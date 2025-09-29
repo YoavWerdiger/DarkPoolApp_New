@@ -85,8 +85,7 @@ export default function ActionMenu({
         <View style={{
           height: 1,
           backgroundColor: 'rgba(255,255,255,0.12)',
-          marginLeft: 24,
-          marginRight: 24,
+          marginVertical: 8,
         }} />
       )}
     </View>

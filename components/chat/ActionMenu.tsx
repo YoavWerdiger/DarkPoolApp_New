@@ -59,29 +59,37 @@ export default function ActionMenu({
   };
 
   const ActionRow = ({ item, isLast }: { item: ActionItem; isLast: boolean }) => (
-    <Pressable
-      onPress={() => { 
-        onClose(); 
-        setTimeout(item.onPress, 100); 
-      }}
-      style={({ pressed }) => ({
-        paddingVertical: 16,
-        paddingHorizontal: 20,
-        backgroundColor: pressed ? 'rgba(255,255,255,0.05)' : 'transparent',
-        borderBottomWidth: isLast ? 0 : 1,
-        borderBottomColor: 'rgba(255,255,255,0.08)',
-      })}
-    >
-      <Text style={{ 
-        color: item.destructive ? '#ff6b6b' : '#ffffff', 
-        fontSize: 16,
-        fontWeight: '500',
-        textAlign: 'right',
-        letterSpacing: 0.2,
-      }}>
-        {item.label}
-      </Text>
-    </Pressable>
+    <View>
+      <Pressable
+        onPress={() => { 
+          onClose(); 
+          setTimeout(item.onPress, 100); 
+        }}
+        style={({ pressed }) => ({
+          paddingVertical: 18,
+          paddingHorizontal: 24,
+          backgroundColor: pressed ? 'rgba(255,255,255,0.08)' : 'transparent',
+        })}
+      >
+        <Text style={{ 
+          color: item.destructive ? '#ff6b6b' : '#ffffff', 
+          fontSize: 16,
+          fontWeight: '500',
+          textAlign: 'right',
+          letterSpacing: 0.3,
+        }}>
+          {item.label}
+        </Text>
+      </Pressable>
+      {!isLast && (
+        <View style={{
+          height: 1,
+          backgroundColor: 'rgba(255,255,255,0.12)',
+          marginLeft: 24,
+          marginRight: 24,
+        }} />
+      )}
+    </View>
   );
 
   const screen = Dimensions.get('window');
@@ -111,11 +119,11 @@ export default function ActionMenu({
           <View
             style={{
               alignSelf: 'flex-end',
-              marginBottom: 16,
+              marginBottom: 20,
               backgroundColor: 'rgba(20,20,20,0.95)',
               borderRadius: 24,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
+              borderColor: 'rgba(255,255,255,0.15)',
               overflow: 'hidden',
               width: 300,
               shadowColor: '#000',
@@ -130,8 +138,8 @@ export default function ActionMenu({
               showsHorizontalScrollIndicator={false}
               style={{ width: '100%' }}
               contentContainerStyle={{
-                paddingHorizontal: 20,
-                paddingVertical: 14,
+                paddingHorizontal: 24,
+                paddingVertical: 16,
                 alignItems: 'center',
               }}
             >
@@ -141,11 +149,11 @@ export default function ActionMenu({
                   onPress={() => handleReactionPress(emoji)}
                   style={({ pressed }) => ({
                     transform: [{ scale: pressed ? 0.85 : 1 }],
-                    marginHorizontal: 4,
-                    paddingVertical: 8,
-                    paddingHorizontal: 6,
-                    borderRadius: 16,
-                    backgroundColor: pressed ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    marginHorizontal: 6,
+                    paddingVertical: 10,
+                    paddingHorizontal: 8,
+                    borderRadius: 18,
+                    backgroundColor: pressed ? 'rgba(255,255,255,0.12)' : 'transparent',
                   })}
                 >
                   <Text style={{ fontSize: 24 }}>{emoji}</Text>
@@ -154,13 +162,13 @@ export default function ActionMenu({
               <Pressable 
                 onPress={onOpenPicker} 
                 style={({ pressed }) => ({
-                  marginLeft: 16,
-                  marginRight: 12,
+                  marginLeft: 18,
+                  marginRight: 14,
                   transform: [{ scale: pressed ? 0.85 : 1 }],
-                  paddingVertical: 8,
-                  paddingHorizontal: 10,
-                  borderRadius: 16,
-                  backgroundColor: pressed ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)',
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
+                  borderRadius: 18,
+                  backgroundColor: pressed ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.1)',
                 })}
               >
                 <Plus size={24} color="#ffffff" strokeWidth={2} />
@@ -190,12 +198,13 @@ export default function ActionMenu({
               width: 300,
               backgroundColor: 'rgba(20,20,20,0.95)',
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
+              borderColor: 'rgba(255,255,255,0.15)',
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 8 },
               shadowOpacity: 0.4,
               shadowRadius: 16,
               elevation: 12,
+              marginTop: 8,
             }}
           >
             <LinearGradient

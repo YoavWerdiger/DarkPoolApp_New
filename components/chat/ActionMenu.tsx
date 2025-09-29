@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, Animated, Pressable, Dimensions, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus } from 'lucide-react-native';
+import { Plus, Copy, Share, Star, Flag, Trash2, Edit, Reply, Forward, Info, Pin } from 'lucide-react-native';
 
 type ActionItem = {
   key: string;
   label: string;
+  icon?: string;
   destructive?: boolean;
   onPress: () => void;
 };
@@ -58,40 +59,74 @@ export default function ActionMenu({
     }, 150);
   };
 
+  const getIcon = (iconName?: string) => {
+    const iconProps = { size: 20, color: '#ffffff' };
+    
+    switch (iconName) {
+      case 'copy': return <Copy {...iconProps} />;
+      case 'share': return <Share {...iconProps} />;
+      case 'star': return <Star {...iconProps} />;
+      case 'flag': return <Flag {...iconProps} />;
+      case 'trash': return <Trash2 {...iconProps} />;
+      case 'edit': return <Edit {...iconProps} />;
+      case 'reply': return <Reply {...iconProps} />;
+      case 'forward': return <Forward {...iconProps} />;
+      case 'info': return <Info {...iconProps} />;
+      case 'pin': return <Pin {...iconProps} />;
+      default: return null;
+    }
+  };
+
   const ActionRow = ({ item, isLast }: { item: ActionItem; isLast: boolean }) => (
-    <View>
-      <Pressable
-        onPress={() => { 
-          onClose(); 
-          setTimeout(item.onPress, 100); 
-        }}
-        style={({ pressed }) => ({
-          paddingVertical: 18,
-          paddingHorizontal: 24,
-          backgroundColor: pressed ? 'rgba(255,255,255,0.08)' : 'transparent',
-        })}
-      >
-        <Text style={{ 
-          color: item.destructive ? '#ff6b6b' : '#ffffff', 
-          fontSize: 16,
-          fontWeight: '500',
-          textAlign: 'right',
-          letterSpacing: 0.3,
-        }}>
-          {item.label}
-        </Text>
-      </Pressable>
+    <Pressable
+      onPress={() => { 
+        onClose(); 
+        setTimeout(item.onPress, 100); 
+      }}
+      style={({ pressed }) => ({
+        paddingVertical: 16,
+        paddingHorizontal: 15,
+        backgroundColor: pressed ? 'rgba(255,255,255,0.08)' : 'transparent',
+      })}
+    >
+       <View style={{ 
+         flexDirection: 'row', 
+         alignItems: 'center', // מיישר אנכית
+         justifyContent: 'flex-start', // הכל מתחיל משמאל
+       }}>
+         {/* אייקון */}
+         {item.icon && (
+           <View style={{ marginRight: 15, alignItems: 'center'
+           }}>
+             {getIcon(item.icon)}
+           </View>
+         )}
+         
+         {/* טקסט */}
+         <Text
+           style={{ 
+             color: item.destructive ? '#ff6b6b' : '#ffffff', 
+             fontSize: 16,
+             fontWeight: '500',
+             textAlign: 'right',
+             flex: 1
+           }}
+         >
+           {item.label}
+         </Text>
+       </View>
+  
+      {/* קו מפריד */}
       {!isLast && (
         <View style={{
+          marginTop: 12,
           height: 1,
           backgroundColor: 'rgba(255,255,255,0.12)',
-          marginVertical: 8,
         }} />
       )}
-    </View>
+    </Pressable>
   );
-
-  const screen = Dimensions.get('window');
+      const screen = Dimensions.get('window');
   const width = Math.min(280, screen.width - 40);
   const quickReactions = ['👍','❤️','😂','😮','😢','🙏','🔥','💯','🎉','👏'];
 

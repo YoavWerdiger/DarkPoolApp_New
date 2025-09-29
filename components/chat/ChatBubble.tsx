@@ -1456,13 +1456,13 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           </View>
         }
         items={[
-          { key: 'reply', label: 'השב', icon: 'chatbubbles-outline', onPress: handleReply },
-          { key: 'forward', label: 'העבר', icon: 'arrow-redo-outline', onPress: handleForward },
-          { key: 'copy', label: 'העתק', icon: 'copy-outline', onPress: onCopy },
-          { key: 'info', label: 'פרטים', icon: 'information-circle-outline', onPress: () => setShowSeenBySheet(true) },
-          { key: 'star', label: isMessageStarred ? 'הסר כוכב' : 'סמן בכוכב', icon: 'star-outline', onPress: () => (isMessageStarred ? handleUnstarMessage() : handleStarMessage()) },
-          { key: 'pin', label: 'הצמד', icon: 'pin-outline', onPress: () => {} },
-          { key: 'delete', label: 'מחק', icon: 'trash-outline', destructive: true, onPress: () => onDeleteMessage?.(message.id) },
+          { key: 'reply', label: 'השב', icon: 'reply', onPress: handleReply },
+          { key: 'forward', label: 'העבר', icon: 'forward', onPress: handleForward },
+          { key: 'copy', label: 'העתק', icon: 'copy', onPress: onCopy },
+          { key: 'info', label: 'פרטים', icon: 'info', onPress: () => setShowSeenBySheet(true) },
+          { key: 'star', label: isMessageStarred ? 'הסר כוכב' : 'סמן בכוכב', icon: 'star', onPress: () => (isMessageStarred ? handleUnstarMessage() : handleStarMessage()) },
+          { key: 'pin', label: 'הצמד', icon: 'pin', onPress: () => {} },
+          { key: 'delete', label: 'מחק', icon: 'trash', destructive: true, onPress: () => onDeleteMessage?.(message.id) },
         ]}
       />
 

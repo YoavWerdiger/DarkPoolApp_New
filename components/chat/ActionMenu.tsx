@@ -2,13 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, Animated, Pressable, Dimensions, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { Plus } from 'lucide-react-native';
 
 type ActionItem = {
   key: string;
   label: string;
-  icon: string;
   destructive?: boolean;
   onPress: () => void;
 };
@@ -18,14 +16,24 @@ interface ActionMenuProps {
   onClose: () => void;
   isMe: boolean;
   items: ActionItem[];
-  preview?: React.ReactNode; // תוכן הבועה לשכפול
+  preview?: React.ReactNode;
   onReact?: (emoji: string) => void;
   onOpenPicker?: () => void;
   messageId?: string;
-  currentReactions?: { [emoji: string]: string[] }; // ריאקשנים קיימים
+  currentReactions?: { [emoji: string]: string[] };
 }
 
-export default function ActionMenu({ visible, onClose, isMe, items, preview, onReact, onOpenPicker, messageId, currentReactions = {} }: ActionMenuProps) {
+export default function ActionMenu({ 
+  visible, 
+  onClose, 
+  isMe, 
+  items, 
+  preview, 
+  onReact, 
+  onOpenPicker, 
+  messageId, 
+  currentReactions = {} 
+}: ActionMenuProps) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
   const [selectedReaction, setSelectedReaction] = useState<string | null>(null);
@@ -33,8 +41,8 @@ export default function ActionMenu({ visible, onClose, isMe, items, preview, onR
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.timing(opacity, { toValue: 1, duration: 160, useNativeDriver: true }),
-        Animated.timing(translateY, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 0, duration: 250, useNativeDriver: true }),
       ]).start();
     } else {
       opacity.setValue(0);
@@ -45,66 +53,53 @@ export default function ActionMenu({ visible, onClose, isMe, items, preview, onR
   const handleReactionPress = (emoji: string) => {
     setSelectedReaction(emoji);
     onReact?.(emoji);
-    // סגירת התפריט אחרי בחירת ריאקשן
     setTimeout(() => {
       onClose();
-    }, 200);
+    }, 150);
   };
 
   const ActionRow = ({ item, isLast }: { item: ActionItem; isLast: boolean }) => (
-    <View>
-      <Pressable
-        onPress={() => { onClose(); setTimeout(item.onPress, 0); }}
-        style={({ pressed }) => ({
-          flexDirection: 'row',
-          alignItems: 'center',
-          height: 50,
-          paddingLeft: 15,
-          paddingRight: 15,
-          backgroundColor: pressed ? 'rgba(0,230,84,0.08)' : 'transparent',
-        })}
-      >
-        <Ionicons 
-          name={item.icon as any} 
-          size={18} 
-          color={item.destructive ? '#ff3b30' : '#E5E7EB'} 
-        />
-        <Text style={{ 
-          color: item.destructive ? '#ff3b30' : '#E5E7EB', 
-          fontSize: 14,
-          fontWeight: '500',
-          marginLeft: 12,
-          flex: 1,
-          textAlign: 'right'
-        }}>{item.label}</Text>
-      </Pressable>
-      {!isLast && (
-        <View style={{
-          height: 1,
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          marginLeft: 45,
-          marginRight: 15
-        }} />
-      )}
-    </View>
+    <Pressable
+      onPress={() => { 
+        onClose(); 
+        setTimeout(item.onPress, 100); 
+      }}
+      style={({ pressed }) => ({
+        paddingVertical: 16,
+        paddingHorizontal: 20,
+        backgroundColor: pressed ? 'rgba(255,255,255,0.05)' : 'transparent',
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: 'rgba(255,255,255,0.08)',
+      })}
+    >
+      <Text style={{ 
+        color: item.destructive ? '#ff6b6b' : '#ffffff', 
+        fontSize: 16,
+        fontWeight: '500',
+        textAlign: 'right',
+        letterSpacing: 0.2,
+      }}>
+        {item.label}
+      </Text>
+    </Pressable>
   );
 
   const screen = Dimensions.get('window');
-  const width = Math.min(260, screen.width - 40);
+  const width = Math.min(280, screen.width - 40);
   const quickReactions = ['👍','❤️','😂','😮','😢','🙏','🔥','💯','🎉','👏'];
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1 }}>
-        {/* שכבת טשטוש */}
-        <BlurView intensity={60} tint="dark" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
+        {/* רקע מטושטש */}
+        <BlurView intensity={80} tint="dark" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} />
         
         {/* תוכן התפריט */}
         <Animated.View
           style={{
             position: 'absolute',
-            top: Math.max(100, screen.height * 0.25),
+            top: Math.max(120, screen.height * 0.3),
             right: 20,
             alignItems: 'flex-end',
             opacity,
@@ -112,102 +107,99 @@ export default function ActionMenu({ visible, onClose, isMe, items, preview, onR
           }}
           pointerEvents="box-none"
         >
-          {/* ריאקשנים - מוצמדים מעל הבועה עם מרווח מתחת */}
+          {/* ריאקשנים מהירים */}
           <View
             style={{
               alignSelf: 'flex-end',
-              marginBottom: 14,
-              backgroundColor: '#141414',
-              borderRadius: 20,
+              marginBottom: 16,
+              backgroundColor: 'rgba(20,20,20,0.95)',
+              borderRadius: 24,
               borderWidth: 1,
-              borderColor: 'rgba(0,230,84,0.3)',
+              borderColor: 'rgba(255,255,255,0.1)',
               overflow: 'hidden',
-              width: 280,
+              width: 300,
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-              shadowRadius: 4,
-              elevation: 4,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
             }}
           >
-            <LinearGradient
-              colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={{ width: '100%' }}
               contentContainerStyle={{
-                paddingHorizontal: 16,
-                paddingVertical: 12,
+                paddingHorizontal: 20,
+                paddingVertical: 14,
                 alignItems: 'center',
               }}
             >
-              {quickReactions.map((e, idx) => (
+              {quickReactions.map((emoji, idx) => (
                 <Pressable 
                   key={idx} 
-                  onPress={() => handleReactionPress(e)}
+                  onPress={() => handleReactionPress(emoji)}
                   style={({ pressed }) => ({
-                    transform: [{ scale: pressed ? 0.9 : 1 }],
-                    marginHorizontal: 6,
-                    paddingVertical: 6,
-                    paddingHorizontal: 4,
-                    borderRadius: 12,
-                    backgroundColor: pressed ? 'rgba(0,230,84,0.1)' : 'transparent',
+                    transform: [{ scale: pressed ? 0.85 : 1 }],
+                    marginHorizontal: 4,
+                    paddingVertical: 8,
+                    paddingHorizontal: 6,
+                    borderRadius: 16,
+                    backgroundColor: pressed ? 'rgba(255,255,255,0.1)' : 'transparent',
                   })}
                 >
-                  <Text style={{ fontSize: 22 }}>{e}</Text>
+                  <Text style={{ fontSize: 24 }}>{emoji}</Text>
                 </Pressable>
               ))}
               <Pressable 
                 onPress={onOpenPicker} 
                 style={({ pressed }) => ({
-                  marginLeft: 12,
-                  marginRight: 8,
-                  transform: [{ scale: pressed ? 0.9 : 1 }],
-                  paddingVertical: 6,
-                  paddingHorizontal: 8,
-                  borderRadius: 12,
-                  backgroundColor: pressed ? 'rgba(0,230,84,0.15)' : 'rgba(0,230,84,0.08)',
+                  marginLeft: 16,
+                  marginRight: 12,
+                  transform: [{ scale: pressed ? 0.85 : 1 }],
+                  paddingVertical: 8,
+                  paddingHorizontal: 10,
+                  borderRadius: 16,
+                  backgroundColor: pressed ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.08)',
                 })}
               >
-                <Plus size={22} color="#00E654" strokeWidth={2} />
+                <Plus size={24} color="#ffffff" strokeWidth={2} />
               </Pressable>
             </ScrollView>
           </View>
 
-          {/* פריוויו של הבועה - קטן */}
-          <View
-            style={{
-              marginBottom: 14,
-              alignSelf: 'flex-end',
-              maxWidth: width,
-            }}
-          >
-            {preview}
-          </View>
+          {/* תצוגה מקדימה של ההודעה */}
+          {preview && (
+            <View
+              style={{
+                marginBottom: 16,
+                alignSelf: 'flex-end',
+                maxWidth: width,
+                opacity: 0.7,
+              }}
+            >
+              {preview}
+            </View>
+          )}
 
-          {/* רשימת פעולות - בגוון האפור של האפליקציה עם גרדיאנט חדשני */}
+          {/* תפריט הפעולות */}
           <View
             style={{
-              borderRadius: 12,
+              borderRadius: 16,
               overflow: 'hidden',
-              width: 280,
+              width: 300,
+              backgroundColor: 'rgba(20,20,20,0.95)',
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.14)',
-              backgroundColor: '#1A1A1A',
+              borderColor: 'rgba(255,255,255,0.1)',
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.28,
-              shadowRadius: 12,
-              elevation: 10,
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.4,
+              shadowRadius: 16,
+              elevation: 12,
             }}
           >
             <LinearGradient
-              colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
+              colors={['rgba(255,255,255,0.02)', 'transparent', 'rgba(255,255,255,0.01)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -221,5 +213,3 @@ export default function ActionMenu({ visible, onClose, isMe, items, preview, onR
     </Modal>
   );
 }
-
-

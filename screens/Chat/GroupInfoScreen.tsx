@@ -801,7 +801,7 @@ export default function GroupInfoScreen() {
         paddingHorizontal: 20,
         paddingTop: 60,
         paddingBottom: 20,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+                  backgroundColor: '#181818',
         borderBottomWidth: 1,
         borderBottomColor: 'rgba(0,230,84,0.2)'
       }}>
@@ -848,7 +848,7 @@ export default function GroupInfoScreen() {
           paddingHorizontal: 24,
           paddingVertical: 32,
           borderRadius: 20,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: '#181818',
           borderWidth: 2,
           borderColor: 'rgba(0,230,84,0.3)',
           shadowColor: '#00E654',
@@ -942,7 +942,7 @@ export default function GroupInfoScreen() {
             paddingHorizontal: 20,
             paddingVertical: 20,
             borderRadius: 20,
-            backgroundColor: 'rgba(0,0,0,0.4)',
+            backgroundColor: '#181818',
             borderWidth: 1,
             borderColor: 'rgba(255,0,0,0.2)',
             shadowColor: '#000',
@@ -1001,7 +1001,7 @@ export default function GroupInfoScreen() {
           paddingHorizontal: 20,
           paddingVertical: 20,
           borderRadius: 16,
-          backgroundColor: 'rgba(0,0,0,0.3)',
+          backgroundColor: '#181818',
           borderWidth: 1,
           borderColor: 'rgba(0,230,84,0.15)'
         }}>
@@ -1062,7 +1062,7 @@ export default function GroupInfoScreen() {
           paddingHorizontal: 20,
           paddingVertical: 20,
           borderRadius: 16,
-          backgroundColor: 'rgba(0,0,0,0.3)',
+          backgroundColor: '#181818',
           borderWidth: 1,
           borderColor: 'rgba(0,230,84,0.15)'
         }}>
@@ -1116,7 +1116,7 @@ export default function GroupInfoScreen() {
             <View style={{ marginTop: 16 }}>
               {starredMessages.slice(0, 3).map((message, index) => (
                 <View key={index} style={{
-                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  backgroundColor: '#181818',
                   borderRadius: 12,
                   padding: 12,
                   marginBottom: 8,
@@ -1161,7 +1161,7 @@ export default function GroupInfoScreen() {
           paddingHorizontal: 20,
           paddingVertical: 20,
           borderRadius: 16,
-          backgroundColor: 'rgba(0,0,0,0.3)',
+          backgroundColor: '#181818',
           borderWidth: 1,
           borderColor: 'rgba(0,230,84,0.15)'
         }}>
@@ -1220,7 +1220,7 @@ export default function GroupInfoScreen() {
           paddingHorizontal: 20,
           paddingVertical: 20,
           borderRadius: 16,
-          backgroundColor: 'rgba(0,0,0,0.3)',
+          backgroundColor: '#181818',
           borderWidth: 1,
           borderColor: 'rgba(0,230,84,0.15)'
         }}>
@@ -1595,7 +1595,7 @@ export default function GroupInfoScreen() {
                     justifyContent: 'space-between',
                     marginBottom: 12,
                     padding: 12,
-                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    backgroundColor: '#181818',
                     borderRadius: 16,
                     borderWidth: 1,
                     borderColor: 'rgba(0,230,84,0.1)'
@@ -1740,7 +1740,7 @@ export default function GroupInfoScreen() {
                         justifyContent: 'space-between',
                         marginBottom: 12,
                         padding: 12,
-                        backgroundColor: 'rgba(0,0,0,0.3)',
+                        backgroundColor: '#181818',
                         borderRadius: 16,
                         borderWidth: 1,
                         borderColor: 'rgba(0,230,84,0.1)'
@@ -1878,7 +1878,7 @@ export default function GroupInfoScreen() {
               onPress={() => setShowAll(!showAll)} 
               style={{
                 marginTop: 12,
-                backgroundColor: 'rgba(0,0,0,0.3)',
+                backgroundColor: '#181818',
                 padding: 12,
                 borderRadius: 16,
                 borderWidth: 1,

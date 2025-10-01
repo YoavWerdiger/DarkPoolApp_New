@@ -3,6 +3,7 @@ import { Modal, View, Text, Animated, Pressable, Dimensions, ScrollView } from '
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, Copy, Share, Star, Flag, Trash2, Edit, Reply, Forward, Info, Pin } from 'lucide-react-native';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type ActionItem = {
   key: string;
@@ -59,8 +60,8 @@ export default function ActionMenu({
     }, 150);
   };
 
-  const getIcon = (iconName?: string) => {
-    const iconProps = { size: 20, color: '#ffffff' };
+  const getIcon = (iconName?: string, isDestructive?: boolean) => {
+    const iconProps = { size: 20, color: isDestructive ? '#FF453A' : '#FFFFFF' };
     
     switch (iconName) {
       case 'copy': return <Copy {...iconProps} />;
@@ -77,55 +78,80 @@ export default function ActionMenu({
     }
   };
 
-  const ActionRow = ({ item, isLast }: { item: ActionItem; isLast: boolean }) => (
-    <Pressable
-      onPress={() => { 
+  const ActionRow = ({ item, isLast }: { item: ActionItem; isLast: boolean }) => {
+    const [scaleValue] = useState(new Animated.Value(1));
+    const [pressed, setPressed] = useState(false);
+
+    const handlePressIn = () => {
+      setPressed(true);
+      Animated.spring(scaleValue, {
+        toValue: 0.98,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const handlePressOut = () => {
+      setPressed(false);
+      Animated.spring(scaleValue, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const handlePress = () => {
+      HapticFeedback.selection();
         onClose(); 
         setTimeout(item.onPress, 100); 
-      }}
-      style={({ pressed }) => ({
-        paddingVertical: 16,
-        paddingHorizontal: 15,
-        backgroundColor: pressed ? 'rgba(255,255,255,0.08)' : 'transparent',
-      })}
-    >
-       <View style={{ 
+    };
+
+    return (
+      <Animated.View
+        style={[
+          {
+            borderBottomWidth: isLast ? 0 : 0.5,
+            borderBottomColor: 'rgba(255,255,255,0.08)',
+            transform: [{ scale: scaleValue }]
+          }
+        ]}
+      >
+        <Pressable
+          onPress={handlePress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          style={[
+            {
          flexDirection: 'row', 
-         alignItems: 'center', // מיישר אנכית
-         justifyContent: 'flex-start', // הכל מתחיל משמאל
-       }}>
+              alignItems: 'center',
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              minHeight: 40,
+              backgroundColor: pressed ? '#2A2A2A' : '#181818',
+            }
+          ]}
+        >
          {/* אייקון */}
          {item.icon && (
-           <View style={{ marginRight: 15, alignItems: 'center'
-           }}>
-             {getIcon(item.icon)}
+            <View style={{ marginRight: 10, width: 20, alignItems: 'center' }}>
+              {getIcon(item.icon, item.destructive)}
            </View>
          )}
          
          {/* טקסט */}
          <Text
            style={{ 
-             color: item.destructive ? '#ff6b6b' : '#ffffff', 
-             fontSize: 16,
-             fontWeight: '500',
+              color: item.destructive ? '#FF453A' : '#FFFFFF', 
+              fontSize: 15,
+              fontWeight: '400',
+              flex: 1,
              textAlign: 'right',
-             flex: 1
            }}
          >
            {item.label}
          </Text>
-       </View>
-  
-      {/* קו מפריד */}
-      {!isLast && (
-        <View style={{
-          marginTop: 12,
-          height: 1,
-          backgroundColor: 'rgba(255,255,255,0.12)',
-        }} />
-      )}
     </Pressable>
+      </Animated.View>
   );
+  };
       const screen = Dimensions.get('window');
   const width = Math.min(280, screen.width - 40);
   const quickReactions = ['👍','❤️','😂','😮','😢','🙏','🔥','💯','🎉','👏'];
@@ -154,12 +180,12 @@ export default function ActionMenu({
             style={{
               alignSelf: 'flex-end',
               marginBottom: 20,
-              backgroundColor: 'rgba(20,20,20,0.95)',
+              backgroundColor: '#181818',
               borderRadius: 24,
               borderWidth: 1,
               borderColor: 'rgba(255,255,255,0.15)',
               overflow: 'hidden',
-              width: 300,
+              width: 280,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
@@ -167,13 +193,19 @@ export default function ActionMenu({
               elevation: 8,
             }}
           >
+            <LinearGradient
+              colors={['rgba(255,255,255,0.03)', 'rgba(255,255,255,0.01)', 'rgba(255,255,255,0.02)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={{ width: '100%' }}
               contentContainerStyle={{
-                paddingHorizontal: 24,
-                paddingVertical: 16,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
                 alignItems: 'center',
               }}
             >
@@ -183,11 +215,11 @@ export default function ActionMenu({
                   onPress={() => handleReactionPress(emoji)}
                   style={({ pressed }) => ({
                     transform: [{ scale: pressed ? 0.85 : 1 }],
-                    marginHorizontal: 6,
+                    marginHorizontal: 12,
                     paddingVertical: 10,
                     paddingHorizontal: 8,
-                    borderRadius: 18,
-                    backgroundColor: pressed ? 'rgba(255,255,255,0.12)' : 'transparent',
+                    borderRadius: 20,
+                    backgroundColor: pressed ? 'rgba(255,255,255,0.15)' : 'transparent',
                   })}
                 >
                   <Text style={{ fontSize: 24 }}>{emoji}</Text>
@@ -196,13 +228,13 @@ export default function ActionMenu({
               <Pressable 
                 onPress={onOpenPicker} 
                 style={({ pressed }) => ({
-                  marginLeft: 18,
-                  marginRight: 14,
+                  marginLeft: 12,
+                  marginRight: 8,
                   transform: [{ scale: pressed ? 0.85 : 1 }],
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 18,
-                  backgroundColor: pressed ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.1)',
+                  paddingVertical: 8,
+                  paddingHorizontal: 8,
+                  borderRadius: 20,
+                  backgroundColor: pressed ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
                 })}
               >
                 <Plus size={24} color="#ffffff" strokeWidth={2} />
@@ -229,20 +261,20 @@ export default function ActionMenu({
             style={{
               borderRadius: 16,
               overflow: 'hidden',
-              width: 300,
-              backgroundColor: 'rgba(20,20,20,0.95)',
+              width: 220,
+              backgroundColor: '#181818',
               borderWidth: 1,
               borderColor: 'rgba(255,255,255,0.15)',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: 0.4,
-              shadowRadius: 16,
-              elevation: 12,
+              shadowColor: '#00E654',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 12,
+              elevation: 8,
               marginTop: 8,
             }}
           >
             <LinearGradient
-              colors={['rgba(255,255,255,0.02)', 'transparent', 'rgba(255,255,255,0.01)']}
+              colors={['rgba(0,230,84,0.05)', 'rgba(0,230,84,0.02)', 'rgba(0,230,84,0.08)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}

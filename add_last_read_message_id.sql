@@ -11,7 +11,7 @@ ON channel_members(channel_id, last_read_message_id);
 
 -- עדכון השדה עבור הודעות קיימות (אופציונלי)
 -- UPDATE channel_members 
--- SET last_read_message_id = (
+-- SET last_readdd_message_id = (
 --   SELECT id FROM messages 
 --   WHERE channel_id = channel_members.channel_id 
 --   ORDER BY created_at DESC 

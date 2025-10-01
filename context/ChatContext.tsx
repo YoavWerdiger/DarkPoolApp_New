@@ -62,23 +62,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
     }
   }, [userId]);
 
-  // טעינה מקדימה של הודעות לכל הצ'אטים אחרי שהם נטענו
+  // טעינה מקדימה של הודעות לכל הצ'אטים אחרי שהם נטענו (CACHE בלבד, בלי להחליף UI)
   useEffect(() => {
     if (chats.length > 0 && userId) {
-      console.log('🚀 ChatContext: Preloading messages for all chats:', chats.length);
+      console.log('🚀 ChatContext: Preloading messages for all chats (cache only):', chats.length);
       const startTime = Date.now();
       
-      // טען הודעות לכל הצ'אטים במקביל (רק 3 הראשונים)
       const chatsToPreload = chats.slice(0, 3);
       Promise.all(
-        chatsToPreload.map(chat => 
-          loadMessages(chat.id).catch(error => 
-            console.error(`❌ Error preloading messages for chat ${chat.id}:`, error)
-          )
-        )
+        chatsToPreload.map(async (chat) => {
+          try {
+            const messageList = await ChatService.getMessages(chat.id);
+            setMessagesCache(prev => ({ ...prev, [chat.id]: messageList }));
+          } catch (error) {
+            console.error(`❌ Error preloading messages for chat ${chat.id}:`, error);
+          }
+        })
       ).then(() => {
         const endTime = Date.now();
-        console.log(`⏱️ ChatContext: Preloaded messages for ${chatsToPreload.length} chats in ${endTime - startTime}ms`);
+        console.log(`⏱️ ChatContext: Preloaded (cache) for ${chatsToPreload.length} chats in ${endTime - startTime}ms`);
       });
     }
   }, [chats.length, userId]);
@@ -184,15 +186,25 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
           return prev;
         }
         
-        // בדיקה אם זו הודעה זמנית שצריך להחליף
+        // בדיקה אם זו הודעה שכבר קיימת עם correlation key
         const correlationKey = `${newMessage.sender_id}|${(newMessage.content || '').trim()}|${newMessage.reply_to_message_id || ''}`;
+        const hasCorrelationMatch = prev.some(msg => 
+          (msg as any).correlationKey === correlationKey && 
+          msg.sender_id === newMessage.sender_id
+        );
+        
+        if (hasCorrelationMatch) {
+          console.log('⚠️ Message with same correlation key already exists, skipping duplicate');
+          return prev;
+        }
+        
+        // בדיקה אם זו הודעה זמנית שצריך להחליף
         const tempMessageIndex = prev.findIndex(msg => {
           const isTemp = msg.id.startsWith('temp_');
           const sameSender = msg.sender_id === newMessage.sender_id;
           const sameContent = (msg.content || '').trim() === (newMessage.content || '').trim();
           const sameReply = (msg.reply_to_message_id || '') === (newMessage.reply_to_message_id || '');
-          const sameCorrelation = (msg as any).correlationKey && (msg as any).correlationKey === correlationKey;
-          return isTemp && sameSender && (sameCorrelation || (sameContent && sameReply));
+          return isTemp && sameSender && sameContent && sameReply;
         });
         
         if (tempMessageIndex !== -1) {
@@ -202,6 +214,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
           return newMessages;
         }
         
+        console.log('➕ Adding new real-time message');
         return [newMessage, ...prev];
       });
     });
@@ -236,9 +249,10 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
       console.log('📋 ChatContext: Loaded chats:', chatList);
       setChats(chatList);
       
-      // Set first chat as default if no current chat is set
-      if (chatList.length > 0 && !currentChatId) {
-        console.log('🎯 ChatContext: Setting first chat as default:', chatList[0].id);
+      // אל תקבע צ'אט ראשון כברירת מחדל אם כבר הועבר initialChatId
+      // הגנה מרייס: נקבע רק אם אין currentChatId וגם אין initialChatId
+      if (chatList.length > 0 && !currentChatId && !initialChatId) {
+        console.log('🎯 ChatContext: No current/initial chat - setting first chat as default:', chatList[0].id);
         setCurrentChatId(chatList[0].id);
         loadMessages(chatList[0].id);
       } else if (chatList.length === 0) {
@@ -299,31 +313,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
       return;
     }
     
-    // יצירת הודעה זמנית מיד כדי שהמשתמש יראה אותה
-    const correlationKey = `${userId}|${(content || '').trim()}|${replyTo || ''}`;
-    const tempMessage: Message = {
-      id: `temp_${Date.now()}_${Math.random()}`,
-      channel_id: currentChatId,
-      sender_id: userId,
-      content,
-      type: replyTo ? 'reply' : 'text',
-      recipient_id: undefined,
-      reply_to_message_id: replyTo || undefined,
-      mentions: mentions || undefined,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      status: 'sent' as const, // נשתמש ב-sent גם להודעה זמנית
-      read_by: [],
-      sender: {
-        full_name: 'אתה'
-      },
-      // שדה עזר פנימי לדידופ
-      ...( { correlationKey } as any )
-    };
-    
-    // הוסף את ההודעה הזמנית מיד
-    console.log('📤 ChatContext: Adding temporary message immediately');
-    setMessages(prev => [tempMessage, ...prev]);
+    // לא נוסיף הודעה זמנית - נחכה להודעה האמיתית מהשרת
+    console.log('📤 ChatContext: Sending message without temporary message');
     
     try {
       console.log('📤 ChatContext: Sending message via ChatService...');
@@ -340,16 +331,16 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
       
       // בדיקה שההודעה נשלחה בהצלחה
       if (result && result.id) {
-        console.log('🔄 ChatContext: Replacing temporary message with real message');
+        console.log('✅ ChatContext: Message sent successfully, adding to messages');
         
-        // החלף את ההודעה הזמנית בהודעה האמיתית
+        // הוסף את ההודעה האמיתית לרשימה עם אנימציית פייד
         setMessages(prev => {
-          const newMessages = prev.map(msg => 
-            msg.id === tempMessage.id ? { ...result, status: 'sent' as const } : msg
-          );
-          console.log('📋 Messages after replacement:', newMessages.length);
-          return newMessages;
+          const newMessage = { ...result, status: 'sent' as const };
+          // הוסף correlation key למניעת כפילות
+          (newMessage as any).correlationKey = `${result.sender_id}|${(result.content || '').trim()}|${result.reply_to_message_id || ''}`;
+          return [newMessage, ...prev];
         });
+        
         
         // עדכן גם את הצ'אט האחרון
         setChats(prev => prev.map(chat => {
@@ -371,19 +362,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
           return chat;
         }));
         
-        console.log('✅ ChatContext: Message replaced and chat updated');
+        console.log('✅ ChatContext: Message added and chat updated');
       } else {
-        console.error('❌ ChatContext: Message result is invalid, removing temporary message');
-        // הסר את ההודעה הזמנית אם השליחה נכשלה
-        setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
+        console.error('❌ ChatContext: Message result is invalid');
       }
       
       // Real-time subscription יטפל בעדכונים נוספים
       console.log('✅ ChatContext: Message sent and added to local state - real-time will handle further updates');
     } catch (error) {
       console.error('❌ ChatContext: Error sending message:', error);
-      // הסר את ההודעה הזמנית אם השליחה נכשלה
-      setMessages(prev => prev.filter(msg => msg.id !== tempMessage.id));
     }
   };
 
@@ -427,8 +414,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
   const setCurrentChat = (chatId: string) => {
     console.log('🔄 ChatContext: Switching to chat:', chatId);
     setCurrentChatId(chatId);
-    
-    // טען הודעות (עם cache)
+
+    // הצג מיד הודעות מה־cache אם קיימות, אחרת נקה כדי למנוע הצגת צ'אט קודם
+    if (messagesCache[chatId]) {
+      setMessages(messagesCache[chatId]);
+    } else {
+      setMessages([]);
+    }
+
+    // ואז טען הודעות טריות
     loadMessages(chatId);
   };
 

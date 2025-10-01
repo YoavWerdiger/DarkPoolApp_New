@@ -95,6 +95,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
   const [swipeEnabled, setSwipeEnabled] = useState(true);
   const swipeableRef = useRef<Swipeable>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // פונקציה לאיפוס כל ה-states (למעט MediaViewer)
   const resetAllStates = () => {
@@ -172,8 +173,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   const [duration, setDuration] = useState(0);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   
-  const bubbleScale = useRef(new Animated.Value(0.8)).current;
-  const bubbleOpacity = useRef(new Animated.Value(0)).current;
+  // בוטל זום – נשתמש רק בפייד דרך fadeAnim
   const pressScale = useRef(new Animated.Value(1)).current;
   const screenWidth = Dimensions.get('window').width;
   const maxBubbleWidth = Math.floor(screenWidth * 0.9);
@@ -306,24 +306,23 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   const textDirection = getTextDirection();
 
   // אנימציה כניסה לבועה
+  // בוטלו האנימציות הישנות (זום + אופסיטי). נשאר רק fadeAnim
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(bubbleScale, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bubbleOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    return undefined;
   }, []);
 
   // ביטול אנימציית 'שולח...' כדי למנוע הבהובים
   useEffect(() => {
     return undefined;
+  }, []);
+
+  // אנימציית פייד להוספת הודעה
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   // טעינת ריאקציות
@@ -1235,10 +1234,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     <>
       <Animated.View 
         className={`w-full mb-3 flex-row${isMe ? '-reverse' : ''}`}
-        style={{ 
-          transform: [{ scale: bubbleScale }],
-          opacity: bubbleOpacity,
-        }}
+        style={{ opacity: fadeAnim }}
       >
         {/* תמונת משתמש - רק עבור אחרים */}
          {!isMe && (
@@ -1313,9 +1309,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           overshootRight={false}
         >
           <Animated.View
-            style={{
-              transform: [{ scale: bubbleScale }],
-              opacity: bubbleOpacity,
+          style={{
                alignSelf: isMe ? 'flex-end' : 'flex-start',
                marginLeft: isMe ? 0 : 12,
                marginRight: isMe ? 12 : 0,

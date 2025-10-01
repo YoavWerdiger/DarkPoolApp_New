@@ -1,222 +1,130 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  Pressable, 
-  Switch,
-  Alert,
-  TextInput 
-} from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { ArrowLeft, Key, Ban, AlertTriangle, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, Shield, Lock, Eye, EyeOff, UserCheck, UserX, Key, Download, Trash2 } from 'lucide-react-native';
 
 interface PrivacyScreenProps {
   navigation: any;
 }
 
 export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
-  const [privacy, setPrivacy] = useState({
-    // נראות פרופיל
-    profileVisibility: 'public', // public, friends, private
-    showEmail: false,
-    showPhone: false,
-    showLastSeen: true,
-    showOnlineStatus: true,
-    
-    // הודעות
-    whoCanMessage: 'everyone', // everyone, friends, nobody
-    whoCanAddToGroups: 'friends',
+  const [privacySettings, setPrivacySettings] = useState({
+    profileVisibility: 'friends', // 'public', 'friends', 'private'
+    onlineStatus: true,
+    lastSeen: true,
     readReceipts: true,
-    typingIndicator: true,
-    
-    // תוכן
-    whoCanSeeMyContent: 'friends',
-    whoCanTagMe: 'friends',
-    allowScreenshots: false,
-    
-    // חסימות
-    blockedUsers: [],
-    blockedKeywords: [],
-    
-    // אבטחה
     twoFactorAuth: false,
-    loginAlerts: true,
-    sessionTimeout: 30, // דקות
-    biometricAuth: false,
   });
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-
-  // פונקציה לשינוי הגדרה
-  const updateSetting = (key: string, value: any) => {
-    setPrivacy(prev => ({ ...prev, [key]: value }));
+  const handleChangeSetting = (key: string, value: any) => {
+    setPrivacySettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
 
-  // פונקציה לשמירת ההגדרות
-  const handleSave = async () => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      Alert.alert('הצלחה', 'הגדרות הפרטיות נשמרו בהצלחה!');
-    } catch (error) {
-      Alert.alert('שגיאה', 'אירעה שגיאה בשמירת ההגדרות');
-    } finally {
-      setIsLoading(false);
+  const privacyOptions = [
+    {
+      title: 'נראות פרופיל',
+      subtitle: 'מי יכול לראות את הפרופיל שלך',
+      icon: 'eye-outline',
+      key: 'profileVisibility',
+      options: [
+        { label: 'ציבורי', value: 'public' },
+        { label: 'חברים בלבד', value: 'friends' },
+        { label: 'פרטי', value: 'private' }
+      ],
+      color: '#00E654'
+    },
+    {
+      title: 'סטטוס מקוון',
+      subtitle: 'הצג מתי אתה פעיל באפליקציה',
+      icon: 'radio-outline',
+      key: 'onlineStatus',
+      type: 'boolean',
+      color: '#00E654'
+    },
+    {
+      title: 'זמן נוכחות אחרון',
+      subtitle: 'הצג מתי נראת לאחרונה',
+      icon: 'time-outline',
+      key: 'lastSeen',
+      type: 'boolean',
+      color: '#00E654'
+    },
+    {
+      title: 'קבלות קריאה',
+      subtitle: 'הצג מתי קראת הודעות',
+      icon: 'checkmark-done-outline',
+      key: 'readReceipts',
+      type: 'boolean',
+      color: '#00E654'
+    },
+    {
+      title: 'אימות דו-שלבי',
+      subtitle: 'אבטחה נוספת לחשבון',
+      icon: 'shield-checkmark-outline',
+      key: 'twoFactorAuth',
+      type: 'boolean',
+      color: '#00E654'
     }
+  ];
+
+  const securityActions = [
+    {
+      title: 'שינוי סיסמה',
+      subtitle: 'עדכן את הסיסמה שלך',
+      icon: 'key-outline',
+      action: () => Alert.alert('שינוי סיסמה', 'פתיחת דף שינוי סיסמה...'),
+      color: '#00E654'
+    },
+    {
+      title: 'ייצוא נתונים',
+      subtitle: 'הורד העתק של הנתונים שלך',
+      icon: 'download-outline',
+      action: () => Alert.alert('ייצוא נתונים', 'התחלת תהליך ייצוא...'),
+      color: '#00E654'
+    },
+    {
+      title: 'מחיקת חשבון',
+      subtitle: 'מחק את החשבון לצמיתות',
+      icon: 'trash-outline',
+      action: () => {
+        Alert.alert(
+          'מחיקת חשבון',
+          'האם אתה בטוח שברצונך למחוק את החשבון? פעולה זו לא ניתנת לביטול.',
+          [
+            { text: 'ביטול', style: 'cancel' },
+            { text: 'מחק', style: 'destructive', onPress: () => Alert.alert('מחיקה', 'חשבון נמחק') }
+          ]
+        );
+      },
+      color: '#DC2626'
+    }
+  ];
+
+  const handleSaveSettings = () => {
+    Alert.alert('הצלחה', 'ההגדרות נשמרו בהצלחה!');
+    navigation.goBack();
   };
-
-  // פונקציה לשינוי סיסמה
-  const handleChangePassword = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      Alert.alert('שגיאה', 'הסיסמאות אינן תואמות');
-      return;
-    }
-    
-    if (passwordData.newPassword.length < 6) {
-      Alert.alert('שגיאה', 'הסיסמה חייבת להכיל לפחות 6 תווים');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      Alert.alert('הצלחה', 'הסיסמה שונתה בהצלחה!');
-      setShowChangePassword(false);
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    } catch (error) {
-      Alert.alert('שגיאה', 'אירעה שגיאה בשינוי הסיסמה');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // קומפוננט של פריט הגדרה עם switch
-  const SettingSwitch = ({ title, subtitle, icon, iconColor, value, onToggle }: any) => (
-    <View style={{
-      backgroundColor: '#2A2A2A',
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)'
-    }}>
-      <View style={{
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        backgroundColor: iconColor,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12
-      }}>
-        <Ionicons name={icon} size={20} color="#fff" />
-      </View>
-      
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 2 }}>
-          {title}
-        </Text>
-        <Text style={{ color: '#999', fontSize: 13 }}>
-          {subtitle}
-        </Text>
-      </View>
-      
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        trackColor={{ false: '#333', true: '#00E654' }}
-        thumbColor={value ? '#fff' : '#666'}
-        ios_backgroundColor="#333"
-      />
-    </View>
-  );
-
-  // קומפוננט של פריט הגדרה עם בחירה
-  const SettingChoice = ({ title, subtitle, icon, iconColor, options, value, onSelect }: any) => (
-    <View style={{
-      backgroundColor: '#2A2A2A',
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 12,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)'
-    }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-        <View style={{
-          width: 40,
-          height: 40,
-          borderRadius: 10,
-          backgroundColor: iconColor,
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginRight: 12
-        }}>
-          <Ionicons name={icon} size={20} color="#fff" />
-        </View>
-        
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 2 }}>
-            {title}
-          </Text>
-          <Text style={{ color: '#999', fontSize: 13 }}>
-            {subtitle}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        {options.map((option: any, index: number) => (
-          <Pressable
-            key={index}
-            onPress={() => onSelect(option.value)}
-            style={{
-              flex: 1,
-              backgroundColor: value === option.value ? '#00E654' : '#1A1A1A',
-              padding: 8,
-              borderRadius: 8,
-              alignItems: 'center',
-              marginHorizontal: 2
-            }}
-          >
-            <Text style={{
-              color: value === option.value ? '#000' : '#fff',
-              fontSize: 12,
-              fontWeight: value === option.value ? 'bold' : 'normal'
-            }}>
-              {option.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#181818' }}>
       {/* גרדיאנט רקע */}
       <LinearGradient
-        colors={['rgba(0, 230, 84, 0.08)', 'rgba(0, 230, 84, 0.03)', 'rgba(0, 230, 84, 0.05)']}
+        colors={['rgba(0, 230, 84, 0.05)', 'transparent', 'rgba(0, 230, 84, 0.03)']}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
       />
       
       {/* Header */}
       <View style={{
-        backgroundColor: '#2A2A2A',
         paddingTop: 50,
         paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.1)'
+        borderBottomColor: 'rgba(0, 230, 84, 0.1)',
+        backgroundColor: '#181818'
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable
@@ -225,7 +133,7 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: '#1A1A1A',
+              backgroundColor: '#181818',
               alignItems: 'center',
               justifyContent: 'center',
               borderWidth: 1,
@@ -235,383 +143,247 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
             <ArrowLeft size={20} color="#fff" strokeWidth={2} />
           </Pressable>
           
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', writingDirection: 'rtl' }}>
             פרטיות ואבטחה
           </Text>
           
           <Pressable
-            onPress={handleSave}
-            disabled={isLoading}
+            onPress={handleSaveSettings}
             style={{
-              backgroundColor: isLoading ? '#666' : '#00E654',
+              backgroundColor: '#00E654',
               paddingHorizontal: 16,
               paddingVertical: 8,
-              borderRadius: 20,
-              opacity: isLoading ? 0.7 : 1
+              borderRadius: 20
             }}
           >
-            <Text style={{ color: isLoading ? '#ccc' : '#000', fontSize: 14, fontWeight: 'bold' }}>
-              {isLoading ? 'שומר...' : 'שמור'}
+            <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold', writingDirection: 'rtl' }}>
+              שמור
             </Text>
           </Pressable>
         </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {/* נראות פרופיל */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            נראות פרופיל
-          </Text>
-          
-          <SettingChoice
-            title="מי יכול לראות את הפרופיל שלי"
-            subtitle="קבע מי יכול לראות את המידע האישי שלך"
-            icon="person-outline"
-            iconColor="#4F46E5"
-            value={privacy.profileVisibility}
-            onSelect={(value: string) => updateSetting('profileVisibility', value)}
-            options={[
-              { label: 'כולם', value: 'public' },
-              { label: 'חברים', value: 'friends' },
-              { label: 'פרטי', value: 'private' }
-            ]}
-          />
-          
-          <SettingSwitch
-            title="הצג כתובת אימייל"
-            subtitle="אחרים יכולים לראות את האימייל שלך"
-            icon="mail-outline"
-            iconColor="#059669"
-            value={privacy.showEmail}
-            onToggle={(value: boolean) => updateSetting('showEmail', value)}
-          />
-          
-          <SettingSwitch
-            title="הצג מספר טלפון"
-            subtitle="אחרים יכולים לראות את הטלפון שלך"
-            icon="call-outline"
-            iconColor="#DC2626"
-            value={privacy.showPhone}
-            onToggle={(value: boolean) => updateSetting('showPhone', value)}
-          />
-          
-          <SettingSwitch
-            title="הצג זמן חיבור אחרון"
-            subtitle="אחרים יכולים לראות מתי היית מחובר"
-            icon="time-outline"
-            iconColor="#7C3AED"
-            value={privacy.showLastSeen}
-            onToggle={(value: boolean) => updateSetting('showLastSeen', value)}
-          />
-          
-          <SettingSwitch
-            title="הצג סטטוס מקוון"
-            subtitle="אחרים יכולים לראות שאתה מחובר כעת"
-            icon="radio-outline"
-            iconColor="#EA580C"
-            value={privacy.showOnlineStatus}
-            onToggle={(value: boolean) => updateSetting('showOnlineStatus', value)}
-          />
-        </View>
-
-        {/* הודעות */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            הודעות וצ'אטים
-          </Text>
-          
-          <SettingChoice
-            title="מי יכול לשלוח לי הודעות"
-            subtitle="קבע מי יכול ליצור איתך צ'אט חדש"
-            icon="chatbubble-outline"
-            iconColor="#0891B2"
-            value={privacy.whoCanMessage}
-            onSelect={(value: string) => updateSetting('whoCanMessage', value)}
-            options={[
-              { label: 'כולם', value: 'everyone' },
-              { label: 'חברים', value: 'friends' },
-              { label: 'אף אחד', value: 'nobody' }
-            ]}
-          />
-          
-          <SettingChoice
-            title="מי יכול להוסיף אותי לקבוצות"
-            subtitle="קבע מי יכול להוסיף אותך לקבוצות"
-            icon="people-outline"
-            iconColor="#65A30D"
-            value={privacy.whoCanAddToGroups}
-            onSelect={(value: string) => updateSetting('whoCanAddToGroups', value)}
-            options={[
-              { label: 'כולם', value: 'everyone' },
-              { label: 'חברים', value: 'friends' },
-              { label: 'אף אחד', value: 'nobody' }
-            ]}
-          />
-          
-          <SettingSwitch
-            title="אישורי קריאה"
-            subtitle="אחרים יכולים לראות שקראת את ההודעות"
-            icon="checkmark-done-outline"
-            iconColor="#F59E0B"
-            value={privacy.readReceipts}
-            onToggle={(value: boolean) => updateSetting('readReceipts', value)}
-          />
-          
-          <SettingSwitch
-            title="מחוון הקלדה"
-            subtitle="אחרים יכולים לראות שאתה מקליד"
-            icon="create-outline"
-            iconColor="#8B5CF6"
-            value={privacy.typingIndicator}
-            onToggle={(value: boolean) => updateSetting('typingIndicator', value)}
-          />
-        </View>
-
-        {/* אבטחה */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            אבטחה וגישה
-          </Text>
-          
-          <SettingSwitch
-            title="אימות דו-שלבי"
-            subtitle="הגנה נוספת עם קוד SMS"
-            icon="shield-checkmark-outline"
-            iconColor="#DC2626"
-            value={privacy.twoFactorAuth}
-            onToggle={(value: boolean) => updateSetting('twoFactorAuth', value)}
-          />
-          
-          <SettingSwitch
-            title="התראות כניסה"
-            subtitle="קבל התראה על כניסות חדשות"
-            icon="log-in-outline"
-            iconColor="#059669"
-            value={privacy.loginAlerts}
-            onToggle={(value: boolean) => updateSetting('loginAlerts', value)}
-          />
-          
-          <SettingSwitch
-            title="אימות ביומטרי"
-            subtitle="כניסה עם טביעת אצבע או פנים"
-            icon="finger-print-outline"
-            iconColor="#6366F1"
-            value={privacy.biometricAuth}
-            onToggle={(value: boolean) => updateSetting('biometricAuth', value)}
-          />
-
-          {/* שינוי סיסמה */}
-          <Pressable
-            onPress={() => setShowChangePassword(!showChangePassword)}
-            style={{
-              backgroundColor: '#2A2A2A',
-              padding: 16,
-              borderRadius: 12,
-              marginBottom: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)'
-            }}
-          >
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              backgroundColor: '#F59E0B',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 12
-            }}>
-              <Key size={20} color="#fff" strokeWidth={2} />
-            </View>
-            
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 2 }}>
-                שינוי סיסמה
-              </Text>
-              <Text style={{ color: '#999', fontSize: 13 }}>
-                עדכן את סיסמת החשבון שלך
+        {/* כרטיס פרטיות */}
+        <View style={{ padding: 20, marginBottom: 20 }}>
+          <View style={{
+            padding: 20,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: 'rgba(0, 230, 84, 0.1)',
+            backgroundColor: 'rgba(0, 230, 84, 0.02)'
+          }}>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 16 }}>
+              <Shield size={24} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', writingDirection: 'rtl' }}>
+                הגדרות פרטיות
               </Text>
             </View>
             
-            <Ionicons 
-              name={showChangePassword ? "chevron-up" : "chevron-forward"} 
-              size={20} 
-              color="#666" 
-            />
-          </Pressable>
+            <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl', marginBottom: 16 }}>
+              שלוט במי יכול לראות את המידע שלך
+            </Text>
+          </View>
+        </View>
 
-          {/* טופס שינוי סיסמה */}
-          {showChangePassword && (
-            <View style={{
-              backgroundColor: '#1A1A1A',
-              padding: 16,
-              borderRadius: 12,
-              marginBottom: 12,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)'
-            }}>
-              <TextInput
-                placeholder="סיסמה נוכחית"
-                placeholderTextColor="#666"
-                secureTextEntry
-                value={passwordData.currentPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
+        {/* הגדרות פרטיות */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          {privacyOptions.map((setting, index) => (
+            <View key={index} style={{ marginBottom: 16 }}>
+              <LinearGradient
+                colors={['#181818', '#1a1a1a']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
                 style={{
-                  backgroundColor: '#2A2A2A',
-                  color: '#fff',
-                  padding: 12,
-                  borderRadius: 8,
-                  marginBottom: 12,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.1)'
-                }}
-              />
-              
-              <TextInput
-                placeholder="סיסמה חדשה"
-                placeholderTextColor="#666"
-                secureTextEntry
-                value={passwordData.newPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
-                style={{
-                  backgroundColor: '#2A2A2A',
-                  color: '#fff',
-                  padding: 12,
-                  borderRadius: 8,
-                  marginBottom: 12,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.1)'
-                }}
-              />
-              
-              <TextInput
-                placeholder="אישור סיסמה חדשה"
-                placeholderTextColor="#666"
-                secureTextEntry
-                value={passwordData.confirmPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
-                style={{
-                  backgroundColor: '#2A2A2A',
-                  color: '#fff',
-                  padding: 12,
-                  borderRadius: 8,
-                  marginBottom: 16,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.1)'
-                }}
-              />
-              
-              <Pressable
-                onPress={handleChangePassword}
-                disabled={isLoading}
-                style={{
-                  backgroundColor: '#00E654',
-                  padding: 12,
-                  borderRadius: 8,
+                  padding: 16,
+                  borderRadius: 16,
+                  flexDirection: 'row-reverse',
                   alignItems: 'center',
-                  opacity: isLoading ? 0.7 : 1
+                  borderWidth: 1,
+                  borderColor: 'rgba(0, 230, 84, 0.1)',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2
                 }}
               >
-                <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold' }}>
-                  {isLoading ? 'משנה סיסמה...' : 'שנה סיסמה'}
-                </Text>
-              </Pressable>
+                {/* אייקון עם גרדיאנט */}
+                <LinearGradient
+                  colors={['#00E654', '#00D04B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: 16,
+                    shadowColor: '#00E654',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4,
+                    elevation: 4
+                  }}
+                >
+                  <Ionicons name={setting.icon as any} size={24} color="#000" />
+                </LinearGradient>
+                
+                {/* תוכן */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 4, writingDirection: 'rtl' }}>
+                    {setting.title}
+                  </Text>
+                  <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl' }}>
+                    {setting.subtitle}
+                  </Text>
+                  
+                  {/* אפשרויות או מתג */}
+                  {setting.options ? (
+                    <View style={{ flexDirection: 'row-reverse', marginTop: 8 }}>
+                      {setting.options.map((option, optionIndex) => (
+                        <Pressable
+                          key={optionIndex}
+                          onPress={() => handleChangeSetting(setting.key, option.value)}
+                          style={{
+                            backgroundColor: privacySettings[setting.key as keyof typeof privacySettings] === option.value ? '#00E654' : '#333',
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 8,
+                            marginLeft: 8
+                          }}
+                        >
+                          <Text style={{ 
+                            color: privacySettings[setting.key as keyof typeof privacySettings] === option.value ? '#000' : '#fff',
+                            fontSize: 12,
+                            writingDirection: 'rtl'
+                          }}>
+                            {option.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={() => handleChangeSetting(setting.key, !privacySettings[setting.key as keyof typeof privacySettings])}
+                      style={{
+                        backgroundColor: privacySettings[setting.key as keyof typeof privacySettings] ? '#00E654' : '#666',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 8,
+                        alignSelf: 'flex-start',
+                        marginTop: 8
+                      }}
+                    >
+                      <Text style={{ 
+                        color: privacySettings[setting.key as keyof typeof privacySettings] ? '#000' : '#fff',
+                        fontSize: 12,
+                        writingDirection: 'rtl'
+                      }}>
+                        {privacySettings[setting.key as keyof typeof privacySettings] ? 'מופעל' : 'מכובה'}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </LinearGradient>
             </View>
-          )}
+          ))}
         </View>
 
-        {/* פעולות מתקדמות */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            פעולות מתקדמות
-          </Text>
+        {/* פעולות אבטחה */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', writingDirection: 'rtl' }}>
+              פעולות אבטחה
+            </Text>
+          </View>
           
-          <Pressable
-            style={{
-              backgroundColor: '#2A2A2A',
-              padding: 16,
-              borderRadius: 12,
-              marginBottom: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)'
-            }}
-          >
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              backgroundColor: '#DC2626',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 12
-            }}>
-              <Ban size={20} color="#fff" strokeWidth={2} />
+          {securityActions.map((action, index) => (
+            <View key={index} style={{ marginBottom: 12 }}>
+              <Pressable
+                onPress={action.action}
+                style={({ pressed }) => ({
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
+                  opacity: pressed ? 0.8 : 1
+                })}
+              >
+                <LinearGradient
+                  colors={['#181818', '#1a1a1a']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    padding: 16,
+                    borderRadius: 16,
+                    flexDirection: 'row-reverse',
+                    alignItems: 'center',
+                    borderWidth: 1,
+                    borderColor: action.color === '#DC2626' ? 'rgba(220, 38, 38, 0.2)' : 'rgba(0, 230, 84, 0.1)',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 2
+                  }}
+                >
+                  {/* אייקון עם גרדיאנט */}
+                  <LinearGradient
+                    colors={action.color === '#DC2626' ? ['#DC2626', '#B91C1C'] : ['#00E654', '#00D04B']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 16,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginLeft: 16,
+                      shadowColor: action.color,
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                      elevation: 4
+                    }}
+                  >
+                    <Ionicons name={action.icon as any} size={24} color="#000" />
+                  </LinearGradient>
+                  
+                  {/* טקסט */}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 4, writingDirection: 'rtl' }}>
+                      {action.title}
+                    </Text>
+                    <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl' }}>
+                      {action.subtitle}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </Pressable>
             </View>
-            
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 2 }}>
-                משתמשים חסומים
-              </Text>
-              <Text style={{ color: '#999', fontSize: 13 }}>
-                נהל רשימת משתמשים חסומים
-              </Text>
-            </View>
-            
-            <View style={{
-              backgroundColor: '#DC2626',
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 12
-            }}>
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
-                {privacy.blockedUsers.length}
-              </Text>
-            </View>
-          </Pressable>
-          
-          <Pressable
-            style={{
-              backgroundColor: '#2A2A2A',
-              padding: 16,
-              borderRadius: 12,
-              marginBottom: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)'
-            }}
-          >
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              backgroundColor: '#F59E0B',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 12
-            }}>
-              <AlertTriangle size={20} color="#fff" strokeWidth={2} />
-            </View>
-            
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 2 }}>
-                מילות מפתח חסומות
-              </Text>
-              <Text style={{ color: '#999', fontSize: 13 }}>
-                הודעות עם מילים אלה יסוננו
-              </Text>
-            </View>
-            
-            <ChevronRight size={20} color="#666" strokeWidth={2} />
-          </Pressable>
+          ))}
+        </View>
+
+        {/* הוראות אבטחה */}
+        <View style={{ padding: 20, marginTop: 20 }}>
+          <View style={{
+            padding: 16,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(0, 230, 84, 0.1)',
+            backgroundColor: 'rgba(0, 230, 84, 0.02)'
+          }}>
+            <Text style={{ color: '#00E654', fontSize: 14, fontWeight: '600', marginBottom: 8, writingDirection: 'rtl' }}>
+              🔒 טיפי אבטחה:
+            </Text>
+            <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl', lineHeight: 20 }}>
+              • השתמש בסיסמה חזקה וייחודית{'\n'}
+              • הפעל אימות דו-שלבי{'\n'}
+              • אל תשתף פרטים אישיים עם זרים{'\n'}
+              • בדוק את הגדרות הפרטיות שלך באופן קבוע
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </View>
   );
 }
-

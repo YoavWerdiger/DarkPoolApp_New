@@ -9,10 +9,9 @@ import {
   Dimensions,
   Image,
   Alert,
-  Animated,
-  PanGestureHandler,
-  State
+  Animated
 } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ImageIcon, Video as VideoIcon, FileText, File, X, Trash2, ArrowRight } from 'lucide-react-native';

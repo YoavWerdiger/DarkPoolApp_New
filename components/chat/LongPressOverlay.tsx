@@ -7,6 +7,10 @@ import { DesignTokens } from '../ui/DesignTokens';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
 
+// רטט קצר ועדין בעת פתיחת התצוגה (עם fallback אם אין expo-haptics)
+let Haptics: any = { selectionAsync: async () => {}, impactAsync: async () => {}, ImpactFeedbackStyle: { Light: 'Light' } };
+try { Haptics = require('expo-haptics'); } catch {}
+
 interface LongPressOverlayProps {
   visible: boolean;
   message: MessageSnapshot | null;
@@ -48,24 +52,20 @@ export default function LongPressOverlay({
     fetchRole();
   }, [message]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const menuSlideAnim = useRef(new Animated.Value(300)).current;
   const menuOpacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
+      // רטט קצר מאוד בעת פתיחה (אסתטי ועדין)
+      try { Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Light); } catch {}
+
       // פתיחה: רקע + תצוגות
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
@@ -94,11 +94,6 @@ export default function LongPressOverlay({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
           duration: 150,
           useNativeDriver: true,
         }),
@@ -150,7 +145,7 @@ export default function LongPressOverlay({
             styles.reactionWrapper,
             {
               opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }]
+              // ללא זום - פייד בלבד
             }
           ]}
         >
@@ -167,6 +162,7 @@ export default function LongPressOverlay({
             styles.actionSheet,
             {
               opacity: menuOpacityAnim,
+              // ללא זום - החלקה קלה בלבד
               transform: [{ translateY: menuSlideAnim }]
             }
           ]}

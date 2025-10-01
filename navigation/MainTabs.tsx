@@ -1,5 +1,4 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import ProfileScreen from '../screens/Profile';
 import NewsScreen from '../screens/News';
 import JournalScreen from '../screens/Journal';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +6,7 @@ import { View } from 'react-native';
 import { MessageCircle, User, Newspaper, BookOpen, GraduationCap } from 'lucide-react-native';
 import ChatStack from '../navigation/ChatStack';
 import LearningStack from '../navigation/LearningStack';
+import ProfileStack from '../navigation/ProfileStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -83,7 +83,7 @@ export default function MainTabs() {
           },
         }}
       />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'פרופיל' }} />
+      <Tab.Screen name="Profile" component={ProfileStack} options={{ title: 'פרופיל' }} />
     </Tab.Navigator>
   );
 } 

@@ -1,15 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  Pressable, 
-  Switch,
-  Alert 
-} from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Bell, BellOff, Volume2, VolumeX, Smartphone, Wifi, WifiOff } from 'lucide-react-native';
 
 interface NotificationsScreenProps {
   navigation: any;
@@ -17,129 +10,87 @@ interface NotificationsScreenProps {
 
 export default function NotificationsScreen({ navigation }: NotificationsScreenProps) {
   const [notifications, setNotifications] = useState({
-    // הגדרות כלליות
     pushNotifications: true,
-    emailNotifications: false,
-    smsNotifications: false,
-    
-    // הודעות צ'אט
-    newMessages: true,
-    groupMessages: true,
-    mentions: true,
-    reactions: false,
-    
-    // למידה
-    courseUpdates: true,
-    newLessons: true,
-    achievements: true,
-    reminders: false,
-    
-    // מערכת
-    systemUpdates: true,
-    securityAlerts: true,
-    maintenanceNotices: false,
-    
-    // הגדרות מתקדמות
-    doNotDisturb: false,
-    quietHours: false,
-    vibration: true,
-    sound: true,
-    
-    // זמני שקט
-    quietStart: '22:00',
-    quietEnd: '07:00',
+    messageNotifications: true,
+    groupNotifications: true,
+    soundEnabled: true,
+    vibrationEnabled: true,
+    wifiOnly: false,
   });
 
-  const [isLoading, setIsLoading] = useState(false);
-
-  // פונקציה לשינוי הגדרה
-  const toggleSetting = (key: string, value: boolean) => {
-    setNotifications(prev => ({ ...prev, [key]: value }));
+  const handleToggle = (key: string) => {
+    setNotifications(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
-  // פונקציה לשמירת ההגדרות
-  const handleSave = async () => {
-    setIsLoading(true);
-    try {
-      // כאן תהיה הלוגיקה לשמירה בשרת
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      Alert.alert('הצלחה', 'הגדרות ההתראות נשמרו בהצלחה!');
-    } catch (error) {
-      Alert.alert('שגיאה', 'אירעה שגיאה בשמירת ההגדרות');
-    } finally {
-      setIsLoading(false);
+  const notificationSettings = [
+    {
+      title: 'התראות פוש',
+      subtitle: 'קבל התראות על הודעות חדשות',
+      icon: 'notifications-outline',
+      key: 'pushNotifications',
+      color: '#00E654'
+    },
+    {
+      title: 'התראות הודעות',
+      subtitle: 'התראות על הודעות ישירות',
+      icon: 'chatbubble-outline',
+      key: 'messageNotifications',
+      color: '#00E654'
+    },
+    {
+      title: 'התראות קבוצות',
+      subtitle: 'התראות על פעילות בקבוצות',
+      icon: 'people-outline',
+      key: 'groupNotifications',
+      color: '#00E654'
+    },
+    {
+      title: 'צלילים',
+      subtitle: 'השמע צליל בהתראות',
+      icon: 'volume-high-outline',
+      key: 'soundEnabled',
+      color: '#00E654'
+    },
+    {
+      title: 'רטט',
+      subtitle: 'רטט במכשיר בזמן התראות',
+      icon: 'phone-portrait-outline',
+      key: 'vibrationEnabled',
+      color: '#00E654'
+    },
+    {
+      title: 'רק ב-WiFi',
+      subtitle: 'התראות רק כשמחובר ל-WiFi',
+      icon: 'wifi-outline',
+      key: 'wifiOnly',
+      color: '#00E654'
     }
-  };
+  ];
 
-  // קומפוננט של פריט הגדרה
-  const SettingItem = ({ 
-    title, 
-    subtitle, 
-    icon, 
-    iconColor, 
-    value, 
-    onToggle, 
-    disabled = false 
-  }: any) => (
-    <View style={{
-      backgroundColor: '#2A2A2A',
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)',
-      opacity: disabled ? 0.6 : 1
-    }}>
-      <View style={{
-        width: 40,
-        height: 40,
-        borderRadius: 10,
-        backgroundColor: iconColor,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12
-      }}>
-        <Ionicons name={icon} size={20} color="#fff" />
-      </View>
-      
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 2 }}>
-          {title}
-        </Text>
-        <Text style={{ color: '#999', fontSize: 13 }}>
-          {subtitle}
-        </Text>
-      </View>
-      
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        disabled={disabled}
-        trackColor={{ false: '#333', true: '#00E654' }}
-        thumbColor={value ? '#fff' : '#666'}
-        ios_backgroundColor="#333"
-      />
-    </View>
-  );
+  const handleSaveSettings = () => {
+    Alert.alert('הצלחה', 'ההגדרות נשמרו בהצלחה!');
+    navigation.goBack();
+  };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#181818' }}>
       {/* גרדיאנט רקע */}
       <LinearGradient
-        colors={['rgba(0, 230, 84, 0.08)', 'rgba(0, 230, 84, 0.03)', 'rgba(0, 230, 84, 0.05)']}
+        colors={['rgba(0, 230, 84, 0.05)', 'transparent', 'rgba(0, 230, 84, 0.03)']}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
       />
       
       {/* Header */}
       <View style={{
-        backgroundColor: '#2A2A2A',
         paddingTop: 50,
         paddingBottom: 16,
         paddingHorizontal: 20,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.1)'
+        borderBottomColor: 'rgba(0, 230, 84, 0.1)',
+        backgroundColor: '#181818'
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Pressable
@@ -148,7 +99,7 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: '#1A1A1A',
+              backgroundColor: '#181818',
               alignItems: 'center',
               justifyContent: 'center',
               borderWidth: 1,
@@ -158,238 +109,175 @@ export default function NotificationsScreen({ navigation }: NotificationsScreenP
             <ArrowLeft size={20} color="#fff" strokeWidth={2} />
           </Pressable>
           
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', writingDirection: 'rtl' }}>
             התראות והודעות
           </Text>
           
           <Pressable
-            onPress={handleSave}
-            disabled={isLoading}
+            onPress={handleSaveSettings}
             style={{
-              backgroundColor: isLoading ? '#666' : '#00E654',
+              backgroundColor: '#00E654',
               paddingHorizontal: 16,
               paddingVertical: 8,
-              borderRadius: 20,
-              opacity: isLoading ? 0.7 : 1
+              borderRadius: 20
             }}
           >
-            <Text style={{ color: isLoading ? '#ccc' : '#000', fontSize: 14, fontWeight: 'bold' }}>
-              {isLoading ? 'שומר...' : 'שמור'}
+            <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold', writingDirection: 'rtl' }}>
+              שמור
             </Text>
           </Pressable>
         </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {/* הגדרות כלליות */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            הגדרות כלליות
-          </Text>
-          
-          <SettingItem
-            title="התראות פוש"
-            subtitle="התראות על המסך הראשי"
-            icon="notifications"
-            iconColor="#4F46E5"
-            value={notifications.pushNotifications}
-            onToggle={(value: boolean) => toggleSetting('pushNotifications', value)}
-          />
-          
-          <SettingItem
-            title="התראות אימייל"
-            subtitle="התראות לכתובת המייל"
-            icon="mail"
-            iconColor="#059669"
-            value={notifications.emailNotifications}
-            onToggle={(value: boolean) => toggleSetting('emailNotifications', value)}
-          />
-          
-          <SettingItem
-            title="הודעות SMS"
-            subtitle="התראות בהודעות טקסט"
-            icon="chatbubble"
-            iconColor="#DC2626"
-            value={notifications.smsNotifications}
-            onToggle={(value: boolean) => toggleSetting('smsNotifications', value)}
-          />
+        {/* כרטיס הגדרות כללי */}
+        <View style={{ padding: 20, marginBottom: 20 }}>
+          <View style={{
+            padding: 20,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: 'rgba(0, 230, 84, 0.1)',
+            backgroundColor: 'rgba(0, 230, 84, 0.02)'
+          }}>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 16 }}>
+              <Bell size={24} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', writingDirection: 'rtl' }}>
+                הגדרות התראות
+              </Text>
+            </View>
+            
+            <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl', marginBottom: 16 }}>
+              התאם אישית את ההתראות שלך לפי הצרכים שלך
+            </Text>
+
+            {/* כפתור הפעל/כבה הכל */}
+            <Pressable
+              onPress={() => {
+                const allEnabled = Object.values(notifications).every(v => v);
+                setNotifications({
+                  pushNotifications: !allEnabled,
+                  messageNotifications: !allEnabled,
+                  groupNotifications: !allEnabled,
+                  soundEnabled: !allEnabled,
+                  vibrationEnabled: !allEnabled,
+                  wifiOnly: false,
+                });
+              }}
+              style={{
+                backgroundColor: '#181818',
+                padding: 12,
+                borderRadius: 12,
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', writingDirection: 'rtl' }}>
+                הפעל/כבה הכל
+              </Text>
+              <View style={{
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                backgroundColor: Object.values(notifications).every(v => v) ? '#00E654' : '#666',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {Object.values(notifications).every(v => v) ? (
+                  <Bell size={14} color="#000" strokeWidth={2} />
+                ) : (
+                  <BellOff size={14} color="#000" strokeWidth={2} />
+                )}
+              </View>
+            </Pressable>
+          </View>
         </View>
 
-        {/* הודעות צ'אט */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            הודעות צ'אט
-          </Text>
-          
-          <SettingItem
-            title="הודעות חדשות"
-            subtitle="התראה על הודעות חדשות"
-            icon="chatbubble-outline"
-            iconColor="#7C3AED"
-            value={notifications.newMessages}
-            onToggle={(value: boolean) => toggleSetting('newMessages', value)}
-            disabled={!notifications.pushNotifications}
-          />
-          
-          <SettingItem
-            title="הודעות קבוצה"
-            subtitle="התראות מקבוצות"
-            icon="people-outline"
-            iconColor="#EA580C"
-            value={notifications.groupMessages}
-            onToggle={(value: boolean) => toggleSetting('groupMessages', value)}
-            disabled={!notifications.pushNotifications}
-          />
-          
-          <SettingItem
-            title="אזכורים"
-            subtitle="כשמזכירים אותך בהודעה"
-            icon="at-outline"
-            iconColor="#0891B2"
-            value={notifications.mentions}
-            onToggle={(value: boolean) => toggleSetting('mentions', value)}
-            disabled={!notifications.pushNotifications}
-          />
-          
-          <SettingItem
-            title="תגובות"
-            subtitle="תגובות על ההודעות שלך"
-            icon="heart-outline"
-            iconColor="#F59E0B"
-            value={notifications.reactions}
-            onToggle={(value: boolean) => toggleSetting('reactions', value)}
-            disabled={!notifications.pushNotifications}
-          />
+        {/* רשימת הגדרות */}
+        <View style={{ paddingHorizontal: 20 }}>
+          {notificationSettings.map((setting, index) => (
+            <View key={index} style={{ marginBottom: 16 }}>
+              <LinearGradient
+                colors={['#181818', '#1a1a1a']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  padding: 16,
+                  borderRadius: 16,
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: 'rgba(0, 230, 84, 0.1)',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2
+                }}
+              >
+                {/* אייקון עם גרדיאנט */}
+                <LinearGradient
+                  colors={['#00E654', '#00D04B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 16,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: 16,
+                    shadowColor: '#00E654',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4,
+                    elevation: 4
+                  }}
+                >
+                  <Ionicons name={setting.icon as any} size={24} color="#000" />
+                </LinearGradient>
+                
+                {/* טקסט */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 4, writingDirection: 'rtl' }}>
+                    {setting.title}
+                  </Text>
+                  <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl' }}>
+                    {setting.subtitle}
+                  </Text>
+                </View>
+                
+                {/* מתג */}
+                <Switch
+                  value={notifications[setting.key as keyof typeof notifications]}
+                  onValueChange={() => handleToggle(setting.key)}
+                  trackColor={{ false: '#666', true: '#00E654' }}
+                  thumbColor={notifications[setting.key as keyof typeof notifications] ? '#fff' : '#f4f3f4'}
+                  style={{ transform: [{ scaleX: 1.2 }, { scaleY: 1.2 }] }}
+                />
+              </LinearGradient>
+            </View>
+          ))}
         </View>
 
-        {/* למידה */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            למידה וקורסים
-          </Text>
-          
-          <SettingItem
-            title="עדכוני קורסים"
-            subtitle="עדכונים על הקורסים שלך"
-            icon="school-outline"
-            iconColor="#8B5CF6"
-            value={notifications.courseUpdates}
-            onToggle={(value: boolean) => toggleSetting('courseUpdates', value)}
-            disabled={!notifications.pushNotifications}
-          />
-          
-          <SettingItem
-            title="שיעורים חדשים"
-            subtitle="כשמתפרסמים שיעורים חדשים"
-            icon="play-outline"
-            iconColor="#10B981"
-            value={notifications.newLessons}
-            onToggle={(value: boolean) => toggleSetting('newLessons', value)}
-            disabled={!notifications.pushNotifications}
-          />
-          
-          <SettingItem
-            title="הישגים"
-            subtitle="כשאתה משיג יעדים חדשים"
-            icon="trophy-outline"
-            iconColor="#F59E0B"
-            value={notifications.achievements}
-            onToggle={(value: boolean) => toggleSetting('achievements', value)}
-            disabled={!notifications.pushNotifications}
-          />
-          
-          <SettingItem
-            title="תזכורות למידה"
-            subtitle="תזכורות יומיות ללמידה"
-            icon="time-outline"
-            iconColor="#06B6D4"
-            value={notifications.reminders}
-            onToggle={(value: boolean) => toggleSetting('reminders', value)}
-            disabled={!notifications.pushNotifications}
-          />
-        </View>
-
-        {/* הגדרות מערכת */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            הגדרות מערכת
-          </Text>
-          
-          <SettingItem
-            title="עדכוני מערכת"
-            subtitle="עדכונים חשובים על האפליקציה"
-            icon="system-outline"
-            iconColor="#6366F1"
-            value={notifications.systemUpdates}
-            onToggle={(value: boolean) => toggleSetting('systemUpdates', value)}
-          />
-          
-          <SettingItem
-            title="התראות אבטחה"
-            subtitle="התראות על פעילות חשודה"
-            icon="shield-checkmark-outline"
-            iconColor="#DC2626"
-            value={notifications.securityAlerts}
-            onToggle={(value: boolean) => toggleSetting('securityAlerts', value)}
-          />
-          
-          <SettingItem
-            title="הודעות תחזוקה"
-            subtitle="הודעות על תחזוקת השרת"
-            icon="construct-outline"
-            iconColor="#65A30D"
-            value={notifications.maintenanceNotices}
-            onToggle={(value: boolean) => toggleSetting('maintenanceNotices', value)}
-          />
-        </View>
-
-        {/* הגדרות מתקדמות */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 }}>
-            הגדרות מתקדמות
-          </Text>
-          
-          <SettingItem
-            title="מצב שקט"
-            subtitle="השתק את כל ההתראות"
-            icon="moon-outline"
-            iconColor="#6B7280"
-            value={notifications.doNotDisturb}
-            onToggle={(value: boolean) => toggleSetting('doNotDisturb', value)}
-          />
-          
-          <SettingItem
-            title="שעות שקט"
-            subtitle="השתק התראות בשעות מסוימות"
-            icon="time-outline"
-            iconColor="#374151"
-            value={notifications.quietHours}
-            onToggle={(value: boolean) => toggleSetting('quietHours', value)}
-            disabled={notifications.doNotDisturb}
-          />
-          
-          <SettingItem
-            title="רטט"
-            subtitle="רטט עם התראות"
-            icon="phone-portrait-outline"
-            iconColor="#9CA3AF"
-            value={notifications.vibration}
-            onToggle={(value: boolean) => toggleSetting('vibration', value)}
-            disabled={notifications.doNotDisturb}
-          />
-          
-          <SettingItem
-            title="צליל"
-            subtitle="צליל עם התראות"
-            icon="volume-high-outline"
-            iconColor="#6B7280"
-            value={notifications.sound}
-            onToggle={(value: boolean) => toggleSetting('sound', value)}
-            disabled={notifications.doNotDisturb}
-          />
+        {/* הוראות נוספות */}
+        <View style={{ padding: 20, marginTop: 20 }}>
+          <View style={{
+            padding: 16,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: 'rgba(0, 230, 84, 0.1)',
+            backgroundColor: 'rgba(0, 230, 84, 0.02)'
+          }}>
+            <Text style={{ color: '#00E654', fontSize: 14, fontWeight: '600', marginBottom: 8, writingDirection: 'rtl' }}>
+              💡 טיפ:
+            </Text>
+            <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl', lineHeight: 20 }}>
+              ניתן להגדיר התראות מתקדמות יותר בהגדרות המכשיר שלך
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </View>
   );
 }
-

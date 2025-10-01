@@ -401,16 +401,16 @@ export default function MessageInputBar({
         style={{ 
           flexDirection: 'row',
           alignItems: 'center',
-          borderRadius: 50,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
+          borderRadius: 30,
+          paddingHorizontal: 8,
+          paddingVertical: 8,
           marginHorizontal: 6,
           marginBottom: 15,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.5,
-          shadowRadius: 16,
-          elevation: 16,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
           borderWidth: 1,
           borderColor: '#333333'
         }}
@@ -419,39 +419,32 @@ export default function MessageInputBar({
         <Pressable 
           onPress={handleAttachmentPress}
           style={{ 
-            width: 48,
-            height: 48,
-            backgroundColor: '#00E654',
-            borderRadius: 24,
+            width: 40,
+            height: 40,
             alignItems: 'center',
             justifyContent: 'center',
-            marginLeft: 16,
-            shadowColor: '#00E654',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.5,
-            shadowRadius: 8,
-            elevation: 8,
+            marginLeft: 12,
           }}
         >
-          <Plus size={22} color="#000" strokeWidth={2} />
+          <Plus size={24} color="#00E654" strokeWidth={2} />
         </Pressable>
 
         {/* אזור הקלדה - מרכז */}
         <View 
           style={{ 
             flex: 1,
-            marginHorizontal: 16,
+            marginHorizontal: 12,
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 25,
+            borderRadius: 20,
             borderWidth: 1,
             borderColor: isTyping ? '#00E654' : 'rgba(255, 255, 255, 0.1)',
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.2,
-            shadowRadius: 10,
-            elevation: 5,
-            minHeight: 52,
-            maxHeight: 120,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 6,
+            elevation: 3,
+            minHeight: 40,
+            maxHeight: 100,
           }}
         >
           <TextInput
@@ -468,12 +461,12 @@ export default function MessageInputBar({
               width: '100%',
               color: '#FFFFFF',
               fontWeight: 'normal' as const,
-              fontSize: 16,
+              fontSize: 15,
               backgroundColor: 'transparent',
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              minHeight: 52,
-              maxHeight: 70,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              minHeight: 40,
+              maxHeight: 60,
               includeFontPadding: false
             }}
             ref={textInputRef}
@@ -508,24 +501,11 @@ export default function MessageInputBar({
         {/* כפתור שליחה/הקלטה - שמאל */}
         <Pressable 
           style={{ 
-            width: 48,
-            height: 48,
-            backgroundColor: isTyping 
-              ? '#00E654' 
-              : (isRecording ? '#F85149' : 'rgba(255, 255, 255, 0.1)'),
-            borderRadius: 24,
+            width: 40,
+            height: 40,
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: 16,
-            shadowColor: isTyping ? '#00E654' : '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 8,
-            borderWidth: 1,
-            borderColor: isTyping 
-              ? '#00E654' 
-              : (isRecording ? '#F85149' : 'rgba(255, 255, 255, 0.2)'),
+            marginRight: 12,
             opacity: (isTyping && !text.trim()) ? 0.5 : 1,
           }}
           onPress={handleSendOrRecord}
@@ -533,8 +513,8 @@ export default function MessageInputBar({
         >
           <Ionicons 
             name={isTyping ? "send" : (isRecording ? "stop" : "mic")}
-            size={20} 
-            color={isTyping ? '#000000' : '#FFFFFF'} 
+            size={22} 
+            color={isTyping ? '#00E654' : (isRecording ? '#F85149' : '#FFFFFF')} 
           />
         </Pressable>
       </LinearGradient>

@@ -133,26 +133,25 @@ export default function PollCreationModal({
       >
         <View className="flex-1 bg-black">
           {/* Header */}
-          <View className="flex-row items-center justify-between px-4 py-3 border-b border-gray-800">
-            <TouchableOpacity onPress={handleClose}>
-              <X size={24} color="#fff" strokeWidth={2} />
-            </TouchableOpacity>
-            <Text className="text-xl text-white font-bold">יצירת סקר חדש</Text>
-            <TouchableOpacity
-              onPress={handleCreatePoll}
-              disabled={isCreating}
-              className={`px-4 py-2 rounded-lg ${isCreating ? 'bg-gray-600' : 'bg-primary'}`}
-            >
-              <Text className={`font-bold ${isCreating ? 'text-gray-400' : 'text-black'}`}>
-                {isCreating ? 'יוצר...' : 'צור סקר'}
-              </Text>
-            </TouchableOpacity>
+          <View className="flex-row items-center px-4 py-3 border-b border-gray-800">
+            {/* Left action: close */}
+            <View className="flex-1 flex-row items-center">
+              <TouchableOpacity onPress={handleClose} className="mr-3">
+                <X size={24} color="#fff" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+            {/* Title centered */}
+            <View className="flex-1 items-center">
+              <Text className="text-xl text-white font-bold">יצירת סקר חדש</Text>
+            </View>
+            {/* Right spacer */}
+            <View className="flex-1" />
           </View>
 
           <ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
             {/* Question Input */}
             <View className="mb-6">
-              <Text className="text-white font-bold text-lg mb-3">שאלת הסקר</Text>
+              <Text className="text-white font-bold text-lg mb-3 text-right">שאלת הסקר</Text>
               <TextInput
                 value={question}
                 onChangeText={setQuestion}
@@ -169,7 +168,7 @@ export default function PollCreationModal({
             <View className="mb-6">
               <TouchableOpacity
                 onPress={() => setMultipleChoice(!multipleChoice)}
-                className="flex-row items-center justify-between bg-[#111111] border border-[#333] rounded-xl px-4 py-3"
+                className="flex-row items-center justify-center bg-[#111111] border border-[#333] rounded-xl px-4 py-3"
               >
                 <View className="flex-row items-center">
                   <Ionicons
@@ -181,16 +180,13 @@ export default function PollCreationModal({
                     {multipleChoice ? 'בחירה מרובה' : 'בחירה יחידה'}
                   </Text>
                 </View>
-                <Text className="text-gray-400 text-sm">
-                  {multipleChoice ? 'משתמשים יכולים לבחור מספר אפשרויות' : 'משתמשים יכולים לבחור אפשרות אחת בלבד'}
-                </Text>
               </TouchableOpacity>
             </View>
 
             {/* Options */}
             <View className="mb-6">
-              <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-white font-bold text-lg">אפשרויות בחירה</Text>
+              <View className="flex-row-reverse items-center justify-between mb-3">
+                <Text className="text-white font-bold text-lg text-right" style={{ flex: 1 }}>אפשרויות בחירה</Text>
                 <TouchableOpacity
                   onPress={addOption}
                   disabled={options.length >= 10}
@@ -205,8 +201,8 @@ export default function PollCreationModal({
               </View>
 
               {options.map((option, index) => (
-                <View key={index} className="flex-row items-center mb-3">
-                  <View className="flex-1 mr-3">
+                <View key={index} className="flex-row-reverse items-center mb-3">
+                  <View className="flex-1 ml-3">
                     <TextInput
                       value={option}
                       onChangeText={(text) => updateOption(index, text)}
@@ -234,9 +230,9 @@ export default function PollCreationModal({
 
             {/* Preview */}
             <View className="mb-6">
-              <Text className="text-white font-bold text-lg mb-3">תצוגה מקדימה</Text>
+              <Text className="text-white font-bold text-lg mb-3 text-right">תצוגה מקדימה</Text>
               <View className="bg-[#111111] border border-[#333] rounded-xl p-4">
-                <Text className="text-white font-bold text-lg mb-3 text-center">
+                <Text className="text-white font-bold text-lg mb-3 text-right">
                   {question || 'שאלת הסקר תופיע כאן'}
                 </Text>
                 
@@ -264,15 +260,20 @@ export default function PollCreationModal({
               </View>
             </View>
 
-            {/* Instructions */}
-            <View className="bg-[#1a1a1a] border border-[#333] rounded-xl p-4">
-              <Text className="text-gray-300 text-sm text-center leading-5">
-                💡 <Text className="font-bold">טיפים:</Text>{'\n'}
-                • שאלה ברורה תקבל תשובות טובות יותר{'\n'}
-                • הוסף 3-5 אפשרויות לקבלת תוצאות איכותיות{'\n'}
-                • השתמש בבחירה מרובה רק כשהדבר הכרחי
-              </Text>
+            {/* Create button at bottom under preview */}
+            <View className="mb-6 items-center">
+              <TouchableOpacity
+                onPress={handleCreatePoll}
+                disabled={isCreating}
+                className={`${isCreating ? 'bg-gray-600' : 'bg-primary'} w-4/5 py-4 rounded-2xl items-center`}
+              >
+                <Text className={`font-bold text-lg ${isCreating ? 'text-gray-400' : 'text-black'}`}>
+                  {isCreating ? 'יוצר...' : 'צור סקר'}
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {/* טיפים הוסרו לבקשתך */}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

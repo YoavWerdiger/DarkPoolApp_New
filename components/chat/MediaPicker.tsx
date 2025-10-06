@@ -31,6 +31,24 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
     }
   }, [visible]);
 
+  // ניקוי הקלטה בעת unmount
+  React.useEffect(() => {
+    return () => {
+      if (recordingRef.current) {
+        console.log('🎤 MediaPicker: Cleaning up recording on unmount...');
+        try {
+          recordingRef.current.stopAndUnloadAsync();
+        } catch (error) {
+          console.log('🎤 MediaPicker: Cleanup error on unmount:', error);
+        }
+        recordingRef.current = null;
+      }
+      if (durationInterval.current) {
+        clearInterval(durationInterval.current);
+      }
+    };
+  }, []);
+
   const showActionSheet = () => {
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -232,6 +250,17 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // התחלת הקלטה
   const startAudioRecording = async () => {
     try {
+      // נקה הקלטה קודמת אם קיימת
+      if (recordingRef.current) {
+        console.log('🎤 MediaPicker: Cleaning up previous recording...');
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch (cleanupError) {
+          console.log('🎤 MediaPicker: Cleanup error (expected):', cleanupError);
+        }
+        recordingRef.current = null;
+      }
+      
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('אישור נדרש', 'אנא אשר גישה למיקרופון');

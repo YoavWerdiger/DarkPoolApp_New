@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -12,6 +12,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import OnboardingNavigator from './navigation/OnboardingNavigator';
 import { RegistrationProvider } from './context/RegistrationContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ScheduledUpdatesService from './services/scheduledUpdates';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +36,21 @@ function AppContent() {
   const { user, isLoading } = useAuth();
 
   console.log('🎓 AppContent: Auth state:', { user: user?.id, isLoading });
+
+  // אתחול עדכונים מתוזמנים
+  useEffect(() => {
+    // התחלת עדכונים מתוזמנים רק אחרי שהמשתמש מחובר
+    if (user && !isLoading) {
+      console.log('🚀 Starting scheduled updates for user:', user.id);
+      ScheduledUpdatesService.startScheduledUpdates();
+    }
+
+    // ניקוי בעת סגירת האפליקציה
+    return () => {
+      console.log('⏹️ Stopping scheduled updates');
+      ScheduledUpdatesService.stopScheduledUpdates();
+    };
+  }, [user, isLoading]);
 
   if (isLoading) {
     return (

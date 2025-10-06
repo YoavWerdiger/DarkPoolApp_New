@@ -9,7 +9,7 @@ const EOD_API_KEY = '68c99499978585.44924748';
 const EOD_ECONOMIC_EVENTS_API = 'https://eodhd.com/api/economic-events';
 
 // Trading Economics API לנתונים כלכליים
-const TRADING_ECONOMICS_API_KEY = 'demo'; // ניתן להחליף במפתח אמיתי
+const TRADING_ECONOMICS_API_KEY = process.env.EXPO_PUBLIC_TRADING_ECONOMICS_API_KEY || '';
 const TRADING_ECONOMICS_API = 'https://api.tradingeconomics.com/calendar';
 
 export interface EconomicEvent {
@@ -30,6 +30,14 @@ export interface EconomicEvent {
   isRead?: boolean;
   createdAt?: string;
   dateObject?: Date;
+  // שדות חדשים עבור EODHD
+  type?: string;
+  period?: string;
+  comparison?: 'yoy' | 'qoq' | 'mom';
+  unit?: string;
+  // שדות נוספים עבור מדדים מאקרו
+  value?: number;
+  indicator?: string;
 }
 
 export interface UnreadEventData {
@@ -261,15 +269,19 @@ export class EconomicCalendarService {
         console.error('❌ Error details:', error);
       }
 
-      // הוספת נתונים כלכליים מ-Trading Economics
-      try {
-        console.log('🔄 About to call getTradingEconomicsData()...');
-        const tradingEconomicsData = await this.getTradingEconomicsData();
-        events.push(...tradingEconomicsData);
-        console.log(`📅 Added ${tradingEconomicsData.length} Trading Economics events`);
-      } catch (error) {
-        console.error('❌ Failed to fetch Trading Economics data:', error);
-        console.error('❌ Error details:', error);
+      // הוספת נתונים כלכליים מ-Trading Economics (רק אם מוגדר מפתח אמיתי)
+      if (TRADING_ECONOMICS_API_KEY && TRADING_ECONOMICS_API_KEY.toLowerCase() !== 'demo') {
+        try {
+          console.log('🔄 About to call getTradingEconomicsData()...');
+          const tradingEconomicsData = await this.getTradingEconomicsData();
+          events.push(...tradingEconomicsData);
+          console.log(`📅 Added ${tradingEconomicsData.length} Trading Economics events`);
+        } catch (error) {
+          console.error('❌ Failed to fetch Trading Economics data:', error);
+          console.error('❌ Error details:', error);
+        }
+      } else {
+        console.log('ℹ️ Skipping Trading Economics (no valid API key)');
       }
 
       console.log(`✅ Total: Successfully fetched ${events.length} economic events (historical + future)`);
@@ -794,12 +806,13 @@ export class EconomicCalendarService {
       const response = await fetch(economicEventsUrl);
       
       if (!response.ok) {
-        console.log(`❌ EOD Economic Events API error: HTTP ${response.status} - Using basic future events fallback`);
+        console.log(`❌ EOD Economic Events API error: HTTP ${response.status}`);
         if (response.status === 400) {
           const errorData = await response.text();
           console.log('❌ EOD error details:', errorData);
         }
-        return this.getBasicFutureEvents();
+        // אין נפילה ל-mock
+        return [];
       }
       
       const data = await response.json();
@@ -839,18 +852,18 @@ export class EconomicCalendarService {
       
       console.log(`📊 Found ${futureEvents.length} future events from EOD Economic Events API`);
       
-      // אם לא מצאנו אירועים עתידיים מ-EOD, נשתמש בגיבוי
+      // אם לא נמצאו אירועים עתידיים, לא נחזיר mock
       if (futureEvents.length === 0) {
-        console.log('📅 No future events from EOD Economic Events API - using basic future events fallback');
-        return this.getBasicFutureEvents();
+        console.log('📅 No future events from EOD Economic Events API');
+        return [];
       }
       
       return futureEvents;
       
     } catch (error) {
-      console.log('❌ EOD Economic Events API failed - using basic future events fallback:', error);
-      // נחזור לאירועים חזויים בסיסיים במקרה של שגיאה
-      return this.getBasicFutureEvents();
+      console.log('❌ EOD Economic Events API failed:', error);
+      // אין נפילה ל-mock
+      return [];
     }
   }
 

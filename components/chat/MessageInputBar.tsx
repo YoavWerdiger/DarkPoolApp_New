@@ -97,6 +97,24 @@ export default function MessageInputBar({
     setTextDirection(direction);
   }, [text]);
 
+  // ניקוי הקלטה בעת unmount
+  useEffect(() => {
+    return () => {
+      if (recordingRef.current) {
+        console.log('🎤 Cleaning up recording on unmount...');
+        try {
+          recordingRef.current.stopAndUnloadAsync();
+        } catch (error) {
+          console.log('🎤 Cleanup error on unmount:', error);
+        }
+        recordingRef.current = null;
+      }
+      if (durationInterval.current) {
+        clearInterval(durationInterval.current);
+      }
+    };
+  }, []);
+
   // Mentions hook
   const {
     mentionTokens,
@@ -272,6 +290,18 @@ export default function MessageInputBar({
   const startAudioRecording = async () => {
     try {
       console.log('🎤 Starting audio recording...');
+      
+      // נקה הקלטה קודמת אם קיימת
+      if (recordingRef.current) {
+        console.log('🎤 Cleaning up previous recording...');
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch (cleanupError) {
+          console.log('🎤 Cleanup error (expected):', cleanupError);
+        }
+        recordingRef.current = null;
+      }
+      
       const { status } = await Audio.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('אישור נדרש', 'אנא אשר גישה למיקרופון');
@@ -394,36 +424,31 @@ export default function MessageInputBar({
         zIndex: 1000,
       }}
     >
-      <LinearGradient
-        colors={['#1a1a1a', '#0f0f0f']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <View
         style={{ 
           flexDirection: 'row',
-          alignItems: 'center',
-          borderRadius: 30,
+          alignItems: 'flex-end',
+          backgroundColor: '#121212',
           paddingHorizontal: 8,
           paddingVertical: 8,
-          marginHorizontal: 6,
-          marginBottom: 15,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-          borderWidth: 1,
-          borderColor: '#333333'
+          marginHorizontal: 0,
+          marginBottom: 0,
+          borderWidth: 0,
+          borderTopWidth: 1,
+          borderColor: '#333333',
+          minHeight: 60,
         }}
       >
         {/* כפתור צירוף קבצים - ימין */}
         <Pressable 
           onPress={handleAttachmentPress}
           style={{ 
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             alignItems: 'center',
             justifyContent: 'center',
-            marginLeft: 12,
+            marginLeft: 8,
+            marginRight: 8,
           }}
         >
           <Plus size={24} color="#00E654" strokeWidth={2} />
@@ -433,26 +458,21 @@ export default function MessageInputBar({
         <View 
           style={{ 
             flex: 1,
-            marginHorizontal: 12,
+            marginHorizontal: 8,
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: 20,
+            borderRadius: 21,
             borderWidth: 1,
             borderColor: isTyping ? '#00E654' : 'rgba(255, 255, 255, 0.1)',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 6,
-            elevation: 3,
-            minHeight: 40,
-            maxHeight: 100,
+            minHeight: 42,
+            maxHeight: 70, // 2 שורות מקסימום
           }}
         >
           <TextInput
-            placeholder="הקלד הודעה..."
+            placeholder="הודעה"
             placeholderTextColor="#A0AEC0"
             value={text}
             onChangeText={handleTextChange}
-            multiline
+            multiline={true}
             numberOfLines={2}
             textAlignVertical="top"
             style={{ 
@@ -464,13 +484,13 @@ export default function MessageInputBar({
               fontSize: 15,
               backgroundColor: 'transparent',
               paddingHorizontal: 12,
-              paddingVertical: 8,
-              minHeight: 40,
-              maxHeight: 60,
-              includeFontPadding: false
+              paddingVertical: 10,
+              minHeight: 42,
+              maxHeight: 70, // 2 שורות מקסימום
+              includeFontPadding: false,
+              lineHeight: 20
             }}
             ref={textInputRef}
-            scrollEnabled
           />
         </View>
 
@@ -501,11 +521,12 @@ export default function MessageInputBar({
         {/* כפתור שליחה/הקלטה - שמאל */}
         <Pressable 
           style={{ 
-            width: 40,
-            height: 40,
+            width: 42,
+            height: 42,
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: 12,
+            marginLeft: 8,
+            marginRight: 8,
             opacity: (isTyping && !text.trim()) ? 0.5 : 1,
           }}
           onPress={handleSendOrRecord}
@@ -517,20 +538,20 @@ export default function MessageInputBar({
             color={isTyping ? '#00E654' : (isRecording ? '#F85149' : '#FFFFFF')} 
           />
         </Pressable>
-      </LinearGradient>
+      </View>
 
       {/* אינדיקטור הקלטה פעילה */}
       {isRecording && (
         <View style={{
           position: 'absolute',
-          bottom: isKeyboardVisible ? 100 : 100,
+          bottom: isKeyboardVisible ? 60 : 60,
           left: 16,
           right: 16,
           zIndex: 999,
         }}>
           {/* בועת הקלטה - עיצוב נקי ופשוט */}
           <View style={{
-            backgroundColor: 'rgba(19, 19, 19, 0.8)',
+            backgroundColor: 'rgba(29, 24, 24, 0.91)',
             paddingVertical: 12,
             paddingHorizontal: 16,
             borderRadius: 12,
@@ -538,7 +559,9 @@ export default function MessageInputBar({
             alignItems: 'center',
             justifyContent: 'space-between',
             borderWidth: 1,
-            borderColor: '#F85149',
+            borderColor: 'rgba(255,255,255,0.06)',
+            borderLeftWidth: 3,
+            borderLeftColor: '#F85149',
             shadowColor: '#F85149',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.3,
@@ -565,7 +588,7 @@ export default function MessageInputBar({
                     borderRadius: 3,
                     backgroundColor: '#F85149',
                     marginRight: 8,
-                    opacity: 0.8
+                    opacity: 0.9
                   }} />
                   <Text style={{ 
                     color: '#CCCCCC',

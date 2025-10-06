@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Check, User, Phone, Mail, TrendingUp, BarChart3, Clock, Rocket } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../../services/authService';
+import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 
 // Debug: בדיקה שה-AuthService קיים
 console.log('🔍 RegistrationSummary: AuthService imported:', !!AuthService);
@@ -80,25 +81,29 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
       if (user) {
         console.log('✅ RegistrationSummary: User created successfully, navigating to main app');
         
-        // עדכון ה-AuthContext עם המשתמש החדש
-        setUser(user);
-        
-        Alert.alert(
-          'הרשמה הושלמה בהצלחה!',
-          'ברוכים הבאים ל-DarkPool! תוכל להתחיל להשתמש באפליקציה.',
-          [
-            {
-              text: 'התחל',
-              onPress: () => {
-                // ניווט ישיר לדף הקבוצות
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Main' }],
-                });
-              }
+      // עדכון ה-AuthContext עם המשתמש החדש
+      setUser(user);
+      
+      // קבלת פרטי התוכנית שנבחרה
+      const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
+      const planName = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
+      
+      Alert.alert(
+        'הרשמה הושלמה בהצלחה!',
+        `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}. תוכל להתחיל להשתמש באפליקציה.`,
+        [
+          {
+            text: 'התחל',
+            onPress: () => {
+              // ניווט ישיר לדף הקבוצות
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+              });
             }
-          ]
-        );
+          }
+        ]
+      );
       } else {
         Alert.alert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
       }
@@ -251,10 +256,10 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
 
             {/* Summary Section */}
             <View style={{
-              backgroundColor: 'rgba(45, 55, 72, 0.9)',
+              backgroundColor: '#181818',
               borderRadius: 16,
               borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderColor: 'rgba(255, 255, 255, 0.15)',
               padding: 20,
               marginBottom: 40
             }}>
@@ -392,13 +397,13 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
               <TouchableOpacity
                 onPress={() => navigation.goBack()}
                 style={{
-                  backgroundColor: 'rgba(45, 55, 72, 0.9)',
+                  backgroundColor: '#181818',
                   borderRadius: 14,
                   paddingVertical: 16,
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.2)'
+                  borderColor: 'rgba(255, 255, 255, 0.15)'
                 }}
               >
                 <Text style={{ 

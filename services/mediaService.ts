@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-js';
+import * as base64js from 'base64-js';
 
 export interface LessonMedia {
   id?: string;
@@ -258,20 +258,29 @@ class MediaService {
       const fileName = `${type}_${timestamp}.${fileExtension}`;
       const filePath = `chat-media/${fileName}`;
       
+      console.log('📁 MediaService: File path:', filePath);
+      
       // קריאת הקובץ כ-ArrayBuffer
       const fileInfo = await FileSystem.getInfoAsync(uri);
+      console.log('📁 MediaService: File info:', fileInfo);
+      
       if (!fileInfo.exists) {
         throw new Error('File does not exist');
       }
       
+      console.log('📁 MediaService: Reading file as Base64...');
       const fileData = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
       
+      console.log('📁 MediaService: File data length:', fileData.length);
+      
       // המרה מ-Base64 ל-ArrayBuffer
-      const bytes = decode(fileData);
+      const bytes = base64js.toByteArray(fileData);
+      console.log('📁 MediaService: Bytes length:', bytes.length);
       
       // העלאה ל-Supabase Storage
+      console.log('📤 MediaService: Uploading to Supabase Storage...');
       const { data, error } = await supabase.storage
         .from('app-media')
         .upload(filePath, bytes, {
@@ -283,6 +292,8 @@ class MediaService {
         console.error('❌ MediaService: Upload error:', error);
         return { success: false, error: error.message };
       }
+      
+      console.log('✅ MediaService: Upload successful, data:', data);
       
       // קבלת URL ציבורי
       const { data: urlData } = supabase.storage

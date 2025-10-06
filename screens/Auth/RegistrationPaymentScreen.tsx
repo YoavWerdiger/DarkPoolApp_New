@@ -1,50 +1,34 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, Alert, Linking } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
+import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-
-// Cardcom API Configuration
-const CARDCOM_CONFIG = {
-  terminalNumber: '1000', // Terminal number from Cardcom
-  userName: 'test', // Username from Cardcom
-  apiKey: 'your_api_key_here', // API key from Cardcom
-  baseUrl: 'https://secure.cardcom.solutions/api/v1'
-};
+import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
 
 const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState('premium');
+  const [selectedPlan, setSelectedPlan] = useState('monthly');
 
-  const plans = [
-    {
-      id: 'free',
-      name: 'חינם',
-      price: '₪0',
-      period: 'לחודש',
-      features: ['גישה לקהילה', 'עדכונים בסיסיים', 'תמיכה מוגבלת'],
-      popular: false
-    },
-    {
-      id: 'premium',
-      name: 'פרימיום',
-      price: '₪99',
-      period: 'לחודש',
-      features: ['כל התכונות החינמיות', 'אותות מסחר מתקדמים', 'ניתוחים מקצועיים', 'תמיכה 24/7'],
-      popular: true
-    },
-    {
-      id: 'pro',
-      name: 'פרו',
-      price: '₪199',
-      period: 'לחודש',
-      features: ['כל התכונות הפרימיום', 'ייעוץ אישי', 'אותות בלעדיים', 'ניתוחים מותאמים אישית'],
-      popular: false
-    }
-  ];
+  // המרת תוכניות המנוי לפורמט המתאים לתצוגה
+  const plans = Object.values(SUBSCRIPTION_PLANS).map(plan => ({
+    id: plan.id,
+    name: plan.name,
+    price: plan.price === 0 ? '₪0' : `₪${plan.price}`,
+    period: 'לחודש',
+    features: plan.features,
+    popular: plan.popular
+  }));
 
   const handlePayment = async () => {
+    // במהלך הרישום, המשתמש עדיין לא מחובר, אז נדלג על הבדיקה הזו
+    // if (!user) {
+    //   Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
+    //   return;
+    // }
+
     setLoading(true);
     
     try {
@@ -54,27 +38,26 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
         accountType: selectedPlan
       }));
 
-      // Simulate Cardcom payment process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const selectedPlanData = SUBSCRIPTION_PLANS[selectedPlan as keyof typeof SUBSCRIPTION_PLANS];
       
-      // In real implementation, you would:
-      // 1. Create payment request to Cardcom API
-      // 2. Process payment with card details
-      // 3. Handle payment response
-      // 4. Update user subscription status
+      if (!selectedPlanData) {
+        throw new Error('תוכנית מנוי לא נמצאה');
+      }
+
+      // כל התוכניות הן בתשלום - אין תוכנית חינמית
+
+      // עבור למסך הצ'קאאוט עם פרטי אשראי
+      navigation.navigate('CreditCardCheckout', { 
+        planId: selectedPlan,
+        fromRegistration: true 
+      });
       
-      Alert.alert(
-        'תשלום הושלם בהצלחה!',
-        'החשבון שלך עודכן בהצלחה. תוכל להתחיל להשתמש בכל התכונות.',
-        [
-          {
-            text: 'אישור',
-            onPress: () => navigation.navigate('RegistrationSummary')
-          }
-        ]
-      );
     } catch (error) {
-      Alert.alert('שגיאה בתשלום', 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.');
+      console.error('❌ שגיאה בתשלום:', error);
+      Alert.alert(
+        'שגיאה בתשלום', 
+        error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
+      );
     } finally {
       setLoading(false);
     }
@@ -161,11 +144,11 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
               style={{
                 width: width,
-                height: height,
-                resizeMode: 'contain'
+                height: height
               }}
               imageStyle={{
-                opacity: 0.3
+                opacity: 0.3,
+                resizeMode: 'contain'
               }}
             />
           </View>
@@ -216,10 +199,10 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   key={plan.id}
                   onPress={() => setSelectedPlan(plan.id)}
                   style={{
-                    backgroundColor: selectedPlan === plan.id ? 'rgba(0, 230, 84, 0.1)' : 'rgba(45, 55, 72, 0.9)',
+                    backgroundColor: selectedPlan === plan.id ? 'rgba(0, 230, 84, 0.1)' : '#181818',
                     borderRadius: 16,
                     borderWidth: 2,
-                    borderColor: selectedPlan === plan.id ? '#00E654' : 'rgba(255, 255, 255, 0.1)',
+                    borderColor: selectedPlan === plan.id ? '#00E654' : 'rgba(255, 255, 255, 0.15)',
                     padding: 20,
                     position: 'relative'
                   }}
@@ -392,13 +375,13 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 <TouchableOpacity
                   onPress={handleSkipPayment}
                   style={{
-                    backgroundColor: 'rgba(45, 55, 72, 0.9)',
+                    backgroundColor: '#181818',
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: 'center',
                     justifyContent: 'center',
                     borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                    borderColor: 'rgba(255, 255, 255, 0.15)'
                   }}
                 >
                   <Text style={{ 

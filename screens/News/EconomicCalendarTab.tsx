@@ -14,8 +14,13 @@ import { Clock, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import EconomicCalendarService, { EconomicEvent } from '../../services/economicCalendarService';
+// הימנעות מ-`import type` כדי למנוע בעיות טרנספילציה ב-Metro
+type EconEvent = EconomicEvent;
+import EODHDService, { SUPPORTED_ECONOMIC_INDICATORS, SUPPORTED_COUNTRIES } from '../../services/eodhdService';
+import EconomicDataCacheService, { CachedEconomicEvent } from '../../services/economicDataCache';
+import ScheduledUpdatesService from '../../services/scheduledUpdates';
 
-const EconomicEventCard: React.FC<{ event: EconomicEvent; onPress: (event: EconomicEvent) => void }> = ({ 
+const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent) => void }> = ({ 
   event, 
   onPress 
 }) => {
@@ -126,8 +131,8 @@ const EconomicEventCard: React.FC<{ event: EconomicEvent; onPress: (event: Econo
 };
 
 export default function EconomicCalendarTab() {
-  const [events, setEvents] = useState<EconomicEvent[]>([]);
-  const [filteredEvents, setFilteredEvents] = useState<EconomicEvent[]>([]);
+  const [events, setEvents] = useState<EconEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<EconEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImportance, setSelectedImportance] = useState<'all' | 'high' | 'medium' | 'low'>('all');
@@ -135,7 +140,10 @@ export default function EconomicCalendarTab() {
   
   // תצוגה יומית חדשה
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [dailyEvents, setDailyEvents] = useState<EconomicEvent[]>([]);
+  const [dailyEvents, setDailyEvents] = useState<EconEvent[]>([]);
+
+  // פילטרים מתקדמים
+  // פישוט: אין פילטרים מתקדמים, אין מתג מקור נתונים, אין טעינת היסטוריה ידנית
 
   // פונקציות ניווט יומי
   const goToPreviousDay = () => {
@@ -169,16 +177,36 @@ export default function EconomicCalendarTab() {
     filterEventsByDate();
   }, [filterEventsByDate]);
 
-  // טעינת אירועים כלכליים אמיתיים
+  // טעינת אירועים כלכליים עם cache
   const loadEconomicEvents = useCallback(async () => {
     try {
-      console.log('📅 EconomicCalendarTab: Loading real economic events');
+      console.log('📅 EconomicCalendarTab: Loading economic events');
       
-      // טעינה מ-FRED API
-      let loadedEvents: EconomicEvent[];
-      loadedEvents = await EconomicCalendarService.getEconomicEvents();
+      let loadedEvents: EconEvent[] = [];
+      // ברירת מחדל: טעינה מ-cache עם נפילה אוטומטית ל-APIs אם ריק
+      console.log('📦 Loading from cache...');
+      const dateRange = {
+        start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      };
+      const cachedEvents = await EconomicDataCacheService.getEconomicEvents(
+        'US',
+        selectedImportance === 'all' ? undefined : selectedImportance,
+        dateRange
+      );
+      loadedEvents = cachedEvents.map(event => EconomicDataCacheService.convertToAppFormat(event));
+      if (!loadedEvents || loadedEvents.length === 0) {
+        console.log('⚠️ Cache returned 0 events – falling back to direct API load...');
+        const isEODHDAvailable = await EODHDService.checkApiAvailability();
+        if (isEODHDAvailable) {
+          const eodhdEvents = await EODHDService.getPopularEconomicIndicators();
+          loadedEvents = eodhdEvents.map(event => EODHDService.convertToAppFormat(event));
+        } else {
+          loadedEvents = await EconomicCalendarService.getEconomicEvents();
+        }
+      }
       
-      console.log('✅ EconomicCalendarTab: Loaded', loadedEvents.length, 'real events');
+      console.log('✅ EconomicCalendarTab: Loaded', loadedEvents.length, 'events');
       setEvents(loadedEvents);
       filterEvents(loadedEvents, selectedImportance);
     } catch (error) {
@@ -193,9 +221,10 @@ export default function EconomicCalendarTab() {
   }, [selectedTimeframe, selectedImportance]);
 
   // פונקציית סינון
-  const filterEvents = useCallback((allEvents: EconomicEvent[], importance: 'all' | 'high' | 'medium' | 'low') => {
+  const filterEvents = useCallback((allEvents: EconEvent[], importance: 'all' | 'high' | 'medium' | 'low') => {
     let filtered = allEvents;
     
+    // סינון לפי חשיבות
     if (importance !== 'all') {
       filtered = allEvents.filter(event => event.importance === importance);
     }
@@ -223,8 +252,11 @@ export default function EconomicCalendarTab() {
   // רענון
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
+    setHasMoreData(true);
     loadEconomicEvents();
   }, [loadEconomicEvents]);
+
+  // בוטל: טעינת נתונים היסטוריים ידנית – היסטוריה נטענת בדיפולט דרך ה-cache
 
   // בחירת אירוע
   const handleEventPress = useCallback((event: EconomicEvent) => {
@@ -326,6 +358,8 @@ export default function EconomicCalendarTab() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* פילטרים מתקדמים – בוטל לפי דרישה */}
+
       {/* ניווט יומי */}
       <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
         {/* בקרת תאריך */}
@@ -416,6 +450,8 @@ export default function EconomicCalendarTab() {
         )}
 
       </View>
+
+      {/* כפתור טעינת נתונים היסטוריים – בוטל לפי דרישה */}
 
       {/* אירועים יומיים */}
       <FlatList

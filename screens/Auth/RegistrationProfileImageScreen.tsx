@@ -224,14 +224,14 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                   onPress={pickImageFromGallery}
                   disabled={loading}
                   style={{
-                    backgroundColor: 'rgba(45, 55, 72, 0.9)',
+                    backgroundColor: '#181818',
                     borderRadius: 12,
                     paddingHorizontal: 20,
                     paddingVertical: 12,
                     flexDirection: 'row',
                     alignItems: 'center',
                     borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                    borderColor: 'rgba(255, 255, 255, 0.15)'
                   }}
                 >
                   <Ionicons name="images-outline" size={20} color="#00E654" style={{ marginLeft: 8 }} />
@@ -245,14 +245,14 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                   onPress={takePhoto}
                   disabled={loading}
                   style={{
-                    backgroundColor: 'rgba(45, 55, 72, 0.9)',
+                    backgroundColor: '#181818',
                     borderRadius: 12,
                     paddingHorizontal: 20,
                     paddingVertical: 12,
                     flexDirection: 'row',
                     alignItems: 'center',
                     borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.2)'
+                    borderColor: 'rgba(255, 255, 255, 0.15)'
                   }}
                 >
                   <Ionicons name="camera-outline" size={20} color="#00E654" style={{ marginLeft: 8 }} />
@@ -313,13 +313,13 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
               <TouchableOpacity
                 onPress={skipImage}
                 style={{
-                  backgroundColor: 'rgba(45, 55, 72, 0.9)',
+                  backgroundColor: '#181818',
                   borderRadius: 14,
                   paddingVertical: 16,
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.2)'
+                  borderColor: 'rgba(255, 255, 255, 0.15)'
                 }}
               >
                 <Text style={{ 

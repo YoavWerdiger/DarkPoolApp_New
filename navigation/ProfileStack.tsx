@@ -1,9 +1,12 @@
+import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import ProfileScreen from '../screens/Profile';
+import ProfileMainScreen from '../screens/Profile/ProfileMainScreen';
 import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 import NotificationsScreen from '../screens/Profile/NotificationsScreen';
-import PrivacyScreen from '../screens/Profile/PrivacyScreen';
+import SettingsScreen from '../screens/Profile/SettingsScreen';
 import SubscriptionScreen from '../screens/Profile/SubscriptionScreen';
+import CheckoutScreen from '../screens/Payment/CheckoutScreen';
+import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
 
 const Stack = createStackNavigator();
 
@@ -12,14 +15,16 @@ export default function ProfileStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#181818' },
+        cardStyle: { backgroundColor: '#121212' }
       }}
     >
-      <Stack.Screen name="ProfileMain" component={ProfileScreen} />
+      <Stack.Screen name="ProfileMain" component={ProfileMainScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="Privacy" component={PrivacyScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="Subscription" component={SubscriptionScreen} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} />
+      <Stack.Screen name="CreditCardCheckout" component={CreditCardCheckoutScreen} />
     </Stack.Navigator>
   );
 }

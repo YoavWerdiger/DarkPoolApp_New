@@ -134,7 +134,7 @@ export default function NewsScreen() {
         </View>
           <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 10 }} />
         {/* תוכן הטאב הפעיל */}
-        <View className="flex-1" style={{ marginBottom: 0 }}>
+        <View className="flex-1">
           <ActiveComponent />
         </View>
       </SafeAreaView>

@@ -22,37 +22,15 @@ export default function MainTabs() {
         tabBarInactiveTintColor: '#888',
         tabBarStyle: { 
           backgroundColor: '#121212', 
-          borderTopWidth: 0,
+          borderTopWidth: 1,
+          borderTopColor: '#666666',
           height: 90,
           paddingBottom: 15,
           paddingTop: 15,
         },
         tabBarIcon: ({ color, size, focused }) => {
           if (route.name === 'Chat') {
-            return (
-              <View 
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: focused ? '#00E654' : '#222222',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginTop: -15,
-                  shadowColor: focused ? '#00E654' : '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: focused ? 0.3 : 0.2,
-                  shadowRadius: 8,
-                  elevation: 8,
-                }}
-              >
-                <MessageCircle 
-                  size={focused ? 36 : 32} 
-                  color={focused ? '#000' : color}
-                  strokeWidth={2}
-                />
-              </View>
-            );
+            return <MessageCircle size={size + 2} color={color} strokeWidth={2} />;
           } else if (route.name === 'Profile') {
             return <User size={size + 2} color={color} strokeWidth={2} />;
           } else if (route.name === 'News') {
@@ -72,7 +50,7 @@ export default function MainTabs() {
     >
       <Tab.Screen name="News" component={NewsScreen} options={{ title: 'חדשות' }} />
       <Tab.Screen name="Journal" component={JournalScreen} options={{ title: 'יומן' }} />
-      <Tab.Screen name="Chat" component={ChatStack} options={{ title: '' }} />
+      <Tab.Screen name="Chat" component={ChatStack} options={{ title: 'צאטים' }} />
       <Tab.Screen 
         name="Courses" 
         component={LearningStack} 

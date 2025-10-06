@@ -1,15 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { Mail, Lock } from 'lucide-react-native';
+import { Mail, Lock, Check } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { signIn, isLoading } = useAuth();
+  const [rememberMe, setRememberMe] = useState(false);
+  const { signIn, isLoading, attemptAutoLogin } = useAuth();
+
+  // טעינת פרטי התחברות שמורים
+  useEffect(() => {
+    loadSavedCredentials();
+  }, []);
+
+  const loadSavedCredentials = async () => {
+    try {
+      const savedEmail = await AsyncStorage.getItem('saved_email');
+      const savedPassword = await AsyncStorage.getItem('saved_password');
+      const savedRememberMe = await AsyncStorage.getItem('remember_me');
+      
+      if (savedRememberMe === 'true' && savedEmail && savedPassword) {
+        setEmail(savedEmail);
+        setPassword(savedPassword);
+        setRememberMe(true);
+      }
+    } catch (error) {
+      console.error('Error loading saved credentials:', error);
+    }
+  };
+
+  const saveCredentials = async (email: string, password: string, remember: boolean) => {
+    try {
+      if (remember) {
+        await AsyncStorage.setItem('saved_email', email);
+        await AsyncStorage.setItem('saved_password', password);
+        await AsyncStorage.setItem('remember_me', 'true');
+      } else {
+        await AsyncStorage.removeItem('saved_email');
+        await AsyncStorage.removeItem('saved_password');
+        await AsyncStorage.removeItem('remember_me');
+      }
+    } catch (error) {
+      console.error('Error saving credentials:', error);
+    }
+  };
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
@@ -20,6 +59,20 @@ export default function LoginScreen({ navigation }: any) {
     const { error } = await signIn({ email: email.trim(), password });
     if (error) {
       Alert.alert('שגיאה בהתחברות', error);
+    } else {
+      // אם ההתחברות הצליחה, נשמור את הפרטים אם "זכור אותי" מסומן
+      await saveCredentials(email.trim(), password, rememberMe);
+      
+      if (rememberMe) {
+        // הודעה למשתמש על התחברות אוטומטית
+        setTimeout(() => {
+          Alert.alert(
+            'התחברות מוצלחת!', 
+            'הנתונים נשמרו. בפעם הבאה תתחבר אוטומטית.',
+            [{ text: 'אישור' }]
+          );
+        }, 1000);
+      }
     }
   };
 
@@ -252,18 +305,60 @@ export default function LoginScreen({ navigation }: any) {
                 </View>
               </View>
 
-               {/* Forgot Password */}
-               <Pressable onPress={handleForgotPassword} style={{ alignSelf: 'flex-end', marginTop: 4 }}>
-                 <Text style={{ 
-                   color: '#00E654', 
-                   fontSize: 14, 
-                   fontWeight: '500',
-                   letterSpacing: 0.2,
-                   textAlign: 'right'
-                 }}>
-                   שכחת סיסמה?
-                 </Text>
-               </Pressable>
+               {/* Remember Me & Forgot Password */}
+               <View style={{ 
+                 flexDirection: 'row-reverse', 
+                 justifyContent: 'space-between', 
+                 alignItems: 'center',
+                 marginTop: 8
+               }}>
+                 {/* Remember Me Checkbox */}
+                 <Pressable 
+                   onPress={() => setRememberMe(!rememberMe)}
+                   style={{ 
+                     flexDirection: 'row-reverse', 
+                     alignItems: 'center',
+                     gap: 8
+                   }}
+                 >
+                   <View style={{
+                     width: 20,
+                     height: 20,
+                     borderRadius: 4,
+                     borderWidth: 2,
+                     borderColor: rememberMe ? '#00E654' : '#666666',
+                     backgroundColor: rememberMe ? '#00E654' : 'transparent',
+                     alignItems: 'center',
+                     justifyContent: 'center'
+                   }}>
+                     {rememberMe && (
+                       <Check size={12} color="#000" strokeWidth={3} />
+                     )}
+                   </View>
+                   <Text style={{ 
+                     color: '#B0B0B0', 
+                     fontSize: 14, 
+                     fontWeight: '500',
+                     letterSpacing: 0.2,
+                     writingDirection: 'rtl'
+                   }}>
+                     זכור אותי
+                   </Text>
+                 </Pressable>
+
+                 {/* Forgot Password */}
+                 <Pressable onPress={handleForgotPassword}>
+                   <Text style={{ 
+                     color: '#00E654', 
+                     fontSize: 14, 
+                     fontWeight: '500',
+                     letterSpacing: 0.2,
+                     textAlign: 'right'
+                   }}>
+                     שכחת סיסמה?
+                   </Text>
+                 </Pressable>
+               </View>
 
               {/* Login Button */}
               <LinearGradient

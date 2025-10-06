@@ -1,0 +1,51 @@
+name: Economic Data Sync
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allow manual trigger
+  push:
+    branches: [ main ]
+    paths:
+      - 'supabase/functions/economic-scheduler/**'
+      - 'supabase/functions/economic-cron/**'
+
+jobs:
+  sync-economic-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: |
+        npm install -g supabase
+        
+    - name: Deploy Supabase functions
+      run: |
+        supabase functions deploy economic-scheduler
+        supabase functions deploy economic-cron
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        
+    - name: Trigger economic data update
+      run: |
+        curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/economic-cron" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+          -H "Content-Type: application/json"
+          
+    - name: Cleanup old data
+      run: |
+        curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/economic-scheduler/cleanup-old-data" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+          -H "Content-Type: application/json"
+
+

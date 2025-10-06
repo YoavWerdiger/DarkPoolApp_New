@@ -30,8 +30,12 @@ export default function GroupHeader({ chatId }: { chatId: string | null }) {
     <TouchableOpacity
       onPress={() => navigation.navigate('GroupInfo', { chatId })}
       activeOpacity={0.85}
-      className="flex-row-reverse items-center px-4 py-3 bg-[#181818] border-b border-[#222] min-h-[80px]"
-      style={{ paddingTop: 20 }}
+      className="flex-row-reverse items-center px-4 py-3 bg-[#181818] min-h-[80px]"
+      style={{ 
+        paddingTop: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#666666'
+      }}
     >
       {imageUrl ? (
         <Image

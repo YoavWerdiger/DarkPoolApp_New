@@ -14,6 +14,7 @@ interface MediaMessageRendererProps {
     content?: string;
     file_url?: string;
     type: string;
+    duration?: number;
     sender?: {
       full_name?: string;
     };
@@ -45,10 +46,12 @@ export default function MediaMessageRenderer({
     if (message.type === 'audio' && message.file_url) {
       const loadDuration = async () => {
         try {
+          console.log('🎵 Loading duration from file:', message.file_url);
           const { sound } = await Audio.Sound.createAsync({ uri: message.file_url! });
           const status = await sound.getStatusAsync();
           if (status.isLoaded && status.durationMillis && status.durationMillis > 0) {
             setDurationMs(status.durationMillis);
+            console.log('🎵 Duration loaded from file:', status.durationMillis);
           }
           await sound.unloadAsync();
         } catch (error) {
@@ -188,7 +191,19 @@ export default function MediaMessageRenderer({
   }, [isPlaying]);
   
   const renderImageMessage = () => (
-    <View>
+    <View style={{
+      borderRadius: 16,
+      overflow: 'hidden',
+      backgroundColor: isMe ? 'rgba(0,230,84,0.1)' : 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: isMe ? 'rgba(0,230,84,0.2)' : 'rgba(255,255,255,0.1)',
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4
+    }}>
       {/* שם השולח מעל התמונה (רק לאחרים) */}
       {!isMe && (
         <Text 
@@ -198,7 +213,9 @@ export default function MediaMessageRenderer({
             color: '#00E654',
             fontSize: 13,
             fontWeight: 'bold',
-            marginBottom: 6
+            marginBottom: 8,
+            paddingHorizontal: 12,
+            paddingTop: 8
           }}
         >
           {message.sender?.full_name || 'משתמש'}
@@ -218,15 +235,8 @@ export default function MediaMessageRenderer({
           <Image 
             source={{ uri: message.file_url }} 
             style={{ 
-              width: 200, 
-              height: 200, 
-              borderRadius: 12, 
-              marginBottom: 6,
-              backgroundColor: '#2A2A2A',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
+              width: 220, 
+              height: 220, 
               alignSelf: 'center'
             }} 
             resizeMode="cover"
@@ -236,10 +246,8 @@ export default function MediaMessageRenderer({
           />
         ) : (
           <View style={{ 
-            width: 200, 
-            height: 200, 
-            borderRadius: 12, 
-            marginBottom: 6,
+            width: 220, 
+            height: 220, 
             backgroundColor: '#2A2A2A',
             justifyContent: 'center',
             alignItems: 'center',
@@ -256,7 +264,8 @@ export default function MediaMessageRenderer({
           writingDirection: textDirection,
           fontSize: 13,
           fontWeight: '400',
-          marginTop: 2,
+          paddingHorizontal: 12,
+          paddingBottom: 8,
           lineHeight: 18
         }}>
           {message.content}
@@ -266,7 +275,19 @@ export default function MediaMessageRenderer({
   );
 
   const renderVideoMessage = () => (
-    <View>
+    <View style={{
+      borderRadius: 16,
+      overflow: 'hidden',
+      backgroundColor: isMe ? 'rgba(0,230,84,0.1)' : 'rgba(255,255,255,0.05)',
+      borderWidth: 1,
+      borderColor: isMe ? 'rgba(0,230,84,0.2)' : 'rgba(255,255,255,0.1)',
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4
+    }}>
       <Pressable onPress={() => {
         if (message.file_url) {
           onMediaPress({
@@ -278,19 +299,12 @@ export default function MediaMessageRenderer({
         }
       }}>
         <View style={{ 
-          width: 240, 
-          height: 140, 
-          borderRadius: 12, 
+          width: 260, 
+          height: 160, 
           backgroundColor: '#2A2A2A',
           justifyContent: 'center',
           alignItems: 'center',
-          marginBottom: 6,
           position: 'relative',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          alignSelf: 'center',
           overflow: 'hidden'
         }}>
           {videoThumbnail ? (
@@ -300,7 +314,6 @@ export default function MediaMessageRenderer({
                 style={{
                   width: '100%',
                   height: '100%',
-                  borderRadius: 12,
                 }}
                 resizeMode="cover"
               />
@@ -315,7 +328,6 @@ export default function MediaMessageRenderer({
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  borderRadius: 12,
                 }}
                 pointerEvents="none"
               />
@@ -324,7 +336,6 @@ export default function MediaMessageRenderer({
             <View style={{ 
               width: '100%', 
               height: '100%', 
-              borderRadius: 12,
               backgroundColor: isMe ? '#1F1F1F' : '#181818',
               justifyContent: 'center',
               alignItems: 'center'
@@ -336,11 +347,11 @@ export default function MediaMessageRenderer({
             position: 'absolute',
             top: '50%',
             left: '50%',
-            transform: [{ translateX: -18 }, { translateY: -18 }],
-            width: 36,
-            height: 36,
+            transform: [{ translateX: -20 }, { translateY: -20 }],
+            width: 40,
+            height: 40,
             backgroundColor: isMe ? '#00E654' : '#181818',
-            borderRadius: 18,
+            borderRadius: 20,
             justifyContent: 'center',
             alignItems: 'center',
             shadowColor: isMe ? '#00E654' : '#181818',
@@ -349,7 +360,7 @@ export default function MediaMessageRenderer({
             shadowRadius: 6,
             elevation: 6
           }}>
-            <Play size={16} color={isMe ? "#181818" : "#00E654"} strokeWidth={3} />
+            <Play size={18} color={isMe ? "#181818" : "#00E654"} strokeWidth={3} />
           </View>
         </View>
       </Pressable>
@@ -360,7 +371,8 @@ export default function MediaMessageRenderer({
           writingDirection: textDirection,
           fontSize: 13,
           fontWeight: '400',
-          marginTop: 2,
+          paddingHorizontal: 12,
+          paddingBottom: 8,
           lineHeight: 18
         }}>
           {message.content}
@@ -372,46 +384,72 @@ export default function MediaMessageRenderer({
   const renderAudioMessage = () => (
     <View
       style={{
-        width: 260,
-        borderRadius: 12,
-        overflow: 'hidden', // המדיה היא הבועה – ללא מסגרת כפולה
-        marginBottom: 6,
-        backgroundColor: isMe ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)',
+        width: 280,
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 8,
+        backgroundColor: isMe ? 'rgba(0,230,84,0.15)' : 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: isMe ? 'rgba(0,230,84,0.25)' : 'rgba(255,255,255,0.1)',
+        borderLeftWidth: isMe ? 3 : 0,
+        borderLeftColor: isMe ? '#00E654' : 'transparent',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
         alignSelf: 'center'
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}>
         {/* Play Button */}
         <Pressable
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: isMe ? '#000000' : '#00E654',
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: isMe ? '#00E654' : '#00E654',
             justifyContent: 'center',
             alignItems: 'center',
-            marginRight: 12
+            marginRight: 16,
+            shadowColor: '#00E654',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 3
           }}
           onPress={togglePlay}
         >
-          {isPlaying ? <Pause size={20} color={isMe ? '#00E654' : '#000'} strokeWidth={2} /> : <Play size={20} color={isMe ? '#00E654' : '#000'} strokeWidth={2} />}
+          {isPlaying ? <Pause size={20} color="#000" strokeWidth={2} /> : <Play size={20} color="#000" strokeWidth={2} />}
         </Pressable>
 
         {/* Timeline */}
         <View style={{ flex: 1 }}>
           {/* זמן נוכחי / סה"כ */}
-          <View style={{ flexDirection: 'row-reverse', marginBottom: 6 }}>
-            <Text style={{ color: isMe ? '#000' : '#fff', fontSize: 12 }}>{formatMs(positionMs)} / {formatMs(durationMs)}</Text>
+          <View style={{ flexDirection: 'row-reverse', marginBottom: 8 }}>
+            <Text style={{ color: isMe ? '#000' : '#fff', fontSize: 12, fontWeight: '500' }}>{formatMs(positionMs)} / {formatMs(durationMs)}</Text>
           </View>
           {/* פס התקדמות עם דוט */}
           <View
             {...panResponder.panHandlers}
-            style={{ height: 16, justifyContent: 'center' }}
+            style={{ height: 20, justifyContent: 'center' }}
             onLayout={(e) => setBarWidthPx(e.nativeEvent.layout.width)}
           >
-            <View style={{ height: 4, backgroundColor: isMe ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.25)', borderRadius: 2, width: '100%' }} />
-            <View style={{ position: 'absolute', height: 4, backgroundColor: '#00E654', borderRadius: 2, width: (progressPct / 100) * barWidthPx }} />
-            <View style={{ position: 'absolute', left: (progressPct / 100) * barWidthPx - 6, width: 12, height: 12, borderRadius: 6, backgroundColor: '#00E654' }} />
+            <View style={{ height: 6, backgroundColor: isMe ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)', borderRadius: 3, width: '100%' }} />
+            <View style={{ position: 'absolute', height: 6, backgroundColor: '#00E654', borderRadius: 3, width: (progressPct / 100) * barWidthPx }} />
+            <View style={{ 
+              position: 'absolute', 
+              left: (progressPct / 100) * barWidthPx - 8, 
+              width: 16, 
+              height: 16, 
+              borderRadius: 8, 
+              backgroundColor: '#00E654',
+              shadowColor: '#00E654',
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.4,
+              shadowRadius: 2,
+              elevation: 2
+            }} />
           </View>
         </View>
       </View>
@@ -420,7 +458,20 @@ export default function MediaMessageRenderer({
   );
 
   const renderDocumentMessage = () => (
-    <View style={{ borderRadius: 12, overflow: 'hidden', backgroundColor: isMe ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)', marginBottom: 6, alignSelf: 'center' }}>
+    <View style={{ 
+      borderRadius: 16, 
+      overflow: 'hidden', 
+      backgroundColor: isMe ? 'rgba(0,230,84,0.1)' : 'rgba(255,255,255,0.05)', 
+      borderWidth: 1,
+      borderColor: isMe ? 'rgba(0,230,84,0.2)' : 'rgba(255,255,255,0.1)',
+      marginBottom: 8, 
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+      alignSelf: 'center' 
+    }}>
       <Pressable onPress={() => {
         if (message.file_url) {
           onMediaPress({
@@ -431,21 +482,33 @@ export default function MediaMessageRenderer({
           });
         }
       }}>
-        <View style={{ width: 260, minHeight: 72, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}>
-          <View style={{ width: 44, height: 44, borderRadius: 10, backgroundColor: '#2a2a2a', justifyContent: 'center', alignItems: 'center', marginRight: 12, borderWidth: 1, borderColor: '#4b5563' }}>
-            <FileText size={20} color={'#E5E7EB'} strokeWidth={2} />
+        <View style={{ width: 280, minHeight: 80, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16 }}>
+          <View style={{ 
+            width: 48, 
+            height: 48, 
+            borderRadius: 12, 
+            backgroundColor: isMe ? '#00E654' : '#2a2a2a', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            marginRight: 16,
+            shadowColor: isMe ? '#00E654' : '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 2
+          }}>
+            <FileText size={22} color={isMe ? '#000' : '#E5E7EB'} strokeWidth={2} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: isMe ? '#000' : '#fff', fontWeight: '700', fontSize: 14, marginBottom: 2 }} numberOfLines={1} ellipsizeMode="tail">
+            <Text style={{ color: isMe ? '#000' : '#fff', fontWeight: '700', fontSize: 15, marginBottom: 4 }} numberOfLines={1} ellipsizeMode="tail">
               {(message.content && message.content !== '[document]') ? message.content : (message.file_url?.split('/').pop() || 'מסמך')}
             </Text>
-            <Text style={{ color: isMe ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)', fontSize: 12 }} numberOfLines={1}>
+            <Text style={{ color: isMe ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '500' }} numberOfLines={1}>
               {message.file_url?.split('.').pop()?.toUpperCase() || 'FILE'}
             </Text>
           </View>
         </View>
       </Pressable>
-      {/* no footer time for media */}
     </View>
   );
 

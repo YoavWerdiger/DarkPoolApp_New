@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { ArrowLeft, Shield, Lock, Eye, EyeOff, UserCheck, UserX, Key, Download, Trash2 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface PrivacyScreenProps {
   navigation: any;
@@ -26,31 +27,24 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
 
   const privacyOptions = [
     {
-      title: 'נראות פרופיל',
-      subtitle: 'מי יכול לראות את הפרופיל שלך',
-      icon: 'eye-outline',
-      key: 'profileVisibility',
-      options: [
-        { label: 'ציבורי', value: 'public' },
-        { label: 'חברים בלבד', value: 'friends' },
-        { label: 'פרטי', value: 'private' }
-      ],
+      title: 'נתוני חשבון',
+      subtitle: 'מידע אישי ופרטי התחברות',
+      icon: 'person-outline',
+      type: 'account_data',
       color: '#00E654'
     },
     {
-      title: 'סטטוס מקוון',
-      subtitle: 'הצג מתי אתה פעיל באפליקציה',
-      icon: 'radio-outline',
-      key: 'onlineStatus',
-      type: 'boolean',
+      title: 'הרשאות אפליקציה',
+      subtitle: 'ניהול הרשאות גישה למידע',
+      icon: 'shield-checkmark-outline',
+      type: 'permissions',
       color: '#00E654'
     },
     {
-      title: 'זמן נוכחות אחרון',
-      subtitle: 'הצג מתי נראת לאחרונה',
-      icon: 'time-outline',
-      key: 'lastSeen',
-      type: 'boolean',
+      title: 'אבטחת חשבון',
+      subtitle: 'אימות דו-שלבי, סיסמאות, מפתחות',
+      icon: 'key-outline',
+      type: 'security',
       color: '#00E654'
     },
     {
@@ -80,6 +74,16 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
       color: '#00E654'
     },
     {
+      title: 'מחיקת נתוני התחברות',
+      subtitle: 'מחק פרטי התחברות שמורים מהמכשיר',
+      icon: 'log-out-outline',
+      action: () => Alert.alert('מחיקת נתוני התחברות', 'האם אתה בטוח שברצונך למחוק את נתוני ההתחברות השמורים?', [
+        { text: 'ביטול', style: 'cancel' },
+        { text: 'מחק', style: 'destructive', onPress: clearSavedCredentials }
+      ]),
+      color: '#F59E0B'
+    },
+    {
       title: 'ייצוא נתונים',
       subtitle: 'הורד העתק של הנתונים שלך',
       icon: 'download-outline',
@@ -107,6 +111,17 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
   const handleSaveSettings = () => {
     Alert.alert('הצלחה', 'ההגדרות נשמרו בהצלחה!');
     navigation.goBack();
+  };
+
+  const clearSavedCredentials = async () => {
+    try {
+      await AsyncStorage.removeItem('saved_email');
+      await AsyncStorage.removeItem('saved_password');
+      await AsyncStorage.removeItem('remember_me');
+      Alert.alert('הצלחה', 'נתוני התחברות נמחקו בהצלחה!');
+    } catch (error) {
+      Alert.alert('שגיאה', 'אירעה שגיאה במחיקת הנתונים');
+    }
   };
 
   return (
@@ -166,13 +181,17 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {/* כרטיס פרטיות */}
         <View style={{ padding: 20, marginBottom: 20 }}>
-          <View style={{
-            padding: 20,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: 'rgba(0, 230, 84, 0.1)',
-            backgroundColor: 'rgba(0, 230, 84, 0.02)'
-          }}>
+          <LinearGradient
+            colors={['rgba(0, 230, 84, 0.08)', 'rgba(0, 230, 84, 0.03)', 'rgba(0, 230, 84, 0.06)', 'rgba(0, 230, 84, 0.02)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              padding: 20,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: 'rgba(0, 230, 84, 0.15)'
+            }}
+          >
             <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 16 }}>
               <Shield size={24} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
               <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', writingDirection: 'rtl' }}>
@@ -183,7 +202,7 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
             <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl', marginBottom: 16 }}>
               שלוט במי יכול לראות את המידע שלך
             </Text>
-          </View>
+          </LinearGradient>
         </View>
 
         {/* הגדרות פרטיות */}
@@ -365,13 +384,17 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
 
         {/* הוראות אבטחה */}
         <View style={{ padding: 20, marginTop: 20 }}>
-          <View style={{
-            padding: 16,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: 'rgba(0, 230, 84, 0.1)',
-            backgroundColor: 'rgba(0, 230, 84, 0.02)'
-          }}>
+          <LinearGradient
+            colors={['rgba(0, 230, 84, 0.06)', 'rgba(0, 230, 84, 0.02)', 'rgba(0, 230, 84, 0.04)', 'rgba(0, 230, 84, 0.01)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: 'rgba(0, 230, 84, 0.12)'
+            }}
+          >
             <Text style={{ color: '#00E654', fontSize: 14, fontWeight: '600', marginBottom: 8, writingDirection: 'rtl' }}>
               🔒 טיפי אבטחה:
             </Text>
@@ -381,7 +404,7 @@ export default function PrivacyScreen({ navigation }: PrivacyScreenProps) {
               • אל תשתף פרטים אישיים עם זרים{'\n'}
               • בדוק את הגדרות הפרטיות שלך באופן קבוע
             </Text>
-          </View>
+          </LinearGradient>
         </View>
       </ScrollView>
     </View>

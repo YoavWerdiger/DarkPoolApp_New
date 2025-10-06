@@ -141,11 +141,11 @@ export default function ChatRoomScreen() {
   const mentionButtonOpacity = useRef(new Animated.Value(0)).current;
   
   // מרווחים דינמיים מול ה-MessageInputBar והטאב התחתון
-  const INPUT_BAR_HEIGHT = 100; // גובה משוער
+  const INPUT_BAR_HEIGHT = 60; // גובה משוער - עודכן לגובה החדש
   const EXTRA_BOTTOM_PADDING = 240; // עוד ריווח לבועה האחרונה
   const LIST_BOTTOM_PADDING = INPUT_BAR_HEIGHT + EXTRA_BOTTOM_PADDING; // ריווח תחתון לרשימה
   const SCROLL_BTN_BOTTOM = 100; // מיקום נוח מעל הטאב
-  const MENTION_BTN_BOTTOM = 170; // מעט מעל כפתור הגלילה
+  const MENTION_BTN_BOTTOM = 130; // מעט מעל כפתור הגלילה - עודכן לגובה החדש
   
   // State לחיפוש
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -795,50 +795,46 @@ export default function ChatRoomScreen() {
   // פונקציות חדשות לתמיכה במדיה
   const handleMediaSelected = async (mediaType: string, uri: string, metadata?: MediaMetadata) => {
     try {
-      if (!currentChatId) return;
+      if (!currentChatId || !user?.id) return;
 
       console.log('📱 ChatRoomScreen: Media selected:', { mediaType, uri, metadata });
 
-      let mediaUrl = '';
-      let mediaMetadata = metadata;
-
-      switch (mediaType) {
-          case 'image':
-            console.log('Image upload not implemented yet');
-            mediaUrl = uri;
-            mediaMetadata = undefined;
-            break;
-          case 'video':
-            console.log('Video upload not implemented yet');
-            mediaUrl = uri;
-            mediaMetadata = undefined;
-            break;
-          case 'audio':
-            console.log('Audio upload not implemented yet');
-            mediaUrl = uri;
-            mediaMetadata = undefined;
-            break;
-          case 'document':
-            console.log('Document upload not implemented yet');
-            mediaUrl = uri;
-            mediaMetadata = undefined;
-            break;
-        default:
-          console.error('Unknown media type:', mediaType);
-          return;
+      console.log('📤 Uploading media to Supabase Storage:', { type: mediaType, uri });
+      
+      // העלה את הקובץ ל-Supabase Storage
+      const uploadResult = await mediaService.uploadMedia(uri, mediaType as 'image' | 'video' | 'audio' | 'document');
+      
+      if (!uploadResult.success || !uploadResult.url) {
+        console.error('❌ Failed to upload media:', uploadResult.error);
+        Alert.alert('שגיאה', `שגיאה בהעלאת ${mediaType}: ${uploadResult.error}`);
+        return;
       }
 
-      // שלח הודעת מדיה
-      // TODO: עדכן את sendMessage לתמיכה במדיה
-      console.log('Media message ready:', { mediaType, mediaUrl, mediaMetadata });
-      
-      // הצג הודעה למשתמש
-      Alert.alert('הצלחה', 'המדיה נשלחה בהצלחה!', [
-        { text: 'אישור' }
-      ]);
+      console.log('✅ Media uploaded successfully:', { type: mediaType, url: uploadResult.url });
+
+      // שלח הודעת מדיה אמיתית באמצעות ChatService
+      const newMessage = await ChatService.sendMediaMessage({
+        channelId: currentChatId,
+        senderId: user.id,
+        mediaUrl: uploadResult.url,
+        mediaType: mediaType as 'image' | 'video' | 'audio' | 'document',
+        caption: '',
+        metadata: uploadResult.metadata || metadata,
+        replyTo: replyingTo?.id || null
+      });
+
+      if (newMessage) {
+        console.log('✅ Media message sent successfully');
+        // נקה את ההודעה שאתה עונה עליה אם יש
+        if (replyingTo) {
+          setReplyingTo(null);
+        }
+      } else {
+        Alert.alert('שגיאה', 'שגיאה בשליחת הודעת המדיה');
+      }
 
     } catch (error) {
-      console.error('Error handling media:', error);
+      console.error('❌ Error handling media:', error);
       Alert.alert('שגיאה', 'שגיאה בשליחת המדיה');
     }
   };
@@ -859,16 +855,26 @@ export default function ChatRoomScreen() {
           let mediaUrl = '';
           let mediaMetadata: any | undefined;
 
-            // השתמש ב-URI המקומי כמו קודם
-            mediaUrl = mediaFile.uri;
-            mediaMetadata = {
+          console.log('📤 Uploading media to Supabase Storage:', { type: mediaFile.type, uri: mediaFile.uri });
+          
+          // העלה את הקובץ ל-Supabase Storage
+          const uploadResult = await mediaService.uploadMedia(mediaFile.uri, mediaFile.type);
+          
+          if (uploadResult.success && uploadResult.url) {
+            mediaUrl = uploadResult.url;
+            mediaMetadata = uploadResult.metadata || {
               file_name: mediaFile.fileName || undefined,
               file_size: mediaFile.fileSize || undefined,
               duration: mediaFile.duration || undefined,
               width: mediaFile.width || undefined,
               height: mediaFile.height || undefined
             };
-            console.log('📎 Using local URI for media:', { type: mediaFile.type, url: mediaUrl });
+            console.log('✅ Media uploaded successfully:', { type: mediaFile.type, url: mediaUrl });
+          } else {
+            console.error('❌ Failed to upload media:', uploadResult.error);
+            Alert.alert('שגיאה', `שגיאה בהעלאת ${mediaFile.type}: ${uploadResult.error}`);
+            continue; // דלג על הקובץ הזה
+          }
 
           console.log('Media uploaded successfully:', { type: mediaFile.type, url: mediaUrl, metadata: mediaMetadata });
 
@@ -950,7 +956,7 @@ export default function ChatRoomScreen() {
           paddingTop: Platform.OS === 'ios' ? 40 : 20,
           paddingBottom: 10,
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(0,230,84,0.22)',
+          borderBottomColor: '#666666',
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 3 },
           shadowOpacity: 0.25,

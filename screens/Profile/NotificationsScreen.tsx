@@ -1,282 +1,369 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, Switch, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  Pressable, 
+  Switch,
+  Alert,
+  Image
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { ArrowLeft, Bell, BellOff, Volume2, VolumeX, Smartphone, Wifi, WifiOff } from 'lucide-react-native';
+import { 
+  Bell, 
+  ArrowLeft,
+  Volume2,
+  Smartphone,
+  Moon,
+  Sun
+} from 'lucide-react-native';
+import { useAuth } from '../../context/AuthContext';
+import GradientHeader from '../../components/GradientHeader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface NotificationsScreenProps {
-  navigation: any;
+interface NotificationSettings {
+  pushNotifications: boolean;
+  sound: boolean;
+  vibration: boolean;
+  quietHours: boolean;
+  quietStart: string;
+  quietEnd: string;
 }
 
-export default function NotificationsScreen({ navigation }: NotificationsScreenProps) {
-  const [notifications, setNotifications] = useState({
+export default function NotificationsScreen({ navigation }: any) {
+  const { user } = useAuth();
+  const [settings, setSettings] = useState<NotificationSettings>({
     pushNotifications: true,
-    messageNotifications: true,
-    groupNotifications: true,
-    soundEnabled: true,
-    vibrationEnabled: true,
-    wifiOnly: false,
+    sound: true,
+    vibration: true,
+    quietHours: false,
+    quietStart: '22:00',
+    quietEnd: '08:00'
   });
+  const [loading, setLoading] = useState(true);
 
-  const handleToggle = (key: string) => {
-    setNotifications(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
-  };
+  console.log('🚀 NotificationsScreen: Component loaded');
+  console.log('🔍 NotificationsScreen: User:', user?.id);
+  console.log('🔍 NotificationsScreen: Loading:', loading);
 
-  const notificationSettings = [
-    {
-      title: 'התראות פוש',
-      subtitle: 'קבל התראות על הודעות חדשות',
-      icon: 'notifications-outline',
-      key: 'pushNotifications',
-      color: '#00E654'
-    },
-    {
-      title: 'התראות הודעות',
-      subtitle: 'התראות על הודעות ישירות',
-      icon: 'chatbubble-outline',
-      key: 'messageNotifications',
-      color: '#00E654'
-    },
-    {
-      title: 'התראות קבוצות',
-      subtitle: 'התראות על פעילות בקבוצות',
-      icon: 'people-outline',
-      key: 'groupNotifications',
-      color: '#00E654'
-    },
-    {
-      title: 'צלילים',
-      subtitle: 'השמע צליל בהתראות',
-      icon: 'volume-high-outline',
-      key: 'soundEnabled',
-      color: '#00E654'
-    },
-    {
-      title: 'רטט',
-      subtitle: 'רטט במכשיר בזמן התראות',
-      icon: 'phone-portrait-outline',
-      key: 'vibrationEnabled',
-      color: '#00E654'
-    },
-    {
-      title: 'רק ב-WiFi',
-      subtitle: 'התראות רק כשמחובר ל-WiFi',
-      icon: 'wifi-outline',
-      key: 'wifiOnly',
-      color: '#00E654'
+  useEffect(() => {
+    loadSettings();
+  }, [user]);
+
+  const loadSettings = async () => {
+    try {
+      console.log('Loading notification settings...');
+      
+      if (!user) {
+        console.log('❌ No user found in NotificationsScreen');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('✅ User found in NotificationsScreen:', user.id);
+      
+      const savedSettings = await AsyncStorage.getItem('notification_settings');
+      if (savedSettings) {
+        setSettings(JSON.parse(savedSettings));
+        console.log('✅ Notification settings loaded:', JSON.parse(savedSettings));
+      }
+    } catch (error) {
+      console.error('❌ Error loading notification settings:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  const handleSaveSettings = () => {
-    Alert.alert('הצלחה', 'ההגדרות נשמרו בהצלחה!');
-    navigation.goBack();
   };
+
+  const saveSettings = async (newSettings: NotificationSettings) => {
+    try {
+      await AsyncStorage.setItem('notification_settings', JSON.stringify(newSettings));
+      setSettings(newSettings);
+      console.log('✅ Notification settings saved:', newSettings);
+    } catch (error) {
+      console.error('❌ Error saving notification settings:', error);
+      Alert.alert('שגיאה', 'לא ניתן לשמור את ההגדרות');
+    }
+  };
+
+  const handleToggle = (key: keyof NotificationSettings) => {
+    const newSettings = { ...settings, [key]: !settings[key] };
+    saveSettings(newSettings);
+  };
+
+  const renderSettingItem = (
+    title: string,
+    subtitle: string,
+    key: keyof NotificationSettings,
+    icon: React.ReactNode,
+    color: string = '#00E654'
+  ) => (
+    <LinearGradient
+      colors={['#252525', '#1E1E1E']}
+      style={{
+        borderRadius: 16,
+        marginBottom: 16,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 6,
+      }}
+    >
+      <Pressable
+        style={{
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          borderRadius: 16,
+          padding: 20,
+          borderWidth: 1,
+          borderColor: '#333333',
+        }}
+      >
+      <View style={{ flex: 1, marginRight: 16 }}>
+        <Text style={{
+          color: '#FFFFFF',
+          fontSize: 17,
+          fontWeight: '500',
+          marginBottom: 6,
+          letterSpacing: 0.3,
+          textAlign: 'right'
+        }}>
+          {title}
+        </Text>
+        <Text style={{
+          color: '#B0B0B0',
+          fontSize: 15,
+          fontWeight: '400',
+          lineHeight: 20,
+          textAlign: 'right'
+        }}>
+          {subtitle}
+        </Text>
+      </View>
+      
+      <View style={{
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: color,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 20,
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+      }}>
+        {icon}
+      </View>
+    </Pressable>
+    </LinearGradient>
+  );
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#181818', justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: '#FFFFFF', fontSize: 18 }}>טוען הגדרות...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#181818' }}>
-      {/* גרדיאנט רקע */}
-      <LinearGradient
-        colors={['rgba(0, 230, 84, 0.05)', 'transparent', 'rgba(0, 230, 84, 0.03)']}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
-      />
-      
-      {/* Header */}
+      {/* רקע חלק לשיפור ביצועים */}
       <View style={{
-        paddingTop: 50,
-        paddingBottom: 16,
-        paddingHorizontal: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0, 230, 84, 0.1)',
-        backgroundColor: '#181818'
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#181818',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)'
-            }}
-          >
-            <ArrowLeft size={20} color="#fff" strokeWidth={2} />
-          </Pressable>
-          
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', writingDirection: 'rtl' }}>
-            התראות והודעות
-          </Text>
-          
-          <Pressable
-            onPress={handleSaveSettings}
-            style={{
-              backgroundColor: '#00E654',
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 20
-            }}
-          >
-            <Text style={{ color: '#000', fontSize: 14, fontWeight: 'bold', writingDirection: 'rtl' }}>
-              שמור
-            </Text>
-          </Pressable>
-        </View>
-      </View>
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: '#181818',
+      }} />
 
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {/* כרטיס הגדרות כללי */}
-        <View style={{ padding: 20, marginBottom: 20 }}>
-          <View style={{
-            padding: 20,
+      <GradientHeader 
+        title="התראות"
+        onBack={() => navigation.goBack()}
+      />
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingVertical: 20, paddingHorizontal: 16 }}
+        showsVerticalScrollIndicator={false}
+      >
+      {/* Push Notifications */}
+        <LinearGradient
+          colors={['#252525', '#1E1E1E']}
+          style={{
             borderRadius: 16,
+          marginBottom: 16,
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            elevation: 6,
+          }}
+        >
+          <View style={{
+            borderRadius: 16,
+          padding: 16,
             borderWidth: 1,
-            borderColor: 'rgba(0, 230, 84, 0.1)',
-            backgroundColor: 'rgba(0, 230, 84, 0.02)'
+            borderColor: '#333333',
           }}>
-            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 16 }}>
-              <Bell size={24} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-              <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', writingDirection: 'rtl' }}>
-                הגדרות התראות
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, marginRight: 16 }}>
+              <Text style={{
+                color: '#FFFFFF',
+              fontSize: 17,
+                fontWeight: '600',
+                marginBottom: 6,
+                textAlign: 'right'
+              }}>
+                התראות Push
+              </Text>
+              <Text style={{
+                color: '#B0B0B0',
+              fontSize: 14,
+                textAlign: 'right'
+              }}>
+                קבל התראות על הודעות ופעילות חדשה
               </Text>
             </View>
             
-            <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl', marginBottom: 16 }}>
-              התאם אישית את ההתראות שלך לפי הצרכים שלך
-            </Text>
-
-            {/* כפתור הפעל/כבה הכל */}
-            <Pressable
-              onPress={() => {
-                const allEnabled = Object.values(notifications).every(v => v);
-                setNotifications({
-                  pushNotifications: !allEnabled,
-                  messageNotifications: !allEnabled,
-                  groupNotifications: !allEnabled,
-                  soundEnabled: !allEnabled,
-                  vibrationEnabled: !allEnabled,
-                  wifiOnly: false,
-                });
-              }}
-              style={{
-                backgroundColor: '#181818',
-                padding: 12,
-                borderRadius: 12,
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}
-            >
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', writingDirection: 'rtl' }}>
-                הפעל/כבה הכל
-              </Text>
-              <View style={{
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                backgroundColor: Object.values(notifications).every(v => v) ? '#00E654' : '#666',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {Object.values(notifications).every(v => v) ? (
-                  <Bell size={14} color="#000" strokeWidth={2} />
-                ) : (
-                  <BellOff size={14} color="#000" strokeWidth={2} />
-                )}
-              </View>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* רשימת הגדרות */}
-        <View style={{ paddingHorizontal: 20 }}>
-          {notificationSettings.map((setting, index) => (
-            <View key={index} style={{ marginBottom: 16 }}>
-              <LinearGradient
-                colors={['#181818', '#1a1a1a']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  padding: 16,
-                  borderRadius: 16,
-                  flexDirection: 'row-reverse',
-                  alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: 'rgba(0, 230, 84, 0.1)',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
-                  elevation: 2
-                }}
-              >
-                {/* אייקון עם גרדיאנט */}
-                <LinearGradient
-                  colors={['#00E654', '#00D04B']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: 16,
-                    shadowColor: '#00E654',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4,
-                    elevation: 4
-                  }}
-                >
-                  <Ionicons name={setting.icon as any} size={24} color="#000" />
-                </LinearGradient>
-                
-                {/* טקסט */}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 4, writingDirection: 'rtl' }}>
-                    {setting.title}
-                  </Text>
-                  <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl' }}>
-                    {setting.subtitle}
-                  </Text>
-                </View>
-                
-                {/* מתג */}
-                <Switch
-                  value={notifications[setting.key as keyof typeof notifications]}
-                  onValueChange={() => handleToggle(setting.key)}
-                  trackColor={{ false: '#666', true: '#00E654' }}
-                  thumbColor={notifications[setting.key as keyof typeof notifications] ? '#fff' : '#f4f3f4'}
-                  style={{ transform: [{ scaleX: 1.2 }, { scaleY: 1.2 }] }}
-                />
-              </LinearGradient>
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#00E654', alignItems: 'center', justifyContent: 'center', marginLeft: 16 }}>
+              <Bell size={18} color="#FFFFFF" />
             </View>
-          ))}
-        </View>
+          </View>
+          
+          <View style={{ marginTop: 16, alignItems: 'flex-end' }}>
+            <Switch
+              value={settings.pushNotifications}
+              onValueChange={() => handleToggle('pushNotifications')}
+              trackColor={{ false: '#333333', true: '#00E654' }}
+              thumbColor={settings.pushNotifications ? '#FFFFFF' : '#888888'}
+            />
+          </View>
+          </View>
+        </LinearGradient>
 
-        {/* הוראות נוספות */}
-        <View style={{ padding: 20, marginTop: 20 }}>
+        {/* Sound */}
+        {renderSettingItem(
+          'צלילים',
+          'התראות קוליות',
+          'sound',
+          <Volume2 size={20} color="#FFFFFF" />,
+          '#3B82F6'
+        )}
+
+        {/* Vibration */}
+        {renderSettingItem(
+          'רטט',
+          'רטט בהתראות',
+          'vibration',
+          <Smartphone size={20} color="#FFFFFF" />,
+          '#8B5CF6'
+        )}
+
+        {/* Quiet Hours */}
+        <LinearGradient
+          colors={['#252525', '#1E1E1E']}
+          style={{
+            borderRadius: 16,
+            marginBottom: 24,
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            elevation: 6,
+          }}
+        >
           <View style={{
-            padding: 16,
-            borderRadius: 12,
+            borderRadius: 16,
+            padding: 20,
             borderWidth: 1,
-            borderColor: 'rgba(0, 230, 84, 0.1)',
-            backgroundColor: 'rgba(0, 230, 84, 0.02)'
+            borderColor: '#333333',
           }}>
-            <Text style={{ color: '#00E654', fontSize: 14, fontWeight: '600', marginBottom: 8, writingDirection: 'rtl' }}>
-              💡 טיפ:
-            </Text>
-            <Text style={{ color: '#999', fontSize: 14, writingDirection: 'rtl', lineHeight: 20 }}>
-              ניתן להגדיר התראות מתקדמות יותר בהגדרות המכשיר שלך
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1, marginRight: 16 }}>
+              <Text style={{
+                color: '#FFFFFF',
+                fontSize: 18,
+                fontWeight: '600',
+                marginBottom: 6,
+                textAlign: 'right'
+              }}>
+                שעות שקטות
+              </Text>
+              <Text style={{
+                color: '#B0B0B0',
+                fontSize: 15,
+                textAlign: 'right'
+              }}>
+                {settings.quietStart} - {settings.quietEnd}
+              </Text>
+            </View>
+            
+            <View style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              backgroundColor: '#F59E0B',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: 20,
+            }}>
+              <Moon size={20} color="#FFFFFF" />
+            </View>
+          </View>
+          
+          <View style={{ marginTop: 16, alignItems: 'flex-end' }}>
+            <Switch
+              value={settings.quietHours}
+              onValueChange={() => handleToggle('quietHours')}
+              trackColor={{ false: '#333333', true: '#F59E0B' }}
+              thumbColor={settings.quietHours ? '#FFFFFF' : '#888888'}
+            />
+          </View>
+          </View>
+        </LinearGradient>
+
+        {/* Tips Card */}
+        <LinearGradient
+          colors={['#1A2332', '#0F1419']}
+          style={{
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: '#2D3748',
+            shadowColor: '#F59E0B',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.1,
+            shadowRadius: 8,
+            elevation: 4,
+          }}
+        >
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 12 }}>
+            <Sun size={20} color="#F59E0B" style={{ marginLeft: 12 }} />
+            <Text style={{
+              color: '#FFFFFF',
+              fontSize: 18,
+              fontWeight: '600',
+              textAlign: 'right'
+            }}>
+              טיפים
             </Text>
           </View>
-        </View>
+          <Text style={{
+            color: '#B0B0B0',
+            fontSize: 15,
+            lineHeight: 22,
+            textAlign: 'right'
+          }}>
+            • שעות שקטות יעזרו לך לישון טוב יותר{'\n'}
+            • התראות Push מומלצות להודעות חשובות{'\n'}
+            • רטט עובד גם כשהטלפון בשקט
+          </Text>
+        </LinearGradient>
       </ScrollView>
     </View>
   );

@@ -41,34 +41,48 @@ export default function EarningsReportsTab() {
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
-        body {
+        html, body {
           margin: 0;
           padding: 0;
+          height: 100%;
           background-color: #0A0A0A;
-          overflow-x: hidden;
+          overflow: hidden;
+        }
+        #container {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          background-color: #0A0A0A;
         }
         iframe {
-          width: 100%;
-          height: 600px;
-          border: none;
           position: absolute;
           top: 0;
           left: 0;
+          width: 100%;
+          height: 100%;
+          border: none;
         }
       </style>
     </head>
     <body>
-      <iframe
+      <div id="container">
+        <iframe
         src="https://earningshub.com/embed/calendar?theme=dark&calendarView=list&filter=one_billion"
         title="Earnings Hub Calendar"
         allowfullscreen>
-      </iframe>
+        </iframe>
+      </div>
     </body>
     </html>
   `;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: DesignTokens.colors.background.primary, marginBottom: 0 }}>
+    <View className="flex-1" style={{ backgroundColor: DesignTokens.colors.background.primary }}>
       {error ? (
         <View className="flex-1 justify-center items-center px-6">
           <BarChart3 size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />

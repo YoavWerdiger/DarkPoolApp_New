@@ -1,14 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthService, AuthUser, LoginCredentials, RegisterCredentials } from '../services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   signIn: (credentials: LoginCredentials) => Promise<{ error: string | null }>;
   signUp: (credentials: RegisterCredentials) => Promise<{ error: string | null }>;
-  signOut: () => Promise<{ error: string | null }>;
+  signOut: (keepCredentials?: boolean) => Promise<{ error: string | null }>;
   updateProfile: (updates: Partial<AuthUser>) => Promise<{ error: string | null }>;
   setUser: (user: AuthUser | null) => void;
+  attemptAutoLogin: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,7 +33,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     console.log('🔄 AuthContext: Initializing...');
-    checkUser();
+    initializeAuth();
     const { data: { subscription } } = AuthService.onAuthStateChange((user) => {
       console.log('🔄 AuthContext: Auth state changed, user:', user?.id);
       setUser(user);
@@ -40,20 +42,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkUser = async () => {
+  const initializeAuth = async () => {
+    console.log('🔄 AuthContext: Initializing...');
+    const currentUser = await checkUser();
+    console.log('🔍 AuthContext: Current user after checkUser:', currentUser?.id);
+    
+    // אם אין משתמש מחובר, ננסה התחברות אוטומטית
+    if (!currentUser) {
+      console.log('🔄 AuthContext: No current user, attempting auto-login...');
+      await attemptAutoLogin();
+    }
+    
+    console.log('✅ AuthContext: Initialization complete, user:', user?.id);
+    setIsLoading(false);
+  };
+
+  const checkUser = async (): Promise<AuthUser | null> => {
     console.log('🔍 AuthContext: Checking current user...');
-    setIsLoading(true);
     try {
+      // בדיקה אם יש משתמש מחובר כרגע
       const { user, error } = await AuthService.getCurrentUser();
-      if (error) {
-        console.error('❌ AuthContext: Error checking user:', error);
+      if (user) {
+        console.log('✅ AuthContext: Current user loaded:', user?.id);
+        setUser(user);
+        return user;
       }
-      console.log('✅ AuthContext: Current user loaded:', user?.id);
-      setUser(user);
+
+      console.log('❌ AuthContext: No current user found');
+      setUser(null);
+      return null;
     } catch (error) {
       console.error('❌ AuthContext: Error checking user:', error);
-    } finally {
-      setIsLoading(false);
+      setUser(null);
+      return null;
+    }
+  };
+
+  const attemptAutoLogin = async () => {
+    try {
+      console.log('🔄 AuthContext: Attempting auto-login...');
+      const savedRememberMe = await AsyncStorage.getItem('remember_me');
+      const savedEmail = await AsyncStorage.getItem('saved_email');
+      const savedPassword = await AsyncStorage.getItem('saved_password');
+
+      if (savedRememberMe === 'true' && savedEmail && savedPassword) {
+        console.log('🔄 AuthContext: Found saved credentials, attempting auto-login...');
+        const { user, error } = await AuthService.signIn({ email: savedEmail, password: savedPassword });
+        if (error) {
+          console.log('❌ AuthContext: Auto-login failed:', error);
+          // אם ההתחברות האוטומטית נכשלת, נמחק את הנתונים השמורים
+          await AsyncStorage.removeItem('saved_email');
+          await AsyncStorage.removeItem('saved_password');
+          await AsyncStorage.removeItem('remember_me');
+        } else if (user) {
+          console.log('✅ AuthContext: Auto-login successful');
+          setUser(user);
+        }
+      }
+    } catch (error) {
+      console.error('❌ AuthContext: Error during auto-login:', error);
     }
   };
 
@@ -97,11 +144,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signOut = async (): Promise<{ error: string | null }> => {
+  const signOut = async (keepCredentials: boolean = false): Promise<{ error: string | null }> => {
     setIsLoading(true);
     try {
       const { error } = await AuthService.signOut();
       if (error) return { error };
+      
+      // מחיקת נתוני התחברות שמורים בהתנתקות (אלא אם כן המשתמש בחר לשמור)
+      if (!keepCredentials) {
+        try {
+          await AsyncStorage.removeItem('saved_email');
+          await AsyncStorage.removeItem('saved_password');
+          await AsyncStorage.removeItem('remember_me');
+          console.log('✅ AuthContext: Cleared saved credentials on logout');
+        } catch (storageError) {
+          console.error('❌ AuthContext: Error clearing saved credentials:', storageError);
+        }
+      } else {
+        console.log('✅ AuthContext: Keeping saved credentials as requested');
+      }
+      
       setUser(null);
       return { error: null };
     } catch (error: any) {
@@ -130,6 +192,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     updateProfile,
     setUser,
+    attemptAutoLogin,
   };
 
   return (

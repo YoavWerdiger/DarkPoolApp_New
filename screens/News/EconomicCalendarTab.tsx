@@ -19,6 +19,8 @@ type EconEvent = EconomicEvent;
 import EODHDService, { SUPPORTED_ECONOMIC_INDICATORS, SUPPORTED_COUNTRIES } from '../../services/eodhdService';
 import EconomicDataCacheService, { CachedEconomicEvent } from '../../services/economicDataCache';
 import ScheduledUpdatesService from '../../services/scheduledUpdates';
+import FinnhubService from '../../services/finnhubService';
+import { supabase } from '../../lib/supabase';
 
 const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent) => void }> = ({ 
   event, 
@@ -143,7 +145,7 @@ export default function EconomicCalendarTab() {
   const [dailyEvents, setDailyEvents] = useState<EconEvent[]>([]);
 
   // פילטרים מתקדמים
-  // פישוט: אין פילטרים מתקדמים, אין מתג מקור נתונים, אין טעינת היסטוריה ידנית
+  // פישוט: אין פילטרים מתקדמים, אין טעינת היסטוריה ידנית
 
   // פונקציות ניווט יומי
   const goToPreviousDay = () => {
@@ -168,7 +170,6 @@ export default function EconomicCalendarTab() {
     const eventsForDay = events.filter(event => event.date === selectedDateStr);
     
     console.log(`📅 Filtering events for ${selectedDateStr}: found ${eventsForDay.length} events`);
-    console.log('📊 Available event dates:', events.map(e => e.date).sort());
     setDailyEvents(eventsForDay);
   }, [events, selectedDate]);
 
@@ -177,33 +178,77 @@ export default function EconomicCalendarTab() {
     filterEventsByDate();
   }, [filterEventsByDate]);
 
-  // טעינת אירועים כלכליים עם cache
+  // טעינת אירועים מ-Supabase Database
+  const loadFromDatabase = async (): Promise<EconEvent[]> => {
+    try {
+      console.log('💾 Loading from Supabase Database...');
+      
+      // קבלת טווח תאריכים - 3 חודשים אחורה ו-3 חודשים קדימה מהיום (לא מהתאריך הנבחר)
+      const today = new Date(); // תמיד התאריך הנוכחי
+      const startDate = new Date(today);
+      startDate.setMonth(startDate.getMonth() - 3);
+      const endDate = new Date(today);
+      endDate.setMonth(endDate.getMonth() + 3);
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      
+      console.log(`📅 Fetching events from ${startDateStr} to ${endDateStr}`);
+      
+      const { data, error } = await supabase
+        .from('economic_events')
+        .select('*')
+        .gte('date', startDateStr)
+        .lte('date', endDateStr)
+        .order('date', { ascending: false })
+        .limit(500);
+      
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        return [];
+      }
+      
+      if (!data || data.length === 0) {
+        console.log('⚠️ No data in database');
+        return [];
+      }
+      
+      console.log(`✅ Loaded ${data.length} events from database`);
+      
+      // המרה לפורמט של האפליקציה
+      return data.map(event => ({
+        id: event.id,
+        title: event.title,
+        country: event.country,
+        currency: event.currency || '',
+        importance: event.importance as 'high' | 'medium' | 'low',
+        date: typeof event.date === 'string' ? event.date : new Date(event.date).toISOString().split('T')[0],
+        time: event.time || '',
+        actual: event.actual || '',
+        forecast: event.forecast || '',
+        previous: event.previous || '',
+        description: event.description || '',
+        category: event.category || '',
+        impact: event.impact || '',
+        source: event.source || 'Database',
+        createdAt: event.created_at
+      }));
+    } catch (error) {
+      console.error('❌ Error loading from database:', error);
+      return [];
+    }
+  };
+
+  // טעינת אירועים כלכליים מ-Database בלבד
   const loadEconomicEvents = useCallback(async () => {
     try {
-      console.log('📅 EconomicCalendarTab: Loading economic events');
+      console.log('📅 EconomicCalendarTab: Loading economic events from Database');
       
-      let loadedEvents: EconEvent[] = [];
-      // ברירת מחדל: טעינה מ-cache עם נפילה אוטומטית ל-APIs אם ריק
-      console.log('📦 Loading from cache...');
-      const dateRange = {
-        start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      };
-      const cachedEvents = await EconomicDataCacheService.getEconomicEvents(
-        'US',
-        selectedImportance === 'all' ? undefined : selectedImportance,
-        dateRange
-      );
-      loadedEvents = cachedEvents.map(event => EconomicDataCacheService.convertToAppFormat(event));
-      if (!loadedEvents || loadedEvents.length === 0) {
-        console.log('⚠️ Cache returned 0 events – falling back to direct API load...');
-        const isEODHDAvailable = await EODHDService.checkApiAvailability();
-        if (isEODHDAvailable) {
-          const eodhdEvents = await EODHDService.getPopularEconomicIndicators();
-          loadedEvents = eodhdEvents.map(event => EODHDService.convertToAppFormat(event));
-        } else {
-          loadedEvents = await EconomicCalendarService.getEconomicEvents();
-        }
+      // טעינה מ-Supabase Database
+      const loadedEvents = await loadFromDatabase();
+      
+      if (loadedEvents.length === 0) {
+        Alert.alert('אין נתונים', 'הטבלה ריקה. הרץ את daily-economic-sync להביא נתונים.');
       }
       
       console.log('✅ EconomicCalendarTab: Loaded', loadedEvents.length, 'events');
@@ -249,10 +294,31 @@ export default function EconomicCalendarTab() {
     loadEconomicEvents();
   }, [loadEconomicEvents]);
 
+  // Realtime subscription - עדכונים אוטומטיים מ-Supabase
+  useEffect(() => {
+    console.log('🔄 Subscribing to economic_events realtime updates...');
+    
+    const subscription = supabase
+      .channel('economic_events_channel')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'economic_events' },
+        (payload) => {
+          console.log('📡 Economic event realtime update:', payload);
+          // רענן את הנתונים
+          loadEconomicEvents();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔄 Unsubscribing from economic_events realtime');
+      subscription.unsubscribe();
+    };
+  }, [loadEconomicEvents]);
+
   // רענון
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    setHasMoreData(true);
     loadEconomicEvents();
   }, [loadEconomicEvents]);
 
@@ -358,8 +424,6 @@ export default function EconomicCalendarTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* פילטרים מתקדמים – בוטל לפי דרישה */}
-
       {/* ניווט יומי */}
       <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
         {/* בקרת תאריך */}

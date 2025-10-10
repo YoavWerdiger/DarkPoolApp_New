@@ -55,7 +55,7 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       title: 'הגדרות',
       items: [
         { icon: 'notifications-outline', title: 'התראות', subtitle: 'הגדרת התראות פוש', color: '#00E654' },
-        { icon: 'shield-checkmark-outline', title: 'פרטיות ואבטחה', subtitle: 'נתוני חשבון, הרשאות, אבטחה', color: '#00E654' },
+        { icon: 'settings-outline', title: 'הגדרות', subtitle: 'הגדרות אפליקציה ואבטחה', color: '#00E654' },
       ]
     },
     {
@@ -75,8 +75,8 @@ export default function ProfileScreen({ navigation }: ProfileScreenProps) {
       case 'התראות':
         navigation.navigate('Notifications');
         break;
-      case 'פרטיות ואבטחה':
-        navigation.navigate('Privacy');
+      case 'הגדרות':
+        navigation.navigate('Settings');
         break;
       case 'מסלול':
         navigation.navigate('Subscription');

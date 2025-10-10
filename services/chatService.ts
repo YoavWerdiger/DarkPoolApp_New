@@ -406,6 +406,7 @@ export class ChatService {
           mentions,
           read_by,
           viewed_by,
+          news_data,
           sender:users!messages_sender_id_fkey(
             full_name,
             profile_picture
@@ -442,8 +443,9 @@ export class ChatService {
   static subscribeToMessages(channelId: string, onMessage: (message: Message) => void) {
     console.log('🔔 ChatService: Setting up subscription for channel:', channelId);
     
-    return supabase
-      .channel(`chat:${channelId}`)
+    const channel = supabase.channel(`chat:${channelId}`);
+    
+    return channel
       .on(
         'postgres_changes',
         {
@@ -479,8 +481,21 @@ export class ChatService {
           onMessage(data as Message);
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         console.log('🔔 ChatService: Subscription status:', status);
+        if (err) {
+          console.error('❌ ChatService: Subscription error:', err);
+        }
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ ChatService: Successfully subscribed to channel:', channelId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ ChatService: Channel error for:', channelId);
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ ChatService: Subscription timed out for:', channelId);
+        } else if (status === 'CLOSED') {
+          console.log('🔕 ChatService: Subscription closed for:', channelId);
+        }
       });
   }
 

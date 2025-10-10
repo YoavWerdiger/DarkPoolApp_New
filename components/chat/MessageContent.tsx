@@ -24,7 +24,7 @@ export default function MessageContent({
         <Text 
           className="text-base"
           style={{ 
-            textAlign: textDirection === 'rtl' ? 'left' : 'right',
+            textAlign: textDirection === 'rtl' ? 'right' : 'left',
             direction: textDirection, 
             width: '100%',
             color: isMe ? '#000000' : '#FFFFFF',
@@ -47,7 +47,7 @@ export default function MessageContent({
       <Text 
         className="text-base"
         style={{ 
-          textAlign: textDirection === 'rtl' ? 'left' : 'right',
+          textAlign: textDirection === 'rtl' ? 'right' : 'left',
           direction: textDirection, 
           width: '100%',
           writingDirection: textDirection

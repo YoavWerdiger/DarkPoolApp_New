@@ -1,131 +1,56 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   ScrollView, 
   Pressable, 
   Image, 
-  Dimensions,
-  Animated,
-  TouchableOpacity,
   Alert
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { 
   User, 
-  Edit3, 
-  BookOpen, 
-  MessageSquare, 
   Settings, 
+  Bell,
   CreditCard,
   ChevronRight,
-  Star,
-  TrendingUp,
-  Users,
-  LogOut
+  LogOut,
+  Edit
 } from 'lucide-react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 
-const { width } = Dimensions.get('window');
-
-// הסרנו סטטיסטיקות מזויפות - נתונים אמיתיים יבואו מהשרת
-
-interface QuickAction {
+interface MenuItem {
   id: string;
   title: string;
-  subtitle: string;
-  icon: string;
-  color: string;
+  icon: any;
   onPress: () => void;
 }
 
 export default function ProfileMainScreen({ navigation }: any) {
   const { user, isLoading, signOut } = useAuth();
-  const [imageLoading, setImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  useEffect(() => {
+    if (user) {
+      loadProfileData();
+    }
+  }, [user]);
 
-  const getMembershipText = (): string => {
+  const loadProfileData = async () => {
     try {
-      console.log('🔍 User data for membership:', {
-        created_at: (user as any)?.created_at,
-        createdAt: (user as any)?.createdAt,
-        user_metadata: (user as any)?.user_metadata,
-        raw_user: user
-      });
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
       
-      const created = (user as any)?.created_at || (user as any)?.createdAt;
-      console.log('📅 Created date found:', created);
-      
-      if (!created) {
-        console.log('❌ No created date found');
-        return 'חבר בקהילה חדש';
+      if (data) {
+        setProfileData(data);
       }
-      
-      const createdDate = new Date(created);
-      console.log('📅 Parsed date:', createdDate);
-      
-      if (isNaN(createdDate.getTime())) {
-        console.log('❌ Invalid date');
-        return 'חבר בקהילה חדש';
-      }
-      
-      const day = String(createdDate.getDate()).padStart(2, '0');
-      const month = String(createdDate.getMonth() + 1).padStart(2, '0');
-      const year = createdDate.getFullYear();
-      const result = `חבר בקהילה מאז ${day}/${month}/${year}`;
-      
-      console.log('✅ Membership text:', result);
-      return result;
     } catch (error) {
-      console.log('❌ Error in getMembershipText:', error);
-      return 'חבר בקהילה חדש';
+      console.error('Error loading profile:', error);
     }
   };
-
-  const getPlanText = (): string => {
-    const raw = (user as any)?.account_type || (user as any)?.plan || (user as any)?.track_id;
-    const map: Record<string, string> = {
-      free: 'חינם',
-      basic: 'בסיס',
-      pro: 'פרו',
-      premium: 'פרימיום',
-      vip: 'VIP',
-      trial: 'ניסיון',
-    };
-    if (!raw) return 'מסלול: חינם';
-    const key = String(raw).toLowerCase();
-    const friendly = map[key] || raw;
-    return `מסלול: ${friendly}`;
-  };
-
-  useEffect(() => {
-    // אנימציה של כניסה
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  // אפס את מצב התמונה כשהמשתמש משתנה
-  useEffect(() => {
-    if (user?.profile_picture) {
-      setImageLoading(true);
-      setImageError(false);
-    }
-  }, [user?.profile_picture]);
 
   const handleSignOut = async () => {
     Alert.alert(
@@ -134,24 +59,12 @@ export default function ProfileMainScreen({ navigation }: any) {
       [
         { text: 'ביטול', style: 'cancel' },
         {
-          text: 'התנתק ומחק נתונים',
+          text: 'התנתק',
           style: 'destructive',
           onPress: async () => {
-            const { error } = await signOut(false); // מחק נתונים
+            const { error } = await signOut(true);
             if (error) {
               Alert.alert('שגיאה', 'שגיאה בהתנתקות');
-            }
-          },
-        },
-        {
-          text: 'התנתק ושמור נתונים',
-          style: 'default',
-          onPress: async () => {
-            const { error } = await signOut(true); // שמור נתונים
-            if (error) {
-              Alert.alert('שגיאה', 'שגיאה בהתנתקות');
-            } else {
-              Alert.alert('התנתקות', 'נתוני ההתחברות נשמרו להפעלה הבאה');
             }
           },
         },
@@ -159,390 +72,350 @@ export default function ProfileMainScreen({ navigation }: any) {
     );
   };
 
-  const quickActions: QuickAction[] = [
+  const menuItems: MenuItem[] = [
     {
       id: 'edit',
-      title: 'ערוך פרופיל',
-      subtitle: 'עדכן פרטים אישיים',
-      icon: 'person',
-      color: '#00E654',
+      title: 'עריכת פרופיל',
+      icon: Edit,
       onPress: () => navigation.navigate('EditProfile')
     },
     {
       id: 'notifications',
       title: 'התראות',
-      subtitle: 'הגדרות התראות',
-      icon: 'notifications',
-      color: '#F59E0B',
+      icon: Bell,
       onPress: () => navigation.navigate('Notifications')
     },
     {
       id: 'settings',
       title: 'הגדרות',
-      subtitle: 'הגדרות אפליקציה',
-      icon: 'settings',
-      color: '#F59E0B',
+      icon: Settings,
       onPress: () => navigation.navigate('Settings')
     },
     {
       id: 'subscription',
       title: 'מסלול ותשלום',
-      subtitle: 'ניהול מנוי',
-      icon: 'card',
-      color: '#EF4444',
+      icon: CreditCard,
       onPress: () => navigation.navigate('Subscription')
     }
   ];
 
-  // הסרנו renderStatCard - לא נדרש יותר
-
-  const renderQuickAction = (action: QuickAction, index: number) => (
-    <Animated.View
-      key={action.id}
-      style={{
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }],
-      }}
-    >
-      <TouchableOpacity
-        onPress={action.onPress}
-        style={{
-          marginBottom: 16,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 3
-        }}
-      >
-        <LinearGradient
-          colors={['#252525', '#1E1E1E', '#181818']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            padding: 20,
-            borderRadius: 20,
-            flexDirection: 'row-reverse',
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: '#333333'
-          }}
-        >
-          {/* אייקון */}
-          <View style={{
-            width: 50,
-            height: 50,
-            borderRadius: 15,
-            backgroundColor: action.color,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: 20,
-            shadowColor: action.color,
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.4,
-            shadowRadius: 8,
-            elevation: 4
-          }}>
-            <Ionicons name={action.icon as any} size={24} color="#FFFFFF" />
-          </View>
-          
-          {/* תוכן */}
-          <View style={{ flex: 1 }}>
-            <Text style={{ 
-              color: '#FFFFFF', 
-              fontSize: 18, 
-              fontWeight: '600', 
-              marginBottom: 4,
-              writingDirection: 'rtl'
-            }}>
-              {action.title}
-            </Text>
-            <Text style={{ 
-              color: '#B0B0B0', 
-              fontSize: 14, 
-              fontWeight: '400',
-              writingDirection: 'rtl'
-            }}>
-              {action.subtitle}
-            </Text>
-          </View>
-          
-          {/* חץ */}
-          <View style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            backgroundColor: '#333333',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <ChevronRight size={18} color="#888888" />
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-
-  console.log('🔍 ProfileMainScreen render:', { 
-    isLoading, 
-    userId: user?.id,
-    userEmail: user?.email,
-    userFullName: user?.full_name,
-    userCreatedAt: (user as any)?.created_at,
-    userCreatedAtAlt: (user as any)?.createdAt,
-    userMetadata: (user as any)?.user_metadata,
-    rawUser: user
-  });
-
   if (isLoading) {
-    console.log('⏳ ProfileMainScreen: Still loading...');
     return (
       <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 18 }}>טוען נתונים...</Text>
+        <Text style={{ color: '#666', fontSize: 16 }}>טוען...</Text>
       </View>
     );
   }
 
-  // אם אין משתמש, נציג מסך עם הודעה
   if (!user) {
-    console.log('❌ ProfileMainScreen: No user found');
     return (
       <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '600', marginBottom: 16, textAlign: 'center' }}>
+        <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '600', marginBottom: 8 }}>
           לא מחובר
         </Text>
-        <Text style={{ color: '#B0B0B0', fontSize: 16, textAlign: 'center', lineHeight: 24 }}>
-          יש להתחבר לאפליקציה כדי לראות את הפרופיל
+        <Text style={{ color: '#666', fontSize: 14, textAlign: 'center' }}>
+          יש להתחבר לאפליקציה
         </Text>
       </View>
     );
   }
 
-  console.log('✅ ProfileMainScreen: Rendering with user:', user.id);
+  const displayName = profileData?.full_name || user?.email?.split('@')[0] || 'משתמש';
+  const email = user?.email || '';
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
-      <ScrollView 
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        {/* Header עם גרדיאנט */}
-        <LinearGradient
-          colors={['#00E65420', '#00E65410', 'transparent', '#00E65405']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            paddingTop: 48,
-            paddingBottom: 24,
-            paddingHorizontal: 24,
-            alignItems: 'center',
-            borderBottomWidth: 1,
-            borderBottomColor: 'rgba(0, 230, 84, 0.2)'
-          }}
-        >
-          {/* תמונת פרופיל אמיתית + Badge מחובר בסגנון וואטסאפ (ללא אפקט זום) */}
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-            }}
-          >
-            <View style={{ width: 100, height: 100, marginBottom: 20 }}>
-              <LinearGradient
-                colors={['#00E654', '#00D04B', '#00E654']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 50,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: '#00E654',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 12,
-                  elevation: 8
-                }}
-              >
-                <View style={{
-                  width: 92,
-                  height: 92,
-                  borderRadius: 46,
-                  overflow: 'hidden',
-                  backgroundColor: '#FFFFFF'
-                }}>
-                  {user?.profile_picture && !imageError ? (
-                    <Image 
-                      source={{ uri: user.profile_picture as any }} 
-                      style={{ 
-                        width: '100%', 
-                        height: '100%',
-                        resizeMode: 'cover'
-                      }}
-                      onError={() => {
-                        console.log('❌ Error loading profile picture');
-                        setImageError(true);
-                        setImageLoading(false);
-                      }}
-                      onLoad={() => {
-                        console.log('✅ Profile picture loaded successfully');
-                        setImageLoading(false);
-                        setImageError(false);
-                      }}
-                    />
-                  ) : (
-                    <View style={{ 
-                      width: '100%', 
-                      height: '100%', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      backgroundColor: '#F0F0F0'
-                    }}>
-                      <User size={46} color="#666666" strokeWidth={2} />
-                    </View>
-                  )}
-                </View>
-              </LinearGradient>
-              <View style={{
-                position: 'absolute',
-                bottom: 2,
-                right: 2,
-                width: 18,
-                height: 18,
-                borderRadius: 9,
-                backgroundColor: '#25D366',
-                borderWidth: 2,
-                borderColor: 'rgba(0,0,0,0.6)'
-              }} />
-            </View>
-          </Animated.View>
+    <ScrollView style={{ flex: 1, backgroundColor: '#121212' }}>
+      {/* Profile Header */}
+      <View style={{
+        paddingTop: 50,
+        paddingBottom: 24,
+        paddingHorizontal: 20,
+        alignItems: 'center'
+      }}>
+        {/* Avatar */}
+        <View style={{
+          width: 100,
+          height: 100,
+          borderRadius: 50,
+          backgroundColor: '#1A1A1A',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 16,
+          borderWidth: 3,
+          borderColor: '#2A2A2A'
+        }}>
+          {profileData?.profile_picture ? (
+            <Image 
+              source={{ uri: profileData.profile_picture }} 
+              style={{ width: '100%', height: '100%', borderRadius: 50 }}
+            />
+          ) : (
+            <User size={40} color="#666" strokeWidth={1.5} />
+          )}
+        </View>
 
-          {/* פרטי משתמש - שם ושתי שורות מידע אלגנטיות */}
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              alignItems: 'center'
-            }}
-          >
-            <Text style={{ 
-              color: '#FFFFFF', 
-              fontSize: 28, 
-              fontWeight: '700', 
-              marginBottom: 0,
-              writingDirection: 'rtl'
-            }}>
-              {user?.full_name || (user as any)?.display_name || user?.email?.split('@')[0] || 'משתמש'}
-            </Text>
-            <Text style={{
-              color: '#B0B0B0',
-              fontSize: 14,
-              marginTop: 8,
-              writingDirection: 'rtl'
-            }}>
-              {getMembershipText()}
-            </Text>
-            <Text style={{
-              color: '#00E654',
-              fontSize: 14,
-              marginTop: 4,
-              writingDirection: 'rtl'
-            }}>
-              {getPlanText()}
-            </Text>
-          </Animated.View>
-        </LinearGradient>
+        {/* User Info */}
+        <Text style={{ 
+          color: '#FFFFFF', 
+          fontSize: 26, 
+          fontWeight: '700', 
+          marginBottom: 6,
+          textAlign: 'center'
+        }}>
+          {displayName}
+        </Text>
+        <Text style={{ 
+          color: '#888', 
+          fontSize: 15,
+          marginBottom: 12,
+          textAlign: 'center'
+        }}>
+          {email}
+        </Text>
 
-        {/* הסרנו סטטיסטיקות מזויפות - נתונים אמיתיים יבואו מהשרת */}
-
-        {/* קיצורי דרך */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 30 }}>
+        {/* Subscription Badge */}
+        <View style={{
+          paddingHorizontal: 16,
+          paddingVertical: 8,
+          borderRadius: 20,
+          backgroundColor: '#1A1A1A',
+          borderWidth: 1,
+          borderColor: '#333'
+        }}>
           <Text style={{ 
-            color: '#FFFFFF', 
-            fontSize: 22, 
-            fontWeight: '600', 
-            marginBottom: 20,
-            writingDirection: 'rtl'
+            color: '#00E654', 
+            fontSize: 13,
+            fontWeight: '600'
           }}>
-            קיצורי דרך
+            מנוי פעיל
           </Text>
-          
-          {(() => {
-            console.log('🎯 Rendering quickActions:', quickActions.length);
-            return quickActions.length > 0 ? (
-              quickActions.map((action, index) => {
-                console.log(`🎯 Rendering action ${index}:`, action.title);
-                return renderQuickAction(action, index);
-              })
-            ) : (
-              <View style={{ padding: 20, alignItems: 'center' }}>
-                <Text style={{ color: '#888', fontSize: 16 }}>אין קיצורי דרך זמינים</Text>
-              </View>
-            );
-          })()}
         </View>
+      </View>
 
-        {/* כפתור התנתקות */}
-        <View style={{ paddingHorizontal: 24, marginTop: 40, marginBottom: 32 }}>
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }}
+      {/* Menu Options */}
+      <View style={{ 
+        paddingHorizontal: 20,
+        marginBottom: 30
+      }}>
+        <View style={{
+          backgroundColor: '#1A1A1A',
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: '#2A2A2A'
+        }}>
+          {/* Edit Profile */}
+          <Pressable
+            onPress={() => navigation.navigate('EditProfile')}
+            style={({ pressed }) => ({
+              paddingVertical: 16,
+              paddingHorizontal: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: pressed ? '#1E1E1E' : 'transparent',
+              borderBottomWidth: 1,
+              borderBottomColor: '#2A2A2A'
+            })}
           >
-            <Pressable
-              onPress={handleSignOut}
-              style={({ pressed }) => ({
-                transform: [{ scale: pressed ? 0.99 : 1 }],
-                opacity: pressed ? 0.95 : 1
-              })}
-            >
-              <View style={{
-                padding: 20,
-                borderRadius: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#2A1A1A',
-                borderWidth: 1,
-                borderColor: '#DC2626',
-                shadowColor: '#DC2626',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 12,
-                elevation: 6
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: '#252525',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 16
+            }}>
+              <Edit size={20} color="#666" strokeWidth={2} />
+            </View>
+            
+            <View style={{ flex: 1 }}>
+              <Text style={{ 
+                color: '#FFFFFF', 
+                fontSize: 16, 
+                fontWeight: '500',
+                marginBottom: 2,
+                textAlign: 'right',
+                writingDirection: 'rtl'
               }}>
-                <View style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  backgroundColor: '#DC2626',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 12
-                }}>
-                  <LogOut size={18} color="#FFFFFF" strokeWidth={2} />
-                </View>
-                <Text style={{ 
-                  color: '#FFFFFF', 
-                  fontSize: 17, 
-                  fontWeight: '500',
-                  textAlign: 'center',
-                  writingDirection: 'rtl',
-                  letterSpacing: 0.3
-                }}>
-                  התנתק מהחשבון
-                </Text>
-              </View>
-            </Pressable>
-          </Animated.View>
-        </View>
+                עריכת פרופיל
+              </Text>
+            </View>
+            
+            <View style={{ marginLeft: 16 }}>
+              <ChevronRight size={18} color="#666" strokeWidth={2} />
+            </View>
+          </Pressable>
 
-        {/* גרסת אפליקציה */}
-        <View style={{ alignItems: 'center', paddingTop: 20, paddingBottom: 20 }}>
-          <Text style={{ color: '#666', fontSize: 12, writingDirection: 'rtl' }}>גרסה 1.0.0 • DarkPool App</Text>
+          {/* Notifications */}
+          <Pressable
+            onPress={() => navigation.navigate('Notifications')}
+            style={({ pressed }) => ({
+              paddingVertical: 16,
+              paddingHorizontal: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: pressed ? '#1E1E1E' : 'transparent',
+              borderBottomWidth: 1,
+              borderBottomColor: '#2A2A2A'
+            })}
+          >
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: '#252525',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 16
+            }}>
+              <Bell size={20} color="#666" strokeWidth={2} />
+            </View>
+            
+            <View style={{ flex: 1 }}>
+              <Text style={{ 
+                color: '#FFFFFF', 
+                fontSize: 16, 
+                fontWeight: '500',
+                marginBottom: 2,
+                textAlign: 'right',
+                writingDirection: 'rtl'
+              }}>
+                התראות
+              </Text>
+            </View>
+            
+            <View style={{ marginLeft: 16 }}>
+              <ChevronRight size={18} color="#666" strokeWidth={2} />
+            </View>
+          </Pressable>
+
+          {/* Settings */}
+          <Pressable
+            onPress={() => navigation.navigate('Settings')}
+            style={({ pressed }) => ({
+              paddingVertical: 16,
+              paddingHorizontal: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: pressed ? '#1E1E1E' : 'transparent',
+              borderBottomWidth: 1,
+              borderBottomColor: '#2A2A2A'
+            })}
+          >
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: '#252525',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 16
+            }}>
+              <Settings size={20} color="#666" strokeWidth={2} />
+            </View>
+            
+            <View style={{ flex: 1 }}>
+              <Text style={{ 
+                color: '#FFFFFF', 
+                fontSize: 16, 
+                fontWeight: '500',
+                marginBottom: 2,
+                textAlign: 'right',
+                writingDirection: 'rtl'
+              }}>
+                הגדרות
+              </Text>
+            </View>
+            
+            <View style={{ marginLeft: 16 }}>
+              <ChevronRight size={18} color="#666" strokeWidth={2} />
+            </View>
+          </Pressable>
+
+          {/* Subscription */}
+          <Pressable
+            onPress={() => navigation.navigate('Subscription')}
+            style={({ pressed }) => ({
+              paddingVertical: 16,
+              paddingHorizontal: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: pressed ? '#1E1E1E' : 'transparent'
+            })}
+          >
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: '#252525',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 16
+            }}>
+              <CreditCard size={20} color="#666" strokeWidth={2} />
+            </View>
+            
+            <View style={{ flex: 1 }}>
+              <Text style={{ 
+                color: '#FFFFFF', 
+                fontSize: 16, 
+                fontWeight: '500',
+                marginBottom: 2,
+                textAlign: 'right',
+                writingDirection: 'rtl'
+              }}>
+                מסלול ותשלום
+              </Text>
+            </View>
+            
+            <View style={{ marginLeft: 16 }}>
+              <ChevronRight size={18} color="#666" strokeWidth={2} />
+            </View>
+          </Pressable>
         </View>
-      </ScrollView>
-    </View>
+      </View>
+
+      {/* Sign Out Button */}
+      <View style={{ 
+        paddingHorizontal: 20,
+        marginBottom: 30
+      }}>
+        <Pressable
+          onPress={handleSignOut}
+          style={({ pressed }) => ({
+            paddingVertical: 18,
+            paddingHorizontal: 20,
+            borderRadius: 16,
+            backgroundColor: pressed ? '#2A1A1A' : '#1A1A1A',
+            borderWidth: 1,
+            borderColor: '#DC2626',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center'
+          })}
+        >
+          <LogOut size={20} color="#DC2626" strokeWidth={2} />
+          <Text style={{ 
+            color: '#DC2626', 
+            fontSize: 17, 
+            fontWeight: '600',
+            marginLeft: 12
+          }}>
+            התנתק מהחשבון
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Version */}
+      <View style={{ 
+        alignItems: 'center',
+        paddingBottom: 40,
+        paddingTop: 20
+      }}>
+        <Text style={{ color: '#555', fontSize: 13 }}>
+          גרסה 1.0.0 • DarkPool App
+        </Text>
+      </View>
+    </ScrollView>
   );
 }

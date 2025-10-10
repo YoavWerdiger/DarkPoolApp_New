@@ -51,6 +51,10 @@ interface MessageInputBarProps {
   chatId: string;
   editingMessage?: { id: string; content: string } | null;
   onCancelEdit?: () => void;
+  replyToMessage?: { id: string; content: string; userName?: string } | null;
+  onCancelReply?: () => void;
+  startTyping?: () => void;
+  stopTyping?: () => void;
 }
 
 export default function MessageInputBar({ 
@@ -60,7 +64,11 @@ export default function MessageInputBar({
   onEditMessage,
   chatId,
   editingMessage,
-  onCancelEdit
+  onCancelEdit,
+  replyToMessage,
+  onCancelReply,
+  startTyping,
+  stopTyping
 }: MessageInputBarProps) {
   const screenWidth = Dimensions.get('window').width;
   const maxBubbleWidth = Math.floor(screenWidth * 0.9);
@@ -79,6 +87,8 @@ export default function MessageInputBar({
   const recordingRef = useRef<Audio.Recording | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
   const textInputRef = useRef<TextInput>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingTimeRef = useRef<number>(0);
 
   // Initialize text with editing message content
   useEffect(() => {
@@ -112,6 +122,11 @@ export default function MessageInputBar({
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
       }
+      // נקה גם את typing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        stopTyping?.();
+      }
     };
   }, []);
 
@@ -133,6 +148,11 @@ export default function MessageInputBar({
       // Extract mentions if any
       const mentions = getMentionRanges(text);
       console.log('📤 MessageInputBar: Mentions found:', mentions);
+      
+      // הפסק להקליד כשמשלחים
+      if (isTyping) {
+        stopTyping?.();
+      }
       
       if (editingMessage && onEditMessage) {
         // Editing existing message
@@ -159,11 +179,46 @@ export default function MessageInputBar({
   const handleTextChange = (newText: string) => {
     console.log('🎨 MessageInputBar: Text changed to:', newText);
     
+    const wasTyping = isTyping;
+    const nowTyping = newText.length > 0;
+    
     setText(newText);
-    setIsTyping(newText.length > 0);
+    setIsTyping(nowTyping);
     
     // Handle mentions in the hook (this will handle the mention picker logic)
     handleInputChange(newText);
+    
+    // Typing indicator עם throttling - שולח עדכון רק אחת ל-500ms
+    if (nowTyping) {
+      const now = Date.now();
+      const timeSinceLastTyping = now - lastTypingTimeRef.current;
+      
+      // שלח typing indicator אם עברו לפחות 500ms מהעדכון האחרון
+      if (timeSinceLastTyping > 500) {
+        console.log('✍️ MessageInputBar: User typing (throttled)');
+        startTyping?.();
+        lastTypingTimeRef.current = now;
+      }
+      
+      // בטל timeout קודם
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // הגדר timeout חדש - אם לא מקלידים 2 שניות, נפסיק
+      typingTimeoutRef.current = setTimeout(() => {
+        console.log('🛑 MessageInputBar: User stopped typing (timeout)');
+        stopTyping?.();
+        setIsTyping(false);
+      }, 2000);
+    } else if (!nowTyping && wasTyping) {
+      // הפסיק להקליד (מחק הכל)
+      console.log('🛑 MessageInputBar: User cleared text');
+      stopTyping?.();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    }
   };
 
   // Render text with mentions for display
@@ -476,7 +531,7 @@ export default function MessageInputBar({
             numberOfLines={2}
             textAlignVertical="top"
             style={{ 
-              textAlign: 'right',
+              textAlign: textDirection === 'rtl' ? 'right' : 'left',
               writingDirection: textDirection,
               width: '100%',
               color: '#FFFFFF',
@@ -493,30 +548,6 @@ export default function MessageInputBar({
             ref={textInputRef}
           />
         </View>
-
-        {/* כפתור ביטול עריכה - אם במצב עריכה */}
-        {editingMessage && onCancelEdit && (
-          <Pressable 
-            className="rounded-full"
-            style={{ 
-              backgroundColor: '#F85149',
-              marginHorizontal: 4,
-              padding: 12,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-              shadowRadius: 4,
-              elevation: 4
-            }}
-            onPress={onCancelEdit}
-          >
-            <Ionicons 
-              name="close"
-              size={20} 
-              color="#FFFFFF" 
-            />
-          </Pressable>
-        )}
 
         {/* כפתור שליחה/הקלטה - שמאל */}
         <Pressable 
@@ -545,37 +576,33 @@ export default function MessageInputBar({
         <View style={{
           position: 'absolute',
           bottom: isKeyboardVisible ? 60 : 60,
-          left: 16,
-          right: 16,
+          left: 0,
+          right: 0,
           zIndex: 999,
         }}>
           {/* בועת הקלטה - עיצוב נקי ופשוט */}
           <View style={{
-            backgroundColor: 'rgba(29, 24, 24, 0.91)',
-            paddingVertical: 12,
+            backgroundColor: 'rgba(19, 19, 19, 0.8)',
+            paddingVertical: 10,
             paddingHorizontal: 16,
-            borderRadius: 12,
+            borderRadius: 0,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.06)',
+            borderWidth: 0,
+            borderBottomWidth: 1,
+            borderColor: 'rgba(255,255,255,0.08)',
             borderLeftWidth: 3,
             borderLeftColor: '#F85149',
-            shadowColor: '#F85149',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-            minHeight: 50
+            height: 60
           }}>
             {/* תוכן ההקלטה - מרכז */}
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ 
                   color: '#FFFFFF',
-                  fontSize: 14,
-                  fontWeight: 'bold',
+                  fontSize: 13,
+                  fontWeight: '600',
                   marginBottom: 2
                 }}>
                   הקלטה פעילה
@@ -583,16 +610,16 @@ export default function MessageInputBar({
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {/* נקודה מהבהבת ליד הטיימר */}
                   <View style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 3,
+                    width: 5,
+                    height: 5,
+                    borderRadius: 2.5,
                     backgroundColor: '#F85149',
-                    marginRight: 8,
+                    marginRight: 6,
                     opacity: 0.9
                   }} />
                   <Text style={{ 
                     color: '#CCCCCC',
-                    fontSize: 12
+                    fontSize: 11
                   }}>
                     {formatDuration(recordingDuration)}
                   </Text>
@@ -614,16 +641,156 @@ export default function MessageInputBar({
                 }
               }}
               style={({ pressed }) => ({
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: 'rgba(255, 255, 255, 0.12)',
                 alignItems: 'center',
                 justifyContent: 'center',
                 transform: [{ scale: pressed ? 0.95 : 1 }]
               })}
             >
-              <Ionicons name="close" size={18} color="#FFFFFF" />
+              <Ionicons name="close" size={16} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* Reply Preview - אם עונים להודעה */}
+      {replyToMessage && !editingMessage && (
+        <View style={{
+          position: 'absolute',
+          bottom: isKeyboardVisible ? 60 : 60,
+          left: 0,
+          right: 0,
+          zIndex: 999,
+        }}>
+          {/* בועת תשובה - עיצוב כמו ההקלטה */}
+          <View style={{
+            backgroundColor: 'rgba(29, 24, 24, 0.95)',
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            borderRadius: 0,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 0,
+            borderBottomWidth: 1,
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderLeftWidth: 3,
+            borderLeftColor: '#00E654',
+            height: 60,
+          }}>
+            {/* תוכן התשובה - מרכז */}
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ 
+                  color: '#FFFFFF',
+                  fontSize: 13,
+                  fontWeight: '600',
+                  marginBottom: 2
+                }}>
+                  תשובה ל{replyToMessage.userName ? ` ${replyToMessage.userName}` : ''}
+                </Text>
+                <Text 
+                  style={{ 
+                    color: '#CCCCCC',
+                    fontSize: 11,
+                    textAlign: detectLanguage(replyToMessage.content) === 'rtl' ? 'right' : 'left',
+                    writingDirection: detectLanguage(replyToMessage.content)
+                  }}
+                  numberOfLines={1}
+                >
+                  {replyToMessage.content.length > 30 
+                    ? replyToMessage.content.substring(0, 30) + '...' 
+                    : replyToMessage.content}
+                </Text>
+              </View>
+            </View>
+            
+            {/* כפתור ביטול - ימין */}
+            <Pressable 
+              onPress={onCancelReply}
+              style={({ pressed }) => ({
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ scale: pressed ? 0.95 : 1 }]
+              })}
+            >
+              <Ionicons name="close" size={16} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* Edit Preview - אם במצב עריכה */}
+      {editingMessage && (
+        <View style={{
+          position: 'absolute',
+          bottom: isKeyboardVisible ? 60 : 60,
+          left: 0,
+          right: 0,
+          zIndex: 999,
+        }}>
+          {/* בועת עריכה - עיצוב כמו ההקלטה */}
+          <View style={{
+            backgroundColor: 'rgba(29, 24, 24, 0.95)',
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            borderRadius: 0,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 0,
+            borderBottomWidth: 1,
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderLeftWidth: 3,
+            borderLeftColor: '#00E654',
+            height: 60,
+          }}>
+            {/* תוכן העריכה - מרכז */}
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ 
+                  color: '#FFFFFF',
+                  fontSize: 13,
+                  fontWeight: '600',
+                  marginBottom: 2
+                }}>
+                  עריכת הודעה
+                </Text>
+                <Text 
+                  style={{ 
+                    color: '#CCCCCC',
+                    fontSize: 11
+                  }}
+                  numberOfLines={1}
+                >
+                  {editingMessage.content.length > 30 
+                    ? editingMessage.content.substring(0, 30) + '...' 
+                    : editingMessage.content}
+                </Text>
+              </View>
+            </View>
+            
+            {/* כפתור ביטול - ימין */}
+            <Pressable 
+              onPress={onCancelEdit}
+              style={({ pressed }) => ({
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: [{ scale: pressed ? 0.95 : 1 }]
+              })}
+            >
+              <Ionicons name="close" size={16} color="#FFFFFF" />
             </Pressable>
           </View>
         </View>

@@ -55,6 +55,9 @@ export default function MediaViewer({
   const audioRef = useRef<Audio.Sound | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const zoomTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const imageScale = useRef(new Animated.Value(1)).current;
 
   // בדיקת מצב כוכב ראשוני
   useEffect(() => {
@@ -79,12 +82,35 @@ export default function MediaViewer({
     checkStarredStatus();
   }, [visible, message?.id, user?.id]);
 
+  // פונקציה להחזרת מיקום למרכז עם אנימציה חלקה
+  const resetImagePosition = () => {
+    // נקה timeout קודם אם קיים
+    if (zoomTimeoutRef.current) {
+      clearTimeout(zoomTimeoutRef.current);
+    }
+    
+    zoomTimeoutRef.current = setTimeout(() => {
+      // החזר את ה-ScrollView למרכז עם אנימציה
+      scrollViewRef.current?.scrollTo({ x: 0, y: 0, animated: true });
+      
+      // החזר את גודל התמונה למקור עם אנימציה חלקה וטבעית
+      Animated.spring(imageScale, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 9,
+        velocity: 0,
+      }).start();
+    }, 100);
+  };
+
   // אנימציה כניסה וניקוי state
   useEffect(() => {
     console.log('🎯 MediaViewer visible changed to:', visible);
     if (visible) {
       console.log('🎯 MediaViewer opening - resetting states');
       setShowActions(false);
+      imageScale.setValue(1);
       
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -108,8 +134,14 @@ export default function MediaViewer({
         audioRef.current = null;
       }
       
+      if (zoomTimeoutRef.current) {
+        clearTimeout(zoomTimeoutRef.current);
+        zoomTimeoutRef.current = null;
+      }
+      
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
+      imageScale.setValue(1);
     }
   }, [visible]);
 
@@ -308,29 +340,55 @@ export default function MediaViewer({
     switch (mediaType) {
       case 'image':
         return (
-          <View 
-            style={{ 
-              flex: 1,
-              justifyContent: 'center', 
-              alignItems: 'center',
-              backgroundColor: 'black',
-            }}
-          >
-            <Image
-              source={{ uri: mediaUrl }}
-              style={{
-                width: screenWidth,
-                height: screenHeight * 0.8,
+          <View style={{ flex: 1, backgroundColor: 'black' }}>
+            <ScrollView
+              ref={scrollViewRef}
+              style={{ flex: 1 }}
+              contentContainerStyle={{
+                minHeight: screenHeight,
+                minWidth: screenWidth,
+                justifyContent: 'center',
+                alignItems: 'center',
               }}
-              resizeMode="contain"
-              onLoad={() => {
-                console.log('✅ Image loaded successfully:', mediaUrl);
+              maximumZoomScale={3}
+              minimumZoomScale={1}
+              bouncesZoom={true}
+              centerContent={true}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              scrollEventThrottle={16}
+              decelerationRate="fast"
+              onScrollBeginDrag={() => {
+                // נקה טיימרים קודמים כשמתחילים גלילה חדשה
+                if (zoomTimeoutRef.current) {
+                  clearTimeout(zoomTimeoutRef.current);
+                  zoomTimeoutRef.current = null;
+                }
               }}
-              onError={(error) => {
-                console.error('❌ Image load error:', error);
-                console.error('❌ Failed URL:', mediaUrl);
+              onScrollEndDrag={() => {
+                resetImagePosition();
               }}
-            />
+              onMomentumScrollEnd={() => {
+                resetImagePosition();
+              }}
+            >
+              <Animated.Image
+                source={{ uri: mediaUrl }}
+                style={{
+                  width: screenWidth * 1.15,
+                  height: screenHeight * 1.05,
+                  transform: [{ scale: imageScale }],
+                }}
+                resizeMode="cover"
+                onLoad={() => {
+                  console.log('✅ Image loaded successfully:', mediaUrl);
+                }}
+                onError={(error) => {
+                  console.error('❌ Image load error:', error);
+                  console.error('❌ Failed URL:', mediaUrl);
+                }}
+              />
+            </ScrollView>
           </View>
         );
 

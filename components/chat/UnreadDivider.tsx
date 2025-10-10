@@ -1,6 +1,5 @@
-import React from 'react';
-import { View, Text, Pressable } from 'react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Pressable, Animated } from 'react-native';
 
 interface UnreadDividerProps {
   unreadCount: number;
@@ -13,76 +12,59 @@ const UnreadDivider: React.FC<UnreadDividerProps> = ({
 }) => {
   console.log('🟢 UnreadDivider: Rendering with count:', unreadCount);
   
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  
+  useEffect(() => {
+    // Fade out אוטומטי אחרי 45 שניות
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 1500,
+        useNativeDriver: true,
+      }).start();
+    }, 45000);
+    
+    return () => clearTimeout(timer);
+  }, [fadeAnim]);
+  
   if (unreadCount <= 0) {
     console.log('🔴 UnreadDivider: Not rendering - count is', unreadCount);
     return null;
   }
 
   return (
-    <Pressable 
-      onPress={onPress}
-      className="my-4 mx-4"
-      disabled={!onPress}
-      style={{
-        opacity: onPress ? 1 : 0.8
-      }}
-    >
-      <View className="flex-row items-center justify-center">
-        {/* קו שמאל */}
-        <View 
-          className="flex-1 h-[1px]" 
-          style={{ 
-            backgroundColor: DesignTokens.colors.border,
-            shadowColor: DesignTokens.colors.border,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-            elevation: 1
-          }}
-        />
-        
-        {/* טקסט במרכז */}
-        <View 
-          className="mx-4 px-4 py-2 rounded-full"
-          style={{ 
-            backgroundColor: DesignTokens.colors.primary,
-            shadowColor: DesignTokens.colors.primary,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 6,
-            elevation: 4,
-            borderWidth: 1,
-            borderColor: DesignTokens.colors.primary + '40'
-          }}
-        >
-          <Text 
-            className="text-sm font-bold text-center"
-            style={{ 
-              color: DesignTokens.colors.textPrimary,
-              fontSize: DesignTokens.typography.fontSize.sm,
-              fontWeight: DesignTokens.typography.fontWeight.bold
-            }}
-          >
-            {unreadCount} הודעות חדשות
-          </Text>
+    <Animated.View style={{ opacity: fadeAnim, marginVertical: 16, marginHorizontal: 16 }}>
+      <Pressable onPress={onPress} disabled={!onPress}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          {/* קו שמאל */}
+          <View style={{ flex: 1, height: 2, backgroundColor: '#00D84A' }} />
+          
+          {/* טקסט במרכז */}
+          <View style={{ 
+            backgroundColor: '#181818',
+            paddingHorizontal: 14,
+            paddingVertical: 6,
+            borderRadius: 16,
+            marginHorizontal: 12,
+            borderWidth: 1.5,
+            borderColor: '#00D84A'
+          }}>
+            <Text style={{ 
+              color: '#00D84A',
+              fontSize: 13,
+              fontWeight: '700',
+              textAlign: 'center'
+            }}>
+              {unreadCount} הודעות חדשות
+            </Text>
+          </View>
+          
+          {/* קו ימין */}
+          <View style={{ flex: 1, height: 2, backgroundColor: '#00D84A' }} />
         </View>
-        
-        {/* קו ימין */}
-        <View 
-          className="flex-1 h-[1px]" 
-          style={{ 
-            backgroundColor: DesignTokens.colors.border,
-            shadowColor: DesignTokens.colors.border,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.1,
-            shadowRadius: 2,
-            elevation: 1
-          }}
-        />
-      </View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
-}
+};
 
 export default UnreadDivider;
-

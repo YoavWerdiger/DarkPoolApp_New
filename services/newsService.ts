@@ -339,25 +339,80 @@ export const newsService = NewsService.getInstance();
 
 // פונקציות עזר
 export const formatNewsDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-
-  if (diffInHours < 1) {
+  console.log('🕐 formatNewsDate: Input dateString:', dateString);
+  
+  if (!dateString) {
+    console.log('⚠️ formatNewsDate: Empty dateString, using current time');
     return 'לפני פחות משעה';
-  } else if (diffInHours < 24) {
-    return `לפני ${diffInHours} שעות`;
-  } else if (diffInHours < 48) {
-    return 'אתמול';
-  } else {
-    return date.toLocaleDateString('he-IL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   }
+
+  // ניסיון לפרסר את התאריך
+  let date: Date;
+  
+  try {
+    // אם זה מספר (timestamp), נמיר אותו
+    if (typeof dateString === 'number' || /^\d+$/.test(dateString)) {
+      const timestamp = parseInt(dateString);
+      // בדיקה אם זה timestamp בשניות או במילישניות
+      if (timestamp < 10000000000) { // פחות מ-10 מיליארד = בשניות
+        date = new Date(timestamp * 1000);
+      } else { // במילישניות
+        date = new Date(timestamp);
+      }
+      console.log('🕐 formatNewsDate: Parsed as Unix timestamp:', date);
+    } else {
+      date = new Date(dateString);
+      console.log('🕐 formatNewsDate: Parsed as date string:', date);
+    }
+
+    // בדיקה אם התאריך תקין
+    if (isNaN(date.getTime()) || date.getTime() < 0) {
+      console.log('❌ formatNewsDate: Invalid date, using current time');
+      date = new Date();
+    }
+  } catch (error) {
+    console.log('❌ formatNewsDate: Error parsing date, using current time:', error);
+    date = new Date();
+  }
+
+  // המרה לשעון ישראל - עם בדיקת תקינות
+  let israelDate: Date;
+  let israelNow: Date;
+  
+  try {
+    israelDate = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
+    const now = new Date();
+    israelNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
+    
+    // בדיקה נוספת אם ההמרה הצליחה
+    if (isNaN(israelDate.getTime()) || isNaN(israelNow.getTime())) {
+      throw new Error('Invalid timezone conversion');
+    }
+  } catch (error) {
+    console.log('❌ formatNewsDate: Timezone conversion failed, using UTC:', error);
+    // נפילה ל-UTC אם המרת timezone נכשלת
+    israelDate = date;
+    israelNow = new Date();
+  }
+  
+  const diffInMs = israelNow.getTime() - israelDate.getTime();
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  console.log('🕐 formatNewsDate: Formatted date:', {
+    originalDate: dateString,
+    israelDate: israelDate.toISOString()
+  });
+
+  // תצוגת תאריך ושעה פשוטה
+  return israelDate.toLocaleDateString('he-IL', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 };
 
 export const truncateText = (text: string, maxLength: number = 150): string => {

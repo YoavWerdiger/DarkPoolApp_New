@@ -405,6 +405,191 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, article, onClose }) =>
   );
 };
 
+// מודל מפורט לחדשות
+interface NewsDetailModalProps {
+  visible: boolean;
+  article: NewsArticle | null;
+  isLiked: boolean;
+  onClose: () => void;
+  onLike: (article: NewsArticle) => void;
+  onShare: (article: NewsArticle) => void;
+}
+
+const NewsDetailModal: React.FC<NewsDetailModalProps> = ({ 
+  visible, 
+  article, 
+  isLiked, 
+  onClose, 
+  onLike, 
+  onShare 
+}) => {
+  if (!article) return null;
+
+  const categoryColor = getNewsCategoryColor(article.category);
+  const categoryIcon = getNewsCategoryIcon(article.category);
+  
+  // זיהוי אם זה טוויטר או חדשה רגילה
+  const isTwitterPost = article.source === 'Twitter' || 
+                       article.source === 'Bloomberg' || 
+                       article.source === 'Reuters' ||
+                       article.source === 'CNN' ||
+                       article.source === 'BBC' ||
+                       article.source === 'טוויטר' ||
+                       article.url?.includes('twitter.com') ||
+                       article.source_url?.includes('twitter.com') ||
+                       article.id?.length > 15;
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+        {/* כותרת */}
+        <View className="flex-row items-center justify-between p-4 border-b" style={{ borderBottomColor: 'rgba(255, 255, 255, 0.1)' }}>
+          <TouchableOpacity onPress={onClose}>
+            <Ionicons 
+              name="close" 
+              size={24} 
+              color={DesignTokens.colors.text.primary} 
+            />
+          </TouchableOpacity>
+          <Text 
+            className="text-lg font-semibold"
+            style={{ color: DesignTokens.colors.text.primary }}
+          >
+            {article.source ? `חדשה מאת ${article.source}` : 'חדשה'}
+          </Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <ScrollView style={{ flex: 1 }}>
+          {/* תמונה גדולה */}
+          {article.image_url && (
+            <View className="w-full h-64">
+              <Image
+                source={{ uri: article.image_url }}
+                className="w-full h-full"
+                resizeMode="cover"
+                style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
+              />
+            </View>
+          )}
+
+          {/* תוכן */}
+          <View className="p-4">
+            {/* כותרת */}
+            <Text 
+              className="text-xl font-bold mb-3 leading-7"
+              style={{ 
+                color: DesignTokens.colors.text.primary,
+                textAlign: 'right',
+                writingDirection: 'rtl'
+              }}
+            >
+              {article.title}
+            </Text>
+
+            {/* מידע על הכתבה */}
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center">
+                <Text 
+                  className="text-sm font-medium"
+                  style={{ color: DesignTokens.colors.text.secondary }}
+                >
+                  {article.source}
+                </Text>
+                <Text 
+                  className="text-sm ml-3"
+                  style={{ color: DesignTokens.colors.text.tertiary }}
+                >
+                  {formatNewsDate(article.published_at)}
+                </Text>
+              </View>
+
+              {/* קטגוריה */}
+              {article.category && article.category !== 'כללי' && (
+                <View 
+                  className="px-3 py-1 rounded-full"
+                  style={{ backgroundColor: categoryColor + '20' }}
+                >
+                  <Text 
+                    className="text-sm font-medium"
+                    style={{ color: categoryColor }}
+                  >
+                    {article.category}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* תוכן מלא */}
+            <Text 
+              className="text-base leading-6 mb-6"
+              style={{ 
+                color: DesignTokens.colors.text.primary,
+                textAlign: 'right',
+                writingDirection: 'rtl'
+              }}
+            >
+              {article.content || article.summary}
+            </Text>
+
+            {/* כפתורי פעולה */}
+            <View className="flex-row items-center justify-center space-x-4">
+              {/* לייק */}
+              <TouchableOpacity 
+                className="flex-row items-center px-6 py-3 rounded-full"
+                style={{ 
+                  backgroundColor: isLiked 
+                    ? 'rgba(255, 59, 92, 0.15)' 
+                    : 'rgba(255, 255, 255, 0.05)'
+                }}
+                onPress={() => onLike(article)}
+              >
+                <Ionicons 
+                  name={isLiked ? "heart" : "heart-outline"} 
+                  size={20} 
+                  color={isLiked ? "#FF3B5C" : DesignTokens.colors.text.secondary}
+                  style={{ marginRight: 8 }}
+                />
+                <Text 
+                  className="text-base font-medium"
+                  style={{ color: isLiked ? "#FF3B5C" : DesignTokens.colors.text.secondary }}
+                >
+                  {isLiked ? 'אהבתי' : 'אהבתי'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* שיתוף */}
+              <TouchableOpacity 
+                className="flex-row items-center px-6 py-3 rounded-full"
+                style={{ backgroundColor: 'rgba(0, 216, 74, 0.15)' }}
+                onPress={() => onShare(article)}
+              >
+                <Ionicons 
+                  name="share-outline" 
+                  size={20} 
+                  color="#00D84A"
+                  style={{ marginRight: 8 }}
+                />
+                <Text 
+                  className="text-base font-medium"
+                  style={{ color: '#00D84A' }}
+                >
+                  שתף
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+};
+
 const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, isLiked }) => {
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const categoryColor = getNewsCategoryColor(article.category);
@@ -424,319 +609,166 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
   return (
     <Pressable
       onPress={() => onPress(article)}
-      className="mx-4 rounded-2xl overflow-hidden"
+      className="mx-4 py-4"
       style={{
-        marginBottom: 15,
-        backgroundColor: DesignTokens.colors.background.secondary,
-        shadowColor: DesignTokens.colors.primary.main,
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
-        elevation: 4,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)'
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+        paddingBottom: 16,
+        marginBottom: 8
       }}
     >
-      {/* תמונה עם גרדיאנט */}
-      {article.image_url && (
-        <View className="relative h-32">
-          <Image
-            source={{ uri: article.image_url }}
-            className="w-full h-full"
-            resizeMode="cover"
-            style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
-          />
-          
-          {/* גרדיאנט עדין ונקי */}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-            locations={[0, 0.6, 1]}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0
-            }}
-          />
+      <View className="flex-row items-start">
+        {/* תמונה קטנה */}
+        <View className="w-16 h-16 rounded-lg overflow-hidden mr-4 flex-shrink-0">
+          {article.image_url ? (
+            <Image
+              source={{ uri: article.image_url }}
+              className="w-full h-full"
+              resizeMode="cover"
+              style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
+            />
+          ) : (
+            <View 
+              className="w-full h-full items-center justify-center"
+              style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
+            >
+              <Ionicons 
+                name={isTwitterPost ? "logo-twitter" : "newspaper-outline"} 
+                size={24} 
+                color={DesignTokens.colors.text.tertiary} 
+              />
+            </View>
+          )}
+        </View>
 
-          {/* זמן ומקור על התמונה עם בועות עדינות */}
-          <View className="absolute bottom-3 left-4 right-4">
-            <View className="flex-row items-center justify-between">
-          <View 
-                className="px-3 py-1 rounded-full"
-            style={{
-                  backgroundColor: 'rgba(0,0,0,0.3)',
-                  borderWidth: 0.5,
-                  borderColor: 'rgba(0,216,74,0.2)'
-                }}
-              >
-              <Text 
-                className="text-sm font-medium"
-                  style={{ color: '#FFFFFF' }}
-              >
-                {article.source}
-              </Text>
-              </View>
-              <View 
-                className="px-3 py-1 rounded-full"
+        {/* תוכן */}
+        <View className="flex-1">
+          {/* כותרת */}
+          <Text 
+            className="text-base font-semibold leading-5 mb-2"
+            style={{ 
+              color: DesignTokens.colors.text.primary,
+              textAlign: 'right',
+              writingDirection: 'rtl'
+            }}
+            numberOfLines={2}
+          >
+            {article.title}
+          </Text>
+
+          {/* סיכום - מוגבל ל-2 שורות */}
+          {article.summary && (
+            <Text 
+              className="text-sm leading-4 mb-3"
+              style={{ 
+                color: DesignTokens.colors.text.secondary,
+                textAlign: 'right',
+                writingDirection: 'rtl'
+              }}
+              numberOfLines={2}
+            >
+              {truncateText(article.summary, 100)}
+            </Text>
+          )}
+
+          {/* מידע תחתון */}
+          <View className="flex-row items-center justify-between">
+            {/* כפתורי פעולה - בצד שמאל */}
+            <View className="flex-row items-center">
+              {/* לייק */}
+              <TouchableOpacity 
                 style={{ 
-                  backgroundColor: 'rgba(0,0,0,0.3)',
-                  borderWidth: 0.5,
-                  borderColor: 'rgba(0,216,74,0.2)'
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isLiked 
+                    ? 'rgba(255, 59, 92, 0.15)' 
+                    : 'transparent',
+                  marginRight: 8
                 }}
+                onPress={() => onLike(article)}
+                activeOpacity={0.7}
               >
+                <Ionicons 
+                  name={isLiked ? "heart" : "heart-outline"} 
+                  size={16} 
+                  color={isLiked ? "#FF3B5C" : DesignTokens.colors.text.secondary} 
+                />
+              </TouchableOpacity>
+
+              {/* שיתוף */}
+              <TouchableOpacity 
+                style={{ 
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent'
+                }}
+                onPress={() => setShareModalVisible(true)}
+              >
+                <Ionicons 
+                  name="share-outline" 
+                  size={16} 
+                  color={DesignTokens.colors.text.secondary} 
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* מקור וזמן - בצד ימין */}
+            <View className="flex-row items-center">
+              {/* זמן */}
               <Text 
-                className="text-sm font-medium"
-                  style={{ color: '#FFFFFF' }}
+                className="text-xs"
+                style={{ color: DesignTokens.colors.text.tertiary }}
               >
                 {formatNewsDate(article.published_at)}
               </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* תוכן */}
-      <View className="p-4">
-        {isTwitterPost ? (
-          // טוויטר - התוכן + מידע תחתון
-          <>
-            <Text 
-              className="text-lg font-medium leading-6"
-              style={{ 
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'right',
-                writingDirection: 'rtl'
-              }}
-              numberOfLines={6}
-            >
-              {article.title}
-            </Text>
-            
-            
-            {/* כפתור צפייה בטוויטר */}
-            {(article.url || article.source_url) && (
-              <Pressable
-                onPress={async () => {
-                  const twitterUrl = article.url || article.source_url;
-                  if (twitterUrl) {
-                    try {
-                      const supported = await Linking.canOpenURL(twitterUrl);
-                      if (supported) {
-                        await Linking.openURL(twitterUrl);
-                      } else {
-                        Alert.alert('שגיאה', 'לא ניתן לפתוח את הלינק');
-                      }
-                    } catch (error) {
-                      console.error('Error opening link:', error);
-                      Alert.alert('שגיאה', 'לא ניתן לפתוח את הלינק');
-                    }
-                  }
-                }}
-                className="mt-4 px-5 py-2.5 rounded-full self-center"
-                style={{ backgroundColor: '#1DA1F2', alignItems: 'center', minWidth: 160 }}
-              >
-                <View className="flex-row items-center" style={{ justifyContent: 'center' }}>
-                  <Ionicons 
-                    name="logo-twitter" 
-                    size={16} 
-                    color="white" 
-                    style={{ marginRight: 6 }}
-                  />
-                  <Text 
-                    className="text-sm font-medium"
-                    style={{ color: 'white', textAlign: 'center' }}
-                  >
-                    צפה בטוויטר
-                  </Text>
-                </View>
-              </Pressable>
-            )}
-          </>
-        ) : (
-          // חדשה רגילה - כותרת + סיכום
-          <>
-            {/* כותרת */}
-            <Text 
-              className="text-xl font-bold mb-3 leading-7"
-              style={{ 
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'right',
-                writingDirection: 'rtl'
-              }}
-              numberOfLines={3}
-            >
-              {article.title}
-            </Text>
-
-            {/* סיכום */}
-            {article.summary && (
+              
+              {/* נקודת הפרדה */}
               <Text 
-                className="text-base mb-4 leading-6"
-                style={{ 
-                  color: DesignTokens.colors.text.secondary,
-                  textAlign: 'right',
-                  writingDirection: 'rtl'
-                }}
-                numberOfLines={4}
+                className="text-xs mx-2"
+                style={{ color: DesignTokens.colors.text.tertiary }}
               >
-                {truncateText(article.summary, 200)}
+                •
               </Text>
-            )}
-
-            {/* מידע תחתון */}
-            <View className="flex-row items-center justify-between">
-              {/* קטגוריה - רק אם לא "כללי" */}
-              {article.category && article.category !== 'כללי' && (
-                <View 
-                  className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: categoryColor + '20' }}
-                >
-                  <View className="flex-row items-center">
-                    <Ionicons 
-                      name={categoryIcon as any} 
-                      size={14} 
-                      color={categoryColor} 
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text 
-                      className="text-sm font-medium"
-                      style={{ color: categoryColor }}
-                    >
-                      {article.category}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* זמן קריאה */}
-              <View className="flex-row items-center">
-                <Ionicons 
-                  name="time-outline" 
-                  size={14} 
-                  color={DesignTokens.colors.text.tertiary} 
-                  style={{ marginRight: 4 }}
-                />
-                <Text 
-                  className="text-sm font-medium"
-                  style={{ color: DesignTokens.colors.text.tertiary }}
-                >
-                  {article.reading_time} דק' קריאה
-                </Text>
-              </View>
+              
+              {/* מקור */}
+              <Text 
+                className="text-xs font-medium mr-3"
+                style={{ color: DesignTokens.colors.text.secondary }}
+              >
+                {article.source}
+              </Text>
             </View>
-          </>
-        )}
-
-        {/* מידע תחתון רק אם אין תמונה */}
-        {!article.image_url && (
-          <View className="flex-row items-center justify-between mt-4">
-            <Text 
-              className="text-sm font-medium"
-              style={{ color: DesignTokens.colors.text.secondary }}
-            >
-              {article.source}
-            </Text>
-            <Text 
-              className="text-sm font-medium"
-              style={{ color: DesignTokens.colors.text.tertiary }}
-            >
-              {formatNewsDate(article.published_at)}
-            </Text>
           </View>
-        )}
 
-        {/* מספר צפיות אם קיים */}
-        {article.view_count && article.view_count > 0 && (
-          <View className="flex-row items-center mt-3">
-            <Ionicons 
-              name="eye" 
-              size={16} 
-              color={DesignTokens.colors.text.tertiary} 
-              style={{ marginRight: 6 }}
-            />
-            <Text 
-              className="text-sm"
-              style={{ color: DesignTokens.colors.text.tertiary }}
+          {/* קטגוריה אם קיימת */}
+          {article.category && article.category !== 'כללי' && (
+            <View 
+              className="px-2 py-1 rounded-full self-start mt-2"
+              style={{ backgroundColor: categoryColor + '20' }}
             >
-              {article.view_count.toLocaleString()} צפיות
-            </Text>
-          </View>
-        )}
-
-        {/* כפתורי פעולה */}
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          justifyContent: 'flex-end', 
-          marginTop: 24, 
-          paddingTop: 12, 
-          borderTopWidth: 2, 
-          borderTopColor: 'rgba(255, 255, 255, 0.05)' 
-        }}>
-          {/* לייק - רק אייקון לב */}
-          <TouchableOpacity 
-            style={{ 
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: isLiked 
-                ? 'rgba(255, 59, 92, 0.15)' 
-                : 'rgba(255, 255, 255, 0.05)'
-            }}
-            onPress={() => onLike(article)}
-            activeOpacity={0.7}
-          >
-            <Ionicons 
-              name={isLiked ? "heart" : "heart-outline"} 
-              size={20} 
-              color={isLiked ? "#FF3B5C" : DesignTokens.colors.text.secondary} 
-            />
-          </TouchableOpacity>
-
-          {/* שיתוף */}
-          <TouchableOpacity 
-            style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              paddingHorizontal: 12, 
-              paddingVertical: 8, 
-              borderRadius: 20,
-              backgroundColor: 'rgba(0, 216, 74, 0.1)', 
-              marginLeft: 12 
-            }}
-            onPress={() => setShareModalVisible(true)}
-          >
-            <Ionicons 
-              name="share-outline" 
-              size={18} 
-              color="#00D84A" 
-              style={{ marginLeft: 4 }}
-            />
-            <Text 
-              style={{ 
-                fontSize: 14, 
-                fontWeight: '500', 
-                color: '#00D84A' 
-              }}
-            >
-              שתף
-            </Text>
-          </TouchableOpacity>
+              <Text 
+                className="text-xs font-medium"
+                style={{ color: categoryColor }}
+              >
+                {article.category}
+              </Text>
+            </View>
+          )}
         </View>
-
-        {/* מודל שיתוף */}
-        <ShareModal
-          visible={shareModalVisible}
-          article={article}
-          onClose={() => setShareModalVisible(false)}
-        />
       </View>
+
+      {/* מודל שיתוף */}
+      <ShareModal
+        visible={shareModalVisible}
+        article={article}
+        onClose={() => setShareModalVisible(false)}
+      />
     </Pressable>
   );
 };
@@ -749,6 +781,10 @@ export default function BreakingNewsTab() {
   // מצב האהבתי
   const [likedArticles, setLikedArticles] = useState<Set<string>>(new Set());
   const [likesCount, setLikesCount] = useState<Record<string, number>>({});
+  
+  // מצב המודל המפורט
+  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   // טעינת החדשות שאהב המשתמש
   const loadLikedArticles = useCallback(async () => {
@@ -943,6 +979,31 @@ export default function BreakingNewsTab() {
         const category = row.category || row.type || row.topic || 
                         row.section || row.tag || 'כללי';
         
+        // עיבוד תאריך משופר
+        const rawDate = row.time || row.published_at || row.created_at || row.date || row.timestamp || row.posted_at;
+        console.log(`🕐 BreakingNewsTab: Raw date for article ${index}:`, {
+          rawDate,
+          type: typeof rawDate,
+          rowKeys: Object.keys(row).filter(key => key.includes('time') || key.includes('date') || key.includes('created') || key.includes('posted'))
+        });
+
+        // בדיקת תקינות התאריך
+        let validatedDate = rawDate;
+        if (rawDate) {
+          try {
+            const testDate = new Date(rawDate);
+            if (isNaN(testDate.getTime()) || testDate.getTime() < 0) {
+              console.log(`⚠️ BreakingNewsTab: Invalid date for article ${index}, using current time`);
+              validatedDate = new Date().toISOString();
+            }
+          } catch (error) {
+            console.log(`❌ BreakingNewsTab: Error validating date for article ${index}:`, error);
+            validatedDate = new Date().toISOString();
+          }
+        } else {
+          validatedDate = new Date().toISOString();
+        }
+        
         const article = {
           id: row.id || row.uuid || row.tweet_id || String(index),
           title: title,
@@ -952,8 +1013,8 @@ export default function BreakingNewsTab() {
           source_url: row.source_url || row.url || row.link || row.tweet_url || '',
           author: row.author || row.writer || row.username || row.screen_name || '',
           image_url: image_url,
-          published_at: row.time || row.published_at || row.created_at || row.date || row.timestamp || row.posted_at || new Date().toISOString(),
-          created_at: row.time || row.created_at || row.date || row.timestamp || new Date().toISOString(),
+          published_at: validatedDate,
+          created_at: validatedDate,
           updated_at: row.updated_at || row.modified_at || null,
           category: category,
           tags: row.tags || row.hashtags || [],
@@ -964,7 +1025,10 @@ export default function BreakingNewsTab() {
           reading_time: row.reading_time || row.read_time || Math.ceil(content.length / 300) || 1
         };
         
-        console.log(`✅ BreakingNewsTab: Mapped article ${index}:`, article);
+        console.log(`✅ BreakingNewsTab: Mapped article ${index}:`, {
+          ...article,
+          published_at_formatted: formatNewsDate(article.published_at)
+        });
         return article;
       });
 
@@ -1055,14 +1119,23 @@ export default function BreakingNewsTab() {
     setRefreshing(false);
   }, [loadBreakingNews, loadLikedArticles]);
 
-  // בחירת כתבה
+  // בחירת כתבה - פתיחת מודל מפורט
   const handleArticlePress = useCallback((article: NewsArticle) => {
     console.log('⚡ BreakingNewsTab: Article pressed:', article.title);
-    // TODO: פתיחת מסך פרטי הכתבה
-    Alert.alert('חדשות מתפרצות', `פתיחת פרטי הכתבה: ${article.title}`);
-    
-    // TODO: עדכון מספר צפיות כשהטבלה תהיה מוכנה
-    // newsService.incrementViewCount(article.id);
+    setSelectedArticle(article);
+    setDetailModalVisible(true);
+  }, []);
+
+  // סגירת מודל מפורט
+  const handleCloseDetailModal = useCallback(() => {
+    setDetailModalVisible(false);
+    setSelectedArticle(null);
+  }, []);
+
+  // שיתוף מהמודל המפורט
+  const handleShareFromModal = useCallback((article: NewsArticle) => {
+    // TODO: פתיחת מודל שיתוף
+    console.log('Sharing article from modal:', article.title);
   }, []);
 
   // רינדור כתבה
@@ -1077,36 +1150,36 @@ export default function BreakingNewsTab() {
 
   // רינדור רשימה ריקה
   const renderEmptyState = () => (
-    <View className="flex-1 justify-center items-center px-8">
+    <View className="flex-1 justify-center items-center px-8 py-16">
       <Ionicons 
-        name="flash-outline" 
-        size={64} 
+        name="newspaper-outline" 
+        size={48} 
         color={DesignTokens.colors.text.tertiary} 
       />
       <Text 
-        className="text-xl font-semibold mt-4 text-center"
+        className="text-lg font-semibold mt-4 text-center"
         style={{ color: DesignTokens.colors.text.primary }}
       >
-        אין חדשות מתפרצות
+        אין חדשות כרגע
       </Text>
       <Text 
         className="text-sm mt-2 text-center"
         style={{ color: DesignTokens.colors.text.secondary }}
       >
-        נסה לרענן או לבדוק את החיבור לאינטרנט
+        החדשות המתפרצות יופיעו כאן
       </Text>
     </View>
   );
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center">
+      <View className="flex-1 justify-center items-center py-16">
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
         <Text 
-          className="mt-4 text-lg"
+          className="mt-4 text-base"
           style={{ color: DesignTokens.colors.text.secondary }}
         >
-          טוען חדשות מתפרצות...
+          טוען חדשות...
         </Text>
       </View>
     );
@@ -1114,33 +1187,32 @@ export default function BreakingNewsTab() {
 
   if (articles.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center p-6">
+      <View className="flex-1 justify-center items-center px-8 py-16">
         <Ionicons 
           name="newspaper-outline" 
-          size={64} 
+          size={48} 
           color={DesignTokens.colors.text.tertiary} 
-          style={{ marginBottom: 16 }}
         />
         <Text 
-          className="text-xl font-semibold mb-2"
+          className="text-lg font-semibold mt-4 text-center"
           style={{ color: DesignTokens.colors.text.primary }}
         >
           אין חדשות כרגע
         </Text>
         <Text 
-          className="text-base text-center"
+          className="text-sm mt-2 text-center"
           style={{ color: DesignTokens.colors.text.secondary }}
         >
-          החדשות המתפרצות יופיעו כאן ברגע שיופיעו במסד הנתונים
+          החדשות המתפרצות יופיעו כאן
         </Text>
         <Pressable
           onPress={loadBreakingNews}
-          className="mt-4 px-6 py-2 rounded-full"
+          className="mt-6 px-6 py-3 rounded-full"
           style={{ backgroundColor: DesignTokens.colors.primary.main }}
         >
           <Text 
             className="text-sm font-medium"
-            style={{ color: DesignTokens.colors.text.primary }}
+            style={{ color: '#FFFFFF' }}
           >
             רענן
           </Text>
@@ -1165,7 +1237,18 @@ export default function BreakingNewsTab() {
         }
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 16, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingTop: 12, paddingBottom: 24 }}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+      />
+      
+      {/* מודל מפורט לחדשות */}
+      <NewsDetailModal
+        visible={detailModalVisible}
+        article={selectedArticle}
+        isLiked={selectedArticle ? likedArticles.has(selectedArticle.id) : false}
+        onClose={handleCloseDetailModal}
+        onLike={handleLike}
+        onShare={handleShareFromModal}
       />
     </View>
   );

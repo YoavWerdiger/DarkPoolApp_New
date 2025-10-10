@@ -98,7 +98,7 @@ function AppContent() {
   }
 
   return (
-    <View style={{ flex: 1, direction: 'ltr' }}>
+    <View style={{ flex: 1, direction: 'ltr', backgroundColor: '#121212' }}>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (

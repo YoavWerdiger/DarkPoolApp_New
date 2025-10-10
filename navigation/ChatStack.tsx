@@ -1,4 +1,4 @@
-import React from 'react';
+  import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import ChatsListScreen from '../screens/Chat/ChatsListScreen';
 import ChatRoomScreen from '../screens/Chat/ChatRoomScreen';

@@ -3,12 +3,22 @@ import { supabase } from '../lib/supabase';
 // CardCom API Configuration - פרטי החברה האמיתיים (API v11)
 export const CARDCOM_CONFIG = {
   terminalNumber: 147763, // מסוף 147763 - סניף מרכזי
-  apiName: 'y5N7Nh1YfRIrqaa1TFzY', // שם משתמש ממשקים
-  apiPassword: 'IQWEk245ICRSmSJHJ3Ya', // סיסמת משתמש ממשקים
+  apiName: 'kiCl9NU22wGlzSNGPtg7', // שם משתמש ממשקים חדש
+  apiPassword: 'fHgXjiB9BgyC1kTJeLek', // סיסמת משתמש ממשקים חדשה
   baseUrl: 'https://secure.cardcom.solutions/api/v11',
   successUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-action',
   errorUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-action',
   callbackUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/rapid-responder'
+};
+
+// בדיקת תקינות המפתח
+export const validateCardcomConfig = () => {
+  console.log('🔍 CardCom Config Validation:');
+  console.log('  Terminal Number:', CARDCOM_CONFIG.terminalNumber);
+  console.log('  API Name:', CARDCOM_CONFIG.apiName);
+  console.log('  API Password:', CARDCOM_CONFIG.apiPassword ? '***' + CARDCOM_CONFIG.apiPassword.slice(-4) : 'MISSING');
+  console.log('  Base URL:', CARDCOM_CONFIG.baseUrl);
+  console.log('  Full Endpoint:', `${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`);
 };
 
 // Subscription Plans Configuration - מסלולים חיים
@@ -74,6 +84,7 @@ export interface PaymentRequest {
   planId: string;
   userEmail: string;
   userName: string;
+  userPhone?: string;
   cardDetails?: {
     cardNumber: string;
     expiryDate: string;
@@ -87,7 +98,9 @@ export interface PaymentRequest {
 export interface PaymentResponse {
   success: boolean;
   transactionId?: string;
-  paymentUrl?: string;
+  paymentUrl?: string | null;
+  cardcomTransactionId?: string;
+  approvalNumber?: string;
   error?: string;
 }
 
@@ -101,11 +114,14 @@ export interface PaymentCallback {
 
 class PaymentService {
   /**
-   * יוצר בקשת תשלום חדשה עם CardCom LowProfile API
+   * יוצר בקשת תשלום חדשה עם CardCom LowProfile API (הפתרון הסופי)
    */
   async createPaymentRequest(request: PaymentRequest): Promise<PaymentResponse> {
     try {
-      console.log('🔄 PaymentService: Creating payment request:', request);
+      // בדיקת תקינות הקונפיגורציה
+      validateCardcomConfig();
+      
+      console.log('🔄 PaymentService: Creating payment request with LowProfile API:', request);
 
       // יצירת מזהה עסקה ייחודי
       const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -135,11 +151,23 @@ class PaymentService {
           {
             Name: "transactionId",
             Value: transactionId
+          },
+          {
+            Name: "userEmail",
+            Value: request.userEmail || ""
+          },
+          {
+            Name: "userName",
+            Value: request.userName || ""
           }
         ]
       };
 
       console.log('🔄 PaymentService: Sending request to CardCom LowProfile API');
+      console.log('🔄 PaymentService: API Name:', CARDCOM_CONFIG.apiName);
+      console.log('🔄 PaymentService: Terminal:', CARDCOM_CONFIG.terminalNumber);
+      console.log('🔄 PaymentService: Full URL:', `${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`);
+      console.log('🔄 PaymentService: Request Data:', JSON.stringify(paymentData, null, 2));
 
       // שליחת בקשת תשלום ל-CardCom LowProfile API
       const response = await fetch(`${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`, {
@@ -151,7 +179,12 @@ class PaymentService {
         body: JSON.stringify(paymentData)
       });
 
+      console.log('🔄 PaymentService: Response status:', response.status);
+      console.log('🔄 PaymentService: Response headers:', Object.fromEntries(response.headers.entries()));
+
       const result = await response.json();
+
+      console.log('🔄 PaymentService: CardCom LowProfile API response:', result);
 
       if (result.ResponseCode === 0) {
         // שמירת פרטי העסקה במסד הנתונים

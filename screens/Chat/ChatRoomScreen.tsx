@@ -21,8 +21,39 @@ import { mediaService } from '../../services/mediaService';
 import { supabase } from '../../lib/supabase';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 
+// פונקציה לזיהוי שפה
+const detectLanguage = (text: string): 'rtl' | 'ltr' => {
+  if (!text || text.trim().length === 0) {
+    return 'rtl'; // ברירת מחדל - עברית
+  }
+  
+  // בדיקה אם הטקסט מכיל תווים עבריים
+  const hebrewRegex = /[\u0590-\u05FF]/;
+  const arabicRegex = /[\u0600-\u06FF]/;
+  
+  // בדיקה אם הטקסט מכיל תווים לטיניים (אנגלית)
+  const latinRegex = /[a-zA-Z]/;
+  
+  const hasHebrew = hebrewRegex.test(text);
+  const hasArabic = arabicRegex.test(text);
+  const hasLatin = latinRegex.test(text);
+  
+  // אם יש עברית או ערבית - RTL
+  if (hasHebrew || hasArabic) {
+    return 'rtl';
+  }
+  
+  // אם יש רק לטינית - LTR
+  if (hasLatin && !hasHebrew && !hasArabic) {
+    return 'ltr';
+  }
+  
+  // ברירת מחדל - עברית
+  return 'rtl';
+};
+
 export default function ChatRoomScreen() {
-  const { messages, sendMessage, chats, currentChatId, markMessageAsRead, markMessageAsDelivered, updateMessage, deleteMessage, loadMessages } = useChat();
+  const { messages, sendMessage, chats, currentChatId, markMessageAsRead, markMessageAsDelivered, updateMessage, deleteMessage, loadMessages, typingUsers, startTyping, stopTyping } = useChat();
 
   // State for reply
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -626,37 +657,31 @@ export default function ChatRoomScreen() {
     if (unreadDividerIndex !== -1) {
       console.log('🎯 ChatRoomScreen: Found UnreadDivider at index:', unreadDividerIndex);
       
-      // גלילה עם עיכוב כדי לוודא שהרשימה נטענה לגמרי
-      setTimeout(() => {
-        try {
-          console.log('🎯 ChatRoomScreen: Executing scrollToIndex to:', unreadDividerIndex);
-          flatListRef.current?.scrollToIndex({
-            index: unreadDividerIndex,
-            animated: true,
-            viewPosition: 0.2, // מציב את הדיווידר ב-20% מהחלק העליון
-          });
-          
-          // סמן שגללנו אחרי הגלילה
-          setTimeout(() => {
-            setHasScrolledToUnread(true);
-            console.log('✅ ChatRoomScreen: Scrolled to UnreadDivider, marking as scrolled');
-          }, 500);
-          
-        } catch (error) {
-          console.log('⚠️ ChatRoomScreen: Error scrolling to UnreadDivider, trying scrollToOffset instead:', error);
-          // אם scrollToIndex נכשל, נסה גלילה כללית
-          flatListRef.current?.scrollToOffset({
-            offset: unreadDividerIndex * 100, // הערכה גסה של גובה איטם
-            animated: true,
-          });
-          
-          // סמן שגללנו אחרי הגלילה
-          setTimeout(() => {
-            setHasScrolledToUnread(true);
-            console.log('✅ ChatRoomScreen: Scrolled to UnreadDivider via offset, marking as scrolled');
-          }, 500);
-        }
-      }, 1000); // עיכוב קצר יותר
+      // גלילה מיידית ללא עיכוב
+      try {
+        console.log('🎯 ChatRoomScreen: Executing immediate scrollToIndex to:', unreadDividerIndex);
+        flatListRef.current?.scrollToIndex({
+          index: unreadDividerIndex,
+          animated: false, // ללא אנימציה לכניסה ישירה
+          viewPosition: 0.5, // מציב את הדיווידר במרכז המסך בדיוק
+        });
+        
+        // סמן שגללנו מיד
+        setHasScrolledToUnread(true);
+        console.log('✅ ChatRoomScreen: Scrolled to UnreadDivider immediately');
+        
+      } catch (error) {
+        console.log('⚠️ ChatRoomScreen: Error scrolling to UnreadDivider, trying scrollToOffset instead:', error);
+        // אם scrollToIndex נכשל, נסה גלילה כללית
+        flatListRef.current?.scrollToOffset({
+          offset: unreadDividerIndex * 100, // הערכה גסה של גובה איטם
+          animated: false,
+        });
+        
+        // סמן שגללנו
+        setHasScrolledToUnread(true);
+        console.log('✅ ChatRoomScreen: Scrolled to UnreadDivider via offset');
+      }
     } else {
       console.log('❌ ChatRoomScreen: UnreadDivider not found in messagesWithDividers');
       // אם לא נמצא divider, סמן שגללנו כדי לא לנסות שוב
@@ -1047,10 +1072,17 @@ export default function ChatRoomScreen() {
             </Text>
             <Text style={{
               fontSize: 12,
-              color: '#ccc',
+              color: typingUsers.length > 0 ? '#00E654' : '#ccc',
               marginTop: 2
             }} numberOfLines={1}>
-              {currentChat?.description || `${membersCount ?? 0} משתתפים`}
+              {typingUsers.length > 0 
+                ? typingUsers.length === 1
+                  ? `${typingUsers[0].userName} מקליד...`
+                  : typingUsers.length === 2
+                    ? `${typingUsers[0].userName} ו-${typingUsers[1].userName} מקלידים...`
+                    : `${typingUsers.length} משתמשים מקלידים...`
+                : (currentChat?.description || `${membersCount ?? 0} משתתפים`)
+              }
             </Text>
           </View>
         </TouchableOpacity>
@@ -1127,7 +1159,7 @@ export default function ChatRoomScreen() {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        style={{ flex: 1, backgroundColor: '#121212' }}
       >
       <ImageBackground 
         source={{ uri: backgroundImage }}
@@ -1246,7 +1278,7 @@ export default function ChatRoomScreen() {
           removeClippedSubviews
           updateCellsBatchingPeriod={50}
           maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             // Check if item is a day divider
             if ('type' in item && item.type === 'divider') {
               return <DayDivider date={item.date} />;
@@ -1257,11 +1289,50 @@ export default function ChatRoomScreen() {
               return <UnreadDivider unreadCount={item.count} onPress={handleUnreadDividerPress} />;
             }
             
+            // חישוב grouping (הודעות רצופות מאותו משתמש)
+            const currentMessage = item as Message;
+            let isGrouped = false;
+            let isGroupStart = false;
+            let isGroupEnd = false;
+            
+            // מצא את האינדקס של ההודעה הנוכחית במערך messages הרגיל
+            const messageIndex = messages.findIndex(m => m.id === currentMessage.id);
+            
+            if (messageIndex !== -1) {
+              // בדוק אם יש הודעה קודמת מאותו משתמש
+              if (messageIndex < messages.length - 1) {
+                const prevMessage = messages[messageIndex + 1]; // הודעה קודמת בזמן
+                const timeDiff = Math.abs(
+                  new Date(currentMessage.created_at).getTime() - 
+                  new Date(prevMessage.created_at).getTime()
+                ) / 1000 / 60; // בדקות
+                
+                if (prevMessage.sender_id === currentMessage.sender_id && timeDiff < 2) {
+                  isGrouped = true;
+                  isGroupStart = true; // יש הודעה לפניה מאותו משתמש
+                }
+              }
+              
+              // בדוק אם יש הודעה הבאה מאותו משתמש
+              if (messageIndex > 0) {
+                const nextMessage = messages[messageIndex - 1]; // הודעה הבאה בזמן
+                const timeDiff = Math.abs(
+                  new Date(currentMessage.created_at).getTime() - 
+                  new Date(nextMessage.created_at).getTime()
+                ) / 1000 / 60; // בדקות
+                
+                if (nextMessage.sender_id === currentMessage.sender_id && timeDiff < 2) {
+                  isGrouped = true;
+                  isGroupEnd = true; // יש הודעה אחריה מאותו משתמש
+                }
+              }
+            }
+            
             // Regular message
             return (
               <ChatBubble
-                message={item as Message}
-                isMe={item.sender_id === user?.id}
+                message={currentMessage}
+                isMe={currentMessage.sender_id === user?.id}
                 onReply={handleReply}
                 onEditMessage={handleEditMessage}
                 onDeleteMessage={handleDeleteMessage}
@@ -1269,14 +1340,10 @@ export default function ChatRoomScreen() {
                 onJumpToMessage={handleJumpToMessage}
                 channelMembers={channelMembers}
                 currentUserId={user?.id}
-                shouldHighlight={latestMentionMessageId === item.id && (() => {
-                  console.log('🎯 ChatRoomScreen: Rendering message with highlight check:', { 
-                    messageId: item.id, 
-                    latestMentionMessageId, 
-                    shouldHighlight: latestMentionMessageId === item.id 
-                  });
-                  return latestMentionMessageId === item.id;
-                })()}
+                shouldHighlight={latestMentionMessageId === currentMessage.id}
+                isGrouped={isGrouped}
+                isGroupStart={isGroupStart}
+                isGroupEnd={isGroupEnd}
               />
             );
           }}
@@ -1366,14 +1433,15 @@ export default function ChatRoomScreen() {
                 right: 0,
                 bottom: INPUT_BAR_HEIGHT + 1,
                 zIndex: 1001,
-                marginHorizontal: 12,
+                marginHorizontal: 0,
                 backgroundColor: 'rgba(29, 24, 24, 0.91)',
-                borderRadius: 16,
+                borderRadius: 0,
                 paddingVertical: 10,
-                paddingHorizontal: 12,
+                paddingHorizontal: 16,
                 borderLeftWidth: 3,
                 borderLeftColor: '#00E654',
-                borderWidth: 1,
+                borderWidth: 0,
+                borderBottomWidth: 1,
                 borderColor: 'rgba(255,255,255,0.06)'
               }}
             >
@@ -1404,7 +1472,16 @@ export default function ChatRoomScreen() {
                     </Pressable>
                   </View>
                   <Text 
-                    style={{ color: '#B0B0B0', fontSize: 12, textAlign: 'right', writingDirection: 'rtl' }} 
+                    style={{ 
+                      color: '#B0B0B0', 
+                      fontSize: 12, 
+                      textAlign: replyingTo.content && replyingTo.content.trim().length > 0 
+                        ? (detectLanguage(replyingTo.content) === 'rtl' ? 'right' : 'left')
+                        : 'right', // ברירת מחדל עברית לטקסטי מדיה
+                      writingDirection: replyingTo.content && replyingTo.content.trim().length > 0 
+                        ? detectLanguage(replyingTo.content) 
+                        : 'rtl'
+                    }} 
                     numberOfLines={2} 
                     ellipsizeMode="tail"
                   >
@@ -1437,6 +1514,8 @@ export default function ChatRoomScreen() {
             chatId={currentChatId || ''}
             editingMessage={editingMessage}
             onCancelEdit={cancelEdit}
+            startTyping={startTyping}
+            stopTyping={stopTyping}
           />
         </SafeAreaView>
       </ImageBackground>

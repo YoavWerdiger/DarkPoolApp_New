@@ -135,7 +135,17 @@ export class EconomicCalendarService {
         
         // Consumer Price Sub-indices (monthly updates)
         { id: 'CUSR0000SEHE', name: 'CPI Energy - מדד מחירי אנרגיה', category: 'אינפלציה', importance: 'low' },
-        { id: 'CUSR0000SAF1', name: 'CPI Food - מדד מחירי מזון', category: 'אינפלציה', importance: 'low' }
+        { id: 'CUSR0000SAF1', name: 'CPI Food - מדד מחירי מזון', category: 'אינפלציה', importance: 'low' },
+        
+        // Additional Important Indicators
+        { id: 'T10Y3M', name: '3-Month Treasury Bill Rate - אג"ח 3 חודשים', category: 'מדיניות מוניטרית', importance: 'high' },
+        { id: 'GS2', name: 'Treasury 2Y - אג"ח 2 שנים', category: 'מדיניות מוניטרית', importance: 'high' },
+        { id: 'GS30', name: 'Treasury 30Y - אג"ח 30 שנים', category: 'מדיניות מוניטרית', importance: 'high' },
+        { id: 'VIXCLS', name: 'VIX - מדד תנודתיות', category: 'שוקי הון', importance: 'high' },
+        { id: 'DGS10', name: '10-Year Treasury Rate - ריבית אג"ח 10 שנים', category: 'מדיניות מוניטרית', importance: 'high' },
+        { id: 'DEXUSEU', name: 'USD/EUR Exchange Rate - שער דולר/יורו', category: 'מטבעות', importance: 'medium' },
+        { id: 'DEXJPUS', name: 'USD/JPY Exchange Rate - שער דולר/ין', category: 'מטבעות', importance: 'medium' },
+        { id: 'DEXUSUK', name: 'USD/GBP Exchange Rate - שער דולר/לירה', category: 'מטבעות', importance: 'medium' }
       ];
       
       const events: EconomicEvent[] = [];

@@ -22,13 +22,19 @@ interface MediaMessageRendererProps {
   isMe: boolean;
   onMediaPress: (media: any) => void;
   textDirection: 'rtl' | 'ltr';
+  isGrouped?: boolean;
+  isGroupStart?: boolean;
+  isGroupEnd?: boolean;
 }
 
 export default function MediaMessageRenderer({ 
   message, 
   isMe, 
   onMediaPress, 
-  textDirection 
+  textDirection,
+  isGrouped,
+  isGroupStart,
+  isGroupEnd
 }: MediaMessageRendererProps) {
   const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
   // ====== Audio state ======
@@ -204,8 +210,8 @@ export default function MediaMessageRenderer({
       shadowRadius: 8,
       elevation: 4
     }}>
-      {/* שם השולח מעל התמונה (רק לאחרים) */}
-      {!isMe && (
+      {/* שם השולח מעל התמונה (רק לאחרים ורק אם זה תחילת קבוצה) */}
+      {!isMe && (!isGrouped || isGroupStart) && (
         <Text 
           style={{ 
             textAlign: 'right',
@@ -388,11 +394,10 @@ export default function MediaMessageRenderer({
         borderRadius: 16,
         overflow: 'hidden',
         marginBottom: 8,
-        backgroundColor: isMe ? 'rgba(0,230,84,0.15)' : 'rgba(255,255,255,0.05)',
+        backgroundColor: isMe ? 'rgba(0, 212, 77,0.6)' : 'rgba(255,255,255,0.08)',
         borderWidth: 1,
-        borderColor: isMe ? 'rgba(0,230,84,0.25)' : 'rgba(255,255,255,0.1)',
+        borderColor: isMe ? 'rgba(0,230,84,0.6)' : 'rgba(255,255,255,0.1)',
         borderLeftWidth: isMe ? 3 : 0,
-        borderLeftColor: isMe ? '#00E654' : 'transparent',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
@@ -408,11 +413,11 @@ export default function MediaMessageRenderer({
             width: 44,
             height: 44,
             borderRadius: 22,
-            backgroundColor: isMe ? '#00E654' : '#00E654',
+            backgroundColor: isMe ? '#000' : '#00E654',
             justifyContent: 'center',
             alignItems: 'center',
             marginRight: 16,
-            shadowColor: '#00E654',
+            shadowColor: isMe ? '#000' : '#00E654',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.3,
             shadowRadius: 4,
@@ -420,7 +425,7 @@ export default function MediaMessageRenderer({
           }}
           onPress={togglePlay}
         >
-          {isPlaying ? <Pause size={20} color="#000" strokeWidth={2} /> : <Play size={20} color="#000" strokeWidth={2} />}
+          {isPlaying ? <Pause size={20} color={isMe ? "#00E654" : "#000"} strokeWidth={2} /> : <Play size={20} color={isMe ? "#00E654" : "#000"} strokeWidth={2} />}
         </Pressable>
 
         {/* Timeline */}
@@ -436,15 +441,15 @@ export default function MediaMessageRenderer({
             onLayout={(e) => setBarWidthPx(e.nativeEvent.layout.width)}
           >
             <View style={{ height: 6, backgroundColor: isMe ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)', borderRadius: 3, width: '100%' }} />
-            <View style={{ position: 'absolute', height: 6, backgroundColor: '#00E654', borderRadius: 3, width: (progressPct / 100) * barWidthPx }} />
+            <View style={{ position: 'absolute', height: 6, backgroundColor: isMe ? '#000' : '#00E654', borderRadius: 3, width: (progressPct / 100) * barWidthPx }} />
             <View style={{ 
               position: 'absolute', 
               left: (progressPct / 100) * barWidthPx - 8, 
               width: 16, 
               height: 16, 
               borderRadius: 8, 
-              backgroundColor: '#00E654',
-              shadowColor: '#00E654',
+              backgroundColor: isMe ? '#000' : '#00E654',
+              shadowColor: isMe ? '#000' : '#00E654',
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.4,
               shadowRadius: 2,
@@ -461,9 +466,9 @@ export default function MediaMessageRenderer({
     <View style={{ 
       borderRadius: 16, 
       overflow: 'hidden', 
-      backgroundColor: isMe ? 'rgba(0,230,84,0.1)' : 'rgba(255,255,255,0.05)', 
+      backgroundColor: isMe ? 'rgba(0, 230, 84, 0.5)' : 'rgba(255,255,255,0.08)', 
       borderWidth: 1,
-      borderColor: isMe ? 'rgba(0,230,84,0.2)' : 'rgba(255,255,255,0.1)',
+      borderColor: isMe ? 'rgba(0, 230, 84, 0.6)' : 'rgba(255,255,255,0.1)',
       marginBottom: 8, 
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
@@ -483,21 +488,21 @@ export default function MediaMessageRenderer({
         }
       }}>
         <View style={{ width: 280, minHeight: 80, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16 }}>
-          <View style={{ 
+            <View style={{ 
             width: 48, 
             height: 48, 
             borderRadius: 12, 
-            backgroundColor: isMe ? '#00E654' : '#2a2a2a', 
+            backgroundColor: isMe ? '#000' : '#00E654', 
             justifyContent: 'center', 
             alignItems: 'center', 
             marginRight: 16,
-            shadowColor: isMe ? '#00E654' : '#000',
+            shadowColor: isMe ? '#000' : '#00E654',
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.2,
             shadowRadius: 4,
             elevation: 2
           }}>
-            <FileText size={22} color={isMe ? '#000' : '#E5E7EB'} strokeWidth={2} />
+            <FileText size={22} color={isMe ? '#00E654' : '#000'} strokeWidth={2} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: isMe ? '#000' : '#fff', fontWeight: '700', fontSize: 15, marginBottom: 4 }} numberOfLines={1} ellipsizeMode="tail">

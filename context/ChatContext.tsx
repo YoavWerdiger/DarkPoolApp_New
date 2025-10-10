@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Message, Chat } from '../services/supabase';
 import { ChatService } from '../services/chatService';
+import { TypingService, TypingUser } from '../services/typingService';
+import { supabase } from '../services/supabase';
 
 interface ChatContextType {
   messages: Message[];
   chats: Chat[];
   currentChatId: string | null;
   isLoading: boolean;
+  typingUsers: TypingUser[];
   sendMessage: (content: string, replyTo?: string | null, mentions?: any[]) => Promise<void>;
   sendFileMessage: (fileType: 'image' | 'voice' | 'file') => Promise<void>;
   sendMediaMessage: (mediaUrl: string, mediaType: string, caption?: string, metadata?: any, replyTo?: string | null) => Promise<void>;
@@ -17,6 +20,8 @@ interface ChatContextType {
   markMessageAsDelivered: (messageId: string) => Promise<void>;
   updateMessage: (messageId: string, newContent: string, mentions?: any[]) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
+  startTyping: () => void;
+  stopTyping: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -41,6 +46,32 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
   const [currentChatId, setCurrentChatId] = useState<string | null>(initialChatId || null);
   const [isLoading, setIsLoading] = useState(false);
   const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>({});
+  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
+  const [currentUserName, setCurrentUserName] = useState<string>('');
+
+  // Load user name for typing indicator
+  useEffect(() => {
+    if (userId) {
+      console.log('🔄 ChatContext: Loading user name for:', userId);
+      
+      supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', userId)
+        .single()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('❌ ChatContext: Error loading user name:', error);
+            return;
+          }
+          
+          if (data?.full_name) {
+            setCurrentUserName(data.full_name);
+            console.log('✅ ChatContext: User name loaded:', data.full_name);
+          }
+        });
+    }
+  }, [userId]);
 
   // Load chats and messages on mount - טעינה מקדימה
   useEffect(() => {
@@ -186,19 +217,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
           return prev;
         }
         
-        // בדיקה אם זו הודעה שכבר קיימת עם correlation key
-        const correlationKey = `${newMessage.sender_id}|${(newMessage.content || '').trim()}|${newMessage.reply_to_message_id || ''}`;
-        const hasCorrelationMatch = prev.some(msg => 
-          (msg as any).correlationKey === correlationKey && 
-          msg.sender_id === newMessage.sender_id
-        );
-        
-        if (hasCorrelationMatch) {
-          console.log('⚠️ Message with same correlation key already exists, skipping duplicate');
-          return prev;
-        }
-        
-        // בדיקה אם זו הודעה זמנית שצריך להחליף
+        // בדיקה אם זו הודעה זמנית שצריך להחליף (רק למשתמש ששלח)
         const tempMessageIndex = prev.findIndex(msg => {
           const isTemp = msg.id.startsWith('temp_');
           const sameSender = msg.sender_id === newMessage.sender_id;
@@ -214,7 +233,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
           return newMessages;
         }
         
-        console.log('➕ Adding new real-time message');
+        console.log('➕ Adding new real-time message from', newMessage.sender_id === userId ? 'self' : 'other user');
         return [newMessage, ...prev];
       });
     });
@@ -233,6 +252,28 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
       updateSubscription.unsubscribe();
     };
   }, [currentChatId]);
+
+  // Subscribe to typing events when chat changes
+  useEffect(() => {
+    if (!currentChatId || !userId || !currentUserName) return;
+
+    console.log('👀 ChatContext: Setting up typing subscription for chat:', currentChatId);
+
+    const unsubscribe = TypingService.subscribeToTyping(
+      currentChatId,
+      userId,
+      (typingUsersList) => {
+        console.log('✍️ ChatContext: Typing users updated:', typingUsersList);
+        setTypingUsers(typingUsersList);
+      }
+    );
+
+    return () => {
+      console.log('🔕 ChatContext: Unsubscribing from typing events');
+      unsubscribe();
+      setTypingUsers([]);
+    };
+  }, [currentChatId, userId, currentUserName]);
 
   useEffect(() => {
     if (initialChatId) {
@@ -313,8 +354,23 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
       return;
     }
     
-    // לא נוסיף הודעה זמנית - נחכה להודעה האמיתית מהשרת
-    console.log('📤 ChatContext: Sending message without temporary message');
+    // צור הודעה זמנית להצגה מיידית למשתמש ששלח
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const tempMessage: Message = {
+      id: tempId,
+      channel_id: currentChatId,
+      sender_id: userId,
+      content,
+      type: 'text' as any,
+      created_at: new Date().toISOString(),
+      reply_to_message_id: replyTo || undefined,
+      mentions: mentions || undefined,
+      status: 'sending' as any,
+    };
+    
+    // הוסף הודעה זמנית רק למשתמש ששלח
+    console.log('📤 ChatContext: Adding temporary message for sender:', tempId);
+    setMessages(prev => [tempMessage, ...prev]);
     
     try {
       console.log('📤 ChatContext: Sending message via ChatService...');
@@ -329,20 +385,11 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
       });
       console.log('✅ ChatContext: Message sent successfully:', result);
       
-      // בדיקה שההודעה נשלחה בהצלחה
+      // ההודעה האמיתית תגיע דרך realtime subscription
+      // ה-subscription יחליף את ההודעה הזמנית בהודעה האמיתית
+      
+      // עדכן גם את הצ'אט האחרון
       if (result && result.id) {
-        console.log('✅ ChatContext: Message sent successfully, adding to messages');
-        
-        // הוסף את ההודעה האמיתית לרשימה עם אנימציית פייד
-        setMessages(prev => {
-          const newMessage = { ...result, status: 'sent' as const };
-          // הוסף correlation key למניעת כפילות
-          (newMessage as any).correlationKey = `${result.sender_id}|${(result.content || '').trim()}|${result.reply_to_message_id || ''}`;
-          return [newMessage, ...prev];
-        });
-        
-        
-        // עדכן גם את הצ'אט האחרון
         setChats(prev => prev.map(chat => {
           if (chat.id === currentChatId) {
             return {
@@ -362,15 +409,15 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
           return chat;
         }));
         
-        console.log('✅ ChatContext: Message added and chat updated');
-      } else {
-        console.error('❌ ChatContext: Message result is invalid');
+        console.log('✅ ChatContext: Chat updated with last message');
       }
       
-      // Real-time subscription יטפל בעדכונים נוספים
-      console.log('✅ ChatContext: Message sent and added to local state - real-time will handle further updates');
+      console.log('✅ ChatContext: Message sent - waiting for realtime to replace temp message');
     } catch (error) {
       console.error('❌ ChatContext: Error sending message:', error);
+      
+      // הסר את ההודעה הזמנית במקרה של שגיאה
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
     }
   };
 
@@ -510,11 +557,26 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
     }
   };
 
+  const startTyping = () => {
+    if (!currentChatId || !userId || !currentUserName) return;
+    
+    console.log('✍️ ChatContext: User started typing');
+    TypingService.startTyping(currentChatId, userId, currentUserName);
+  };
+
+  const stopTyping = () => {
+    if (!currentChatId || !userId) return;
+    
+    console.log('🛑 ChatContext: User stopped typing');
+    TypingService.stopTyping(currentChatId, userId);
+  };
+
   const value: ChatContextType = {
     messages,
     chats,
     currentChatId,
     isLoading,
+    typingUsers,
     sendMessage,
     sendFileMessage,
     sendMediaMessage,
@@ -525,6 +587,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
     markMessageAsDelivered,
     updateMessage,
     deleteMessage,
+    startTyping,
+    stopTyping,
   };
 
   return (

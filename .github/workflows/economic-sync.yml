@@ -1,0 +1,37 @@
+name: Economic Data Sync
+
+on:
+  schedule:
+    # כל יום ב-06:00 UTC
+    - cron: '0 6 * * *'
+  workflow_dispatch: # הפעלה ידנית
+
+jobs:
+  sync-economic-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Daily Economic Sync
+      run: |
+        curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{}' \
+          https://wpmrtczbfcijoocguime.supabase.co/functions/v1/daily-economic-sync
+    
+    - name: Daily Earnings Sync
+      run: |
+        curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{}' \
+          https://wpmrtczbfcijoocguime.supabase.co/functions/v1/daily-earnings-sync
+    
+    - name: Smart Poller
+      run: |
+        curl -X POST \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Content-Type: application/json" \
+          -d '{}' \
+          https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-economic-poller
+

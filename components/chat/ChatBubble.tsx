@@ -75,9 +75,12 @@ interface ChatBubbleProps {
   channelMembers?: string[]; // Array of user IDs in the channel
   currentUserId?: string; // Current user ID for mention highlighting
   shouldHighlight?: boolean; // Whether this message should be highlighted
+  isGrouped?: boolean; // Whether this message is grouped with the previous one
+  isGroupStart?: boolean; // Whether this is the first message in a group
+  isGroupEnd?: boolean; // Whether this is the last message in a group
 }
 
-export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDeleteMessage, allMessages, onJumpToMessage, channelMembers, currentUserId, shouldHighlight }: ChatBubbleProps) {
+export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDeleteMessage, allMessages, onJumpToMessage, channelMembers, currentUserId, shouldHighlight, isGrouped, isGroupStart, isGroupEnd }: ChatBubbleProps) {
   const { user } = useAuth();
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<any | null>(null);
@@ -377,7 +380,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         content={text}
         mentions={mentions}
         isMe={isMe}
-        textDirection={'rtl'}
+        textDirection={textDirection}
       />
     );
   };
@@ -947,18 +950,31 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
       // נסה לקבל את הנתונים מ-news_data או מ-content (fallback)
       let newsData = (message as any).news_data;
       
+      console.log('📰 News message rendering:', { 
+        id: message.id, 
+        has_news_data: !!newsData,
+        content: message.content,
+        newsData 
+      });
+      
       // אם אין news_data, נסה לחלץ מה-content
-      if (!newsData && message.content.startsWith('📰NEWS_DATA:')) {
+      if (!newsData && message.content && message.content.startsWith('📰NEWS_DATA:')) {
         try {
           const jsonStr = message.content.replace('📰NEWS_DATA:', '');
           newsData = JSON.parse(jsonStr);
+          console.log('📰 Parsed news data from content:', newsData);
         } catch (e) {
-          console.error('Error parsing news data from content:', e);
+          console.error('❌ Error parsing news data from content:', e);
           return null;
         }
       }
       
-      if (!newsData) return null;
+      if (!newsData) {
+        console.error('❌ No news data found for message:', message.id);
+        return null;
+      }
+      
+      console.log('✅ Rendering news with data:', newsData);
       return (
         <View 
           className="rounded-2xl overflow-hidden"
@@ -1091,6 +1107,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           isMe={isMe}
           onMediaPress={handleMediaPress}
           textDirection={textDirection}
+          isGrouped={isGrouped}
+          isGroupStart={isGroupStart}
+          isGroupEnd={isGroupEnd}
         />
       );
     }
@@ -1102,6 +1121,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           isMe={isMe}
           onMediaPress={handleMediaPress}
           textDirection={textDirection}
+          isGrouped={isGrouped}
+          isGroupStart={isGroupStart}
+          isGroupEnd={isGroupEnd}
         />
       );
     }
@@ -1113,6 +1135,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           isMe={isMe}
           onMediaPress={handleMediaPress}
           textDirection={textDirection}
+          isGrouped={isGrouped}
+          isGroupStart={isGroupStart}
+          isGroupEnd={isGroupEnd}
         />
       );
     }
@@ -1124,6 +1149,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           isMe={isMe}
           onMediaPress={handleMediaPress}
           textDirection={textDirection}
+          isGrouped={isGrouped}
+          isGroupStart={isGroupStart}
+          isGroupEnd={isGroupEnd}
         />
       );
     }
@@ -1233,52 +1261,57 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   return (
     <>
       <Animated.View 
-        className={`w-full mb-3 flex-row${isMe ? '-reverse' : ''}`}
+        className={`w-full ${isGrouped && !isGroupStart ? 'mb-0.5' : 'mb-2'} flex-row${isMe ? '-reverse' : ''}`}
         style={{ opacity: fadeAnim }}
       >
-        {/* תמונת משתמש - רק עבור אחרים */}
+        {/* תמונת משתמש - רק עבור אחרים ורק אם זה לא grouped או שזה תחילת הקבוצה */}
          {!isMe && (
            <View style={{ 
              flexDirection: 'column', 
              alignItems: 'center', 
              justifyContent: 'flex-end', 
-             marginRight: 4,
-             marginBottom: 2
+             marginRight: 3,
+             marginBottom: 2,
+             width: 24, // שמור על הרוחב תמיד
            }}>
-             {(message.sender && typeof (message.sender as any).profile_picture === 'string' && (message.sender as any).profile_picture) ? (
-               <Image 
+             {(!isGrouped || isGroupStart) && (
+               <>
+                 {(message.sender && typeof (message.sender as any).profile_picture === 'string' && (message.sender as any).profile_picture) ? (
+                   <Image 
                  source={{ uri: (message.sender as any).profile_picture }} 
                  style={{ 
-                   width: 28, 
-                   height: 28, 
-                   borderRadius: 14,
-                   borderWidth: 1,
-                   borderColor: '#00E654'
-                 }} 
-               />
-             ) : (
-               <View 
-                 style={{ 
-                   width: 28, 
-                   height: 28, 
-                   borderRadius: 14, 
-                   alignItems: 'center', 
-                   justifyContent: 'center',
-                   backgroundColor: '#00E654',
-                   borderWidth: 1,
-                   borderColor: '#00E654'
-                 }}
-               >
-                 <Text 
-                   style={{ 
-                     color: '#FFFFFF',
-                     fontSize: 12,
-                     fontWeight: 'bold'
-                   }}
-                 >
-                   {message.sender?.full_name ? message.sender.full_name[0] : 'מ'}
-                 </Text>
-               </View>
+                   width: 24, 
+                   height: 24, 
+                   borderRadius: 12,
+                       borderWidth: 1,
+                       borderColor: '#00E654'
+                     }} 
+                   />
+                 ) : (
+                   <View 
+                     style={{ 
+                       width: 24, 
+                       height: 24, 
+                       borderRadius: 12, 
+                       alignItems: 'center', 
+                       justifyContent: 'center',
+                       backgroundColor: '#00E654',
+                       borderWidth: 1,
+                       borderColor: '#00E654'
+                     }}
+                   >
+                     <Text 
+                     style={{ 
+                       color: '#FFFFFF',
+                       fontSize: 10,
+                       fontWeight: 'bold'
+                     }}
+                     >
+                       {message.sender?.full_name ? message.sender.full_name[0] : 'מ'}
+                     </Text>
+                   </View>
+                 )}
+               </>
              )}
            </View>
          )}
@@ -1288,7 +1321,11 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
               inputRange: [0, 1],
               outputRange: ['transparent', 'rgba(0, 230, 84, 0.1)'],
             }),
-            borderRadius: 12,
+            borderRadius: isGrouped ? (
+              isGroupStart ? (isMe ? [12, 12, 4, 12] : [12, 12, 12, 4]) : 
+              isGroupEnd ? (isMe ? [4, 12, 12, 12] : [12, 4, 12, 12]) :
+              (isMe ? [4, 12, 4, 12] : [12, 4, 12, 4])
+            ) : 12,
             margin: highlightAnimation.interpolate({
               inputRange: [0, 1],
               outputRange: [0, 4],
@@ -1311,9 +1348,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           <Animated.View
           style={{
                alignSelf: isMe ? 'flex-end' : 'flex-start',
-               marginLeft: isMe ? 0 : 12,
-               marginRight: isMe ? 12 : 0,
-               marginVertical: 2,
+               marginLeft: isMe ? 0 : 8,
+               marginRight: isMe ? 8 : 0,
+               marginVertical: isGrouped && !isGroupStart ? 0.5 : 1,
                flexDirection: 'row',
                alignItems: 'flex-end',
             }}
@@ -1337,32 +1374,32 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                   transform: [{ scale: pressScale }],
                   alignItems: 'flex-end', 
                    backgroundColor: isMe ? '#00E654' : '#181818',
-                  borderRadius: 18,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  borderWidth: 1,
-                  borderColor: isMe ? '#00E654' : 'rgba(255,255,255,0.2)',
+                  borderRadius: 16,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderWidth: 0.5,
+                  borderColor: isMe ? 'rgba(0,230,84,0.3)' : 'rgba(255,255,255,0.08)',
                   shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
-                  elevation: 2,
-                  minWidth: 60,
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.05,
+                  shadowRadius: 2,
+                  elevation: 1,
+                  minWidth: 50,
                   maxWidth: maxBubbleWidth,
                 }}
               >
                  {/* תוכן ההודעה */}
                  <View style={{ maxWidth: maxBubbleWidth - 8 }}>
-                   {/* שם השולח בראש הבועה (רק אצל אחרים) - רק אם זה לא הודעת מדיה */}
-                   {!isMe && message.type === 'text' && (
+                   {/* שם השולח בראש הבועה (רק אצל אחרים) - רק אם זה לא הודעת מדיה ורק אם זה תחילת קבוצה */}
+                   {!isMe && message.type === 'text' && (!isGrouped || isGroupStart) && (
                      <Text 
                        style={{ 
                          textAlign: 'right',
                          writingDirection: 'rtl',
                          color: '#00E654',
-                         fontSize: 13,
+                         fontSize: 12,
                          fontWeight: 'bold',
-                         marginBottom: 4
+                         marginBottom: 3
                        }}
                      >
                        {message.sender?.full_name || 'משתמש'}
@@ -1372,14 +1409,21 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                    {renderContent()}
                 </View>
                 
-                {/* Star indicator */}
-                {isMessageStarred && (
-                  <View className="absolute top-2 left-2 bg-yellow-500 rounded-full p-1">
-                    <Star size={12} color="#000" strokeWidth={2} />
-                  </View>
-                )}
                 {/* Footer - סטטוס ושעה - תמיד בצד ימין */}
-                <View className="flex-row items-center justify-end mt-1">
+                <View className="flex-row items-center justify-between mt-1">
+                  {/* צד שמאל - כוכב אם ההודעה מסומנת */}
+                  <View style={{ width: 16, alignItems: 'flex-start' }}>
+                    {isMessageStarred && (
+                      <Star 
+                        size={11} 
+                        color={isMe ? "#181818" : "#00E654"} 
+                        strokeWidth={2}
+                        fill={isMe ? "#181818" : "#00E654"}
+                        style={{ marginLeft: -2 }}
+                      />
+                    )}
+                  </View>
+                  
                   {/* צד ימין - סטטוס ושעה תמיד */}
                   <View className="flex-row items-center">
                     {/* בוטל אינדיקטור 'שולח...' כדי למנוע הבהוב */}
@@ -1391,7 +1435,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                         color: isMe ? '#000000' : '#FFFFFF',
                         textAlign: 'right',
                         writingDirection: 'ltr',
-                        fontSize: 10,
+                        fontSize: 9,
                       }}
                     >
                       {formattedTime}

@@ -3,8 +3,8 @@ import { supabase } from '../lib/supabase';
 // CardCom API Configuration - פרטי החברה האמיתיים (API v11)
 export const CARDCOM_CONFIG = {
   terminalNumber: 147763, // מסוף 147763 - סניף מרכזי
-  apiName: 'kiCl9NU22wGlzSNGPtg7', // שם משתמש ממשקים חדש
-  apiPassword: 'fHgXjiB9BgyC1kTJeLek', // סיסמת משתמש ממשקים חדשה
+  apiName: 'y5N7Nh1YfRIrqaa1TFzY', // שם משתמש ממשקים מעודכן
+  apiPassword: 'IQWEk245ICRSmSJHJ3Ya', // סיסמת משתמש ממשקים מעודכנת
   baseUrl: 'https://secure.cardcom.solutions/api/v11',
   successUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-action',
   errorUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-action',
@@ -23,56 +23,195 @@ export const validateCardcomConfig = () => {
 
 // Subscription Plans Configuration - מסלולים חיים
 export const SUBSCRIPTION_PLANS = {
-  monthly: {
-    id: 'monthly',
-    name: 'מסלול חודשי',
+  // מסלול חינמי
+  free: {
+    id: 'free',
+    name: 'חינמי',
+    description: 'גישה בסיסית לחדשות כלכליות',
+    price: 0,
+    period: 'monthly',
+    features: [
+      'חדשות כלכליות יומיות',
+      'הכרזות רשמיות',
+      'קבוצה חינמית אחת'
+    ],
+    excludedFeatures: [
+      'חדשות מתפרצות בזמן אמת',
+      'גישה לקהילה',
+      'חדרי סווינגים והשקעות',
+      'איתותי מסחר יומי',
+      'איתותי Penny Stocks',
+      'יומן מסחר אישי',
+      'קורס הלוויתנים'
+    ],
+    role: 'free_user',
+    popular: false,
+    color: '#6B7280'
+  },
+  
+  // מסלול Gold
+  gold_monthly: {
+    id: 'gold_monthly',
+    name: 'Gold',
+    description: 'חדשות בזמן אמת וקהילה פעילה',
     price: 99,
     period: 'monthly',
     features: [
-      'גישה מלאה לכל התכונות',
-      'אותות מסחר חיים',
-      'ניתוחים מקצועיים',
-      'תמיכה 24/7',
-      'גישה לקהילה הפרימיום',
-      'אותות בלעדיים',
-      'עדכונים בזמן אמת'
+      'חדשות כלכליות יומיות',
+      'חדשות מתפרצות בזמן אמת וציוצים',
+      'גישה לקהילה הכללית'
     ],
-    role: 'premium_user',
-    popular: true
+    excludedFeatures: [
+      'חדר סווינגים והשקעות',
+      'איתותי מסחר יומי',
+      'איתותי Penny Stocks',
+      'יומן מסחר אישי',
+      'קורס הלוויתנים'
+    ],
+    role: 'gold_user',
+    popular: true,
+    color: '#F59E0B'
   },
-  quarterly: {
-    id: 'quarterly',
-    name: 'מסלול רבעוני',
-    price: 250,
+  gold_quarterly: {
+    id: 'gold_quarterly',
+    name: 'Gold',
+    description: 'חדשות בזמן אמת וקהילה פעילה',
+    price: 249,
     period: 'quarterly',
     features: [
-      'כל התכונות של המסלול החודשי',
-      'הנחה של 16%',
-      'גישה מוקדמת לתכונות חדשות',
-      'ייעוץ אישי חודשי',
-      'אותות בלעדיים',
-      'ניתוחים מותאמים אישית'
+      'חדשות כלכליות יומיות',
+      'חדשות מתפרצות בזמן אמת וציוצים',
+      'גישה לקהילה הכללית',
+      'הנחה של 16%'
+    ],
+    excludedFeatures: [
+      'חדר סווינגים והשקעות',
+      'איתותי מסחר יומי',
+      'איתותי Penny Stocks',
+      'יומן מסחר אישי',
+      'קורס הלוויתנים'
+    ],
+    role: 'gold_user',
+    popular: false,
+    color: '#F59E0B'
+  },
+  
+  // מסלול Premium
+  premium_monthly: {
+    id: 'premium_monthly',
+    name: 'Premium',
+    description: 'הבחירה של רוב הסוחרים',
+    price: 149,
+    period: 'monthly',
+    features: [
+      'חדשות כלכליות יומיות',
+      'חדשות מתפרצות בזמן אמת וציוצים',
+      'גישה לקהילה הכללית',
+      'חדר סווינגים והשקעות',
+      'איתותי מסחר יומי',
+      'יומן מסחר אישי'
+    ],
+    excludedFeatures: [
+      'איתותי Penny Stocks',
+      'קורס הלוויתנים'
     ],
     role: 'premium_user',
-    popular: false
+    popular: true,
+    color: '#3B82F6'
   },
-  yearly: {
-    id: 'yearly',
-    name: 'מסלול שנתי',
-    price: 999,
+  premium_quarterly: {
+    id: 'premium_quarterly',
+    name: 'Premium',
+    description: 'הבחירה של רוב הסוחרים',
+    price: 399,
+    period: 'quarterly',
+    features: [
+      'חדשות כלכליות יומיות',
+      'חדשות מתפרצות בזמן אמת וציוצים',
+      'גישה לקהילה הכללית',
+      'חדר סווינגים והשקעות',
+      'איתותי מסחר יומי',
+      'יומן מסחר אישי',
+      'הנחה של 11%'
+    ],
+    excludedFeatures: [
+      'איתותי Penny Stocks',
+      'קורס הלוויתנים'
+    ],
+    role: 'premium_user',
+    popular: false,
+    color: '#3B82F6'
+  },
+  
+  // מסלול Platinum
+  platinum_monthly: {
+    id: 'platinum_monthly',
+    name: 'Platinum',
+    description: 'גישה מלאה לכל העולמות',
+    price: 199,
+    period: 'monthly',
+    features: [
+      'חדשות כלכליות יומיות',
+      'חדשות מתפרצות בזמן אמת וציוצים',
+      'גישה לקהילה הכללית',
+      'חדר סווינגים והשקעות',
+      'איתותי מסחר יומי',
+      'יומן מסחר אישי',
+      'איתותי Penny Stocks'
+    ],
+    excludedFeatures: [
+      'קורס הלוויתנים'
+    ],
+    role: 'platinum_user',
+    popular: false,
+    color: '#8B5CF6'
+  },
+  platinum_quarterly: {
+    id: 'platinum_quarterly',
+    name: 'Platinum',
+    description: 'גישה מלאה לכל העולמות',
+    price: 549,
+    period: 'quarterly',
+    features: [
+      'חדשות כלכליות יומיות',
+      'חדשות מתפרצות בזמן אמת וציוצים',
+      'גישה לקהילה הכללית',
+      'חדר סווינגים והשקעות',
+      'איתותי מסחר יומי',
+      'יומן מסחר אישי',
+      'איתותי Penny Stocks',
+      'הנחה של 8%'
+    ],
+    excludedFeatures: [
+      'קורס הלוויתנים'
+    ],
+    role: 'platinum_user',
+    popular: false,
+    color: '#8B5CF6'
+  },
+  
+  // מסלול Platinum Pro (שנתי)
+  platinum_pro_yearly: {
+    id: 'platinum_pro_yearly',
+    name: 'Platinum Pro',
+    description: 'חבילת הפרימיום המלאה ביותר',
+    price: 1849,
     period: 'yearly',
     features: [
-      'כל התכונות של המסלול הרבעוני',
-      'הנחה של 16%',
-      'גישה מוקדמת לתכונות חדשות',
-      'ייעוץ אישי שבועי',
-      'אותות בלעדיים',
-      'ניתוחים מותאמים אישית',
-      'גישה לחדר VIP',
-      'מפגשים אישיים'
+      'חדשות כלכליות יומיות',
+      'חדשות מתפרצות בזמן אמת וציוצים',
+      'גישה לקהילה הכללית',
+      'חדר סווינגים והשקעות',
+      'איתותי מסחר יומי',
+      'יומן מסחר אישי',
+      'איתותי Penny Stocks',
+      'קורס הלוויתנים במתנה',
+      'חיסכון של ₪350'
     ],
-    role: 'premium_user',
-    popular: false
+    excludedFeatures: [],
+    role: 'platinum_pro_user',
+    popular: false,
+    color: '#F59E0B'
   }
 };
 
@@ -256,7 +395,7 @@ class PaymentService {
   }
 
   /**
-   * שומר פרטי עסקה במסד הנתונים
+   * שומר פרטי עסקה במסד הנתונים באמצעות Edge Function
    */
   private async saveTransaction(transaction: {
     id: string;
@@ -269,28 +408,66 @@ class PaymentService {
     paymentUrl: string;
   }) {
     try {
-      const { error } = await supabase
-        .from('payment_transactions')
-        .insert({
-          id: transaction.id,
-          user_id: transaction.userId,
-          plan_id: transaction.planId,
-          amount: transaction.amount,
-          status: transaction.status,
-          cardcom_low_profile_id: transaction.cardcomLowProfileId,
-          cardcom_transaction_id: transaction.cardcomTransactionId,
-          payment_url: transaction.paymentUrl,
-          created_at: new Date().toISOString()
+      console.log('🔄 PaymentService: Preparing transaction data:', JSON.stringify(transaction, null, 2));
+
+      // ניסיון 1: Edge Function (מומלץ)
+      try {
+        const { data, error } = await supabase.functions.invoke('create-payment', {
+          body: {
+            transaction: {
+              id: transaction.id,
+              userId: transaction.userId,
+              planId: transaction.planId,
+              amount: transaction.amount,
+              currency: 'ILS',
+              status: transaction.status,
+              cardcomLowProfileId: transaction.cardcomLowProfileId,
+              cardcomTransactionId: transaction.cardcomTransactionId,
+              paymentUrl: transaction.paymentUrl,
+            }
+          }
         });
 
-      if (error) {
-        console.error('❌ PaymentService: Error saving transaction:', error);
-        throw error;
-      }
+        if (error) {
+          console.error('❌ PaymentService: Edge function error:', error);
+          throw error;
+        }
 
-      console.log('✅ PaymentService: Transaction saved successfully');
+        if (data && !data.success) {
+          console.error('❌ PaymentService: Edge function returned error:', data);
+          throw new Error(JSON.stringify(data));
+        }
+
+        console.log('✅ PaymentService: Transaction saved via Edge Function');
+        return;
+      } catch (edgeFunctionError) {
+        console.warn('⚠️ PaymentService: Edge Function failed, trying direct insert...', edgeFunctionError);
+        
+        // ניסיון 2: הכנסה ישירה (fallback)
+        const { error: directError } = await supabase
+          .from('payment_transactions')
+          .insert({
+            id: transaction.id,
+            user_id: transaction.userId,
+            plan_id: transaction.planId,
+            amount: transaction.amount,
+            currency: 'ILS',
+            status: transaction.status,
+            cardcom_low_profile_id: transaction.cardcomLowProfileId,
+            cardcom_transaction_id: transaction.cardcomTransactionId,
+            payment_url: transaction.paymentUrl,
+            created_at: new Date().toISOString()
+          });
+
+        if (directError) {
+          console.error('❌ PaymentService: Direct insert also failed:', directError);
+          throw directError;
+        }
+
+        console.log('✅ PaymentService: Transaction saved via direct insert');
+      }
     } catch (error) {
-      console.error('❌ PaymentService: Error saving transaction:', error);
+      console.error('❌ PaymentService: All save attempts failed:', error);
       throw error;
     }
   }

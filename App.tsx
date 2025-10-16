@@ -9,6 +9,7 @@ import { View, ActivityIndicator, Text, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import OnboardingNavigator from './navigation/OnboardingNavigator';
 import { RegistrationProvider } from './context/RegistrationContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -54,7 +55,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0b0b0b' }}>
+      <View style={{ flex: 1, backgroundColor: '#0d0d0d' }}>
         <LinearGradient 
           colors={['rgba(0,230,84,0.08)', 'rgba(0,230,84,0.03)', 'rgba(0,230,84,0.05)']} 
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
@@ -81,7 +82,7 @@ function AppContent() {
             borderWidth: 1,
             borderColor: 'rgba(0,230,84,0.2)'
           }}>
-            <ActivityIndicator size="large" color="#00E654" />
+            <ActivityIndicator size="large" color="#05d157" />
             <Text style={{ 
               color: '#FFFFFF', 
               fontSize: 16, 
@@ -98,7 +99,7 @@ function AppContent() {
   }
 
   return (
-    <View style={{ flex: 1, direction: 'ltr', backgroundColor: '#121212' }}>
+    <View style={{ flex: 1, direction: 'ltr', backgroundColor: '#0d0d0d' }}>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
@@ -119,11 +120,13 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </ThemeProvider>
+        <BottomSheetModalProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </ThemeProvider>
+        </BottomSheetModalProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

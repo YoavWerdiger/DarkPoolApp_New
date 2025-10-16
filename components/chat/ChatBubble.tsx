@@ -27,6 +27,7 @@ import { PollService, PollWithVotes } from '../../services/pollService';
 import { useAuth } from '../../context/AuthContext';
 import { extractTextSegments } from '../../utils/textRanges';
 import { Audio } from 'expo-av';
+import { useNavigation } from '@react-navigation/native';
 // רטט נשאר פעיל - אם יש התקנה
 let Haptics: any = { impactAsync: async () => {}, ImpactFeedbackStyle: { Light: 'Light' } };
 try { Haptics = require('expo-haptics'); } catch {}
@@ -78,10 +79,12 @@ interface ChatBubbleProps {
   isGrouped?: boolean; // Whether this message is grouped with the previous one
   isGroupStart?: boolean; // Whether this is the first message in a group
   isGroupEnd?: boolean; // Whether this is the last message in a group
+  hasPrevFromSameSender?: boolean; // Whether there's a previous message from same sender in same minute
 }
 
-export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDeleteMessage, allMessages, onJumpToMessage, channelMembers, currentUserId, shouldHighlight, isGrouped, isGroupStart, isGroupEnd }: ChatBubbleProps) {
+export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDeleteMessage, allMessages, onJumpToMessage, channelMembers, currentUserId, shouldHighlight, isGrouped, isGroupStart, isGroupEnd, hasPrevFromSameSender }: ChatBubbleProps) {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<any | null>(null);
   const [isReplying, setIsReplying] = useState(false);
@@ -179,7 +182,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   // בוטל זום – נשתמש רק בפייד דרך fadeAnim
   const pressScale = useRef(new Animated.Value(1)).current;
   const screenWidth = Dimensions.get('window').width;
-  const maxBubbleWidth = Math.floor(screenWidth * 0.9);
+  const maxBubbleWidth = Math.floor(screenWidth * 0.70);
 
   // לוג לבדיקת פרטי השולח
   useEffect(() => {
@@ -319,13 +322,20 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     return undefined;
   }, []);
 
-  // אנימציית פייד להוספת הודעה
+  // אנימציית פייד להוספת הודעה - רק עבור הודעות זמניות
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    // הפעל אנימציה רק עבור הודעות זמניות (לפני אישור מהשרת)
+    // כך נמנע fade in כפול - פעם בשליחה ופעם באישור מהשרת
+    if (message.id.startsWith('temp_')) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // הודעות אמיתיות מהשרת - אין אנימציה
+      fadeAnim.setValue(1);
+    }
   }, []);
 
   // טעינת ריאקציות
@@ -932,8 +942,8 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             style={{ 
               color: isMe ? '#000000' : '#FFFFFF',
               fontSize: 10,
-              textAlign: 'right',
-              writingDirection: 'rtl'
+              textAlign: detectLanguage(previewText) === 'rtl' ? 'right' : 'left',
+              writingDirection: detectLanguage(previewText)
             }}
             numberOfLines={2}
           >
@@ -975,16 +985,44 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
       }
       
       console.log('✅ Rendering news with data:', newsData);
+      
+      // פונקציה לטיפול בלחיצה על החדשה
+      const handleNewsPress = () => {
+        Alert.alert(
+          'מעבר לחדשות',
+          'האם ברצונך לעבור לטאב החדשות ולראות את החדשה?',
+          [
+            {
+              text: 'ביטול',
+              style: 'cancel'
+            },
+            {
+              text: 'עבור',
+              onPress: () => {
+                // מעבר פשוט לטאב החדשות
+                navigation.navigate('News');
+              }
+            }
+          ]
+        );
+      };
+      
       return (
-        <View 
-          className="rounded-2xl overflow-hidden"
-          style={{
-            backgroundColor: DesignTokens.colors.background.secondary,
-            borderWidth: 1,
-            borderColor: 'rgba(0, 216, 74, 0.2)',
-            maxWidth: 280
-          }}
+        <Pressable
+          onPress={handleNewsPress}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.8 : 1
+          })}
         >
+          <View 
+            className="rounded-2xl overflow-hidden"
+            style={{
+              backgroundColor: DesignTokens.colors.background.secondary,
+              borderWidth: 1,
+              borderColor: 'rgba(0, 216, 74, 0.2)',
+              maxWidth: 280
+            }}
+          >
           {/* תמונה אם קיימת */}
           {newsData.image_url && (
             <View className="relative h-32">
@@ -1081,6 +1119,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             </View>
           </View>
         </View>
+        </Pressable>
       );
     }
 
@@ -1261,7 +1300,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   return (
     <>
       <Animated.View 
-        className={`w-full ${isGrouped && !isGroupStart ? 'mb-0.5' : 'mb-2'} flex-row${isMe ? '-reverse' : ''}`}
+        className={`w-full ${hasPrevFromSameSender ? 'mb-0.5' : 'mb-2'} flex-row${isMe ? '-reverse' : ''}`}
         style={{ opacity: fadeAnim }}
       >
         {/* תמונת משתמש - רק עבור אחרים ורק אם זה לא grouped או שזה תחילת הקבוצה */}
@@ -1350,7 +1389,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                alignSelf: isMe ? 'flex-end' : 'flex-start',
                marginLeft: isMe ? 0 : 8,
                marginRight: isMe ? 8 : 0,
-               marginVertical: isGrouped && !isGroupStart ? 0.5 : 1,
+               marginVertical: hasPrevFromSameSender ? 0.5 : 1,
                flexDirection: 'row',
                alignItems: 'flex-end',
             }}
@@ -1386,10 +1425,17 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                   elevation: 1,
                   minWidth: 50,
                   maxWidth: maxBubbleWidth,
+                  width: 'auto',
+                  flexShrink: 1
                 }}
               >
                  {/* תוכן ההודעה */}
-                 <View style={{ maxWidth: maxBubbleWidth - 8 }}>
+                 <View style={{ 
+                   maxWidth: maxBubbleWidth - 8, 
+                   width: '100%',
+                   flexShrink: 1,
+                   flexWrap: 'wrap'
+                 }}>
                    {/* שם השולח בראש הבועה (רק אצל אחרים) - רק אם זה לא הודעת מדיה ורק אם זה תחילת קבוצה */}
                    {!isMe && message.type === 'text' && (!isGrouped || isGroupStart) && (
                      <Text 
@@ -1399,7 +1445,8 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                          color: '#00E654',
                          fontSize: 12,
                          fontWeight: 'bold',
-                         marginBottom: 3
+                         marginBottom: 3,
+                         flexWrap: 'wrap'
                        }}
                      >
                        {message.sender?.full_name || 'משתמש'}
@@ -1410,38 +1457,29 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                 </View>
                 
                 {/* Footer - סטטוס ושעה - תמיד בצד ימין */}
-                <View className="flex-row items-center justify-between mt-1">
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
                   {/* צד שמאל - כוכב אם ההודעה מסומנת */}
-                  <View style={{ width: 16, alignItems: 'flex-start' }}>
-                    {isMessageStarred && (
-                      <Star 
-                        size={11} 
-                        color={isMe ? "#181818" : "#00E654"} 
-                        strokeWidth={2}
-                        fill={isMe ? "#181818" : "#00E654"}
-                        style={{ marginLeft: -2 }}
-                      />
-                    )}
-                  </View>
+                  {isMessageStarred && (
+                    <Star 
+                      size={9} 
+                      color={isMe ? "#181818" : "#00E654"} 
+                      strokeWidth={2}
+                      fill={isMe ? "#181818" : "#00E654"}
+                    />
+                  )}
                   
-                  {/* צד ימין - סטטוס ושעה תמיד */}
-                  <View className="flex-row items-center">
-                    {/* בוטל אינדיקטור 'שולח...' כדי למנוע הבהוב */}
-                    
-                  {/* פוטר: שעה תמיד בצד ימין; ללא וי/סטטוס */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text 
-                      style={{ 
-                        color: isMe ? '#000000' : '#FFFFFF',
-                        textAlign: 'right',
-                        writingDirection: 'ltr',
-                        fontSize: 9,
-                      }}
-                    >
-                      {formattedTime}
-                    </Text>
-                  </View>
-                  </View>
+                  {/* צד ימין - שעה */}
+                  <Text 
+                    style={{ 
+                      color: isMe ? '#000000' : '#FFFFFF',
+                      textAlign: 'right',
+                      writingDirection: 'ltr',
+                      fontSize: 9,
+                      marginLeft: 'auto',
+                    }}
+                  >
+                    {formattedTime}
+                  </Text>
                 </View>
               </Animated.View>
               </Pressable>

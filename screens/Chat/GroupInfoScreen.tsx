@@ -8,6 +8,7 @@ import { ChatService } from '../../services/chatService';
 import { supabase } from '../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { ArrowRight, Share as ShareIcon, Trash2, ImageIcon, Star, Bell, BellOff, Palette, FileText, Edit3, Lock, MoreVertical, Users, User, UserMinus } from 'lucide-react-native';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 
 const iconMap: Record<string, string> = {
@@ -43,12 +44,12 @@ export default function GroupInfoScreen() {
   const [showMediaPreview, setShowMediaPreview] = useState(false);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { theme, toggleTheme, isDarkMode } = useTheme();
 
   // פונקציה לבחירת ערכת נושא
   const handleThemeSelect = () => {
     toggleTheme();
-    console.log('🎨 Theme toggled to:', isDark ? 'light' : 'dark');
+    console.log('🎨 Theme toggled to:', isDarkMode ? 'light' : 'dark');
   };
 
   // פונקציה לבדיקת מבנה הנתונים
@@ -731,38 +732,22 @@ export default function GroupInfoScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0b0b0b' }}>
-        <LinearGradient 
-          colors={['rgba(0,230,84,0.08)', 'rgba(0,230,84,0.03)', 'rgba(0,230,84,0.05)']} 
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
-        />
-        <ImageBackground
-          source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            opacity: 0.1
-          }}
-          resizeMode="cover"
-        />
+      <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <View style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            backgroundColor: DesignTokens.colors.background.secondary,
             paddingHorizontal: 32,
             paddingVertical: 24,
-            borderRadius: 16,
+            borderRadius: DesignTokens.borderRadius.xl,
             alignItems: 'center',
             borderWidth: 1,
-            borderColor: 'rgba(0,230,84,0.2)'
+            borderColor: DesignTokens.colors.border.primary
           }}>
-            <ActivityIndicator size="large" color="#00E654" />
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
             <Text style={{ 
-              color: '#FFFFFF', 
-              fontSize: 16, 
-              fontWeight: '500',
+              color: DesignTokens.colors.text.primary, 
+              fontSize: DesignTokens.typography.fontSize.base, 
+              fontWeight: '500' as any,
               marginTop: 16,
               textAlign: 'center'
             }}>
@@ -776,47 +761,56 @@ export default function GroupInfoScreen() {
 
   if (!group) {
     return (
-      <LinearGradient colors={[ 'rgba(0,230,84,0.06)', '#0b0b0b' ]} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text className="text-white text-lg">הקבוצה לא נמצאה</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} className="mt-4 bg-primary px-6 py-3 rounded-xl">
-          <Text className="text-black font-bold">חזור</Text>
+      <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ 
+          color: DesignTokens.colors.text.primary, 
+          fontSize: DesignTokens.typography.fontSize.lg,
+          marginBottom: 16 
+        }}>הקבוצה לא נמצאה</Text>
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={{
+            backgroundColor: DesignTokens.colors.primary.main,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            borderRadius: DesignTokens.borderRadius.xl
+          }}
+        >
+          <Text style={{
+            color: '#000000',
+            fontWeight: '700' as any
+          }}>חזור</Text>
         </TouchableOpacity>
-      </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0b0b0b' }}>
-      <LinearGradient
-        colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-      />
-      {/* Header */}
-      <View style={{
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: 60,
-        paddingBottom: 20,
-                  backgroundColor: '#181818',
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0,230,84,0.2)'
-      }}>
+    <View style={{ flex: 1, backgroundColor: '#0d0d0d' }}>
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 20,
+          paddingTop: 60,
+          paddingBottom: 16,
+          backgroundColor: '#1C1C1E',
+          borderBottomWidth: 1,
+          borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+        }}>
         <TouchableOpacity 
           onPress={() => navigation.goBack()}
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: 'rgba(0,230,84,0.2)',
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
             alignItems: 'center',
             justifyContent: 'center'
           }}
         >
-          <ArrowRight size={24} color="#00E654" strokeWidth={2} />
+          <ArrowRight size={20} color="#FFFFFF" strokeWidth={2} />
         </TouchableOpacity>
         <Text style={{
           fontSize: 20,
@@ -827,78 +821,43 @@ export default function GroupInfoScreen() {
         <TouchableOpacity 
           onPress={handleShareGroup}
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: 'rgba(0,230,84,0.2)',
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
             alignItems: 'center',
             justifyContent: 'center'
           }}
         >
-          <ShareIcon size={24} color="#00E654" strokeWidth={2} />
+          <ShareIcon size={20} color="#FFFFFF" strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+      <ScrollView 
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
         {/* Group Header */}
         <View style={{
           alignItems: 'center',
           marginHorizontal: 20,
-          marginTop: 20,
+          marginTop: 24,
           paddingHorizontal: 24,
           paddingVertical: 32,
-          borderRadius: 20,
-          backgroundColor: '#181818',
-          borderWidth: 2,
-          borderColor: 'rgba(0,230,84,0.3)',
-          shadowColor: '#00E654',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.2,
-          shadowRadius: 20,
-          elevation: 12
+          borderRadius: 16,
+          backgroundColor: '#1C1C1E',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8
         }}>
-          {group?.image_url ? (
-            <Image 
-              source={{ uri: group.image_url }} 
-              style={{ 
-                width: 112,
-                height: 112,
-                borderRadius: 56,
-                marginBottom: 16,
-                borderWidth: 4,
-                borderColor: '#00E654',
-                shadowColor: '#00E654', 
-                shadowOpacity: 0.5, 
-                shadowRadius: 16, 
-                shadowOffset: { width: 0, height: 8 },
-              }} 
-            />
-          ) : (
-            <View style={{
-              width: 112,
-              height: 112,
-              borderRadius: 56,
-              backgroundColor: '#00E654',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 16,
-              borderWidth: 4,
-              borderColor: '#00E654',
-                shadowColor: '#00E654', 
-              shadowOpacity: 0.5, 
-              shadowRadius: 16, 
-              shadowOffset: { width: 0, height: 8 },
-              elevation: 8
-            }}>
-              <Text style={{ color: '#000000', fontSize: 40, fontWeight: '800' }}>
-                {group?.name?.charAt(0) || 'ק'}
-              </Text>
-            </View>
-          )}
-          
           <Text style={{
-            fontSize: 28,
-            fontWeight: '800',
+            fontSize: 24,
+            fontWeight: '700',
             color: '#FFFFFF',
             textAlign: 'center',
             marginBottom: 8,
@@ -907,28 +866,27 @@ export default function GroupInfoScreen() {
           
           <Text style={{
             textAlign: 'center',
-            color: '#B0B0B0',
-            fontSize: 16,
-            lineHeight: 24,
+            color: '#A0A0A0',
+            fontSize: 14,
+            lineHeight: 20,
             marginBottom: 16,
             paddingHorizontal: 16,
-            fontWeight: '400'
           }}>
             {group?.description || 'אין תיאור זמין לקבוצה זו'}
           </Text>
           
           <View style={{
-            backgroundColor: 'rgba(0,230,84,0.15)',
+            backgroundColor: 'rgba(0, 230, 84, 0.1)',
             paddingHorizontal: 16,
             paddingVertical: 8,
             borderRadius: 20,
             borderWidth: 1,
-            borderColor: 'rgba(0,230,84,0.3)'
+            borderColor: 'rgba(0, 230, 84, 0.3)'
           }}>
             <Text style={{
               color: '#00E654',
-              fontWeight: '700',
-              fontSize: 14
+              fontWeight: '600',
+              fontSize: 12
             }}>{members.length} משתתפים</Text>
           </View>
         </View>
@@ -937,27 +895,22 @@ export default function GroupInfoScreen() {
         {/* Admin/Owner Actions */}
         {(isAdmin || isOwner) && (
           <View style={{
-            marginHorizontal: 20,
-            marginTop: 16,
-            paddingHorizontal: 20,
-            paddingVertical: 20,
-            borderRadius: 20,
-            backgroundColor: '#181818',
+            marginHorizontal: DesignTokens.spacing.lg,
+            marginTop: DesignTokens.spacing.lg,
+            paddingHorizontal: DesignTokens.spacing.xl,
+            paddingVertical: DesignTokens.spacing.xl,
+            borderRadius: DesignTokens.borderRadius.lg,
+            backgroundColor: DesignTokens.colors.background.secondary,
             borderWidth: 1,
-            borderColor: 'rgba(255,0,0,0.2)',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            elevation: 4
+            borderColor: DesignTokens.colors.border.primary,
+            ...DesignTokens.shadows.sm
           }}>
             <Text style={{
-              color: '#FFFFFF',
-              fontSize: 18,
-              fontWeight: '700',
+              color: DesignTokens.colors.text.primary,
+              fontSize: DesignTokens.typography.fontSize.lg,
+              fontWeight: '700' as any,
               textAlign: 'center',
-              marginBottom: 16,
-              letterSpacing: 0.5
+              marginBottom: DesignTokens.spacing.lg,
             }}>פעולות מנהל</Text>
             <View style={{
               flexDirection: 'row-reverse',
@@ -968,25 +921,20 @@ export default function GroupInfoScreen() {
                   onPress={handleDeleteGroup}
                   style={{
                     alignItems: 'center',
-                    paddingVertical: 12,
-                    paddingHorizontal: 16,
-                    backgroundColor: '#DC2626',
-                    borderRadius: 16,
+                    paddingVertical: DesignTokens.spacing.md,
+                    paddingHorizontal: DesignTokens.spacing.lg,
+                    backgroundColor: DesignTokens.colors.danger.main,
+                    borderRadius: DesignTokens.borderRadius.md,
                     flex: 1,
                     marginHorizontal: 4,
-                    shadowColor: '#DC2626',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 4
                   }}
                 >
-                  <Trash2 size={24} color="#FFFFFF" strokeWidth={2} />
+                  <Trash2 size={20} color="#FFFFFF" strokeWidth={2} />
                   <Text style={{
                     color: '#FFFFFF',
                     marginTop: 4,
-                    fontSize: 12,
-                    fontWeight: '700'
+                    fontSize: DesignTokens.typography.fontSize.xs,
+                    fontWeight: '600' as any
                   }}>מחק קבוצה</Text>
                 </TouchableOpacity>
               )}
@@ -998,141 +946,133 @@ export default function GroupInfoScreen() {
         <View style={{
           marginHorizontal: 20,
           marginTop: 16,
-          paddingHorizontal: 20,
-          paddingVertical: 20,
+          backgroundColor: '#1C1C1E',
           borderRadius: 16,
-          backgroundColor: '#181818',
-          borderWidth: 1,
-          borderColor: 'rgba(0,230,84,0.15)'
+          overflow: 'hidden'
         }}>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('MediaGallery', { 
-                chatId: chatId, 
-                channelName: group?.name || 'קבוצה' 
-              })}
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('MediaGallery', { 
+              chatId: chatId, 
+              channelName: group?.name || 'קבוצה' 
+            })}
             style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              paddingVertical: 16,
+              paddingHorizontal: 16
             }}
           >
-            <View style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              flex: 1
-            }}>
-              <View style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#00E654',
-                borderRadius: 12,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12
-              }}>
-                <ImageIcon size={20} color="#000000" strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{
-                  color: '#FFFFFF',
-                  fontWeight: '600',
-                  fontSize: 16,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>מדיה, קישורים וקבצים</Text>
-                <Text style={{
-                  color: '#B0B0B0',
-                  fontSize: 14,
-                  textAlign: 'right'
-                }}>{mediaItems.length} פריטים</Text>
-              </View>
-            </View>
-              <Ionicons 
+            {/* Chevron - שמאל */}
+            <Ionicons 
               name="chevron-back" 
-                size={20} 
-                color="#00E654" 
-              />
-              </TouchableOpacity>
-          </View>
+              size={20} 
+              color="#666666" 
+            />
+
+            {/* Text Content - מרכז */}
+            <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: '#FFFFFF',
+                marginBottom: 2,
+                textAlign: 'right'
+              }}>מדיה, קישורים וקבצים</Text>
+              <Text style={{
+                fontSize: 13,
+                color: '#666666',
+                textAlign: 'right'
+              }}>{mediaItems.length} פריטים</Text>
+            </View>
+
+            {/* Icon - ימין */}
+            <View style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <ImageIcon size={20} color="#00E654" strokeWidth={2} />
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* הודעות שסומנו בכוכב */}
         <View style={{
           marginHorizontal: 20,
           marginTop: 16,
-          paddingHorizontal: 20,
-          paddingVertical: 20,
+          backgroundColor: '#1C1C1E',
           borderRadius: 16,
-          backgroundColor: '#181818',
-          borderWidth: 1,
-          borderColor: 'rgba(0,230,84,0.15)'
+          overflow: 'hidden'
         }}>
           <TouchableOpacity 
             onPress={() => setShowPinnedMessages(!showPinnedMessages)}
             style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              paddingVertical: 16,
+              paddingHorizontal: 16
             }}
           >
-            <View style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              flex: 1
-            }}>
-              <View style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#F59E0B',
-                borderRadius: 12,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12
-              }}>
-                <Star size={20} color="#000000" strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{
-                  color: '#FFFFFF',
-                  fontWeight: '600',
-                  fontSize: 16,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>הודעות שסומנו בכוכב</Text>
-                <Text style={{
-                  color: '#B0B0B0',
-                  fontSize: 14,
-                  textAlign: 'right'
-                }}>{starredMessages.length} הודעות</Text>
-              </View>
-            </View>
+            {/* Chevron - שמאל */}
             <Ionicons 
               name={showPinnedMessages ? "chevron-up" : "chevron-down"} 
-                size={20} 
-              color="#00E654" 
-              />
+              size={20} 
+              color="#666666" 
+            />
+
+            {/* Text Content - מרכז */}
+            <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: '#FFFFFF',
+                marginBottom: 2,
+                textAlign: 'right'
+              }}>הודעות שסומנו בכוכב</Text>
+              <Text style={{
+                fontSize: 13,
+                color: '#666666',
+                textAlign: 'right'
+              }}>{starredMessages.length} הודעות</Text>
+            </View>
+
+            {/* Icon - ימין */}
+            <View style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Star size={20} color="#00E654" strokeWidth={2} />
+            </View>
           </TouchableOpacity>
           
           {showPinnedMessages && starredMessages.length > 0 && (
-            <View style={{ marginTop: 16 }}>
+            <View style={{ marginTop: DesignTokens.spacing.lg }}>
               {starredMessages.slice(0, 3).map((message, index) => (
                 <View key={index} style={{
-                  backgroundColor: '#181818',
-                  borderRadius: 12,
-                  padding: 12,
-                  marginBottom: 8,
+                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  borderRadius: DesignTokens.borderRadius.md,
+                  padding: DesignTokens.spacing.md,
+                  marginBottom: DesignTokens.spacing.sm,
                   borderWidth: 1,
-                  borderColor: 'rgba(0,230,84,0.1)'
+                  borderColor: DesignTokens.colors.border.primary
                 }}>
                   <Text style={{
-                    color: '#FFFFFF',
-                    fontSize: 14,
+                    color: DesignTokens.colors.text.primary,
+                    fontSize: DesignTokens.typography.fontSize.sm,
                     lineHeight: 20
                   }} numberOfLines={2}>
                     {message.content}
                   </Text>
                   <Text style={{
-                    color: '#B0B0B0',
-                    fontSize: 12,
+                    color: DesignTokens.colors.text.tertiary,
+                    fontSize: DesignTokens.typography.fontSize.xs,
                     marginTop: 4
                   }}>
                     {new Date(message.created_at).toLocaleDateString('he-IL')}
@@ -1141,11 +1081,11 @@ export default function GroupInfoScreen() {
               ))}
               {starredMessages.length > 3 && (
                 <Text style={{
-                  color: '#00E654',
-                  fontSize: 14,
+                  color: DesignTokens.colors.primary.main,
+                  fontSize: DesignTokens.typography.fontSize.sm,
                   textAlign: 'center',
-                  marginTop: 8,
-                  fontWeight: '600'
+                  marginTop: DesignTokens.spacing.sm,
+                  fontWeight: '600' as any
                 }}>
                   +{starredMessages.length - 3} הודעות נוספות
                 </Text>
@@ -1158,58 +1098,55 @@ export default function GroupInfoScreen() {
         <View style={{
           marginHorizontal: 20,
           marginTop: 16,
-          paddingHorizontal: 20,
-          paddingVertical: 20,
+          backgroundColor: '#1C1C1E',
           borderRadius: 16,
-          backgroundColor: '#181818',
-          borderWidth: 1,
-          borderColor: 'rgba(0,230,84,0.15)'
+          overflow: 'hidden'
         }}>
           <View style={{
-            flexDirection: 'row-reverse',
+            flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            paddingVertical: 16,
+            paddingHorizontal: 16
           }}>
-            <View style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              flex: 1
-            }}>
-              <View style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#3B82F6',
-                borderRadius: 12,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12
-              }}>
-                {notificationsEnabled ? <Bell size={20} color="#FFFFFF" strokeWidth={2} /> : <BellOff size={20} color="#FFFFFF" strokeWidth={2} />}
-              </View>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{
-                  color: '#FFFFFF',
-                  fontWeight: '600',
-                  fontSize: 16,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>התראות</Text>
-                <Text style={{
-                  color: '#B0B0B0',
-                  fontSize: 14,
-                  textAlign: 'right'
-                }}>
-                  {notificationsEnabled ? 'מופעלות' : 'מבוטלות'}
-                </Text>
-              </View>
-            </View>
+            {/* Switch - שמאל */}
             <Switch
               value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
-              trackColor={{ false: 'rgba(51,51,51,0.8)', true: '#00E654' }}
-              thumbColor={notificationsEnabled ? '#FFFFFF' : '#666666'}
-              ios_backgroundColor="rgba(51,51,51,0.8)"
+              trackColor={{ false: 'rgba(255,255,255,0.12)', true: '#00E654' }}
+              thumbColor={notificationsEnabled ? '#FFFFFF' : '#999999'}
+              ios_backgroundColor="rgba(255,255,255,0.12)"
+              style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
             />
+
+            {/* Text Content - מרכז */}
+            <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: '#FFFFFF',
+                marginBottom: 2,
+                textAlign: 'right'
+              }}>התראות</Text>
+              <Text style={{
+                fontSize: 13,
+                color: '#666666',
+                textAlign: 'right'
+              }}>
+                {notificationsEnabled ? 'מופעלות' : 'מבוטלות'}
+              </Text>
+            </View>
+
+            {/* Icon - ימין */}
+            <View style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              {notificationsEnabled ? <Bell size={20} color="#00E654" strokeWidth={2} /> : <BellOff size={20} color="#666666" strokeWidth={2} />}
+            </View>
           </View>
         </View>
 
@@ -1217,58 +1154,55 @@ export default function GroupInfoScreen() {
         <View style={{
           marginHorizontal: 20,
           marginTop: 16,
-          paddingHorizontal: 20,
-          paddingVertical: 20,
+          backgroundColor: '#1C1C1E',
           borderRadius: 16,
-          backgroundColor: '#181818',
-          borderWidth: 1,
-          borderColor: 'rgba(0,230,84,0.15)'
+          overflow: 'hidden'
         }}>
           <View style={{
-            flexDirection: 'row-reverse',
+            flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            paddingVertical: 16,
+            paddingHorizontal: 16
           }}>
-            <View style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              flex: 1
-            }}>
-              <View style={{
-                width: 40,
-                height: 40,
-                backgroundColor: '#8B5CF6',
-                borderRadius: 12,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12
-              }}>
-                <Palette size={20} color="#FFFFFF" strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={{
-                  color: '#FFFFFF',
-                  fontWeight: '600',
-                  fontSize: 16,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>ערכת נושא</Text>
-                <Text style={{
-                  color: '#B0B0B0',
-                  fontSize: 14,
-                  textAlign: 'right'
-                }}>
-                  {isDark ? 'מצב כהה' : 'מצב בהיר'}
-                </Text>
-              </View>
-            </View>
+            {/* Switch - שמאל */}
             <Switch
-              value={!isDark}
+              value={!isDarkMode}
               onValueChange={handleThemeSelect}
-              trackColor={{ false: 'rgba(51,51,51,0.8)', true: '#00E654' }}
-              thumbColor={isDark ? '#666666' : '#FFFFFF'}
-              ios_backgroundColor="rgba(51,51,51,0.8)"
+              trackColor={{ false: 'rgba(255,255,255,0.12)', true: '#00E654' }}
+              thumbColor={isDarkMode ? '#999999' : '#FFFFFF'}
+              ios_backgroundColor="rgba(255,255,255,0.12)"
+              style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
             />
+
+            {/* Text Content - מרכז */}
+            <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: '#FFFFFF',
+                marginBottom: 2,
+                textAlign: 'right'
+              }}>ערכת נושא</Text>
+              <Text style={{
+                fontSize: 13,
+                color: '#666666',
+                textAlign: 'right'
+              }}>
+                {isDarkMode ? 'מצב כהה' : 'מצב בהיר'}
+              </Text>
+            </View>
+
+            {/* Icon - ימין */}
+            <View style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Palette size={20} color="#00E654" strokeWidth={2} />
+            </View>
           </View>
         </View>
 
@@ -1278,187 +1212,268 @@ export default function GroupInfoScreen() {
         {/* Admin Settings Section - Only for Admins/Owners */}
         {(isAdmin || isOwner) && (
           <View style={{
-            marginHorizontal: 16,
+            marginHorizontal: 20,
             marginTop: 16,
-            backgroundColor: '#111111',
+            backgroundColor: '#1C1C1E',
             borderRadius: 16,
-            borderWidth: 1,
-            borderColor: '#222',
-            padding: 16
+            overflow: 'hidden'
           }}>
-            <Text style={{
-              color: '#FFFFFF',
-              fontWeight: 'bold',
-              fontSize: 18,
-              marginBottom: 16,
-              textAlign: 'right'
-            }}>הגדרות מנהל</Text>
+            <View style={{
+              paddingVertical: 16,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+            }}>
+              <Text style={{
+                color: '#FFFFFF',
+                fontWeight: '700',
+                fontSize: 18,
+                textAlign: 'right'
+              }}>הגדרות מנהל</Text>
+            </View>
             
             {/* Group Description */}
             <TouchableOpacity style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16
+              paddingVertical: 16,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
             }}>
-              <View style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center'
-              }}>
-                <FileText size={24} color="#00E654" strokeWidth={2} />
-                <View style={{ marginRight: 12 }}>
-                  <Text style={{
-                    color: '#FFFFFF',
-                    fontWeight: 'bold',
-                    textAlign: 'right'
-                  }}>תיאור קבוצה</Text>
-                  <Text style={{
-                    color: '#9CA3AF',
-                    fontSize: 12,
-                    textAlign: 'right'
-                  }} numberOfLines={1}>
-                    {group?.description || 'אין תיאור'}
-                  </Text>
-                </View>
+              {/* Chevron - שמאל */}
+              <Ionicons name="chevron-back" size={20} color="#666666" />
+
+              {/* Text Content - מרכז */}
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                  marginBottom: 2,
+                  textAlign: 'right'
+                }}>תיאור קבוצה</Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: '#666666',
+                  textAlign: 'right'
+                }} numberOfLines={1}>
+                  {group?.description || 'אין תיאור'}
+                </Text>
               </View>
-              <ArrowRight size={20} color="#00E654" strokeWidth={2} />
+
+              {/* Icon - ימין */}
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <FileText size={20} color="#00E654" strokeWidth={2} />
+              </View>
             </TouchableOpacity>
             
             {/* Group Icon */}
             <TouchableOpacity style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16
+              paddingVertical: 16,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
             }}>
-              <View style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center'
-              }}>
-                <ImageIcon size={24} color="#00E654" strokeWidth={2} />
-                <View style={{ marginRight: 12 }}>
-                  <Text style={{
-                    color: '#FFFFFF',
-                    fontWeight: 'bold',
-                    textAlign: 'right'
-                  }}>אייקון קבוצה</Text>
-                  <Text style={{
-                    color: '#9CA3AF',
-                    fontSize: 12,
-                    textAlign: 'right'
-                  }}>שנה את האייקון</Text>
-                </View>
+              {/* Chevron - שמאל */}
+              <Ionicons name="chevron-back" size={20} color="#666666" />
+
+              {/* Text Content - מרכז */}
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                  marginBottom: 2,
+                  textAlign: 'right'
+                }}>אייקון קבוצה</Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: '#666666',
+                  textAlign: 'right'
+                }}>שנה את האייקון</Text>
               </View>
-              <ArrowRight size={20} color="#00E654" strokeWidth={2} />
+
+              {/* Icon - ימין */}
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <ImageIcon size={20} color="#00E654" strokeWidth={2} />
+              </View>
             </TouchableOpacity>
             
             {/* Group Name */}
             <TouchableOpacity style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16
+              paddingVertical: 16,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
             }}>
-              <View style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center'
-              }}>
-                <Edit3 size={24} color="#00E654" strokeWidth={2} />
-                <View style={{ marginRight: 12 }}>
-                  <Text style={{
-                    color: '#FFFFFF',
-                    fontWeight: 'bold',
-                    textAlign: 'right'
-                  }}>שם קבוצה</Text>
-                  <Text style={{
-                    color: '#9CA3AF',
-                    fontSize: 12,
-                    textAlign: 'right'
-                  }} numberOfLines={1}>
-                    {group?.name || 'ללא שם'}
-                  </Text>
-                </View>
+              {/* Chevron - שמאל */}
+              <Ionicons name="chevron-back" size={20} color="#666666" />
+
+              {/* Text Content - מרכז */}
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                  marginBottom: 2,
+                  textAlign: 'right'
+                }}>שם קבוצה</Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: '#666666',
+                  textAlign: 'right'
+                }} numberOfLines={1}>
+                  {group?.name || 'ללא שם'}
+                </Text>
               </View>
-              <ArrowRight size={20} color="#00E654" strokeWidth={2} />
+
+              {/* Icon - ימין */}
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Edit3 size={20} color="#00E654" strokeWidth={2} />
+              </View>
             </TouchableOpacity>
             
             {/* Clear Chat History */}
             <TouchableOpacity style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16
+              paddingVertical: 16,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
             }}>
-              <View style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center'
-              }}>
-                <Trash2 size={24} color="#ff4444" strokeWidth={2} />
-                <View style={{ marginRight: 12 }}>
-                  <Text style={{
-                    color: '#FFFFFF',
-                    fontWeight: 'bold',
-                    textAlign: 'right'
-                  }}>נקה היסטוריה</Text>
-                  <Text style={{
-                    color: '#9CA3AF',
-                    fontSize: 12,
-                    textAlign: 'right'
-                  }}>מחק את כל ההודעות</Text>
-                </View>
+              {/* Chevron - שמאל */}
+              <Ionicons name="chevron-back" size={20} color="#EF4444" />
+
+              {/* Text Content - מרכז */}
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#EF4444',
+                  marginBottom: 2,
+                  textAlign: 'right'
+                }}>נקה היסטוריה</Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: '#666666',
+                  textAlign: 'right'
+                }}>מחק את כל ההודעות</Text>
               </View>
-              <ArrowRight size={20} color="#ff4444" strokeWidth={2} />
+
+              {/* Icon - ימין */}
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Trash2 size={20} color="#EF4444" strokeWidth={2} />
+              </View>
             </TouchableOpacity>
             
             {/* Group Privacy */}
             <TouchableOpacity style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 16
+              paddingVertical: 16,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
             }}>
-              <View style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center'
-              }}>
-                <Lock size={24} color="#00E654" strokeWidth={2} />
-                <View style={{ marginRight: 12 }}>
-                  <Text style={{
-                    color: '#FFFFFF',
-                    fontWeight: 'bold',
-                    textAlign: 'right'
-                  }}>הגדרות פרטיות</Text>
-                  <Text style={{
-                    color: '#9CA3AF',
-                    fontSize: 12,
-                    textAlign: 'right'
-                  }}>
-                    {group?.is_private ? 'קבוצה פרטית' : 'קבוצה ציבורית'}
-                  </Text>
-                </View>
+              {/* Chevron - שמאל */}
+              <Ionicons name="chevron-back" size={20} color="#666666" />
+
+              {/* Text Content - מרכז */}
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                  marginBottom: 2,
+                  textAlign: 'right'
+                }}>הגדרות פרטיות</Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: '#666666',
+                  textAlign: 'right'
+                }}>
+                  {group?.is_private ? 'קבוצה פרטית' : 'קבוצה ציבורית'}
+                </Text>
               </View>
-              <ArrowRight size={20} color="#00E654" strokeWidth={2} />
+
+              {/* Icon - ימין */}
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Lock size={20} color="#00E654" strokeWidth={2} />
+              </View>
             </TouchableOpacity>
             
             {/* More Admin Options */}
             <TouchableOpacity style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              paddingVertical: 16,
+              paddingHorizontal: 16
             }}>
-              <View style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center'
-              }}>
-                <MoreVertical size={24} color="#00E654" strokeWidth={2} />
+              {/* Chevron - שמאל */}
+              <Ionicons name="chevron-back" size={20} color="#666666" />
+
+              {/* Text Content - מרכז */}
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
                 <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
                   color: '#FFFFFF',
-                  fontWeight: 'bold',
-                  marginRight: 12,
                   textAlign: 'right'
                 }}>אפשרויות נוספות</Text>
               </View>
-              <ArrowRight size={20} color="#00E654" strokeWidth={2} />
+
+              {/* Icon - ימין */}
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <MoreVertical size={20} color="#00E654" strokeWidth={2} />
+              </View>
             </TouchableOpacity>
           </View>
         )}
@@ -1467,50 +1482,64 @@ export default function GroupInfoScreen() {
         <View style={{
           marginHorizontal: 20,
           marginTop: 16,
-          paddingHorizontal: 20,
-          paddingVertical: 20,
-          borderRadius: 20,
-          backgroundColor: 'rgba(0,0,0,0.4)',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.05)',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          elevation: 4
+          backgroundColor: '#1C1C1E',
+          borderRadius: 16,
+          overflow: 'hidden'
         }}>
           <TouchableOpacity 
             onPress={() => setShowAll(!showAll)}
             style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              paddingVertical: 16,
+              paddingHorizontal: 16
             }}
           >
-            <View style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'center'
-            }}>
+            {/* Chevron - שמאל */}
+            <Ionicons 
+              name={showAll ? "chevron-up" : "chevron-down"} 
+              size={20} 
+              color="#666666" 
+            />
+
+            {/* Text Content - מרכז */}
+            <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
               <View style={{
-                backgroundColor: '#00E654',
-                borderRadius: 12,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                marginRight: 8
+                flexDirection: 'row-reverse',
+                alignItems: 'center'
               }}>
+                <View style={{
+                  backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                  borderRadius: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  marginRight: 8
+                }}>
+                  <Text style={{
+                    color: '#00E654',
+                    fontWeight: '700',
+                    fontSize: 12
+                  }}>{members.length}</Text>
+                </View>
                 <Text style={{
-                  color: '#000000',
+                  color: '#FFFFFF',
                   fontWeight: '700',
-                  fontSize: 12
-                }}>{members.length}</Text>
+                  fontSize: 16,
+                  textAlign: 'right'
+                }}>חברים</Text>
               </View>
-              <Text style={{
-                color: '#FFFFFF',
-                fontWeight: '700',
-                fontSize: 16,
-                marginRight: 12
-              }}>חברים</Text>
-              <Users size={24} color="#00E654" strokeWidth={2} />
+            </View>
+
+            {/* Icon - ימין */}
+            <View style={{
+              width: 36,
+              height: 36,
+              borderRadius: 8,
+              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Users size={20} color="#00E654" strokeWidth={2} />
             </View>
           </TouchableOpacity>
           
@@ -1595,10 +1624,10 @@ export default function GroupInfoScreen() {
                     justifyContent: 'space-between',
                     marginBottom: 12,
                     padding: 12,
-                    backgroundColor: '#181818',
-                    borderRadius: 16,
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: 'rgba(0,230,84,0.1)'
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
                   }}>
                     <View style={{
                       flexDirection: 'row-reverse',
@@ -1609,24 +1638,24 @@ export default function GroupInfoScreen() {
                         <Image 
                           source={{ uri: memberImage }} 
                           style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
+                            width: 44,
+                            height: 44,
+                            borderRadius: 22,
                             marginRight: 12
                           }}
                           onError={(error) => console.log('❌ Image load error:', error)}
                         />
                       ) : (
                         <View style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 20,
-                          backgroundColor: '#00E654',
+                          width: 44,
+                          height: 44,
+                          borderRadius: 22,
+                          backgroundColor: 'rgba(255,255,255,0.12)',
                           alignItems: 'center',
                           justifyContent: 'center',
                           marginRight: 12
                         }}>
-                          <User size={20} color="#FFFFFF" strokeWidth={2} />
+                          <User size={20} color="#666666" strokeWidth={2} />
                         </View>
                       )}
                       
@@ -1638,42 +1667,43 @@ export default function GroupInfoScreen() {
                         }}>
                           <Text style={{
                             color: '#FFFFFF',
-                            fontWeight: '700',
+                            fontWeight: '600',
                             fontSize: 14,
                             marginRight: 8,
-                            textAlign: 'right'
+                            textAlign: 'right',
+                            flex: 1
                           }} numberOfLines={1}>
                             {memberName}
                           </Text>
                           
                           {item.role === 'admin' && (
                             <View style={{
-                              backgroundColor: '#00E654',
-                              borderRadius: 8,
+                              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                              borderRadius: 6,
                               paddingHorizontal: 8,
                               paddingVertical: 4,
-                              marginLeft: 8
+                              marginLeft: 4
                             }}>
                               <Text style={{
-                                color: '#000000',
+                                color: '#00E654',
                                 fontWeight: '700',
-                                fontSize: 10
+                                fontSize: 9
                               }}>מנהל</Text>
                             </View>
                           )}
                           
                           {item.user_id === user?.id && (
                             <View style={{
-                              backgroundColor: '#4B5563',
-                              borderRadius: 8,
+                              backgroundColor: 'rgba(255,255,255,0.08)',
+                              borderRadius: 6,
                               paddingHorizontal: 8,
                               paddingVertical: 4,
-                              marginLeft: 8
+                              marginLeft: 4
                             }}>
                               <Text style={{
-                                color: '#00E654',
+                                color: '#A0A0A0',
                                 fontWeight: '700',
-                                fontSize: 10
+                                fontSize: 9
                               }}>אתה</Text>
                             </View>
                           )}
@@ -1681,7 +1711,7 @@ export default function GroupInfoScreen() {
                         
                         {memberPhone && (
                           <Text style={{
-                            color: '#B0B0B0',
+                            color: '#666666',
                             fontSize: 12,
                             marginLeft: 8,
                             textAlign: 'right'
@@ -1699,25 +1729,25 @@ export default function GroupInfoScreen() {
                           <TouchableOpacity 
                             onPress={() => handlePromoteMember(item.user_id, memberName)}
                             style={{
-                              backgroundColor: '#00E654',
-                              padding: 8,
-                              borderRadius: 12,
-                              marginLeft: 8
+                              backgroundColor: 'rgba(0, 216, 74, 0.15)',
+                              padding: DesignTokens.spacing.sm,
+                              borderRadius: DesignTokens.borderRadius.sm,
+                              marginLeft: DesignTokens.spacing.sm
                             }}
                           >
-                            <Star size={14} color="#000000" strokeWidth={2} />
+                            <Star size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                           </TouchableOpacity>
                         )}
                         
                         <TouchableOpacity 
                           onPress={() => handleRemoveMember(item.user_id, memberName)}
                           style={{
-                            backgroundColor: '#DC2626',
-                            padding: 8,
-                            borderRadius: 12
+                            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                            padding: DesignTokens.spacing.sm,
+                            borderRadius: DesignTokens.borderRadius.sm
                           }}
                         >
-                          <UserMinus size={14} color="#FFFFFF" strokeWidth={2} />
+                          <UserMinus size={14} color={DesignTokens.colors.danger.main} strokeWidth={2} />
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1738,12 +1768,12 @@ export default function GroupInfoScreen() {
                         flexDirection: 'row-reverse',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        marginBottom: 12,
-                        padding: 12,
-                        backgroundColor: '#181818',
-                        borderRadius: 16,
+                        marginBottom: DesignTokens.spacing.md,
+                        padding: DesignTokens.spacing.md,
+                        backgroundColor: 'rgba(255,255,255,0.04)',
+                        borderRadius: DesignTokens.borderRadius.md,
                         borderWidth: 1,
-                        borderColor: 'rgba(0,230,84,0.1)'
+                        borderColor: DesignTokens.colors.border.primary
                       }}>
                         <View style={{
                           flexDirection: 'row-reverse',
@@ -1754,24 +1784,24 @@ export default function GroupInfoScreen() {
                             <Image 
                               source={{ uri: memberImage }} 
                               style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 20,
-                                marginRight: 12
+                                width: 44,
+                                height: 44,
+                                borderRadius: DesignTokens.borderRadius.full,
+                                marginRight: DesignTokens.spacing.md
                               }}
                               onError={(error) => console.log('❌ Image load error:', error)}
                             />
                           ) : (
                             <View style={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: 20,
-                              backgroundColor: '#00E654',
+                              width: 44,
+                              height: 44,
+                              borderRadius: DesignTokens.borderRadius.full,
+                              backgroundColor: 'rgba(255,255,255,0.12)',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              marginRight: 12
+                              marginRight: DesignTokens.spacing.md
                             }}>
-                              <User size={20} color="#FFFFFF" strokeWidth={2} />
+                              <User size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                             </View>
                           )}
                           
@@ -1782,43 +1812,44 @@ export default function GroupInfoScreen() {
                               marginBottom: 4
                             }}>
                               <Text style={{
-                                color: '#FFFFFF',
-                                fontWeight: '700',
-                                fontSize: 14,
-                                marginRight: 8,
-                                textAlign: 'right'
+                                color: DesignTokens.colors.text.primary,
+                                fontWeight: '600' as any,
+                                fontSize: DesignTokens.typography.fontSize.sm,
+                                marginRight: DesignTokens.spacing.sm,
+                                textAlign: 'right',
+                                flex: 1
                               }} numberOfLines={1}>
                                 {memberName}
                               </Text>
                               
                               {item.role === 'admin' && (
                                 <View style={{
-                                  backgroundColor: '#00E654',
-                                  borderRadius: 8,
-                                  paddingHorizontal: 8,
+                                  backgroundColor: 'rgba(0, 216, 74, 0.15)',
+                                  borderRadius: DesignTokens.borderRadius.sm,
+                                  paddingHorizontal: DesignTokens.spacing.sm,
                                   paddingVertical: 4,
-                                  marginLeft: 8
+                                  marginLeft: 4
                                 }}>
                                   <Text style={{
-                                    color: '#000000',
-                                    fontWeight: '700',
-                                    fontSize: 10
+                                    color: DesignTokens.colors.primary.main,
+                                    fontWeight: '700' as any,
+                                    fontSize: 9
                                   }}>מנהל</Text>
                                 </View>
                               )}
                               
                               {item.user_id === user?.id && (
                                 <View style={{
-                                  backgroundColor: '#4B5563',
-                                  borderRadius: 8,
-                                  paddingHorizontal: 8,
+                                  backgroundColor: 'rgba(255,255,255,0.08)',
+                                  borderRadius: DesignTokens.borderRadius.sm,
+                                  paddingHorizontal: DesignTokens.spacing.sm,
                                   paddingVertical: 4,
-                                  marginLeft: 8
+                                  marginLeft: 4
                                 }}>
                                   <Text style={{
-                                    color: '#00E654',
-                                    fontWeight: '700',
-                                    fontSize: 10
+                                    color: DesignTokens.colors.text.secondary,
+                                    fontWeight: '700' as any,
+                                    fontSize: 9
                                   }}>אתה</Text>
                                 </View>
                               )}
@@ -1826,9 +1857,9 @@ export default function GroupInfoScreen() {
                             
                             {memberPhone && (
                               <Text style={{
-                                color: '#B0B0B0',
-                                fontSize: 12,
-                                marginLeft: 8,
+                                color: DesignTokens.colors.text.tertiary,
+                                fontSize: DesignTokens.typography.fontSize.xs,
+                                marginLeft: DesignTokens.spacing.sm,
                                 textAlign: 'right'
                               }}>{memberPhone}</Text>
                             )}
@@ -1844,25 +1875,25 @@ export default function GroupInfoScreen() {
                 <TouchableOpacity 
                                 onPress={() => handlePromoteMember(item.user_id, memberName)}
                                 style={{
-                                  backgroundColor: '#00E654',
-                                  padding: 8,
-                                  borderRadius: 12,
-                                  marginLeft: 8
+                                  backgroundColor: 'rgba(0, 216, 74, 0.15)',
+                                  padding: DesignTokens.spacing.sm,
+                                  borderRadius: DesignTokens.borderRadius.sm,
+                                  marginLeft: DesignTokens.spacing.sm
                                 }}
                               >
-                                <Star size={14} color="#000000" strokeWidth={2} />
+                                <Star size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                 </TouchableOpacity>
                             )}
                             
                             <TouchableOpacity 
                               onPress={() => handleRemoveMember(item.user_id, memberName)}
                               style={{
-                                backgroundColor: '#DC2626',
-                                padding: 8,
-                                borderRadius: 12
+                                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                                padding: DesignTokens.spacing.sm,
+                                borderRadius: DesignTokens.borderRadius.sm
                               }}
                             >
-                              <UserMinus size={14} color="#FFFFFF" strokeWidth={2} />
+                              <UserMinus size={14} color={DesignTokens.colors.danger.main} strokeWidth={2} />
                             </TouchableOpacity>
                           </View>
                         )}
@@ -1877,19 +1908,19 @@ export default function GroupInfoScreen() {
             <TouchableOpacity 
               onPress={() => setShowAll(!showAll)} 
               style={{
-                marginTop: 12,
-                backgroundColor: '#181818',
-                padding: 12,
-                borderRadius: 16,
+                marginTop: DesignTokens.spacing.md,
+                backgroundColor: 'rgba(255,255,255,0.06)',
+                padding: DesignTokens.spacing.md,
+                borderRadius: DesignTokens.borderRadius.md,
                 borderWidth: 1,
-                borderColor: 'rgba(0,230,84,0.2)'
+                borderColor: DesignTokens.colors.border.primary
               }}
             >
               <Text style={{
-                color: '#00E654',
+                color: DesignTokens.colors.text.secondary,
                 textAlign: 'center',
-                fontWeight: '700',
-                fontSize: 14
+                fontWeight: '600' as any,
+                fontSize: DesignTokens.typography.fontSize.sm
               }}>
                     {showAll ? `הצג פחות` : `הצג את כל ${members.length} החברים`}
               </Text>
@@ -1902,10 +1933,10 @@ export default function GroupInfoScreen() {
         {/* Exit Group Button */}
         <View style={{
           paddingHorizontal: 20,
-          paddingVertical: 20,
+          paddingVertical: 32,
           backgroundColor: 'transparent'
         }}>
-            <TouchableOpacity
+          <TouchableOpacity
             onPress={() => {
               Alert.alert(
                 'יציאה מהקבוצה',
@@ -1946,35 +1977,29 @@ export default function GroupInfoScreen() {
               );
             }}
             style={{
-              backgroundColor: '#FF4444',
-              paddingVertical: 14,
-              paddingHorizontal: 16,
-              borderRadius: 12,
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              paddingVertical: 16,
+              paddingHorizontal: 24,
+              borderRadius: 16,
               borderWidth: 1,
-              borderColor: '#FF4444',
+              borderColor: '#EF4444',
               alignItems: 'center',
               alignSelf: 'center',
-              minWidth: 300
+              minWidth: 280
             }}
           >
-            <View style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'center'
+            <Text style={{
+              color: '#EF4444',
+              fontSize: 16,
+              fontWeight: '700',
+              textAlign: 'center'
             }}>
-             
-              <Text style={{
-                color: '#FFFFFF',
-                fontSize: 16,
-                fontWeight: 'bold',
-                textAlign: 'center'
-              }}>
-                צא מהקבוצה
-              </Text>
-            </View>
-            </TouchableOpacity>
-          </View>
+              צא מהקבוצה
+            </Text>
+          </TouchableOpacity>
+        </View>
 
       </ScrollView>
     </View>
   );
-} 
+}

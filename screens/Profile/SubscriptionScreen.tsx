@@ -4,53 +4,68 @@ import {
   Text, 
   ScrollView, 
   Alert,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator,
+  SafeAreaView
 } from 'react-native';
 import { 
   Crown, 
+  Star, 
   CreditCard, 
+  Calendar, 
   Check,
-  X
+  ArrowLeft,
+  Zap,
+  Users
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
 
 interface SubscriptionPlan {
   id: string;
   name: string;
+  description: string;
   price: number;
   period: string;
   features: string[];
   popular: boolean;
+  icon: any;
 }
 
 export default function SubscriptionScreen({ navigation }: any) {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSubscriptionData();
-  }, []);
+    if (user) {
+      loadSubscriptionData();
+    }
+  }, [user]);
 
   const loadSubscriptionData = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const currentSubscription = await paymentService.getCurrentSubscription(user.id);
-      setCurrentPlan(currentSubscription);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const subscription = await paymentService.getCurrentSubscription(user.id);
+      setCurrentPlan(subscription);
 
       const availablePlans = Object.values(SUBSCRIPTION_PLANS).map(plan => ({
         id: plan.id,
         name: plan.name,
+        description: plan.description,
         price: plan.price,
         period: plan.period,
         features: plan.features,
-        popular: plan.popular
+        popular: plan.popular,
+        icon: plan.id === 'monthly' ? Crown : 
+              plan.id === 'quarterly' ? Star : Users
       }));
       setPlans(availablePlans);
       
@@ -63,7 +78,7 @@ export default function SubscriptionScreen({ navigation }: any) {
 
   const handlePlanSelection = (planId: string) => {
     if (!user) {
-      Alert.alert('שגיאה', 'נדרש להתחבר');
+      Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
       return;
     }
 
@@ -79,294 +94,334 @@ export default function SubscriptionScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: '#666', fontSize: 16 }}>טוען...</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#00E654" />
+          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען נתוני מנוי...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
-      {/* Header */}
-      <View style={{
-        paddingTop: 50,
-        paddingBottom: 16,
-        paddingHorizontal: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#1E1E1E',
-        flexDirection: 'row-reverse',
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
+        {/* Header */}
+        <View style={{
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        backgroundColor: theme.cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.border
       }}>
-        <View style={{ width: 24 }} />
-        
-        <Text style={{ 
-          color: '#FFFFFF', 
-          fontSize: 18, 
-          fontWeight: '600',
-          writingDirection: 'rtl'
-        }}>
-          מסלול ותשלום
-        </Text>
-        
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <X size={24} color="#666" strokeWidth={2} />
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={{
+            width: 36,
+            height: 36,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: 18,
+            backgroundColor: theme.isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
+          }}
+        >
+          <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
         </TouchableOpacity>
-      </View>
+        
+        <Text style={{
+          flex: 1,
+          textAlign: 'center',
+          fontSize: 20,
+          fontWeight: '700',
+          color: theme.textPrimary,
+          marginRight: 36
+        }}>
+          מנוי ומסלול
+        </Text>
+        </View>
+      </SafeAreaView>
 
       <ScrollView 
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
-          {/* Current Plan */}
-          {currentPlan ? (
-            <View style={{
-              marginBottom: 32,
-              padding: 20,
-              borderRadius: 16,
-              backgroundColor: '#1A1A1A',
-              borderWidth: 2,
-              borderColor: '#00E654'
+        {/* Current Plan */}
+        {currentPlan && (
+          <View style={{ paddingHorizontal: 20, paddingTop: 24, marginBottom: 32 }}>
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: theme.textSecondary,
+              marginBottom: 12,
+              marginRight: 4,
+              textAlign: 'right',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
             }}>
-              <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center',
-                marginBottom: 12
-              }}>
+              המנוי הנוכחי
+            </Text>
+            
+            <View style={{
+              backgroundColor: theme.cardBackground,
+              borderRadius: 16,
+              padding: 24
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                  <Text style={{
+                    fontSize: 22,
+                    fontWeight: '700',
+                    color: theme.textPrimary,
+                    marginBottom: 6
+                  }}>
+                    {currentPlan.plan_name || 'מנוי פעיל'}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{
+                      fontSize: 14,
+                      color: theme.textSecondary,
+                      marginLeft: 6
+                    }}>
+                      {new Date(currentPlan.end_date).toLocaleDateString('he-IL')}
+                    </Text>
+                    <Calendar size={14} color={theme.textTertiary} strokeWidth={2} />
+                  </View>
+                </View>
                 <View style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  backgroundColor: '#00E654',
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  backgroundColor: 'rgba(5, 209, 87, 0.15)',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginLeft: 12
+                  marginLeft: 16
                 }}>
-                  <Crown size={20} color="#000" strokeWidth={2} />
-                </View>
-                
-                <View style={{ flex: 1 }}>
-                  <Text style={{ 
-                    color: '#FFFFFF', 
-                    fontSize: 18, 
-                    fontWeight: '600'
-                  }}>
-                    {currentPlan.name}
-                  </Text>
-                  <Text style={{ 
-                    color: '#00E654', 
-                    fontSize: 14
-                  }}>
-                    מנוי פעיל
-                  </Text>
+                  <Crown size={28} color="#00E654" strokeWidth={2} />
                 </View>
               </View>
 
-              <View style={{ 
-                flexDirection: 'row', 
-                justifyContent: 'space-between',
-                paddingTop: 12,
-                borderTopWidth: 1,
-                borderTopColor: '#2A2A2A'
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(5, 209, 87, 0.15)',
+                paddingVertical: 10,
+                paddingHorizontal: 16,
+                borderRadius: 10
               }}>
-                <View>
-                  <Text style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>
-                    חיוב הבא
-                  </Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-                    {currentPlan.price}₪
-                  </Text>
-                </View>
-                <View>
-                  <Text style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>
-                    תאריך חידוש
-                  </Text>
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-                    {currentPlan.nextBilling}
-                  </Text>
-                </View>
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: '#00E654'
+                }}>
+                  מנוי פעיל
+                </Text>
+                <Check size={18} color="#00E654" strokeWidth={2.5} style={{ marginRight: 8 }} />
               </View>
             </View>
-          ) : (
-            <View style={{
-              marginBottom: 32,
-              padding: 40,
-              alignItems: 'center',
-              backgroundColor: '#1A1A1A',
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: '#2A2A2A'
-            }}>
-              <CreditCard size={40} color="#666" style={{ marginBottom: 12 }} />
-              <Text style={{ 
-                color: '#FFFFFF', 
-                fontSize: 16, 
-                fontWeight: '600',
-                marginBottom: 4
-              }}>
-                אין מנוי פעיל
-              </Text>
-              <Text style={{ 
-                color: '#666', 
-                fontSize: 14,
-                textAlign: 'center'
-              }}>
-                בחר תוכנית מנוי כדי להתחיל
-              </Text>
-            </View>
-          )}
+          </View>
+        )}
 
-          {/* Plans */}
-          <Text style={{ 
-            color: '#999', 
-            fontSize: 14, 
-            fontWeight: '600', 
-            marginBottom: 16,
+        {/* Available Plans */}
+        <View style={{ paddingHorizontal: 20 }}>
+          <Text style={{
+            fontSize: 13,
+            fontWeight: '700',
+            color: theme.textSecondary,
+            marginBottom: 12,
+            marginRight: 4,
+            textAlign: 'right',
             textTransform: 'uppercase',
             letterSpacing: 0.5
           }}>
-            תוכניות מנוי
+            מסלולים זמינים
           </Text>
 
-          {plans.map((plan, index) => (
-            <TouchableOpacity
-              key={plan.id}
-              onPress={() => handlePlanSelection(plan.id)}
-              style={{
-                marginBottom: 16,
-                padding: 20,
-                borderRadius: 16,
-                backgroundColor: '#1A1A1A',
-                borderWidth: plan.popular ? 2 : 1,
-                borderColor: plan.popular ? '#00E654' : '#2A2A2A',
-                position: 'relative'
-              }}
-            >
-              {plan.popular && (
-                <View style={{
-                  position: 'absolute',
-                  top: -10,
-                  left: 20,
-                  backgroundColor: '#00E654',
-                  paddingHorizontal: 12,
-                  paddingVertical: 4,
-                  borderRadius: 8
-                }}>
-                  <Text style={{ 
-                    color: '#000', 
-                    fontSize: 11, 
-                    fontWeight: '600'
+          {plans.map((plan, index) => {
+            const isCurrentPlan = currentPlan && plan.id === currentPlan.plan_id;
+            
+            return (
+              <TouchableOpacity
+                key={plan.id}
+                onPress={() => handlePlanSelection(plan.id)}
+                disabled={isCurrentPlan}
+                style={{
+                  backgroundColor: theme.cardBackground,
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 16,
+                  opacity: isCurrentPlan ? 0.6 : 1
+                }}
+              >
+                {plan.popular && (
+                  <View style={{
+                    position: 'absolute',
+                    top: 16,
+                    left: 16,
+                    backgroundColor: '#00E654',
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center'
                   }}>
-                    מומלץ
-                  </Text>
-                </View>
-              )}
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: '700',
+                      color: '#ffffff'
+                    }}>
+                      מומלץ ביותר
+                    </Text>
+                    <Star size={14} color="#ffffff" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                  </View>
+                )}
 
-              <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center',
-                marginBottom: 16
-              }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ 
-                    color: '#FFFFFF', 
-                    fontSize: 18, 
-                    fontWeight: '600',
-                    marginBottom: 4
+                <View style={{ alignItems: 'flex-end', marginBottom: 20, marginTop: plan.popular ? 24 : 0 }}>
+                  <Text style={{
+                    fontSize: 22,
+                    fontWeight: '700',
+                    color: theme.textPrimary,
+                    marginBottom: 6
                   }}>
                     {plan.name}
                   </Text>
-                  <Text style={{ 
-                    color: '#666', 
-                    fontSize: 14
+                  <Text style={{
+                    fontSize: 14,
+                    color: theme.textSecondary,
+                    marginBottom: 12,
+                    textAlign: 'right'
                   }}>
-                    {plan.period}
+                    {plan.description}
                   </Text>
-                </View>
-                
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ 
-                    color: '#00E654', 
-                    fontSize: 24, 
-                    fontWeight: '700' 
-                  }}>
-                    {plan.price}₪
-                  </Text>
-                  <Text style={{ 
-                    color: '#666', 
-                    fontSize: 12
-                  }}>
-                    {plan.period}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Features */}
-              <View style={{ 
-                paddingTop: 16,
-                borderTopWidth: 1,
-                borderTopColor: '#2A2A2A'
-              }}>
-                {plan.features.map((feature, featureIndex) => (
-                  <View key={featureIndex} style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center',
-                    marginBottom: 8
-                  }}>
-                    <Check size={14} color="#00E654" style={{ marginLeft: 8 }} strokeWidth={2.5} />
-                    <Text style={{ 
-                      color: '#FFFFFF', 
-                      fontSize: 14
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                    <Text style={{
+                      fontSize: 15,
+                      color: theme.textSecondary,
+                      marginLeft: 6
                     }}>
-                      {feature}
+                      / {plan.period}
+                    </Text>
+                    <Text style={{
+                      fontSize: 32,
+                      fontWeight: '700',
+                      color: '#00E654'
+                    }}>
+                      ₪{plan.price}
                     </Text>
                   </View>
-                ))}
-              </View>
+                </View>
 
-              {/* Action Button */}
-              <View style={{
-                marginTop: 16,
-                paddingVertical: 12,
-                borderRadius: 12,
-                backgroundColor: plan.popular ? '#00E654' : '#252525',
-                alignItems: 'center'
-              }}>
-                <Text style={{ 
-                  color: plan.popular ? '#000' : '#00E654', 
-                  fontSize: 15, 
-                  fontWeight: '600'
-                }}>
-                  {currentPlan && plan.id === currentPlan.plan_id ? 'מנוי נוכחי' : 'בחר תוכנית'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+                {/* Features */}
+                <View style={{ gap: 10 }}>
+                  {plan.features.map((feature, featureIndex) => (
+                    <View key={featureIndex} style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center'
+                    }}>
+                      <Text style={{
+                        flex: 1,
+                        fontSize: 14,
+                        color: theme.textSecondary,
+                        textAlign: 'right',
+                        lineHeight: 20
+                      }}>
+                        {feature}
+                      </Text>
+                      <View style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
+                        backgroundColor: 'rgba(5, 209, 87, 0.15)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginLeft: 12
+                      }}>
+                        <Check size={14} color="#00E654" strokeWidth={3} />
+                      </View>
+                    </View>
+                  ))}
+                </View>
 
-          {/* Cancel Subscription */}
-          {currentPlan && (
-            <TouchableOpacity
-              style={{
-                marginTop: 24,
-                paddingVertical: 16,
-                borderRadius: 12,
-                backgroundColor: '#1A1A1A',
-                borderWidth: 1,
-                borderColor: '#DC2626',
-                alignItems: 'center'
-              }}
-            >
-              <Text style={{ 
-                color: '#DC2626', 
-                fontSize: 15, 
-                fontWeight: '500'
-              }}>
-                בטל מנוי
-              </Text>
-            </TouchableOpacity>
-          )}
+                {isCurrentPlan && (
+                  <View style={{
+                    marginTop: 20,
+                    paddingTop: 20,
+                    borderTopWidth: 1,
+                    borderTopColor: '#2a2a2a',
+                    alignItems: 'center'
+                  }}>
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                      paddingVertical: 8,
+                      paddingHorizontal: 16,
+                      borderRadius: 20
+                    }}>
+                      <Text style={{
+                        fontSize: 13,
+                        color: '#00E654',
+                        fontWeight: '700'
+                      }}>
+                        המסלול הנוכחי שלך
+                      </Text>
+                      <Check size={16} color="#00E654" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                    </View>
+                  </View>
+                )}
+
+                {!isCurrentPlan && (
+                  <View style={{
+                    marginTop: 20,
+                    paddingTop: 20,
+                    borderTopWidth: 1,
+                    borderTopColor: '#2a2a2a'
+                  }}>
+                    <View style={{
+                      backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                      paddingVertical: 12,
+                      paddingHorizontal: 20,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      borderWidth: 1,
+                      borderColor: 'rgba(5, 209, 87, 0.3)'
+                    }}>
+                      <Text style={{
+                        fontSize: 15,
+                        fontWeight: '700',
+                        color: '#00E654'
+                      }}>
+                        בחר מסלול זה
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Info Note */}
+        <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
+          <View style={{
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            borderRadius: 12,
+            padding: 16,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.05)'
+          }}>
+            <Text style={{
+              fontSize: 13,
+              color: theme.textSecondary,
+              textAlign: 'right',
+              lineHeight: 20
+            }}>
+              💡 ניתן לשדרג או להוריד מסלול בכל עת. השינוי ייכנס לתוקף מיידית.
+            </Text>
+          </View>
         </View>
       </ScrollView>
     </View>

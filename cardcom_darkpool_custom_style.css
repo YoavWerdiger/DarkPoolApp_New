@@ -1,0 +1,1754 @@
+/* ============================================
+   DarkPool - Custom CardCom Payment Page Style
+   עיצוב דף תשלום מותאם לאפליקציה
+   ============================================ */
+
+/* ===== צבעים כלליים ===== */
+:root {
+    --bg-primary: #121212;
+    --bg-secondary: #1A1A1A;
+    --bg-card: #1E1E1E;
+    --accent-color: #05d157;
+    --accent-hover: #04b449;
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.6);
+    --text-tertiary: rgba(255, 255, 255, 0.4);
+    --border-color: #2a2a2a;
+    --error-color: #DC2626;
+    --success-color: #05d157;
+}
+
+/* ===== רקע כללי ===== */
+body {
+    background-color: var(--bg-primary) !important;
+    padding: 0;
+    margin: 0;
+    color: var(--text-primary) !important;
+}
+
+img {
+    border: 0 !important;
+    display: block !important;
+    max-width: 100% !important;
+    height: auto !important;
+}
+
+body * {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Tahoma, Helvetica, sans-serif !important;
+}
+
+.directionLTR {
+    direction: ltr;
+}
+
+h1 {
+    text-align: center;
+    color: var(--text-primary) !important;
+}
+
+/* ===== כפתור Bit ===== */
+#bit-payment-button {
+    background-image: url(/Images/Bit/bit_button.svg);
+    background-position: center;
+    background-size: cover;
+    height: 40px;
+    width: 328px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+#bit-payment-button:hover {
+    background-image: url(/Images/Bit/bit_button_hover.svg);
+}
+
+/* ===== פרטי תשלום ===== */
+.paymentDetails .blockDetailsIn {
+    background-image: none !important;
+    background-color: var(--bg-secondary) !important;
+}
+
+.customDetails {
+    background-color: var(--bg-secondary) !important;
+}
+
+.OrderDetails .blockDetailsIn {
+    background-image: none !important;
+    background-color: var(--bg-secondary) !important;
+}
+
+/* ===== טבלת מוצרים ===== */
+.productsTbl {
+    background-color: transparent !important;
+    width: 100%;
+    table-layout: auto;
+    border: none !important;
+}
+
+.productsTbl td {
+    color: var(--text-primary) !important;
+    background-color: rgba(42, 42, 42, 0.3) !important;
+    text-align: center;
+    border: 1px solid var(--border-color) !important;
+}
+
+.productsTbl td span {
+    display: inline-block;
+    padding: 10px 10px;
+}
+
+.productsTbl td {
+    font-size: 15px;
+}
+
+.productsTbl .title th {
+    font-size: 19px;
+    margin: 0 0 2px;
+    background-color: rgba(42, 42, 42, 0.5) !important;
+    color: var(--text-secondary) !important;
+    padding: 12px !important;
+}
+
+.productsTbl .odd td {
+    background-color: rgba(30, 30, 30, 0.5) !important;
+}
+
+.productsTbl .even td {
+    background-color: rgba(42, 42, 42, 0.3) !important;
+}
+
+.productsTbl .total {
+    background-color: transparent !important;
+    font-size: 19px;
+}
+
+.productsTbl .total span {
+    padding: 0;
+}
+
+.productsTbl .total .num {
+    color: var(--accent-color) !important;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.productsTbl .commission-summery {
+    margin-bottom: 10px;
+}
+
+.productsTbl .commission-summery span,
+.productsTbl .commission-summery span.num {
+    font-size: 16px;
+}
+
+.showProductsTabs {
+    display: none !important;
+}
+
+.showProductsTables {
+    display: block !important;
+}
+
+/* ===== Header ===== */
+.header {
+    width: 100%;
+    display: block;
+    background-color: var(--bg-secondary) !important;
+    padding: 34px 0 23px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.header .headerIn {
+    width: 979px;
+    margin: 0 auto;
+    display: block;
+}
+
+.header .headerIn .logoDiv {
+    vertical-align: top;
+    max-width: 700px;
+}
+
+.header .headerIn .logoDiv img {
+    display: block;
+    max-width: 700px;
+    height: auto;
+}
+
+.header .headerIn .detailsDiv {
+    display: inline-block;
+    vertical-align: top;
+    margin: 10px 0 0;
+    color: var(--text-secondary) !important;
+    font-size: 16px;
+    line-height: 1.4em;
+    min-width: 250px;
+    border-right: 1px dashed rgba(255, 255, 255, 0.2) !important;
+}
+
+.header .headerIn .detailsDiv div.company {
+    font-weight: bold;
+    color: var(--text-primary) !important;
+}
+
+.clear {
+    clear: both;
+}
+
+/* ===== פרטי מוצרים ===== */
+.productsDetails {
+    width: 100%;
+    display: block;
+    padding: 30px 0 25px;
+}
+
+.productsDetails .productsDetailsIn {
+    display: block;
+    margin: 0 auto;
+    width: 979px;
+}
+
+.productsDetailsIn .titleRow {
+    display: block;
+    background-color: rgba(42, 42, 42, 0.5) !important;
+    color: var(--text-primary) !important;
+    font-size: 19px;
+    margin: 0 0 2px;
+}
+
+.productsDetailsIn .darkRow,
+.productsDetailsIn .lightRow {
+    display: block;
+    background-color: rgba(42, 42, 42, 0.3) !important;
+    color: var(--text-primary) !important;
+    font-size: 15px;
+    margin: 0 0 2px;
+}
+
+.productsDetailsIn .darkRow span.title, 
+.productsDetailsIn .lightRow span.title {
+    display: none;
+}
+
+.productsDetailsIn .lightRow {
+    background-color: rgba(30, 30, 30, 0.5) !important;
+}
+
+.productName {
+    width: 589px;
+    display: inline-block;
+}
+
+.productName span {
+    display: inline-block;
+    padding: 10px 10px;
+}
+
+.productPrice,
+.productQuantity,
+.productTotal {
+    width: 128px;
+    border-right: 2px solid var(--border-color) !important;
+    text-align: center;
+    display: inline-block;
+}
+
+.productPrice,
+.productQuantity,
+.productTotal {
+    display: inline-block;
+    padding: 10px 0;
+}
+
+.totalProducts {
+    display: block;
+    width: 100%;
+    text-align: right;
+    color: var(--text-primary) !important;
+    font-size: 16px;
+    margin: 10px 0 0;
+}
+
+.totalProducts .num {
+    color: var(--accent-color) !important;
+    font-size: 19px;
+    font-weight: bold;
+    display: inline-block;
+    padding: 0 4px 0 0;
+}
+
+/* ===== בלוקים ראשיים ===== */
+.blockDetails {
+    display: block;
+    width: 100%;
+    padding: 23px 0 26px;
+}
+
+.blockDetailsIn {
+    width: 979px;
+    margin: 0 auto;
+    font-size: 15px;
+    color: var(--text-primary) !important;
+    background-color: var(--bg-secondary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+}
+
+.blockDetailsIn .title {
+    display: block;
+    font-size: 19px;
+    padding-bottom: 10px;
+    color: var(--text-primary) !important;
+    margin-right: 3px;
+    font-weight: 600 !important;
+}
+
+.title.target-element {
+    margin: 0;
+}
+
+/* ===== שדות טופס ===== */
+.blockDetailsIn .formRow {
+    display: block;
+    margin: 0 0 12px;
+}
+
+.blockDetailsIn .formRow .fieldName {
+    width: 183px;
+    display: inline-block;
+    vertical-align: top;
+    padding: 7px 0 0;
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+}
+
+.blockDetailsIn .formRow .summaryTotal {
+    width: 250px;
+}
+
+.blockDetailsIn .formRow .fieldName a {
+    vertical-align: top;
+    padding: 0px 2px 0 0;
+    display: inline-block;
+}
+
+.blockDetailsIn .formRow .fieldName a img {
+    display: block;
+    opacity: 0.7;
+}
+
+.blockDetailsIn .formRow .fieldInput {
+    display: inline-block;
+    vertical-align: top;
+    border: none;
+}
+
+.blockDetailsIn .formRow .fieldInput select,
+.blockDetailsIn .formRow .fieldInput input {
+    margin: 0 10px;
+    color: var(--text-primary) !important;
+    font-size: 15px;
+    border-radius: 8px !important;
+    border: 1px solid var(--border-color) !important;
+    background-color: rgba(42, 42, 42, 0.5) !important;
+    transition: all 0.2s ease !important;
+}
+
+.blockDetailsIn .formRow .fieldInput select:focus,
+.blockDetailsIn .formRow .fieldInput input:focus {
+    border-color: var(--accent-color) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgba(5, 209, 87, 0.1) !important;
+    background-color: rgba(42, 42, 42, 0.8) !important;
+}
+
+.blockDetailsIn .formRow .fieldInput select {
+    padding: 8px 3px;
+    width: 325px;
+}
+
+.blockDetailsIn .formRow .fieldInput input {
+    padding: 12px 16px !important;
+    width: 313px;
+}
+
+.validityDate {
+    width: 345px;
+}
+
+.blockDetailsIn .formRow .fieldInput select.mini {
+    width: 100px;
+}
+
+.blockDetailsIn .formRow .fieldInput select.tiny {
+    width: 60px;
+}
+
+.blockDetailsIn .formRow .fieldInput select.tiny.withMargin {
+    margin-left: 33px;
+}
+
+.blockDetailsIn .formRow .fieldInput input[type='checkbox'] {
+    width: 20px;
+    margin: 12px 10px 3px 4px;
+    accent-color: var(--accent-color);
+}
+
+.blockDetailsIn .formRow .fieldInput .checkbox {
+    width: 400px;
+}
+
+/* ===== שגיאות ===== */
+.blockDetailsIn .formRow.errorRow .fieldInput select,
+.blockDetailsIn .formRow.errorRow .fieldInput input {
+    border: 1px solid var(--error-color) !important;
+    background-color: rgba(220, 38, 38, 0.1) !important;
+}
+
+.blockDetailsIn .formRow.errorRow .fieldName:before {
+    content: "*";
+    color: var(--error-color) !important;
+    font-weight: bold;
+    font-size: 25px;
+    display: inline-block;
+    margin: -2px -28px 0px 8px;
+    vertical-align: top;
+}
+
+/* ===== הצלחה ===== */
+.blockDetailsIn .formRow.success .fieldName:before {
+    content: "✓";
+    color: var(--success-color) !important;
+    font-weight: bold;
+    font-size: 20px;
+    display: inline-block;
+    margin: -7px -30px 0px 6px;
+    padding: 3px 0px 0 0;
+    vertical-align: top;
+    background-color: var(--success-color);
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    line-height: 20px;
+}
+
+.blockDetailsIn .formRow.success .fieldName,
+.blockDetailsIn .formRow.errorRow .fieldName {
+    margin-right: 0px;
+}
+
+/* ===== PayPal & תשלומים חלופיים ===== */
+.paypalDiv {
+    display: flex;
+    margin: 0 0 10px;
+    vertical-align: top;
+}
+
+.paypalDiv a, .paypalDiv span {
+    vertical-align: top;
+    display: inline-block;
+}
+
+.paypalDiv span {
+    padding: 4px 0 0 4px;
+}
+
+.paypalDiv img {
+    max-width: 328px;
+    width: 328px;
+    height: 40px;
+    border-radius: 8px;
+}
+
+.paypalDiv .paypal-buttons {
+    width: 328px !important;
+}
+
+/* ===== שגיאות כלליות ===== */
+.errorDiv {
+    background-color: rgba(220, 38, 38, 0.2) !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--error-color) !important;
+    color: #fff !important;
+    font-size: 17px;
+    padding: 16px !important;
+    width: 522px;
+    margin: 0;
+}
+
+.errorDiv .errorDivIn {
+    display: block;
+    margin: 0 auto;
+}
+
+.errorDiv ul {
+    margin: 0;
+    padding: 0 0 0 20px;
+}
+
+.errorDiv li {
+    color: #FCA5A5 !important;
+}
+
+/* ===== Overlay ===== */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8);
+    opacity: 0.9;
+    z-index: 101;
+}
+
+.target-element {
+    z-index: 102;
+    position: relative;
+    max-width: 535px;
+    background-color: var(--bg-secondary) !important;
+    padding: 15px 34px;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 16px !important;
+}
+
+.title.target-element {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.title.target-element {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+.titleContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    text-align: center;
+}
+
+/* ===== כפתור שליחה ===== */
+.submitDiv, #captcha_div {
+    max-width: 566px;
+    padding: 3px 3px 15px 3px;
+    min-height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    z-index: 102;
+    position: relative;
+    background-color: var(--bg-secondary) !important;
+}
+
+.CreditCardDiv {
+    margin-right: 33px;
+}
+
+#captcha_div {
+    justify-content: flex-start;
+    max-width: 597px;
+    margin-right: 0px;
+    margin-bottom: 0;
+}
+
+#captcha_div .fieldName {
+    display: none;
+    width: 0px;
+}
+
+#captcha_div .googleCaptchaBox {
+    padding: 0;
+    margin: 0;
+}
+
+.submitDiv.target-element {
+    max-width: 597px;
+}
+
+.submitDiv.spaceBetween {
+    justify-content: space-between;
+}
+
+.submitDiv .homeLink {
+    padding: 6px 0 5px;
+}
+
+.submitDiv .homeLink a {
+    font-size: 14px;
+    color: var(--accent-color) !important;
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.2s ease;
+}
+
+.submitDiv .homeLink a:hover {
+    color: var(--accent-hover) !important;
+}
+
+.submitDiv .homeLink a:before {
+    content: "";
+    display: block;
+    width: 20px;
+    height: 20px;
+    background-size: 20px 20px;
+    background-repeat: no-repeat;
+    background-image: url("https://secure.cardcom.solutions/Images/LowProfile5/house-chimney.svg");
+    filter: brightness(0) saturate(100%) invert(58%) sepia(85%) saturate(2358%) hue-rotate(99deg) brightness(102%) contrast(98%);
+}
+
+.backToCreditPaymentBtn {
+    font-size: 14px;
+    color: var(--accent-color) !important;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.title .description {
+    font-size: 14px;
+    color: var(--text-secondary) !important;
+}
+
+.backToCreditPaymentBtn:before {
+    content: url("https://secure.cardcom.solutions/Images/LowProfile5/previous.svg");
+    display: block;
+    width: 26px;
+    height: 15px;
+    filter: brightness(0) saturate(100%) invert(58%) sepia(85%) saturate(2358%) hue-rotate(99deg) brightness(102%) contrast(98%);
+}
+
+/* ===== כפתור תשלום ראשי ===== */
+.submitDiv .buttonDiv input {
+    color: #FFFFFF !important;
+    width: 174px;
+    background: var(--accent-color) !important;
+    border: none !important;
+    padding: 16px 32px !important;
+    font-size: 18px !important;
+    line-height: 1.3333333;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.submitDiv .buttonDiv input:hover {
+    background: var(--accent-hover) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(5, 209, 87, 0.3) !important;
+}
+
+.submitDiv .buttonDiv input:disabled {
+    background: rgba(42, 42, 42, 0.5) !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+.photo {
+    width: auto !important;
+    text-align: center !important;
+}
+
+/* ===== Footer ===== */
+.footer {
+    background-color: var(--bg-secondary) !important;
+    width: 100%;
+    padding: 18px 0 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+@supports(display: -webkit-inline-box) {
+    .footer {
+        display: -webkit-inline-box;
+    }
+}
+
+.footer .footerIn {
+    width: 979px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+}
+
+.footer .footerIn div {
+    display: inline-block;
+    vertical-align: top;
+}
+
+.footer .footerIn .right {
+    display: flex;
+}
+
+.footer .footerIn .right .cardsLogos {
+    display: flex;
+    align-content: stretch;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.footer .footerIn .right .cardsLogos .cardsLogo img.logoImg {
+    max-width: 60px;
+    opacity: 0.7;
+    filter: brightness(0.9);
+}
+
+.footer .footerIn div img {
+    display: block;
+}
+
+.pciLogo {
+    margin: 0 0 0 39px;
+    opacity: 0.7;
+}
+
+.cardcomText {
+    color: var(--text-tertiary) !important;
+    font-size: 14px !important;
+    padding: 15px 0 0;
+    margin: 0 60px 0 70px;
+}
+
+.logoImg {
+    width: auto;
+    height: 30px;
+    margin-left: 4px;
+    margin-top: 4px;
+    float: right;
+}
+
+.cardsLogos {
+    width: 210px;
+}
+
+.cardsLogo {
+    width: 50px;
+}
+
+/* ===== RTL ===== */
+body {
+    text-align: right;
+    direction: rtl;
+}
+
+.paymentDetailsFlexBox {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.paymentDetails .blockDetailsIn {
+    background-position: left;
+}
+
+.productsTbl .align {
+    text-align: right;
+}
+
+.productsTbl .total {
+    text-align: left;
+}
+
+.header .headerIn .logoDiv {
+    float: right;
+}
+
+.header .headerIn .detailsDiv {
+    border-right: 1px dashed rgba(255, 255, 255, 0.2);
+    padding: 0 10px 0 0;
+    float: left;
+}
+
+.submitDiv .homeLink {
+    float: right;
+}
+
+.submitDiv .homeLink a {
+    background-position: right;
+    padding: 0 20px 0 0;
+}
+
+.submitDiv .buttonDiv {
+    float: left;
+    margin-left: 48px;
+}
+
+.submitDiv .buttonDiv.gpay-additional-data {
+    margin-left: 44px;
+}
+
+.submitContainer {
+    padding-bottom: 15px;
+    justify-content: space-between;
+    flex-direction: row;
+}
+
+.submitDiv.target-element.submitContainer .buttonDiv {
+    margin-left: 18px;
+}
+
+/* ===== Loading ===== */
+.loading-indicator-wrapper {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    text-align: center;
+    background: rgba(0, 0, 0, 0.9);
+    transition: all 250ms linear;
+}
+
+.loading-indicator-wrapper.loader-visible {
+    opacity: 1;
+    z-index: 9999;
+}
+
+.loading-indicator-wrapper.loader-hidden {
+    opacity: 0;
+    z-index: -1;
+    display: none;
+}
+
+.loading-indicator-wrapper img {
+    vertical-align: middle;
+    display: inline-block;
+}
+
+.loading-indicator-wrapper .loader {
+    margin: 0 auto;
+    font-size: 10px;
+    position: fixed;
+    display: inline-block;
+    text-indent: -9999em;
+    border-top: 1.1em solid rgba(5, 209, 87, 0.2);
+    border-right: 1.1em solid rgba(5, 209, 87, 0.2);
+    border-bottom: 1.1em solid rgba(5, 209, 87, 0.2);
+    border-left: 1.1em solid var(--accent-color);
+    animation: load 1.1s infinite linear;
+    top: 50%;
+    left: 50%;
+    margin-left: -100px;
+    margin-top: -100px;
+}
+
+.loading-indicator-wrapper .loader,
+.loading-indicator-wrapper .loader:after {
+    border-radius: 50%;
+    width: 10em;
+    height: 10em;
+}
+
+.loading-indicator-wrapper .loading-indicator-helper {
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+}
+
+@keyframes load {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== Media Queries ===== */
+@media screen and (max-width: 978px) {
+    .header .headerIn,
+    .productsDetails .productsDetailsIn,
+    .blockDetails .blockDetailsIn,
+    .footer .footerIn {
+        width: 96%;
+    }
+
+    .header {
+        padding: 25px 0;
+    }
+
+    .header .headerIn .logoDiv {
+        width: 100%;
+        text-align: center;
+    }
+
+    .header .headerIn .logoDiv img {
+        max-width: 100%;
+    }
+
+    .header .headerIn .detailsDiv {
+        width: 100%;
+        text-align: center;
+        float: none;
+        border: none;
+        margin-top: 15px;
+        padding: 0;
+    }
+
+    .header .headerIn .detailsDiv div {
+        display: inline-block;
+    }
+
+    .header .headerIn .detailsDiv div:before {
+        content: "|";
+        display: inline-block;
+        margin: 0 3px 0 5px;
+        color: var(--text-tertiary);
+    }
+
+    .header .headerIn .detailsDiv a {
+        color: var(--accent-color);
+    }
+
+    .header .headerIn .detailsDiv div.adress:before {
+        content: "";
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .header .headerIn .logoDiv img {
+        display: inline-block;
+    }
+
+    .productName {
+        width: 346px;
+    }
+
+    .blockDetailsIn {
+        background: var(--bg-secondary) !important;
+        background-image: none !important;
+    }
+
+    .footer .footerIn .cardsLogos {
+        display: block;
+        width: auto;
+    }
+
+    .footer .footerIn {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .footer .footerIn .right {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .footer .footerIn .right .cardsLogos {
+        display: flex;
+    }
+
+    .footer .footerIn .cardsLogos img {
+        display: inline-block;
+    }
+
+    .footer .footerIn .cardcomText {
+        display: block;
+        padding: 15px 0 0px;
+        width: auto;
+        margin: 0;
+    }
+
+    .footer .footerIn .right {
+        width: auto;
+        vertical-align: top;
+        display: flex;
+    }
+
+    .footer .footerIn .left {
+        width: auto;
+        display: inline-block;
+        vertical-align: top;
+        float: left;
+    }
+}
+
+@media screen and (max-width: 640px) {
+    .productPrice, .productQuantity, .productTotal {
+        width: 90px;
+    }
+
+    .productName {
+        width: 336px;
+    }
+
+    .pciLogo {
+        margin: 0 0 0 16px;
+    }
+
+    .photo {
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    .ui-tooltip {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .ui-tooltip img {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .header .headerIn .logoDiv img {
+        max-width: 100%;
+    }
+
+    .header .headerIn .detailsDiv div:before {
+        content: "";
+    }
+
+    .header .headerIn .detailsDiv div .title {
+        font-weight: bold;
+    }
+
+    .showProductsTabs {
+        display: block !important;
+    }
+
+    .showProductsTables {
+        display: none !important;
+    }
+
+    .productName, .productPrice, .productQuantity, .productTotal {
+        border: none;
+        display: block;
+        padding: 3px 0;
+        width: 96%;
+        margin: 0 auto;
+        text-align: right;
+    }
+
+    .productName span {
+        padding: 0;
+        font-size: 18px;
+    }
+
+    .productsDetailsIn .darkRow, .productsDetailsIn .lightRow {
+        padding: 10px 0;
+    }
+
+    .productsDetailsIn .darkRow span.title, .productsDetailsIn .lightRow span.title {
+        display: inline-block;
+        padding: 0 0 0 3px;
+        font-weight: bold;
+    }
+
+    .productsDetailsIn .darkRow .productName span.title, 
+    .productsDetailsIn .lightRow .productName span.title {
+        display: none;
+    }
+
+    .blockDetailsIn .formRow .fieldName {
+        width: 100%;
+        padding: 7px 0;
+    }
+
+    .blockDetailsIn .formRow .fieldInput select,
+    .blockDetailsIn .formRow .fieldInput input {
+        width: 94%;
+    }
+
+    .blockDetailsIn .formRow .fieldInput {
+        width: 100%;
+    }
+
+    .blockDetailsIn .formRow.errorRow .fieldInput {
+        width: 90%;
+    }
+
+    .submitDiv {
+        width: 100%;
+    }
+
+    .errorDiv {
+        width: 100%;
+    }
+
+    .footer .footerIn {
+        text-align: center;
+    }
+
+    .footer .footerIn .left {
+        float: none;
+        padding: 15px 0 0;
+    }
+
+    .footerIframe {
+        width: 300px !important;
+    }
+
+    .blockDetailsIn .formRow .fieldInput input {
+        width: 94%;
+        margin: 0;
+    }
+}
+
+@media screen and (max-width: 320px) {
+    .submitDiv {
+        height: 70px;
+        display: block;
+        padding: 10px 0;
+    }
+
+    .paypalDiv {
+        justify-content: center;
+    }
+
+    .paypalDiv span {
+        display: none;
+    }
+
+    .cardsLogos {
+        text-align: center !important;
+        width: 200px;
+        min-height: 40px !important;
+    }
+
+    .footerIframe {
+        width: 200px !important;
+    }
+
+    .blockDetailsIn .formRow .fieldInput input {
+        width: 94%;
+        margin: 0;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .blockDetails.paymentDetails .blockDetailsIn .title.target-element {
+        margin-bottom: 0;
+        padding-bottom: 15px;
+    }
+
+    .submitDiv .buttonDiv {
+        margin-left: 15px;
+    }
+
+    .submitDiv.target-element {
+        width: auto;
+    }
+
+    .blockDetailsIn .formRow.errorRow .fieldInput,
+    .blockDetailsIn .formRow.success .fieldInput {
+        width: 100%;
+    }
+
+    .blockDetailsIn .formRow .fieldName {
+        width: auto;
+        margin-right: 11px;
+        padding: 7px 0;
+    }
+
+    .blockDetailsIn .formRow .fieldInput {
+        width: 100%;
+    }
+
+    .blockDetailsIn .formRow .fieldInput input {
+        width: 94%;
+    }
+
+    .blockDetailsIn .formRow.success .fieldName:before {
+        margin: -7px -18px 0px 6px;
+    }
+
+    .blockDetailsIn .formRow.success .fieldName,
+    .blockDetailsIn .formRow.errorRow .fieldName {
+        margin-right: 11px;
+    }
+}
+
+/* ===== הערה חשובה - אל תמחק! ===== */
+/* "הסליקה מתבצעת דרך קארדקום" - חובה להשאיר בfooter */
+
+/* לוגואים חובה - PCI DSS ו-CARDCOM - מבוסס על הקוד הקיים */
+
+/* עדכון הלוגיקה הקיימת */
+.footer .footerIn .right .cardsLogos {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 20px !important;
+    width: auto !important;
+    flex-wrap: nowrap !important;
+    padding: 10px 0 !important;
+}
+
+/* הסתרת תמונות לוגואים ישנות */
+.footer .footerIn .right .cardsLogos .cardsLogo img.logoImg {
+    display: none !important;
+}
+
+/* תמונות אחרות - נשאיר אותן */
+.footer .footerIn div img:not(.logoImg) {
+    display: block !important;
+}
+
+.cardsLogos img:not(.logoImg) {
+    display: block !important;
+}
+
+/* לוגואים מקוריים מהשרת של CardCom - ללא כפילות */
+.footer .footerIn .right .cardsLogos::before {
+    content: "" !important;
+    display: inline-block !important;
+    width: 120px !important;
+    height: 30px !important;
+    background-image: url('https://secure.cardcom.solutions/LoadImage.ashx?c=21296&g=9164370d-0ae4-44ae-a980-8ac15a9c276b') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    margin: 0 10px !important;
+    flex-shrink: 0 !important;
+}
+
+.footer .footerIn .right .cardsLogos::after {
+    content: "" !important;
+    display: inline-block !important;
+    width: 100px !important;
+    height: 30px !important;
+    background-image: url('https://secure.cardcom.solutions/LoadImage.ashx?c=21296&g=c915b3ec-4ab5-4963-8014-b69bc92dfbde') !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    margin: 0 10px !important;
+    flex-shrink: 0 !important;
+}
+
+/* תמונות ספציפיות - וודא שהן נטענות */
+.header .headerIn .logoDiv img {
+    display: block !important;
+    max-width: 700px !important;
+    height: auto !important;
+}
+
+.blockDetailsIn .formRow .fieldName a img {
+    display: block !important;
+    opacity: 0.7 !important;
+}
+
+.paypalDiv img {
+    display: block !important;
+    max-width: 328px !important;
+    width: 328px !important;
+    height: 40px !important;
+}
+
+.loading-indicator-wrapper img {
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* תמונות שאלות ועזרה */
+.WhatIsCvvLightBox img {
+    display: inline-block !important;
+}
+
+/* תמונות אחרות */
+.footer .footerIn div img {
+    display: block !important;
+}
+
+/* הסתרת הלוגואים הישנים כדי למנוע כפילות */
+.pciLogo {
+    display: none !important;
+}
+
+.cardcomText {
+    display: none !important;
+}
+
+/* עדכון .cardsLogo הקיים */
+.cardsLogo {
+    width: auto !important;
+    margin: 0 5px !important;
+}
+
+/* תיקון ה-footer הכללי */
+.footer .footerIn {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 15px 20px !important;
+    min-height: 60px !important;
+    flex-wrap: wrap !important;
+}
+
+.footer .footerIn .right {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 15px !important;
+    flex-wrap: wrap !important;
+}
+
+.footer .footerIn .left {
+    display: none !important;
+}
+
+/* רספונסיבי למובייל - מבוסס על הקוד הקיים */
+@media screen and (max-width: 768px) {
+    .footer .footerIn {
+        padding: 10px 15px !important;
+        min-height: 50px !important;
+    }
+    
+    .footer .footerIn .cardsLogos {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        width: auto !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .footer .footerIn .right .cardsLogos::before {
+        width: 80px !important;
+        height: 20px !important;
+        margin: 0 5px !important;
+    }
+    
+    .footer .footerIn .right .cardsLogos::after {
+        width: 70px !important;
+        height: 20px !important;
+        margin: 0 5px !important;
+    }
+    
+    /* הסתרת הלוגואים הישנים במובייל גם */
+    .pciLogo {
+        display: none !important;
+    }
+    
+    .cardcomText {
+        display: none !important;
+    }
+    
+    /* תמונות במובייל */
+    .header .headerIn .logoDiv img {
+        max-width: 100% !important;
+        display: inline-block !important;
+    }
+    
+    .footer .footerIn .cardsLogos img {
+        display: inline-block !important;
+    }
+    
+    .footer .footerIn div img {
+        display: block !important;
+    }
+}
+
+
+#txtCustLinePH {
+    display: none !important;
+}
+
+.formRow.cardRow[data-bind*="custLinePH"] {
+    display: none !important;
+}
+
+#numberOfPaymentsselect {
+    display: none !important;
+}
+
+.formRow.cardRow[data-bind*="numberOfPayments"] {
+    display: none !important;
+}
+
+.fieldName.summaryTotal {
+    display: none !important;
+}
+
+
+#validityMonth, #validityYear {
+    background: var(--bg-secondary) !important;
+    border: 2px solid var(--border-color) !important;
+    border-radius: 12px !important;
+    color: var(--text-primary) !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    cursor: pointer !important;
+    min-width: 80px !important;
+    margin: 0 4px !important;
+}
+
+#validityMonth:hover, #validityYear:hover {
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 3px rgba(5, 209, 87, 0.1) !important;
+}
+
+#validityMonth:focus, #validityYear:focus {
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 3px rgba(5, 209, 87, 0.2) !important;
+    outline: none !important;
+}
+
+.validityDate::after {
+    content: "▼" !important;
+    position: absolute !important;
+    right: 12px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: var(--accent-color) !important;
+    font-size: 12px !important;
+    pointer-events: none !important;
+}
+
+.validityDate {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+
+.fieldName::after {
+    content: "" !important;
+    display: inline-block !important;
+    width: 6px !important;
+    height: 6px !important;
+    background: var(--accent-color) !important;
+    border-radius: 50% !important;
+    margin-left: 6px !important;
+    margin-right: 0 !important;
+    margin-bottom: 2px !important;
+    vertical-align: middle !important;
+}
+
+/* הסתרת הנקודה הירוקה משדות לא חובה */
+.formRow.cardRow:not([data-bind*="required"]) .fieldName::after,
+.formRow.cardRow[data-bind*="hide"] .fieldName::after {
+    display: none !important;
+}
+
+.fieldName::before {
+    display: none !important;
+}
+
+#txtCustName[value*="דוגמא"],
+#txtCustName[value*="דוגמה"],
+#txtCustName[value*="example"] {
+    color: var(--text-tertiary) !important;
+    font-style: italic !important;
+}
+
+input[value*="לקוח לדוגמא"],
+input[value*="לקוח לדוגמה"],
+input[value*="Example Customer"] {
+    color: var(--text-tertiary) !important;
+    font-style: italic !important;
+}
+
+.formRow.cardRow .fieldName::before,
+.formRow.cardRow .fieldName::after {
+    display: none !important;
+}
+
+.formRow.cardRow[data-bind*="required"] .fieldName::after {
+    display: inline-block !important;
+}
+
+.fieldName::before,
+.fieldName::after {
+    display: none !important;
+}
+
+.formRow.cardRow[data-bind*="required"] .fieldName::after {
+    content: "●" !important;
+    color: var(--accent-color) !important;
+    font-size: 8px !important;
+    margin-left: 4px !important;
+    display: inline-block !important;
+}
+
+/* כפתור התשלום */
+input[type="button"][value*="לתשלום"],
+input[type="button"][value*="תשלום"],
+input[type="button"][value*="Pay"],
+input[type="button"][value*="Go"],
+.submitDiv input[type="button"],
+.buttonDiv input[type="button"] {
+    background: rgba(5, 209, 87, 0.1) !important;
+    color: var(--accent-color) !important;
+    border: 1px solid rgba(5, 209, 87, 0.3) !important;
+    border-radius: 12px !important;
+    padding: 14px 20px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: none !important;
+    position: relative !important;
+    overflow: visible !important;
+    min-width: auto !important;
+    height: auto !important;
+    line-height: 1.2 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: row !important;
+}
+
+input[type="button"][value*="לתשלום"]:hover,
+input[type="button"][value*="תשלום"]:hover,
+input[type="button"][value*="Pay"]:hover,
+input[type="button"][value*="Go"]:hover,
+.submitDiv input[type="button"]:hover,
+.buttonDiv input[type="button"]:hover {
+    background: rgba(5, 209, 87, 0.2) !important;
+    border-color: rgba(5, 209, 87, 0.5) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+input[type="button"][value*="לתשלום"]:active,
+input[type="button"][value*="תשלום"]:active,
+input[type="button"][value*="Pay"]:active,
+input[type="button"][value*="Go"]:active,
+.submitDiv input[type="button"]:active,
+.buttonDiv input[type="button"]:active {
+    background: rgba(5, 209, 87, 0.3) !important;
+    border-color: rgba(5, 209, 87, 0.6) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+input[type="button"][value*="לתשלום"]:disabled,
+input[type="button"][value*="תשלום"]:disabled,
+input[type="button"][value*="Pay"]:disabled,
+input[type="button"][value*="Go"]:disabled,
+.submitDiv input[type="button"]:disabled,
+.buttonDiv input[type="button"]:disabled {
+    background: var(--border-color) !important;
+    color: var(--text-tertiary) !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.submitDiv,
+.buttonDiv {
+    text-align: center !important;
+    margin: 30px 0 !important;
+    padding: 20px 0 !important;
+}
+
+@media (max-width: 768px) {
+    input[type="button"][value*="לתשלום"],
+    input[type="button"][value*="תשלום"],
+    input[type="button"][value*="Pay"],
+    input[type="button"][value*="Go"],
+    .submitDiv input[type="button"],
+    .buttonDiv input[type="button"] {
+        width: 100% !important;
+        max-width: 300px !important;
+        padding: 16px 30px !important;
+        font-size: 16px !important;
+    }
+}
+
+
+.productsTbl {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    background: var(--bg-secondary) !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+    margin: 20px 0 !important;
+}
+
+.productsTbl thead tr.title {
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%) !important;
+}
+
+.productsTbl thead tr.title th {
+    color: var(--text-primary) !important;
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    padding: 20px 16px !important;
+    text-align: center !important;
+    border: none !important;
+    letter-spacing: 0.5px !important;
+}
+
+.productsTbl tbody tr {
+    background: var(--bg-secondary) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    transition: all 0.3s ease !important;
+}
+
+.productsTbl tbody tr:hover {
+    background: var(--bg-card) !important;
+    transform: translateY(-1px) !important;
+}
+
+.productsTbl tbody tr:last-child {
+    border-bottom: none !important;
+}
+
+.productsTbl tbody td {
+    padding: 16px !important;
+    color: var(--text-primary) !important;
+    font-size: 14px !important;
+    border: none !important;
+    text-align: center !important;
+}
+
+.productsTbl tbody td.total {
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%) !important;
+    font-weight: 700 !important;
+    font-size: 18px !important;
+    color: var(--accent-color) !important;
+    padding: 20px 16px !important;
+    border-top: 2px solid var(--accent-color) !important;
+}
+
+.paymentDetailsFlexBox {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.paymentDetailsFlexBox div {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 8px 0 !important;
+}
+
+.paymentDetailsFlexBox span.text {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+}
+
+.paymentDetailsFlexBox span.num {
+    color: var(--accent-color) !important;
+    font-weight: 700 !important;
+    font-size: 20px !important;
+}
+
+
+.showProductsTables {
+    display: none !important;
+}
+
+.showProductsTabs {
+    display: block !important;
+    background: var(--bg-secondary) !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    margin: 20px 0 !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.darkRow, .lightRow {
+    background: var(--bg-card) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    margin-bottom: 12px !important;
+    border: 1px solid var(--border-color) !important;
+    transition: all 0.3s ease !important;
+}
+
+.darkRow:hover, .lightRow:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+.darkRow:last-child, .lightRow:last-child {
+    margin-bottom: 0 !important;
+}
+
+.productName, .productPrice, .productQuantity, .productTotal {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 8px !important;
+    padding: 4px 0 !important;
+}
+
+.productName:last-child, .productPrice:last-child, .productQuantity:last-child, .productTotal:last-child {
+    margin-bottom: 0 !important;
+}
+
+.productName span.title, .productPrice span.title, .productQuantity span.title, .productTotal span.title {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+}
+
+.productName span:not(.title), .productPrice span:not(.title), .productQuantity span:not(.title), .productTotal span:not(.title) {
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+}
+
+.totalProducts {
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    margin-top: 16px !important;
+    border: 2px solid var(--accent-color) !important;
+    text-align: center !important;
+}
+
+.totalProducts span.text {
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+    font-size: 16px !important;
+}
+
+.totalProducts span.num {
+    color: var(--accent-color) !important;
+    font-weight: 700 !important;
+    font-size: 24px !important;
+    margin-right: 8px !important;
+}
+
+@media (max-width: 768px) {
+    .productsTbl {
+        display: none !important;
+    }
+    
+    .showProductsTabs {
+        display: block !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .showProductsTabs {
+        display: none !important;
+    }
+    
+    .productsTbl {
+        display: table !important;
+    }
+}
+

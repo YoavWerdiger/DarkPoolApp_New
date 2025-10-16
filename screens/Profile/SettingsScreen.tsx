@@ -6,22 +6,29 @@ import {
   Switch, 
   Alert,
   TouchableOpacity,
-  Pressable
+  ActivityIndicator,
+  SafeAreaView
 } from 'react-native';
 import { 
   Globe, 
-  Bell, 
   Moon, 
-  Volume2,
+  Sun,
+  ArrowLeft,
   Smartphone,
-  LogOut,
-  X,
+  Lock,
+  Database,
   Trash2,
-  ChevronRight
+  Info,
+  ChevronLeft,
+  RefreshCcw,
+  HardDrive,
+  Fingerprint,
+  Shield
 } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface SettingItem {
   id: string;
@@ -36,13 +43,14 @@ interface SettingItem {
 }
 
 export default function SettingsScreen({ navigation }: any) {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
+  const { theme, isDarkMode, toggleTheme } = useTheme();
   const [settings, setSettings] = useState({
-    notifications: true,
-    sound: true,
-    vibration: true,
     darkMode: true,
-    messageNotifications: true,
+    autoUpdate: true,
+    dataSaving: false,
+    biometricAuth: false,
+    language: 'he'
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -53,14 +61,10 @@ export default function SettingsScreen({ navigation }: any) {
 
   const loadSettings = async () => {
     try {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-      
-      const savedSettings = await AsyncStorage.getItem('user_settings');
-      if (savedSettings) {
-        setSettings(JSON.parse(savedSettings));
+      const saved = await AsyncStorage.getItem('appSettings');
+      if (saved) {
+        const parsedSettings = JSON.parse(saved);
+        setSettings(parsedSettings);
       }
       setIsLoading(false);
     } catch (error) {
@@ -69,40 +73,65 @@ export default function SettingsScreen({ navigation }: any) {
     }
   };
 
-  const saveSettings = async (newSettings: typeof settings) => {
+  const handleToggle = async (key: string, value: boolean) => {
+    const newSettings = {
+      ...settings,
+      [key]: value
+    };
+    
+    setSettings(newSettings);
+    
+    // Update theme immediately for dark mode
+    if (key === 'darkMode') {
+      toggleTheme();
+    }
+    
     try {
-      await AsyncStorage.setItem('user_settings', JSON.stringify(newSettings));
-      setSettings(newSettings);
+      await AsyncStorage.setItem('appSettings', JSON.stringify(newSettings));
     } catch (error) {
       console.error('Error saving settings:', error);
     }
   };
 
-  const handleToggle = (key: string, value: boolean) => {
-    const newSettings = { ...settings, [key]: value };
-    saveSettings(newSettings);
+  const handleLanguageChange = () => {
+    Alert.alert(
+      'שפה',
+      'בחר שפה',
+      [
+        { text: 'עברית', onPress: () => handleToggle('language', 'he') },
+        { text: 'English', onPress: () => handleToggle('language', 'en') },
+        { text: 'ביטול', style: 'cancel' }
+      ]
+    );
   };
 
-  const handleLogout = async () => {
+  const handleClearCache = () => {
     Alert.alert(
-      'התנתקות',
-      'האם אתה בטוח שברצונך להתנתק?',
+      'נקה מטמון',
+      'האם אתה בטוח שברצונך למחוק את כל הנתונים הזמניים? פעולה זו לא תמחק את המידע האישי שלך.',
       [
         { text: 'ביטול', style: 'cancel' },
-        { 
-          text: 'התנתק', 
-          style: 'destructive', 
+        {
+          text: 'נקה',
+          style: 'destructive',
           onPress: async () => {
             try {
-              await supabase.auth.signOut();
-              await AsyncStorage.removeItem('user_settings');
-              await AsyncStorage.removeItem('saved_credentials');
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Auth' }],
-              });
+              // Clear AsyncStorage cache
+              const keys = await AsyncStorage.getAllKeys();
+              const cacheKeys = keys.filter(key => 
+                key.startsWith('cache_') || 
+                key.startsWith('temp_') || 
+                key === 'offlineData'
+              );
+              
+              if (cacheKeys.length > 0) {
+                await AsyncStorage.multiRemove(cacheKeys);
+              }
+              
+              Alert.alert('הצלחה', 'המטמון נוקה בהצלחה');
             } catch (error) {
-              Alert.alert('שגיאה', 'לא ניתן להתנתק כרגע');
+              console.error('Error clearing cache:', error);
+              Alert.alert('שגיאה', 'שגיאה בניקוי המטמון');
             }
           }
         }
@@ -110,145 +139,165 @@ export default function SettingsScreen({ navigation }: any) {
     );
   };
 
-  const handleClearData = async () => {
-    Alert.alert(
-      'מחיקת נתונים',
-      'פעולה זו תמחק את כל הנתונים המקומיים',
-      [
-        { text: 'ביטול', style: 'cancel' },
-        { 
-          text: 'מחק', 
-          style: 'destructive', 
-          onPress: async () => {
-            try {
-              await AsyncStorage.clear();
-              Alert.alert('הצלחה', 'נתונים מקומיים נמחקו');
-            } catch (error) {
-              Alert.alert('שגיאה', 'לא ניתן למחוק');
+  const handleBiometricAuth = (value: boolean) => {
+    if (value) {
+      Alert.alert(
+        'אימות ביומטרי',
+        'הפעלת אימות ביומטרי תאפשר לך להתחבר לאפליקציה באמצעות Face ID או Touch ID.',
+        [
+          { text: 'ביטול', onPress: () => {} },
+          { 
+            text: 'הפעל', 
+            onPress: () => {
+              // Here you would integrate with biometric authentication
+              handleToggle('biometricAuth', true);
+              Alert.alert('הצלחה', 'אימות ביומטרי הופעל');
             }
           }
-        }
-      ]
-    );
+        ]
+      );
+    } else {
+      handleToggle('biometricAuth', false);
+    }
   };
 
-  const settingSections: { title: string; items: SettingItem[] }[] = [
+  const settingSections = [
     {
-      title: 'הגדרות כלליות',
+      title: 'תצוגה',
       items: [
         {
           id: 'darkMode',
-          title: 'מצב כהה',
-          subtitle: 'עיצוב כהה',
-          icon: Moon,
-          type: 'switch',
+          title: settings.darkMode ? 'מצב כהה' : 'מצב בהיר',
+          subtitle: settings.darkMode ? 'תצוגה כהה לעיניים' : 'תצוגה בהירה ובהירה',
+          icon: settings.darkMode ? Moon : Sun,
+          type: 'switch' as const,
           value: settings.darkMode,
-          onToggle: (value) => handleToggle('darkMode', value)
+          onToggle: (value: boolean) => handleToggle('darkMode', value)
+        }
+      ]
+    },
+    {
+      title: 'אפליקציה',
+      items: [
+        {
+          id: 'autoUpdate',
+          title: 'עדכון אוטומטי',
+          subtitle: 'עדכן תוכן באופן אוטומטי',
+          icon: RefreshCcw,
+          type: 'switch' as const,
+          value: settings.autoUpdate,
+          onToggle: (value: boolean) => handleToggle('autoUpdate', value)
+        },
+        {
+          id: 'dataSaving',
+          title: 'חיסכון בנתונים',
+          subtitle: 'הפחת שימוש בנתונים סלולריים',
+          icon: HardDrive,
+          type: 'switch' as const,
+          value: settings.dataSaving,
+          onToggle: (value: boolean) => handleToggle('dataSaving', value)
         },
         {
           id: 'language',
           title: 'שפה',
-          subtitle: 'עברית',
+          subtitle: settings.language === 'he' ? 'עברית' : 'English',
           icon: Globe,
-          type: 'action',
-          onPress: () => {
-            Alert.alert('שפה', 'עדיין לא זמין');
-          }
+          type: 'action' as const,
+          onPress: handleLanguageChange
         }
       ]
     },
     {
-      title: 'התראות',
+      title: 'אבטחה',
       items: [
         {
-          id: 'notifications',
-          title: 'התראות',
-          subtitle: 'התראות כלליות',
-          icon: Bell,
-          type: 'switch',
-          value: settings.notifications,
-          onToggle: (value) => handleToggle('notifications', value)
-        },
-        {
-          id: 'messageNotifications',
-          title: 'התראות הודעות',
-          subtitle: 'הודעות בצ\'אט',
-          icon: Bell,
-          type: 'switch',
-          value: settings.messageNotifications,
-          onToggle: (value) => handleToggle('messageNotifications', value)
-        },
-        {
-          id: 'sound',
-          title: 'צלילים',
-          subtitle: 'צלילי התראות',
-          icon: Volume2,
-          type: 'switch',
-          value: settings.sound,
-          onToggle: (value) => handleToggle('sound', value)
-        },
-        {
-          id: 'vibration',
-          title: 'רטט',
-          subtitle: 'רטט בהתראות',
-          icon: Smartphone,
-          type: 'switch',
-          value: settings.vibration,
-          onToggle: (value) => handleToggle('vibration', value)
+          id: 'biometricAuth',
+          title: 'אימות ביומטרי',
+          subtitle: 'השתמש ב-Face ID / Touch ID',
+          icon: Fingerprint,
+          type: 'switch' as const,
+          value: settings.biometricAuth,
+          onToggle: handleBiometricAuth
         }
       ]
     },
     {
-      title: 'נתונים',
+      title: 'מתקדם',
       items: [
         {
-          id: 'clearData',
-          title: 'מחק נתונים מקומיים',
-          subtitle: 'מחק נתונים שמורים',
+          id: 'clearCache',
+          title: 'נקה מטמון',
+          subtitle: 'מחק נתונים זמניים',
           icon: Trash2,
-          type: 'action',
-          danger: true,
-          onPress: handleClearData
+          type: 'action' as const,
+          onPress: handleClearCache,
+          danger: true
+        },
+        {
+          id: 'about',
+          title: 'אודות האפליקציה',
+          subtitle: 'מידע וגרסה',
+          icon: Info,
+          type: 'action' as const,
+          onPress: () => {
+            Alert.alert('אודות', 'DarkPool App\nגרסה 1.0.0\n\n© 2025 DarkPool');
+          }
         }
       ]
     }
   ];
 
+
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: '#666', fontSize: 16 }}>טוען...</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#00E654" />
+          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
-      {/* Header */}
-      <View style={{
-        paddingTop: 50,
-        paddingBottom: 16,
-        paddingHorizontal: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#1E1E1E',
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
+        {/* Header */}
+        <View style={{
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between'
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        backgroundColor: theme.cardBackground,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.border
       }}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <X size={24} color="#666" strokeWidth={2} />
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={{
+            width: 36,
+            height: 36,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: 18,
+            backgroundColor: theme.isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
+          }}
+        >
+          <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
         </TouchableOpacity>
         
-        <Text style={{ 
-          color: '#FFFFFF', 
-          fontSize: 18, 
-          fontWeight: '600'
+        <Text style={{
+          flex: 1,
+          textAlign: 'center',
+          fontSize: 20,
+          fontWeight: '700',
+          color: theme.textPrimary,
+          marginRight: 36
         }}>
           הגדרות
         </Text>
-        
-        <View style={{ width: 24 }} />
-      </View>
+        </View>
+      </SafeAreaView>
 
       <ScrollView 
         style={{ flex: 1 }}
@@ -258,110 +307,107 @@ export default function SettingsScreen({ navigation }: any) {
         <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
           {settingSections.map((section, sectionIndex) => (
             <View key={sectionIndex} style={{ marginBottom: 24 }}>
-              <Text style={{ 
-                color: '#FFFFFF', 
-                fontSize: 18, 
-                fontWeight: '600', 
-                marginBottom: 16,
+              {/* Section Title */}
+              <Text style={{
+                fontSize: 13,
+                fontWeight: '700',
+                color: theme.textTertiary,
+                marginBottom: 12,
+                marginRight: 4,
                 textAlign: 'right',
-                writingDirection: 'rtl'
+                textTransform: 'uppercase',
+                letterSpacing: 0.5
               }}>
                 {section.title}
               </Text>
-              
+
+              {/* Section Items */}
               <View style={{
-                backgroundColor: '#181818',
+                backgroundColor: theme.cardBackground,
                 borderRadius: 16,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.15)',
                 overflow: 'hidden'
               }}>
-                {section.items.map((item, index) => (
-                  <Pressable
+                {section.items.map((item, itemIndex) => (
+                  <TouchableOpacity
                     key={item.id}
-                    onPress={item.onPress}
+                    onPress={item.type === 'action' ? item.onPress : undefined}
                     disabled={item.type === 'switch'}
-                    style={({ pressed }) => ({
-                      flexDirection: 'row', 
+                    activeOpacity={item.type === 'action' ? 0.7 : 1}
+                    style={{
+                      flexDirection: 'row',
                       alignItems: 'center',
-                      paddingHorizontal: 14,
-                      paddingVertical: 12,
-                      minHeight: 40,
-                      backgroundColor: pressed ? '#2A2A2A' : '#181818',
-                      borderBottomWidth: index < section.items.length - 1 ? 0.5 : 0,
-                      borderBottomColor: 'rgba(255,255,255,0.08)'
-                    })}
+                      paddingVertical: 16,
+                      paddingHorizontal: 16,
+                      borderBottomWidth: itemIndex < section.items.length - 1 ? 1 : 0,
+                      borderBottomColor: theme.border
+                    }}
                   >
-                    {/* אייקון */}
-                    <View style={{ marginRight: 10, width: 20, alignItems: 'center' }}>
-                      <item.icon size={20} color={item.danger ? '#DC2626' : '#FFFFFF'} strokeWidth={2} />
-                    </View>
-                    
-                    {/* טקסט */}
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ 
-                        color: item.danger ? '#DC2626' : '#FFFFFF', 
-                        fontSize: 15,
-                        fontWeight: '400',
+                    {/* Switch/Chevron - שמאל */}
+                    {item.type === 'switch' && item.onToggle ? (
+                      <Switch
+                        value={item.value}
+                        onValueChange={item.onToggle}
+                        trackColor={{ false: theme.switchTrackOff, true: '#00E654' }}
+                        thumbColor={item.value ? '#ffffff' : theme.switchThumbOff}
+                        ios_backgroundColor={theme.switchTrackOff}
+                        style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                      />
+                    ) : (
+                      <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
+                    )}
+
+                    {/* Text Content - מרכז */}
+                    <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                      <Text style={{
+                        fontSize: 16,
+                        fontWeight: '600',
+                        color: item.danger ? '#EF4444' : theme.textPrimary,
                         marginBottom: 2,
-                        textAlign: 'right',
-                        writingDirection: 'rtl'
+                        textAlign: 'right'
                       }}>
                         {item.title}
                       </Text>
-                      <Text style={{ 
-                        color: '#888', 
+                      <Text style={{
                         fontSize: 13,
-                        textAlign: 'right',
-                        writingDirection: 'rtl'
+                        color: theme.textTertiary,
+                        textAlign: 'right'
                       }}>
                         {item.subtitle}
                       </Text>
                     </View>
-                    
-                    {/* Switch או Chevron */}
-                    <View style={{ marginLeft: 16 }}>
-                      {item.type === 'switch' ? (
-                        <Switch
-                          value={item.value}
-                          onValueChange={item.onToggle}
-                          trackColor={{ false: '#2A2A2A', true: '#00E654' }}
-                          thumbColor={item.value ? '#FFFFFF' : '#4A4A4A'}
-                          ios_backgroundColor="#2A2A2A"
-                        />
-                      ) : (
-                        <ChevronRight size={18} color="#666" strokeWidth={2} />
-                      )}
+
+                    {/* Icon - ימין */}
+                    <View style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      backgroundColor: item.danger ? 'rgba(239, 68, 68, 0.1)' : 'rgba(0, 230, 84, 0.1)',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <item.icon 
+                        size={20} 
+                        color={item.danger ? '#EF4444' : '#00E654'} 
+                        strokeWidth={2} 
+                      />
                     </View>
-                  </Pressable>
+                  </TouchableOpacity>
                 ))}
               </View>
             </View>
           ))}
 
-          {/* App Info */}
-          <View style={{
-            marginTop: 20,
-            padding: 16,
-            borderRadius: 16,
-            backgroundColor: '#181818',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.15)',
-            alignItems: 'center'
+          {/* App Version */}
+          <View style={{ 
+            alignItems: 'center', 
+            marginTop: 16,
+            marginBottom: 20
           }}>
             <Text style={{ 
-              color: '#FFFFFF', 
-              fontSize: 16, 
-              fontWeight: '600', 
-              marginBottom: 4
-            }}>
-              DarkPool App
-            </Text>
-            <Text style={{ 
-              color: '#666', 
+              color: theme.textTertiary, 
               fontSize: 13
             }}>
-              גרסה 1.0.0
+              DarkPool App · גרסה 1.0.0
             </Text>
           </View>
         </View>

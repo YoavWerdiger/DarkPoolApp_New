@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { View, FlatList, KeyboardAvoidingView, Platform, Text, Image, TouchableOpacity, Animated, ImageBackground, Alert, Pressable, TextInput, TouchableWithoutFeedback, Keyboard, ActivityIndicator } from 'react-native';
+import { View, FlatList, KeyboardAvoidingView, Platform, Text, Image, TouchableOpacity, Animated, ImageBackground, Alert, Pressable, TextInput, TouchableWithoutFeedback, Keyboard, ActivityIndicator, LayoutAnimation, UIManager } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -191,19 +191,20 @@ export default function ChatRoomScreen() {
       return false;
     }
     
-    // יצירת תאריכים עם רק שנה, חודש ויום (בלי שעה)
-    const d1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
-    const d2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
+    // השוואה פשוטה של יום, חודש ושנה לפי זמן מקומי
+    const sameYear = date1.getFullYear() === date2.getFullYear();
+    const sameMonth = date1.getMonth() === date2.getMonth();
+    const sameDate = date1.getDate() === date2.getDate();
     
     console.log('🔍 isSameDay: Comparing dates:', {
       date1: date1.toISOString(),
       date2: date2.toISOString(),
-      d1: d1.toISOString(),
-      d2: d2.toISOString(),
-      result: d1.getTime() === d2.getTime()
+      date1Local: `${date1.getDate()}/${date1.getMonth() + 1}/${date1.getFullYear()}`,
+      date2Local: `${date2.getDate()}/${date2.getMonth() + 1}/${date2.getFullYear()}`,
+      result: sameYear && sameMonth && sameDate
     });
     
-    return d1.getTime() === d2.getTime();
+    return sameYear && sameMonth && sameDate;
   };
 
   // מצא את הצ'אט הנוכחי
@@ -223,7 +224,30 @@ export default function ChatRoomScreen() {
     setFilteredMessages(filtered);
   };
 
+  // הפעל LayoutAnimation עבור Android
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
 
+  // אנימציה חלקה וקלה כשהודעות חדשות נוספות
+  useEffect(() => {
+    if (messages.length > 0) {
+      LayoutAnimation.configureNext({
+        duration: 200,
+        create: {
+          type: LayoutAnimation.Types.easeOut,
+          property: LayoutAnimation.Properties.opacity,
+          springDamping: 0.9,
+        },
+        update: {
+          type: LayoutAnimation.Types.spring,
+          springDamping: 0.9,
+        },
+      });
+    }
+  }, [messages.length]);
 
   // סמן הודעות כנקראו רק אחרי שהמשתמש רואה את ה-divider
   useEffect(() => {
@@ -442,6 +466,9 @@ export default function ChatRoomScreen() {
       
       // איפוס ה-reply
       setReplyingTo(null);
+      
+      // גלילה אוטומטית לתחתית אחרי שליחת הודעה
+      scrollToBottom();
       
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -854,6 +881,8 @@ export default function ChatRoomScreen() {
         if (replyingTo) {
           setReplyingTo(null);
         }
+        // גלילה אוטומטית לתחתית אחרי שליחת הודעת מדיה
+        scrollToBottom();
       } else {
         Alert.alert('שגיאה', 'שגיאה בשליחת הודעת המדיה');
       }
@@ -948,6 +977,9 @@ export default function ChatRoomScreen() {
       // עדכן את רשימת ההודעות אחרי שליחת כל המדיה
       console.log('🔄 ChatRoomScreen: Refreshing messages after media send');
       await loadMessages(currentChatId);
+      
+      // גלילה אוטומטית לתחתית אחרי שליחת הודעות מדיה
+      scrollToBottom();
 
     } catch (error) {
       console.error('Error handling media preview send:', error);
@@ -1272,11 +1304,11 @@ export default function ChatRoomScreen() {
           }}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          initialNumToRender={12}
-          maxToRenderPerBatch={12}
-          windowSize={7}
-          removeClippedSubviews
-          updateCellsBatchingPeriod={50}
+          initialNumToRender={15}
+          maxToRenderPerBatch={8}
+          windowSize={10}
+          removeClippedSubviews={false}
+          updateCellsBatchingPeriod={100}
           maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           renderItem={({ item, index }) => {
             // Check if item is a day divider
@@ -1295,36 +1327,39 @@ export default function ChatRoomScreen() {
             let isGroupStart = false;
             let isGroupEnd = false;
             
+            // פונקציה להשוואת שעה ודקה
+            const isSameMinute = (date1: Date, date2: Date) => {
+              return date1.getHours() === date2.getHours() && 
+                     date1.getMinutes() === date2.getMinutes();
+            };
+            
             // מצא את האינדקס של ההודעה הנוכחית במערך messages הרגיל
             const messageIndex = messages.findIndex(m => m.id === currentMessage.id);
             
             if (messageIndex !== -1) {
-              // בדוק אם יש הודעה קודמת מאותו משתמש
-              if (messageIndex < messages.length - 1) {
-                const prevMessage = messages[messageIndex + 1]; // הודעה קודמת בזמן
-                const timeDiff = Math.abs(
-                  new Date(currentMessage.created_at).getTime() - 
-                  new Date(prevMessage.created_at).getTime()
-                ) / 1000 / 60; // בדקות
-                
-                if (prevMessage.sender_id === currentMessage.sender_id && timeDiff < 2) {
-                  isGrouped = true;
-                  isGroupStart = true; // יש הודעה לפניה מאותו משתמש
-                }
-              }
+              const currentDate = new Date(currentMessage.created_at);
               
-              // בדוק אם יש הודעה הבאה מאותו משתמש
-              if (messageIndex > 0) {
-                const nextMessage = messages[messageIndex - 1]; // הודעה הבאה בזמן
-                const timeDiff = Math.abs(
-                  new Date(currentMessage.created_at).getTime() - 
-                  new Date(nextMessage.created_at).getTime()
-                ) / 1000 / 60; // בדקות
-                
-                if (nextMessage.sender_id === currentMessage.sender_id && timeDiff < 2) {
-                  isGrouped = true;
-                  isGroupEnd = true; // יש הודעה אחריה מאותו משתמש
-                }
+              // בדוק אם יש הודעה קודמת (לפני בזמן) מאותו משתמש באותה דקה
+              const hasPrevFromSameSender = messageIndex < messages.length - 1 && (() => {
+                const prevMessage = messages[messageIndex + 1];
+                const prevDate = new Date(prevMessage.created_at);
+                return prevMessage.sender_id === currentMessage.sender_id && 
+                       isSameMinute(currentDate, prevDate);
+              })();
+              
+              // בדוק אם יש הודעה הבאה (אחרי בזמן) מאותו משתמש באותה דקה
+              const hasNextFromSameSender = messageIndex > 0 && (() => {
+                const nextMessage = messages[messageIndex - 1];
+                const nextDate = new Date(nextMessage.created_at);
+                return nextMessage.sender_id === currentMessage.sender_id && 
+                       isSameMinute(currentDate, nextDate);
+              })();
+              
+              // קביעת מצב הקיבוץ
+              if (hasPrevFromSameSender || hasNextFromSameSender) {
+                isGrouped = true;
+                isGroupStart = !hasPrevFromSameSender && hasNextFromSameSender; // ראשון בקבוצה
+                isGroupEnd = hasPrevFromSameSender && !hasNextFromSameSender; // אחרון בקבוצה
               }
             }
             
@@ -1344,6 +1379,7 @@ export default function ChatRoomScreen() {
                 isGrouped={isGrouped}
                 isGroupStart={isGroupStart}
                 isGroupEnd={isGroupEnd}
+                hasPrevFromSameSender={hasPrevFromSameSender}
               />
             );
           }}
@@ -1434,7 +1470,7 @@ export default function ChatRoomScreen() {
                 bottom: INPUT_BAR_HEIGHT + 1,
                 zIndex: 1001,
                 marginHorizontal: 0,
-                backgroundColor: 'rgba(29, 24, 24, 0.91)',
+                backgroundColor: 'rgba(19, 19, 19, 0.8)',
                 borderRadius: 0,
                 paddingVertical: 10,
                 paddingHorizontal: 16,

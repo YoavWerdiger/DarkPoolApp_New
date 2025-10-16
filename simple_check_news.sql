@@ -54,3 +54,4 @@ FROM pg_indexes
 WHERE tablename = 'app_news';
 
 
+

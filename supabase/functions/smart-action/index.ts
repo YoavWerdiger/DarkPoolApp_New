@@ -61,72 +61,87 @@ serve(async (req) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>תשלום הושלם בהצלחה</title>
         <style>
+            * {
+                box-sizing: border-box;
+            }
             body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #000000 0%, #0d1b0d 50%, #1a2d1a 100%);
+                background: #121212;
                 margin: 0;
                 padding: 20px;
                 min-height: 100vh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: white;
+                color: #FFFFFF;
             }
             .container {
-                background: rgba(26, 26, 26, 0.9);
-                border-radius: 20px;
+                background: #1A1A1A;
+                border-radius: 16px;
                 padding: 40px;
                 text-align: center;
-                border: 2px solid #00E654;
-                box-shadow: 0 0 30px rgba(0, 230, 84, 0.3);
+                border: 1px solid #2a2a2a;
                 max-width: 400px;
                 width: 100%;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
             }
             .success-icon {
                 width: 80px;
                 height: 80px;
-                background: #00E654;
+                background: #05d157;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin: 0 auto 20px;
+                margin: 0 auto 24px;
                 font-size: 40px;
+                color: #FFFFFF;
             }
             h1 {
-                color: #00E654;
+                color: #FFFFFF;
                 font-size: 24px;
-                margin-bottom: 16px;
+                margin-bottom: 12px;
                 font-weight: 700;
             }
             p {
-                color: #B0B0B0;
+                color: rgba(255, 255, 255, 0.6);
                 font-size: 16px;
-                line-height: 1.5;
+                line-height: 1.6;
                 margin-bottom: 30px;
             }
             .button {
-                background: linear-gradient(135deg, #00E654, #00B84A);
-                color: #000000;
+                background: #05d157;
+                color: #FFFFFF;
                 padding: 16px 32px;
                 border-radius: 12px;
                 text-decoration: none;
-                font-weight: 700;
+                font-weight: 600;
                 font-size: 16px;
                 display: inline-block;
-                transition: transform 0.2s;
+                transition: all 0.2s ease;
+                border: none;
+                cursor: pointer;
             }
             .button:hover {
+                background: #04b449;
                 transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(5, 209, 87, 0.3);
             }
             .transaction-id {
-                background: rgba(0, 230, 84, 0.1);
+                background: rgba(5, 209, 87, 0.1);
                 padding: 12px;
                 border-radius: 8px;
                 margin-top: 20px;
-                font-family: monospace;
+                font-family: 'Courier New', monospace;
                 font-size: 12px;
-                color: #00E654;
+                color: #05d157;
+                border: 1px solid rgba(5, 209, 87, 0.2);
+            }
+            .logo {
+                font-size: 14px;
+                color: rgba(255, 255, 255, 0.4);
+                margin-top: 24px;
+                font-weight: 500;
             }
         </style>
     </head>
@@ -137,6 +152,7 @@ serve(async (req) => {
             <p>המנוי שלך הופעל בהצלחה. תוכל לחזור לאפליקציה ולהתחיל להשתמש בכל התכונות.</p>
             <a href="darkpoolapp://payment/success" class="button">חזור לאפליקציה</a>
             ${transactionId ? `<div class="transaction-id">מספר עסקה: ${transactionId}</div>` : ''}
+            <div class="logo">DarkPool</div>
         </div>
         
         <script>
@@ -168,26 +184,29 @@ serve(async (req) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>שגיאה בתשלום</title>
         <style>
+            * {
+                box-sizing: border-box;
+            }
             body {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #000000 0%, #1a0a0a 50%, #2d0a0a 100%);
+                background: #121212;
                 margin: 0;
                 padding: 20px;
                 min-height: 100vh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                color: white;
+                color: #FFFFFF;
             }
             .container {
-                background: rgba(26, 26, 26, 0.9);
-                border-radius: 20px;
+                background: #1A1A1A;
+                border-radius: 16px;
                 padding: 40px;
                 text-align: center;
-                border: 2px solid #DC2626;
-                box-shadow: 0 0 30px rgba(220, 38, 38, 0.3);
+                border: 1px solid #2a2a2a;
                 max-width: 400px;
                 width: 100%;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
             }
             .error-icon {
                 width: 80px;
@@ -197,31 +216,45 @@ serve(async (req) => {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin: 0 auto 20px;
+                margin: 0 auto 24px;
                 font-size: 40px;
+                color: #FFFFFF;
             }
             h1 {
-                color: #DC2626;
+                color: #FFFFFF;
                 font-size: 24px;
-                margin-bottom: 16px;
+                margin-bottom: 12px;
                 font-weight: 700;
             }
             p {
-                color: #B0B0B0;
+                color: rgba(255, 255, 255, 0.6);
                 font-size: 16px;
-                line-height: 1.5;
+                line-height: 1.6;
                 margin-bottom: 30px;
             }
             .button {
-                background: linear-gradient(135deg, #DC2626, #B91C1C);
+                background: #DC2626;
                 color: #FFFFFF;
                 padding: 16px 32px;
                 border-radius: 12px;
                 text-decoration: none;
-                font-weight: 700;
+                font-weight: 600;
                 font-size: 16px;
                 display: inline-block;
-                transition: transform 0.2s;
+                transition: all 0.2s ease;
+                border: none;
+                cursor: pointer;
+            }
+            .button:hover {
+                background: #B91C1C;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+            }
+            .logo {
+                font-size: 14px;
+                color: rgba(255, 255, 255, 0.4);
+                margin-top: 24px;
+                font-weight: 500;
             }
         </style>
     </head>
@@ -231,6 +264,7 @@ serve(async (req) => {
             <h1>שגיאה בתשלום</h1>
             <p>אירעה שגיאה בעיבוד התשלום. אנא נסה שוב או פנה לתמיכה.</p>
             <a href="darkpoolapp://payment/error" class="button">חזור לאפליקציה</a>
+            <div class="logo">DarkPool</div>
         </div>
     </body>
     </html>

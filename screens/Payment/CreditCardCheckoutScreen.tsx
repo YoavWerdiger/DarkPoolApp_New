@@ -14,15 +14,11 @@ import {
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
-  CreditCard, 
   Shield, 
-  Check, 
   ArrowLeft, 
   Crown,
   Star,
   Users,
-  Lock,
-  Calendar,
   User
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -50,12 +46,8 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   const [showIframe, setShowIframe] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState('');
 
-  // Credit Card Form State
-  const [cardNumber, setCardNumber] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
+  // User Details Form State (כבר לא צריך פרטי כרטיס - LowProfile iframe)
   const [cardholderName, setCardholderName] = useState('');
-  const [idNumber, setIdNumber] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
@@ -76,64 +68,9 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     }
   }, [planId, user, fromRegistration, registrationData]);
 
-  const formatCardNumber = (text: string) => {
-    // Remove all non-digits
-    const cleaned = text.replace(/\D/g, '');
-    // Add spaces every 4 digits
-    const formatted = cleaned.replace(/(\d{4})(?=\d)/g, '$1 ');
-    return formatted;
-  };
-
-  const formatExpiryDate = (text: string) => {
-    // Remove all non-digits
-    const cleaned = text.replace(/\D/g, '');
-    // Add slash after 2 digits
-    if (cleaned.length >= 2) {
-      return cleaned.substring(0, 2) + '/' + cleaned.substring(2, 4);
-    }
-    return cleaned;
-  };
-
   const validateForm = () => {
-    if (!cardNumber || cardNumber.replace(/\s/g, '').length < 16) {
-      Alert.alert('שגיאה', 'אנא הכנס מספר כרטיס אשראי תקין');
-      return false;
-    }
-    if (!expiryDate || expiryDate.length < 5) {
-      Alert.alert('שגיאה', 'אנא הכנס תאריך תפוגה תקין');
-      return false;
-    }
-    
-    // בדיקת תקינות התאריך
-    const expiryWithoutSlash = expiryDate.replace('/', '');
-    if (expiryWithoutSlash.length !== 4) {
-      Alert.alert('שגיאה', 'תאריך התפוגה חייב להיות בפורמט MM/YY');
-      return false;
-    }
-    
-    const month = parseInt(expiryWithoutSlash.substring(0, 2));
-    const year = parseInt(expiryWithoutSlash.substring(2, 4));
-    
-    if (month < 1 || month > 12) {
-      Alert.alert('שגיאה', 'חודש לא תקין');
-      return false;
-    }
-    
-    const currentYear = new Date().getFullYear() % 100;
-    if (year < currentYear) {
-      Alert.alert('שגיאה', 'כרטיס האשראי פג תוקף');
-      return false;
-    }
-    if (!cvv || cvv.length < 3) {
-      Alert.alert('שגיאה', 'אנא הכנס קוד אבטחה תקין');
-      return false;
-    }
     if (!cardholderName.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס שם בעל הכרטיס');
-      return false;
-    }
-    if (!idNumber || idNumber.length < 9) {
-      Alert.alert('שגיאה', 'אנא הכנס תעודת זהות תקינה');
+      Alert.alert('שגיאה', 'אנא הכנס שם מלא');
       return false;
     }
     if (!email.trim()) {
@@ -209,14 +146,11 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     setLoading(true);
     
     try {
-      // כל התוכניות הן בתשלום - אין תוכנית חינמית
-
-      // הכנת נתוני התשלום
       const userId = fromRegistration ? null : (user?.id || null);
 
-      console.log('🔄 יצירת בקשת תשלום עם LowProfile API');
+      console.log('🔄 יצירת בקשת תשלום עם LowProfile iframe');
 
-      // יצירת בקשת תשלום ל-CardCom LowProfile
+      // יצירת בקשת תשלום ל-CardCom LowProfile - יעביר למילוי פרטי כרטיס ב-iframe
       const paymentResponse = await paymentService.createPaymentRequest({
         amount: plan.price,
         currency: 'ILS',
@@ -225,11 +159,12 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         planId: selectedPlan,
         userEmail: email,
         userName: cardholderName,
-        // LowProfile API לא צריך פרטי כרטיס כאן
+        userPhone: phone
       });
 
       if (paymentResponse.success && paymentResponse.paymentUrl) {
-        // הצגת iframe תשלום בתוך האפליקציה
+        console.log('✅ URL של iframe התשלום התקבל, פותח iframe...');
+        // הצגת iframe תשלום של CardCom בתוך האפליקציה
         setPaymentUrl(paymentResponse.paymentUrl);
         setShowIframe(true);
       } else {
@@ -252,11 +187,15 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       case 'free':
         return <Users size={24} color="#B0B0B0" />;
       case 'premium':
+      case 'monthly':
         return <Crown size={24} color="#00E654" />;
       case 'pro':
+      case 'yearly':
         return <Star size={24} color="#FFD700" />;
+      case 'quarterly':
+        return <Shield size={24} color="#FFD700" />;
       default:
-        return <CreditCard size={24} color="#00E654" />;
+        return <Crown size={24} color="#00E654" />;
     }
   };
 
@@ -268,8 +207,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         backgroundColor: '#1A1A1A',
         borderRadius: 20,
         padding: 20,
-        borderWidth: 2,
-        borderColor: selectedPlan === 'premium' ? '#00E654' : '#333333',
         marginBottom: 20,
         shadowColor: selectedPlan === 'premium' ? '#00E654' : '#000000',
         shadowOffset: { width: 0, height: 4 },
@@ -348,7 +285,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         {label}
       </Text>
       <View style={{
-        backgroundColor: '#1A1A1A',
+        backgroundColor: '#121212',
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#333333',
@@ -504,7 +441,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             writingDirection: 'rtl',
             flex: 1
           }}>
-            פרטי תשלום
+            פרטי התשלום
           </Text>
         </View>
       </LinearGradient>
@@ -518,89 +455,12 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           {/* Plan Card */}
           {renderPlanCard()}
 
-          {/* Credit Card Section */}
-          <View style={{
-            backgroundColor: '#1A1A1A',
-            borderRadius: 20,
-            padding: 20,
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: '#333333'
-          }}>
-            <View style={{ 
-              flexDirection: 'row-reverse', 
-              alignItems: 'center',
-              marginBottom: 20
-            }}>
-              <CreditCard size={20} color="#00E654" style={{ marginLeft: 8 }} />
-              <Text style={{ 
-                color: '#FFFFFF', 
-                fontSize: 18, 
-                fontWeight: '600',
-                writingDirection: 'rtl'
-              }}>
-                פרטי כרטיס אשראי
-              </Text>
-            </View>
-
-            {/* Card Number */}
-            {renderInputField(
-              'מספר כרטיס אשראי',
-              cardNumber,
-              (text) => setCardNumber(formatCardNumber(text)),
-              '1234 5678 9012 3456',
-              'numeric',
-              19,
-              <CreditCard size={16} color="#666666" />
-            )}
-
-            {/* Expiry and CVV */}
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                {renderInputField(
-                  'תאריך תפוגה',
-                  expiryDate,
-                  (text) => setExpiryDate(formatExpiryDate(text)),
-                  'MM/YY',
-                  'numeric',
-                  5,
-                  <Calendar size={16} color="#666666" />
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                {renderInputField(
-                  'קוד אבטחה',
-                  cvv,
-                  setCvv,
-                  '123',
-                  'numeric',
-                  3,
-                  <Lock size={16} color="#666666" />,
-                  true
-                )}
-              </View>
-            </View>
-
-            {/* Cardholder Name */}
-            {renderInputField(
-              'שם בעל הכרטיס',
-              cardholderName,
-              setCardholderName,
-              'שם מלא כפי שמופיע על הכרטיס',
-              'default',
-              undefined,
-              <User size={16} color="#666666" />
-            )}
-          </View>
-
           {/* Personal Details Section */}
           <View style={{
             backgroundColor: '#1A1A1A',
             borderRadius: 20,
             padding: 20,
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: '#333333'
+            marginBottom: 20
           }}>
             <View style={{ 
               flexDirection: 'row-reverse', 
@@ -618,14 +478,15 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               </Text>
             </View>
 
-            {/* ID Number */}
+            {/* Cardholder Name */}
             {renderInputField(
-              'תעודת זהות',
-              idNumber,
-              setIdNumber,
-              '123456789',
-              'numeric',
-              9
+              'שם מלא',
+              cardholderName,
+              setCardholderName,
+              'שם מלא',
+              'default',
+              undefined,
+              <User size={16} color="#666666" />
             )}
 
             {/* Email */}
@@ -652,9 +513,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             backgroundColor: 'rgba(0, 230, 84, 0.1)',
             borderRadius: 16,
             padding: 16,
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: 'rgba(0, 230, 84, 0.3)'
+            marginBottom: 20
           }}>
             <View style={{ 
               flexDirection: 'row-reverse', 
@@ -668,7 +527,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
                 fontWeight: '600',
                 writingDirection: 'rtl'
               }}>
-                אבטחה מלאה
+                תשלום מאובטח עם CardCom
               </Text>
             </View>
             <Text style={{ 
@@ -677,7 +536,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               lineHeight: 18,
               writingDirection: 'rtl'
             }}>
-              כל הפרטים מוצפנים ומאובטחים עם SSL 256-bit. אנחנו לא שומרים את פרטי הכרטיס שלך.
+              תועבר לדף תשלום מאובטח של CardCom למילוי פרטי כרטיס האשראי. כל הפרטים מוצפנים עם SSL 256-bit והמערכת עומדת בתקן PCI DSS.
             </Text>
           </View>
 
@@ -686,9 +545,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             backgroundColor: '#1A1A1A',
             borderRadius: 16,
             padding: 20,
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: '#333333'
+            marginBottom: 20
           }}>
             <Text style={{ 
               color: '#FFFFFF', 
@@ -797,14 +654,14 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
                 <ActivityIndicator color="#000000" size="small" />
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <CreditCard size={20} color="#000000" style={{ marginLeft: 8 }} />
+                  <Shield size={20} color="#000000" style={{ marginLeft: 8 }} />
                   <Text style={{ 
                     color: '#000000', 
                     fontSize: 18, 
                     fontWeight: '700',
                     writingDirection: 'rtl'
                   }}>
-                    {plan?.price === 0 ? 'המשך בחינם' : 'שלם עכשיו'}
+                    המשך לתשלום מאובטח
                   </Text>
                 </View>
               )}
@@ -820,7 +677,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             lineHeight: 18,
             writingDirection: 'rtl'
           }}>
-            בלחיצה על "שלם עכשיו" אתה מסכים לתנאי השימוש ומדיניות הפרטיות שלנו
+            בלחיצה על "המשך לתשלום מאובטח" אתה מסכים לתנאי השימוש ומדיניות הפרטיות שלנו
           </Text>
         </View>
       </ScrollView>

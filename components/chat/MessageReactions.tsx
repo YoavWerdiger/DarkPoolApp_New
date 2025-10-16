@@ -17,7 +17,7 @@ export default function MessageReactions({ reactions, onReactionDetails }: Messa
   return (
     <Pressable 
       onPress={onReactionDetails}
-      className="absolute -bottom-1 -left-1 flex-row items-center"
+      className="absolute -bottom-3 left-2 flex-row items-center"
     >
       {/* בועות הריאקציה */}
       <View className="flex-row">

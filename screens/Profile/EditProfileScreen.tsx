@@ -9,22 +9,26 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Linking,
-  Image
+  Image,
+  ActivityIndicator,
+  SafeAreaView
 } from 'react-native';
 import { 
   Camera, 
   User, 
-  X,
-  Check
+  ArrowLeft,
+  Check,
+  X
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { mediaService } from '../../services/mediaService';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, updateProfile } = useAuth();
+  const { theme } = useTheme();
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -49,7 +53,7 @@ export default function EditProfileScreen({ navigation }: any) {
         .single();
       
       if (userData) {
-        setDisplayName(userData.full_name || userData.display_name || user.email?.split('@')[0] || '');
+        setDisplayName(userData.full_name || '');
         setPhone(userData.phone || '');
         setProfileImage(userData.profile_picture || null);
       }
@@ -66,14 +70,7 @@ export default function EditProfileScreen({ navigation }: any) {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert(
-          'הרשאה נדרשת', 
-          'אנא אשר גישה לגלריית התמונות',
-          [
-            { text: 'ביטול', style: 'cancel' },
-            { text: 'הגדרות', onPress: () => Linking.openSettings() }
-          ]
-        );
+        Alert.alert('שגיאה', 'נדרשת הרשאה לגישה לתמונות');
         return;
       }
 
@@ -81,15 +78,15 @@ export default function EditProfileScreen({ navigation }: any) {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7,
+        quality: 0.8,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (!result.canceled && result.assets[0]) {
         setProfileImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error picking image:', error);
-      Alert.alert('שגיאה', 'לא ניתן לבחור תמונה');
+      Alert.alert('שגיאה', 'שגיאה בבחירת תמונה');
     }
   };
 
@@ -110,7 +107,6 @@ export default function EditProfileScreen({ navigation }: any) {
 
       let profilePictureUrl = profileImage;
 
-      // העלאת תמונה אם צריך
       if (profileImage && (profileImage.startsWith('file:') || profileImage.startsWith('assets:'))) {
         const upload = await mediaService.uploadMedia(profileImage, 'image');
         if (upload.success) {
@@ -145,257 +141,277 @@ export default function EditProfileScreen({ navigation }: any) {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: '#666', fontSize: 16 }}>טוען...</Text>
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#00E654" />
+          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1, backgroundColor: '#121212' }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* Header */}
-      <View style={{
-        paddingTop: 50,
-        paddingBottom: 16,
-        paddingHorizontal: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#1E1E1E',
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <TouchableOpacity 
-          onPress={handleSave}
-          disabled={isSaving}
-        >
-          {isSaving ? (
-            <Text style={{ color: '#666', fontSize: 16 }}>שומר...</Text>
-          ) : (
-            <Check size={24} color="#00E654" strokeWidth={2} />
-          )}
-        </TouchableOpacity>
-        
-        <Text style={{ 
-          color: '#FFFFFF', 
-          fontSize: 18, 
-          fontWeight: '600',
-          writingDirection: 'rtl'
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          paddingVertical: 16,
+          backgroundColor: theme.cardBackground,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.border
         }}>
-          עריכת פרופיל
-        </Text>
-        
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <X size={24} color="#666" strokeWidth={2} />
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 36,
+              height: 36,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: 18,
+              backgroundColor: theme.isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
+            }}
+          >
+            <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
+          </TouchableOpacity>
 
-      <ScrollView 
+        <Text style={{ 
+            flex: 1,
+            textAlign: 'center',
+            fontSize: 20,
+            fontWeight: '700',
+            color: theme.textPrimary,
+            marginRight: 36
+          }}>
+            עריכת פרופיל
+        </Text>
+        </View>
+      </SafeAreaView>
+
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* Avatar Section */}
-        <View style={{
-          paddingVertical: 40,
-          alignItems: 'center'
-        }}>
-          <TouchableOpacity 
-            onPress={handleImagePicker}
-            style={{ position: 'relative' }}
-          >
+          {/* Main Card */}
+          <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
             <View style={{
-              width: 100,
-              height: 100,
-              borderRadius: 50,
-              backgroundColor: '#1E1E1E',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 2,
-              borderColor: '#2A2A2A',
-              overflow: 'hidden'
-            }}>
-              {profileImage ? (
-                <Image 
-                  source={{ uri: profileImage }} 
-                  style={{ width: '100%', height: '100%' }}
-                />
-              ) : (
-                <User size={40} color="#666" strokeWidth={1.5} />
-              )}
-            </View>
-
-            {/* Camera Badge */}
-            <View style={{
-              position: 'absolute',
-              bottom: 0,
-              right: 0,
-              width: 32,
-              height: 32,
+              backgroundColor: theme.cardBackground,
               borderRadius: 16,
-              backgroundColor: '#00E654',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 3,
-              borderColor: '#121212'
+              padding: 24,
+              gap: 24
             }}>
-              <Camera size={16} color="#000" strokeWidth={2} />
-            </View>
-          </TouchableOpacity>
-
-          <Text style={{ 
-            color: '#666', 
-            fontSize: 14,
-            marginTop: 12
-          }}>
-            לחץ לשינוי תמונה
-          </Text>
-        </View>
-
-        {/* Form Fields */}
-        <View style={{ paddingHorizontal: 20 }}>
-          <View style={{
-            backgroundColor: '#181818',
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.15)',
-            overflow: 'hidden'
-          }}>
-            {/* Display Name */}
-            <View style={{ 
-              paddingVertical: 16,
-              paddingHorizontal: 20,
-              borderBottomWidth: 0.5,
-              borderBottomColor: 'rgba(255,255,255,0.08)'
-            }}>
-              <Text style={{
-                color: '#FFFFFF',
-                fontSize: 16,
-                fontWeight: '500',
-                marginBottom: 8,
-                textAlign: 'right',
-                writingDirection: 'rtl'
-              }}>
-                שם תצוגה
-              </Text>
-              <TextInput
-                style={{
-                  backgroundColor: '#252525',
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  color: '#FFFFFF',
-                  fontSize: 16,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.15)',
-                  textAlign: 'right',
-                  writingDirection: 'rtl'
-                }}
-                value={displayName}
-                onChangeText={setDisplayName}
-                placeholder="הזן שם תצוגה"
-                placeholderTextColor="#666"
-                maxLength={25}
-              />
-              <Text style={{ 
-                color: '#666', 
-                fontSize: 12,
-                marginTop: 4,
-                textAlign: 'left'
-              }}>
-                {displayName.length}/25
-              </Text>
-            </View>
-
-            {/* Email (Read Only) */}
-            <View style={{ 
-              paddingVertical: 16,
-              paddingHorizontal: 20,
-              borderBottomWidth: 0.5,
-              borderBottomColor: 'rgba(255,255,255,0.08)'
-            }}>
-              <Text style={{
-                color: '#FFFFFF',
-                fontSize: 16,
-                fontWeight: '500',
-                marginBottom: 8,
-                textAlign: 'right',
-                writingDirection: 'rtl'
-              }}>
-                כתובת מייל
-              </Text>
+              {/* Avatar Section */}
               <View style={{
-                backgroundColor: '#252525',
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: '#2A2A2A',
-                opacity: 0.5
+                alignItems: 'center',
+                paddingVertical: 8
               }}>
+                <TouchableOpacity 
+                  onPress={handleImagePicker}
+                  style={{ position: 'relative' }}
+                >
+                  <View style={{
+                    width: 120,
+                    height: 120,
+                    borderRadius: 60,
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    borderWidth: 3,
+                    borderColor: '#00E654'
+                  }}>
+                    {profileImage ? (
+                      <Image 
+                        source={{ uri: profileImage }} 
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    ) : (
+                      <User size={60} color={theme.textTertiary} strokeWidth={1.5} />
+                    )}
+                  </View>
+                  
+                  <View style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: '#00E654',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 4,
+                    borderColor: '#1A1A1A'
+                  }}>
+                    <Camera size={20} color="#ffffff" strokeWidth={2.5} />
+                  </View>
+                </TouchableOpacity>
+
+                <Text style={{
+                  fontSize: 14,
+                  color: theme.textTertiary,
+                  marginTop: 16,
+                  textAlign: 'center'
+                }}>
+                  לחץ לשינוי תמונת פרופיל
+                </Text>
+              </View>
+
+              {/* Divider */}
+              <View style={{
+                height: 1,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                marginVertical: 8
+              }} />
+
+              {/* Display Name */}
+              <View>
+            <Text style={{ 
+                  fontSize: 14,
+              fontWeight: '600', 
+                  color: theme.textPrimary,
+                  marginBottom: 8,
+                  textAlign: 'right'
+            }}>
+                  שם תצוגה
+            </Text>
                 <TextInput
-                  style={{
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                  placeholder="הזן שם תצוגה"
+                  placeholderTextColor={theme.textTertiary}
+              style={{
+                    backgroundColor: theme.background,
+                    borderRadius: 12,
                     paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    color: '#666',
+                    paddingVertical: 16,
                     fontSize: 16,
+                    color: theme.textPrimary,
                     textAlign: 'right',
-                    writingDirection: 'rtl'
+                borderWidth: 1,
+                    borderColor: theme.border
                   }}
-                  value={user?.email || ''}
-                  editable={false}
                 />
               </View>
-              <Text style={{ 
-                color: '#666', 
-                fontSize: 12,
-                marginTop: 4,
-                textAlign: 'right',
-                writingDirection: 'rtl'
-              }}>
-                לא ניתן לשנות
-              </Text>
-            </View>
 
-            {/* Phone */}
-            <View style={{ 
-              paddingVertical: 16,
-              paddingHorizontal: 20
-            }}>
-              <Text style={{
-                color: '#FFFFFF',
-                fontSize: 16,
-                fontWeight: '500',
-                marginBottom: 8,
-                textAlign: 'right',
-                writingDirection: 'rtl'
-              }}>
-                מספר טלפון
-              </Text>
+              {/* Phone */}
+              <View>
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: '600',
+                  color: theme.textPrimary,
+                  marginBottom: 8,
+                  textAlign: 'right'
+                }}>
+                  טלפון
+                </Text>
               <TextInput
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="הזן מספר טלפון"
+                  placeholderTextColor={theme.textTertiary}
+                  keyboardType="phone-pad"
                 style={{
-                  backgroundColor: '#252525',
+                    backgroundColor: theme.background,
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 16,
+                  fontSize: 16,
+                    color: theme.textPrimary,
+                    textAlign: 'right',
+                    borderWidth: 1,
+                    borderColor: theme.border
+                  }}
+                />
+              </View>
+
+              {/* Email (Read Only) */}
+              <View>
+                <Text style={{
+                  fontSize: 14,
+                  fontWeight: '600',
+                  color: theme.textPrimary,
+                  marginBottom: 8,
+                  textAlign: 'right'
+                }}>
+                  אימייל
+                </Text>
+                <View style={{
+                  backgroundColor: theme.background,
                   borderRadius: 12,
                   paddingHorizontal: 16,
-                  paddingVertical: 12,
-                  color: '#FFFFFF',
-                  fontSize: 16,
+                  paddingVertical: 16,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.15)',
-                  textAlign: 'right',
-                  writingDirection: 'rtl'
+                  borderColor: 'rgba(255,255,255,0.2)',
+                  opacity: 0.6
+                }}>
+                  <Text style={{
+                    fontSize: 16,
+                    color: theme.textTertiary,
+                    textAlign: 'right'
+                  }}>
+                    {user?.email || ''}
+                  </Text>
+                </View>
+                <Text style={{
+                  fontSize: 12,
+                  color: theme.textTertiary,
+                  marginTop: 8,
+                  textAlign: 'right'
+                }}>
+                  לא ניתן לשנות את כתובת האימייל
+                </Text>
+              </View>
+
+              {/* Divider */}
+              <View style={{
+                height: 1,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                marginVertical: 8
+              }} />
+
+              {/* Save Button */}
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={isSaving}
+              style={{
+                  backgroundColor: '#00E654',
+                  paddingVertical: 16,
+                  paddingHorizontal: 24,
+                  borderRadius: 12,
+                  alignItems: 'center',
+                  opacity: isSaving ? 0.6 : 1,
+                shadowColor: '#00E654',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                  elevation: 8
                 }}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="050-123-4567"
-                placeholderTextColor="#666"
-                keyboardType="phone-pad"
-                maxLength={15}
-              />
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                    <Text style={{ 
+                    fontSize: 16,
+                    fontWeight: '700',
+                    color: '#ffffff'
+                    }}>
+                      שמור שינויים
+                    </Text>
+                )}
+            </TouchableOpacity>
             </View>
-          </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
+

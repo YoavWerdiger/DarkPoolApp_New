@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
-  ScrollView
+  TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // Ionicons הוסר כאן כי הבורר ללא אייקונים
@@ -35,7 +34,7 @@ export default function NewsScreen() {
     },
     {
       id: 'earnings' as const,
-      title: 'דיווחי תוצאות',
+      title: 'דיווחים רבעוניים',
       icon: 'trending-up',
       component: EarningsReportsTab
     }
@@ -76,7 +75,7 @@ export default function NewsScreen() {
           {/* קו הפרדה תחתון */}
         </View>
 
-        {/* טאבים */}
+        {/* טאבים - ממורכז ומסודר */}
         <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
           <View style={{ 
             flexDirection: 'row',
@@ -84,9 +83,12 @@ export default function NewsScreen() {
             borderRadius: 18,
             padding: 4,
             borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.05)'
+            borderColor: 'rgba(255,255,255,0.05)',
+            alignSelf: 'center',
+            width: '100%',
+            maxWidth: 400
           }}>
-            {tabs.map((tab) => (
+            {tabs.map((tab, index) => (
               <TouchableOpacity
                 key={tab.id}
                 onPress={() => setActiveTab(tab.id)}
@@ -94,13 +96,13 @@ export default function NewsScreen() {
                 onPressOut={() => setPressedTab(null)}
                 style={{
                   flex: 1,
-                  height: 40,
-                  paddingHorizontal: 12,
+                  height: 44,
                   borderRadius: 14,
                   backgroundColor: pressedTab === tab.id && activeTab !== tab.id ? 'rgba(255,255,255,0.06)' : 'transparent',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  marginHorizontal: 2
                 }}
               >
                 {activeTab === tab.id ? (
@@ -119,11 +121,10 @@ export default function NewsScreen() {
                   />
                 ) : null}
                 <Text style={{ 
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: activeTab === tab.id ? '700' : '600',
                   color: activeTab === tab.id ? '#FFFFFF' : DesignTokens.colors.text.secondary,
                   textAlign: 'center',
-                  width: '100%',
                   writingDirection: 'rtl'
                 }}>
                   {tab.title}
@@ -132,7 +133,7 @@ export default function NewsScreen() {
             ))}
           </View>
         </View>
-          <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 10 }} />
+        <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 6 }} />
         {/* תוכן הטאב הפעיל */}
         <View className="flex-1">
           <ActiveComponent />

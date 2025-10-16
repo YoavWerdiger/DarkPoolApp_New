@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../services/supabase';
 import { 
@@ -37,21 +38,37 @@ interface NewsCardProps {
 }
 
 interface ShareModalProps {
-  visible: boolean;
   article: NewsArticle | null;
   onClose: () => void;
+  bottomSheetRef: React.RefObject<BottomSheetModal | null>;
 }
 
-const ShareModal: React.FC<ShareModalProps> = ({ visible, article, onClose }) => {
+const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, bottomSheetRef }) => {
   const [chatGroups, setChatGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // הגדרת snap points
+  const snapPoints = useMemo(() => ['70%', '90%'], []);
+  
+  // רינדור backdrop
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+      />
+    ),
+    []
+  );
 
-  // טעינת קבוצות הצ'אט
+  // טעינת קבוצות הצ'אט כשהבוטום שיט נפתח
   useEffect(() => {
-    if (visible) {
+    if (article) {
       loadChatGroups();
     }
-  }, [visible]);
+  }, [article]);
 
   const debugDatabase = async () => {
     try {
@@ -229,179 +246,249 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, article, onClose }) =>
   if (!article) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      index={0}
+      snapPoints={snapPoints}
+      enablePanDownToClose
+      onDismiss={onClose}
+      backdropComponent={renderBackdrop}
+      backgroundStyle={{ backgroundColor: '#1C1C1E' }}
+      handleIndicatorStyle={{ backgroundColor: 'rgba(255,255,255,0.3)', width: 40 }}
     >
-      <View 
-        className="flex-1 justify-end"
-        style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+      <BottomSheetScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
       >
-        <Pressable className="flex-1" onPress={onClose} />
-        
-        <View 
-          className="rounded-t-3xl p-6"
-          style={{ backgroundColor: DesignTokens.colors.background.secondary, maxHeight: '80%' }}
-        >
-          {/* כותרת */}
-          <View className="flex-row items-center justify-between mb-6">
-            <Text 
-              className="text-xl font-bold"
-              style={{ color: DesignTokens.colors.text.primary }}
-            >
-              שתף לקבוצה
-            </Text>
-            <TouchableOpacity onPress={onClose}>
-              <Ionicons 
-                name="close" 
-                size={24} 
-                color={DesignTokens.colors.text.secondary} 
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* תצוגה מקדימה של החדשה */}
-          <View 
-            className="p-4 rounded-2xl mb-6"
-            style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
+        {/* כותרת */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingTop: 8 }}>
+          <Text 
+            style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF' }}
           >
+            שתף לקבוצה
+          </Text>
+          <TouchableOpacity 
+            onPress={onClose}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: 'rgba(255,255,255,0.08)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <Ionicons 
+              name="close" 
+              size={20} 
+              color="#FFFFFF" 
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* תצוגה מקדימה של החדשה */}
+        <View 
+          style={{
+            padding: 16,
+            borderRadius: 16,
+            backgroundColor: 'rgba(255,255,255,0.06)',
+            marginBottom: 24,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.08)'
+          }}
+        >
+          <Text 
+            style={{ 
+              fontSize: 16, 
+              fontWeight: '600', 
+              color: '#FFFFFF', 
+              textAlign: 'right',
+              marginBottom: 8
+            }}
+            numberOfLines={2}
+          >
+            {article.label || article.title}
+          </Text>
+          <Text 
+            style={{ 
+              fontSize: 14, 
+              color: '#999999', 
+              textAlign: 'right',
+              marginBottom: 8,
+              lineHeight: 20
+            }}
+            numberOfLines={2}
+          >
+            {article.label ? article.title : article.summary}
+          </Text>
+          <Text 
+            style={{ 
+              fontSize: 12, 
+              color: '#666666', 
+              textAlign: 'right' 
+            }}
+          >
+            מאת: {article.source}
+          </Text>
+        </View>
+
+        {/* רשימת קבוצות */}
+        {loading ? (
+          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+            <ActivityIndicator size="large" color="#00E654" />
             <Text 
-              className="text-base font-semibold mb-2"
-              style={{ color: DesignTokens.colors.text.primary, textAlign: 'right' }}
-              numberOfLines={2}
+              style={{ fontSize: 14, color: '#999999', marginTop: 16 }}
             >
-              {article.title}
-            </Text>
-            <Text 
-              className="text-sm mb-2"
-              style={{ color: DesignTokens.colors.text.secondary, textAlign: 'right' }}
-              numberOfLines={2}
-            >
-              {article.summary}
-            </Text>
-            <Text 
-              className="text-xs"
-              style={{ color: DesignTokens.colors.text.tertiary, textAlign: 'right' }}
-            >
-              מאת: {article.source}
+              טוען קבוצות...
             </Text>
           </View>
-
-          {/* רשימת קבוצות */}
-          {loading ? (
-            <View className="items-center py-8">
-              <ActivityIndicator size="large" color="#00D84A" />
-              <Text 
-                className="text-sm mt-4"
-                style={{ color: DesignTokens.colors.text.secondary }}
+        ) : chatGroups.length > 0 ? (
+          <View>
+            <Text 
+              style={{ 
+                fontSize: 18, 
+                fontWeight: '600', 
+                color: '#FFFFFF', 
+                textAlign: 'right',
+                marginBottom: 16
+              }}
+            >
+              בחר קבוצה:
+            </Text>
+            {chatGroups.map((group) => (
+              <TouchableOpacity
+                key={group.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  padding: 16,
+                  borderRadius: 16,
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.08)'
+                }}
+                onPress={() => shareToGroup(group.id, group.name)}
               >
-                טוען קבוצות...
-              </Text>
-            </View>
-          ) : chatGroups.length > 0 ? (
-            <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
-              <Text 
-                className="text-lg font-semibold mb-4"
-                style={{ color: DesignTokens.colors.text.primary, textAlign: 'right' }}
-              >
-                בחר קבוצה:
-              </Text>
-              {chatGroups.map((group) => (
-                <TouchableOpacity
-                  key={group.id}
-                  className="flex-row items-center p-4 rounded-2xl mb-3"
-                  style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
-                  onPress={() => shareToGroup(group.id, group.name)}
-                >
-                  <View className="flex-1 ml-4">
-                    <Text 
-                      className="text-base font-semibold"
-                      style={{ color: DesignTokens.colors.text.primary, textAlign: 'right' }}
-                    >
-                      {group.name}
-                    </Text>
-                    <Text 
-                      className="text-sm mt-1"
-                      style={{ color: DesignTokens.colors.text.secondary, textAlign: 'right' }}
-                    >
-                      קבוצת צ'אט
-                    </Text>
-                  </View>
-                  <View 
-                    className="w-12 h-12 rounded-full items-center justify-center"
-                    style={{ backgroundColor: '#00D84A20' }}
-                  >
-                    {group.image_url ? (
-                      <Image 
-                        source={{ uri: group.image_url }}
-                        className="w-12 h-12 rounded-full"
-                      />
-                    ) : (
-                      <Ionicons 
-                        name="people" 
-                        size={24} 
-                        color="#00D84A" 
-                      />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          ) : (
-            <View className="items-center py-8">
-              <Ionicons 
-                name="chatbubbles-outline" 
-                size={64} 
-                color={DesignTokens.colors.text.tertiary} 
-              />
-              <Text 
-                className="text-lg font-semibold mt-4"
-                style={{ color: DesignTokens.colors.text.primary }}
-              >
-                אין קבוצות זמינות
-              </Text>
-              <Text 
-                className="text-sm mt-2 mb-4 text-center"
-                style={{ color: DesignTokens.colors.text.secondary }}
-              >
-                הצטרף לקבוצות כדי לשתף חדשות
-              </Text>
-              <View className="flex-row">
-                <TouchableOpacity
-                  className="px-6 py-3 rounded-full"
-                  style={{ backgroundColor: '#00D84A' }}
-                  onPress={loadChatGroups}
-                >
+                <View style={{ flex: 1, marginLeft: 16 }}>
                   <Text 
-                    className="text-sm font-semibold"
-                    style={{ color: '#FFFFFF' }}
+                    style={{ 
+                      fontSize: 16, 
+                      fontWeight: '600', 
+                      color: '#FFFFFF', 
+                      textAlign: 'right',
+                      marginBottom: 4
+                    }}
                   >
-                    נסה שוב
+                    {group.name}
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  className="px-6 py-3 rounded-full"
-                  style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', marginLeft: 12 }}
-                  onPress={debugDatabase}
-                >
                   <Text 
-                    className="text-sm font-semibold"
-                    style={{ color: DesignTokens.colors.text.secondary }}
+                    style={{ 
+                      fontSize: 13, 
+                      color: '#666666', 
+                      textAlign: 'right' 
+                    }}
                   >
-                    בדיקה
+                    קבוצת צ'אט
                   </Text>
-                </TouchableOpacity>
-              </View>
+                </View>
+                <View 
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {group.image_url ? (
+                    <Image 
+                      source={{ uri: group.image_url }}
+                      style={{ width: 48, height: 48, borderRadius: 24 }}
+                    />
+                  ) : (
+                    <Ionicons 
+                      name="people" 
+                      size={24} 
+                      color="#00E654" 
+                    />
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+            <Ionicons 
+              name="chatbubbles-outline" 
+              size={64} 
+              color="#666666" 
+            />
+            <Text 
+              style={{ 
+                fontSize: 18, 
+                fontWeight: '600', 
+                color: '#FFFFFF', 
+                marginTop: 16 
+              }}
+            >
+              אין קבוצות זמינות
+            </Text>
+            <Text 
+              style={{ 
+                fontSize: 14, 
+                color: '#999999', 
+                marginTop: 8, 
+                textAlign: 'center',
+                marginBottom: 16
+              }}
+            >
+              הצטרף לקבוצות כדי לשתף חדשות
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={{
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                  borderRadius: 24,
+                  backgroundColor: '#00E654'
+                }}
+                onPress={loadChatGroups}
+              >
+                <Text 
+                  style={{ 
+                    fontSize: 14, 
+                    fontWeight: '600', 
+                    color: '#FFFFFF' 
+                  }}
+                >
+                  נסה שוב
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                  borderRadius: 24,
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                }}
+                onPress={debugDatabase}
+              >
+                <Text 
+                  style={{ 
+                    fontSize: 14, 
+                    fontWeight: '600', 
+                    color: '#999999' 
+                  }}
+                >
+                  בדיקה
+                </Text>
+              </TouchableOpacity>
             </View>
-          )}
-
-          {/* מרווח תחתון */}
-          <View className="h-4" />
-        </View>
-      </View>
-    </Modal>
+          </View>
+        )}
+      </BottomSheetScrollView>
+    </BottomSheetModal>
   );
 };
 
@@ -413,6 +500,10 @@ interface NewsDetailModalProps {
   onClose: () => void;
   onLike: (article: NewsArticle) => void;
   onShare: (article: NewsArticle) => void;
+  currentIndex?: number;
+  totalArticles?: number;
+  onNext?: () => void;
+  onPrevious?: () => void;
 }
 
 const NewsDetailModal: React.FC<NewsDetailModalProps> = ({ 
@@ -421,7 +512,11 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   isLiked, 
   onClose, 
   onLike, 
-  onShare 
+  onShare,
+  currentIndex,
+  totalArticles,
+  onNext,
+  onPrevious
 }) => {
   if (!article) return null;
 
@@ -465,10 +560,10 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView style={{ flex: 1 }}>
-          {/* תמונה גדולה */}
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
+          {/* תמונה */}
           {article.image_url && (
-            <View className="w-full h-64">
+            <View className="w-full" style={{ height: 280 }}>
               <Image
                 source={{ uri: article.image_url }}
                 className="w-full h-full"
@@ -479,8 +574,8 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           )}
 
           {/* תוכן */}
-          <View className="p-4">
-            {/* כותרת */}
+          <View className="p-4" style={{ paddingTop: 20 }}>
+            {/* כותרת - label אם קיים */}
             <Text 
               className="text-xl font-bold mb-3 leading-7"
               style={{ 
@@ -489,45 +584,34 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                 writingDirection: 'rtl'
               }}
             >
-              {article.title}
+              {article.label || article.title}
             </Text>
 
-            {/* מידע על הכתבה */}
-            <View className="flex-row items-center justify-between mb-4">
-              <View className="flex-row items-center">
-                <Text 
-                  className="text-sm font-medium"
-                  style={{ color: DesignTokens.colors.text.secondary }}
-                >
-                  {article.source}
-                </Text>
-                <Text 
-                  className="text-sm ml-3"
-                  style={{ color: DesignTokens.colors.text.tertiary }}
-                >
-                  {formatNewsDate(article.published_at)}
-                </Text>
-              </View>
-
-              {/* קטגוריה */}
-              {article.category && article.category !== 'כללי' && (
-                <View 
-                  className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: categoryColor + '20' }}
-                >
-                  <Text 
-                    className="text-sm font-medium"
-                    style={{ color: categoryColor }}
-                  >
-                    {article.category}
-                  </Text>
-                </View>
-              )}
+            {/* מפרסם ותאריך */}
+            <View className="flex-row items-center justify-end mb-4">
+              <Text 
+                className="text-sm"
+                style={{ color: DesignTokens.colors.text.tertiary }}
+              >
+                {formatNewsDate(article.published_at)}
+              </Text>
+              <Text 
+                className="text-sm mx-2"
+                style={{ color: DesignTokens.colors.text.tertiary }}
+              >
+                •
+              </Text>
+              <Text 
+                className="text-sm font-medium"
+                style={{ color: DesignTokens.colors.text.secondary }}
+              >
+                {article.source}
+              </Text>
             </View>
 
-            {/* תוכן מלא */}
+            {/* תוכן הכתבה */}
             <Text 
-              className="text-base leading-6 mb-6"
+              className="text-base leading-6 mb-5"
               style={{ 
                 color: DesignTokens.colors.text.primary,
                 textAlign: 'right',
@@ -537,63 +621,193 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               {article.content || article.summary}
             </Text>
 
-            {/* כפתורי פעולה */}
-            <View className="flex-row items-center justify-center space-x-4">
-              {/* לייק */}
+            {/* קטגוריה אם קיימת */}
+            {article.category && article.category !== 'כללי' && (
+              <View 
+                className="px-3 py-1.5 rounded-full self-end"
+                style={{ backgroundColor: categoryColor + '20' }}
+              >
+                <Text 
+                  className="text-sm font-semibold"
+                  style={{ color: categoryColor }}
+                >
+                  {article.category}
+                </Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
+
+        {/* כפתורי פעולה מעל הקו */}
+        <View 
+          style={{ 
+            position: 'absolute',
+            bottom: 90,
+            left: 0,
+            right: 0,
+            marginBottom: 50,
+            paddingHorizontal: 16
+          }}
+        >
+          <View className="flex-row items-center justify-center" style={{ gap: 12 }}>
+            {/* לייק */}
+            <TouchableOpacity 
+              className="flex-row items-center px-6 py-3 rounded-full"
+              style={{ 
+                backgroundColor: isLiked 
+                  ? 'rgba(255, 59, 92, 0.15)' 
+                  : 'rgba(255, 255, 255, 0.05)',
+                borderWidth: 1,
+                borderColor: isLiked 
+                  ? 'rgba(255, 59, 92, 0.3)' 
+                  : 'rgba(255, 255, 255, 0.08)'
+              }}
+              onPress={() => onLike(article)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={isLiked ? "heart" : "heart-outline"} 
+                size={20} 
+                color={isLiked ? "#FF3B5C" : DesignTokens.colors.text.tertiary}
+                style={{ marginRight: 8 }}
+              />
+              <Text 
+                className="text-base font-medium"
+                style={{ color: isLiked ? "#FF3B5C" : DesignTokens.colors.text.tertiary }}
+              >
+                {isLiked ? 'אהבתי' : 'לייק'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* שיתוף */}
+            <TouchableOpacity 
+              className="flex-row items-center px-6 py-3 rounded-full"
+              style={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.08)'
+              }}
+              onPress={() => onShare(article)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name="share-outline" 
+                size={20} 
+                color={DesignTokens.colors.text.tertiary}
+                style={{ marginRight: 8 }}
+              />
+              <Text 
+                className="text-base font-medium"
+                style={{ color: DesignTokens.colors.text.tertiary }}
+              >
+                שיתוף
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* כפתורי ניווט בתחתית המסך */}
+        <View 
+          style={{ 
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: DesignTokens.colors.background.primary,
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255, 255, 255, 0.1)',
+            paddingHorizontal: 16,
+            paddingTop: 16,
+            paddingBottom: 24
+          }}
+        >
+
+          {/* ניווט בין חדשות */}
+          {onNext && onPrevious && currentIndex !== undefined && totalArticles !== undefined && (
+            <View className="flex-row items-center justify-center" style={{ gap: 16 }}>
+              {/* חדשה הבאה - שמאל */}
               <TouchableOpacity 
-                className="flex-row items-center px-6 py-3 rounded-full"
+                className="flex-1 flex-row items-center justify-center rounded-full"
                 style={{ 
-                  backgroundColor: isLiked 
-                    ? 'rgba(255, 59, 92, 0.15)' 
-                    : 'rgba(255, 255, 255, 0.05)'
+                  backgroundColor: currentIndex < totalArticles - 1 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : 'rgba(255, 255, 255, 0.02)',
+                  borderWidth: 1,
+                  borderColor: currentIndex < totalArticles - 1 
+                    ? 'rgba(255, 255, 255, 0.1)' 
+                    : 'rgba(255, 255, 255, 0.05)',
+                  maxWidth: 160,
+                  paddingVertical: 14
                 }}
-                onPress={() => onLike(article)}
+                onPress={onNext}
+                disabled={currentIndex >= totalArticles - 1}
               >
                 <Ionicons 
-                  name={isLiked ? "heart" : "heart-outline"} 
-                  size={20} 
-                  color={isLiked ? "#FF3B5C" : DesignTokens.colors.text.secondary}
+                  name="chevron-back-outline" 
+                  size={22} 
+                  color={DesignTokens.colors.text.tertiary}
                   style={{ marginRight: 8 }}
                 />
                 <Text 
-                  className="text-base font-medium"
-                  style={{ color: isLiked ? "#FF3B5C" : DesignTokens.colors.text.secondary }}
+                  className="text-base font-semibold"
+                  style={{ color: DesignTokens.colors.text.tertiary }}
                 >
-                  {isLiked ? 'אהבתי' : 'אהבתי'}
+                  הבאה
                 </Text>
               </TouchableOpacity>
 
-              {/* שיתוף */}
+              {/* חדשה קודמת - ימין */}
               <TouchableOpacity 
-                className="flex-row items-center px-6 py-3 rounded-full"
-                style={{ backgroundColor: 'rgba(0, 216, 74, 0.15)' }}
-                onPress={() => onShare(article)}
+                className="flex-1 flex-row items-center justify-center rounded-full"
+                style={{ 
+                  backgroundColor: currentIndex > 0 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : 'rgba(255, 255, 255, 0.02)',
+                  borderWidth: 1,
+                  borderColor: currentIndex > 0 
+                    ? 'rgba(255, 255, 255, 0.1)' 
+                    : 'rgba(255, 255, 255, 0.05)',
+                  maxWidth: 160,
+                  paddingVertical: 14
+                }}
+                onPress={onPrevious}
+                disabled={currentIndex === 0}
               >
-                <Ionicons 
-                  name="share-outline" 
-                  size={20} 
-                  color="#00D84A"
-                  style={{ marginRight: 8 }}
-                />
                 <Text 
-                  className="text-base font-medium"
-                  style={{ color: '#00D84A' }}
+                  className="text-base font-semibold"
+                  style={{ color: DesignTokens.colors.text.tertiary }}
                 >
-                  שתף
+                  קודמת
                 </Text>
+                <Ionicons 
+                  name="chevron-forward-outline" 
+                  size={22} 
+                  color={DesignTokens.colors.text.tertiary}
+                  style={{ marginLeft: 8 }}
+                />
               </TouchableOpacity>
             </View>
-          </View>
-        </ScrollView>
+          )}
+        </View>
       </View>
     </Modal>
   );
 };
 
 const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, isLiked }) => {
-  const [shareModalVisible, setShareModalVisible] = useState(false);
+  const shareBottomSheetRef = useRef<BottomSheetModal | null>(null);
   const categoryColor = getNewsCategoryColor(article.category);
   const categoryIcon = getNewsCategoryIcon(article.category);
+  
+  const handleSharePress = () => {
+    console.log('🔗 Share button pressed, opening bottom sheet...');
+    shareBottomSheetRef.current?.present();
+  };
+  
+  const handleShareClose = () => {
+    console.log('🔗 Closing bottom sheet...');
+    shareBottomSheetRef.current?.dismiss();
+  };
   
   // זיהוי אם זה טוויטר או חדשה רגילה
   const isTwitterPost = article.source === 'Twitter' || 
@@ -643,7 +857,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
 
         {/* תוכן */}
         <View className="flex-1">
-          {/* כותרת */}
+          {/* כותרת - מציג label אם קיים, אחרת title */}
           <Text 
             className="text-base font-semibold leading-5 mb-2"
             style={{ 
@@ -653,11 +867,11 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
             }}
             numberOfLines={2}
           >
-            {article.title}
+            {article.label || article.title}
           </Text>
 
-          {/* סיכום - מוגבל ל-2 שורות */}
-          {article.summary && (
+          {/* תוכן/תיאור - מציג title אם יש label, אחרת summary */}
+          {(article.label ? article.title : article.summary) && (
             <Text 
               className="text-sm leading-4 mb-3"
               style={{ 
@@ -667,7 +881,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
               }}
               numberOfLines={2}
             >
-              {truncateText(article.summary, 100)}
+              {truncateText(article.label ? article.title : article.summary || '', 100)}
             </Text>
           )}
 
@@ -682,11 +896,12 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
                   height: 28,
                   borderRadius: 14,
                   alignItems: 'center',
+                
                   justifyContent: 'center',
                   backgroundColor: isLiked 
                     ? 'rgba(255, 59, 92, 0.15)' 
                     : 'transparent',
-                  marginRight: 8
+                  marginRight: 5
                 }}
                 onPress={() => onLike(article)}
                 activeOpacity={0.7}
@@ -708,7 +923,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
                   justifyContent: 'center',
                   backgroundColor: 'transparent'
                 }}
-                onPress={() => setShareModalVisible(true)}
+                onPress={handleSharePress}
               >
                 <Ionicons 
                   name="share-outline" 
@@ -765,9 +980,9 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
 
       {/* מודל שיתוף */}
       <ShareModal
-        visible={shareModalVisible}
         article={article}
-        onClose={() => setShareModalVisible(false)}
+        onClose={handleShareClose}
+        bottomSheetRef={shareBottomSheetRef}
       />
     </Pressable>
   );
@@ -784,6 +999,7 @@ export default function BreakingNewsTab() {
   
   // מצב המודל המפורט
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [selectedArticleIndex, setSelectedArticleIndex] = useState<number>(0);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   // טעינת החדשות שאהב המשתמש
@@ -857,12 +1073,11 @@ export default function BreakingNewsTab() {
       
       console.log('🧪 BreakingNewsTab: Table test result:', { testData, testError });
       
-      // עכשיו נשלוף את הנתונים
+      // עכשיו נשלוף את הנתונים (ללא מגבלה - יציג את כל החדשות)
       const { data, error } = await supabase
         .from('app_news')
         .select('*')
-        .order('id', { ascending: false })
-        .limit(50);
+        .order('id', { ascending: false });
       
       console.log('📊 BreakingNewsTab: Raw database response:', { data, error });
       
@@ -1006,6 +1221,7 @@ export default function BreakingNewsTab() {
         
         const article = {
           id: row.id || row.uuid || row.tweet_id || String(index),
+          label: row.label || '',
           title: title,
           content: content,
           summary: summary,
@@ -1071,6 +1287,7 @@ export default function BreakingNewsTab() {
           
           const newArticle: NewsArticle = {
             id: row.id || row.uuid || row.tweet_id || String(Date.now()),
+            label: row.label || '',
             title: row.text_content || row.title || row.headline || row.subject || row.name || 
                    row.tweet_text || row.text || row.content || 'כתבה חדשה',
             content: row.text_content || row.content || row.text || row.description || 
@@ -1122,20 +1339,51 @@ export default function BreakingNewsTab() {
   // בחירת כתבה - פתיחת מודל מפורט
   const handleArticlePress = useCallback((article: NewsArticle) => {
     console.log('⚡ BreakingNewsTab: Article pressed:', article.title);
+    const index = articles.findIndex(a => a.id === article.id);
     setSelectedArticle(article);
+    setSelectedArticleIndex(index >= 0 ? index : 0);
     setDetailModalVisible(true);
-  }, []);
+  }, [articles]);
+
+  // ניווט לחדשה הבאה
+  const handleNextArticle = useCallback(() => {
+    if (selectedArticleIndex < articles.length - 1) {
+      const nextIndex = selectedArticleIndex + 1;
+      setSelectedArticleIndex(nextIndex);
+      setSelectedArticle(articles[nextIndex]);
+    }
+  }, [selectedArticleIndex, articles]);
+
+  // ניווט לחדשה הקודמת
+  const handlePreviousArticle = useCallback(() => {
+    if (selectedArticleIndex > 0) {
+      const prevIndex = selectedArticleIndex - 1;
+      setSelectedArticleIndex(prevIndex);
+      setSelectedArticle(articles[prevIndex]);
+    }
+  }, [selectedArticleIndex, articles]);
 
   // סגירת מודל מפורט
   const handleCloseDetailModal = useCallback(() => {
     setDetailModalVisible(false);
     setSelectedArticle(null);
+    setSelectedArticleIndex(0);
   }, []);
 
   // שיתוף מהמודל המפורט
-  const handleShareFromModal = useCallback((article: NewsArticle) => {
-    // TODO: פתיחת מודל שיתוף
-    console.log('Sharing article from modal:', article.title);
+  const handleShareFromModal = useCallback(async (article: NewsArticle) => {
+    try {
+      const shareContent = {
+        title: article.label || article.title,
+        message: `${article.label || article.title}\n\n${article.summary || article.content || ''}\n\nמקור: ${article.source}`,
+        url: article.source_url
+      };
+
+      await Share.share(shareContent);
+    } catch (error) {
+      console.error('❌ BreakingNewsTab: Error sharing:', error);
+      Alert.alert('שגיאה', 'לא ניתן לשתף את הכתבה');
+    }
   }, []);
 
   // רינדור כתבה
@@ -1249,7 +1497,12 @@ export default function BreakingNewsTab() {
         onClose={handleCloseDetailModal}
         onLike={handleLike}
         onShare={handleShareFromModal}
+        currentIndex={selectedArticleIndex}
+        totalArticles={articles.length}
+        onNext={handleNextArticle}
+        onPrevious={handlePreviousArticle}
       />
+
     </View>
   );
 }

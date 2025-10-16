@@ -266,7 +266,7 @@ export default function MediaMessageRenderer({
       {message.content && message.content !== '[image]' ? (
         <Text style={{ 
           color: isMe ? '#000000' : '#FFFFFF', 
-          textAlign: 'right',
+          textAlign: textDirection === 'rtl' ? 'right' : 'left',
           writingDirection: textDirection,
           fontSize: 13,
           fontWeight: '400',
@@ -373,7 +373,7 @@ export default function MediaMessageRenderer({
       {message.content && message.content !== '[video]' ? (
         <Text style={{ 
           color: isMe ? '#000000' : '#FFFFFF', 
-          textAlign: 'right',
+          textAlign: textDirection === 'rtl' ? 'right' : 'left',
           writingDirection: textDirection,
           fontSize: 13,
           fontWeight: '400',

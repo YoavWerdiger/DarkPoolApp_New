@@ -10,7 +10,6 @@ import {
   Linking,
   RefreshControl
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { 
   CreditCard, 
   Shield, 
@@ -169,13 +168,13 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
     return (
       <View style={{
-        backgroundColor: '#1A1A1A',
-        borderRadius: 20,
+        backgroundColor: '#1C1C1E',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
         padding: 24,
-        borderWidth: 2,
-        borderColor: selectedPlan === 'premium' ? '#00E654' : '#333333',
         marginBottom: 24,
-        shadowColor: selectedPlan === 'premium' ? '#00E654' : '#000000',
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -191,7 +190,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             width: 50,
             height: 50,
             borderRadius: 15,
-            backgroundColor: selectedPlan === 'premium' ? '#00E654' : '#333333',
+            backgroundColor: selectedPlan === 'premium' ? '#00E654' : 'rgba(255, 255, 255, 0.05)',
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: 16
@@ -283,12 +282,12 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
   const renderSecurityFeatures = () => (
     <View style={{
-      backgroundColor: '#1A1A1A',
+      backgroundColor: '#1C1C1E',
       borderRadius: 16,
-      padding: 20,
-      marginBottom: 24,
       borderWidth: 1,
-      borderColor: '#333333'
+      borderColor: 'rgba(255,255,255,0.1)',
+      padding: 20,
+      marginBottom: 24
     }}>
       <View style={{ 
         flexDirection: 'row-reverse', 
@@ -345,12 +344,12 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
   const renderPaymentSummary = () => (
     <View style={{
-      backgroundColor: '#1A1A1A',
+      backgroundColor: '#1C1C1E',
       borderRadius: 16,
-      padding: 20,
-      marginBottom: 24,
       borderWidth: 1,
-      borderColor: '#333333'
+      borderColor: 'rgba(255,255,255,0.1)',
+      padding: 20,
+      marginBottom: 24
     }}>
       <Text style={{ 
         color: '#FFFFFF', 
@@ -434,18 +433,16 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
+    <View style={{ flex: 1, backgroundColor: '#0d0d0d' }}>
       {/* Header */}
-      <LinearGradient
-        colors={['#00E65420', '#00E65410', 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <View
         style={{
           paddingTop: 60,
           paddingBottom: 20,
           paddingHorizontal: 24,
+          backgroundColor: '#1C1C1E',
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(0, 230, 84, 0.2)'
+          borderBottomColor: 'rgba(255,255,255,0.1)'
         }}
       >
         <View style={{ 
@@ -456,10 +453,10 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
               alignItems: 'center',
               justifyContent: 'center',
               marginLeft: 16
@@ -478,7 +475,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             צ'קאאוט
           </Text>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView 
         style={{ flex: 1 }}
@@ -507,40 +504,33 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             onPress={handlePayment}
             disabled={loading}
             style={{
+              backgroundColor: '#00E654',
+              borderRadius: 12,
+              padding: 18,
+              alignItems: 'center',
+              shadowColor: '#00E654',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
               opacity: loading ? 0.7 : 1
             }}
           >
-            <LinearGradient
-              colors={['#00E654', '#00B84A', '#008F3A']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                borderRadius: 16,
-                padding: 18,
-                alignItems: 'center',
-                shadowColor: '#00E654',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.4,
-                shadowRadius: 12,
-                elevation: 8
-              }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#000000" size="small" />
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <CreditCard size={20} color="#000000" style={{ marginLeft: 8 }} />
-                  <Text style={{ 
-                    color: '#000000', 
-                    fontSize: 18, 
-                    fontWeight: '700',
-                    writingDirection: 'rtl'
-                  }}>
-                    {plan?.price === 0 ? 'המשך בחינם' : 'שלם עכשיו'}
-                  </Text>
-                </View>
-              )}
-            </LinearGradient>
+            {loading ? (
+              <ActivityIndicator color="#000000" size="small" />
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <CreditCard size={20} color="#000000" style={{ marginLeft: 8 }} />
+                <Text style={{ 
+                  color: '#000000', 
+                  fontSize: 18, 
+                  fontWeight: '700',
+                  writingDirection: 'rtl'
+                }}>
+                  {plan?.price === 0 ? 'המשך בחינם' : 'שלם עכשיו'}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           {/* Terms */}

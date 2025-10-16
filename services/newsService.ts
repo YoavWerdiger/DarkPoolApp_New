@@ -4,7 +4,8 @@ import { DesignTokens } from '../components/ui/DesignTokens';
 // טיפוסי נתונים לחדשות
 export interface NewsArticle {
   id: string;
-  title: string;
+  label?: string;              // כותרת קצרה להצגה
+  title: string;               // כותרת מלאה/תוכן
   content: string;
   summary?: string;
   source: string;

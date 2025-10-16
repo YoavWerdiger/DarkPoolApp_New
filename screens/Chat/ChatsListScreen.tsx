@@ -77,10 +77,10 @@ export default function ChatsListScreen() {
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log('🔄 ChatsListScreen: Setting up realtime subscription for user_channel_state updates');
+    console.log('🔄 ChatsListScreen: Setting up realtime subscriptions');
     
     // Subscribe to changes in user_channel_state to update unread counts
-    const subscription = supabase
+    const stateSubscription = supabase
       .channel('user-channel-state-changes')
       .on('postgres_changes', 
         { 
@@ -97,9 +97,27 @@ export default function ChatsListScreen() {
       )
       .subscribe();
 
+    // Subscribe to new messages to update chat list immediately
+    const messagesSubscription = supabase
+      .channel('new-messages-for-chat-list')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages'
+        }, 
+        (payload) => {
+          console.log('📥 ChatsListScreen: New message received:', payload);
+          // Refresh chats to update unread counts and last message
+          loadChats(user.id);
+        }
+      )
+      .subscribe();
+
     return () => {
-      console.log('🔄 ChatsListScreen: Cleaning up realtime subscription');
-      subscription.unsubscribe();
+      console.log('🔄 ChatsListScreen: Cleaning up realtime subscriptions');
+      stateSubscription.unsubscribe();
+      messagesSubscription.unsubscribe();
     };
   }, [user?.id]);
 

@@ -18,10 +18,10 @@ export default function MainTabs() {
       initialRouteName="Chat"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#00E654',
+        tabBarActiveTintColor: '#05d157',
         tabBarInactiveTintColor: '#888',
         tabBarStyle: { 
-          backgroundColor: '#121212', 
+          backgroundColor: '#0d0d0d', 
           borderTopWidth: 1,
           borderTopColor: '#666666',
           height: 90,

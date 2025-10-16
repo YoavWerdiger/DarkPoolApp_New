@@ -8,13 +8,13 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
+  SafeAreaView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
 import { useLesson, useSaveProgress, useGetSignedUrl } from '../../hooks/useLearning';
-import { DesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress, BlockType } from '../../types/learning';
+import { ArrowLeft, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -100,54 +100,56 @@ export const LessonPlayerScreen: React.FC = () => {
   const renderVideoBlock = () => {
     if (!currentBlock?.video_key) {
       return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>וידאו לא זמין</Text>
+        <View style={styles.blockErrorContainer}>
+          <Text style={styles.blockErrorText}>וידאו לא זמין</Text>
         </View>
       );
     }
 
     if (isLoadingVideo) {
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary} />
-          <Text style={styles.loadingText}>טוען וידאו...</Text>
+        <View style={styles.blockLoadingContainer}>
+          <ActivityIndicator size="large" color="#00E654" />
+          <Text style={styles.blockLoadingText}>טוען וידאו...</Text>
         </View>
       );
     }
 
     if (!signedUrl) {
       return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>לא ניתן לטעון את הוידאו</Text>
+        <View style={styles.blockErrorContainer}>
+          <Text style={styles.blockErrorText}>לא ניתן לטעון את הוידאו</Text>
         </View>
       );
     }
 
     return (
-      <Video
-        style={styles.video}
-        source={{ uri: signedUrl }}
-        resizeMode={ResizeMode.CONTAIN}
-        shouldPlay={isPlaying}
-        onPlaybackStatusUpdate={(status) => {
-          if (status.isLoaded) {
-            handleVideoProgress(status.positionMillis / 1000);
-            if (status.didJustFinish) {
-              handleVideoComplete();
+      <View style={styles.videoContainer}>
+        <Video
+          style={styles.video}
+          source={{ uri: signedUrl }}
+          resizeMode={ResizeMode.CONTAIN}
+          shouldPlay={isPlaying}
+          onPlaybackStatusUpdate={(status) => {
+            if (status.isLoaded) {
+              handleVideoProgress(status.positionMillis / 1000);
+              if (status.didJustFinish) {
+                handleVideoComplete();
+              }
             }
-          }
-        }}
-        posterSource={currentBlock.video_poster_url ? { uri: currentBlock.video_poster_url } : undefined}
-        usePoster={true}
-      />
+          }}
+          posterSource={currentBlock.video_poster_url ? { uri: currentBlock.video_poster_url } : undefined}
+          usePoster={true}
+        />
+      </View>
     );
   };
 
   const renderTextBlock = () => {
     if (!currentBlock?.text_md) {
       return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>תוכן לא זמין</Text>
+        <View style={styles.blockErrorContainer}>
+          <Text style={styles.blockErrorText}>תוכן לא זמין</Text>
         </View>
       );
     }
@@ -199,8 +201,8 @@ export const LessonPlayerScreen: React.FC = () => {
   const renderCurrentBlock = () => {
     if (!currentBlock) {
       return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>תוכן לא זמין</Text>
+        <View style={styles.blockErrorContainer}>
+          <Text style={styles.blockErrorText}>תוכן לא זמין</Text>
         </View>
       );
     }
@@ -216,8 +218,8 @@ export const LessonPlayerScreen: React.FC = () => {
         return renderQuizBlock();
       default:
         return (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>סוג תוכן לא נתמך</Text>
+          <View style={styles.blockErrorContainer}>
+            <Text style={styles.blockErrorText}>סוג תוכן לא נתמך</Text>
           </View>
         );
     }
@@ -226,7 +228,7 @@ export const LessonPlayerScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary} />
+        <ActivityIndicator size="large" color="#00E654" />
         <Text style={styles.loadingText}>טוען שיעור...</Text>
       </View>
     );
@@ -246,53 +248,55 @@ export const LessonPlayerScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['rgba(0, 230, 84, 0.25)', 'transparent', 'rgba(0, 230, 84, 0.15)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        pointerEvents="none"
-      />
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        
-        <View style={styles.headerContent}>
-          <Text style={styles.lessonTitle} numberOfLines={2}>
-            {lesson.title}
-          </Text>
-          <Text style={styles.blockInfo}>
-            {currentBlockIndex + 1} מתוך {lesson.blocks?.length || 0}
-          </Text>
+      {/* Header - SwiftUI Style */}
+      <SafeAreaView style={styles.headerSafeArea}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <ArrowLeft size={20} color="#FFFFFF" strokeWidth={2} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerContent}>
+            <Text style={styles.lessonTitle} numberOfLines={2}>
+              {lesson.title}
+            </Text>
+            <Text style={styles.blockInfo}>
+              {currentBlockIndex + 1} מתוך {lesson.blocks?.length || 0}
+            </Text>
+          </View>
         </View>
-      </View>
+      </SafeAreaView>
 
       {/* Content */}
       <View style={styles.content}>
-        {renderCurrentBlock()}
+        <View style={styles.contentCard}>
+          {renderCurrentBlock()}
+        </View>
       </View>
 
-      {/* Video Controls */}
+      {/* Video Controls - SwiftUI Style */}
       {currentBlock?.type === 'video' && (
-        <View style={styles.videoControls}>
-          <TouchableOpacity
-            style={styles.playButton}
-            onPress={() => setIsPlaying(!isPlaying)}
-          >
-            <Text style={styles.playButtonText}>
-              {isPlaying ? '⏸️' : '▶️'}
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.videoControlsContainer}>
+          <View style={styles.videoControls}>
+            <TouchableOpacity
+              style={styles.playButton}
+              onPress={() => setIsPlaying(!isPlaying)}
+            >
+              {isPlaying ? (
+                <Pause size={24} color="#000000" strokeWidth={2} />
+              ) : (
+                <Play size={24} color="#000000" strokeWidth={2} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
-      {/* Navigation */}
-      <View style={styles.navigation}>
+      {/* Navigation - SwiftUI Style */}
+      <View style={styles.navigationContainer}>
+        <View style={styles.navigation}>
         <TouchableOpacity
           style={[
             styles.navButton,
@@ -301,11 +305,12 @@ export const LessonPlayerScreen: React.FC = () => {
           onPress={goToPreviousBlock}
           disabled={currentBlockIndex === 0}
         >
+          <ChevronLeft size={20} color={currentBlockIndex === 0 ? "#666666" : "#00E654"} strokeWidth={2} />
           <Text style={[
             styles.navButtonText,
             currentBlockIndex === 0 && styles.navButtonTextDisabled
           ]}>
-            ← הקודם
+            הקודם
           </Text>
         </TouchableOpacity>
 
@@ -321,9 +326,11 @@ export const LessonPlayerScreen: React.FC = () => {
             styles.navButtonText,
             (!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) && styles.navButtonTextDisabled
           ]}>
-            הבא →
+            הבא
           </Text>
+          <ChevronRight size={20} color={(!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) ? "#666666" : "#00E654"} strokeWidth={2} />
         </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -332,88 +339,105 @@ export const LessonPlayerScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background,
+    backgroundColor: '#0d0d0d',
+  },
+  headerSafeArea: {
+    backgroundColor: '#1C1C1E',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: DesignTokens.colors.background,
+    backgroundColor: '#0d0d0d',
   },
   loadingText: {
-    marginTop: DesignTokens.spacing.md,
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.textSecondary,
+    marginTop: 16,
+    fontSize: 16,
+    color: '#A0A0A0',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingHorizontal: 24,
   },
   errorIcon: {
     fontSize: 48,
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: 24,
   },
   errorTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: 14,
+    color: '#A0A0A0',
     textAlign: 'center',
   },
   errorText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: 16,
+    color: '#A0A0A0',
     textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderBottomWidth: DesignTokens.layout.borderWidth.normal,
-    borderBottomColor: DesignTokens.colors.border,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#1C1C1E',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: DesignTokens.colors.elevated,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: DesignTokens.spacing.md,
-    borderWidth: DesignTokens.layout.borderWidth.normal,
-    borderColor: DesignTokens.colors.border,
-  },
-  backButtonText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    color: DesignTokens.colors.textPrimary,
-    fontWeight: DesignTokens.typography.fontWeight.bold,
+    marginRight: 16,
   },
   headerContent: {
     flex: 1,
   },
   lessonTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
     textAlign: 'right',
   },
   blockInfo: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
-    marginTop: DesignTokens.spacing.xs,
+    fontSize: 14,
+    color: '#A0A0A0',
+    marginTop: 4,
     textAlign: 'right',
   },
   content: {
     flex: 1,
+    backgroundColor: '#0d0d0d',
+    padding: 20,
+  },
+  contentCard: {
+    flex: 1,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  videoContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   video: {
     width: '100%',
@@ -422,122 +446,159 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
-    padding: DesignTokens.spacing.lg,
+    padding: 20,
   },
   textContent: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.textPrimary,
-    lineHeight: DesignTokens.typography.lineHeight.relaxed * DesignTokens.typography.fontSize.base,
+    fontSize: 16,
+    color: '#FFFFFF',
+    lineHeight: 24,
     textAlign: 'right',
   },
   pdfContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: DesignTokens.spacing.lg,
+    padding: 24,
+  },
+  blockErrorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  blockErrorText: {
+    fontSize: 16,
+    color: '#A0A0A0',
+    textAlign: 'center',
+  },
+  blockLoadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  blockLoadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#A0A0A0',
   },
   pdfText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
   },
   pdfSubtext: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: 14,
+    color: '#A0A0A0',
     textAlign: 'center',
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: 24,
   },
   downloadButton: {
-    backgroundColor: DesignTokens.colors.primary,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: '#00E654',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   downloadButtonText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
   },
   quizContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: DesignTokens.spacing.lg,
+    padding: 24,
   },
   quizText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
   },
   quizSubtext: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: 14,
+    color: '#A0A0A0',
     textAlign: 'center',
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: 24,
   },
   quizButton: {
-    backgroundColor: DesignTokens.colors.info,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: '#00E654',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   quizButtonText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  videoControlsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
   videoControls: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: DesignTokens.spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 20,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   playButton: {
     width: 60,
     height: 60,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: DesignTokens.colors.primary,
+    borderRadius: 30,
+    backgroundColor: '#00E654',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: DesignTokens.layout.borderWidth.normal,
-    borderColor: 'rgba(255,255,255,0.18)',
+    shadowColor: '#00E654',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  playButtonText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
+  navigationContainer: {
+    backgroundColor: '#1C1C1E',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   navigation: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    backgroundColor: 'transparent',
-    borderTopWidth: DesignTokens.layout.borderWidth.normal,
-    borderTopColor: DesignTokens.colors.border,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
   navButton: {
-    backgroundColor: DesignTokens.colors.elevated,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.lg,
-    minWidth: 100,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: DesignTokens.layout.borderWidth.normal,
-    borderColor: DesignTokens.colors.border,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    gap: 8,
   },
   navButtonDisabled: {
-    backgroundColor: DesignTokens.colors.border,
+    backgroundColor: 'rgba(255,255,255,0.03)',
     opacity: 0.5,
   },
   navButtonText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   navButtonTextDisabled: {
-    color: DesignTokens.colors.textMuted,
+    color: '#666666',
   },
 });
 

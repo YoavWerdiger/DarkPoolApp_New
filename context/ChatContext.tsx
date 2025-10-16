@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Message, Chat } from '../services/supabase';
 import { ChatService } from '../services/chatService';
 import { TypingService, TypingUser } from '../services/typingService';
@@ -29,6 +30,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 export const useChat = () => {
   const context = useContext(ChatContext);
   if (!context) {
+    console.error('❌ useChat: Context not found - make sure ChatProvider is wrapping the component');
     throw new Error('useChat must be used within a ChatProvider');
   }
   return context;
@@ -48,6 +50,8 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
   const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>({});
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [currentUserName, setCurrentUserName] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load user name for typing indicator
   useEffect(() => {
@@ -73,25 +77,6 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
     }
   }, [userId]);
 
-  // Load chats and messages on mount - טעינה מקדימה
-  useEffect(() => {
-    if (userId) {
-      console.log('🔄 ChatContext: userId changed, preloading data for:', userId);
-      const startTime = Date.now();
-      
-      // טען הכל במקביל
-      Promise.all([
-        loadChats(),
-        // אם יש chatId התחלתי, טען גם את ההודעות שלו
-        initialChatId ? loadMessages(initialChatId) : Promise.resolve()
-      ]).then(() => {
-        const endTime = Date.now();
-        console.log(`⏱️ ChatContext: Preloading completed in ${endTime - startTime}ms`);
-      });
-    } else {
-      console.log('⚠️ ChatContext: No userId yet');
-    }
-  }, [userId]);
 
   // טעינה מקדימה של הודעות לכל הצ'אטים אחרי שהם נטענו (CACHE בלבד, בלי להחליף UI)
   useEffect(() => {
@@ -284,6 +269,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
 
   const loadChats = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       console.log('🔄 ChatContext: Loading chats for user:', userId);
       const chatList = await ChatService.getChats(userId);
@@ -303,6 +289,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
       }
     } catch (error) {
       console.error('❌ ChatContext: Error loading chats:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load chats');
     } finally {
       setIsLoading(false);
     }
@@ -322,6 +309,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
     }
     
     setIsLoading(true);
+    setError(null);
     
     try {
       const messageList = await ChatService.getMessages(chatId);
@@ -338,6 +326,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
       setMessages(messageList);
     } catch (error) {
       console.error('❌ ChatContext: Error loading messages:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load messages');
     } finally {
       setIsLoading(false);
     }
@@ -571,6 +560,32 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
     TypingService.stopTyping(currentChatId, userId);
   };
 
+  // Load chats and messages on mount - טעינה מקדימה
+  useEffect(() => {
+    if (userId) {
+      console.log('🔄 ChatContext: userId changed, preloading data for:', userId);
+      const startTime = Date.now();
+      
+      // טען הכל במקביל
+      Promise.all([
+        loadChats(),
+        // אם יש chatId התחלתי, טען גם את ההודעות שלו
+        initialChatId ? loadMessages(initialChatId) : Promise.resolve()
+      ]).then(() => {
+        const endTime = Date.now();
+        console.log(`⏱️ ChatContext: Preloading completed in ${endTime - startTime}ms`);
+        setIsInitialized(true);
+      }).catch((error) => {
+        console.error('❌ ChatContext: Error preloading data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load data');
+        setIsInitialized(true); // גם במקרה של שגיאה, נאפשר גישה לקומפוננטה
+      });
+    } else {
+      console.log('⚠️ ChatContext: No userId yet');
+      setIsInitialized(true);
+    }
+  }, [userId, initialChatId]);
+
   const value: ChatContextType = {
     messages,
     chats,
@@ -590,6 +605,33 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, in
     startTyping,
     stopTyping,
   };
+
+  // אם עדיין לא הסתיים האתחול, הצג טוען
+  if (!isInitialized) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={{ marginTop: 10, color: '#666' }}>טוען צ'אט...</Text>
+      </View>
+    );
+  }
+
+  // אם יש שגיאה, הצג אותה
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ color: 'red', textAlign: 'center', marginBottom: 20 }}>
+          שגיאה בטעינת הצ'אט: {error}
+        </Text>
+        <TouchableOpacity 
+          style={{ backgroundColor: '#007AFF', padding: 10, borderRadius: 5 }}
+          onPress={() => setError(null)}
+        >
+          <Text style={{ color: 'white' }}>נסה שוב</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ChatContext.Provider value={value}>

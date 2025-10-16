@@ -1,34 +1,35 @@
--- ========================================
--- תיקון RLS Policies עבור תשלומים במהלך רישום
--- ========================================
+-- תיקון RLS Policies עבור earnings_calendar
+-- הבעיה: המשתמשים לא רואים את הנתונים
 
--- מחיקת ה-policy הישן
-DROP POLICY IF EXISTS "Users can insert their own payment transactions" ON payment_transactions;
+-- 1. ביטול כל ה-policies הקיימים
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.earnings_calendar;
+DROP POLICY IF EXISTS "Enable insert for service role" ON public.earnings_calendar;
+DROP POLICY IF EXISTS "Enable update for service role" ON public.earnings_calendar;
 
--- יצירת policy חדש שמאפשר הכנסת עסקאות עם user_id null (במהלך רישום)
-CREATE POLICY "Users can insert their own payment transactions or pending transactions" ON payment_transactions
-    FOR INSERT WITH CHECK (
-        auth.uid() = user_id OR 
-        user_id IS NULL
-    );
+-- 2. יצירת policy חדש שמאפשר קריאה לכולם (כולל anon)
+CREATE POLICY "Enable read access for all users"
+  ON public.earnings_calendar
+  FOR SELECT
+  USING (true);
 
--- הוספת policy לעדכון עסקאות pending (כאשר המשתמש נרשם)
-CREATE POLICY "Users can update pending payment transactions" ON payment_transactions
-    FOR UPDATE USING (
-        auth.uid() = user_id OR 
-        user_id IS NULL
-    );
+-- 3. policy להוספה ועדכון רק ל-service_role
+CREATE POLICY "Enable insert for service role"
+  ON public.earnings_calendar
+  FOR INSERT
+  TO service_role
+  WITH CHECK (true);
 
--- בדיקה שה-policies נוצרו
-SELECT 
-    schemaname,
-    tablename,
-    policyname,
-    permissive,
-    roles,
-    cmd,
-    qual,
-    with_check
-FROM pg_policies 
-WHERE tablename = 'payment_transactions'
-ORDER BY policyname;
+CREATE POLICY "Enable update for service role"
+  ON public.earnings_calendar
+  FOR UPDATE
+  TO service_role
+  USING (true);
+
+-- 4. ודא שה-RLS מופעל
+ALTER TABLE public.earnings_calendar ENABLE ROW LEVEL SECURITY;
+
+-- 5. ודא שהטבלה ב-realtime
+ALTER PUBLICATION supabase_realtime ADD TABLE public.earnings_calendar;
+
+-- 6. בדיקה - אמור להחזיר את מספר הרשומות
+SELECT COUNT(*) as total FROM public.earnings_calendar;

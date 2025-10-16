@@ -1,13 +1,21 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type Theme = 'dark' | 'light';
-
 interface ThemeContextType {
-  theme: Theme;
+  isDarkMode: boolean;
   toggleTheme: () => void;
   backgroundImage: string;
-  isDark: boolean;
+  theme: {
+    background: string;
+    cardBackground: string;
+    textPrimary: string;
+    textSecondary: string;
+    textTertiary: string;
+    border: string;
+    headerBorder: string;
+    switchTrackOff: string;
+    switchThumbOff: string;
+  };
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -20,55 +28,65 @@ export const useTheme = () => {
   return context;
 };
 
-interface ThemeProviderProps {
-  children: ReactNode;
-}
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-const DARK_BACKGROUND = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/1.png';
-const LIGHT_BACKGROUND = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/2.png';
-
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>('dark');
-
-  // טעינת הנושא השמור
   useEffect(() => {
-    const loadTheme = async () => {
-      try {
-        const savedTheme = await AsyncStorage.getItem('app_theme');
-        if (savedTheme === 'light' || savedTheme === 'dark') {
-          setTheme(savedTheme);
-        }
-      } catch (error) {
-        console.error('Error loading theme:', error);
-      }
-    };
     loadTheme();
   }, []);
 
-  const toggleTheme = async () => {
-    const newTheme: Theme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
+  const loadTheme = async () => {
     try {
-      await AsyncStorage.setItem('app_theme', newTheme);
+      const saved = await AsyncStorage.getItem('appSettings');
+      if (saved) {
+        const parsedSettings = JSON.parse(saved);
+        setIsDarkMode(parsedSettings.darkMode ?? true);
+      }
+    } catch (error) {
+      console.error('Error loading theme:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleTheme = async () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    
+    try {
+      const saved = await AsyncStorage.getItem('appSettings');
+      const settings = saved ? JSON.parse(saved) : {};
+      const newSettings = { ...settings, darkMode: newTheme };
+      await AsyncStorage.setItem('appSettings', JSON.stringify(newSettings));
     } catch (error) {
       console.error('Error saving theme:', error);
     }
   };
 
-  const backgroundImage = theme === 'dark' ? DARK_BACKGROUND : LIGHT_BACKGROUND;
-  const isDark = theme === 'dark';
+  const backgroundImage = isDarkMode 
+    ? 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/1.png'
+    : 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/2.png';
 
-  const value: ThemeContextType = {
-    theme,
-    toggleTheme,
-    backgroundImage,
-    isDark,
+  const theme = {
+    background: isDarkMode ? '#121212' : '#F5F5F7',
+    cardBackground: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+    textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
+    textSecondary: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+    textTertiary: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
+    border: isDarkMode ? '#2a2a2a' : 'rgba(0,0,0,0.1)',
+    headerBorder: isDarkMode ? '#1a1a1a' : 'rgba(0,0,0,0.1)',
+    switchTrackOff: isDarkMode ? '#2a2a2a' : '#E5E5E7',
+    switchThumbOff: isDarkMode ? '#4a4a4a' : '#FFFFFF'
   };
 
+  if (isLoading) {
+    return null;
+  }
+
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider value={{ isDarkMode, toggleTheme, backgroundImage, theme }}>
       {children}
     </ThemeContext.Provider>
   );
 };
-

@@ -12,31 +12,36 @@ const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
     console.log('🔍 DayDivider: Date type:', typeof date);
     console.log('🔍 DayDivider: Date value:', date);
     
-    // יצירת תאריכים פשוטים לפי שנה, חודש ויום
+    // קבלת התאריך הנוכחי
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-    const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     
-    console.log('🔍 DayDivider: Now:', now);
-    console.log('🔍 DayDivider: Today (normalized):', today);
-    console.log('🔍 DayDivider: Yesterday (normalized):', yesterday);
-    console.log('🔍 DayDivider: MessageDate (original):', date);
-    console.log('🔍 DayDivider: MessageDate (normalized):', messageDate);
-    console.log('🔍 DayDivider: MessageDate parts:', {
-      year: date.getFullYear(),
-      month: date.getMonth(),
-      date: date.getDate(),
-      hours: date.getHours(),
-      minutes: date.getMinutes()
+    // השוואה פשוטה לפי יום, חודש ושנה (זמן מקומי)
+    const isToday = date.getFullYear() === now.getFullYear() &&
+                    date.getMonth() === now.getMonth() &&
+                    date.getDate() === now.getDate();
+    
+    // חישוב אתמול
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const isYesterday = date.getFullYear() === yesterday.getFullYear() &&
+                        date.getMonth() === yesterday.getMonth() &&
+                        date.getDate() === yesterday.getDate();
+    
+    console.log('🔍 DayDivider: Date parts:', {
+      messageDate: `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`,
+      todayDate: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`,
+      yesterdayDate: `${yesterday.getDate()}/${yesterday.getMonth() + 1}/${yesterday.getFullYear()}`,
+      isToday,
+      isYesterday
     });
     
-    // השוואה מדויקת של תאריכים
-    if (messageDate.getTime() === today.getTime()) {
+    // החזרת הטקסט המתאים
+    if (isToday) {
       console.log('🔍 DayDivider: Returning היום');
       return 'היום';
     }
-    if (messageDate.getTime() === yesterday.getTime()) {
+    if (isYesterday) {
       console.log('🔍 DayDivider: Returning אתמול');
       return 'אתמול';
     }

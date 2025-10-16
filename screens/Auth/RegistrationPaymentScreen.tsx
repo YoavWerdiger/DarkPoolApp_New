@@ -201,8 +201,6 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   style={{
                     backgroundColor: selectedPlan === plan.id ? 'rgba(0, 230, 84, 0.1)' : '#181818',
                     borderRadius: 16,
-                    borderWidth: 2,
-                    borderColor: selectedPlan === plan.id ? '#00E654' : 'rgba(255, 255, 255, 0.15)',
                     padding: 20,
                     position: 'relative'
                   }}
@@ -257,8 +255,6 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       width: 24,
                       height: 24,
                       borderRadius: 12,
-                      borderWidth: 2,
-                      borderColor: selectedPlan === plan.id ? '#00E654' : 'rgba(255, 255, 255, 0.3)',
                       backgroundColor: selectedPlan === plan.id ? '#00E654' : 'transparent',
                       alignItems: 'center',
                       justifyContent: 'center'
@@ -379,9 +375,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.15)'
+                    justifyContent: 'center'
                   }}
                 >
                   <Text style={{ 

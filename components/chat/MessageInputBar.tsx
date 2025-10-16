@@ -71,7 +71,7 @@ export default function MessageInputBar({
   stopTyping
 }: MessageInputBarProps) {
   const screenWidth = Dimensions.get('window').width;
-  const maxBubbleWidth = Math.floor(screenWidth * 0.9);
+  const maxBubbleWidth = Math.floor(screenWidth * 0.70);
   const isMe = true; // הקלטה תמיד נחשבת כ-"me"
   
   const [text, setText] = useState('');
@@ -346,6 +346,9 @@ export default function MessageInputBar({
     try {
       console.log('🎤 Starting audio recording...');
       
+      // סגור את המקלדת אם היא פתוחה
+      Keyboard.dismiss();
+      
       // נקה הקלטה קודמת אם קיימת
       if (recordingRef.current) {
         console.log('🎤 Cleaning up previous recording...');
@@ -497,6 +500,7 @@ export default function MessageInputBar({
         {/* כפתור צירוף קבצים - ימין */}
         <Pressable 
           onPress={handleAttachmentPress}
+          disabled={isRecording}
           style={{ 
             width: 42,
             height: 42,
@@ -504,6 +508,7 @@ export default function MessageInputBar({
             justifyContent: 'center',
             marginLeft: 8,
             marginRight: 8,
+            opacity: isRecording ? 0.3 : 1,
           }}
         >
           <Plus size={24} color="#00E654" strokeWidth={2} />
@@ -514,22 +519,24 @@ export default function MessageInputBar({
           style={{ 
             flex: 1,
             marginHorizontal: 8,
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            backgroundColor: isRecording ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
             borderRadius: 21,
             borderWidth: 1,
-            borderColor: isTyping ? '#00E654' : 'rgba(255, 255, 255, 0.1)',
+            borderColor: isRecording ? 'rgba(255, 255, 255, 0.05)' : (isTyping ? '#00E654' : 'rgba(255, 255, 255, 0.1)'),
             minHeight: 42,
             maxHeight: 70, // 2 שורות מקסימום
+            opacity: isRecording ? 0.5 : 1,
           }}
         >
           <TextInput
-            placeholder="הודעה"
+            placeholder={isRecording ? 'הקלטה פעילה...' : 'הודעה'}
             placeholderTextColor="#A0AEC0"
             value={text}
             onChangeText={handleTextChange}
             multiline={true}
             numberOfLines={2}
             textAlignVertical="top"
+            editable={!isRecording}
             style={{ 
               textAlign: textDirection === 'rtl' ? 'right' : 'left',
               writingDirection: textDirection,
@@ -667,7 +674,7 @@ export default function MessageInputBar({
         }}>
           {/* בועת תשובה - עיצוב כמו ההקלטה */}
           <View style={{
-            backgroundColor: 'rgba(29, 24, 24, 0.95)',
+            backgroundColor: 'rgba(19, 19, 19, 0.8)',
             paddingVertical: 10,
             paddingHorizontal: 16,
             borderRadius: 0,
@@ -738,7 +745,7 @@ export default function MessageInputBar({
         }}>
           {/* בועת עריכה - עיצוב כמו ההקלטה */}
           <View style={{
-            backgroundColor: 'rgba(29, 24, 24, 0.95)',
+            backgroundColor: 'rgba(19, 19, 19, 0.8)',
             paddingVertical: 10,
             paddingHorizontal: 16,
             borderRadius: 0,
@@ -823,7 +830,7 @@ export default function MessageInputBar({
 
       {/* Mention Picker */}
       <MentionPicker
-        visible={showMentionPicker}
+        visible={showMentionPicker && !isRecording}
         onClose={closeMentionPicker}
         onSelectUser={handleMentionSelect}
         searchQuery={mentionSearchQuery}

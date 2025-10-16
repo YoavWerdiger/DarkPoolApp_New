@@ -10,7 +10,7 @@ export const DesignTokens = {
   colors: {
     // Brand
     primary: {
-      main: '#00D84A',        // ירוק ראשי (כמו WhatsApp)
+      main: '#05d157',        // ירוק ראשי (כמו העיצוב החדש)
     },
     secondary: {
       main: '#34D399',        // ירוק משני
@@ -21,21 +21,21 @@ export const DesignTokens = {
     
     // Background
     background: {
-      primary: '#0A0A0A',     // רקע ראשי (כמעט שחור)
-      secondary: '#111111',   // משטחים (כהה יותר)
-      tertiary: '#1A1A1A',    // רכיבים מורמים
+      primary: '#0d0d0d',     // רקע ראשי (כמעט שחור)
+      secondary: '#1a1a1a',   // משטחים (כהה יותר)
+      tertiary: '#1a1a1a',    // רכיבים מורמים
     },
     
     // Chat
-    bubbleMe: '#00D84A',       // בועות שלי
-    bubbleOther: '#1A1A1A',    // בועות אחרים
+    bubbleMe: '#05d157',       // בועות שלי
+    bubbleOther: '#1a1a1a',    // בועות אחרים
     
     // Text
     text: {
-      primary: '#FFFFFF',    // טקסט ראשי
-      secondary: '#9CA3AF',  // טקסט משני
-      tertiary: '#6B7280',   // טקסט מעומעם
-      danger: '#EF4444',     // טקסט שגיאה
+      primary: '#FFFFFF',         // טקסט ראשי
+      secondary: 'rgba(255,255,255,0.6)',  // טקסט משני
+      tertiary: 'rgba(255,255,255,0.5)',   // טקסט מעומעם
+      danger: '#EF4444',          // טקסט שגיאה
     },
     
     // Border
@@ -67,6 +67,7 @@ export const DesignTokens = {
   typography: {
     fontFamily: {
       system: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+      assistant: ['Assistant-ExtraBold', 'Assistant', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
     },
     fontSize: {
       xs: 12,    // קטן מאוד
@@ -82,6 +83,7 @@ export const DesignTokens = {
       medium: '500',
       semibold: '600',
       bold: '700',
+      extrabold: '800',
     },
     lineHeight: {
       tight: 1.2,
@@ -146,7 +148,7 @@ export const DesignTokens = {
       elevation: 8,
     },
     green: {
-      shadowColor: '#00D84A',
+      shadowColor: '#05d157',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 12,

@@ -28,7 +28,9 @@ export default function MessageContent({
             direction: textDirection, 
             width: '100%',
             color: isMe ? '#000000' : '#FFFFFF',
-            writingDirection: textDirection
+            writingDirection: textDirection,
+            flexWrap: 'wrap',
+            flexShrink: 1
           }}
         >
           {text}
@@ -50,7 +52,9 @@ export default function MessageContent({
           textAlign: textDirection === 'rtl' ? 'right' : 'left',
           direction: textDirection, 
           width: '100%',
-          writingDirection: textDirection
+          writingDirection: textDirection,
+          flexWrap: 'wrap',
+          flexShrink: 1
         }}
       >
         {segments.map((segment, index) => {

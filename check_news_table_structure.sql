@@ -59,3 +59,5 @@ FROM pg_class
 WHERE relname = 'app_news';
 
 
+
+

@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Alert, Platform, TextInput, SafeAreaView, KeyboardAvoidingView, PanResponder, TouchableWithoutFeedback, Keyboard, Modal, Linking } from 'react-native';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Alert, Platform, TextInput, SafeAreaView, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Modal, Linking } from 'react-native';
+import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DesignTokens } from '../../components/ui/DesignTokens';
@@ -142,9 +143,24 @@ function LearningScreen() {
   const [lessonProgress, setLessonProgress] = useState(0); // התקדמות השיעור הנוכחי
   const [totalProgress, setTotalProgress] = useState(0); // התקדמות כללית של הקורס
   const [userNotes, setUserNotes] = useState(''); // הערות המשתמש
-  const [showNotesBottomSheet, setShowNotesBottomSheet] = useState(false);
-  const [bottomSheetTranslateY] = useState(new Animated.Value(0));
+  const notesBottomSheetRef = useRef<BottomSheetModal>(null);
   const textInputRef = useRef<TextInput>(null);
+  
+  // הגדרת snap points לbottom sheet
+  const snapPoints = useMemo(() => ['70%', '90%'], []);
+  
+  // רינדור backdrop
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop
+        {...props}
+        disappearsOnIndex={-1}
+        appearsOnIndex={0}
+        opacity={0.5}
+      />
+    ),
+    []
+  );
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
@@ -168,46 +184,6 @@ function LearningScreen() {
     DEMO_COURSE.lessons.map(() => new Animated.Value(1))
   );
 
-  // PanResponder לגרירת Bottom Sheet
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: (evt, gestureState) => {
-      return true;
-    },
-    onMoveShouldSetPanResponder: (evt, gestureState) => {
-      return Math.abs(gestureState.dy) > 10;
-    },
-    onPanResponderGrant: () => {
-      bottomSheetTranslateY.setOffset(0);
-      bottomSheetTranslateY.setValue(0);
-    },
-    onPanResponderMove: (evt, gestureState) => {
-      if (gestureState.dy > 0) {
-        bottomSheetTranslateY.setValue(gestureState.dy);
-      }
-    },
-    onPanResponderRelease: (evt, gestureState) => {
-      bottomSheetTranslateY.flattenOffset();
-      if (gestureState.dy > 150) {
-        // סגירה אם גררו יותר מ-150px
-        Animated.timing(bottomSheetTranslateY, {
-          toValue: 1000,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          setShowNotesBottomSheet(false);
-          bottomSheetTranslateY.setValue(0);
-        });
-      } else {
-        // חזרה למקום
-        Animated.spring(bottomSheetTranslateY, {
-          toValue: 0,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }).start();
-      }
-    },
-  });
 
   // טעינת נתונים מהמסד
   useEffect(() => {
@@ -348,11 +324,30 @@ function LearningScreen() {
     
     try {
       const notes = await learningProgressService.getUserNotes(user.id, courseData.id, lessonId);
-      if (notes) {
-        setUserNotes(notes.notes_content || '');
+      if (notes && notes.notes_content) {
+        // נסה לפרסר JSON, אם לא מצליח - השתמש בטקסט הרגיל
+        try {
+          const parsedContent = JSON.parse(notes.notes_content);
+          if (Array.isArray(parsedContent)) {
+            // זה תוכן ישן מהעורך העשיר - נמיר לטקסט רגיל
+            const textContent = parsedContent
+              .filter(element => element.type === 'text')
+              .map(element => element.content)
+              .join('\n');
+            setUserNotes(textContent);
+          } else {
+            setUserNotes(notes.notes_content);
+          }
+        } catch {
+          // זה טקסט רגיל
+          setUserNotes(notes.notes_content);
+        }
+      } else {
+        setUserNotes('');
       }
     } catch (error) {
       console.error('Error loading user notes:', error);
+      setUserNotes('');
     }
   };
 
@@ -419,13 +414,14 @@ function LearningScreen() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 0.8,
       });
 
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri;
         const currentText = userNotes;
-        const newText = currentText + `\n![תמונה](${imageUri})\n`;
+        // הוספת התמונה בפורמט markdown
+        const newText = currentText + `\n\n📷 [תמונה נוספה]\n${imageUri}\n\n`;
         setUserNotes(newText);
         setTimeout(() => {
           textInputRef.current?.focus();
@@ -682,44 +678,8 @@ function LearningScreen() {
     }
   };
 
-  // טעינת הערות כשנפתח השיעור
-  useEffect(() => {
-    if (selectedLesson) {
-      loadExistingNotes(selectedLesson.id);
-    }
-  }, [selectedLesson]);
 
-  // טעינת הערות כשנפתח הדיאלוג
-  useEffect(() => {
-    if (showNotesBottomSheet && selectedLesson) {
-      loadExistingNotes(selectedLesson.id);
-    }
-  }, [showNotesBottomSheet, selectedLesson]);
 
-  // עדכון אוטומטי של התוכן (פחות אגרסיבי)
-  useEffect(() => {
-    if (richTextContent.length > 0) {
-      const currentContent = JSON.stringify(richTextContent);
-      if (currentContent !== lastSavedContent) {
-        // עדכון אוטומטי כל 5 שניות (פחות אגרסיבי)
-        const timer = setTimeout(async () => {
-          if (selectedLesson) {
-            setIsSaving(true);
-            try {
-              await saveUserNotes(selectedLesson.id, currentContent);
-              setLastSavedContent(currentContent);
-            } catch (error) {
-              console.error('Error auto-saving:', error);
-            } finally {
-              setIsSaving(false);
-            }
-          }
-        }, 5000);
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [richTextContent, selectedLesson, lastSavedContent]);
 
   const renderRichTextElement = (element: any, index: number) => {
     const renderContent = () => {
@@ -864,14 +824,7 @@ function LearningScreen() {
       }
       
       // נטען את ההערות של המשתמש עבור השיעור הספציפי
-      try {
-        const notes = await learningProgressService.getUserNotes(user.id, courseData.id, lesson.id);
-        setUserNotes(notes?.notes_content || '');
-        console.log('Loaded notes for lesson', lesson.id, ':', notes);
-      } catch (error) {
-        console.error('Error loading user notes:', error);
-        setUserNotes('');
-      }
+      await loadUserNotes(lesson.id);
     }
 
     // נטען את קישורי המדיה אם לא קיימים
@@ -1291,7 +1244,7 @@ function LearningScreen() {
             {/* Notes Section - כפתור לפתיחת Bottom Sheet */}
             <TouchableOpacity 
               style={styles.simpleNotesSection}
-              onPress={() => setShowNotesBottomSheet(true)}
+              onPress={() => notesBottomSheetRef.current?.present()}
             >
               <View style={styles.simpleNotesHeader}>
                 <Edit3 size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
@@ -1299,189 +1252,114 @@ function LearningScreen() {
                 <ChevronUp size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   </View>
               <Text style={styles.notesPreview}>
-                {(() => {
-                  if (richTextContent.length === 0) {
-                    return 'לחץ לכתיבת הערות...';
-                  }
-                  
-                  const textContent = richTextContent
-                    .filter(element => element.type === 'text')
-                    .map(element => element.content)
-                    .join(' ');
-                  
-                  return textContent.length > 100 ? 
-                    textContent.substring(0, 100) + '...' : 
-                    textContent;
-                })()}
+                {userNotes.trim() ? 
+                  (userNotes.length > 100 ? userNotes.substring(0, 100) + '...' : userNotes) : 
+                  'לחץ לכתיבת הערות...'}
               </Text>
                 </TouchableOpacity>
           </ScrollView>
               </View>
               
         {/* Notes Bottom Sheet */}
-        {showNotesBottomSheet && (
-          <TouchableOpacity 
-            style={styles.bottomSheetOverlay}
-            activeOpacity={1}
-            onPress={() => setShowNotesBottomSheet(false)}
-          >
-            <KeyboardAvoidingView 
-              behavior={Platform.OS === 'ios' ? 'position' : 'height'}
-              style={styles.keyboardAvoidingView}
-              keyboardVerticalOffset={Platform.OS === 'ios' ? -50 : 0}
+        <BottomSheetModal
+          ref={notesBottomSheetRef}
+          index={0}
+          snapPoints={snapPoints}
+          enablePanDownToClose
+          onDismiss={() => {}}
+          backdropComponent={renderBackdrop}
+          backgroundStyle={{ backgroundColor: '#1C1C1E' }}
+          handleIndicatorStyle={{ backgroundColor: 'rgba(255,255,255,0.3)', width: 40 }}
+        >
+          {/* Header - פשוט ומינימלי */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
+            <TouchableOpacity 
+              onPress={() => notesBottomSheetRef.current?.dismiss()}
+              style={{ 
+                width: 36, 
+                height: 36, 
+                borderRadius: 18, 
+                backgroundColor: 'rgba(255,255,255,0.08)', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}
             >
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                <Animated.View 
-                  style={[styles.bottomSheet, { transform: [{ translateY: bottomSheetTranslateY }] }]}
-                  {...panResponder.panHandlers}
-                >
-              <View style={styles.bottomSheetHeader}>
-                <View style={styles.dragHandle} />
-                <View style={styles.headerContent}>
-                  <Text style={styles.bottomSheetTitle}>הערות שלי</Text>
-                  {isSaving && (
-                    <View style={styles.savingIndicator}>
-                      <Save size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-                      <Text style={styles.savingText}>שומר...</Text>
-                </View>
-                  )}
-                  {isLoadingNotes && (
-                    <View style={styles.savingIndicator}>
-                      <RefreshCw size={16} color={DesignTokens.colors.text.secondary} strokeWidth={2} />
-                      <Text style={styles.savingText}>טוען הערות...</Text>
-                    </View>
-                  )}
-                  {!isLoadingNotes && !isSaving && (
-                    <View style={styles.formatIndicator}>
-                      <Text style={styles.formatText}>
-                        {currentFormatting.bold ? 'מודגש' : 'רגיל'} • 
-                        <Text style={{ color: currentFormatting.color }}> צבע</Text>
-                      </Text>
-                    </View>
-                  )}
-              </View>
-                <TouchableOpacity 
-                  style={styles.closeButton}
-                  onPress={() => setShowNotesBottomSheet(false)}
-                >
-                  <X size={24} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                </TouchableOpacity>
-              </View>
-              
-              {/* Toolbar */}
-              <View style={styles.toolbar}>
-                    <TouchableOpacity 
-                  style={[styles.toolbarButton, currentFormatting.bold && styles.activeToolbarButton]}
-                  onPress={toggleBold}
-                >
-                  <Type size={20} color={currentFormatting.bold ? DesignTokens.colors.primary.main : DesignTokens.colors.text.primary} strokeWidth={2} />
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                  style={styles.toolbarButton}
-                  onPress={addImageElement}
-                >
-                  <ImageIcon size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.toolbarButton}
-                  onPress={addColoredTextElement}
-                >
-                  <Palette size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                    </TouchableOpacity>
-                  </View>
-              
-              {/* Direct Text Editor */}
-              <ScrollView 
-                style={styles.flowingTextContainer}
-                contentContainerStyle={styles.flowingTextContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                <TouchableOpacity 
-                  style={styles.editableTextArea}
-                  onPress={startEditing}
-                  activeOpacity={0.7}
-                >
-                  {/* תצוגת התוכן הקיים */}
-                  <View style={styles.textAreaContent}>
-                    {renderFlowingText()}
-                    {richTextContent.length === 0 && !isEditing && (
-                      <Text style={styles.placeholderText}>כתוב הערות כאן...</Text>
-                    )}
-                  </View>
-                  
-                  {/* אזור עריכה חדש */}
-                  {isEditing && (
-                    <View style={styles.newTextInputContainer}>
-                      <TextInput
-                        ref={textInputRef}
-                        style={[
-                          styles.inlineTextInput,
-                          currentFormatting.bold && styles.boldText,
-                          { color: currentFormatting.color }
-                        ]}
-                        placeholder="הוסף הערה חדשה..."
-                        placeholderTextColor={DesignTokens.colors.text.tertiary}
-                        value={editingText}
-                        onChangeText={setEditingText}
-                        multiline
-                        textAlign="right"
-                        textAlignVertical="top"
-                        autoFocus
-                        onSubmitEditing={finishEditing}
-                        onBlur={finishEditing}
-                      />
-                    </View>
-                  )}
-                  
-                  {/* כפתור הוספת הערה */}
-                  {!isEditing && (
-                    <View style={styles.addNoteButton}>
-                      <PlusCircle size={24} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-                      <Text style={styles.addNoteText}>הוסף הערה</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </ScrollView>
-              
-              
-              {/* Action Buttons */}
-              <View style={styles.bottomSheetActions}>
-                <TouchableOpacity 
-                  style={styles.cancelButton}
-                  onPress={() => setShowNotesBottomSheet(false)}
-                >
-                  <Text style={styles.cancelButtonText}>ביטול</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.saveButton}
-                  onPress={async () => {
-                    if (selectedLesson) {
-                      try {
-                        setIsSaving(true);
-                        const content = JSON.stringify(richTextContent);
-                        await saveUserNotes(selectedLesson.id, content);
-                        setLastSavedContent(content);
-                        Alert.alert('נשמר!', 'ההערות נשמרו בהצלחה');
-                        // רענון התצוגה
-                        await loadExistingNotes(selectedLesson.id);
-                      } catch (error) {
-                        console.error('Error saving notes:', error);
-                        Alert.alert('שגיאה', 'לא ניתן לשמור את ההערות');
-                      } finally {
-                        setIsSaving(false);
-                      }
-                    }
-                  }}
-                >
-                  <Text style={styles.saveButtonText}>שמור</Text>
-                </TouchableOpacity>
-              </View>
-              </Animated.View>
-              </TouchableWithoutFeedback>
-            </KeyboardAvoidingView>
-          </TouchableOpacity>
-        )}
+              <X size={20} color="#FFFFFF" strokeWidth={2} />
+            </TouchableOpacity>
+            
+            <Text style={{ fontSize: 20, fontWeight: '700', color: '#FFFFFF' }}>
+              הערות שלי
+            </Text>
+            
+            <TouchableOpacity 
+              onPress={async () => {
+                if (selectedLesson) {
+                  try {
+                    setIsSaving(true);
+                    await saveUserNotes(selectedLesson.id, userNotes);
+                    Alert.alert('נשמר!', 'ההערות נשמרו בהצלחה');
+                  } catch (error) {
+                    console.error('Error saving notes:', error);
+                    Alert.alert('שגיאה', 'לא ניתן לשמור את ההערות');
+                  } finally {
+                    setIsSaving(false);
+                  }
+                }
+              }}
+              style={{ 
+                width: 36, 
+                height: 36, 
+                borderRadius: 18, 
+                backgroundColor: 'rgba(0, 230, 84, 0.15)', 
+                alignItems: 'center', 
+                justifyContent: 'center' 
+              }}
+            >
+              {isSaving ? (
+                <RefreshCw size={20} color="#00E654" strokeWidth={2} />
+              ) : (
+                <Save size={20} color="#00E654" strokeWidth={2} />
+              )}
+            </TouchableOpacity>
+          </View>
+          
+          {/* איזור כתיבה - עם רקע ומסגרת נפרדים */}
+          <BottomSheetScrollView 
+            style={{ flex: 1, backgroundColor: '#1C1C1E' }}
+            contentContainerStyle={{ padding: 20, paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+            keyboardBehavior="interactive"
+          >
+            <View style={{
+              backgroundColor: '#2C2C2E',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.1)',
+              padding: 16,
+              minHeight: 400
+            }}>
+              <TextInput
+                ref={textInputRef}
+                style={{
+                  fontSize: 16,
+                  color: '#FFFFFF',
+                  textAlign: 'right',
+                  textAlignVertical: 'top',
+                  minHeight: 400,
+                  lineHeight: 24
+                }}
+                placeholder="התחל לכתוב הערות..."
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                value={userNotes}
+                onChangeText={setUserNotes}
+                multiline
+                autoFocus
+              />
+            </View>
+          </BottomSheetScrollView>
+          
+          
+        </BottomSheetModal>
 
         {/* Link Dialog */}
         <Modal

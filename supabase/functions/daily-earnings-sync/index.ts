@@ -1,190 +1,146 @@
-// Daily Earnings Sync - Edge Function
-// שולף נתוני Earnings מ-EODHD API ומעדכן את Supabase DB
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const EODHD_API_KEY = '68e3c3af900997.85677801'
-const EODHD_BASE_URL = 'https://eodhd.com/api'
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-interface EarningsEvent {
-  id: string
-  title: string
-  company: string
-  symbol: string
-  report_date: string
-  date: string
-  before_after_market?: string
-  currency?: string
-  actual?: number
-  estimate?: number
-  difference?: number
-  percent?: number
-  source: string
-  createdAt: string
-  dateObject: Date
+interface EarningsData {
+  code: string;
+  report_date: string;
+  date: string;
+  before_after_market: string;
+  currency: string;
+  actual: number;
+  estimate: number;
+  difference: number;
+  percent: number;
 }
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
-    console.log('🚀 Daily Earnings Sync started')
-    
+    console.log('🚀 Earnings sync function started')
+    console.log('🔄 Starting Earnings sync...')
+
     // יצירת Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
-    // קבלת תאריכים - שבוע אחד קדימה (מצומצם יותר)
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase configuration')
+    }
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // EODHD API Key
+    const eodhdApiKey = Deno.env.get('EODHD_API_KEY') || '68e3c3af900997.85677801'
+    if (!eodhdApiKey) {
+      throw new Error('EODHD_API_KEY is required')
+    }
+
+    // חישוב טווח תאריכים - שבוע אחורה + 3 חודשים קדימה
     const today = new Date()
     const startDate = new Date(today)
-    startDate.setDate(startDate.getDate() - 1) // יום אחד אחורה
-    
+    startDate.setDate(startDate.getDate() - 7) // שבוע אחורה
     const endDate = new Date(today)
-    endDate.setDate(endDate.getDate() + 7) // שבוע אחד קדימה (במקום 14)
-    
-    const startDateStr = startDate.toISOString().split('T')[0]
-    const endDateStr = endDate.toISOString().split('T')[0]
-    
-    console.log(`📅 Fetching earnings from ${startDateStr} to ${endDateStr}`)
-    
-    // שליפת Earnings מ-EODHD
-    const earnings = await fetchEODHDEarnings(startDateStr, endDateStr)
-    
-    console.log(`📊 Fetched ${earnings.length} earnings events from EODHD`)
-    
-    // שמירה ב-Supabase
-    if (earnings.length > 0) {
-      // מחיקת נתונים ישנים
-      const { error: deleteError } = await supabase
-        .from('earnings_events')
-        .delete()
-        .gte('report_date', startDateStr)
-        .lte('report_date', endDateStr)
-      
-      if (deleteError) {
-        console.log('❌ Error deleting old earnings:', deleteError)
-      }
-      
-      // הוספת נתונים חדשים
-      const { error: insertError } = await supabase
-        .from('earnings_events')
-        .insert(earnings)
-      
-      if (insertError) {
-        console.log('❌ Error inserting new earnings:', insertError)
-      } else {
-        console.log(`✅ Successfully saved ${earnings.length} earnings to database`)
+    endDate.setMonth(endDate.getMonth() + 3) // 3 חודשים קדימה
+
+    const fromDate = startDate.toISOString().split('T')[0]
+    const toDate = endDate.toISOString().split('T')[0]
+
+    console.log(`📅 Fetching earnings from ${fromDate} to ${toDate}...`)
+
+    // קריאה ל-EODHD API
+    const apiUrl = `https://eodhd.com/api/calendar/earnings?from=${fromDate}&to=${toDate}&api_token=${eodhdApiKey}&fmt=json`
+    console.log('🔗 API URL:', apiUrl.replace(eodhdApiKey, '***'))
+
+    const response = await fetch(apiUrl)
+    if (!response.ok) {
+      throw new Error(`EODHD API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    console.log('📈 Received earnings data:', data)
+
+    if (!data.earnings || !Array.isArray(data.earnings)) {
+      throw new Error('Invalid response format from EODHD API')
+    }
+
+    let totalProcessed = 0
+    let totalInserted = 0
+
+    // עיבוד כל דיווח תוצאות
+    for (const earnings of data.earnings) {
+      totalProcessed++
+
+      try {
+        const earningsData = {
+          id: `earnings_${earnings.code}_${earnings.report_date}`,
+          code: earnings.code,
+          report_date: earnings.report_date,
+          date: earnings.date,
+          before_after_market: earnings.before_after_market || null,
+          currency: earnings.currency || null,
+          actual: earnings.actual || null,
+          estimate: earnings.estimate || null,
+          difference: earnings.difference || null,
+          percent: earnings.percent || null,
+          source: 'EODHD',
+          updated_at: new Date().toISOString()
+        }
+
+        // הכנסה/עדכון במסד הנתונים
+        const { error } = await supabase
+          .from('earnings_calendar')
+          .upsert(earningsData, { 
+            onConflict: 'id',
+            ignoreDuplicates: false 
+          })
+
+        if (error) {
+          console.error('❌ Error upserting earnings:', error)
+        } else {
+          totalInserted++
+        }
+
+      } catch (error) {
+        console.error('❌ Error processing earnings:', error)
       }
     }
-    
-    // שליחת התראות Push ל-earnings חשובים היום
-    const todayStr = today.toISOString().split('T')[0]
-    const todayEarnings = earnings.filter(earning => 
-      earning.report_date === todayStr && 
-      ['JPM.US', 'WFC.US', 'BAC.US', 'GS.US', 'MS.US', 'BLK.US'].includes(earning.symbol)
+
+    console.log(`✅ Earnings sync completed: ${totalInserted}/${totalProcessed} records processed`)
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Earnings synchronized successfully',
+        processed: totalProcessed,
+        inserted: totalInserted,
+        dateRange: `${fromDate} to ${toDate}`
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      },
     )
-    
-    if (todayEarnings.length > 0) {
-      console.log(`📱 Found ${todayEarnings.length} important earnings today`)
-      
-      // כאן נוכל להוסיף שליחת Push Notifications
-      // TODO: Implement push notifications for earnings
-    }
-    
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Successfully synced ${earnings.length} earnings events`,
-      earningsCount: earnings.length,
-      todayImportantEarnings: todayEarnings.length
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 200
-    })
-    
+
   } catch (error) {
-    console.error('❌ Daily Earnings Sync error:', error)
-    
-    return new Response(JSON.stringify({
-      success: false,
-      error: error.message
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-      status: 500
-    })
+    console.error('❌ Earnings sync error:', error)
+
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      }),
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      },
+    )
   }
 })
-
-// פונקציה לשליפת Earnings מ-EODHD
-async function fetchEODHDEarnings(startDate: string, endDate: string): Promise<EarningsEvent[]> {
-  try {
-    const url = `${EODHD_BASE_URL}/calendar/earnings?api_token=${EODHD_API_KEY}&from=${startDate}&to=${endDate}&fmt=json`
-    
-    console.log(`📡 EODHD Earnings API: ${url}`)
-    
-    const response = await fetch(url)
-    
-    if (!response.ok) {
-      console.log(`❌ EODHD Earnings API error: HTTP ${response.status}`)
-      return []
-    }
-    
-    const data = await response.json()
-    const earnings: EarningsEvent[] = []
-    
-    if (data && data.earnings && Array.isArray(data.earnings)) {
-      data.earnings.forEach((earning: any) => {
-        // מיפוי נתונים מ-EODHD לפורמט שלנו
-        const reportDate = new Date(earning.report_date)
-        
-        earnings.push({
-          id: `earnings_${earning.code}_${earning.report_date}`,
-          title: `📊 Earnings Report - ${getCompanyName(earning.code)}`,
-          company: getCompanyName(earning.code),
-          symbol: earning.code,
-          report_date: earning.report_date,
-          date: earning.date,
-          before_after_market: earning.before_after_market,
-          currency: earning.currency,
-          actual: earning.actual,
-          estimate: earning.estimate,
-          difference: earning.difference,
-          percent: earning.percent,
-          source: 'EODHD Earnings Calendar',
-          createdAt: new Date().toISOString(),
-          dateObject: reportDate
-        })
-      })
-    }
-    
-    return earnings
-    
-  } catch (error) {
-    console.log('❌ EODHD Earnings fetch error:', error)
-    return []
-  }
-}
-
-// פונקציה לקבלת שם החברה מהסמל
-function getCompanyName(symbol: string): string {
-  const companyNames: { [key: string]: string } = {
-    'JPM.US': 'JPMorgan Chase',
-    'WFC.US': 'Wells Fargo',
-    'BAC.US': 'Bank of America',
-    'GS.US': 'Goldman Sachs',
-    'MS.US': 'Morgan Stanley',
-    'BLK.US': 'BlackRock',
-    'C.US': 'Citigroup',
-    'PNC.US': 'PNC Financial',
-    'MTB.US': 'M&T Bank',
-    'UNH.US': 'UnitedHealth',
-    'INFY.US': 'Infosys',
-    'TSM.US': 'Taiwan Semiconductor',
-    'PAYTM.BSE': 'Paytm',
-    'RELIANCE.BSE': 'Reliance Industries',
-    'AXISBANK.BSE': 'Axis Bank',
-    'KOTAKBANK.BSE': 'Kotak Mahindra Bank'
-  }
-  
-  return companyNames[symbol] || symbol.replace(/\.(US|BSE|NSE)$/, '')
-}
-

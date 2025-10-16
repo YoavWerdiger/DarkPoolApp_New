@@ -251,21 +251,13 @@ serve(async (req) => {
     
     // שמירה ב-Supabase
     if (events.length > 0) {
-      // מחיקת נתונים ישנים
-      const { error: deleteError } = await supabase
-        .from('economic_events')
-        .delete()
-        .gte('date', startDateStr)
-        .lte('date', endDateStr)
-      
-      if (deleteError) {
-        console.log('❌ Error deleting old events:', deleteError)
-      }
-      
-      // הוספת נתונים חדשים
+      // הוספת נתונים חדשים עם upsert (עדכון אם קיים, הוספה אם לא)
       const { error: insertError } = await supabase
         .from('economic_events')
-        .insert(events)
+        .upsert(events, {
+          onConflict: 'id',
+          ignoreDuplicates: false
+        })
       
       if (insertError) {
         console.log('❌ Error inserting new events:', insertError)

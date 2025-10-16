@@ -10,24 +10,22 @@
   const EODHD_API_KEY = '68e3c3af900997.85677801'
   const EODHD_BASE_URL = 'https://eodhd.com/api'
 
-  interface EconomicEvent {
-    id: string
-    title: string
-    country: string
-    currency: string
-    importance: 'high' | 'medium' | 'low'
-    date: string
-    time: string
-    actual?: string
-    forecast?: string
-    previous?: string
-    description?: string
-    category?: string
-    impact?: string
-    source?: string
-    createdAt?: string
-    dateObject?: Date
-  }
+interface EconomicEvent {
+  id: string
+  title: string
+  country: string
+  currency: string
+  importance: 'high' | 'medium' | 'low'
+  date: string
+  time: string
+  actual?: string
+  forecast?: string
+  previous?: string
+  description?: string
+  category?: string
+  impact?: string
+  source?: string
+}
 
   // פונקציה לשליפת Economic Events מ-EODHD
   async function fetchEODHDEconomicEvents(startDate: string, endDate: string): Promise<EconomicEvent[]> {
@@ -51,24 +49,22 @@
           // מיפוי נתונים מ-EODHD לפורמט שלנו
           const eventDate = new Date(event.date)
           
-          events.push({
-            id: `eodhd_${event.type}_${event.date}`,
-            title: `📊 ${event.type}`,
-            country: event.country === 'US' ? 'ארצות הברית' : event.country,
-            currency: event.country === 'US' ? 'USD' : '',
-            importance: mapEODHDImportance(event.type),
-            date: event.date.split(' ')[0], // רק התאריך ללא השעה
-            time: event.date.includes(' ') ? event.date.split(' ')[1].substring(0, 5) : '',
-            actual: event.actual?.toString() || '',
-            forecast: event.estimate?.toString() || '',
-            previous: event.previous?.toString() || '',
-            description: `${event.type}${event.period ? ` (${event.period})` : ''}${event.comparison ? ` - ${event.comparison}` : ''}`,
-            category: mapEODHDCategory(event.type),
-            impact: mapEODHDImportance(event.type),
-            source: 'EODHD Economic Events',
-            createdAt: new Date().toISOString(),
-            dateObject: eventDate
-          })
+        events.push({
+          id: `eodhd_${event.type}_${event.date}`.replace(/[^a-zA-Z0-9_]/g, '_'),
+          title: event.type,
+          country: 'United States',
+          currency: 'USD',
+          importance: mapEODHDImportance(event.type),
+          date: event.date.split(' ')[0],
+          time: event.date.includes(' ') ? event.date.split(' ')[1].substring(0, 5) : '00:00',
+          actual: event.actual?.toString() || '',
+          forecast: event.estimate?.toString() || '',
+          previous: event.previous?.toString() || '',
+          description: event.type,
+          category: mapEODHDCategory(event.type),
+          impact: mapEODHDImportance(event.type),
+          source: 'EODHD'
+        })
         })
       }
       
@@ -200,24 +196,22 @@
                 ? (parseFloat(current.value) - parseFloat(previous.value)).toFixed(2)
                 : ''
               
-              seriesEvents.push({
-                id: `fred_${series.id}_${current.date}`,
-                title: `📊 ${series.name}`,
-                country: 'ארצות הברית',
-                currency: 'USD',
-                importance: series.importance as 'high' | 'medium' | 'low',
-                date: current.date,
-                time: '',
-                actual: current.value,
-                forecast: '',
-                previous: (previous && previous.value !== '.') ? previous.value : '',
-                description: `${series.name}: ${current.value}. ${change ? `שינוי מהנתון הקודם: ${change}` : ''}`,
-                category: series.category,
-                impact: series.importance as 'high' | 'medium' | 'low',
-                source: 'FRED - Federal Reserve',
-                createdAt: new Date().toISOString(),
-                dateObject: new Date(current.date)
-              })
+            seriesEvents.push({
+              id: `fred_${series.id}_${current.date}`,
+              title: series.name,
+              country: 'United States',
+              currency: 'USD',
+              importance: series.importance as 'high' | 'medium' | 'low',
+              date: current.date,
+              time: '00:00',
+              actual: current.value,
+              forecast: '',
+              previous: (previous && previous.value !== '.') ? previous.value : '',
+              description: series.name,
+              category: series.category,
+              impact: series.importance,
+              source: 'FRED'
+            })
             }
           }
           

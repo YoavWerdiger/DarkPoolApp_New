@@ -243,17 +243,23 @@ interface EconomicEvent {
         console.log('❌ Failed to fetch EODHD Economic Events:', error)
       }
       
+    // הסרת כפילויות לפי ID
+    const uniqueEvents = events.filter((event, index, self) => 
+      index === self.findIndex((e) => e.id === event.id)
+    )
+    
+    console.log(`📊 Total events: ${events.length}, Unique: ${uniqueEvents.length}`)
+    
     // שמירה ב-Supabase
-    if (events.length > 0) {
-      console.log(`🔄 Attempting to upsert ${events.length} events...`)
-      console.log('📋 Sample event:', JSON.stringify(events[0]))
+    if (uniqueEvents.length > 0) {
+      console.log(`🔄 Attempting to upsert ${uniqueEvents.length} events...`)
+      console.log('📋 Sample event:', JSON.stringify(uniqueEvents[0]))
       
       // הוספת נתונים חדשים עם upsert (עדכון אם קיים, הוספה אם לא)
       const { data, error: insertError } = await supabase
         .from('economic_events')
-        .upsert(events, {
-          onConflict: 'id',
-          ignoreDuplicates: false
+        .upsert(uniqueEvents, {
+          onConflict: 'id'
         })
         .select()
       
@@ -261,7 +267,7 @@ interface EconomicEvent {
         console.log('❌ Error inserting new events:', JSON.stringify(insertError))
         throw new Error(`Database insert failed: ${insertError.message}`)
       } else {
-        console.log(`✅ Successfully saved ${data?.length || events.length} events to database`)
+        console.log(`✅ Successfully saved ${data?.length || uniqueEvents.length} events to database`)
       }
     }
       

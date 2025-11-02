@@ -29,7 +29,13 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "bundler": "metro"
+    "extra": {
+      "eas": {
+        "projectId": "c6140546-bf96-4ca0-85a5-26807f0742f6"
+      }
+    },
+    "bundler": "metro",
+    "owner": "darkpoolapp"
   },
   "locales": {
     "he": {

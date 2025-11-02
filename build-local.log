@@ -1,0 +1,460 @@
+Resolved "production" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "production" environment on EAS.
+Environment variables loaded from the "production" build profile "env" configuration: NODE_OPTIONS.
+
+Specified value for "android.package" in app.json is ignored because an android directory was detected in the project.
+EAS Build will use the value found in the native code.
+- Incrementing versionCode from 91 to 92.
+✔ Incremented versionCode from 91 to 92.
+android.versionCode field in app config is ignored when version source is set to remote, but this value will still be in the manifest available via expo-constants. It's recommended to remove this value from app config.
+✔ Using remote Android credentials (Expo server)
+✔ Using Keystore from configuration: Build Credentials JboGe0JEfk (default)
+- Computing project fingerprint
+✔ Computed project fingerprint
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated rimraf@2.4.5: Rimraf versions prior to v4 are no longer supported
+npm warn deprecated lodash.get@4.4.2: This package is deprecated. Use the optional chaining (?.) operator instead.
+npm warn deprecated glob@6.0.4: Glob versions prior to v9 are no longer supported
+npm warn deprecated sudo-prompt@9.1.1: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+npm warn deprecated @xmldom/xmldom@0.7.13: this version is no longer supported, please update to at least 0.8.*
+Node.js version in your eas.json does not match the Node.js currently installed in your system
+ANDROID_NDK_HOME environment variable was not specified, continuing build without NDK
+[SETUP_WORKINGDIR] Preparing workingdir /var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/eas-build-local-nodejs/19afd2e2-58c5-41e9-9cda-03a45dda2d15
+[START_BUILD] Starting build
+  "job": {
+    "type": "generic",
+    "platform": "android",
+    "projectRootDirectory": ".",
+    "projectArchive": {
+      "type": "PATH",
+      "path": "/var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/eas-cli-nodejs/c56809b4-f3e3-4026-9e37-f0e5391fa10f.tar.gz"
+    },
+    "builderEnvironment": {
+      "node": "20.18.1",
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=4096"
+      }
+    },
+    "cache": {
+      "disabled": false,
+      "paths": [],
+      "clear": false
+    },
+    "updates": {},
+    "buildType": "app-bundle",
+    "username": "darkpoolapp",
+    "version": {
+      "versionCode": "92"
+    },
+    "experimental": {},
+    "mode": "build",
+    "triggeredBy": "EAS_CLI",
+    "appId": "c6140546-bf96-4ca0-85a5-26807f0742f6",
+    "initiatingUserId": "b4af8a3f-b997-4823-82fd-b0512b348ae7"
+  }
+Local build, skipping project archive refresh
+[PREPARE_PROJECT] .npmrc found at .npmrc
+[READ_PACKAGE_JSON] Using package.json:
+[READ_PACKAGE_JSON] {
+  "name": "darkpoolapp",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo/metro-runtime": "~5.0.4",
+    "@expo/vector-icons": "^15.0.2",
+    "@gorhom/bottom-sheet": "^5.2.6",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-clipboard/clipboard": "^1.16.3",
+    "@react-navigation/bottom-tabs": "^7.4.2",
+    "@react-navigation/native": "^7.1.14",
+    "@react-navigation/native-stack": "^7.3.21",
+    "@react-navigation/stack": "^7.4.2",
+    "@supabase/supabase-js": "^2.50.2",
+    "@tanstack/react-query": "^5.81.5",
+    "date-fns": "^4.1.0",
+    "expo": "~54.0.0",
+    "expo-av": "~15.1.7",
+    "expo-blur": "~14.1.5",
+    "expo-constants": "~17.1.7",
+    "expo-device": "~7.1.4",
+    "expo-document-picker": "~13.1.6",
+    "expo-file-system": "~18.1.11",
+    "expo-haptics": "^15.0.7",
+    "expo-image-picker": "~16.1.4",
+    "expo-linear-gradient": "~15.0.7",
+    "expo-linking": "~7.1.7",
+    "expo-modules-core": "^3.0.23",
+    "expo-notifications": "~0.31.4",
+    "expo-sharing": "~13.1.5",
+    "expo-status-bar": "~2.2.3",
+    "expo-video-thumbnails": "^10.0.7",
+    "lodash": "^4.17.21",
+    "lodash.isequal": "^4.5.0",
+    "lodash.uniqby": "^4.7.0",
+    "lucide-react-native": "^0.525.0",
+    "nativewind": "^4.1.23",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-native": "0.81.5",
+    "react-native-action-sheet": "^2.2.0",
+    "react-native-animatable": "^1.4.0",
+    "react-native-context-menu-view": "^1.19.0",
+    "react-native-css-interop": "^0.2.1",
+    "react-native-dropdown-picker": "^5.4.6",
+    "react-native-element-dropdown": "^2.12.4",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-haptic-feedback": "^2.3.3",
+    "react-native-paper": "^5.14.5",
+    "react-native-popup-menu": "^0.18.0",
+    "react-native-reanimated": "~3.16.7",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.11.2",
+    "react-native-uuid": "^2.0.3",
+    "react-native-vector-icons": "^10.3.0",
+    "react-native-web": "^0.20.0",
+    "react-native-webview": "^13.13.5",
+    "react-native-worklets": "^0.5.2",
+    "react-native-worklets-core": "^1.6.2",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~19.1.0",
+    "@types/react-native-vector-icons": "^6.4.18",
+    "expo-build-properties": "^1.0.9",
+    "typescript": "~5.8.3"
+  },
+  "private": true
+}
+[INSTALL_DEPENDENCIES] Running "npm ci --include=dev" in /var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/eas-build-local-nodejs/19afd2e2-58c5-41e9-9cda-03a45dda2d15/build directory
+[INSTALL_DEPENDENCIES] npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+[INSTALL_DEPENDENCIES] npm warn deprecated lodash.isequal@4.5.0: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
+[INSTALL_DEPENDENCIES] npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+[INSTALL_DEPENDENCIES] npm warn deprecated react-native-vector-icons@10.3.0: react-native-vector-icons package has moved to a new model of per-icon-family packages. See the https://github.com/oblador/react-native-vector-icons/blob/master/MIGRATION.md on how to migrate
+[INSTALL_DEPENDENCIES] added 953 packages, and audited 954 packages in 8s
+[INSTALL_DEPENDENCIES] 109 packages are looking for funding
+[INSTALL_DEPENDENCIES]   run `npm fund` for details
+[INSTALL_DEPENDENCIES] found 0 vulnerabilities
+The NODE_ENV environment variable is required but was not specified. Ensure the project is bundled with Expo CLI or NODE_ENV is set.
+Proceeding without mode-specific .env
+[33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra key in Expo config: "locales"
+[90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+[READ_APP_CONFIG] Using app configuration:
+[READ_APP_CONFIG] {
+  "name": "DarkPool",
+  "slug": "DarkPool",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "icon": "./assets/icon.png",
+  "userInterfaceStyle": "dark",
+  "newArchEnabled": true,
+  "splash": {
+    "image": "./assets/splash-icon.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#000000"
+  },
+  "assetBundlePatterns": [
+    "**/*"
+  ],
+  "ios": {
+    "supportsTablet": true,
+    "bundleIdentifier": "com.darkpool.app"
+  },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
+      "backgroundColor": "#000000"
+    },
+    "edgeToEdgeEnabled": true,
+    "package": "com.darkpool.app",
+    "versionCode": 4,
+    "permissions": [
+      "android.permission.INTERNET",
+      "android.permission.CAMERA",
+      "android.permission.READ_EXTERNAL_STORAGE",
+      "android.permission.WRITE_EXTERNAL_STORAGE",
+      "android.permission.RECORD_AUDIO",
+      "android.permission.READ_MEDIA_IMAGES",
+      "android.permission.READ_MEDIA_VIDEO",
+      "android.permission.POST_NOTIFICATIONS"
+    ]
+  },
+  "web": {
+    "favicon": "./assets/favicon.png"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "c6140546-bf96-4ca0-85a5-26807f0742f6"
+    }
+  },
+  "plugins": [
+    [
+      "expo-build-properties",
+      {
+        "android": {
+          "enableProguardInReleaseBuilds": true,
+          "enableShrinkResourcesInReleaseBuilds": true,
+          "enableMinifyInReleaseBuilds": true
+        }
+      }
+    ]
+  ],
+  "owner": "darkpoolapp",
+  "sdkVersion": "54.0.0",
+  "platforms": [
+    "ios",
+    "android",
+    "web"
+  ]
+}
+[RUN_EXPO_DOCTOR] Running "expo doctor"
+[RUN_EXPO_DOCTOR] [33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra key in Expo config: "locales"
+[RUN_EXPO_DOCTOR] [90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+[RUN_EXPO_DOCTOR] Running 17 checks on your project...
+[RUN_EXPO_DOCTOR] [33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra key in Expo config: "locales"
+[RUN_EXPO_DOCTOR] [90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+[RUN_EXPO_DOCTOR] 12/17 checks passed. 5 checks failed. Possible issues detected:
+[RUN_EXPO_DOCTOR] Use the --verbose flag to see more details about passed checks.
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] ✖ Check dependencies for packages that should not be installed directly
+[RUN_EXPO_DOCTOR] The package "expo-modules-core" should not be installed directly in your project. You should instead use the exported API from the expo package.
+[RUN_EXPO_DOCTOR] Advice:
+[RUN_EXPO_DOCTOR] Remove these packages from your package.json.
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] ✖ Check that required peer dependencies are installed
+[RUN_EXPO_DOCTOR] Missing peer dependency: expo-font
+[RUN_EXPO_DOCTOR] Required by: @expo/vector-icons
+[RUN_EXPO_DOCTOR] Advice:
+[RUN_EXPO_DOCTOR] Install missing required peer dependency with "npx expo install expo-font"
+[RUN_EXPO_DOCTOR] Your app may crash outside of Expo Go without this dependency. Native module peer dependencies must be installed directly.
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] ✖ Check that no duplicate dependencies are installed
+[RUN_EXPO_DOCTOR] Your project contains duplicate native module dependencies, which should be de-duplicated.
+[RUN_EXPO_DOCTOR] Native builds may only contain one version of any given native module, and having multiple versions of a single Native module installed may lead to unexpected build errors.
+[RUN_EXPO_DOCTOR] Found duplicates for expo-constants:
+[RUN_EXPO_DOCTOR]   ├─ expo-constants@17.1.7 (at: node_modules/expo-constants)
+[RUN_EXPO_DOCTOR]   ├─ expo-constants@18.0.8 (at: node_modules/expo/node_modules/expo-constants)
+[RUN_EXPO_DOCTOR]   └─ expo-constants@18.0.8 (at: node_modules/expo-asset/node_modules/expo-constants)
+[RUN_EXPO_DOCTOR] Found duplicates for expo-file-system:
+[RUN_EXPO_DOCTOR]   ├─ expo-file-system@18.1.11 (at: node_modules/expo-file-system)
+[RUN_EXPO_DOCTOR]   └─ expo-file-system@19.0.12 (at: node_modules/expo/node_modules/expo-file-system)
+[RUN_EXPO_DOCTOR] Found duplicates for expo-modules-core:
+[RUN_EXPO_DOCTOR]   ├─ expo-modules-core@3.0.23 (at: node_modules/expo-modules-core)
+[RUN_EXPO_DOCTOR]   └─ expo-modules-core@3.0.15 (at: node_modules/expo/node_modules/expo-modules-core)
+[RUN_EXPO_DOCTOR] Advice:
+[RUN_EXPO_DOCTOR] Resolve your dependency issues and deduplicate your dependencies. Learn more: https://expo.fyi/resolving-dependency-issues
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] ✖ Check for app config fields that may not be synced in a non-CNG project
+[RUN_EXPO_DOCTOR] This project contains native project folders but also has native configuration properties in app.json, indicating it is configured to use Prebuild. When the android/ios folders are present, EAS Build will not sync the following properties: orientation, icon, userInterfaceStyle, splash, ios, android, plugins. 
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] Advice:
+[RUN_EXPO_DOCTOR] Add '/android' to your .gitignore file if you intend to use CNG / Prebuild. Learn more: https://docs.expo.dev/workflow/prebuild/#usage-with-eas-build
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] ✖ Check that packages match versions required by installed Expo SDK
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] ❗ Major version mismatches
+[RUN_EXPO_DOCTOR] package                                    expected  found    
+[RUN_EXPO_DOCTOR] @expo/metro-runtime                        ~6.1.2    5.0.4    
+[RUN_EXPO_DOCTOR] expo-av                                    ~16.0.7   15.1.7   
+[RUN_EXPO_DOCTOR] expo-blur                                  ~15.0.7   14.1.5   
+[RUN_EXPO_DOCTOR] expo-constants                             ~18.0.10  17.1.7   
+[RUN_EXPO_DOCTOR] expo-device                                ~8.0.9    7.1.4    
+[RUN_EXPO_DOCTOR] expo-document-picker                       ~14.0.7   13.1.6   
+[RUN_EXPO_DOCTOR] expo-file-system                           ~19.0.17  18.1.11  
+[RUN_EXPO_DOCTOR] expo-image-picker                          ~17.0.8   16.1.4   
+[RUN_EXPO_DOCTOR] expo-linking                               ~8.0.8    7.1.7    
+[RUN_EXPO_DOCTOR] expo-sharing                               ~14.0.7   13.1.5   
+[RUN_EXPO_DOCTOR] expo-status-bar                            ~3.0.8    2.2.3    
+[RUN_EXPO_DOCTOR] react                                      19.1.0    18.3.1   
+[RUN_EXPO_DOCTOR] react-dom                                  19.1.0    18.3.1   
+[RUN_EXPO_DOCTOR] react-native-reanimated                    ~4.1.1    3.16.7   
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] ⚠️ Minor version mismatches
+[RUN_EXPO_DOCTOR] package                                    expected  found    
+[RUN_EXPO_DOCTOR] @react-native-async-storage/async-storage  2.2.0     2.1.2    
+[RUN_EXPO_DOCTOR] expo-notifications                         ~0.32.12  0.31.4   
+[RUN_EXPO_DOCTOR] react-native-svg                           15.12.1   15.11.2  
+[RUN_EXPO_DOCTOR] react-native-web                           ^0.21.0   0.20.0   
+[RUN_EXPO_DOCTOR] react-native-webview                       13.15.0   13.13.5  
+[RUN_EXPO_DOCTOR] typescript                                 ~5.9.2    5.8.3    
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] 🔧 Patch version mismatches
+[RUN_EXPO_DOCTOR] package                                    expected  found    
+[RUN_EXPO_DOCTOR] @expo/vector-icons                         ^15.0.3   15.0.2   
+[RUN_EXPO_DOCTOR] expo                                       54.0.21   54.0.2   
+[RUN_EXPO_DOCTOR] react-native-worklets                      0.5.1     0.5.2    
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] Changelogs:
+[RUN_EXPO_DOCTOR] - expo-av → https://github.com/expo/expo/blob/sdk-54/packages/expo-av/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-blur → https://github.com/expo/expo/blob/sdk-54/packages/expo-blur/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-constants → https://github.com/expo/expo/blob/sdk-54/packages/expo-constants/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-device → https://github.com/expo/expo/blob/sdk-54/packages/expo-device/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-document-picker → https://github.com/expo/expo/blob/sdk-54/packages/expo-document-picker/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-file-system → https://github.com/expo/expo/blob/sdk-54/packages/expo-file-system/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-image-picker → https://github.com/expo/expo/blob/sdk-54/packages/expo-image-picker/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-linking → https://github.com/expo/expo/blob/sdk-54/packages/expo-linking/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-notifications → https://github.com/expo/expo/blob/sdk-54/packages/expo-notifications/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-sharing → https://github.com/expo/expo/blob/sdk-54/packages/expo-sharing/CHANGELOG.md
+[RUN_EXPO_DOCTOR] - expo-status-bar → https://github.com/expo/expo/blob/sdk-54/packages/expo-status-bar/CHANGELOG.md
+[RUN_EXPO_DOCTOR] 
+[RUN_EXPO_DOCTOR] 23 packages out of date.
+[RUN_EXPO_DOCTOR] Advice:
+[RUN_EXPO_DOCTOR] Use 'npx expo install --check' to review and upgrade your dependencies.
+[RUN_EXPO_DOCTOR] To ignore specific packages, add them to "expo.install.exclude" in package.json. Learn more: https://expo.fyi/dependency-validation
+[RUN_EXPO_DOCTOR] 5 checks failed, indicating possible issues with the project.
+[RUN_EXPO_DOCTOR] Command "expo doctor" failed.
+Error: npx -y expo-doctor exited with non-zero code: 1
+    at ChildProcess.completionListener (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/spawn-async/build/spawnAsync.js:42:23)
+    at Object.onceWrapper (node:events:634:26)
+    at ChildProcess.emit (node:events:519:28)
+    at maybeClose (node:internal/child_process:1101:16)
+    at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+    ...
+    at spawnAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/spawn-async/build/spawnAsync.js:7:23)
+    at spawn (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/turtle-spawn/dist/index.js:16:47)
+    at runExpoDoctor (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/common/setup.js:124:52)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async /Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/common/setup.js:103:17
+    at async BuildContext.runBuildPhase (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/context.js:123:28)
+    at async setupAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/common/setup.js:101:9)
+    at async buildAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/builders/android.js:72:5)
+    at async runBuilderWithHooksAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/builders/common.js:12:13)
+    at async Object.androidBuilder (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/builders/android.js:59:16)
+[PREBUILD] Skipped running "expo prebuild" because the "android" directory already exists. Learn more about the build process: https://docs.expo.dev/build-reference/android-builds/
+[PREPARE_CREDENTIALS] Writing secrets to the project's directory
+[PREPARE_CREDENTIALS] Injecting signing config into build.gradle
+[EAGER_BUNDLE] [33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra key in Expo config: "locales"
+[EAGER_BUNDLE] [90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+[EAGER_BUNDLE] [33m[1mWarning: [22mRoot-level [1m"expo"[22m object found. Ignoring extra key in Expo config: "locales"
+[EAGER_BUNDLE] [90mLearn more: https://expo.fyi/root-expo-object[0m[0m
+[EAGER_BUNDLE] Starting Metro Bundler
+[EAGER_BUNDLE] | (node:3348) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[EAGER_BUNDLE] | (Use `node --trace-warnings ...` to show where the warning was created)
+[EAGER_BUNDLE] | (node:3349) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[EAGER_BUNDLE] | (Use `node --trace-warnings ...` to show where the warning was created)
+[EAGER_BUNDLE] | (node:3351) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[EAGER_BUNDLE] | (Use `node --trace-warnings ...` to show where the warning was created)
+[EAGER_BUNDLE] | (node:3352) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[EAGER_BUNDLE] | (Use `node --trace-warnings ...` to show where the warning was created)
+[EAGER_BUNDLE] | (node:3353) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[EAGER_BUNDLE] | (Use `node --trace-warnings ...` to show where the warning was created)
+[EAGER_BUNDLE] | (node:3350) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[EAGER_BUNDLE] | (Use `node --trace-warnings ...` to show where the warning was created)
+[EAGER_BUNDLE] | (node:3354) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[EAGER_BUNDLE] | (Use `node --trace-warnings ...` to show where the warning was created)
+[EAGER_BUNDLE] Android ./index.ts ▓░░░░░░░░░░░░░░░ 10.6% ( 79/243)
+[EAGER_BUNDLE] Android ./index.ts ▓▓▓▓▓░░░░░░░░░░░ 34.7% (377/673)
+[EAGER_BUNDLE] Android ./index.ts ▓▓▓▓▓▓▓▓░░░░░░░░ 50.5% ( 651/2548)
+[EAGER_BUNDLE] Android ./index.ts ▓▓▓▓▓▓▓▓░░░░░░░░ 50.5% (1105/2841)
+[EAGER_BUNDLE] Android ./index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 84.1% (2765/3021)
+[EAGER_BUNDLE] Android ./index.ts ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (3365/3365)
+[EAGER_BUNDLE] Android Bundled 20167ms index.ts (3365 modules)
+[EAGER_BUNDLE] Writing bundle output to: /var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/ykms6lvjt39/index.js
+[EAGER_BUNDLE] Copying 47 asset files
+[EAGER_BUNDLE] Done writing bundle output
+[RUN_GRADLEW] Running 'gradlew :app:bundleRelease' in /var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/eas-build-local-nodejs/19afd2e2-58c5-41e9-9cda-03a45dda2d15/build/android
+[RUN_GRADLEW] > Task :gradle-plugin:shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[RUN_GRADLEW] > Task :gradle-plugin:settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:pluginDescriptors
+[RUN_GRADLEW] > Task :gradle-plugin:settings-plugin:pluginDescriptors
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:processResources
+[RUN_GRADLEW] > Task :gradle-plugin:settings-plugin:processResources
+[RUN_GRADLEW] > Task :gradle-plugin:shared:processResources NO-SOURCE
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:processResources NO-SOURCE
+[RUN_GRADLEW] > Task :gradle-plugin:shared:compileKotlin
+[RUN_GRADLEW] > Task :gradle-plugin:shared:compileJava NO-SOURCE
+[RUN_GRADLEW] > Task :gradle-plugin:shared:classes UP-TO-DATE
+[RUN_GRADLEW] > Task :gradle-plugin:shared:jar
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileKotlin
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:compileJava NO-SOURCE
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:classes UP-TO-DATE
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin-shared:jar
+[RUN_GRADLEW] > Task :gradle-plugin:settings-plugin:compileKotlin
+[RUN_GRADLEW] > Task :gradle-plugin:settings-plugin:compileJava NO-SOURCE
+[RUN_GRADLEW] > Task :gradle-plugin:settings-plugin:classes
+[RUN_GRADLEW] > Task :gradle-plugin:settings-plugin:jar
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileKotlin
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:compileJava NO-SOURCE
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:classes
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-settings-plugin:jar
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[RUN_GRADLEW] > Task :gradle-plugin:react-native-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[RUN_GRADLEW] > Task :expo-module-gradle-plugin:checkKotlinGradlePluginConfigurationErrors SKIPPED
+[RUN_GRADLEW] > Task :expo-module-gradle-plugin:pluginDescriptors
+[RUN_GRADLEW] > Task :expo-module-gradle-plugin:processResources
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin:pluginDescriptors
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin:processResources
+[RUN_GRADLEW] > Task :gradle-plugin:react-native-gradle-plugin:pluginDescriptors
+[RUN_GRADLEW] > Task :gradle-plugin:react-native-gradle-plugin:processResources
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin:compileKotlin
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin:compileJava NO-SOURCE
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin:classes
+[RUN_GRADLEW] > Task :expo-gradle-plugin:expo-autolinking-plugin:jar
+[RUN_GRADLEW] > Task :gradle-plugin:react-native-gradle-plugin:compileKotlin
+[RUN_GRADLEW] > Task :gradle-plugin:react-native-gradle-plugin:compileJava NO-SOURCE
+[RUN_GRADLEW] > Task :gradle-plugin:react-native-gradle-plugin:classes
+[RUN_GRADLEW] > Task :gradle-plugin:react-native-gradle-plugin:jar
+[RUN_GRADLEW] > Task :expo-module-gradle-plugin:compileKotlin
+[RUN_GRADLEW] w: file:///private/var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/eas-build-local-nodejs/19afd2e2-58c5-41e9-9cda-03a45dda2d15/build/node_modules/expo-modules-core/expo-module-gradle-plugin/src/main/kotlin/expo/modules/plugin/android/AndroidLibraryExtension.kt:9:24 'var targetSdk: Int?' is deprecated. Will be removed from library DSL in v9.0. Use testOptions.targetSdk or/and lint.targetSdk instead.
+[RUN_GRADLEW] > Task :expo-module-gradle-plugin:compileJava NO-SOURCE
+[RUN_GRADLEW] > Task :expo-module-gradle-plugin:classes
+[RUN_GRADLEW] > Task :expo-module-gradle-plugin:jar
+[RUN_GRADLEW] > Configure project :
+[RUN_GRADLEW] [32m[ExpoRootProject][0m Using the following versions:
+[RUN_GRADLEW]   - buildTools:  [32m36.0.0[0m
+[RUN_GRADLEW]   - minSdk:      [32m24[0m
+[RUN_GRADLEW]   - compileSdk:  [32m36[0m
+[RUN_GRADLEW]   - targetSdk:   [32m36[0m
+[RUN_GRADLEW]   - ndk:         [32m27.1.12297006[0m
+[RUN_GRADLEW]   - kotlin:      [32m2.1.20[0m
+[RUN_GRADLEW]   - ksp:         [32m2.1.20-2.0.1[0m
+[RUN_GRADLEW] [Incubating] Problems report is available at: file:///private/var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/eas-build-local-nodejs/19afd2e2-58c5-41e9-9cda-03a45dda2d15/build/android/build/reports/problems/problems-report.html
+[RUN_GRADLEW] FAILURE: Build failed with an exception.
+[RUN_GRADLEW] * Where:
+[RUN_GRADLEW] Build file '/private/var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/eas-build-local-nodejs/19afd2e2-58c5-41e9-9cda-03a45dda2d15/build/android/build.gradle' line: 24
+[RUN_GRADLEW] * What went wrong:
+[RUN_GRADLEW] A problem occurred evaluating root project 'DarkPool'.
+[RUN_GRADLEW] > Failed to apply plugin 'com.facebook.react.rootproject'.
+[RUN_GRADLEW]    > A problem occurred configuring project ':app'.
+[RUN_GRADLEW]       > SDK location not found. Define a valid SDK location with an ANDROID_HOME environment variable or by setting the sdk.dir path in your project's local properties file at '/private/var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/eas-build-local-nodejs/19afd2e2-58c5-41e9-9cda-03a45dda2d15/build/android/local.properties'.
+[RUN_GRADLEW] * Try:
+[RUN_GRADLEW] > Run with --stacktrace option to get the stack trace.
+[RUN_GRADLEW] Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+[RUN_GRADLEW] You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+[RUN_GRADLEW] For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+[RUN_GRADLEW] 24 actionable tasks: 24 executed
+[RUN_GRADLEW] > Run with --info or --debug option to get more log output.
+[RUN_GRADLEW] > Run with --scan to get full insights.
+[RUN_GRADLEW] > Get more help at https://help.gradle.org.
+[RUN_GRADLEW] BUILD FAILED in 10s
+[RUN_GRADLEW] Error: Gradle build failed with unknown error. See logs for the "Run gradlew" phase for more information.
+
+Build failed
+Gradle build failed with unknown error. See logs for the "Run gradlew" phase for more information.
+Error: Gradle build failed with unknown error. See logs for the "Run gradlew" phase for more information.
+    at resolveBuildPhaseErrorAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/buildErrors/detectError.js:69:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async BuildContext.handleBuildPhaseErrorAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/context.js:192:28)
+    at async BuildContext.runBuildPhase (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/context.js:135:35)
+    at async buildAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/builders/android.js:183:5)
+    at async runBuilderWithHooksAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/builders/common.js:12:13)
+    at async Object.androidBuilder (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/@expo/build-tools/dist/builders/android.js:59:16)
+    at async buildAndroidAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/eas-cli-local-build-plugin/dist/android.js:44:12)
+    at async buildAsync (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/eas-cli-local-build-plugin/dist/build.js:55:29)
+    at async main (/Users/yoavwerdiger/.npm/_npx/51b74c4db9e60cb6/node_modules/eas-cli-local-build-plugin/dist/main.js:16:9)
+npx -y eas-cli-local-build-plugin@1.0.243 eyJqb2IiOnsidHlwZSI6ImdlbmVyaWMiLCJwbGF0Zm9ybSI6ImFuZHJvaWQiLCJwcm9qZWN0Um9vdERpcmVjdG9yeSI6Ii4iLCJwcm9qZWN0QXJjaGl2ZSI6eyJ0eXBlIjoiUEFUSCIsInBhdGgiOiIvdmFyL2ZvbGRlcnMvOW0vM3JqbWZxM3M1cm5ncm5sMF9ra2t6OF80MDAwMGduL1QvZWFzLWNsaS1ub2RlanMvYzU2ODA5YjQtZjNlMy00MDI2LTllMzctZjBlNTM5MWZhMTBmLnRhci5neiJ9LCJidWlsZGVyRW52aXJvbm1lbnQiOnsibm9kZSI6IjIwLjE4LjEiLCJlbnYiOnsiTk9ERV9PUFRJT05TIjoiLS1tYXgtb2xkLXNwYWNlLXNpemU9NDA5NiJ9fSwiY2FjaGUiOnsiZGlzYWJsZWQiOmZhbHNlLCJwYXRocyI6W10sImNsZWFyIjpmYWxzZX0sInNlY3JldHMiOnsiYnVpbGRDcmVkZW50aWFscyI6eyJrZXlzdG9yZSI6eyJkYXRhQmFzZTY0IjoiL3UzKzdRQUFBQUlBQUFBQkFBQUFBUUFnTm1Ka05qVTNNREZtTWpRelptWmlNREJoWWpjME9URTBPVEF6TmpJeVltUUFBQUdhSXVPSmNBQUFCUU13Z2dUL01BNEdDaXNHQVFRQktnSVJBUUVGQUFTQ0JPdVZHL21uZ1JrczR4NDlORDNwU2tDRGlBWHF2UnN5VG5mRzFyYTkyL1JSTThZS1MrMzh5NnNRNmhxdElZT3Jyam94MmU1aHI0VVdLU0RhMkFVdThlYXNzeStEK1B6RTRuUjFwalVET2JLWXNTM0haQytMZWxKOVlKM1FmaXV5NGJINkZvUmRqUm55TGk4OWFGR2tiL1Y1aXR0QWVpRklEczFrbCtSWGNueURMNDliRm5lRTFudEVhMyt3MVhoVjlvL1lXamU5TlZzcVV2TFhIZEk1UnNwd0ttOVRQYUNVSkU5Q1d6WDFjV0RVS1k5dkRwbk1xZnEvMmg4Wm9yOU9ieXllWTFCQXJJNGpvVkJIOU9uWkw5VzZ1eTJrdlY0VFBJbDdBTmRyYXk4ZFdmM2lPeno0RkNOTnN2Q1d0Sm44Z3NIQWVNdk5FdHdSZkIyb0JRODY5QzZnOEphQWZiTDNFNTVSMlFKZnhQeHRWMitTcUw2dC9qZkZCQ0xTOGVJWktpOW9XZnkvSkk3NEJVbHg0dHBNS2tRZDNkWm0xeUUxZVRyMUxwdXltaHVOc1ZCVk91OUh6bTlhdVE0aWlrclFxOVl4SW42ZVRjKzJLWGN1TnZ3dDR4RWYvdSt6eVkzczVEZmpDWUJ6ckNpNXZVR3B2SFY5T0RGMm10L0lBbmRNSFRkQ1BKMmdFZlpyYmNFTEtsbTFwMjY3R1h0UEZYMW9uRlJIeWZIWE5rb09tUGpJTHNlR3VNS1J1UGVPTDV0UjlnRjFoYzlMZEk1VUtWVFQ4bFBRLzNib0tRUDd3UGtUQUNyY2V3dkdQYUFpVlVNeVpZenRSRFM4SFJvaHRJVzdXajdTWWxRYlQ2NjhFUVJ2eEsvMUZNWkhSakdOa0JKQk05SWlSenQ5UkdtQXJIVHJmV2VOeGcvS2tCY1hGTDJmZlVranBSbW5PTGw0enc0cFduWDNHczJwNTdreHJqV3R4TWJIeDdIdXB5UDhyT1krUXp6Um9NR2VHY3IyVlQrS3FZL05GNy9HUmZjeU5EMUZRL2ZDMjBtWmdZMnFFbWpGdFhJTVEyUHcxdDFQVTlpTDh4QnhNOE5CQVl2T3hoditnZ3hNeUxqK0E0N2xDUlVrQlJJdFd0aXRwbzhOWTVUR0F1WmtiQXpwdGRkc3laU2hwS1o2cmVkRytIQ1dlMWQ0UXpEejVlSis0L3NuclcxSyt5bFZIRk5mT2pwckNwaWgwUEJLVjlFOHlVSVVrVHRBQnZHanprVzFSaE5FaTRrYmphS3hjdFh1MlZnMUhQR1pzZHdZUzBoZ0RPUHZTUHkzb21KMHRUUFlreTlCNTJOV3ppazRwMmJuNXN0cllzcU9zb1ZiTGNZZnU4Rk9Da1o0UzFRS2pGT2l0WGVYVkRhY3Y4UTR1cHNlb05tckE5NnhPWEh3ZXRja0JoZ1FXVHY1bTJrVStQVlYwT1JxUzFPa2ZvUFNNR3p1WGlNR2xjOWhOYlFZM2wrV0p5Tll6bDFsOXpINXNPRUJ6Z2t4NENBZDFRYVM1YzU0TThTd0RKVG85STRPRjF1VzdxM3p1LzZvQkN2Tk8wS1QxeVRkakh1cWJscDM5bDdlemNoRCtoY1o1QkUzQ0RodE13T1loRTN3Qmk2VUFOb1dUUUtSemd4N0dDVS9McWpQVDZXK1RJWlpQTytLampqYVFELzVYRVJlZmlwa0hSVEFSN0FWZmkzTXZaOW9BYXBrNWVYYlluRzRCOHlPeGdjT2RxVG5tcFZpT2dZV24vMWl6eUZobEN6RGFPaHF6bU03d3RlUDJYNjhmZGhFZHlVRWdma3YvSlZIOVhlWkp2d01pdXZ0Zy9QVGRZOHFLbTJoQ2MwUG1PdFA2eXNlOEUwaTBiRTdMS3k3L3dMRWNHV3gxb3JEcktrRjRFek9ISnREVENnWStsWkFxeUc2c29ONlFyWnFNTkJBMWd1NVN0LzV4bC9IUlpDSzFGVVZjbTlCMTc1Qk1NbUxOQ0ZzeFl1dnZHN2dVd1BZUExWTTRhdlBJQS81T2NESFNpQURaRndoa0N6UGpzRHNvMTE2VHFzdFp6OFV4Z1JldTFQekVhc3pQTlZaNW5tT0JEZ0NTTXpZWWlocnd2d0xHRHR0L2dLZGVucHhNTy9sdTZwMUh4ZFdBRjdNUmJQNHBqMmdCd3d3dkJjOUFOS25qSWFROU5meGpubm1CTzBZVVhXbExHRlJSaDRtNXJpcWRnQUFBQUVBQlZndU5UQTVBQUFETGpDQ0F5b3dnZ0lTb0FNQ0FRSUNDUURCdlZPWXgyOFlZakFOQmdrcWhraUc5dzBCQVFzRkFEQkNNUWt3QndZRFZRUUdFd0F4Q1RBSEJnTlZCQWdUQURFSk1BY0dBMVVFQnhNQU1Ra3dCd1lEVlFRS0V3QXhDVEFIQmdOVkJBc1RBREVKTUFjR0ExVUVBeE1BTUNBWERUSTFNVEF5TmpJek16ZzBPRm9ZRHpJd05UTXdNekV6TWpNek9EUTRXakJDTVFrd0J3WURWUVFHRXdBeENUQUhCZ05WQkFnVEFERUpNQWNHQTFVRUJ4TUFNUWt3QndZRFZRUUtFd0F4Q1RBSEJnTlZCQXNUQURFSk1BY0dBMVVFQXhNQU1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBb2V6WjRoWWlDWGYzdFdxQkJzOVN6REx4MnEvM3dJcnZTQUlLQ1pVN2kxU2NtK21qSnVxL0xvQXpHUjNaNFowVjdEWWJycXdVVGV2UHB0Q2ZGNTRRK21XYnI1M2ZWRk1QK3hKcEVPZDBLTktFQWxObWY1a2hRTkhKdForSGFSWklWdTJKd3MrZGdxU1AzVEhjdU1pa0ROVU9ETTZDUEV6WXJ0dU8wRW9IcW5QTC9mUTF1NlEvRm5SMHRlODhDYjVCRmswdG9mREdtUXRacm5VRVV1dTF2TU5hY2lGUGZEV25Pai9zOFBORjdKN1ZiRlg2OUpldStFcmFuYXJUK2ZKZEo3Z1BhUCtBSmc5VVREVW5QcXdyZWpwenA1VnJ3alNlamhzZEVEQkpiYzZHOHB0ZWxHY3hZM3hQeVRwQWpBZStQdE5mR2N3SXZyQjJjVFp1T0pwRWZRSURBUUFCb3lFd0h6QWRCZ05WSFE0RUZnUVVvL2V0c1lDZjBXb1JQYndVWFp6OXlGWGJ2WVV3RFFZSktvWklodmNOQVFFTEJRQURnZ0VCQUI2WHJvTVFwenV4OGxoeHdTSmxKMExRVURnTURicnRrWXpYRjMwa3c2b1I2U29xK0E0NDMzdDZybitCZTJLdWs0TlJGR216OVI2cVh3SnRQRnRSWjdTSjJ3UEUyZzE3eTJ2V2VUdEQ2NmVsQURHNnpBUXprS2x5SUcwVm8zbnhSSUVRd0NmQWJzOHQ2SUNYOHZJbGZoN2lEelBSWENLTUNncjFtRkx3WENTdlV6enlSdW9yM3R0dGpRZ3pvTjIwU0dZSzVabGx2My9Kd1ZsWjRjb3lvTGl2dm1xMVMwK0kzeHFJQmExZzhzdUZNa094blRQLzA2dUJFOW5NTStwSkZNKzl2WlUwY2FNenIvSkZseUhWNC8zeXlESGdhMVRpaXIxZDZlbVVpOFFrYnBsN0dmNERxYkxYdlZEY05HOFBUeUlUTUVLK0w0RHp5eHVMd0dqODZnbkNodjlkMzZUNFU4NjRjUDIrZjZvUEtTZ0pVZz09Iiwia2V5c3RvcmVQYXNzd29yZCI6IjFjZmIzODNhZDhmYTdkYTJmOGM0MzEzZDdjYWM1Y2FjIiwia2V5QWxpYXMiOiI2YmQ2NTcwMWYyNDNmZmIwMGFiNzQ5MTQ5MDM2MjJiZCIsImtleVBhc3N3b3JkIjoiNmI1ZjUxOGI1NTYxYTU5YmQ5NTdjZDk0MDgzYTExNDAifX19LCJ1cGRhdGVzIjp7fSwiYnVpbGRUeXBlIjoiYXBwLWJ1bmRsZSIsInVzZXJuYW1lIjoiZGFya3Bvb2xhcHAiLCJ2ZXJzaW9uIjp7InZlcnNpb25Db2RlIjoiOTIifSwiZXhwZXJpbWVudGFsIjp7fSwibW9kZSI6ImJ1aWxkIiwidHJpZ2dlcmVkQnkiOiJFQVNfQ0xJIiwiYXBwSWQiOiJjNjE0MDU0Ni1iZjk2LTRjYTAtODVhNS0yNjgwN2YwNzQyZjYiLCJpbml0aWF0aW5nVXNlcklkIjoiYjRhZjhhM2YtYjk5Ny00ODIzLTgyZmQtYjA1MTJiMzQ4YWU3In0sIm1ldGFkYXRhIjp7InRyYWNraW5nQ29udGV4dCI6eyJ0cmFja2luZ19pZCI6ImMxNzVkYTY0LTBkNWMtNDgwOS04ZjdjLWM4MTZlZjVmNjU1MiIsInBsYXRmb3JtIjoiYW5kcm9pZCIsInNka192ZXJzaW9uIjoiNTQuMC4wIiwiYWNjb3VudF9pZCI6Ijk5NWNjOGM2LTc4MGUtNDdmOC1hNDkzLTBhZjY2NTRjMWFiMSIsInByb2plY3RfaWQiOiJjNjE0MDU0Ni1iZjk2LTRjYTAtODVhNS0yNjgwN2YwNzQyZjYiLCJwcm9qZWN0X3R5cGUiOiJnZW5lcmljIiwiZGV2X2NsaWVudCI6ZmFsc2UsIm5vX3dhaXQiOmZhbHNlLCJydW5fZnJvbV9jaSI6ZmFsc2UsImxvY2FsIjp0cnVlfSwiYXBwVmVyc2lvbiI6IjEuMC4wIiwiYXBwQnVpbGRWZXJzaW9uIjoiOTIiLCJjbGlWZXJzaW9uIjoiMTYuMjYuMCIsIndvcmtmbG93IjoiZ2VuZXJpYyIsImNyZWRlbnRpYWxzU291cmNlIjoicmVtb3RlIiwic2RrVmVyc2lvbiI6IjU0LjAuMCIsImZpbmdlcnByaW50SGFzaCI6IjMxNGE0ZGNhZTBiYzE5MWE4YmZlOTNlOTE0N2Q5ZGM1OGIxZDQzYTMiLCJyZWFjdE5hdGl2ZVZlcnNpb24iOiIwLjgxLjUiLCJkaXN0cmlidXRpb24iOiJzdG9yZSIsImFwcE5hbWUiOiJEYXJrUG9vbCIsImFwcElkZW50aWZpZXIiOiJjb20uZGFya3Bvb2wuYXBwIiwiYnVpbGRQcm9maWxlIjoicHJvZHVjdGlvbiIsImdpdENvbW1pdEhhc2giOiJjNjU3ODE0NTQ2MmY2NDEzZWYxMGNjZWNkOWIwNjg3MjI3ODQ5ZTk0IiwiZ2l0Q29tbWl0TWVzc2FnZSI6IkFkZCBjb21wbGV0ZSBBbmRyb2lkIG5hdGl2ZSBjb2RlIHdpdGggU29Mb2FkZXIgYW5kIEJyaWRnZWxlc3MgZml4ZXNcblxuLSBEaXNhYmxlIEJyaWRnZWxlc3MgQXJjaGl0ZWN0dXJlIGluIGdyYWRsZS5wcm9wZXJ0aWVzIGFuZCBidWlsZC5ncmFkbGVcbi0gQWRkIGV4cGxpY2l0IFNvTG9hZGVyLmluaXQoKSBpbiBNYWluQXBwbGljYXRpb24ub25DcmVhdGVcbi0gRml4IE1haW5BY3Rpdml0eS5vbkNyZWF0ZSB0byB1c2Ugc2F2ZWRJbnN0YW5jZVN0YXRlIHByb3Blcmx5XG4tIEFkZCBBQkkgZmlsdGVycyBmb3IgcmVsZWFzZSBidWlsZHMgKEFSTSBvbmx5KVxuLSBJbmNsdWRlIGFsbCBBbmRyb2lkIGJ1aWxkIGZpbGVzIChncmFkbGV3LCBncmFkbGUgd3JhcHBlciwgZXRjLikiLCJpc0dpdFdvcmtpbmdUcmVlRGlydHkiOnRydWUsInVzZXJuYW1lIjoiZGFya3Bvb2xhcHAiLCJydW5XaXRoTm9XYWl0RmxhZyI6ZmFsc2UsInJ1bkZyb21DSSI6ZmFsc2UsImRldmVsb3BtZW50Q2xpZW50IjpmYWxzZSwicmVxdWlyZWRQYWNrYWdlTWFuYWdlciI6Im5wbSIsImN1c3RvbU5vZGVWZXJzaW9uIjoiMjAuMTguMSIsInNpbXVsYXRvciI6ZmFsc2V9fQ== exited with non-zero code: 1
+    Error: build command failed.

@@ -1,5 +1,5 @@
   import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ChatsListScreen from '../screens/Chat/ChatsListScreen';
 import ChatRoomScreen from '../screens/Chat/ChatRoomScreen';
 import GroupInfoScreen from '../screens/Chat/GroupInfoScreen';
@@ -8,7 +8,7 @@ import ChannelsScreen from '../screens/Chat/ChannelsScreen';
 import { ChatProvider } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 function ChatRoomScreenWithProvider({ route }: any) {
   const { user } = useAuth();

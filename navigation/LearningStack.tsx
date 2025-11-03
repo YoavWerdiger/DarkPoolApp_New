@@ -1,4 +1,4 @@
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LearningScreen from '../screens/Learning';
 import { DesignTokens } from '../components/ui/DesignTokens';
 
@@ -6,7 +6,7 @@ export type LearningStackParamList = {
   LearningScreen: undefined;
 };
 
-const Stack = createStackNavigator<LearningStackParamList>();
+const Stack = createNativeStackNavigator<LearningStackParamList>();
 
 export default function LearningStack() {
   return (

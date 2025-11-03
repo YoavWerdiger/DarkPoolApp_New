@@ -24,7 +24,7 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.darkpoolapp.DarkPool"
+      "package": "com.darkpool.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

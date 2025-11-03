@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+// import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../services/supabase';
 import { 
@@ -40,28 +40,12 @@ interface NewsCardProps {
 interface ShareModalProps {
   article: NewsArticle | null;
   onClose: () => void;
-  bottomSheetRef: React.RefObject<BottomSheetModal | null>;
+  visible: boolean;
 }
 
-const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, bottomSheetRef }) => {
+const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) => {
   const [chatGroups, setChatGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  // הגדרת snap points
-  const snapPoints = useMemo(() => ['70%', '90%'], []);
-  
-  // רינדור backdrop
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-      />
-    ),
-    []
-  );
 
   // טעינת קבוצות הצ'אט כשהבוטום שיט נפתח
   useEffect(() => {
@@ -246,19 +230,31 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, bottomSheetRe
   if (!article) return null;
 
   return (
-    <BottomSheetModal
-      ref={bottomSheetRef}
-      index={0}
-      snapPoints={snapPoints}
-      enablePanDownToClose
-      onDismiss={onClose}
-      backdropComponent={renderBackdrop}
-      backgroundStyle={{ backgroundColor: '#1C1C1E' }}
-      handleIndicatorStyle={{ backgroundColor: 'rgba(255,255,255,0.3)', width: 40 }}
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
     >
-      <BottomSheetScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
-      >
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <View style={{ 
+          backgroundColor: '#1C1C1E', 
+          borderTopLeftRadius: 24, 
+          borderTopRightRadius: 24,
+          maxHeight: '70%',
+          paddingHorizontal: 20,
+          paddingBottom: 40
+        }}>
+          <View style={{ 
+            width: 40, 
+            height: 5, 
+            backgroundColor: 'rgba(255,255,255,0.3)', 
+            alignSelf: 'center', 
+            marginTop: 12,
+            marginBottom: 8,
+            borderRadius: 3
+          }} />
+          <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
         {/* כותרת */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingTop: 8 }}>
           <Text 
@@ -487,8 +483,10 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, bottomSheetRe
             </View>
           </View>
         )}
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
 };
 
@@ -795,18 +793,18 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
 };
 
 const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, isLiked }) => {
-  const shareBottomSheetRef = useRef<BottomSheetModal | null>(null);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
   const categoryColor = getNewsCategoryColor(article.category);
   const categoryIcon = getNewsCategoryIcon(article.category);
   
   const handleSharePress = () => {
-    console.log('🔗 Share button pressed, opening bottom sheet...');
-    shareBottomSheetRef.current?.present();
+    console.log('🔗 Share button pressed, opening modal...');
+    setShareModalVisible(true);
   };
   
   const handleShareClose = () => {
-    console.log('🔗 Closing bottom sheet...');
-    shareBottomSheetRef.current?.dismiss();
+    console.log('🔗 Closing modal...');
+    setShareModalVisible(false);
   };
   
   // זיהוי אם זה טוויטר או חדשה רגילה
@@ -982,7 +980,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
       <ShareModal
         article={article}
         onClose={handleShareClose}
-        bottomSheetRef={shareBottomSheetRef}
+        visible={shareModalVisible}
       />
     </Pressable>
   );

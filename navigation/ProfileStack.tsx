@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import UserProfileScreen from '../screens/Profile/UserProfileScreen';
 import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 import NotificationsScreen from '../screens/Profile/NotificationsScreen';
@@ -9,7 +9,7 @@ import SubscriptionPlansScreen from '../screens/Profile/SubscriptionPlansScreen'
 import CheckoutScreen from '../screens/Payment/CheckoutScreen';
 import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 export default function ProfileStack() {
   return (

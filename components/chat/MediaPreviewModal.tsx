@@ -11,14 +11,12 @@ import {
   Alert,
   Animated
 } from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ImageIcon, Video as VideoIcon, FileText, File, X, Trash2, ArrowRight } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { Audio } from 'expo-av';
 import { MediaMetadata, MediaFile } from '../../services/mediaService';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 interface MediaPreviewModalProps {
   visible: boolean;

@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 // חזרה זמנית למצב יציב ללא HoldMenu
 const HoldItem: React.FC<{ children: React.ReactNode }> = ({ children }) => <>{children}</>;
 import { Message, ReactionSummary } from '../../services/supabase';
-import { RectButton, Swipeable } from 'react-native-gesture-handler';
+// import { RectButton, Swipeable } from 'react-native-gesture-handler'; // Removed - not compatible with New Architecture
 import MediaBubble from './MediaBubble';
 import MediaViewer from './MediaViewer';
 import ForwardModal from './ForwardModal';
@@ -99,43 +99,33 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   const [selectedMessage, setSelectedMessage] = useState<MessageSnapshot | null>(null);
   const [showSeenBySheet, setShowSeenBySheet] = useState(false);
   const [actionMenuVisible, setActionMenuVisible] = useState(false);
-  const [swipeEnabled, setSwipeEnabled] = useState(true);
-  const swipeableRef = useRef<Swipeable>(null);
+  // const [swipeEnabled, setSwipeEnabled] = useState(true); // Removed - Swipeable not compatible with New Architecture
+  // const swipeableRef = useRef<Swipeable>(null); // Removed - Swipeable not compatible with New Architecture
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   // פונקציה לאיפוס כל ה-states (למעט MediaViewer)
   const resetAllStates = () => {
     console.log('🔄 resetAllStates called');
     
-    // סגור את ה-Swipeable במפורש
-    if (swipeableRef.current) {
-      swipeableRef.current.close();
-      console.log('🔄 Swipeable closed manually');
-    }
+    // Swipeable removed - not compatible with New Architecture
     
     setSelectedMessage(null);
     setShowMessageContextMenu(false);
     setActionMenuVisible(false);
-    setSwipeEnabled(true);
-    console.log('🔄 resetAllStates completed - swipeEnabled set to true');
+    console.log('🔄 resetAllStates completed');
   };
 
   // פונקציה לאיפוס מלא כולל MediaViewer
   const resetAllStatesIncludingMedia = () => {
     console.log('🔄 resetAllStatesIncludingMedia called');
     
-    // סגור את ה-Swipeable במפורש
-    if (swipeableRef.current) {
-      swipeableRef.current.close();
-      console.log('🔄 Swipeable closed manually');
-    }
+    // Swipeable removed - not compatible with New Architecture
     
     setSelectedMessage(null);
     setShowMessageContextMenu(false);
     setActionMenuVisible(false);
     setShowMediaViewer(false);
     setSelectedMedia(null);
-    setSwipeEnabled(true);
     console.log('🔄 resetAllStatesIncludingMedia completed');
   };
   const [pollData, setPollData] = useState<PollWithVotes | null>(null);
@@ -168,10 +158,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     console.log('🎯 ChatBubble: selectedMessage changed to:', selectedMessage?.id);
   }, [selectedMessage]);
 
-  // Debug: עקוב אחרי שינויים ב-swipeEnabled
-  useEffect(() => {
-    console.log('🎯 ChatBubble: swipeEnabled changed to:', swipeEnabled);
-  }, [swipeEnabled]);
+  // swipeEnabled removed - Swipeable not compatible with New Architecture
   
   // State לניהול הקלטה
   const [isPlaying, setIsPlaying] = useState(false);
@@ -448,7 +435,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   };
 
   const onLongPress = async () => {
-    console.log('🎯 onLongPress called - swipeEnabled:', swipeEnabled);
+    console.log('🎯 onLongPress called');
     
     // בדוק אם אנחנו כבר במצב של long press
     if (selectedMessage) {
@@ -488,10 +475,10 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
       channelId: (message as any).channel_id,
     };
     setSelectedMessage(snapshot);
-    setSwipeEnabled(false);
+    // setSwipeEnabled(false); // Removed - Swipeable not compatible with New Architecture
     setActionMenuVisible(true);
     
-    console.log('🎯 selectedMessage set, actionMenuVisible set to true, swipeEnabled set to false');
+    console.log('🎯 selectedMessage set, actionMenuVisible set to true');
   };
   
   const onCopy = () => { 
@@ -1373,17 +1360,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             alignSelf: isMe ? 'flex-end' : 'flex-start'
           }}
         >
-        <Swipeable
-          ref={swipeableRef}
-          enabled={swipeEnabled}
-          renderLeftActions={renderLeftActions}
-          renderRightActions={renderRightActions}
-          leftThreshold={40}
-          rightThreshold={40}
-          friction={2}
-          overshootLeft={false}
-          overshootRight={false}
-        >
+          {/* Swipeable removed - not compatible with New Architecture */}
           <Animated.View
           style={{
                alignSelf: isMe ? 'flex-end' : 'flex-start',
@@ -1399,7 +1376,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
               <HoldItem>
               <Pressable
                 onPress={() => {
-                  console.log('🎯 ChatBubble onPress (short press) - swipeEnabled:', swipeEnabled, 'selectedMessage:', !!selectedMessage);
+                  console.log('🎯 ChatBubble onPress (short press) - selectedMessage:', !!selectedMessage);
                   // לחיצה קצרה לא עושה כלום - רק MediaViewer או LongPress
                 }}
                 onLongPress={onLongPress}
@@ -1492,13 +1469,13 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
               />
             </View>
           </Animated.View>
-        </Swipeable>
+          {/* Swipeable removed - not compatible with New Architecture */}
         </Animated.View>
       </Animated.View>
 
       <ActionMenu
         visible={actionMenuVisible}
-        onClose={() => { setActionMenuVisible(false); setSwipeEnabled(true); }}
+        onClose={() => { setActionMenuVisible(false); }}
         isMe={isMe}
         messageId={message.id}
         currentReactions={message.reactions || {}}
@@ -1506,11 +1483,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           // הוספת ריאקציה בפועל
           handleReaction(emoji);
           setActionMenuVisible(false);
-          setSwipeEnabled(true);
         }}
         onOpenPicker={() => {
           setActionMenuVisible(false);
-          setSwipeEnabled(true);
           setShowReactionPicker(true);
         }}
         preview={

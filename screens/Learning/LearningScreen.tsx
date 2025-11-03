@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Alert, Platform, TextInput, SafeAreaView, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Modal, Linking } from 'react-native';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+// import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DesignTokens } from '../../components/ui/DesignTokens';
@@ -143,24 +143,8 @@ function LearningScreen() {
   const [lessonProgress, setLessonProgress] = useState(0); // התקדמות השיעור הנוכחי
   const [totalProgress, setTotalProgress] = useState(0); // התקדמות כללית של הקורס
   const [userNotes, setUserNotes] = useState(''); // הערות המשתמש
-  const notesBottomSheetRef = useRef<BottomSheetModal>(null);
+  const [notesModalVisible, setNotesModalVisible] = useState(false);
   const textInputRef = useRef<TextInput>(null);
-  
-  // הגדרת snap points לbottom sheet
-  const snapPoints = useMemo(() => ['70%', '90%'], []);
-  
-  // רינדור backdrop
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-      />
-    ),
-    []
-  );
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
@@ -1244,7 +1228,7 @@ function LearningScreen() {
             {/* Notes Section - כפתור לפתיחת Bottom Sheet */}
             <TouchableOpacity 
               style={styles.simpleNotesSection}
-              onPress={() => notesBottomSheetRef.current?.present()}
+              onPress={() => setNotesModalVisible(true)}
             >
               <View style={styles.simpleNotesHeader}>
                 <Edit3 size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
@@ -1260,21 +1244,33 @@ function LearningScreen() {
           </ScrollView>
               </View>
               
-        {/* Notes Bottom Sheet */}
-        <BottomSheetModal
-          ref={notesBottomSheetRef}
-          index={0}
-          snapPoints={snapPoints}
-          enablePanDownToClose
-          onDismiss={() => {}}
-          backdropComponent={renderBackdrop}
-          backgroundStyle={{ backgroundColor: '#1C1C1E' }}
-          handleIndicatorStyle={{ backgroundColor: 'rgba(255,255,255,0.3)', width: 40 }}
+        {/* Notes Modal */}
+        <Modal
+          visible={notesModalVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setNotesModalVisible(false)}
         >
-          {/* Header - פשוט ומינימלי */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
-            <TouchableOpacity 
-              onPress={() => notesBottomSheetRef.current?.dismiss()}
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+            <View style={{ 
+              backgroundColor: '#1C1C1E', 
+              borderTopLeftRadius: 24, 
+              borderTopRightRadius: 24,
+              maxHeight: '70%',
+            }}>
+              <View style={{ 
+                width: 40, 
+                height: 5, 
+                backgroundColor: 'rgba(255,255,255,0.3)', 
+                alignSelf: 'center', 
+                marginTop: 12,
+                marginBottom: 8,
+                borderRadius: 3
+              }} />
+              {/* Header - פשוט ומינימלי */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
+                <TouchableOpacity 
+                  onPress={() => setNotesModalVisible(false)}
               style={{ 
                 width: 36, 
                 height: 36, 
@@ -1323,13 +1319,13 @@ function LearningScreen() {
             </TouchableOpacity>
           </View>
           
-          {/* איזור כתיבה - עם רקע ומסגרת נפרדים */}
-          <BottomSheetScrollView 
-            style={{ flex: 1, backgroundColor: '#1C1C1E' }}
-            contentContainerStyle={{ padding: 20, paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-            keyboardBehavior="interactive"
-          >
+              {/* איזור כתיבה - עם רקע ומסגרת נפרדים */}
+              <ScrollView 
+                style={{ flex: 1, backgroundColor: '#1C1C1E' }}
+                contentContainerStyle={{ padding: 20, paddingBottom: 20 }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
             <View style={{
               backgroundColor: '#2C2C2E',
               borderRadius: 12,
@@ -1356,10 +1352,10 @@ function LearningScreen() {
                 autoFocus
               />
             </View>
-          </BottomSheetScrollView>
-          
-          
-        </BottomSheetModal>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         {/* Link Dialog */}
         <Modal

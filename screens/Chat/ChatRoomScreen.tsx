@@ -1336,11 +1336,15 @@ export default function ChatRoomScreen() {
             // מצא את האינדקס של ההודעה הנוכחית במערך messages הרגיל
             const messageIndex = messages.findIndex(m => m.id === currentMessage.id);
             
+            // הגדר משתנים מחוץ ל-if block כדי שיהיו זמינים בשימוש ב-ChatBubble
+            let hasPrevFromSameSender = false;
+            let hasNextFromSameSender = false;
+            
             if (messageIndex !== -1) {
               const currentDate = new Date(currentMessage.created_at);
               
               // בדוק אם יש הודעה קודמת (לפני בזמן) מאותו משתמש באותה דקה
-              const hasPrevFromSameSender = messageIndex < messages.length - 1 && (() => {
+              hasPrevFromSameSender = messageIndex < messages.length - 1 && (() => {
                 const prevMessage = messages[messageIndex + 1];
                 const prevDate = new Date(prevMessage.created_at);
                 return prevMessage.sender_id === currentMessage.sender_id && 
@@ -1348,7 +1352,7 @@ export default function ChatRoomScreen() {
               })();
               
               // בדוק אם יש הודעה הבאה (אחרי בזמן) מאותו משתמש באותה דקה
-              const hasNextFromSameSender = messageIndex > 0 && (() => {
+              hasNextFromSameSender = messageIndex > 0 && (() => {
                 const nextMessage = messages[messageIndex - 1];
                 const nextDate = new Date(nextMessage.created_at);
                 return nextMessage.sender_id === currentMessage.sender_id && 

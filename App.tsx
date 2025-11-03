@@ -9,7 +9,7 @@ import { View, ActivityIndicator, Text, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+// import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import OnboardingNavigator from './navigation/OnboardingNavigator';
 import { RegistrationProvider } from './context/RegistrationContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -120,13 +120,11 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <BottomSheetModalProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <AppContent />
-            </AuthProvider>
-          </ThemeProvider>
-        </BottomSheetModalProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

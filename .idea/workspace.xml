@@ -5,7 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="dc0faa45-f8d2-4a54-8e53-ba585d94c810" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/GOOGLE_PLAY_UPLOAD_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/GOOGLE_PLAY_UPLOAD_GUIDE.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/java/com/darkpoolapp/DarkPool/MainActivity.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/java/com/darkpoolapp/DarkPool/MainApplication.kt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/src/main/res/values/strings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/adaptive-icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/adaptive-icon.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/favicon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/icon.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/splash-icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/splash-icon.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/MediaPreviewModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/MediaPreviewModal.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -40,6 +53,7 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;AnalyzeApkAction.lastApkPath&quot;: &quot;/Users/yoavwerdiger/DarkPoolApp_New-1&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,

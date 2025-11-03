@@ -14,19 +14,17 @@
     "production": {
       "autoIncrement": true,
       "node": "20.18.1",
+      "resourceClass": "large",
       "env": {
-        "NODE_OPTIONS": "--max-old-space-size=8192"
+        "NODE_OPTIONS": "--max-old-space-size=16384",
+        "EXPO_NO_BUNDLE_TRANSFORM": "1"
       },
       "android": {
         "buildType": "app-bundle",
         "image": "latest"
       },
       "cache": {
-        "key": "production-cache-v1",
-        "paths": [
-          "node_modules",
-          "android/.gradle"
-        ]
+        "key": "production-cache-v2"
       }
     }
   },

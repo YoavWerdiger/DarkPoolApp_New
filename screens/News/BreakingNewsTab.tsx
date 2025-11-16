@@ -13,13 +13,15 @@ import {
   Modal,
   Share,
   ScrollView,
-  Animated
+  Animated,
+  Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import { supabase } from '../../services/supabase';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UIBottomSheet from '../../components/ui/UIBottomSheet';
+import { supabase } from '../../lib/supabase';
 import { 
   newsService, 
   NewsArticle, 
@@ -44,15 +46,16 @@ interface ShareModalProps {
 }
 
 const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) => {
+  const DesignTokens = useDesignTokens();
   const [chatGroups, setChatGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   // טעינת קבוצות הצ'אט כשהבוטום שיט נפתח
   useEffect(() => {
-    if (article) {
+    if (visible && article) {
       loadChatGroups();
     }
-  }, [article]);
+  }, [visible, article]);
 
   const debugDatabase = async () => {
     try {
@@ -230,45 +233,29 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
   if (!article) return null;
 
   return (
-    <Modal
+    <UIBottomSheet
       visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      onClose={onClose}
+      maxHeight="80%"
+      dragToClose={true}
+      showHandle={true}
     >
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-        <View style={{ 
-          backgroundColor: '#1C1C1E', 
-          borderTopLeftRadius: 24, 
-          borderTopRightRadius: 24,
-          maxHeight: '70%',
-          paddingHorizontal: 20,
-          paddingBottom: 40
-        }}>
-          <View style={{ 
-            width: 40, 
-            height: 5, 
-            backgroundColor: 'rgba(255,255,255,0.3)', 
-            alignSelf: 'center', 
-            marginTop: 12,
-            marginBottom: 8,
-            borderRadius: 3
-          }} />
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-        {/* כותרת */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingTop: 8 }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 }}>
+          <ScrollView contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
+        {/* כותרת - SwiftUI style */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
           <Text 
-            style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF' }}
+            style={{ fontSize: 28, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right', letterSpacing: -0.5 }}
           >
             שתף לקבוצה
           </Text>
           <TouchableOpacity 
             onPress={onClose}
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: 'rgba(255,255,255,0.08)',
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: 'rgba(255,255,255,0.1)',
               alignItems: 'center',
               justifyContent: 'center'
             }}
@@ -276,63 +263,80 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
             <Ionicons 
               name="close" 
               size={20} 
-              color="#FFFFFF" 
+              color={DesignTokens.colors.text.primary} 
             />
           </TouchableOpacity>
         </View>
 
-        {/* תצוגה מקדימה של החדשה */}
+        {/* תצוגה מקדימה של החדשה - SwiftUI style */}
         <View 
           style={{
-            padding: 16,
+            padding: 0,
             borderRadius: 16,
-            backgroundColor: 'rgba(255,255,255,0.06)',
-            marginBottom: 24,
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.08)'
+            backgroundColor: 'transparent',
+            marginBottom: 32,
+            overflow: 'hidden'
           }}
         >
-          <Text 
-            style={{ 
-              fontSize: 16, 
-              fontWeight: '600', 
-              color: '#FFFFFF', 
-              textAlign: 'right',
-              marginBottom: 8
-            }}
-            numberOfLines={2}
-          >
-            {article.label || article.title}
-          </Text>
-          <Text 
-            style={{ 
-              fontSize: 14, 
-              color: '#999999', 
-              textAlign: 'right',
-              marginBottom: 8,
-              lineHeight: 20
-            }}
-            numberOfLines={2}
-          >
-            {article.label ? article.title : article.summary}
-          </Text>
-          <Text 
-            style={{ 
-              fontSize: 12, 
-              color: '#666666', 
-              textAlign: 'right' 
-            }}
-          >
-            מאת: {article.source}
-          </Text>
+          {article.image_url && (
+            <Image
+              source={{ uri: article.image_url }}
+              style={{
+                width: '100%',
+                height: 180,
+                marginBottom: 16
+              }}
+              resizeMode="cover"
+            />
+          )}
+          <View style={{ paddingHorizontal: 4 }}>
+            <Text 
+              style={{ 
+                fontSize: 20, 
+                fontWeight: '600', 
+                color: DesignTokens.colors.text.primary, 
+                textAlign: 'right',
+                marginBottom: 8,
+                lineHeight: 26,
+                letterSpacing: -0.3
+              }}
+              numberOfLines={3}
+            >
+              {article.label || article.title}
+            </Text>
+            <Text 
+              style={{ 
+                fontSize: 15, 
+                color: 'rgba(255,255,255,0.6)', 
+                textAlign: 'right',
+                marginBottom: 12,
+                lineHeight: 22
+              }}
+              numberOfLines={3}
+            >
+              {article.label ? article.title : article.summary}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <Text 
+                style={{ 
+                  fontSize: 13, 
+                  color: 'rgba(255,255,255,0.5)', 
+                  textAlign: 'right',
+                  fontWeight: '500'
+                }}
+              >
+                {article.source}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* רשימת קבוצות */}
+        {/* רשימת קבוצות - SwiftUI style */}
         {loading ? (
-          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-            <ActivityIndicator size="large" color="#00E654" />
+          <View style={{ alignItems: 'center', paddingVertical: 60 }}>
+            <ActivityIndicator size="large" color="rgba(255,255,255,0.6)" />
             <Text 
-              style={{ fontSize: 14, color: '#999999', marginTop: 16 }}
+              style={{ fontSize: 15, color: 'rgba(255,255,255,0.5)', marginTop: 20, fontWeight: '500' }}
             >
               טוען קבוצות...
             </Text>
@@ -341,46 +345,47 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
           <View>
             <Text 
               style={{ 
-                fontSize: 18, 
+                fontSize: 22, 
                 fontWeight: '600', 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 textAlign: 'right',
-                marginBottom: 16
+                marginBottom: 20,
+                letterSpacing: -0.3
               }}
             >
-              בחר קבוצה:
+              בחר קבוצה
             </Text>
-            {chatGroups.map((group) => (
+            {chatGroups.map((group, index) => (
               <TouchableOpacity
                 key={group.id}
                 style={{
-                  flexDirection: 'row',
+                  flexDirection: 'row-reverse',
                   alignItems: 'center',
-                  padding: 16,
-                  borderRadius: 16,
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                  marginBottom: 12,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.08)'
+                  paddingVertical: 16,
+                  paddingHorizontal: 4,
+                  marginBottom: index < chatGroups.length - 1 ? 0 : 0,
+                  borderBottomWidth: index < chatGroups.length - 1 ? 0.5 : 0,
+                  borderBottomColor: 'rgba(255,255,255,0.1)'
                 }}
                 onPress={() => shareToGroup(group.id, group.name)}
               >
-                <View style={{ flex: 1, marginLeft: 16 }}>
+                <View style={{ flex: 1, marginRight: 16 }}>
                   <Text 
                     style={{ 
-                      fontSize: 16, 
+                      fontSize: 17, 
                       fontWeight: '600', 
-                      color: '#FFFFFF', 
+                      color: DesignTokens.colors.text.primary, 
                       textAlign: 'right',
-                      marginBottom: 4
+                      marginBottom: 4,
+                      letterSpacing: -0.2
                     }}
                   >
                     {group.name}
                   </Text>
                   <Text 
                     style={{ 
-                      fontSize: 13, 
-                      color: '#666666', 
+                      fontSize: 14, 
+                      color: 'rgba(255,255,255,0.5)', 
                       textAlign: 'right' 
                     }}
                   >
@@ -389,24 +394,26 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
                 </View>
                 <View 
                   style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                    width: 50,
+                    height: 50,
+                    borderRadius: 25,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    overflow: 'hidden'
                   }}
                 >
                   {group.image_url ? (
                     <Image 
                       source={{ uri: group.image_url }}
-                      style={{ width: 48, height: 48, borderRadius: 24 }}
+                      style={{ width: 50, height: 50 }}
+                      resizeMode="cover"
                     />
                   ) : (
                     <Ionicons 
                       name="people" 
                       size={24} 
-                      color="#00E654" 
+                      color="rgba(255,255,255,0.6)" 
                     />
                   )}
                 </View>
@@ -414,79 +421,70 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
             ))}
           </View>
         ) : (
-          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-            <Ionicons 
-              name="chatbubbles-outline" 
-              size={64} 
-              color="#666666" 
-            />
+          <View style={{ alignItems: 'center', paddingVertical: 60 }}>
+            <View style={{
+              width: 64,
+              height: 64,
+              borderRadius: 32,
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 24
+            }}>
+              <Ionicons 
+                name="chatbubbles-outline" 
+                size={32} 
+                color="rgba(255,255,255,0.5)" 
+              />
+            </View>
             <Text 
               style={{ 
-                fontSize: 18, 
+                fontSize: 20, 
                 fontWeight: '600', 
-                color: '#FFFFFF', 
-                marginTop: 16 
+                color: DesignTokens.colors.text.primary, 
+                marginBottom: 8,
+                letterSpacing: -0.3
               }}
             >
               אין קבוצות זמינות
             </Text>
             <Text 
               style={{ 
-                fontSize: 14, 
-                color: '#999999', 
-                marginTop: 8, 
+                fontSize: 15, 
+                color: 'rgba(255,255,255,0.5)', 
                 textAlign: 'center',
-                marginBottom: 16
+                marginBottom: 32,
+                lineHeight: 22,
+                paddingHorizontal: 20
               }}
             >
               הצטרף לקבוצות כדי לשתף חדשות
             </Text>
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
-                  borderRadius: 24,
-                  backgroundColor: '#00E654'
+            <TouchableOpacity
+              style={{
+                width: '100%',
+                paddingVertical: 16,
+                borderRadius: 12,
+                backgroundColor: DesignTokens.colors.primary.main,
+                alignItems: 'center'
+              }}
+              onPress={loadChatGroups}
+            >
+              <Text 
+                style={{ 
+                  fontSize: 17, 
+                  fontWeight: '600', 
+                  color: DesignTokens.colors.background.primary 
                 }}
-                onPress={loadChatGroups}
               >
-                <Text 
-                  style={{ 
-                    fontSize: 14, 
-                    fontWeight: '600', 
-                    color: '#FFFFFF' 
-                  }}
-                >
-                  נסה שוב
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
-                  borderRadius: 24,
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                }}
-                onPress={debugDatabase}
-              >
-                <Text 
-                  style={{ 
-                    fontSize: 14, 
-                    fontWeight: '600', 
-                    color: '#999999' 
-                  }}
-                >
-                  בדיקה
-                </Text>
-              </TouchableOpacity>
-            </View>
+                נסה שוב
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
           </ScrollView>
         </View>
-      </View>
-    </Modal>
+    </UIBottomSheet>
   );
 };
 
@@ -516,6 +514,8 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   onNext,
   onPrevious
 }) => {
+  const DesignTokens = useDesignTokens();
+  console.log('📰 NewsDetailModal: visible =', visible, 'article =', article?.title);
   if (!article) return null;
 
   const categoryColor = getNewsCategoryColor(article.category);
@@ -533,266 +533,229 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                        article.id?.length > 15;
 
   return (
-    <Modal
+    <UIBottomSheet
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onClose={onClose}
+      maxHeight="90%"
+      dragToClose={true}
     >
-      <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-        {/* כותרת */}
-        <View className="flex-row items-center justify-between p-4 border-b" style={{ borderBottomColor: 'rgba(255, 255, 255, 0.1)' }}>
-          <TouchableOpacity onPress={onClose}>
+      <View style={{ flex: 1 }}>
+        {/* כפתור סגירה */}
+        <View style={{ position: 'absolute', top: 8, left: 12, zIndex: 100 }}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
             <Ionicons 
               name="close" 
-              size={24} 
+              size={20} 
               color={DesignTokens.colors.text.primary} 
             />
           </TouchableOpacity>
-          <Text 
-            className="text-lg font-semibold"
-            style={{ color: DesignTokens.colors.text.primary }}
-          >
-            {article.source ? `חדשה מאת ${article.source}` : 'חדשה'}
-          </Text>
-          <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
+        <ScrollView 
+          contentContainerStyle={{ paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* תמונה */}
           {article.image_url && (
-            <View className="w-full" style={{ height: 280 }}>
+            <View style={{ width: '100%', height: 240, marginBottom: 16 }}>
               <Image
                 source={{ uri: article.image_url }}
-                className="w-full h-full"
+                style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
-                style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
               />
             </View>
           )}
 
           {/* תוכן */}
-          <View className="p-4" style={{ paddingTop: 20 }}>
-            {/* כותרת - label אם קיים */}
+          <View style={{ paddingHorizontal: 20 }}>
+            {/* מקור ותאריך */}
             <Text 
-              className="text-xl font-bold mb-3 leading-7"
               style={{ 
+                fontSize: 12,
+                color: '#666',
+                fontWeight: '500',
+                textAlign: 'right',
+                marginBottom: 10
+              }}
+            >
+              {article.source || 'חדשה'} • {formatNewsDate(article.published_at)}
+            </Text>
+
+            {/* כותרת */}
+            <Text 
+              style={{ 
+                fontSize: 20,
+                fontWeight: '700',
                 color: DesignTokens.colors.text.primary,
                 textAlign: 'right',
-                writingDirection: 'rtl'
+                lineHeight: 28,
+                marginBottom: 14
               }}
             >
               {article.label || article.title}
             </Text>
 
-            {/* מפרסם ותאריך */}
-            <View className="flex-row items-center justify-end mb-4">
-              <Text 
-                className="text-sm"
-                style={{ color: DesignTokens.colors.text.tertiary }}
-              >
-                {formatNewsDate(article.published_at)}
-              </Text>
-              <Text 
-                className="text-sm mx-2"
-                style={{ color: DesignTokens.colors.text.tertiary }}
-              >
-                •
-              </Text>
-              <Text 
-                className="text-sm font-medium"
-                style={{ color: DesignTokens.colors.text.secondary }}
-              >
-                {article.source}
-              </Text>
-            </View>
-
             {/* תוכן הכתבה */}
             <Text 
-              className="text-base leading-6 mb-5"
               style={{ 
-                color: DesignTokens.colors.text.primary,
+                fontSize: 15,
+                lineHeight: 23,
+                color: '#CCC',
                 textAlign: 'right',
-                writingDirection: 'rtl'
+                marginBottom: 20
               }}
             >
               {article.content || article.summary}
             </Text>
 
-            {/* קטגוריה אם קיימת */}
-            {article.category && article.category !== 'כללי' && (
-              <View 
-                className="px-3 py-1.5 rounded-full self-end"
-                style={{ backgroundColor: categoryColor + '20' }}
-              >
-                <Text 
-                  className="text-sm font-semibold"
-                  style={{ color: categoryColor }}
-                >
-                  {article.category}
-                </Text>
-              </View>
-            )}
           </View>
-        </ScrollView>
 
-        {/* כפתורי פעולה מעל הקו */}
-        <View 
-          style={{ 
-            position: 'absolute',
-            bottom: 90,
-            left: 0,
-            right: 0,
-            marginBottom: 50,
-            paddingHorizontal: 16
-          }}
-        >
-          <View className="flex-row items-center justify-center" style={{ gap: 12 }}>
+          {/* כפתורי פעולה - SwiftUI style */}
+          <View style={{ 
+            paddingHorizontal: 20, 
+            marginTop: 16,
+            marginBottom: 16,
+            gap: 10
+          }}>
             {/* לייק */}
             <TouchableOpacity 
-              className="flex-row items-center px-6 py-3 rounded-full"
               style={{ 
-                backgroundColor: isLiked 
-                  ? 'rgba(255, 59, 92, 0.15)' 
-                  : 'rgba(255, 255, 255, 0.05)',
-                borderWidth: 1,
-                borderColor: isLiked 
-                  ? 'rgba(255, 59, 92, 0.3)' 
-                  : 'rgba(255, 255, 255, 0.08)'
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 14,
+                borderRadius: 10,
+                backgroundColor: isLiked ? '#FF3B5C' : '#1a1a1a',
               }}
               onPress={() => onLike(article)}
               activeOpacity={0.7}
             >
               <Ionicons 
                 name={isLiked ? "heart" : "heart-outline"} 
-                size={20} 
-                color={isLiked ? "#FF3B5C" : DesignTokens.colors.text.tertiary}
+                size={18} 
+                color={isLiked ? "#FFF" : "#666"}
                 style={{ marginRight: 8 }}
               />
               <Text 
-                className="text-base font-medium"
-                style={{ color: isLiked ? "#FF3B5C" : DesignTokens.colors.text.tertiary }}
+                style={{ 
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: isLiked ? "#FFF" : "#666"
+                }}
               >
-                {isLiked ? 'אהבתי' : 'לייק'}
+                {isLiked ? 'שמור' : 'שמור למועדפים'}
               </Text>
             </TouchableOpacity>
 
             {/* שיתוף */}
             <TouchableOpacity 
-              className="flex-row items-center px-6 py-3 rounded-full"
               style={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.08)'
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 12,
               }}
               onPress={() => onShare(article)}
               activeOpacity={0.7}
             >
               <Ionicons 
                 name="share-outline" 
-                size={20} 
-                color={DesignTokens.colors.text.tertiary}
+                size={18} 
+                color="#666"
                 style={{ marginRight: 8 }}
               />
               <Text 
-                className="text-base font-medium"
-                style={{ color: DesignTokens.colors.text.tertiary }}
+                style={{ 
+                  fontSize: 15,
+                  fontWeight: '500',
+                  color: "#666"
+                }}
               >
                 שיתוף
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* כפתורי ניווט בתחתית המסך */}
-        <View 
-          style={{ 
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: DesignTokens.colors.background.primary,
-            borderTopWidth: 1,
-            borderTopColor: 'rgba(255, 255, 255, 0.1)',
-            paddingHorizontal: 16,
-            paddingTop: 16,
-            paddingBottom: 24
-          }}
-        >
-
-          {/* ניווט בין חדשות */}
+          {/* כפתורי ניווט */}
           {onNext && onPrevious && currentIndex !== undefined && totalArticles !== undefined && (
-            <View className="flex-row items-center justify-center" style={{ gap: 16 }}>
-              {/* חדשה הבאה - שמאל */}
+            <View style={{ 
+              paddingHorizontal: 20,
+              paddingBottom: 16,
+              flexDirection: 'row', 
+              gap: 12,
+              justifyContent: 'center'
+            }}>
+              {/* קודמת */}
               <TouchableOpacity 
-                className="flex-1 flex-row items-center justify-center rounded-full"
                 style={{ 
-                  backgroundColor: currentIndex < totalArticles - 1 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : 'rgba(255, 255, 255, 0.02)',
-                  borderWidth: 1,
-                  borderColor: currentIndex < totalArticles - 1 
-                    ? 'rgba(255, 255, 255, 0.1)' 
-                    : 'rgba(255, 255, 255, 0.05)',
-                  maxWidth: 160,
-                  paddingVertical: 14
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 10,
+                  backgroundColor: currentIndex > 0 ? '#1a1a1a' : '#111',
+                  paddingVertical: 12,
+                  opacity: currentIndex > 0 ? 1 : 0.4
+                }}
+                onPress={onPrevious}
+                disabled={currentIndex === 0}
+              >
+                <Text style={{ fontSize: 15, fontWeight: '500', color: '#666' }}>
+                  קודמת
+                </Text>
+                <Ionicons 
+                  name="chevron-forward-outline" 
+                  size={18} 
+                  color="#666"
+                  style={{ marginLeft: 6 }}
+                />
+              </TouchableOpacity>
+
+              {/* הבאה */}
+              <TouchableOpacity 
+                style={{ 
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 10,
+                  backgroundColor: currentIndex < totalArticles - 1 ? '#1a1a1a' : '#111',
+                  paddingVertical: 12,
+                  opacity: currentIndex < totalArticles - 1 ? 1 : 0.4
                 }}
                 onPress={onNext}
                 disabled={currentIndex >= totalArticles - 1}
               >
                 <Ionicons 
                   name="chevron-back-outline" 
-                  size={22} 
-                  color={DesignTokens.colors.text.tertiary}
-                  style={{ marginRight: 8 }}
+                  size={18} 
+                  color="#666"
+                  style={{ marginRight: 6 }}
                 />
-                <Text 
-                  className="text-base font-semibold"
-                  style={{ color: DesignTokens.colors.text.tertiary }}
-                >
+                <Text style={{ fontSize: 15, fontWeight: '500', color: '#666' }}>
                   הבאה
                 </Text>
               </TouchableOpacity>
-
-              {/* חדשה קודמת - ימין */}
-              <TouchableOpacity 
-                className="flex-1 flex-row items-center justify-center rounded-full"
-                style={{ 
-                  backgroundColor: currentIndex > 0 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : 'rgba(255, 255, 255, 0.02)',
-                  borderWidth: 1,
-                  borderColor: currentIndex > 0 
-                    ? 'rgba(255, 255, 255, 0.1)' 
-                    : 'rgba(255, 255, 255, 0.05)',
-                  maxWidth: 160,
-                  paddingVertical: 14
-                }}
-                onPress={onPrevious}
-                disabled={currentIndex === 0}
-              >
-                <Text 
-                  className="text-base font-semibold"
-                  style={{ color: DesignTokens.colors.text.tertiary }}
-                >
-                  קודמת
-                </Text>
-                <Ionicons 
-                  name="chevron-forward-outline" 
-                  size={22} 
-                  color={DesignTokens.colors.text.tertiary}
-                  style={{ marginLeft: 8 }}
-                />
-              </TouchableOpacity>
             </View>
           )}
-        </View>
+        </ScrollView>
       </View>
-    </Modal>
+    </UIBottomSheet>
   );
 };
 
 const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, isLiked }) => {
+  const DesignTokens = useDesignTokens();
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const categoryColor = getNewsCategoryColor(article.category);
   const categoryIcon = getNewsCategoryIcon(article.category);
@@ -987,6 +950,8 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
 };
 
 export default function BreakingNewsTab() {
+  console.log('📰 BreakingNewsTab: Component rendering...');
+  const DesignTokens = useDesignTokens();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1458,7 +1423,7 @@ export default function BreakingNewsTab() {
         >
           <Text 
             className="text-sm font-medium"
-            style={{ color: '#FFFFFF' }}
+            style={{ color: DesignTokens.colors.text.primary }}
           >
             רענן
           </Text>

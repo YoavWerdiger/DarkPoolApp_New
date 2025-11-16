@@ -123,22 +123,23 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   title: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: DesignTokens.colors.text.primary,
     marginBottom: DesignTokens.spacing.xs,
     textAlign: 'right',
+    letterSpacing: 0.3,
   },
   description: {
     fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    color: DesignTokens.colors.text.secondary,
     marginBottom: DesignTokens.spacing.sm,
     textAlign: 'right',
     lineHeight: DesignTokens.typography.lineHeight.normal * DesignTokens.typography.fontSize.sm,
   },
   lessonCount: {
     fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.textMuted,
+    color: DesignTokens.colors.text.tertiary,
     textAlign: 'right',
   },
   progressContainer: {
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   },
   expandIcon: {
     fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    color: DesignTokens.colors.text.secondary,
     transform: [{ rotate: '0deg' }],
   },
   expandIconRotated: {

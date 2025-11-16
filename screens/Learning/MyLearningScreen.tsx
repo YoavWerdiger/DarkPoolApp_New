@@ -11,11 +11,13 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { useMyEnrollments } from '../../hooks/useLearning';
 import { CourseCard } from '../../components/learning';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { CourseWithProgress } from '../../types/learning';
 
 export const MyLearningScreen: React.FC = () => {
   const navigation = useNavigation();
+  const DesignTokens = useDesignTokens();
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const { data: enrollments, isLoading, error, refetch } = useMyEnrollments();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -164,35 +166,35 @@ export const MyLearningScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background,
+    backgroundColor: tokens.colors.background,
   },
   header: {
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingTop: DesignTokens.spacing.lg,
-    paddingBottom: DesignTokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.lg,
+    paddingBottom: tokens.spacing.md,
   },
   headerTitle: {
-    fontSize: DesignTokens.typography.fontSize['2xl'],
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: tokens.typography.fontSize['2xl'],
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.textPrimary,
     textAlign: 'right',
   },
   statsContainer: {
-    marginHorizontal: DesignTokens.spacing.lg,
-    marginBottom: DesignTokens.spacing.lg,
-    backgroundColor: DesignTokens.colors.surface,
-    borderRadius: DesignTokens.borderRadius.lg,
-    padding: DesignTokens.spacing.lg,
-    ...DesignTokens.shadows.md,
+    marginHorizontal: tokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.borderRadius.lg,
+    padding: tokens.spacing.lg,
+    ...tokens.shadows.md,
   },
   statsTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.md,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.md,
     textAlign: 'right',
   },
   statsRow: {
@@ -203,14 +205,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontSize: DesignTokens.typography.fontSize.xl,
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.primary,
-    marginBottom: DesignTokens.spacing.xs,
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.primary,
+    marginBottom: tokens.spacing.xs,
   },
   statLabel: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
     textAlign: 'center',
   },
   listWrapper: {
@@ -225,89 +227,89 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   listContainer: {
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingBottom: DesignTokens.spacing['4xl'],
+    paddingHorizontal: tokens.spacing.lg,
+    paddingBottom: tokens.spacing['4xl'],
   },
   courseContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   continueButton: {
-    backgroundColor: DesignTokens.colors.success,
-    marginTop: DesignTokens.spacing.md,
-    paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.success,
+    marginTop: tokens.spacing.md,
+    paddingVertical: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
   },
   continueButtonText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: DesignTokens.spacing['5xl'],
+    paddingVertical: tokens.spacing['5xl'],
   },
   emptyStateIcon: {
     fontSize: 48,
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   emptyStateTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'center',
   },
   emptyStateSubtitle: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   exploreButton: {
-    backgroundColor: DesignTokens.colors.primary,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.primary,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.lg,
   },
   exploreButtonText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.lg,
   },
   errorIcon: {
     fontSize: 48,
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   errorTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   retryButton: {
-    backgroundColor: DesignTokens.colors.primary,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.primary,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.lg,
   },
   retryButtonText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
   },
 });
 

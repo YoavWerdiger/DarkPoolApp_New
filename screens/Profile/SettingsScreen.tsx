@@ -10,9 +10,7 @@ import {
   SafeAreaView
 } from 'react-native';
 import { 
-  Globe, 
   Moon, 
-  Sun,
   ArrowLeft,
   Smartphone,
   Lock,
@@ -29,6 +27,7 @@ import { supabase } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 interface SettingItem {
   id: string;
@@ -49,8 +48,7 @@ export default function SettingsScreen({ navigation }: any) {
     darkMode: true,
     autoUpdate: true,
     dataSaving: false,
-    biometricAuth: false,
-    language: 'he'
+    biometricAuth: false
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -93,17 +91,6 @@ export default function SettingsScreen({ navigation }: any) {
     }
   };
 
-  const handleLanguageChange = () => {
-    Alert.alert(
-      'שפה',
-      'בחר שפה',
-      [
-        { text: 'עברית', onPress: () => handleToggle('language', 'he') },
-        { text: 'English', onPress: () => handleToggle('language', 'en') },
-        { text: 'ביטול', style: 'cancel' }
-      ]
-    );
-  };
 
   const handleClearCache = () => {
     Alert.alert(
@@ -139,23 +126,41 @@ export default function SettingsScreen({ navigation }: any) {
     );
   };
 
-  const handleBiometricAuth = (value: boolean) => {
+  const handleBiometricAuth = async (value: boolean) => {
     if (value) {
-      Alert.alert(
-        'אימות ביומטרי',
-        'הפעלת אימות ביומטרי תאפשר לך להתחבר לאפליקציה באמצעות Face ID או Touch ID.',
-        [
-          { text: 'ביטול', onPress: () => {} },
-          { 
-            text: 'הפעל', 
-            onPress: () => {
-              // Here you would integrate with biometric authentication
-              handleToggle('biometricAuth', true);
-              Alert.alert('הצלחה', 'אימות ביומטרי הופעל');
-            }
-          }
-        ]
-      );
+      try {
+        // נבדוק אם יש תמיכה באימות ביומטרי
+        const { LocalAuthentication } = await import('expo-local-authentication');
+        const compatible = await LocalAuthentication.hasHardwareAsync();
+        
+        if (!compatible) {
+          Alert.alert('שגיאה', 'המכשיר שלך לא תומך באימות ביומטרי');
+          return;
+        }
+
+        const enrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!enrolled) {
+          Alert.alert('שגיאה', 'לא הוגדר אימות ביומטרי במכשיר. אנא הגדר Face ID או Touch ID בהגדרות המכשיר');
+          return;
+        }
+
+        // נבצע אימות ביומטרי
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'אמת את זהותך',
+          cancelLabel: 'ביטול',
+          disableDeviceFallback: false,
+        });
+
+        if (result.success) {
+          handleToggle('biometricAuth', true);
+          Alert.alert('הצלחה', 'אימות ביומטרי הופעל בהצלחה');
+        } else {
+          Alert.alert('בוטל', 'אימות ביומטרי בוטל');
+        }
+      } catch (error) {
+        console.error('Error with biometric auth:', error);
+        Alert.alert('שגיאה', 'שגיאה בהפעלת אימות ביומטרי');
+      }
     } else {
       handleToggle('biometricAuth', false);
     }
@@ -167,9 +172,9 @@ export default function SettingsScreen({ navigation }: any) {
       items: [
         {
           id: 'darkMode',
-          title: settings.darkMode ? 'מצב כהה' : 'מצב בהיר',
-          subtitle: settings.darkMode ? 'תצוגה כהה לעיניים' : 'תצוגה בהירה ובהירה',
-          icon: settings.darkMode ? Moon : Sun,
+          title: 'מצב כהה',
+          subtitle: 'תצוגה כהה לעיניים',
+          icon: Moon,
           type: 'switch' as const,
           value: settings.darkMode,
           onToggle: (value: boolean) => handleToggle('darkMode', value)
@@ -196,14 +201,6 @@ export default function SettingsScreen({ navigation }: any) {
           type: 'switch' as const,
           value: settings.dataSaving,
           onToggle: (value: boolean) => handleToggle('dataSaving', value)
-        },
-        {
-          id: 'language',
-          title: 'שפה',
-          subtitle: settings.language === 'he' ? 'עברית' : 'English',
-          icon: Globe,
-          type: 'action' as const,
-          onPress: handleLanguageChange
         }
       ]
     },
@@ -252,7 +249,7 @@ export default function SettingsScreen({ navigation }: any) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00E654" />
+          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
         </View>
       </SafeAreaView>
@@ -347,8 +344,8 @@ export default function SettingsScreen({ navigation }: any) {
                       <Switch
                         value={item.value}
                         onValueChange={item.onToggle}
-                        trackColor={{ false: theme.switchTrackOff, true: '#00E654' }}
-                        thumbColor={item.value ? '#ffffff' : theme.switchThumbOff}
+                        trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
+                        thumbColor={item.value ? DesignTokens.colors.text.primary : theme.switchThumbOff}
                         ios_backgroundColor={theme.switchTrackOff}
                         style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                       />
@@ -361,7 +358,7 @@ export default function SettingsScreen({ navigation }: any) {
                       <Text style={{
                         fontSize: 16,
                         fontWeight: '600',
-                        color: item.danger ? '#EF4444' : theme.textPrimary,
+                        color: item.danger ? DesignTokens.colors.danger.main : theme.textPrimary,
                         marginBottom: 2,
                         textAlign: 'right'
                       }}>
@@ -387,7 +384,7 @@ export default function SettingsScreen({ navigation }: any) {
                     }}>
                       <item.icon 
                         size={20} 
-                        color={item.danger ? '#EF4444' : '#00E654'} 
+                        color={item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.primary.main} 
                         strokeWidth={2} 
                       />
                     </View>

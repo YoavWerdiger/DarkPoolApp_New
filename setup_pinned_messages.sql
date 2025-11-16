@@ -1,29 +1,31 @@
+-- Drop and recreate pinned_messages table and function
+-- This script ensures everything is set up correctly
+
+-- Drop function first (if exists)
+DROP FUNCTION IF EXISTS get_pinned_messages(UUID);
+
+-- Drop table (if exists) - this will cascade delete indexes and policies
+DROP TABLE IF EXISTS pinned_messages CASCADE;
+
 -- Create pinned_messages table
-CREATE TABLE IF NOT EXISTS pinned_messages (
+CREATE TABLE pinned_messages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
   message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
   pinned_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   pinned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(channel_id, message_id)
 );
 
 -- Create indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_pinned_messages_channel_id ON pinned_messages(channel_id);
-CREATE INDEX IF NOT EXISTS idx_pinned_messages_message_id ON pinned_messages(message_id);
-CREATE INDEX IF NOT EXISTS idx_pinned_messages_pinned_by ON pinned_messages(pinned_by);
-
--- Create unique constraint to prevent duplicate pins
-CREATE UNIQUE INDEX IF NOT EXISTS idx_pinned_messages_unique ON pinned_messages(channel_id, message_id);
+CREATE INDEX idx_pinned_messages_channel_id ON pinned_messages(channel_id);
+CREATE INDEX idx_pinned_messages_message_id ON pinned_messages(message_id);
+CREATE INDEX idx_pinned_messages_pinned_by ON pinned_messages(pinned_by);
 
 -- Enable RLS
 ALTER TABLE pinned_messages ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view pinned messages in channels they are members of" ON pinned_messages;
-DROP POLICY IF EXISTS "Admins and owners can pin messages" ON pinned_messages;
-DROP POLICY IF EXISTS "Admins and owners can unpin messages" ON pinned_messages;
 
 -- Create RLS policies
 CREATE POLICY "Users can view pinned messages in channels they are members of" ON pinned_messages
@@ -93,3 +95,10 @@ $$;
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION get_pinned_messages(UUID) TO authenticated;
+
+-- Grant table permissions
+GRANT SELECT, INSERT, DELETE ON pinned_messages TO authenticated;
+
+-- Add comment
+COMMENT ON FUNCTION get_pinned_messages(UUID) IS 'Returns all pinned messages for a channel with sender and pinner information';
+

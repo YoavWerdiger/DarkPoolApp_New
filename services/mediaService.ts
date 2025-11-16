@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as base64js from 'base64-js';
 
 export interface LessonMedia {

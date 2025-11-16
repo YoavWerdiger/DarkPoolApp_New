@@ -25,6 +25,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 const { width } = Dimensions.get('window');
 
@@ -155,11 +156,11 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       case 'free':
         return <Users size={24} color="#B0B0B0" />;
       case 'premium':
-        return <Crown size={24} color="#00E654" />;
+        return <Crown size={24} color={DesignTokens.colors.primary.main} />;
       case 'pro':
         return <Star size={24} color="#FFD700" />;
       default:
-        return <CreditCard size={24} color="#00E654" />;
+        return <CreditCard size={24} color={DesignTokens.colors.primary.main} />;
     }
   };
 
@@ -200,7 +201,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           
           <View style={{ flex: 1 }}>
             <Text style={{ 
-              color: '#FFFFFF', 
+              color: DesignTokens.colors.text.primary, 
               fontSize: 24, 
               fontWeight: '700',
               writingDirection: 'rtl'
@@ -209,7 +210,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
               <Text style={{ 
-                color: '#00E654', 
+                color: DesignTokens.colors.primary.main, 
                 fontSize: 28, 
                 fontWeight: '800',
                 writingDirection: 'rtl'
@@ -217,7 +218,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                 {plan.price === 0 ? 'חינם' : `₪${plan.price}`}
               </Text>
               <Text style={{ 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontSize: 16, 
                 marginLeft: 8,
                 writingDirection: 'rtl'
@@ -229,13 +230,13 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           
           {plan.popular && (
             <View style={{
-              backgroundColor: '#00E654',
+              backgroundColor: DesignTokens.colors.primary.main,
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 12
             }}>
               <Text style={{ 
-                color: '#000000', 
+                color: DesignTokens.colors.background.primary, 
                 fontSize: 12, 
                 fontWeight: '600' 
               }}>
@@ -248,7 +249,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         {/* Features */}
         <View style={{ marginBottom: 20 }}>
           <Text style={{ 
-            color: '#FFFFFF', 
+            color: DesignTokens.colors.text.primary, 
             fontSize: 18, 
             fontWeight: '600', 
             marginBottom: 12,
@@ -263,9 +264,9 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
               alignItems: 'center',
               marginBottom: 8
             }}>
-              <Check size={16} color="#00E654" style={{ marginLeft: 8 }} />
+              <Check size={16} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
               <Text style={{ 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 fontSize: 14, 
                 fontWeight: '400',
                 writingDirection: 'rtl',
@@ -294,9 +295,9 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         alignItems: 'center',
         marginBottom: 16
       }}>
-        <Shield size={20} color="#00E654" style={{ marginLeft: 8 }} />
+        <Shield size={20} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
         <Text style={{ 
-          color: '#FFFFFF', 
+          color: DesignTokens.colors.text.primary, 
           fontSize: 16, 
           fontWeight: '600',
           writingDirection: 'rtl'
@@ -307,9 +308,9 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       
       <View style={{ gap: 8 }}>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
-          <Lock size={14} color="#00E654" style={{ marginLeft: 8 }} />
+          <Lock size={14} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
           <Text style={{ 
-            color: '#B0B0B0', 
+            color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: 'rtl'
           }}>
@@ -318,9 +319,9 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         </View>
         
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
-          <Shield size={14} color="#00E654" style={{ marginLeft: 8 }} />
+          <Shield size={14} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
           <Text style={{ 
-            color: '#B0B0B0', 
+            color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: 'rtl'
           }}>
@@ -329,9 +330,9 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         </View>
         
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
-          <Check size={14} color="#00E654" style={{ marginLeft: 8 }} />
+          <Check size={14} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
           <Text style={{ 
-            color: '#B0B0B0', 
+            color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: 'rtl'
           }}>
@@ -352,7 +353,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       marginBottom: 24
     }}>
       <Text style={{ 
-        color: '#FFFFFF', 
+        color: DesignTokens.colors.text.primary, 
         fontSize: 18, 
         fontWeight: '600', 
         marginBottom: 16,
@@ -367,14 +368,14 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         marginBottom: 8
       }}>
         <Text style={{ 
-          color: '#B0B0B0', 
+          color: DesignTokens.colors.text.secondary, 
           fontSize: 14,
           writingDirection: 'rtl'
         }}>
           {plan?.name}
         </Text>
         <Text style={{ 
-          color: '#FFFFFF', 
+          color: DesignTokens.colors.text.primary, 
           fontSize: 14,
           fontWeight: '600'
         }}>
@@ -388,14 +389,14 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         marginBottom: 8
       }}>
         <Text style={{ 
-          color: '#B0B0B0', 
+          color: DesignTokens.colors.text.secondary, 
           fontSize: 14,
           writingDirection: 'rtl'
         }}>
           מע"מ
         </Text>
         <Text style={{ 
-          color: '#FFFFFF', 
+          color: DesignTokens.colors.text.primary, 
           fontSize: 14,
           fontWeight: '600'
         }}>
@@ -414,7 +415,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         justifyContent: 'space-between'
       }}>
         <Text style={{ 
-          color: '#FFFFFF', 
+          color: DesignTokens.colors.text.primary, 
           fontSize: 18,
           fontWeight: '700',
           writingDirection: 'rtl'
@@ -422,7 +423,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           סה"כ
         </Text>
         <Text style={{ 
-          color: '#00E654', 
+          color: DesignTokens.colors.primary.main, 
           fontSize: 18,
           fontWeight: '700'
         }}>
@@ -433,7 +434,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0d0d0d' }}>
+    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
       {/* Header */}
       <View
         style={{
@@ -462,11 +463,11 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
               marginLeft: 16
             }}
           >
-            <ArrowLeft size={20} color="#FFFFFF" />
+            <ArrowLeft size={20} color={DesignTokens.colors.text.primary} />
           </TouchableOpacity>
           
           <Text style={{ 
-            color: '#FFFFFF', 
+            color: DesignTokens.colors.text.primary, 
             fontSize: 24, 
             fontWeight: '700',
             writingDirection: 'rtl',
@@ -504,11 +505,11 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             onPress={handlePayment}
             disabled={loading}
             style={{
-              backgroundColor: '#00E654',
+              backgroundColor: DesignTokens.colors.primary.main,
               borderRadius: 12,
               padding: 18,
               alignItems: 'center',
-              shadowColor: '#00E654',
+              shadowColor: DesignTokens.colors.primary.main,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 8,
@@ -522,7 +523,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <CreditCard size={20} color="#000000" style={{ marginLeft: 8 }} />
                 <Text style={{ 
-                  color: '#000000', 
+                  color: DesignTokens.colors.background.primary, 
                   fontSize: 18, 
                   fontWeight: '700',
                   writingDirection: 'rtl'
@@ -535,7 +536,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
           {/* Terms */}
           <Text style={{ 
-            color: '#666666', 
+            color: DesignTokens.colors.text.tertiary, 
             fontSize: 12, 
             textAlign: 'center',
             marginTop: 16,

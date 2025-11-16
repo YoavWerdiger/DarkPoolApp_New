@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, ActionSheetIOS, Platform, Alert, KeyboardAvoidingView, Keyboard, Animated, Dimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Plus, Square } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,7 +11,7 @@ import MentionPicker from './MentionPicker';
 // import { MediaFile } from '../../services/mediaService';
 import { Audio } from 'expo-av';
 import { useMentions } from '../../hooks/useMentions';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 // פונקציה לזיהוי שפה
 const detectLanguage = (text: string): 'rtl' | 'ltr' => {
@@ -70,9 +71,11 @@ export default function MessageInputBar({
   startTyping,
   stopTyping
 }: MessageInputBarProps) {
+  const DesignTokens = useDesignTokens();
   const screenWidth = Dimensions.get('window').width;
   const maxBubbleWidth = Math.floor(screenWidth * 0.70);
   const isMe = true; // הקלטה תמיד נחשבת כ-"me"
+  const insets = useSafeAreaInsets();
   
   const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -243,7 +246,7 @@ export default function MessageInputBar({
           if (part.startsWith('@')) {
             console.log('🎨 Rendering mention part:', part, 'in green bold');
             return (
-              <Text key={index} style={{ fontWeight: 'bold', color: '#00E654', fontSize: 16 }}>
+              <Text key={index} style={{ fontWeight: 'bold', color: DesignTokens.colors.success.main, fontSize: 16 }}>
                 {part}
               </Text>
             );
@@ -286,6 +289,8 @@ export default function MessageInputBar({
 
   const handleMediaSelected = (mediaType: string, uri: string, metadata?: any) => {
     console.log('📱 MessageInputBar: Media selected:', { mediaType, uri, metadata });
+    console.log('📱 MessageInputBar: showMediaPicker before:', showMediaPicker);
+    console.log('📱 MessageInputBar: showMediaPreview before:', showMediaPreview);
     
     // צור אובייקט MediaFile
     const mediaFile: any = {
@@ -298,12 +303,20 @@ export default function MessageInputBar({
       thumbnail: metadata?.thumbnail_url
     };
     
+    console.log('📱 MessageInputBar: Created media file:', mediaFile);
+    
     // הוסף למערך המדיה הנבחרת
-    setSelectedMedia(prev => [...prev, mediaFile]);
+    setSelectedMedia(prev => {
+      const newMedia = [...prev, mediaFile];
+      console.log('📱 MessageInputBar: Updated selectedMedia:', newMedia);
+      return newMedia;
+    });
     
     // סגור את MediaPicker ופתח את Preview
     setShowMediaPicker(false);
     setShowMediaPreview(true);
+    
+    console.log('📱 MessageInputBar: Set showMediaPicker to false, showMediaPreview to true');
   };
 
   const handleMediaSend = (mediaFiles: any[], captions: Record<string, string>) => {
@@ -482,21 +495,22 @@ export default function MessageInputBar({
         zIndex: 1000,
       }}
     >
-      <View
-        style={{ 
-          flexDirection: 'row',
-          alignItems: 'flex-end',
-          backgroundColor: '#121212',
-          paddingHorizontal: 8,
-          paddingVertical: 8,
-          marginHorizontal: 0,
-          marginBottom: 0,
-          borderWidth: 0,
-          borderTopWidth: 1,
-          borderColor: '#333333',
-          minHeight: 60,
-        }}
-      >
+      <SafeAreaView edges={['bottom']} style={{ backgroundColor: DesignTokens.colors.background.primary }}>
+        <View
+          style={{ 
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            backgroundColor: DesignTokens.colors.background.primary,
+            paddingHorizontal: 8,
+            paddingVertical: 8,
+            marginHorizontal: 0,
+            marginBottom: 0,
+            borderWidth: 0,
+            borderTopWidth: 1,
+            borderColor: DesignTokens.colors.border.main,
+            minHeight: 60,
+          }}
+        >
         {/* כפתור צירוף קבצים - ימין */}
         <Pressable 
           onPress={handleAttachmentPress}
@@ -511,7 +525,7 @@ export default function MessageInputBar({
             opacity: isRecording ? 0.3 : 1,
           }}
         >
-          <Plus size={24} color="#00E654" strokeWidth={2} />
+          <Plus size={24} color={DesignTokens.colors.success.main} strokeWidth={2} />
         </Pressable>
 
         {/* אזור הקלדה - מרכז */}
@@ -519,10 +533,10 @@ export default function MessageInputBar({
           style={{ 
             flex: 1,
             marginHorizontal: 8,
-            backgroundColor: isRecording ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
+            backgroundColor: DesignTokens.colors.background.secondary,
             borderRadius: 21,
             borderWidth: 1,
-            borderColor: isRecording ? 'rgba(255, 255, 255, 0.05)' : (isTyping ? '#00E654' : 'rgba(255, 255, 255, 0.1)'),
+            borderColor: isTyping ? DesignTokens.colors.success.main : DesignTokens.colors.border.primary,
             minHeight: 42,
             maxHeight: 70, // 2 שורות מקסימום
             opacity: isRecording ? 0.5 : 1,
@@ -530,7 +544,7 @@ export default function MessageInputBar({
         >
           <TextInput
             placeholder={isRecording ? 'הקלטה פעילה...' : 'הודעה'}
-            placeholderTextColor="#A0AEC0"
+            placeholderTextColor={DesignTokens.colors.text.tertiary}
             value={text}
             onChangeText={handleTextChange}
             multiline={true}
@@ -541,7 +555,7 @@ export default function MessageInputBar({
               textAlign: textDirection === 'rtl' ? 'right' : 'left',
               writingDirection: textDirection,
               width: '100%',
-              color: '#FFFFFF',
+              color: DesignTokens.colors.text.primary,
               fontWeight: 'normal' as const,
               fontSize: 15,
               backgroundColor: 'transparent',
@@ -573,23 +587,24 @@ export default function MessageInputBar({
           <Ionicons 
             name={isTyping ? "send" : (isRecording ? "stop" : "mic")}
             size={22} 
-            color={isTyping ? '#00E654' : (isRecording ? '#F85149' : '#FFFFFF')} 
+            color={isTyping ? DesignTokens.colors.success.main : (isRecording ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary)} 
           />
         </Pressable>
       </View>
+      </SafeAreaView>
 
       {/* אינדיקטור הקלטה פעילה */}
       {isRecording && (
         <View style={{
           position: 'absolute',
-          bottom: isKeyboardVisible ? 60 : 60,
+          bottom: isKeyboardVisible ? 60 + insets.bottom : 60 + insets.bottom,
           left: 0,
           right: 0,
           zIndex: 999,
         }}>
           {/* בועת הקלטה - עיצוב נקי ופשוט */}
           <View style={{
-            backgroundColor: 'rgba(19, 19, 19, 0.8)',
+            backgroundColor: DesignTokens.colors.background.secondary,
             paddingVertical: 10,
             paddingHorizontal: 16,
             borderRadius: 0,
@@ -598,16 +613,16 @@ export default function MessageInputBar({
             justifyContent: 'space-between',
             borderWidth: 0,
             borderBottomWidth: 1,
-            borderColor: 'rgba(255,255,255,0.08)',
+            borderColor: DesignTokens.colors.border.primary,
             borderLeftWidth: 3,
-            borderLeftColor: '#F85149',
+            borderLeftColor: DesignTokens.colors.danger.main,
             height: 60
           }}>
             {/* תוכן ההקלטה - מרכז */}
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ 
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   fontSize: 13,
                   fontWeight: '600',
                   marginBottom: 2
@@ -620,12 +635,12 @@ export default function MessageInputBar({
                     width: 5,
                     height: 5,
                     borderRadius: 2.5,
-                    backgroundColor: '#F85149',
+                    backgroundColor: DesignTokens.colors.danger.main,
                     marginRight: 6,
                     opacity: 0.9
                   }} />
                   <Text style={{ 
-                    color: '#CCCCCC',
+                    color: DesignTokens.colors.text.secondary,
                     fontSize: 11
                   }}>
                     {formatDuration(recordingDuration)}
@@ -651,13 +666,13 @@ export default function MessageInputBar({
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                backgroundColor: DesignTokens.colors.background.tertiary,
                 alignItems: 'center',
                 justifyContent: 'center',
                 transform: [{ scale: pressed ? 0.95 : 1 }]
               })}
             >
-              <Ionicons name="close" size={16} color="#FFFFFF" />
+              <Ionicons name="close" size={16} color={DesignTokens.colors.text.primary} />
             </Pressable>
           </View>
         </View>
@@ -667,14 +682,14 @@ export default function MessageInputBar({
       {replyToMessage && !editingMessage && (
         <View style={{
           position: 'absolute',
-          bottom: isKeyboardVisible ? 60 : 60,
+          bottom: isKeyboardVisible ? 60 + insets.bottom : 60 + insets.bottom,
           left: 0,
           right: 0,
           zIndex: 999,
         }}>
           {/* בועת תשובה - עיצוב כמו ההקלטה */}
           <View style={{
-            backgroundColor: 'rgba(19, 19, 19, 0.8)',
+            backgroundColor: DesignTokens.colors.background.secondary,
             paddingVertical: 10,
             paddingHorizontal: 16,
             borderRadius: 0,
@@ -683,16 +698,16 @@ export default function MessageInputBar({
             justifyContent: 'space-between',
             borderWidth: 0,
             borderBottomWidth: 1,
-            borderColor: 'rgba(255,255,255,0.08)',
+            borderColor: DesignTokens.colors.border.primary,
             borderLeftWidth: 3,
-            borderLeftColor: '#00E654',
+            borderLeftColor: DesignTokens.colors.success.main,
             height: 60,
           }}>
             {/* תוכן התשובה - מרכז */}
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ 
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   fontSize: 13,
                   fontWeight: '600',
                   marginBottom: 2
@@ -701,7 +716,7 @@ export default function MessageInputBar({
                 </Text>
                 <Text 
                   style={{ 
-                    color: '#CCCCCC',
+                    color: DesignTokens.colors.text.secondary,
                     fontSize: 11,
                     textAlign: detectLanguage(replyToMessage.content) === 'rtl' ? 'right' : 'left',
                     writingDirection: detectLanguage(replyToMessage.content)
@@ -722,13 +737,13 @@ export default function MessageInputBar({
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                backgroundColor: DesignTokens.colors.background.tertiary,
                 alignItems: 'center',
                 justifyContent: 'center',
                 transform: [{ scale: pressed ? 0.95 : 1 }]
               })}
             >
-              <Ionicons name="close" size={16} color="#FFFFFF" />
+              <Ionicons name="close" size={16} color={DesignTokens.colors.text.primary} />
             </Pressable>
           </View>
         </View>
@@ -738,14 +753,14 @@ export default function MessageInputBar({
       {editingMessage && (
         <View style={{
           position: 'absolute',
-          bottom: isKeyboardVisible ? 60 : 60,
+          bottom: isKeyboardVisible ? 60 + insets.bottom : 60 + insets.bottom,
           left: 0,
           right: 0,
           zIndex: 999,
         }}>
           {/* בועת עריכה - עיצוב כמו ההקלטה */}
           <View style={{
-            backgroundColor: 'rgba(19, 19, 19, 0.8)',
+            backgroundColor: DesignTokens.colors.background.secondary,
             paddingVertical: 10,
             paddingHorizontal: 16,
             borderRadius: 0,
@@ -754,16 +769,16 @@ export default function MessageInputBar({
             justifyContent: 'space-between',
             borderWidth: 0,
             borderBottomWidth: 1,
-            borderColor: 'rgba(255,255,255,0.08)',
+            borderColor: DesignTokens.colors.border.primary,
             borderLeftWidth: 3,
-            borderLeftColor: '#00E654',
+            borderLeftColor: DesignTokens.colors.success.main,
             height: 60,
           }}>
             {/* תוכן העריכה - מרכז */}
             <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <View style={{ alignItems: 'center' }}>
                 <Text style={{ 
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   fontSize: 13,
                   fontWeight: '600',
                   marginBottom: 2
@@ -772,7 +787,7 @@ export default function MessageInputBar({
                 </Text>
                 <Text 
                   style={{ 
-                    color: '#CCCCCC',
+                    color: DesignTokens.colors.text.secondary,
                     fontSize: 11
                   }}
                   numberOfLines={1}
@@ -791,13 +806,13 @@ export default function MessageInputBar({
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                backgroundColor: DesignTokens.colors.background.tertiary,
                 alignItems: 'center',
                 justifyContent: 'center',
                 transform: [{ scale: pressed ? 0.95 : 1 }]
               })}
             >
-              <Ionicons name="close" size={16} color="#FFFFFF" />
+              <Ionicons name="close" size={16} color={DesignTokens.colors.text.primary} />
             </Pressable>
           </View>
         </View>

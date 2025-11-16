@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Mail, Lock, Check } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -109,7 +110,7 @@ export default function LoginScreen({ navigation }: any) {
         style={{ flex: 1 }}
       >
         <LinearGradient
-          colors={['#000000', '#0d1b0d', '#1a2d1a', '#000000']}
+          colors={[DesignTokens.colors.background.primary, DesignTokens.colors.background.secondary, DesignTokens.colors.background.tertiary, DesignTokens.colors.background.primary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ flex: 1 }}
@@ -125,7 +126,7 @@ export default function LoginScreen({ navigation }: any) {
                   top: dot.y,
                   width: dot.size,
                   height: dot.size,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   opacity: dot.opacity,
                   borderRadius: dot.size / 2
                 }}
@@ -172,7 +173,7 @@ export default function LoginScreen({ navigation }: any) {
                <Text style={{ 
                  fontSize: 32, 
                  fontWeight: '800', 
-                 color: '#FFFFFF', 
+                 color: DesignTokens.colors.text.primary, 
                  marginBottom: 8,
                  letterSpacing: -0.8,
                  textAlign: 'center',
@@ -184,7 +185,7 @@ export default function LoginScreen({ navigation }: any) {
                {/* Subtitle */}
                <Text style={{ 
                  fontSize: 16, 
-                 color: '#B0B0B0', 
+                 color: DesignTokens.colors.text.secondary, 
                  fontWeight: '400',
                  letterSpacing: 0.3,
                  textAlign: 'center',
@@ -198,7 +199,7 @@ export default function LoginScreen({ navigation }: any) {
               <View style={{
                 width: 60,
                 height: 2,
-                backgroundColor: '#00E654',
+                backgroundColor: DesignTokens.colors.primary.main,
                 marginTop: 16,
                 borderRadius: 1
               }} />
@@ -209,7 +210,7 @@ export default function LoginScreen({ navigation }: any) {
               {/* Email Input */}
               <View>
                  <Text style={{ 
-                   color: '#FFFFFF', 
+                   color: DesignTokens.colors.text.primary, 
                    fontSize: 14, 
                    fontWeight: '600', 
                    marginBottom: 8,
@@ -220,20 +221,20 @@ export default function LoginScreen({ navigation }: any) {
                    כתובת אימייל
                  </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  borderColor: '#333333',
+                  borderColor: DesignTokens.colors.border.main,
                   paddingHorizontal: 16,
                   paddingVertical: 4,
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Mail size={20} color="#666666" strokeWidth={2} />
+                  <Mail size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -241,7 +242,7 @@ export default function LoginScreen({ navigation }: any) {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס את כתובת האימייל"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
@@ -254,7 +255,7 @@ export default function LoginScreen({ navigation }: any) {
               {/* Password Input */}
               <View>
                  <Text style={{ 
-                   color: '#FFFFFF', 
+                   color: DesignTokens.colors.text.primary, 
                    fontSize: 14, 
                    fontWeight: '600', 
                    marginBottom: 8,
@@ -265,20 +266,20 @@ export default function LoginScreen({ navigation }: any) {
                    סיסמה
                  </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  borderColor: '#333333',
+                  borderColor: DesignTokens.colors.border.main,
                   paddingHorizontal: 16,
                   paddingVertical: 4,
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Lock size={20} color="#666666" strokeWidth={2} />
+                  <Lock size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -286,7 +287,7 @@ export default function LoginScreen({ navigation }: any) {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס את הסיסמה"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -299,7 +300,7 @@ export default function LoginScreen({ navigation }: any) {
                     <Ionicons 
                       name={showPassword ? "eye-off-outline" : "eye-outline"} 
                       size={20} 
-                      color="#666666" 
+                      color={DesignTokens.colors.text.tertiary} 
                     />
                   </Pressable>
                 </View>
@@ -326,17 +327,17 @@ export default function LoginScreen({ navigation }: any) {
                      height: 20,
                      borderRadius: 4,
                      borderWidth: 2,
-                     borderColor: rememberMe ? '#00E654' : '#666666',
-                     backgroundColor: rememberMe ? '#00E654' : 'transparent',
+                    borderColor: rememberMe ? DesignTokens.colors.primary.main : DesignTokens.colors.text.tertiary,
+                    backgroundColor: rememberMe ? DesignTokens.colors.primary.main : 'transparent',
                      alignItems: 'center',
                      justifyContent: 'center'
                    }}>
                      {rememberMe && (
-                       <Check size={12} color="#000" strokeWidth={3} />
+                       <Check size={12} color={DesignTokens.colors.background.primary} strokeWidth={3} />
                      )}
                    </View>
                    <Text style={{ 
-                     color: '#B0B0B0', 
+                     color: DesignTokens.colors.text.secondary, 
                      fontSize: 14, 
                      fontWeight: '500',
                      letterSpacing: 0.2,
@@ -349,7 +350,7 @@ export default function LoginScreen({ navigation }: any) {
                  {/* Forgot Password */}
                  <Pressable onPress={handleForgotPassword}>
                    <Text style={{ 
-                     color: '#00E654', 
+                     color: DesignTokens.colors.primary.main, 
                      fontSize: 14, 
                      fontWeight: '500',
                      letterSpacing: 0.2,
@@ -362,13 +363,13 @@ export default function LoginScreen({ navigation }: any) {
 
               {/* Login Button */}
               <LinearGradient
-                colors={['#00E654', '#00B84A', '#008F3A']}
+                colors={[DesignTokens.colors.primary.main, DesignTokens.colors.primary.dark, DesignTokens.colors.primary.darker]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
                   borderRadius: 14,
                   marginTop: 12,
-                  shadowColor: '#00E654',
+                  shadowColor: DesignTokens.colors.primary.main,
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: 0.4,
                   shadowRadius: 12,
@@ -386,7 +387,7 @@ export default function LoginScreen({ navigation }: any) {
                   }}
                 >
                    <Text style={{ 
-                     color: '#000000', 
+                     color: DesignTokens.colors.background.primary, 
                      fontSize: 16, 
                      fontWeight: '700',
                      letterSpacing: 0.5,
@@ -406,12 +407,12 @@ export default function LoginScreen({ navigation }: any) {
                  marginTop: 24,
                  gap: 6
                }}>
-                 <Text style={{ color: '#A0A0A0', fontSize: 14, fontWeight: '400' }}>
+                 <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 14, fontWeight: '400' }}>
                    אין לך חשבון?
                  </Text>
                 <Pressable onPress={() => navigation.navigate('Onboarding')}>
                   <Text style={{ 
-                    color: '#00E654', 
+                    color: DesignTokens.colors.primary.main, 
                     fontSize: 14, 
                     fontWeight: '600',
                     letterSpacing: 0.2

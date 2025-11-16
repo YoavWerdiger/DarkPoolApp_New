@@ -13,13 +13,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
 import { ModuleSection } from '../../components/learning';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress } from '../../types/learning';
 
 export const CourseDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { courseId } = route.params as { courseId: string };
+  
+  const DesignTokens = useDesignTokens();
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   
@@ -252,7 +255,7 @@ export const CourseDetailScreen: React.FC = () => {
               disabled={enrollMutation.isPending}
             >
               {enrollMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
+                <ActivityIndicator color={DesignTokens.colors.text.primary} size="small" />
               ) : (
                 <Text style={styles.enrollButtonText}>
                   {course.access === 'free' ? 'הירשם בחינם' : 
@@ -286,43 +289,43 @@ export const CourseDetailScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background,
+    backgroundColor: tokens.colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: DesignTokens.colors.background,
+    backgroundColor: tokens.colors.background,
   },
   loadingText: {
-    marginTop: DesignTokens.spacing.md,
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.textSecondary,
+    marginTop: tokens.spacing.md,
+    fontSize: tokens.typography.fontSize.base,
+    color: tokens.colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.lg,
-    backgroundColor: DesignTokens.colors.background,
+    paddingHorizontal: tokens.spacing.lg,
+    backgroundColor: tokens.colors.background,
   },
   errorIcon: {
     fontSize: 48,
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   errorTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
     textAlign: 'center',
   },
   coverContainer: {
@@ -336,7 +339,7 @@ const styles = StyleSheet.create({
   coverPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: DesignTokens.colors.elevated,
+    backgroundColor: tokens.colors.elevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -345,204 +348,204 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: DesignTokens.spacing.lg,
-    right: DesignTokens.spacing.lg,
+    top: tokens.spacing.lg,
+    right: tokens.spacing.lg,
     width: 40,
     height: 40,
-    borderRadius: DesignTokens.borderRadius.full,
+    borderRadius: tokens.borderRadius.full,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   backButtonText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    color: '#FFFFFF',
-    fontWeight: DesignTokens.typography.fontWeight.bold,
+    fontSize: tokens.typography.fontSize.lg,
+    color: tokens.colors.text.primary,
+    fontWeight: tokens.typography.fontWeight.bold,
   },
   content: {
-    padding: DesignTokens.spacing.lg,
+    padding: tokens.spacing.lg,
   },
   courseInfo: {
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   title: {
-    fontSize: DesignTokens.typography.fontSize['2xl'],
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize['2xl'],
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'right',
   },
   subtitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.textSecondary,
-    marginBottom: DesignTokens.spacing.lg,
+    fontSize: tokens.typography.fontSize.base,
+    color: tokens.colors.textSecondary,
+    marginBottom: tokens.spacing.lg,
     textAlign: 'right',
   },
   instructorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   instructorAvatar: {
     width: 50,
     height: 50,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: DesignTokens.colors.elevated,
+    borderRadius: tokens.borderRadius.full,
+    backgroundColor: tokens.colors.elevated,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: DesignTokens.spacing.md,
+    marginLeft: tokens.spacing.md,
   },
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: DesignTokens.borderRadius.full,
+    borderRadius: tokens.borderRadius.full,
   },
   avatarPlaceholder: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.textPrimary,
   },
   instructorInfo: {
     flex: 1,
   },
   instructorName: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.xs,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.xs,
     textAlign: 'right',
   },
   instructorBio: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
     textAlign: 'right',
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    backgroundColor: DesignTokens.colors.surface,
-    borderRadius: DesignTokens.borderRadius.lg,
+    marginBottom: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.borderRadius.lg,
   },
   statItem: {
     alignItems: 'center',
   },
   statValue: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.primary,
-    marginBottom: DesignTokens.spacing.xs,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.primary,
+    marginBottom: tokens.spacing.xs,
   },
   statLabel: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
   },
   progressContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: DesignTokens.spacing.sm,
+    marginBottom: tokens.spacing.sm,
   },
   progressTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
   },
   progressPercentage: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.primary,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.primary,
   },
   progressBar: {
     height: 8,
-    backgroundColor: DesignTokens.colors.border,
-    borderRadius: DesignTokens.borderRadius.sm,
+    backgroundColor: tokens.colors.border,
+    borderRadius: tokens.borderRadius.sm,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: DesignTokens.colors.primary,
-    borderRadius: DesignTokens.borderRadius.sm,
+    backgroundColor: tokens.colors.primary,
+    borderRadius: tokens.borderRadius.sm,
   },
   descriptionContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   descriptionTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'right',
   },
   description: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
-    lineHeight: DesignTokens.typography.lineHeight.relaxed * DesignTokens.typography.fontSize.sm,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
+    lineHeight: tokens.typography.lineHeight.relaxed * tokens.typography.fontSize.sm,
     textAlign: 'right',
   },
   tagsContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   tagsTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'right',
   },
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: DesignTokens.spacing.sm,
+    gap: tokens.spacing.sm,
   },
   tag: {
-    backgroundColor: DesignTokens.colors.elevated,
-    paddingHorizontal: DesignTokens.spacing.md,
-    paddingVertical: DesignTokens.spacing.sm,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.elevated,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.lg,
   },
   tagText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
   },
   actionContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   enrollButton: {
-    backgroundColor: DesignTokens.colors.primary,
-    paddingVertical: DesignTokens.spacing.lg,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.primary,
+    paddingVertical: tokens.spacing.lg,
+    borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
-    ...DesignTokens.shadows.green,
+    ...tokens.shadows.green,
   },
   enrollButtonText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
   },
   continueButton: {
-    backgroundColor: DesignTokens.colors.success,
-    paddingVertical: DesignTokens.spacing.lg,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.success,
+    paddingVertical: tokens.spacing.lg,
+    borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
   },
   continueButtonText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
   },
   modulesContainer: {
-    marginBottom: DesignTokens.spacing['4xl'],
+    marginBottom: tokens.spacing['4xl'],
   },
   modulesTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.lg,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.lg,
     textAlign: 'right',
   },
 });

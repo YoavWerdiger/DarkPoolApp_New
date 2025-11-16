@@ -32,7 +32,7 @@ import { useNavigation } from '@react-navigation/native';
 let Haptics: any = { impactAsync: async () => {}, ImpactFeedbackStyle: { Light: 'Light' } };
 try { Haptics = require('expo-haptics'); } catch {}
 import { supabase } from '../../lib/supabase';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 // פונקציה לזיהוי שפה
 const detectLanguage = (text: string): 'rtl' | 'ltr' => {
@@ -83,6 +83,7 @@ interface ChatBubbleProps {
 }
 
 export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDeleteMessage, allMessages, onJumpToMessage, channelMembers, currentUserId, shouldHighlight, isGrouped, isGroupStart, isGroupEnd, hasPrevFromSameSender }: ChatBubbleProps) {
+  const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const navigation = useNavigation<any>();
   const [showMediaViewer, setShowMediaViewer] = useState(false);
@@ -399,13 +400,13 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     
     // בדיקה לפי status ו-read_by
     if (message.status === 'sent' && readByCount === 0) {
-      return { icon: '✓', color: '#9CA3AF' }; // נשלח אבל לא נקרא על ידי אף אחד
+      return { icon: '✓', color: DesignTokens.colors.text.tertiary }; // נשלח אבל לא נקרא על ידי אף אחד
     } else if (readByCount > 0 && readByCount >= totalRecipients) {
-      return { icon: '✓✓', color: '#00E654' }; // נקרא על ידי כולם - ירוק
+      return { icon: '✓✓', color: DesignTokens.colors.success.main }; // נקרא על ידי כולם - ירוק
     } else if (readByCount > 0 && readByCount < totalRecipients) {
-      return { icon: '✓✓', color: '#9CA3AF' }; // נקרא על ידי חלק - אפור
+      return { icon: '✓✓', color: DesignTokens.colors.text.tertiary }; // נקרא על ידי חלק - אפור
     } else {
-      return { icon: '✓', color: '#9CA3AF' }; // ברירת מחדל - נשלח
+      return { icon: '✓', color: DesignTokens.colors.text.tertiary }; // ברירת מחדל - נשלח
     }
   };
 
@@ -647,8 +648,8 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
               key={index}
               className="px-2 py-1 rounded-full border items-center justify-center"
               style={{
-                backgroundColor: 'rgba(55, 65, 81, 0.7)',
-                borderColor: 'rgba(107, 114, 128, 0.5)',
+                backgroundColor: DesignTokens.colors.background.secondary,
+                borderColor: DesignTokens.colors.border.primary,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.2,
@@ -674,8 +675,8 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         {remainingCount > 0 && (
           <View className="px-2 py-1 rounded-full border ml-1 items-center justify-center"
             style={{
-              backgroundColor: 'rgba(55, 65, 81, 0.7)',
-              borderColor: 'rgba(107, 114, 128, 0.5)',
+              backgroundColor: DesignTokens.colors.background.secondary,
+              borderColor: DesignTokens.colors.border.primary,
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.2,
@@ -700,7 +701,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     setSelectedMessage(null);
     setShowMessageContextMenu(false);
     setActionMenuVisible(false);
-    setSwipeEnabled(true);
+    // setSwipeEnabled removed - not compatible with New Architecture
     
     setSelectedMedia(media);
     setShowMediaViewer(true);
@@ -734,7 +735,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         break;
       case 'read':
         icon = 'checkmark-done';
-        color = '#00E654';
+        color = DesignTokens.colors.success.main;
         break;
     }
     
@@ -752,7 +753,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
       <RectButton
         onPress={handleSwipeReply}
         style={{
-          backgroundColor: '#3B82F6',
+          backgroundColor: DesignTokens.colors.accent.main,
           width: 40,
           height: 40,
           borderRadius: 30,
@@ -776,7 +777,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
       <RectButton
         onPress={handleSwipeForward}
         style={{
-          backgroundColor: '#F59E0B',
+          backgroundColor: DesignTokens.colors.warning.main,
           width: 40,
           height: 40,
           borderRadius: 30,
@@ -802,7 +803,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           <View
             onLayout={(e) => setReplyPreviewWidth(e.nativeEvent.layout.width)}
             style={{
-            backgroundColor: isMe ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)',
+            backgroundColor: DesignTokens.colors.background.secondary,
             paddingVertical: 6,
             paddingHorizontal: 8,
             borderRadius: 8,
@@ -810,10 +811,10 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             flexDirection: 'row-reverse',
             alignItems: 'flex-start',
             borderRightWidth: 3,
-            borderRightColor: '#3B82F6',
+            borderRightColor: DesignTokens.colors.accent.main,
             borderLeftWidth: 0,
             borderWidth: 1,
-            borderColor: 'rgba(83, 83, 83, 0.1)',
+            borderColor: DesignTokens.colors.border.primary,
             flexShrink: 1,
             maxWidth: maxBubbleWidth - 20,
             minWidth: 230
@@ -893,7 +894,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         <Pressable 
         onPress={() => onJumpToMessage && replyId && onJumpToMessage(replyId)} 
         style={{ 
-          backgroundColor: isMe ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)',
+          backgroundColor: DesignTokens.colors.background.secondary,
           paddingVertical: 8,
           paddingHorizontal: 10,
           borderRadius: 8,
@@ -901,10 +902,10 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           flexDirection: 'row-reverse',
           alignItems: 'flex-start',
           borderRightWidth: 3,
-          borderRightColor: '#3B82F6',
+          borderRightColor: DesignTokens.colors.accent.main,
           borderLeftWidth: 0,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.12)',
+          borderColor: DesignTokens.colors.border.primary,
           flexShrink: 1,
           maxWidth: maxBubbleWidth - 12,
           minWidth: Math.max(230, Math.min(replyPreviewWidth + 24, maxBubbleWidth - 12))
@@ -986,8 +987,21 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             {
               text: 'עבור',
               onPress: () => {
-                // מעבר פשוט לטאב החדשות
-                navigation.navigate('News');
+                // מעבר לטאב החדשות דרך MainTabs
+                try {
+                  // נסה לנווט דרך המסך הראשי
+                  const parent = navigation.getParent();
+                  if (parent) {
+                    parent.navigate('Main', { screen: 'News' });
+                  } else {
+                    // אם אין parent, נסה לנווט ישירות
+                    navigation.navigate('Main', { screen: 'News' });
+                  }
+                } catch (error) {
+                  console.error('❌ Error navigating to News:', error);
+                  // נסה דרך אחרת
+                  navigation.navigate('Main', { screen: 'News' });
+                }
               }
             }
           ]
@@ -1006,7 +1020,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             style={{
               backgroundColor: DesignTokens.colors.background.secondary,
               borderWidth: 1,
-              borderColor: 'rgba(0, 216, 74, 0.2)',
+              borderColor: DesignTokens.colors.border.primary,
               maxWidth: 280
             }}
           >
@@ -1085,7 +1099,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             )}
             
             {/* מידע תחתון */}
-            <View className="flex-row items-center justify-between mt-3 pt-3 border-t-2" style={{ borderTopColor: 'rgba(255, 255, 255, 0.05)' }}>
+            <View className="flex-row items-center justify-between mt-3 pt-3 border-t-2" style={{ borderTopColor: DesignTokens.colors.border.primary }}>
               <Text 
                 className="text-xs font-medium"
                 style={{ color: DesignTokens.colors.text.tertiary }}
@@ -1094,11 +1108,11 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
               </Text>
               <View 
                 className="px-2 py-1 rounded-full"
-                style={{ backgroundColor: '#00D84A20' }}
+                style={{ backgroundColor: `${DesignTokens.colors.success.main}26` }}
               >
                 <Text 
                   className="text-xs font-bold"
-                  style={{ color: '#00D84A' }}
+                  style={{ color: DesignTokens.colors.success.main }}
                 >
                   📰 חדשות
                 </Text>
@@ -1310,7 +1324,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                    height: 24, 
                    borderRadius: 12,
                        borderWidth: 1,
-                       borderColor: '#00E654'
+                       borderColor: DesignTokens.colors.success.main
                      }} 
                    />
                  ) : (
@@ -1321,9 +1335,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                        borderRadius: 12, 
                        alignItems: 'center', 
                        justifyContent: 'center',
-                       backgroundColor: '#00E654',
+                       backgroundColor: DesignTokens.colors.bubbleMe,
                        borderWidth: 1,
-                       borderColor: '#00E654'
+                       borderColor: DesignTokens.colors.success.main
                      }}
                    >
                      <Text 
@@ -1345,7 +1359,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           style={{
             backgroundColor: highlightAnimation.interpolate({
               inputRange: [0, 1],
-              outputRange: ['transparent', 'rgba(0, 230, 84, 0.1)'],
+              outputRange: ['transparent', `${DesignTokens.colors.success.main}1A`],
             }),
             borderRadius: isGrouped ? (
               isGroupStart ? (isMe ? [12, 12, 4, 12] : [12, 12, 12, 4]) : 
@@ -1389,12 +1403,12 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                 style={{ 
                   transform: [{ scale: pressScale }],
                   alignItems: 'flex-end', 
-                   backgroundColor: isMe ? '#00E654' : '#181818',
+                   backgroundColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
                   borderRadius: 16,
                   paddingHorizontal: 10,
                   paddingVertical: 6,
                   borderWidth: 0.5,
-                  borderColor: isMe ? 'rgba(0,230,84,0.3)' : 'rgba(255,255,255,0.08)',
+                  borderColor: DesignTokens.colors.border.primary,
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 1 },
                   shadowOpacity: 0.05,
@@ -1419,7 +1433,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                        style={{ 
                          textAlign: 'right',
                          writingDirection: 'rtl',
-                         color: '#00E654',
+                         color: DesignTokens.colors.success.main,
                          fontSize: 12,
                          fontWeight: 'bold',
                          marginBottom: 3,
@@ -1439,9 +1453,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
                   {isMessageStarred && (
                     <Star 
                       size={9} 
-                      color={isMe ? "#181818" : "#00E654"} 
+                      color={isMe ? DesignTokens.colors.bubbleOther : DesignTokens.colors.success.main} 
                       strokeWidth={2}
-                      fill={isMe ? "#181818" : "#00E654"}
+                      fill={isMe ? DesignTokens.colors.bubbleOther : DesignTokens.colors.success.main}
                     />
                   )}
                   
@@ -1461,7 +1475,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
               </Animated.View>
               </Pressable>
               </HoldItem>
-              
+            
               {/* ריאקציות - מוצגות בפינה התחתונה-שמאלית של הבועה */}
               <MessageReactions
                 reactions={reactions}
@@ -1470,7 +1484,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             </View>
           </Animated.View>
           {/* Swipeable removed - not compatible with New Architecture */}
-        </Animated.View>
+      </Animated.View>
       </Animated.View>
 
       <ActionMenu
@@ -1490,12 +1504,12 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         }}
         preview={
           <View style={{
-            backgroundColor: isMe ? '#00E654' : '#181818',
+            backgroundColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
             borderRadius: 18,
             paddingHorizontal: 12,
             paddingVertical: 8,
             borderWidth: 1,
-            borderColor: isMe ? '#00E654' : 'rgba(0,230,84,0.3)',
+            borderColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.border.primary,
             maxWidth: 280,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 2 },

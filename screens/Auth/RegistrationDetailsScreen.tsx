@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { AuthService } from '../../services/authService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
@@ -135,7 +136,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   top: dot.y,
                   width: dot.size,
                   height: dot.size,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   opacity: dot.opacity,
                   borderRadius: dot.size / 2
                 }}
@@ -182,7 +183,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
               <Text style={{ 
                 fontSize: 32, 
                 fontWeight: '800', 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 marginBottom: 8,
                 letterSpacing: -0.8,
                 textAlign: 'center',
@@ -194,7 +195,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
               {/* Subtitle */}
               <Text style={{ 
                 fontSize: 16, 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontWeight: '400',
                 letterSpacing: 0.3,
                 textAlign: 'center',
@@ -208,7 +209,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
               <View style={{
                 width: 60,
                 height: 2,
-                backgroundColor: '#00E654',
+                backgroundColor: DesignTokens.colors.primary.main,
                 marginTop: 16,
                 borderRadius: 1
               }} />
@@ -238,7 +239,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
               {/* Full Name Input */}
               <View>
                 <Text style={{ 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   fontSize: 14, 
                   fontWeight: '600', 
                   marginBottom: 8,
@@ -249,7 +250,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   שם מלא
                 </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
                   borderColor: error && !name ? '#F85149' : '#333333',
@@ -258,11 +259,11 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Ionicons name="person-outline" size={20} color="#666666" />
+                  <Ionicons name="person-outline" size={20} color={DesignTokens.colors.text.tertiary} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -270,7 +271,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס את שמך המלא"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={name}
                     onChangeText={setName}
                     autoCapitalize="words"
@@ -282,7 +283,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
               {/* Phone Input */}
               <View>
                 <Text style={{ 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   fontSize: 14, 
                   fontWeight: '600', 
                   marginBottom: 8,
@@ -293,7 +294,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   מספר טלפון
                 </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
                   borderColor: error && !phone ? '#F85149' : '#333333',
@@ -302,11 +303,11 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Ionicons name="call-outline" size={20} color="#666666" />
+                  <Ionicons name="call-outline" size={20} color={DesignTokens.colors.text.tertiary} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -314,7 +315,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס מספר טלפון (לדוג׳ 0501234567)"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={phone}
                     onChangeText={setPhone}
                     keyboardType="phone-pad"
@@ -326,7 +327,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
               {/* Email Input */}
               <View>
                 <Text style={{ 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   fontSize: 14, 
                   fontWeight: '600', 
                   marginBottom: 8,
@@ -337,7 +338,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   כתובת אימייל
                 </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
                   borderColor: error && !email ? '#F85149' : '#333333',
@@ -346,11 +347,11 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Ionicons name="mail-outline" size={20} color="#666666" />
+                  <Ionicons name="mail-outline" size={20} color={DesignTokens.colors.text.tertiary} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -358,7 +359,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס את כתובת האימייל"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
@@ -371,7 +372,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
               {/* Password Input */}
               <View>
                 <Text style={{ 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   fontSize: 14, 
                   fontWeight: '600', 
                   marginBottom: 8,
@@ -382,7 +383,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   סיסמה
                 </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
                   borderColor: error && !password ? '#F85149' : '#333333',
@@ -391,11 +392,11 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Ionicons name="lock-closed-outline" size={20} color="#666666" />
+                  <Ionicons name="lock-closed-outline" size={20} color={DesignTokens.colors.text.tertiary} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -403,7 +404,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס סיסמה (לפחות 6 תווים)"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={true}
@@ -420,7 +421,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                 style={{
                   borderRadius: 14,
                   marginTop: 12,
-                  shadowColor: '#00E654',
+                  shadowColor: DesignTokens.colors.primary.main,
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: 0.4,
                   shadowRadius: 12,
@@ -441,7 +442,7 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
                     <ActivityIndicator color="#000000" size="small" />
                   ) : (
                     <Text style={{ 
-                      color: '#000000', 
+                      color: DesignTokens.colors.background.primary, 
                       fontSize: 16, 
                       fontWeight: '700',
                       letterSpacing: 0.5,

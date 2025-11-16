@@ -1,23 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, ErrorInfo, ReactNode, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// Ionicons הוסר כאן כי הבורר ללא אייקונים
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 // קומפוננטים פנימיים
 import BreakingNewsTab from './BreakingNewsTab';
 import EconomicCalendarTab from './EconomicCalendarTab';
 import EarningsReportsTab from './EarningsReportsTab';
 
+// Error Boundary Component
+class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('❌ NewsScreen Error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#121212' }}>
+          <Text style={{ color: '#FFFFFF', fontSize: 18, marginBottom: 10 }}>
+            שגיאה בטעינת המסך
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center' }}>
+            {this.state.error?.message || 'שגיאה לא ידועה'}
+          </Text>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function NewsScreen() {
+  console.log('📰 NewsScreen: Component mounted/rendering...');
+  const DesignTokens = useDesignTokens();
   const [activeTab, setActiveTab] = useState<'breaking' | 'calendar' | 'earnings'>('breaking');
-  const [pressedTab, setPressedTab] = useState<'breaking' | 'calendar' | 'earnings' | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  
+  useEffect(() => {
+    console.log('📰 NewsScreen: useEffect - Component mounted');
+    // דיליי קטן כדי לוודא שהמסך נטען
+    setTimeout(() => {
+      setIsReady(true);
+      console.log('📰 NewsScreen: Component is ready');
+    }, 100);
+    return () => {
+      console.log('📰 NewsScreen: useEffect - Component unmounted');
+    };
+  }, []);
 
   const tabs = [
     {
@@ -42,25 +88,34 @@ export default function NewsScreen() {
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || BreakingNewsTab;
 
+  console.log('📰 NewsScreen: About to render, activeTab:', activeTab, 'isReady:', isReady);
+  
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
+        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+        <Text style={{ color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
+          טוען...
+        </Text>
+      </View>
+    );
+  }
+  
   return (
     <View 
-      className="flex-1"
-      style={{ backgroundColor: DesignTokens.colors.background.primary }}
+      style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
     >
       <StatusBar style="light" backgroundColor={DesignTokens.colors.background.primary} />
       
-      {/* רקע גרדיאנט הוסר כאן כדי שה-Header לא יושפע */}
-      
-      <SafeAreaView className="flex-1" edges={['top']}>
+      <SafeAreaView 
+        style={{ 
+          flex: 1,
+          backgroundColor: DesignTokens.colors.background.primary,
+        }}
+        edges={['top']}
+      >
         {/* Header */}
         <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
-          {/* גרדיאנט בהדר בלבד */}
-          <LinearGradient
-            colors={['rgba(0, 230, 84, 0.14)', 'rgba(0, 230, 84, 0.06)', 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 136 }}
-          />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
             <Text style={{ 
               fontSize: 22, 
@@ -72,75 +127,78 @@ export default function NewsScreen() {
               חדשות פיננסיות
             </Text>
           </View>
-          {/* קו הפרדה תחתון */}
         </View>
 
-        {/* טאבים - ממורכז ומסודר */}
+        {/* טאבים */}
         <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
           <View style={{ 
             flexDirection: 'row',
-            backgroundColor: 'rgba(255,255,255,0.03)',
-            borderRadius: 18,
+            backgroundColor: DesignTokens.colors.background.secondary,
+            borderRadius: 30,
             padding: 4,
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.05)',
             alignSelf: 'center',
             width: '100%',
             maxWidth: 400
           }}>
-            {tabs.map((tab, index) => (
+            {tabs.map((tab, index) => {
+              const isActive = activeTab === tab.id;
+              return (
               <TouchableOpacity
-                key={tab.id}
-                onPress={() => setActiveTab(tab.id)}
-                onPressIn={() => setPressedTab(tab.id)}
-                onPressOut={() => setPressedTab(null)}
+                key={`tab-${tab.id}-${index}`}
+                onPress={() => {
+                  console.log(`📰 NewsScreen: Switching to tab ${tab.id}`);
+                  setActiveTab(tab.id);
+                }}
+                activeOpacity={1}
                 style={{
                   flex: 1,
                   height: 44,
-                  borderRadius: 14,
-                  backgroundColor: pressedTab === tab.id && activeTab !== tab.id ? 'rgba(255,255,255,0.06)' : 'transparent',
+                  borderRadius: 26,
+                  backgroundColor: 'transparent',
                   alignItems: 'center',
                   justifyContent: 'center',
                   overflow: 'hidden',
                   marginHorizontal: 2
                 }}
               >
-                {activeTab === tab.id ? (
-                  <LinearGradient
-                    colors={['#00D84A', '#00A85A']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+                {isActive && (
+                  <View
                     style={{
                       position: 'absolute',
                       top: 0,
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      borderRadius: 14
+                      borderRadius: 26,
+                      backgroundColor: `${DesignTokens.colors.primary.main}14`,
                     }}
                   />
-                ) : null}
+                )}
                 <Text style={{ 
                   fontSize: 14,
-                  fontWeight: activeTab === tab.id ? '700' : '600',
-                  color: activeTab === tab.id ? '#FFFFFF' : DesignTokens.colors.text.secondary,
+                  fontWeight: isActive ? '700' : '600',
+                  color: isActive ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary,
                   textAlign: 'center',
-                  writingDirection: 'rtl'
+                  writingDirection: 'rtl',
+                  position: 'relative',
+                  zIndex: 1
                 }}>
                   {tab.title}
                 </Text>
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
         </View>
-        <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 6 }} />
-        {/* תוכן הטאב הפעיל */}
-        <View className="flex-1">
-          <ActiveComponent />
+        <View style={{ height: 1, backgroundColor: DesignTokens.colors.border.primary, marginTop: 6 }} />
+        
+        {/* תוכן הטאב הפעיל עם Error Boundary */}
+        <View style={{ flex: 1 }}>
+          <ErrorBoundary>
+            <ActiveComponent />
+          </ErrorBoundary>
         </View>
       </SafeAreaView>
     </View>
-    
   );
-  
-} 
+}

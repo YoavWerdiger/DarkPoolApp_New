@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, Modal, Dimensions, Animated } from 'react-native';
+import { View, StyleSheet, TouchableWithoutFeedback, Modal, Dimensions, Animated, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import ReactionBar from './ReactionBar';
 import { DesignTokens } from '../ui/DesignTokens';
@@ -27,7 +28,9 @@ export default function LongPressOverlay({
   onClose,
   onAction
 }: LongPressOverlayProps) {
+  const insets = useSafeAreaInsets();
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const [shouldRender, setShouldRender] = React.useState(false);
 
   React.useEffect(() => {
     const fetchRole = async () => {
@@ -58,8 +61,17 @@ export default function LongPressOverlay({
 
   useEffect(() => {
     if (visible) {
+      console.log('🎯 LongPressOverlay: Opening overlay');
+      setShouldRender(true);
       // רטט קצר מאוד בעת פתיחה (אסתטי ועדין)
       try { Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Light); } catch {}
+
+      // איפוס ערכים לפני אנימציה
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      menuOpacityAnim.setValue(0);
+      menuSlideAnim.setValue(300);
+      console.log('🎯 LongPressOverlay: Animation values reset, menuSlideAnim starts at 300');
 
       // פתיחה: רקע + תצוגות
       Animated.parallel([
@@ -90,7 +102,7 @@ export default function LongPressOverlay({
         ]),
       ]).start();
     } else {
-      // סגירה
+      // סגירה - האנימציה רצה ואז נסגר המודל
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -112,11 +124,14 @@ export default function LongPressOverlay({
           duration: 200,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        // סגור את המודל רק אחרי שהאנימציה מסתיימת
+        setShouldRender(false);
+      });
     }
   }, [visible]);
 
-  if (!visible || !message) return null;
+  if (!shouldRender || !message) return null;
 
   const handleReaction = (emoji: string) => {
     onAction('react', { messageId: message?.id, emoji });
@@ -127,14 +142,24 @@ export default function LongPressOverlay({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal 
+      visible={shouldRender} 
+      transparent 
+      animationType="none" 
+      onRequestClose={onClose}
+      statusBarTranslucent={true}
+    >
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.overlay}>
-          <BlurView
-            intensity={60}
-            tint="dark"
-            style={StyleSheet.absoluteFill}
-          />
+          {Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={60}
+              tint="dark"
+              style={StyleSheet.absoluteFill}
+            />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)' }]} />
+          )}
         </View>
       </TouchableWithoutFeedback>
 
@@ -145,7 +170,7 @@ export default function LongPressOverlay({
             styles.reactionWrapper,
             {
               opacity: fadeAnim,
-              // ללא זום - פייד בלבד
+              transform: [{ translateY: slideAnim }]
             }
           ]}
         >
@@ -156,19 +181,20 @@ export default function LongPressOverlay({
           </TouchableWithoutFeedback>
         </Animated.View>
 
-        {/* Bottom Action Sheet - מותאם, כך שהריאקציות יופיעו מעליו */}
+        {/* Bottom Action Sheet */}
         <Animated.View
           style={[
             styles.actionSheet,
             {
               opacity: menuOpacityAnim,
-              // ללא זום - החלקה קלה בלבד
-              transform: [{ translateY: menuSlideAnim }]
+              transform: [{ translateY: menuSlideAnim }],
             }
           ]}
+          pointerEvents="box-none"
         >
           <TouchableWithoutFeedback onPress={() => {}}>
-            <View>
+            <View style={{ paddingBottom: Math.max(insets.bottom, 20) }}>
+              {console.log('🎯 LongPressOverlay: Rendering ContextMenu, isAdmin:', isAdmin)}
               <ContextMenu onSelect={handleOptionSelect} isAdmin={isAdmin} />
             </View>
           </TouchableWithoutFeedback>
@@ -181,7 +207,7 @@ export default function LongPressOverlay({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(0,0,0,0.4)',
   },
   container: {
     position: 'absolute',
@@ -190,20 +216,19 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+    justifyContent: 'flex-start',
+    paddingTop: 100,
   },
   reactionWrapper: {
-    position: 'absolute',
-    top: '15%',
     zIndex: 20,
   },
   actionSheet: {
+    width: '100%',
+    zIndex: 10,
+    backgroundColor: 'transparent',
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 10,
-    backgroundColor: 'transparent',
   },
 });

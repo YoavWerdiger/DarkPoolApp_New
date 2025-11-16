@@ -1,68 +1,142 @@
-// Design Tokens - מערכת טוקנים עיצוביים
+// Design Tokens - מערכת טוקנים עיצוביים דינמית
 // =========================================
 //
 // כל ערכי העיצוב המרכזיים באפליקציה
-// בהשפעת WhatsApp עם עיצוב מקצועי ומודרני
+// משתלב עם ThemeContext לתמיכה ב-Light/Dark Theme
 //
 
-export const DesignTokens = {
-  // 🎨 Colors - צבעים
-  colors: {
-    // Brand
-    primary: {
-      main: '#05d157',        // ירוק ראשי (כמו העיצוב החדש)
-    },
-    secondary: {
-      main: '#34D399',        // ירוק משני
-    },
-    accent: {
-      main: '#00E5FF',        // כחול להדגשות
-    },
-    
-    // Background
-    background: {
-      primary: '#0d0d0d',     // רקע ראשי (כמעט שחור)
-      secondary: '#1a1a1a',   // משטחים (כהה יותר)
-      tertiary: '#1a1a1a',    // רכיבים מורמים
-    },
-    
-    // Chat
-    bubbleMe: '#05d157',       // בועות שלי
-    bubbleOther: '#1a1a1a',    // בועות אחרים
-    
-    // Text
-    text: {
-      primary: '#FFFFFF',         // טקסט ראשי
-      secondary: 'rgba(255,255,255,0.6)',  // טקסט משני
-      tertiary: 'rgba(255,255,255,0.5)',   // טקסט מעומעם
-      danger: '#EF4444',          // טקסט שגיאה
-    },
-    
-    // Border
-    border: {
-      primary: 'rgba(255,255,255,0.08)',      // גבולות בסיסיים
-      active: 'rgba(255,255,255,0.12)',       // גבולות פעילים
-    },
-    
-    // States
-    success: {
-      main: '#10B981',        // הצלחה
-    },
-    warning: {
-      main: '#F59E0B',        // אזהרה
-    },
-    danger: {
-      main: '#EF4444',        // סכנה
-    },
-    info: {
-      main: '#3B82F6',        // מידע
-    },
-    
-    // Overlay
-    overlay: 'rgba(0,0,0,0.6)', // רקע דיאלוגים
-    backdrop: 'rgba(0,0,0,0.4)', // רקע מעומעם
-  },
+import React from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
+// צבעי Dark Theme
+const darkColors = {
+  // Brand
+  primary: {
+    main: '#05d157',
+    dark: '#00B84A',
+    darker: '#008F3A',
+  },
+  secondary: {
+    main: '#34D399',
+  },
+  accent: {
+    main: '#00E5FF',
+  },
+  
+  // Background
+  background: {
+    primary: '#121212',
+    secondary: '#1A1A1A',
+    tertiary: '#2A2A2A',
+  },
+  
+  // Chat
+  bubbleMe: '#05d157',
+  bubbleOther: '#1a1a1a',
+  
+  // Text
+  text: {
+    primary: '#FFFFFF',
+    secondary: 'rgba(255,255,255,0.6)',
+    tertiary: 'rgba(255,255,255,0.5)',
+    danger: '#EF4444',
+  },
+  
+  // Border
+  border: {
+    main: '#2a2a2a',
+    primary: 'rgba(255,255,255,0.08)',
+    active: 'rgba(255,255,255,0.12)',
+  },
+};
+
+// צבעי Light Theme
+const lightColors = {
+  // Brand
+  primary: {
+    main: '#05d157',
+    dark: '#00B84A',
+    darker: '#008F3A',
+  },
+  secondary: {
+    main: '#34D399',
+  },
+  accent: {
+    main: '#0284C7',
+  },
+  
+  // Background
+  background: {
+    primary: '#F5F5F7',
+    secondary: '#FFFFFF',
+    tertiary: '#E5E5E5',
+  },
+  
+  // Chat
+  bubbleMe: '#DCF8C6',
+  bubbleOther: '#FFFFFF',
+  
+  // Text
+  text: {
+    primary: '#000000',
+    secondary: 'rgba(0,0,0,0.6)',
+    tertiary: 'rgba(0,0,0,0.4)',
+    danger: '#DC2626',
+  },
+  
+  // Border
+  border: {
+    main: 'rgba(0,0,0,0.1)',
+    primary: 'rgba(0,0,0,0.08)',
+    active: 'rgba(0,0,0,0.12)',
+  },
+};
+
+// Hook דינמי לקבלת DesignTokens בהתאם ל-Theme
+// משתמש ב-ThemeContext - מתעדכן אוטומטית כשמחליפים theme!
+export const useDesignTokens = () => {
+  const { isDarkMode } = useTheme();
+  
+  // Log לדיבאג
+  console.log('🎨 useDesignTokens נקרא! isDarkMode =', isDarkMode);
+  
+  // בחירת צבעים בהתאם ל-theme
+  const themeColors = isDarkMode ? darkColors : lightColors;
+  
+  console.log('🎨 Theme נבחר:', isDarkMode ? '🌙 Dark' : '☀️ Light');
+  console.log('🎨 צבע רקע:', themeColors.background.primary);
+  console.log('🎨 צבע טקסט:', themeColors.text.primary);
+  
+  // שימוש ב-useMemo כדי לא ליצור אובייקט חדש בכל רינדור
+  return React.useMemo(() => ({
+    colors: {
+      ...themeColors,
+      ...staticColors,
+    },
+    ...staticTokens,
+  }), [isDarkMode]); // תלות ב-isDarkMode - מתעדכן כשמשתנה!
+};
+
+// צבעים סטטיים (לא משתנים בין themes)
+const staticColors = {
+  success: {
+    main: '#10B981',
+  },
+  warning: {
+    main: '#F59E0B',
+  },
+  danger: {
+    main: '#EF4444',
+  },
+  info: {
+    main: '#3B82F6',
+  },
+  overlay: 'rgba(0,0,0,0.6)',
+  backdrop: 'rgba(0,0,0,0.4)',
+};
+
+// טוקנים סטטיים (לא משתנים בין themes)
+const staticTokens = {
   // 🔤 Typography - טיפוגרפיה
   typography: {
     fontFamily: {
@@ -185,6 +259,15 @@ export const DesignTokens = {
       thick: 2,
     },
   },
+};
+
+// Export סטטי לתאימות לאחור (fallback ל-Dark Theme)
+export const DesignTokens = {
+  colors: {
+    ...darkColors,
+    ...staticColors,
+  },
+  ...staticTokens,
 };
 
 export default DesignTokens;

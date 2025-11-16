@@ -2,14 +2,15 @@ import React, { useEffect, useRef } from 'react';
 import { 
   Modal, 
   View, 
-  Pressable, 
   Animated, 
   Dimensions, 
   ViewStyle,
+  Easing,
   PanResponder,
-  StatusBar 
+  TouchableWithoutFeedback
 } from 'react-native';
-import DesignTokens from './DesignTokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDesignTokens } from './DesignTokens';
 
 export interface UIBottomSheetProps {
   visible: boolean;
@@ -23,7 +24,7 @@ export interface UIBottomSheetProps {
   maxHeight?: string | number;
 }
 
-const { height: screenHeight } = Dimensions.get('window');
+const screenHeight = Dimensions.get('window').height;
 
 const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
   visible,
@@ -31,172 +32,162 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
   children,
   showHandle = true,
   dragToClose = true,
-  backdropOpacity = 0.6,
+  backdropOpacity = 0.7,
   contentStyle,
   closeOnBackdropPress = true,
   maxHeight = '80%',
 }) => {
-  const { colors, spacing, borderRadius, shadows } = DesignTokens;
-  
+  const tokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const panY = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(screenHeight)).current;
+  const [isMounted, setIsMounted] = React.useState(visible);
 
   useEffect(() => {
-    console.log('🎬 UIBottomSheet useEffect:', { visible, screenHeight });
     if (visible) {
-      // Show Animation
-      panY.setValue(0);
-      slideAnim.setValue(screenHeight);
-      console.log('🎬 Starting show animation');
+      setIsMounted(true);
+      fadeAnim.setValue(0);
+      translateY.setValue(screenHeight);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 200,
           useNativeDriver: true,
+          easing: Easing.out(Easing.ease),
         }),
-        Animated.spring(slideAnim, {
+        Animated.timing(translateY, {
           toValue: 0,
-          tension: 100,
-          friction: 8,
+          duration: 250,
           useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
         }),
       ]).start();
     } else {
-      // Hide Animation
-      console.log('🎬 Starting hide animation');
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 150,
           useNativeDriver: true,
         }),
-        Animated.timing(slideAnim, {
+        Animated.timing(translateY, {
           toValue: screenHeight,
-          duration: 250,
+          duration: 200,
           useNativeDriver: true,
         }),
-      ]).start();
+      ]).start(() => {
+        setIsMounted(false);
+      });
     }
-  }, [visible]);
+  }, [visible, fadeAnim, translateY]);
 
-  // PanResponder for drag-to-close
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => dragToClose,
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return dragToClose && Math.abs(gestureState.dy) > 5;
-      },
-      onPanResponderGrant: () => {
-        panY.setOffset(panY._value);
-        panY.setValue(0);
-      },
-      onPanResponderMove: (evt, gestureState) => {
-        // Only allow dragging down
-        if (gestureState.dy >= 0) {
-          panY.setValue(gestureState.dy);
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => dragToClose && gestureState.dy > 5,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
         }
       },
-      onPanResponderRelease: (evt, gestureState) => {
-        panY.flattenOffset();
-        
-        if (gestureState.dy > 120 || gestureState.vy > 0.5) {
-          // Close if dragged down enough or fast enough
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 100 || gestureState.vy > 0.5) {
           onClose();
         } else {
-          // Spring back to position
-          Animated.spring(panY, {
+          Animated.timing(translateY, {
             toValue: 0,
+            duration: 200,
             useNativeDriver: true,
-            tension: 100,
-            friction: 8,
           }).start();
         }
       },
     })
   ).current;
 
-  const backdropStyle: ViewStyle = {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'flex-end',
-  };
+  const maxHeightValue = typeof maxHeight === 'string' && maxHeight.includes('%')
+    ? (screenHeight * parseFloat(maxHeight) / 100)
+    : typeof maxHeight === 'number' ? maxHeight : screenHeight * 0.8;
 
-  const containerStyle: ViewStyle = {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: borderRadius['2xl'],
-    borderTopRightRadius: borderRadius['2xl'],
-    ...shadows.lg,
-    borderTopWidth: 0.5,
-    borderLeftWidth: 0.5,
-    borderRightWidth: 0.5,
-    borderColor: colors.border,
-    maxHeight: typeof maxHeight === 'string' ? maxHeight : maxHeight,
-    minHeight: 200,
-    overflow: 'hidden',
-  };
-
-  const handleStyle: ViewStyle = {
-    width: 50,
-    height: 5,
-    backgroundColor: '#777',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginVertical: spacing.lg,
-  };
-
-  const contentContainerStyle: ViewStyle = {
-    flex: 1,
-    ...contentStyle,
-  };
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <Modal
-      visible={visible}
+      visible={isMounted}
       transparent
       animationType="none"
       statusBarTranslucent={true}
-      onRequestClose={onClose}
+      onRequestClose={() => {
+        console.log('📱 UIBottomSheet: onRequestClose called');
+        onClose();
+      }}
     >
-      <StatusBar backgroundColor="rgba(0,0,0,0.6)" barStyle="light-content" />
-      
-      {/* Backdrop */}
-      <Animated.View style={[backdropStyle, { opacity: fadeAnim }]}>
-        {/* Backdrop Pressable */}
-        <Pressable 
-          style={{ flex: 1 }}
-          onPress={closeOnBackdropPress ? onClose : undefined}
-        />
+      <View style={{ flex: 1 }}>
+        {/* Backdrop */}
+        <TouchableWithoutFeedback onPress={closeOnBackdropPress ? () => {
+          console.log('👆 UIBottomSheet: Backdrop pressed');
+          onClose();
+        } : undefined}>
+          <Animated.View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: tokens.colors.backdrop,
+              opacity: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, backdropOpacity],
+              }),
+            }}
+          />
+        </TouchableWithoutFeedback>
         
-        {/* Bottom Sheet Container */}
+        {/* Sheet Container */}
         <Animated.View 
-          style={[
-            containerStyle,
-            {
-              transform: [
-                { translateY: slideAnim },
-                { translateY: panY }
-              ]
-            }
-          ]}
-          {...(dragToClose ? panResponder.panHandlers : {})}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: tokens.colors.background.secondary,
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            minHeight: 200,
+            maxHeight: maxHeightValue,
+            paddingBottom: insets.bottom,
+            shadowColor: tokens.colors.overlay,
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.2,
+            shadowRadius: 12,
+            elevation: 8,
+            transform: [{ translateY }],
+          }}
         >
           {/* Handle */}
           {showHandle && (
-            <View style={{ alignItems: 'center', paddingTop: spacing.md }}>
-              <View style={handleStyle} />
+            <View 
+              style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}
+              {...(dragToClose ? panResponder.panHandlers : {})}
+            >
+              <View style={{
+                width: 40,
+                height: 4,
+                backgroundColor: tokens.colors.border.active,
+                borderRadius: 2,
+              }} />
             </View>
           )}
           
           {/* Content */}
-          <View style={contentContainerStyle}>
+          <View style={contentStyle}>
             {children}
           </View>
         </Animated.View>
-      </Animated.View>
+      </View>
     </Modal>
   );
 };
 
 export default UIBottomSheet;
-

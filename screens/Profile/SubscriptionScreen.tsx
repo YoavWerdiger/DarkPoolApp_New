@@ -21,6 +21,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 interface SubscriptionPlan {
   id: string;
@@ -96,7 +97,7 @@ export default function SubscriptionScreen({ navigation }: any) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00E654" />
+          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען נתוני מנוי...</Text>
         </View>
       </SafeAreaView>
@@ -199,7 +200,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                   justifyContent: 'center',
                   marginLeft: 16
                 }}>
-                  <Crown size={28} color="#00E654" strokeWidth={2} />
+                  <Crown size={28} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                 </View>
               </View>
 
@@ -215,11 +216,11 @@ export default function SubscriptionScreen({ navigation }: any) {
                 <Text style={{
                   fontSize: 14,
                   fontWeight: '700',
-                  color: '#00E654'
+                  color: DesignTokens.colors.primary.main
                 }}>
                   מנוי פעיל
                 </Text>
-                <Check size={18} color="#00E654" strokeWidth={2.5} style={{ marginRight: 8 }} />
+                <Check size={18} color={DesignTokens.colors.primary.main} strokeWidth={2.5} style={{ marginRight: 8 }} />
               </View>
             </View>
           </View>
@@ -261,7 +262,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                     position: 'absolute',
                     top: 16,
                     left: 16,
-                    backgroundColor: '#00E654',
+                    backgroundColor: DesignTokens.colors.primary.main,
                     paddingHorizontal: 14,
                     paddingVertical: 6,
                     borderRadius: 16,
@@ -271,11 +272,11 @@ export default function SubscriptionScreen({ navigation }: any) {
                     <Text style={{
                       fontSize: 12,
                       fontWeight: '700',
-                      color: '#ffffff'
+                      color: DesignTokens.colors.text.primary
                     }}>
                       מומלץ ביותר
                     </Text>
-                    <Star size={14} color="#ffffff" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                    <Star size={14} color={DesignTokens.colors.text.primary} strokeWidth={2.5} style={{ marginRight: 6 }} />
                   </View>
                 )}
 
@@ -307,7 +308,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                     <Text style={{
                       fontSize: 32,
                       fontWeight: '700',
-                      color: '#00E654'
+                      color: DesignTokens.colors.primary.main
                     }}>
                       ₪{plan.price}
                     </Text>
@@ -339,7 +340,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                         justifyContent: 'center',
                         marginLeft: 12
                       }}>
-                        <Check size={14} color="#00E654" strokeWidth={3} />
+                        <Check size={14} color={DesignTokens.colors.primary.main} strokeWidth={3} />
                       </View>
                     </View>
                   ))}
@@ -350,7 +351,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                     marginTop: 20,
                     paddingTop: 20,
                     borderTopWidth: 1,
-                    borderTopColor: '#2a2a2a',
+                    borderTopColor: DesignTokens.colors.border.main,
                     alignItems: 'center'
                   }}>
                     <View style={{
@@ -363,12 +364,12 @@ export default function SubscriptionScreen({ navigation }: any) {
                     }}>
                       <Text style={{
                         fontSize: 13,
-                        color: '#00E654',
+                        color: DesignTokens.colors.primary.main,
                         fontWeight: '700'
                       }}>
                         המסלול הנוכחי שלך
                       </Text>
-                      <Check size={16} color="#00E654" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                      <Check size={16} color={DesignTokens.colors.primary.main} strokeWidth={2.5} style={{ marginRight: 6 }} />
                     </View>
                   </View>
                 )}
@@ -378,7 +379,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                     marginTop: 20,
                     paddingTop: 20,
                     borderTopWidth: 1,
-                    borderTopColor: '#2a2a2a'
+                    borderTopColor: DesignTokens.colors.border.main
                   }}>
                     <View style={{
                       backgroundColor: 'rgba(5, 209, 87, 0.1)',
@@ -392,7 +393,7 @@ export default function SubscriptionScreen({ navigation }: any) {
                       <Text style={{
                         fontSize: 15,
                         fontWeight: '700',
-                        color: '#00E654'
+                        color: DesignTokens.colors.primary.main
                       }}>
                         בחר מסלול זה
                       </Text>

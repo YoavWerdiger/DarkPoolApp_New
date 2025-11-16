@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sender: {
-    color: '#00E654',
+    color: 'DesignTokens.colors.success.main',
     fontWeight: '700',
     marginBottom: 4,
     fontSize: 12,

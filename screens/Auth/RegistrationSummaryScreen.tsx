@@ -8,6 +8,7 @@ import { Check, User, Phone, Mail, TrendingUp, BarChart3, Clock, Rocket } from '
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../../services/authService';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 // Debug: בדיקה שה-AuthService קיים
 console.log('🔍 RegistrationSummary: AuthService imported:', !!AuthService);
@@ -155,7 +156,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                   top: dot.y,
                   width: dot.size,
                   height: dot.size,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   opacity: dot.opacity,
                   borderRadius: dot.size / 2
                 }}
@@ -205,24 +206,24 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                 borderRadius: 40,
                 backgroundColor: 'rgba(0, 230, 84, 0.2)',
                 borderWidth: 3,
-                borderColor: '#00E654',
+                borderColor: DesignTokens.colors.primary.main,
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 20,
-                shadowColor: '#00E654',
+                shadowColor: DesignTokens.colors.primary.main,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.3,
                 shadowRadius: 8,
                 elevation: 8
               }}>
-                <Check size={40} color="#00E654" strokeWidth={2} />
+                <Check size={40} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
 
               {/* Main Title */}
               <Text style={{ 
                 fontSize: 32, 
                 fontWeight: '800', 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 marginBottom: 8,
                 letterSpacing: -0.8,
                 textAlign: 'center',
@@ -234,7 +235,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
               {/* Subtitle */}
               <Text style={{ 
                 fontSize: 16, 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontWeight: '400',
                 letterSpacing: 0.3,
                 textAlign: 'center',
@@ -248,7 +249,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
               <View style={{
                 width: 60,
                 height: 2,
-                backgroundColor: '#00E654',
+                backgroundColor: DesignTokens.colors.primary.main,
                 marginTop: 16,
                 borderRadius: 1
               }} />
@@ -285,12 +286,12 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                     justifyContent: 'center',
                     marginLeft: 16
                   }}>
-                    <User size={30} color="#00E654" strokeWidth={2} />
+                    <User size={30} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
                   <Text style={{ 
-                    color: '#FFFFFF', 
+                    color: DesignTokens.colors.text.primary, 
                     fontSize: 18, 
                     fontWeight: '700',
                     writingDirection: 'rtl'
@@ -298,7 +299,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                     {data.fullName}
                   </Text>
                   <Text style={{ 
-                    color: '#B0B0B0', 
+                    color: DesignTokens.colors.text.secondary, 
                     fontSize: 14,
                     writingDirection: 'rtl'
                   }}>
@@ -311,16 +312,16 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
               <View style={{ gap: 16 }}>
                 {/* Phone */}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Phone size={20} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
+                  <Phone size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} style={{ marginLeft: 12 }} />
+                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
                     {data.phone}
                   </Text>
                 </View>
 
                 {/* Track */}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TrendingUp size={20} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
+                  <TrendingUp size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} style={{ marginLeft: 12 }} />
+                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
                     {tracks[data.trackId] || 'מסלול לא נבחר'}
                   </Text>
                 </View>
@@ -328,8 +329,8 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                 {/* Markets */}
                 {data.markets && data.markets.length > 0 && (
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <BarChart3 size={20} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
+                    <BarChart3 size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} style={{ marginLeft: 12 }} />
+                    <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
                       {data.markets.join(', ')}
                     </Text>
                   </View>
@@ -338,8 +339,8 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                 {/* Experience */}
                 {data.experience && (
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Clock size={20} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
+                    <Clock size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} style={{ marginLeft: 12 }} />
+                    <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
                       {data.experience}
                     </Text>
                   </View>
@@ -356,7 +357,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                 end={{ x: 1, y: 1 }}
                 style={{
                   borderRadius: 14,
-                  shadowColor: '#00E654',
+                  shadowColor: DesignTokens.colors.primary.main,
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: 0.4,
                   shadowRadius: 12,
@@ -379,7 +380,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Rocket size={20} color="#000000" strokeWidth={2} style={{ marginLeft: 8 }} />
                       <Text style={{ 
-                        color: '#000000', 
+                        color: DesignTokens.colors.background.primary, 
                         fontSize: 16, 
                         fontWeight: '700',
                         letterSpacing: 0.5,
@@ -407,7 +408,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                 }}
               >
                 <Text style={{ 
-                  color: '#B0B0B0', 
+                  color: DesignTokens.colors.text.secondary, 
                   fontSize: 16, 
                   fontWeight: '600',
                   letterSpacing: 0.3,

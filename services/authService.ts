@@ -52,14 +52,108 @@ export interface RegistrationData {
 export class AuthService {
   // Sign in with email and password
   static async signIn({ email, password }: LoginCredentials): Promise<{ user: AuthUser | null; error: string | null }> {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.user) return { user: null, error: error?.message || 'שגיאה בהתחברות' };
-      const user = await this.getUserProfile(data.user.id);
-      return { user, error: null };
-    } catch (error: any) {
-      return { user: null, error: error.message };
+    const maxRetries = 3;
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 AuthService: Attempting sign in (attempt ${attempt}/${maxRetries}) with email:`, email);
+        
+        // בדיקה בסיסית של חיבור לאינטרנט לפני הבקשה
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // timeout של 5 שניות
+          
+          const testResponse = await fetch('https://wpmrtczbfcijoocguime.supabase.co', { 
+            method: 'HEAD',
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+          console.log('✅ AuthService: Network connectivity check passed');
+        } catch (networkError: any) {
+          console.error('❌ AuthService: Network connectivity check failed:', networkError);
+          if (attempt === maxRetries) {
+            return { 
+              user: null, 
+              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+            };
+          }
+          // נמתין קצת לפני ניסיון נוסף
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        
+        if (error) {
+          console.error('❌ AuthService: Supabase auth error:', error.message, error.status);
+          lastError = error;
+          
+          // טיפול מיוחד בשגיאות רשת
+          if (error.message?.includes('Network request failed') || 
+              error.message?.includes('fetch') || 
+              error.status === 0 ||
+              error.status === null) {
+            if (attempt < maxRetries) {
+              console.log(`🔄 AuthService: Retrying in ${attempt} second(s)...`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+              continue;
+            }
+            return { 
+              user: null, 
+              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+            };
+          }
+          
+          // שגיאות אחרות לא דורשות retry
+          return { user: null, error: error.message || 'שגיאה בהתחברות' };
+        }
+        
+        if (!data.user) {
+          console.error('❌ AuthService: No user data returned');
+          return { user: null, error: 'שגיאה בהתחברות - אין נתוני משתמש' };
+        }
+        
+        console.log('✅ AuthService: Auth successful, fetching user profile...');
+        const user = await this.getUserProfile(data.user.id);
+        if (!user) {
+          console.error('❌ AuthService: Failed to fetch user profile');
+          return { user: null, error: 'שגיאה בטעינת פרופיל המשתמש' };
+        }
+        
+        console.log('✅ AuthService: Sign in completed successfully');
+        return { user, error: null };
+      } catch (error: any) {
+        console.error(`❌ AuthService: Sign in exception (attempt ${attempt}):`, error);
+        lastError = error;
+        const errorMessage = error?.message || String(error);
+        
+        if ((errorMessage.includes('Network request failed') || 
+             errorMessage.includes('fetch') ||
+             errorMessage.includes('AbortError')) && 
+            attempt < maxRetries) {
+          console.log(`🔄 AuthService: Retrying in ${attempt} second(s)...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+        
+        if (attempt === maxRetries) {
+          if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
+            return { 
+              user: null, 
+              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+            };
+          }
+          return { user: null, error: errorMessage };
+        }
+      }
     }
+
+    // אם הגענו לכאן, כל הניסיונות נכשלו
+    return { 
+      user: null, 
+      error: lastError?.message || 'שגיאה בהתחברות לאחר מספר ניסיונות' 
+    };
   }
 
   // Sign up with email and password

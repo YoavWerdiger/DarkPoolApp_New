@@ -1,14 +1,15 @@
-import { View, Text, Image, FlatList, TouchableOpacity, ScrollView, Alert, Share, Linking, Modal, Dimensions, Switch, ActivityIndicator, ImageBackground } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Image, FlatList, TouchableOpacity, ScrollView, Alert, Share, Linking, Modal, Dimensions, Switch, ActivityIndicator, ImageBackground, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { ChatService } from '../../services/chatService';
 import { supabase } from '../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { ArrowRight, Share as ShareIcon, Trash2, ImageIcon, Star, Bell, BellOff, Palette, FileText, Edit3, Lock, MoreVertical, Users, User, UserMinus } from 'lucide-react-native';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { ArrowRight, Share as ShareIcon, Trash2, ImageIcon, Star, Bell, BellOff, Palette, FileText, Edit3, Lock, MoreVertical, Users, User, UserMinus, ChevronLeft } from 'lucide-react-native';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 
 const iconMap: Record<string, string> = {
@@ -23,13 +24,47 @@ const iconMap: Record<string, string> = {
 };
 
 export default function GroupInfoScreen() {
+  const DesignTokens = useDesignTokens();
   const route = useRoute();
   const navigation = useNavigation<any>();
+  const tabBarInsets = useSafeAreaInsets();
   const { user } = useAuth();
   const { chatId } = route.params as { chatId: string };
   const [group, setGroup] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [showAll, setShowAll] = useState(false);
+
+  // הסתר TabBar כשנכנסים למסך זה
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = navigation.getParent();
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: { display: 'none' }
+        });
+      }
+      
+      return () => {
+        if (parent) {
+          parent.setOptions({
+            tabBarStyle: { 
+              backgroundColor: DesignTokens.colors.background.primary, 
+              borderTopWidth: 0,
+              height: Platform.OS === 'ios' ? 90 : 70 + tabBarInsets.bottom,
+              paddingBottom: Platform.OS === 'ios' ? 15 : tabBarInsets.bottom + 10,
+              paddingTop: 15,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+              display: 'flex'
+            }
+          });
+        }
+      };
+    }, [navigation, tabBarInsets])
+  );
   const [isPinned, setIsPinned] = useState(false);
   const [isMember, setIsMember] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -777,7 +812,7 @@ export default function GroupInfoScreen() {
           }}
         >
           <Text style={{
-            color: '#000000',
+            color: DesignTokens.colors.background.primary,
             fontWeight: '700' as any
           }}>חזור</Text>
         </TouchableOpacity>
@@ -786,50 +821,51 @@ export default function GroupInfoScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0d0d0d' }}>
+    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
         {/* Header */}
         <View style={{
-          flexDirection: 'row-reverse',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           paddingHorizontal: 20,
           paddingTop: 60,
-          paddingBottom: 16,
-          backgroundColor: '#1C1C1E',
+          paddingBottom: 20,
+          backgroundColor: 'transparent',
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+          borderBottomColor: DesignTokens.colors.border.primary,
+          position: 'relative'
         }}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <ArrowRight size={20} color="#FFFFFF" strokeWidth={2} />
-        </TouchableOpacity>
-        <Text style={{
-          fontSize: 20,
-          fontWeight: '700',
-          color: '#FFFFFF',
-          letterSpacing: 0.5
-        }}>פרטי קבוצה</Text>
+        {/* כפתור שיתוף - משמאל */}
         <TouchableOpacity 
           onPress={handleShareGroup}
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            alignItems: 'center',
-            justifyContent: 'center'
+            position: 'absolute',
+            left: 20,
+            top: 60,
+            padding: 8
           }}
         >
-          <ShareIcon size={20} color="#FFFFFF" strokeWidth={2} />
+          <ShareIcon size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
+        </TouchableOpacity>
+        
+        {/* כותרת ממורכזת */}
+        <Text style={{
+          fontSize: 22,
+          fontWeight: '700',
+          color: DesignTokens.colors.text.primary,
+          textAlign: 'center'
+        }}>פרטי קבוצה</Text>
+        
+        {/* כפתור חזור - מימין */}
+        <TouchableOpacity 
+          onPress={() => navigation.goBack()}
+          style={{
+            position: 'absolute',
+            right: 20,
+            top: 60,
+            padding: 8
+          }}
+        >
+          <ArrowRight size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
 
@@ -844,49 +880,56 @@ export default function GroupInfoScreen() {
           marginHorizontal: 20,
           marginTop: 24,
           paddingHorizontal: 24,
-          paddingVertical: 32,
+          paddingVertical: 28,
           borderRadius: 16,
-          backgroundColor: '#1C1C1E',
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8
+          backgroundColor: DesignTokens.colors.background.secondary,
+          borderWidth: 0
         }}>
+          {/* תמונת קבוצה */}
+          {group?.image_url && (
+            <Image
+              source={{ uri: group.image_url }}
+              style={{
+                width: 110,
+                height: 110,
+                borderRadius: 55,
+                marginBottom: 16,
+                borderWidth: 3,
+                borderColor: DesignTokens.colors.primary.main
+              }}
+            />
+          )}
+          
           <Text style={{
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: '700',
-            color: '#FFFFFF',
+            color: DesignTokens.colors.text.primary,
             textAlign: 'center',
-            marginBottom: 8,
-            letterSpacing: -0.5
+            marginBottom: 8
           }}>{group?.name}</Text>
           
           <Text style={{
             textAlign: 'center',
-            color: '#A0A0A0',
-            fontSize: 14,
-            lineHeight: 20,
+            color: DesignTokens.colors.text.tertiary,
+            fontSize: 15,
+            lineHeight: 22,
             marginBottom: 16,
-            paddingHorizontal: 16,
+            paddingHorizontal: 16
           }}>
             {group?.description || 'אין תיאור זמין לקבוצה זו'}
           </Text>
           
           <View style={{
-            backgroundColor: 'rgba(0, 230, 84, 0.1)',
-            paddingHorizontal: 16,
-            paddingVertical: 8,
+            backgroundColor: `${DesignTokens.colors.success.main}1F`,
+            paddingHorizontal: 18,
+            paddingVertical: 10,
             borderRadius: 20,
-            borderWidth: 1,
-            borderColor: 'rgba(0, 230, 84, 0.3)'
+            borderWidth: 0
           }}>
             <Text style={{
-              color: '#00E654',
-              fontWeight: '600',
-              fontSize: 12
+              color: DesignTokens.colors.primary.main,
+              fontWeight: '700',
+              fontSize: 14
             }}>{members.length} משתתפים</Text>
           </View>
         </View>
@@ -895,22 +938,20 @@ export default function GroupInfoScreen() {
         {/* Admin/Owner Actions */}
         {(isAdmin || isOwner) && (
           <View style={{
-            marginHorizontal: DesignTokens.spacing.lg,
-            marginTop: DesignTokens.spacing.lg,
-            paddingHorizontal: DesignTokens.spacing.xl,
-            paddingVertical: DesignTokens.spacing.xl,
-            borderRadius: DesignTokens.borderRadius.lg,
+            marginHorizontal: 20,
+            marginTop: 20,
+            paddingHorizontal: 20,
+            paddingVertical: 20,
+            borderRadius: 16,
             backgroundColor: DesignTokens.colors.background.secondary,
-            borderWidth: 1,
-            borderColor: DesignTokens.colors.border.primary,
-            ...DesignTokens.shadows.sm
+            borderWidth: 0
           }}>
             <Text style={{
               color: DesignTokens.colors.text.primary,
-              fontSize: DesignTokens.typography.fontSize.lg,
-              fontWeight: '700' as any,
+              fontSize: 16,
+              fontWeight: '700',
               textAlign: 'center',
-              marginBottom: DesignTokens.spacing.lg,
+              marginBottom: 16
             }}>פעולות מנהל</Text>
             <View style={{
               flexDirection: 'row-reverse',
@@ -921,20 +962,22 @@ export default function GroupInfoScreen() {
                   onPress={handleDeleteGroup}
                   style={{
                     alignItems: 'center',
-                    paddingVertical: DesignTokens.spacing.md,
-                    paddingHorizontal: DesignTokens.spacing.lg,
-                    backgroundColor: DesignTokens.colors.danger.main,
-                    borderRadius: DesignTokens.borderRadius.md,
+                    paddingVertical: 12,
+                    paddingHorizontal: 20,
+                    backgroundColor: `${DesignTokens.colors.danger.main}26`,
+                    borderRadius: 12,
                     flex: 1,
                     marginHorizontal: 4,
+                    borderWidth: 1,
+                    borderColor: `${DesignTokens.colors.danger.main}4D`
                   }}
                 >
-                  <Trash2 size={20} color="#FFFFFF" strokeWidth={2} />
+                  <Trash2 size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
                   <Text style={{
-                    color: '#FFFFFF',
-                    marginTop: 4,
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    fontWeight: '600' as any
+                    color: DesignTokens.colors.danger.main,
+                    marginTop: 6,
+                    fontSize: 13,
+                    fontWeight: '600'
                   }}>מחק קבוצה</Text>
                 </TouchableOpacity>
               )}
@@ -946,7 +989,7 @@ export default function GroupInfoScreen() {
         <View style={{
           marginHorizontal: 20,
           marginTop: 16,
-          backgroundColor: '#1C1C1E',
+          backgroundColor: DesignTokens.colors.background.secondary,
           borderRadius: 16,
           overflow: 'hidden'
         }}>
@@ -963,24 +1006,20 @@ export default function GroupInfoScreen() {
             }}
           >
             {/* Chevron - שמאל */}
-            <Ionicons 
-              name="chevron-back" 
-              size={20} 
-              color="#666666" 
-            />
+            <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
 
             {/* Text Content - מרכז */}
             <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
               <Text style={{
                 fontSize: 16,
                 fontWeight: '600',
-                color: '#FFFFFF',
+                color: DesignTokens.colors.text.primary,
                 marginBottom: 2,
                 textAlign: 'right'
               }}>מדיה, קישורים וקבצים</Text>
               <Text style={{
                 fontSize: 13,
-                color: '#666666',
+                color: DesignTokens.colors.text.tertiary,
                 textAlign: 'right'
               }}>{mediaItems.length} פריטים</Text>
             </View>
@@ -990,11 +1029,11 @@ export default function GroupInfoScreen() {
               width: 36,
               height: 36,
               borderRadius: 8,
-              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              backgroundColor: `${DesignTokens.colors.success.main}1A`,
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <ImageIcon size={20} color="#00E654" strokeWidth={2} />
+              <ImageIcon size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
             </View>
           </TouchableOpacity>
         </View>
@@ -1003,7 +1042,7 @@ export default function GroupInfoScreen() {
         <View style={{
           marginHorizontal: 20,
           marginTop: 16,
-          backgroundColor: '#1C1C1E',
+          backgroundColor: DesignTokens.colors.background.secondary,
           borderRadius: 16,
           overflow: 'hidden'
         }}>
@@ -1020,7 +1059,7 @@ export default function GroupInfoScreen() {
             <Ionicons 
               name={showPinnedMessages ? "chevron-up" : "chevron-down"} 
               size={20} 
-              color="#666666" 
+              color={DesignTokens.colors.text.tertiary} 
             />
 
             {/* Text Content - מרכז */}
@@ -1028,13 +1067,13 @@ export default function GroupInfoScreen() {
               <Text style={{
                 fontSize: 16,
                 fontWeight: '600',
-                color: '#FFFFFF',
+                color: DesignTokens.colors.text.primary,
                 marginBottom: 2,
                 textAlign: 'right'
               }}>הודעות שסומנו בכוכב</Text>
               <Text style={{
                 fontSize: 13,
-                color: '#666666',
+                color: DesignTokens.colors.text.tertiary,
                 textAlign: 'right'
               }}>{starredMessages.length} הודעות</Text>
             </View>
@@ -1044,11 +1083,11 @@ export default function GroupInfoScreen() {
               width: 36,
               height: 36,
               borderRadius: 8,
-              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              backgroundColor: `${DesignTokens.colors.success.main}1A`,
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <Star size={20} color="#00E654" strokeWidth={2} />
+              <Star size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
             </View>
           </TouchableOpacity>
           
@@ -1056,7 +1095,7 @@ export default function GroupInfoScreen() {
             <View style={{ marginTop: DesignTokens.spacing.lg }}>
               {starredMessages.slice(0, 3).map((message, index) => (
                 <View key={index} style={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
+                  backgroundColor: DesignTokens.colors.background.tertiary,
                   borderRadius: DesignTokens.borderRadius.md,
                   padding: DesignTokens.spacing.md,
                   marginBottom: DesignTokens.spacing.sm,
@@ -1094,27 +1133,30 @@ export default function GroupInfoScreen() {
           )}
         </View>
 
-        {/* הגדרות התראות */}
+        {/* הגדרות */}
         <View style={{
           marginHorizontal: 20,
           marginTop: 16,
-          backgroundColor: '#1C1C1E',
+          backgroundColor: DesignTokens.colors.background.secondary,
           borderRadius: 16,
           overflow: 'hidden'
         }}>
+          {/* התראות */}
           <View style={{
             flexDirection: 'row',
             alignItems: 'center',
             paddingVertical: 16,
-            paddingHorizontal: 16
+            paddingHorizontal: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: DesignTokens.colors.border.primary
           }}>
             {/* Switch - שמאל */}
             <Switch
               value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
-              trackColor={{ false: 'rgba(255,255,255,0.12)', true: '#00E654' }}
-              thumbColor={notificationsEnabled ? '#FFFFFF' : '#999999'}
-              ios_backgroundColor="rgba(255,255,255,0.12)"
+              trackColor={{ false: DesignTokens.colors.background.tertiary, true: DesignTokens.colors.success.main }}
+              thumbColor={notificationsEnabled ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary}
+              ios_backgroundColor={DesignTokens.colors.background.tertiary}
               style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
             />
 
@@ -1123,13 +1165,13 @@ export default function GroupInfoScreen() {
               <Text style={{
                 fontSize: 16,
                 fontWeight: '600',
-                color: '#FFFFFF',
+                color: DesignTokens.colors.text.primary,
                 marginBottom: 2,
                 textAlign: 'right'
               }}>התראות</Text>
               <Text style={{
                 fontSize: 13,
-                color: '#666666',
+                color: DesignTokens.colors.text.tertiary,
                 textAlign: 'right'
               }}>
                 {notificationsEnabled ? 'מופעלות' : 'מבוטלות'}
@@ -1141,23 +1183,15 @@ export default function GroupInfoScreen() {
               width: 36,
               height: 36,
               borderRadius: 8,
-              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              backgroundColor: notificationsEnabled ? `${DesignTokens.colors.success.main}1A` : DesignTokens.colors.background.tertiary,
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              {notificationsEnabled ? <Bell size={20} color="#00E654" strokeWidth={2} /> : <BellOff size={20} color="#666666" strokeWidth={2} />}
+              {notificationsEnabled ? <Bell size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} /> : <BellOff size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />}
             </View>
           </View>
-        </View>
 
-        {/* ערכת נושא לצ'אט */}
-        <View style={{
-          marginHorizontal: 20,
-          marginTop: 16,
-          backgroundColor: '#1C1C1E',
-          borderRadius: 16,
-          overflow: 'hidden'
-        }}>
+          {/* ערכת נושא */}
           <View style={{
             flexDirection: 'row',
             alignItems: 'center',
@@ -1168,9 +1202,9 @@ export default function GroupInfoScreen() {
             <Switch
               value={!isDarkMode}
               onValueChange={handleThemeSelect}
-              trackColor={{ false: 'rgba(255,255,255,0.12)', true: '#00E654' }}
-              thumbColor={isDarkMode ? '#999999' : '#FFFFFF'}
-              ios_backgroundColor="rgba(255,255,255,0.12)"
+              trackColor={{ false: DesignTokens.colors.background.tertiary, true: DesignTokens.colors.success.main }}
+              thumbColor={isDarkMode ? DesignTokens.colors.text.tertiary : DesignTokens.colors.text.primary}
+              ios_backgroundColor={DesignTokens.colors.background.tertiary}
               style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
             />
 
@@ -1179,13 +1213,13 @@ export default function GroupInfoScreen() {
               <Text style={{
                 fontSize: 16,
                 fontWeight: '600',
-                color: '#FFFFFF',
+                color: DesignTokens.colors.text.primary,
                 marginBottom: 2,
                 textAlign: 'right'
               }}>ערכת נושא</Text>
               <Text style={{
                 fontSize: 13,
-                color: '#666666',
+                color: DesignTokens.colors.text.tertiary,
                 textAlign: 'right'
               }}>
                 {isDarkMode ? 'מצב כהה' : 'מצב בהיר'}
@@ -1197,11 +1231,11 @@ export default function GroupInfoScreen() {
               width: 36,
               height: 36,
               borderRadius: 8,
-              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              backgroundColor: `${DesignTokens.colors.success.main}1A`,
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <Palette size={20} color="#00E654" strokeWidth={2} />
+              <Palette size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
             </View>
           </View>
         </View>
@@ -1213,24 +1247,26 @@ export default function GroupInfoScreen() {
         {(isAdmin || isOwner) && (
           <View style={{
             marginHorizontal: 20,
-            marginTop: 16,
-            backgroundColor: '#1C1C1E',
-            borderRadius: 16,
-            overflow: 'hidden'
+            marginTop: 16
           }}>
+            {/* כותרת סקשן */}
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '700',
+              color: DesignTokens.colors.text.tertiary,
+              marginBottom: 12,
+              marginRight: 4,
+              textAlign: 'right',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
+            }}>הגדרות מנהל</Text>
+
+            {/* בלוק הגדרות מנהל */}
             <View style={{
-              paddingVertical: 16,
-              paddingHorizontal: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+              backgroundColor: DesignTokens.colors.background.secondary,
+              borderRadius: 16,
+              overflow: 'hidden'
             }}>
-              <Text style={{
-                color: '#FFFFFF',
-                fontWeight: '700',
-                fontSize: 18,
-                textAlign: 'right'
-              }}>הגדרות מנהל</Text>
-            </View>
             
             {/* Group Description */}
             <TouchableOpacity style={{
@@ -1239,23 +1275,23 @@ export default function GroupInfoScreen() {
               paddingVertical: 16,
               paddingHorizontal: 16,
               borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+              borderBottomColor: DesignTokens.colors.border.primary
             }}>
               {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color="#666666" />
+              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
 
               {/* Text Content - מרכז */}
               <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '600',
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   marginBottom: 2,
                   textAlign: 'right'
                 }}>תיאור קבוצה</Text>
                 <Text style={{
                   fontSize: 13,
-                  color: '#666666',
+                  color: DesignTokens.colors.text.tertiary,
                   textAlign: 'right'
                 }} numberOfLines={1}>
                   {group?.description || 'אין תיאור'}
@@ -1267,11 +1303,11 @@ export default function GroupInfoScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                backgroundColor: `${DesignTokens.colors.success.main}1A`,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <FileText size={20} color="#00E654" strokeWidth={2} />
+                <FileText size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
             </TouchableOpacity>
             
@@ -1282,23 +1318,23 @@ export default function GroupInfoScreen() {
               paddingVertical: 16,
               paddingHorizontal: 16,
               borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+              borderBottomColor: DesignTokens.colors.border.primary
             }}>
               {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color="#666666" />
+              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
 
               {/* Text Content - מרכז */}
               <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '600',
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   marginBottom: 2,
                   textAlign: 'right'
                 }}>אייקון קבוצה</Text>
                 <Text style={{
                   fontSize: 13,
-                  color: '#666666',
+                  color: DesignTokens.colors.text.tertiary,
                   textAlign: 'right'
                 }}>שנה את האייקון</Text>
               </View>
@@ -1308,11 +1344,11 @@ export default function GroupInfoScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                backgroundColor: `${DesignTokens.colors.success.main}1A`,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <ImageIcon size={20} color="#00E654" strokeWidth={2} />
+                <ImageIcon size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
             </TouchableOpacity>
             
@@ -1323,23 +1359,23 @@ export default function GroupInfoScreen() {
               paddingVertical: 16,
               paddingHorizontal: 16,
               borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+              borderBottomColor: DesignTokens.colors.border.primary
             }}>
               {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color="#666666" />
+              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
 
               {/* Text Content - מרכז */}
               <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '600',
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   marginBottom: 2,
                   textAlign: 'right'
                 }}>שם קבוצה</Text>
                 <Text style={{
                   fontSize: 13,
-                  color: '#666666',
+                  color: DesignTokens.colors.text.tertiary,
                   textAlign: 'right'
                 }} numberOfLines={1}>
                   {group?.name || 'ללא שם'}
@@ -1351,11 +1387,11 @@ export default function GroupInfoScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                backgroundColor: `${DesignTokens.colors.success.main}1A`,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Edit3 size={20} color="#00E654" strokeWidth={2} />
+                <Edit3 size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
             </TouchableOpacity>
             
@@ -1366,23 +1402,23 @@ export default function GroupInfoScreen() {
               paddingVertical: 16,
               paddingHorizontal: 16,
               borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+              borderBottomColor: DesignTokens.colors.border.primary
             }}>
               {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color="#EF4444" />
+              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.danger.main} />
 
               {/* Text Content - מרכז */}
               <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '600',
-                  color: '#EF4444',
+                  color: DesignTokens.colors.danger.main,
                   marginBottom: 2,
                   textAlign: 'right'
                 }}>נקה היסטוריה</Text>
                 <Text style={{
                   fontSize: 13,
-                  color: '#666666',
+                  color: DesignTokens.colors.text.tertiary,
                   textAlign: 'right'
                 }}>מחק את כל ההודעות</Text>
               </View>
@@ -1392,11 +1428,11 @@ export default function GroupInfoScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                backgroundColor: `${DesignTokens.colors.danger.main}1A`,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Trash2 size={20} color="#EF4444" strokeWidth={2} />
+                <Trash2 size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
               </View>
             </TouchableOpacity>
             
@@ -1407,23 +1443,23 @@ export default function GroupInfoScreen() {
               paddingVertical: 16,
               paddingHorizontal: 16,
               borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255, 255, 255, 0.1)'
+              borderBottomColor: DesignTokens.colors.border.primary
             }}>
               {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color="#666666" />
+              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
 
               {/* Text Content - מרכז */}
               <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '600',
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   marginBottom: 2,
                   textAlign: 'right'
                 }}>הגדרות פרטיות</Text>
                 <Text style={{
                   fontSize: 13,
-                  color: '#666666',
+                  color: DesignTokens.colors.text.tertiary,
                   textAlign: 'right'
                 }}>
                   {group?.is_private ? 'קבוצה פרטית' : 'קבוצה ציבורית'}
@@ -1435,11 +1471,11 @@ export default function GroupInfoScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                backgroundColor: `${DesignTokens.colors.success.main}1A`,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <Lock size={20} color="#00E654" strokeWidth={2} />
+                <Lock size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
             </TouchableOpacity>
             
@@ -1451,14 +1487,14 @@ export default function GroupInfoScreen() {
               paddingHorizontal: 16
             }}>
               {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color="#666666" />
+              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
 
               {/* Text Content - מרכז */}
               <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
                 <Text style={{
                   fontSize: 16,
                   fontWeight: '600',
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   textAlign: 'right'
                 }}>אפשרויות נוספות</Text>
               </View>
@@ -1468,24 +1504,39 @@ export default function GroupInfoScreen() {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                backgroundColor: `${DesignTokens.colors.success.main}1A`,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
-                <MoreVertical size={20} color="#00E654" strokeWidth={2} />
+                <MoreVertical size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
             </TouchableOpacity>
+          </View>
           </View>
         )}
 
         {/* Members Section */}
         <View style={{
           marginHorizontal: 20,
-          marginTop: 16,
-          backgroundColor: '#1C1C1E',
-          borderRadius: 16,
-          overflow: 'hidden'
+          marginTop: 16
         }}>
+          {/* כותרת סקשן */}
+          <Text style={{
+            fontSize: 13,
+            fontWeight: '700',
+            color: DesignTokens.colors.text.tertiary,
+            marginBottom: 12,
+            marginRight: 4,
+            textAlign: 'right',
+            textTransform: 'uppercase',
+            letterSpacing: 0.5
+          }}>משתתפים ({members.length})</Text>
+
+          <View style={{
+            backgroundColor: DesignTokens.colors.background.secondary,
+            borderRadius: 16,
+            overflow: 'hidden'
+          }}>
           <TouchableOpacity 
             onPress={() => setShowAll(!showAll)}
             style={{
@@ -1499,35 +1550,23 @@ export default function GroupInfoScreen() {
             <Ionicons 
               name={showAll ? "chevron-up" : "chevron-down"} 
               size={20} 
-              color="#666666" 
+              color={DesignTokens.colors.text.tertiary} 
             />
 
             {/* Text Content - מרכז */}
             <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
-              <View style={{
-                flexDirection: 'row-reverse',
-                alignItems: 'center'
-              }}>
-                <View style={{
-                  backgroundColor: 'rgba(0, 230, 84, 0.1)',
-                  borderRadius: 8,
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  marginRight: 8
-                }}>
-                  <Text style={{
-                    color: '#00E654',
-                    fontWeight: '700',
-                    fontSize: 12
-                  }}>{members.length}</Text>
-                </View>
-                <Text style={{
-                  color: '#FFFFFF',
-                  fontWeight: '700',
-                  fontSize: 16,
-                  textAlign: 'right'
-                }}>חברים</Text>
-              </View>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: DesignTokens.colors.text.primary,
+                marginBottom: 2,
+                textAlign: 'right'
+              }}>הצג את כל החברים</Text>
+              <Text style={{
+                fontSize: 13,
+                color: DesignTokens.colors.text.tertiary,
+                textAlign: 'right'
+              }}>לחץ להרחבה</Text>
             </View>
 
             {/* Icon - ימין */}
@@ -1535,11 +1574,11 @@ export default function GroupInfoScreen() {
               width: 36,
               height: 36,
               borderRadius: 8,
-              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+              backgroundColor: `${DesignTokens.colors.success.main}1A`,
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <Users size={20} color="#00E654" strokeWidth={2} />
+              <Users size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
             </View>
           </TouchableOpacity>
           
@@ -1549,7 +1588,7 @@ export default function GroupInfoScreen() {
             paddingVertical: 32
           }}>
             <Text style={{
-              color: '#B0B0B0',
+              color: DesignTokens.colors.text.secondary,
               fontSize: 16
             }}>טוען חברים...</Text>
           </View>
@@ -1559,13 +1598,13 @@ export default function GroupInfoScreen() {
               paddingVertical: 32
             }}>
             <Text style={{
-              color: '#B0B0B0',
+              color: DesignTokens.colors.text.secondary,
               textAlign: 'center',
               marginBottom: 16,
               fontSize: 16
             }}>אין חברים נוספים בקבוצה זו</Text>
             <Text style={{
-              color: '#808080',
+              color: DesignTokens.colors.text.tertiary,
               textAlign: 'center',
               fontSize: 14,
               marginBottom: 16,
@@ -1579,7 +1618,7 @@ export default function GroupInfoScreen() {
               <TouchableOpacity 
                 onPress={loadData} 
                 style={{
-                  backgroundColor: '#4B5563',
+                  backgroundColor: DesignTokens.colors.background.tertiary,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 12,
@@ -1587,7 +1626,7 @@ export default function GroupInfoScreen() {
                 }}
               >
                 <Text style={{
-                  color: '#FFFFFF',
+                  color: DesignTokens.colors.text.primary,
                   fontWeight: '700',
                   fontSize: 14
                 }}>רענן</Text>
@@ -1595,14 +1634,14 @@ export default function GroupInfoScreen() {
               <TouchableOpacity 
                 onPress={handleShareGroup} 
                 style={{
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
                   borderRadius: 12
                 }}
               >
                 <Text style={{
-                  color: '#000000',
+                  color: DesignTokens.colors.background.primary,
                   fontWeight: '700',
                   fontSize: 14
                 }}>הזמן חברים</Text>
@@ -1622,12 +1661,12 @@ export default function GroupInfoScreen() {
                     flexDirection: 'row-reverse',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginBottom: 12,
-                    padding: 12,
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                    borderRadius: 8,
-                    borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                    marginBottom: 8,
+                    padding: 14,
+                    backgroundColor: 'transparent',
+                    borderRadius: 12,
+                    borderBottomWidth: index < sortedMembers().slice(0, 5).length - 1 ? 1 : 0,
+                    borderBottomColor: DesignTokens.colors.border.primary
                   }}>
                     <View style={{
                       flexDirection: 'row-reverse',
@@ -1650,12 +1689,12 @@ export default function GroupInfoScreen() {
                           width: 44,
                           height: 44,
                           borderRadius: 22,
-                          backgroundColor: 'rgba(255,255,255,0.12)',
+                          backgroundColor: DesignTokens.colors.background.tertiary,
                           alignItems: 'center',
                           justifyContent: 'center',
                           marginRight: 12
                         }}>
-                          <User size={20} color="#666666" strokeWidth={2} />
+                          <User size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                         </View>
                       )}
                       
@@ -1666,7 +1705,7 @@ export default function GroupInfoScreen() {
                           marginBottom: 4
                         }}>
                           <Text style={{
-                            color: '#FFFFFF',
+                            color: DesignTokens.colors.text.primary,
                             fontWeight: '600',
                             fontSize: 14,
                             marginRight: 8,
@@ -1678,14 +1717,14 @@ export default function GroupInfoScreen() {
                           
                           {item.role === 'admin' && (
                             <View style={{
-                              backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                              backgroundColor: `${DesignTokens.colors.success.main}1A`,
                               borderRadius: 6,
                               paddingHorizontal: 8,
                               paddingVertical: 4,
                               marginLeft: 4
                             }}>
                               <Text style={{
-                                color: '#00E654',
+                                color: DesignTokens.colors.primary.main,
                                 fontWeight: '700',
                                 fontSize: 9
                               }}>מנהל</Text>
@@ -1694,14 +1733,14 @@ export default function GroupInfoScreen() {
                           
                           {item.user_id === user?.id && (
                             <View style={{
-                              backgroundColor: 'rgba(255,255,255,0.08)',
+                              backgroundColor: DesignTokens.colors.background.tertiary,
                               borderRadius: 6,
                               paddingHorizontal: 8,
                               paddingVertical: 4,
                               marginLeft: 4
                             }}>
                               <Text style={{
-                                color: '#A0A0A0',
+                                color: DesignTokens.colors.text.secondary,
                                 fontWeight: '700',
                                 fontSize: 9
                               }}>אתה</Text>
@@ -1711,7 +1750,7 @@ export default function GroupInfoScreen() {
                         
                         {memberPhone && (
                           <Text style={{
-                            color: '#666666',
+                            color: DesignTokens.colors.text.tertiary,
                             fontSize: 12,
                             marginLeft: 8,
                             textAlign: 'right'
@@ -1729,7 +1768,7 @@ export default function GroupInfoScreen() {
                           <TouchableOpacity 
                             onPress={() => handlePromoteMember(item.user_id, memberName)}
                             style={{
-                              backgroundColor: 'rgba(0, 216, 74, 0.15)',
+                              backgroundColor: `${DesignTokens.colors.success.main}26`,
                               padding: DesignTokens.spacing.sm,
                               borderRadius: DesignTokens.borderRadius.sm,
                               marginLeft: DesignTokens.spacing.sm
@@ -1742,7 +1781,7 @@ export default function GroupInfoScreen() {
                         <TouchableOpacity 
                           onPress={() => handleRemoveMember(item.user_id, memberName)}
                           style={{
-                            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                            backgroundColor: `${DesignTokens.colors.danger.main}26`,
                             padding: DesignTokens.spacing.sm,
                             borderRadius: DesignTokens.borderRadius.sm
                           }}
@@ -1770,7 +1809,7 @@ export default function GroupInfoScreen() {
                         justifyContent: 'space-between',
                         marginBottom: DesignTokens.spacing.md,
                         padding: DesignTokens.spacing.md,
-                        backgroundColor: 'rgba(255,255,255,0.04)',
+                        backgroundColor: DesignTokens.colors.background.tertiary,
                         borderRadius: DesignTokens.borderRadius.md,
                         borderWidth: 1,
                         borderColor: DesignTokens.colors.border.primary
@@ -1796,7 +1835,7 @@ export default function GroupInfoScreen() {
                               width: 44,
                               height: 44,
                               borderRadius: DesignTokens.borderRadius.full,
-                              backgroundColor: 'rgba(255,255,255,0.12)',
+                              backgroundColor: DesignTokens.colors.background.tertiary,
                               alignItems: 'center',
                               justifyContent: 'center',
                               marginRight: DesignTokens.spacing.md
@@ -1824,7 +1863,7 @@ export default function GroupInfoScreen() {
                               
                               {item.role === 'admin' && (
                                 <View style={{
-                                  backgroundColor: 'rgba(0, 216, 74, 0.15)',
+                                  backgroundColor: `${DesignTokens.colors.success.main}26`,
                                   borderRadius: DesignTokens.borderRadius.sm,
                                   paddingHorizontal: DesignTokens.spacing.sm,
                                   paddingVertical: 4,
@@ -1840,7 +1879,7 @@ export default function GroupInfoScreen() {
                               
                               {item.user_id === user?.id && (
                                 <View style={{
-                                  backgroundColor: 'rgba(255,255,255,0.08)',
+                                  backgroundColor: DesignTokens.colors.background.tertiary,
                                   borderRadius: DesignTokens.borderRadius.sm,
                                   paddingHorizontal: DesignTokens.spacing.sm,
                                   paddingVertical: 4,
@@ -1875,7 +1914,7 @@ export default function GroupInfoScreen() {
                 <TouchableOpacity 
                                 onPress={() => handlePromoteMember(item.user_id, memberName)}
                                 style={{
-                                  backgroundColor: 'rgba(0, 216, 74, 0.15)',
+                                  backgroundColor: `${DesignTokens.colors.success.main}26`,
                                   padding: DesignTokens.spacing.sm,
                                   borderRadius: DesignTokens.borderRadius.sm,
                                   marginLeft: DesignTokens.spacing.sm
@@ -1888,7 +1927,7 @@ export default function GroupInfoScreen() {
                             <TouchableOpacity 
                               onPress={() => handleRemoveMember(item.user_id, memberName)}
                               style={{
-                                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                                backgroundColor: `${DesignTokens.colors.danger.main}26`,
                                 padding: DesignTokens.spacing.sm,
                                 borderRadius: DesignTokens.borderRadius.sm
                               }}
@@ -1900,41 +1939,45 @@ export default function GroupInfoScreen() {
                       </View>
                     );
                   })}
-          </View>
-        )}
-
+                </View>
+              )}
+                  
               {/* Show more/less button */}
               {members.length > 5 && (
-            <TouchableOpacity 
-              onPress={() => setShowAll(!showAll)} 
-              style={{
-                marginTop: DesignTokens.spacing.md,
-                backgroundColor: 'rgba(255,255,255,0.06)',
-                padding: DesignTokens.spacing.md,
-                borderRadius: DesignTokens.borderRadius.md,
-                borderWidth: 1,
-                borderColor: DesignTokens.colors.border.primary
-              }}
-            >
-              <Text style={{
-                color: DesignTokens.colors.text.secondary,
-                textAlign: 'center',
-                fontWeight: '600' as any,
-                fontSize: DesignTokens.typography.fontSize.sm
-              }}>
+                <TouchableOpacity 
+                  onPress={() => setShowAll(!showAll)} 
+                  style={{
+                    marginTop: DesignTokens.spacing.md,
+                    backgroundColor: DesignTokens.colors.background.secondary,
+                    padding: DesignTokens.spacing.md,
+                    borderRadius: DesignTokens.borderRadius.md,
+                    borderWidth: 1,
+                    borderColor: DesignTokens.colors.border.primary
+                  }}
+                >
+                  <Text style={{
+                    color: DesignTokens.colors.text.secondary,
+                    textAlign: 'center',
+                    fontWeight: '600' as any,
+                    fontSize: DesignTokens.typography.fontSize.sm
+                  }}>
                     {showAll ? `הצג פחות` : `הצג את כל ${members.length} החברים`}
-              </Text>
-            </TouchableOpacity>
+                  </Text>
+                </TouchableOpacity>
               )}
+            </View>
+          )}
           </View>
-        )}
         </View>
 
         {/* Exit Group Button */}
         <View style={{
-          paddingHorizontal: 20,
-          paddingVertical: 32,
-          backgroundColor: 'transparent'
+          marginHorizontal: 20,
+          marginTop: 16,
+          marginBottom: 20,
+          backgroundColor: DesignTokens.colors.background.secondary,
+          borderRadius: 16,
+          overflow: 'hidden'
         }}>
           <TouchableOpacity
             onPress={() => {
@@ -1977,21 +2020,15 @@ export default function GroupInfoScreen() {
               );
             }}
             style={{
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
               paddingVertical: 16,
-              paddingHorizontal: 24,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: '#EF4444',
-              alignItems: 'center',
-              alignSelf: 'center',
-              minWidth: 280
+              paddingHorizontal: 16,
+              alignItems: 'center'
             }}
           >
             <Text style={{
-              color: '#EF4444',
+              color: DesignTokens.colors.danger.main,
               fontSize: 16,
-              fontWeight: '700',
+              fontWeight: '600',
               textAlign: 'center'
             }}>
               צא מהקבוצה

@@ -6,7 +6,7 @@ interface ReactionBarProps {
   onReaction: (emoji: string) => void;
 }
 
-const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '😍', '➕'];
+const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥'];
 
 export default function ReactionBar({ onReaction }: ReactionBarProps) {
   return (
@@ -17,17 +17,11 @@ export default function ReactionBar({ onReaction }: ReactionBarProps) {
           onPress={() => onReaction(emoji)}
           style={styles.emojiBtn}
           accessibilityLabel={`React ${emoji}`}
+          activeOpacity={0.6}
         >
           <Text style={styles.emoji}>{emoji}</Text>
         </TouchableOpacity>
       ))}
-      <TouchableOpacity style={[styles.emojiBtn, styles.plus]}>
-        <Text style={styles.emoji}>+</Text>
-      </TouchableOpacity>
-      <View style={{ width: 16 }} />
-      <View style={styles.otherTag}><Text style={styles.otherTagText}>other</Text></View>
-      <View style={{ width: 8 }} />
-      <Text style={styles.otherPlain}>other</Text>
     </View>
   );
 }
@@ -35,42 +29,20 @@ export default function ReactionBar({ onReaction }: ReactionBarProps) {
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    backgroundColor: '#2A2A2A',
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-    borderRadius: 72,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    elevation: 12,
+    backgroundColor: 'rgba(28, 28, 30, 0.95)',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 50,
+    alignItems: 'center'
   },
   emojiBtn: {
-    paddingHorizontal: 28,
-    paddingVertical: 18,
-    minWidth: 148,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 24
   },
   emoji: {
-    fontSize: 60,
-  },
-  plus: {
-    backgroundColor: '#222',
-    borderRadius: 44,
-  },
-  otherTag: {
-    backgroundColor: '#3A3A3A',
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  otherTagText: {
-    color: '#E5E7EB',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  otherPlain: {
-    color: '#E5E7EB',
-    fontSize: 18,
-  },
+    fontSize: 28,
+  }
 });

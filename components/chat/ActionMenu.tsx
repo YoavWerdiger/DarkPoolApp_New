@@ -4,6 +4,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Plus, Copy, Share, Star, Flag, Trash2, Edit, Reply, Forward, Info, Pin } from 'lucide-react-native';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 type ActionItem = {
   key: string;
@@ -36,6 +37,7 @@ export default function ActionMenu({
   messageId, 
   currentReactions = {} 
 }: ActionMenuProps) {
+  const DesignTokens = useDesignTokens();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
   const [selectedReaction, setSelectedReaction] = useState<string | null>(null);
@@ -61,7 +63,7 @@ export default function ActionMenu({
   };
 
   const getIcon = (iconName?: string, isDestructive?: boolean) => {
-    const iconProps = { size: 20, color: isDestructive ? '#FF453A' : '#FFFFFF' };
+    const iconProps = { size: 20, color: isDestructive ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary };
     
     switch (iconName) {
       case 'copy': return <Copy {...iconProps} />;
@@ -109,7 +111,7 @@ export default function ActionMenu({
         style={[
           {
             borderBottomWidth: isLast ? 0 : 0.5,
-            borderBottomColor: 'rgba(255,255,255,0.08)',
+            borderBottomColor: DesignTokens.colors.border.primary,
             transform: [{ scale: scaleValue }]
           }
         ]}
@@ -125,7 +127,7 @@ export default function ActionMenu({
               paddingHorizontal: 14,
               paddingVertical: 12,
               minHeight: 40,
-              backgroundColor: pressed ? '#2A2A2A' : '#181818',
+              backgroundColor: pressed ? DesignTokens.colors.background.tertiary : DesignTokens.colors.background.secondary,
             }
           ]}
         >
@@ -139,7 +141,7 @@ export default function ActionMenu({
          {/* טקסט */}
          <Text
            style={{ 
-              color: item.destructive ? '#FF453A' : '#FFFFFF', 
+              color: item.destructive ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary, 
               fontSize: 15,
               fontWeight: '400',
               flex: 1,
@@ -161,7 +163,7 @@ export default function ActionMenu({
       <Pressable onPress={onClose} style={{ flex: 1 }}>
         {/* רקע מטושטש */}
         <BlurView intensity={80} tint="dark" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} />
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: DesignTokens.colors.backdrop }} />
         
         {/* תוכן התפריט */}
         <Animated.View
@@ -180,10 +182,10 @@ export default function ActionMenu({
             style={{
               alignSelf: 'flex-end',
               marginBottom: 20,
-              backgroundColor: '#181818',
+              backgroundColor: DesignTokens.colors.background.secondary,
               borderRadius: 24,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.15)',
+              borderColor: DesignTokens.colors.border.primary,
               overflow: 'hidden',
               width: 280,
               shadowColor: '#000',
@@ -194,7 +196,7 @@ export default function ActionMenu({
             }}
           >
             <LinearGradient
-              colors={['rgba(255,255,255,0.03)', 'rgba(255,255,255,0.01)', 'rgba(255,255,255,0.02)']}
+              colors={[`${DesignTokens.colors.text.primary}08`, `${DesignTokens.colors.text.primary}03`, `${DesignTokens.colors.text.primary}05`]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -219,7 +221,7 @@ export default function ActionMenu({
                     paddingVertical: 10,
                     paddingHorizontal: 8,
                     borderRadius: 20,
-                    backgroundColor: pressed ? 'rgba(255,255,255,0.15)' : 'transparent',
+                    backgroundColor: pressed ? DesignTokens.colors.background.tertiary : 'transparent',
                   })}
                 >
                   <Text style={{ fontSize: 24 }}>{emoji}</Text>
@@ -234,10 +236,10 @@ export default function ActionMenu({
                   paddingVertical: 8,
                   paddingHorizontal: 8,
                   borderRadius: 20,
-                  backgroundColor: pressed ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)',
+                  backgroundColor: pressed ? DesignTokens.colors.background.tertiary : DesignTokens.colors.background.secondary,
                 })}
               >
-                <Plus size={24} color="#ffffff" strokeWidth={2} />
+                <Plus size={24} color={DesignTokens.colors.text.primary} strokeWidth={2} />
               </Pressable>
             </ScrollView>
           </View>
@@ -262,10 +264,10 @@ export default function ActionMenu({
               borderRadius: 16,
               overflow: 'hidden',
               width: 220,
-              backgroundColor: '#181818',
+              backgroundColor: DesignTokens.colors.background.secondary,
               borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.15)',
-              shadowColor: '#00E654',
+              borderColor: DesignTokens.colors.border.primary,
+              shadowColor: DesignTokens.colors.success.main,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 12,
@@ -274,7 +276,7 @@ export default function ActionMenu({
             }}
           >
             <LinearGradient
-              colors={['rgba(0,230,84,0.05)', 'rgba(0,230,84,0.02)', 'rgba(0,230,84,0.08)']}
+              colors={[`${DesignTokens.colors.success.main}0D`, `${DesignTokens.colors.success.main}05`, `${DesignTokens.colors.success.main}14`]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}

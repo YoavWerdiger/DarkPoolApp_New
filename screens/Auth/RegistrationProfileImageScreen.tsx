@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
@@ -105,7 +106,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                   top: dot.y,
                   width: dot.size,
                   height: dot.size,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   opacity: dot.opacity,
                   borderRadius: dot.size / 2
                 }}
@@ -152,7 +153,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
               <Text style={{ 
                 fontSize: 32, 
                 fontWeight: '800', 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 marginBottom: 8,
                 letterSpacing: -0.8,
                 textAlign: 'center',
@@ -164,7 +165,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
               {/* Subtitle */}
               <Text style={{ 
                 fontSize: 16, 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontWeight: '400',
                 letterSpacing: 0.3,
                 textAlign: 'center',
@@ -178,7 +179,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
               <View style={{
                 width: 60,
                 height: 2,
-                backgroundColor: '#00E654',
+                backgroundColor: DesignTokens.colors.primary.main,
                 marginTop: 16,
                 borderRadius: 1
               }} />
@@ -191,13 +192,13 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                 width: 120,
                 height: 120,
                 borderRadius: 60,
-                backgroundColor: '#1a1a1a',
+                backgroundColor: DesignTokens.colors.background.secondary,
                 borderWidth: 3,
-                borderColor: '#00E654',
+                borderColor: DesignTokens.colors.primary.main,
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginBottom: 20,
-                shadowColor: '#00E654',
+                shadowColor: DesignTokens.colors.primary.main,
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.3,
                 shadowRadius: 8,
@@ -213,7 +214,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                     }}
                   />
                 ) : (
-                  <Ionicons name="person" size={50} color="#666666" />
+                  <Ionicons name="person" size={50} color={DesignTokens.colors.text.tertiary} />
                 )}
               </View>
 
@@ -234,8 +235,8 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                     borderColor: 'rgba(255, 255, 255, 0.15)'
                   }}
                 >
-                  <Ionicons name="images-outline" size={20} color="#00E654" style={{ marginLeft: 8 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+                  <Ionicons name="images-outline" size={20} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
+                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, fontWeight: '600' }}>
                     גלריה
                   </Text>
                 </TouchableOpacity>
@@ -255,8 +256,8 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                     borderColor: 'rgba(255, 255, 255, 0.15)'
                   }}
                 >
-                  <Ionicons name="camera-outline" size={20} color="#00E654" style={{ marginLeft: 8 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
+                  <Ionicons name="camera-outline" size={20} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
+                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, fontWeight: '600' }}>
                     מצלמה
                   </Text>
                 </TouchableOpacity>
@@ -264,8 +265,8 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
 
               {loading && (
                 <View style={{ marginTop: 20 }}>
-                  <ActivityIndicator color="#00E654" size="small" />
-                  <Text style={{ color: '#B0B0B0', fontSize: 14, marginTop: 8 }}>
+                  <ActivityIndicator color={DesignTokens.colors.primary.main} size="small" />
+                  <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 14, marginTop: 8 }}>
                     טוען תמונה...
                   </Text>
                 </View>
@@ -281,7 +282,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                 end={{ x: 1, y: 1 }}
                 style={{
                   borderRadius: 14,
-                  shadowColor: '#00E654',
+                  shadowColor: DesignTokens.colors.primary.main,
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: 0.4,
                   shadowRadius: 12,
@@ -297,7 +298,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                   }}
                 >
                   <Text style={{ 
-                    color: '#000000', 
+                    color: DesignTokens.colors.background.primary, 
                     fontSize: 16, 
                     fontWeight: '700',
                     letterSpacing: 0.5,
@@ -323,7 +324,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                 }}
               >
                 <Text style={{ 
-                  color: '#B0B0B0', 
+                  color: DesignTokens.colors.text.secondary, 
                   fontSize: 16, 
                   fontWeight: '600',
                   letterSpacing: 0.3,

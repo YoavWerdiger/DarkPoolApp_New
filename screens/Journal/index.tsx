@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, ActivityIndicator, Alert, Pressable } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,17 +10,37 @@ import { DesignTokens } from '../../components/ui/DesignTokens';
 export default function JournalScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleLoadStart = () => {
+    // נקה timeout קודם אם קיים
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
     setLoading(true);
     setError(false);
+    
+    // גיבוי - הסתר את הטוען אחרי 10 שניות גם אם הדף לא נטען
+    loadingTimeoutRef.current = setTimeout(() => {
+      setLoading(false);
+    }, 10000);
   };
 
-  const handleLoadEnd = () => {
+  const handleLoad = () => {
+    // נקה את ה-timeout כשהדף נטען
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
     setLoading(false);
   };
 
   const handleError = () => {
+    // נקה את ה-timeout במקרה של שגיאה
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
     setLoading(false);
     setError(true);
     Alert.alert('שגיאה', 'לא ניתן לטעון את האתר. אנא בדוק את החיבור לאינטרנט.');
@@ -30,6 +50,15 @@ export default function JournalScreen() {
     setError(false);
     setLoading(true);
   };
+
+  // נקה את ה-timeout כשהקומפוננטה נהרסת
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <View className="flex-1" style={{ backgroundColor: DesignTokens.colors.background.primary }}>
@@ -100,56 +129,54 @@ export default function JournalScreen() {
               <WebView
                 source={{ uri: 'https://mtrx-trading.com/' }}
                 onLoadStart={handleLoadStart}
-                onLoadEnd={handleLoadEnd}
+                onLoad={handleLoad}
                 onError={handleError}
                 style={{ 
                   flex: 1,
                   backgroundColor: DesignTokens.colors.background.primary,
                 }}
+                // Core settings - supported on both platforms
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
                 startInLoadingState={true}
-                scalesPageToFit={true}
-                allowsInlineMediaPlaybook={true}
+                allowsInlineMediaPlayback={true}
                 mediaPlaybackRequiresUserAction={false}
                 mixedContentMode="compatibility"
+                // Android-specific props
+                scalesPageToFit={true}
+                nestedScrollEnabled={true}
+                overScrollMode="never"
+                // iOS-specific props (will be ignored on Android)
                 bounces={false}
                 scrollEnabled={true}
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
                 automaticallyAdjustContentInsets={false}
-                contentInsetAdjustmentBehavior="never"
-                decelerationRate="normal"
-                directionalLockEnabled={true}
-                keyboardDisplayRequiresUserAction={false}
-                hideKeyboardAccessoryView={false}
-                allowsBackForwardNavigationGestures={false}
-                allowsLinkPreview={false}
-                nestedScrollEnabled={false}
-                overScrollMode="never"
-                scrollEventThrottle={16}
-              userAgent="Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36"
-              injectedJavaScript={`
-                document.body.style.backgroundColor = '#0A0A0A';
-                document.documentElement.style.backgroundColor = '#0A0A0A';
-                document.body.style.overflow = 'hidden';
-                document.documentElement.style.overflow = 'hidden';
-                true;
-              `}
-              renderError={() => (
-                <View 
-                  className="flex-1 justify-center items-center"
-                  style={{ backgroundColor: DesignTokens.colors.background.primary }}
-                >
-                  <Wifi size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
-                  <Text 
-                    className="text-lg font-medium mt-4 text-center"
-                    style={{ color: DesignTokens.colors.text.primary }}
+                // User agent
+                userAgent="Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36"
+                // Injected JavaScript for styling
+                injectedJavaScript={`
+                  document.body.style.backgroundColor = '#0A0A0A';
+                  document.documentElement.style.backgroundColor = '#0A0A0A';
+                  document.body.style.overflow = 'hidden';
+                  document.documentElement.style.overflow = 'hidden';
+                  true;
+                `}
+                // Error rendering
+                renderError={() => (
+                  <View 
+                    className="flex-1 justify-center items-center"
+                    style={{ backgroundColor: DesignTokens.colors.background.primary }}
                   >
-                    שגיאה בטעינת האתר
-                  </Text>
-                </View>
-              )}
+                    <Wifi size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
+                    <Text 
+                      className="text-lg font-medium mt-4 text-center"
+                      style={{ color: DesignTokens.colors.text.primary }}
+                    >
+                      שגיאה בטעינת האתר
+                    </Text>
+                  </View>
+                )}
               />
             </View>
           </>

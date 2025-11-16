@@ -9,7 +9,7 @@ import {
   SectionList
 } from 'react-native';
 import { DollarSign, Calendar } from 'lucide-react-native';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
 
 interface Dividend {
@@ -69,13 +69,7 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
         paddingVertical: 12,
         paddingHorizontal: 14,
         backgroundColor: DesignTokens.colors.background.secondary,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
-        elevation: 4,
-        borderWidth: 1,
-        borderColor: 'rgba(0, 216, 74, 0.15)',
+        borderColor: `${DesignTokens.colors.success.main}26`,
         flexDirection: 'row-reverse',
         alignItems: 'center'
       }}
@@ -86,13 +80,13 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
           width: 44,
           height: 44,
           borderRadius: 22,
-          backgroundColor: 'rgba(0, 216, 74, 0.15)',
+          backgroundColor: `${DesignTokens.colors.success.main}26`,
           alignItems: 'center',
           justifyContent: 'center',
           marginLeft: 12
         }}
       >
-        <DollarSign size={22} color="#00D84A" strokeWidth={2.5} />
+        <DollarSign size={22} color="DesignTokens.colors.success.main" strokeWidth={2.5} />
       </View>
 
       {/* Company Info */}
@@ -120,12 +114,11 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
           paddingHorizontal: 10, 
           paddingVertical: 6, 
           borderRadius: 12, 
-          backgroundColor: 'rgba(0, 216, 74, 0.1)',
-          borderWidth: 1,
+          backgroundColor: `${DesignTokens.colors.success.main}1A`,
           borderColor: 'rgba(0, 216, 74, 0.3)'
         }}
       >
-        <Text style={{ fontSize: 11, color: '#00D84A', fontWeight: '700' }}>
+        <Text style={{ fontSize: 11, color: 'DesignTokens.colors.success.main', fontWeight: '700' }}>
           {getShortDate(dividend.date)}
         </Text>
       </View>
@@ -234,7 +227,7 @@ export default function DividendsTab() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-        <ActivityIndicator size="large" color="#00D84A" />
+        <ActivityIndicator size="large" color="DesignTokens.colors.success.main" />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען דיבידנדים...
         </Text>
@@ -253,8 +246,8 @@ export default function DividendsTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#00D84A"
-            colors={['#00D84A']}
+            tintColor="DesignTokens.colors.success.main"
+            colors={['DesignTokens.colors.success.main']}
           />
         }
         ListEmptyComponent={renderEmptyState}

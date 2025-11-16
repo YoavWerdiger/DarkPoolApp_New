@@ -15,12 +15,15 @@ import { Video, ResizeMode } from 'expo-av';
 import { useLesson, useSaveProgress, useGetSignedUrl } from '../../hooks/useLearning';
 import { LessonWithProgress, BlockType } from '../../types/learning';
 import { ArrowLeft, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export const LessonPlayerScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
+  const DesignTokens = useDesignTokens();
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const { lessonId, initialBlockIndex = 0 } = route.params as { 
     lessonId: string; 
     initialBlockIndex?: number;
@@ -109,7 +112,7 @@ export const LessonPlayerScreen: React.FC = () => {
     if (isLoadingVideo) {
       return (
         <View style={styles.blockLoadingContainer}>
-          <ActivityIndicator size="large" color="#00E654" />
+          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           <Text style={styles.blockLoadingText}>טוען וידאו...</Text>
         </View>
       );
@@ -228,7 +231,7 @@ export const LessonPlayerScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#00E654" />
+        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
         <Text style={styles.loadingText}>טוען שיעור...</Text>
       </View>
     );
@@ -255,7 +258,7 @@ export const LessonPlayerScreen: React.FC = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <ArrowLeft size={20} color="#FFFFFF" strokeWidth={2} />
+            <ArrowLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </TouchableOpacity>
           
           <View style={styles.headerContent}>
@@ -285,9 +288,9 @@ export const LessonPlayerScreen: React.FC = () => {
               onPress={() => setIsPlaying(!isPlaying)}
             >
               {isPlaying ? (
-                <Pause size={24} color="#000000" strokeWidth={2} />
+                <Pause size={24} color={DesignTokens.colors.background.primary} strokeWidth={2} />
               ) : (
-                <Play size={24} color="#000000" strokeWidth={2} />
+                <Play size={24} color={DesignTokens.colors.background.primary} strokeWidth={2} />
               )}
             </TouchableOpacity>
           </View>
@@ -305,7 +308,7 @@ export const LessonPlayerScreen: React.FC = () => {
           onPress={goToPreviousBlock}
           disabled={currentBlockIndex === 0}
         >
-          <ChevronLeft size={20} color={currentBlockIndex === 0 ? "#666666" : "#00E654"} strokeWidth={2} />
+          <ChevronLeft size={20} color={currentBlockIndex === 0 ? DesignTokens.colors.text.tertiary : DesignTokens.colors.primary.main} strokeWidth={2} />
           <Text style={[
             styles.navButtonText,
             currentBlockIndex === 0 && styles.navButtonTextDisabled
@@ -328,7 +331,7 @@ export const LessonPlayerScreen: React.FC = () => {
           ]}>
             הבא
           </Text>
-          <ChevronRight size={20} color={(!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) ? "#666666" : "#00E654"} strokeWidth={2} />
+          <ChevronRight size={20} color={(!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) ? DesignTokens.colors.text.tertiary : DesignTokens.colors.primary.main} strokeWidth={2} />
         </TouchableOpacity>
         </View>
       </View>
@@ -336,24 +339,24 @@ export const LessonPlayerScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0d0d0d',
+    backgroundColor: tokens.colors.background.primary,
   },
   headerSafeArea: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: tokens.colors.background.secondary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0d0d0d',
+    backgroundColor: tokens.colors.background.primary,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#A0A0A0',
+    color: tokens.colors.text.secondary,
   },
   errorContainer: {
     flex: 1,
@@ -368,18 +371,18 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: 14,
-    color: '#A0A0A0',
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 16,
-    color: '#A0A0A0',
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   header: {
@@ -387,7 +390,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: tokens.colors.background.secondary,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
   },
@@ -406,23 +409,23 @@ const styles = StyleSheet.create({
   lessonTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     textAlign: 'right',
   },
   blockInfo: {
     fontSize: 14,
-    color: '#A0A0A0',
+    color: tokens.colors.text.secondary,
     marginTop: 4,
     textAlign: 'right',
   },
   content: {
     flex: 1,
-    backgroundColor: '#0d0d0d',
+    backgroundColor: tokens.colors.background.primary,
     padding: 20,
   },
   contentCard: {
     flex: 1,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -450,7 +453,7 @@ const styles = StyleSheet.create({
   },
   textContent: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     lineHeight: 24,
     textAlign: 'right',
   },
@@ -468,7 +471,7 @@ const styles = StyleSheet.create({
   },
   blockErrorText: {
     fontSize: 16,
-    color: '#A0A0A0',
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   blockLoadingContainer: {
@@ -480,22 +483,22 @@ const styles = StyleSheet.create({
   blockLoadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#A0A0A0',
+    color: tokens.colors.text.secondary,
   },
   pdfText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     marginBottom: 8,
   },
   pdfSubtext: {
     fontSize: 14,
-    color: '#A0A0A0',
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
     marginBottom: 24,
   },
   downloadButton: {
-    backgroundColor: '#00E654',
+    backgroundColor: tokens.colors.primary.main,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -514,17 +517,17 @@ const styles = StyleSheet.create({
   quizText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     marginBottom: 8,
   },
   quizSubtext: {
     fontSize: 14,
-    color: '#A0A0A0',
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
     marginBottom: 24,
   },
   quizButton: {
-    backgroundColor: '#00E654',
+    backgroundColor: tokens.colors.primary.main,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -543,7 +546,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 20,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -557,17 +560,17 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#00E654',
+    backgroundColor: tokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#00E654',
+    shadowColor: tokens.colors.primary.main,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   navigationContainer: {
-    backgroundColor: '#1C1C1E',
+    backgroundColor: tokens.colors.background.secondary,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
   },
@@ -595,10 +598,10 @@ const styles = StyleSheet.create({
   navButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
   },
   navButtonTextDisabled: {
-    color: '#666666',
+    color: tokens.colors.text.tertiary,
   },
 });
 

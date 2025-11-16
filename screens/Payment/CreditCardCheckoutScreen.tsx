@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -24,6 +25,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +43,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   const { user } = useAuth();
   const { data: registrationData } = useRegistration();
   const { planId, fromRegistration = false } = route.params;
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(planId || 'monthly');
   const [showIframe, setShowIframe] = useState(false);
@@ -188,14 +191,14 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         return <Users size={24} color="#B0B0B0" />;
       case 'premium':
       case 'monthly':
-        return <Crown size={24} color="#00E654" />;
+        return <Crown size={24} color={DesignTokens.colors.primary.main} />;
       case 'pro':
       case 'yearly':
         return <Star size={24} color="#FFD700" />;
       case 'quarterly':
         return <Shield size={24} color="#FFD700" />;
       default:
-        return <Crown size={24} color="#00E654" />;
+        return <Crown size={24} color={DesignTokens.colors.primary.main} />;
     }
   };
 
@@ -233,7 +236,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           
           <View style={{ flex: 1 }}>
             <Text style={{ 
-              color: '#FFFFFF', 
+              color: DesignTokens.colors.text.primary, 
               fontSize: 20, 
               fontWeight: '700',
               writingDirection: 'rtl'
@@ -242,7 +245,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
               <Text style={{ 
-                color: '#00E654', 
+                color: DesignTokens.colors.primary.main, 
                 fontSize: 24, 
                 fontWeight: '800',
                 writingDirection: 'rtl'
@@ -250,7 +253,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
                 {plan.price === 0 ? 'חינם' : `₪${plan.price}`}
               </Text>
               <Text style={{ 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontSize: 14, 
                 marginLeft: 8,
                 writingDirection: 'rtl'
@@ -276,7 +279,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   ) => (
     <View style={{ marginBottom: 16 }}>
       <Text style={{ 
-        color: '#FFFFFF', 
+        color: DesignTokens.colors.text.primary, 
         fontSize: 14, 
         fontWeight: '600', 
         marginBottom: 8,
@@ -285,10 +288,10 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         {label}
       </Text>
       <View style={{
-        backgroundColor: '#121212',
+        backgroundColor: DesignTokens.colors.background.primary,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#333333',
+        borderColor: DesignTokens.colors.border.main,
         flexDirection: 'row-reverse',
         alignItems: 'center',
         paddingHorizontal: 16
@@ -305,7 +308,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           placeholderTextColor="#888888"
           style={{
             flex: 1,
-            color: '#FFFFFF',
+            color: DesignTokens.colors.text.primary,
             fontSize: 16,
             paddingVertical: 16,
             fontWeight: '500',
@@ -325,7 +328,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   // אם מציגים iframe תשלום
   if (showIframe) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#000000' }}>
+      <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
         {/* Header */}
         <View style={{
           flexDirection: 'row',
@@ -333,7 +336,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           paddingHorizontal: 20,
           paddingTop: 60,
           paddingBottom: 20,
-          backgroundColor: '#000000'
+          backgroundColor: DesignTokens.colors.background.primary
         }}>
           <TouchableOpacity
             onPress={() => setShowIframe(false)}
@@ -347,10 +350,10 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               marginRight: 16
             }}
           >
-            <ArrowLeft size={20} color="#FFFFFF" />
+            <ArrowLeft size={20} color={DesignTokens.colors.text.primary} />
           </TouchableOpacity>
           <Text style={{
-            color: '#FFFFFF',
+            color: DesignTokens.colors.text.primary,
             fontSize: 20,
             fontWeight: '700',
             flex: 1,
@@ -376,13 +379,13 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: '#000000',
+              backgroundColor: DesignTokens.colors.background.primary,
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <ActivityIndicator color="#00E654" size="large" />
+              <ActivityIndicator color={DesignTokens.colors.primary.main} size="large" />
               <Text style={{
-                color: '#FFFFFF',
+                color: DesignTokens.colors.text.primary,
                 fontSize: 16,
                 marginTop: 16,
                 writingDirection: 'rtl'
@@ -397,23 +400,25 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   }
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1, backgroundColor: '#121212' }}
-    >
-      {/* Header */}
-      <LinearGradient
-        colors={['#00E65420', '#00E65410', 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          paddingTop: 60,
-          paddingBottom: 20,
-          paddingHorizontal: 24,
-          borderBottomWidth: 1,
-          borderBottomColor: 'rgba(0, 230, 84, 0.2)'
-        }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }} edges={['top']}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
       >
+        {/* Header */}
+        <LinearGradient
+          colors={['#00E65420', '#00E65410', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            paddingTop: 20,
+            paddingBottom: 20,
+            paddingHorizontal: 24,
+            borderBottomWidth: 1,
+            borderBottomColor: 'rgba(0, 230, 84, 0.2)'
+          }}
+        >
         <View style={{ 
           flexDirection: 'row-reverse', 
           alignItems: 'center',
@@ -431,11 +436,11 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               marginLeft: 16
             }}
           >
-            <ArrowLeft size={20} color="#FFFFFF" />
+            <ArrowLeft size={20} color={DesignTokens.colors.text.primary} />
           </TouchableOpacity>
           
           <Text style={{ 
-            color: '#FFFFFF', 
+            color: DesignTokens.colors.text.primary, 
             fontSize: 24, 
             fontWeight: '700',
             writingDirection: 'rtl',
@@ -449,7 +454,8 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       <ScrollView 
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
           {/* Plan Card */}
@@ -467,9 +473,9 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               alignItems: 'center',
               marginBottom: 20
             }}>
-              <User size={20} color="#00E654" style={{ marginLeft: 8 }} />
+              <User size={20} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
               <Text style={{ 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 fontSize: 18, 
                 fontWeight: '600',
                 writingDirection: 'rtl'
@@ -486,7 +492,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               'שם מלא',
               'default',
               undefined,
-              <User size={16} color="#666666" />
+              <User size={16} color={DesignTokens.colors.text.tertiary} />
             )}
 
             {/* Email */}
@@ -520,9 +526,9 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               alignItems: 'center',
               marginBottom: 8
             }}>
-              <Shield size={16} color="#00E654" style={{ marginLeft: 8 }} />
+              <Shield size={16} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
               <Text style={{ 
-                color: '#00E654', 
+                color: DesignTokens.colors.primary.main, 
                 fontSize: 14, 
                 fontWeight: '600',
                 writingDirection: 'rtl'
@@ -531,7 +537,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               </Text>
             </View>
             <Text style={{ 
-              color: '#B0B0B0', 
+              color: DesignTokens.colors.text.secondary, 
               fontSize: 12,
               lineHeight: 18,
               writingDirection: 'rtl'
@@ -548,7 +554,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             marginBottom: 20
           }}>
             <Text style={{ 
-              color: '#FFFFFF', 
+              color: DesignTokens.colors.text.primary, 
               fontSize: 18, 
               fontWeight: '600', 
               marginBottom: 16,
@@ -563,14 +569,14 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               marginBottom: 8
             }}>
               <Text style={{ 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontSize: 14,
                 writingDirection: 'rtl'
               }}>
                 {plan?.name}
               </Text>
               <Text style={{ 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 fontSize: 14,
                 fontWeight: '600'
               }}>
@@ -584,14 +590,14 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               marginBottom: 8
             }}>
               <Text style={{ 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontSize: 14,
                 writingDirection: 'rtl'
               }}>
                 מע"מ
               </Text>
               <Text style={{ 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 fontSize: 14,
                 fontWeight: '600'
               }}>
@@ -610,7 +616,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               justifyContent: 'space-between'
             }}>
               <Text style={{ 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 fontSize: 18,
                 fontWeight: '700',
                 writingDirection: 'rtl'
@@ -618,7 +624,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
                 סה"כ
               </Text>
               <Text style={{ 
-                color: '#00E654', 
+                color: DesignTokens.colors.primary.main, 
                 fontSize: 18,
                 fontWeight: '700'
               }}>
@@ -636,14 +642,14 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             }}
           >
             <LinearGradient
-              colors={['#00E654', '#00B84A', '#008F3A']}
+              colors={[DesignTokens.colors.primary.main, DesignTokens.colors.primary.dark, DesignTokens.colors.primary.darker]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={{
                 borderRadius: 16,
                 padding: 18,
                 alignItems: 'center',
-                shadowColor: '#00E654',
+                shadowColor: DesignTokens.colors.primary.main,
                 shadowOffset: { width: 0, height: 6 },
                 shadowOpacity: 0.4,
                 shadowRadius: 12,
@@ -656,7 +662,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Shield size={20} color="#000000" style={{ marginLeft: 8 }} />
                   <Text style={{ 
-                    color: '#000000', 
+                    color: DesignTokens.colors.background.primary, 
                     fontSize: 18, 
                     fontWeight: '700',
                     writingDirection: 'rtl'
@@ -670,7 +676,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
 
           {/* Terms */}
           <Text style={{ 
-            color: '#666666', 
+            color: DesignTokens.colors.text.tertiary, 
             fontSize: 12, 
             textAlign: 'center',
             marginTop: 16,
@@ -681,6 +687,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           </Text>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

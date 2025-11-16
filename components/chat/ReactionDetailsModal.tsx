@@ -1,3 +1,4 @@
+import { useDesignTokens } from "../ui/DesignTokens";
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -12,6 +13,7 @@ import { X, User } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Animated } from 'react-native';
 import { ReactionDetail } from '../../services/supabase';
+import UIBottomSheet from '../ui/UIBottomSheet';
 
 interface ReactionDetailsModalProps {
   visible: boolean;
@@ -81,117 +83,148 @@ export default function ReactionDetailsModal({
 
   if (loading) {
     return (
-      <Modal
+      <UIBottomSheet
         visible={visible}
-        transparent={true}
-        animationType="none"
-        onRequestClose={onClose}
+        onClose={onClose}
+        maxHeight="80%"
+        dragToClose={true}
+        contentStyle={{ padding: 24, alignItems: 'center', justifyContent: 'center', minHeight: 200 }}
       >
-        <Animated.View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', opacity: fadeAnim, justifyContent: 'flex-end' }}>
-          <View className="bg-[#1a1a1a] rounded-t-3xl p-6 items-center justify-center min-h-[200px] relative overflow-hidden">
-            <LinearGradient
-              colors={['rgba(0, 230, 84, 0.10)', 'rgba(0, 0, 0, 0.08)']}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            />
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text className="text-white mt-4">טוען ריאקציות...</Text>
-          </View>
-        </Animated.View>
-      </Modal>
+        <ActivityIndicator size="large" color="#00E654" />
+        <Text style={{ color: '#FFFFFF', marginTop: 16, fontSize: 16 }}>טוען ריאקציות...</Text>
+      </UIBottomSheet>
     );
   }
 
   return (
-    <Modal
+    <UIBottomSheet
       visible={visible}
-      transparent={true}
-      animationType="none"
-      onRequestClose={onClose}
+      onClose={onClose}
+      maxHeight="80%"
+      dragToClose={true}
+      contentStyle={{ padding: 0 }}
     >
-      <Animated.View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', opacity: fadeAnim, justifyContent: 'flex-end' }}>
-        <View className="bg-[#1a1a1a] rounded-t-3xl p-6 max-h-[80%] relative overflow-hidden">
-          <LinearGradient
-            colors={['rgba(0, 230, 84, 0.10)', 'rgba(0, 0, 0, 0.08)']}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-          {/* Header */}
-          <View className="flex-row-reverse items-center justify-between mb-6">
-            <Text className="text-white text-xl font-bold text-right">ריאקציות</Text>
-            <Pressable 
-              onPress={onClose}
-              className="w-8 h-8 bg-[#333] rounded-full items-center justify-center"
-            >
-              <X size={20} color="white" strokeWidth={2} />
-            </Pressable>
-          </View>
+      <View style={{ paddingHorizontal: 20, paddingBottom: 40 }}>
 
-          {/* Tabs */}
-          <View className="flex-row-reverse mb-6">
-            <Pressable
-              onPress={() => setSelectedTab('all')}
-              className={`px-4 py-2 rounded-full ml-2 ${
-                selectedTab === 'all' ? 'bg-primary' : 'bg-[#333]'
-              }`}
-            >
-              <Text className={`font-semibold ${
-                selectedTab === 'all' ? 'text-white' : 'text-gray-400'
-              }`}>
-                הכל {allReactions.length}
+            {/* Header */}
+            <View style={{ 
+              flexDirection: 'row-reverse', 
+              alignItems: 'center', 
+              justifyContent: 'space-between', 
+              marginBottom: 20 
+            }}>
+              <Text style={{ 
+                color: '#FFFFFF', 
+                fontSize: 20, 
+                fontWeight: '700', 
+                textAlign: 'right' 
+              }}>
+                ריאקציות
               </Text>
-            </Pressable>
-            
-            {reactionTypes.map(emoji => (
-              <Pressable
-                key={emoji}
-                onPress={() => setSelectedTab(emoji)}
-                className={`px-4 py-2 rounded-full ml-2 ${
-                  selectedTab === emoji ? 'bg-primary' : 'bg-[#333]'
-                }`}
+              <Pressable 
+                onPress={onClose}
+                style={{ padding: 8 }}
               >
-                <View className="items-center">
-                  <Text className="text-lg">{emoji}</Text>
-                  <Text className={`text-xs ${
-                    selectedTab === emoji ? 'text-white' : 'text-gray-400'
-                  }`}>
-                    {reactionDetails.find(r => r.emoji === emoji)?.count}
-                  </Text>
-                </View>
+                <X size={24} color="#FFFFFF" strokeWidth={2.5} />
               </Pressable>
-            ))}
-          </View>
+            </View>
 
-          {/* Users List */}
-          <ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
-            {filteredReactions.length === 0 ? (
-              <View className="items-center py-8">
-                <Text className="text-gray-400 text-lg">אין ריאקציות</Text>
-              </View>
-            ) : (
-              filteredReactions.map((reaction, index) => (
-                <View key={index} className="flex-row-reverse items-center py-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                  <View className="w-10 h-10 bg-[#333] rounded-full ml-3 items-center justify-center">
-                    <User size={20} color="#666" strokeWidth={2} />
+            {/* Tabs */}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={{ marginBottom: 20 }}
+              contentContainerStyle={{ flexDirection: 'row-reverse' }}
+            >
+              <Pressable
+                onPress={() => setSelectedTab('all')}
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 16,
+                  marginLeft: 8,
+                  backgroundColor: selectedTab === 'all' ? '#00E654' : 'rgba(255,255,255,0.08)'
+                }}
+              >
+                <Text style={{
+                  fontWeight: '600',
+                  fontSize: 15,
+                  color: selectedTab === 'all' ? '#000000' : '#999999'
+                }}>
+                  הכל {allReactions.length}
+                </Text>
+              </Pressable>
+              
+              {reactionTypes.map(emoji => (
+                <Pressable
+                  key={emoji}
+                  onPress={() => setSelectedTab(emoji)}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 16,
+                    marginLeft: 8,
+                    backgroundColor: selectedTab === emoji ? '#00E654' : 'rgba(255,255,255,0.08)'
+                  }}
+                >
+                  <View style={{ alignItems: 'center', flexDirection: 'row' }}>
+                    <Text style={{ fontSize: 16, marginRight: 6 }}>{emoji}</Text>
+                    <Text style={{
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: selectedTab === emoji ? '#000000' : '#999999'
+                    }}>
+                      {reactionDetails.find(r => r.emoji === emoji)?.count}
+                    </Text>
                   </View>
-                  <Text className="text-white flex-1 text-base text-right">{reaction.userName}</Text>
-                  <Text className="text-2xl">{reaction.emoji}</Text>
-                </View>
-              ))
-            )}
-          </ScrollView>
+                </Pressable>
+              ))}
+            </ScrollView>
 
-          {/* Close Button */}
-          <Pressable
-            onPress={onClose}
-            className="mt-6 bg-[#333] py-3 rounded-2xl items-center border border-[#444]"
-          >
-            <Text className="text-white font-semibold text-base">סגור</Text>
-          </Pressable>
-        </View>
-      </Animated.View>
-    </Modal>
+            {/* Users List */}
+            <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              {filteredReactions.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                  <Text style={{ color: '#999999', fontSize: 16 }}>אין ריאקציות</Text>
+                </View>
+              ) : (
+                filteredReactions.map((reaction, index) => (
+                  <View 
+                    key={index} 
+                    style={{ 
+                      flexDirection: 'row-reverse', 
+                      alignItems: 'center', 
+                      paddingVertical: 14,
+                      borderBottomWidth: index < filteredReactions.length - 1 ? 1 : 0,
+                      borderBottomColor: 'rgba(255,255,255,0.05)'
+                    }}
+                  >
+                    <View style={{ 
+                      width: 40, 
+                      height: 40, 
+                      backgroundColor: 'rgba(0,230,84,0.15)', 
+                      borderRadius: 20, 
+                      marginLeft: 12, 
+                      alignItems: 'center', 
+                      justifyContent: 'center' 
+                    }}>
+                      <User size={20} color="#00E654" strokeWidth={2} />
+                    </View>
+                    <Text style={{ 
+                      color: '#FFFFFF', 
+                      flex: 1, 
+                      fontSize: 16, 
+                      textAlign: 'right',
+                      fontWeight: '500'
+                    }}>
+                      {reaction.userName}
+                    </Text>
+                    <Text style={{ fontSize: 24, marginRight: 12 }}>{reaction.emoji}</Text>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+      </View>
+    </UIBottomSheet>
   );
 }

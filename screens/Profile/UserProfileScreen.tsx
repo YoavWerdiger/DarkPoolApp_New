@@ -21,11 +21,13 @@ import {
   Edit3,
   LogOut,
   Shield,
-  Info
+  Info,
+  MessageSquare
 } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 interface MenuItem {
   id: string;
@@ -92,6 +94,42 @@ export default function UserProfileScreen({ navigation }: any) {
       subtitle: 'ניהול מנוי ותשלומים',
       icon: CreditCard,
       onPress: () => navigation.navigate('SubscriptionPlans')
+    },
+    {
+      id: 'rate',
+      title: 'דרג אותנו',
+      subtitle: 'שתף את החוויה שלך',
+      icon: Star,
+      onPress: () => {
+        Alert.alert(
+          'דרג אותנו',
+          'איך תרצה לדרג אותנו?',
+          [
+            {
+              text: 'דירוג אנונימי',
+              onPress: () => {
+                // פתיחת סקר אנונימי בגוגל פורמס
+                const anonymousFormUrl = 'https://forms.gle/YOUR_ANONYMOUS_FORM_ID';
+                // כאן צריך להוסיף קישור לסקר אנונימי
+                Alert.alert('תודה!', 'הסקר האנונימי יפתח בקרוב');
+              }
+            },
+            {
+              text: 'דירוג לא אנונימי',
+              onPress: () => {
+                // פתיחת סקר לא אנונימי בגוגל פורמס
+                const namedFormUrl = 'https://forms.gle/YOUR_NAMED_FORM_ID';
+                // כאן צריך להוסיף קישור לסקר לא אנונימי
+                Alert.alert('תודה!', 'הסקר יפתח בקרוב');
+              }
+            },
+            {
+              text: 'ביטול',
+              style: 'cancel'
+            }
+          ]
+        );
+      }
     }
   ];
 
@@ -120,7 +158,7 @@ export default function UserProfileScreen({ navigation }: any) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00E654" />
+          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען פרופיל...</Text>
         </View>
       </SafeAreaView>
@@ -184,7 +222,7 @@ export default function UserProfileScreen({ navigation }: any) {
             justifyContent: 'center',
             marginBottom: 16,
             borderWidth: 4,
-            borderColor: '#00E654'
+            borderColor: DesignTokens.colors.primary.main
           }}>
             {profileData?.profile_picture ? (
               <Image 
@@ -192,7 +230,7 @@ export default function UserProfileScreen({ navigation }: any) {
                 style={{ width: '100%', height: '100%', borderRadius: 56 }}
               />
             ) : (
-              <User size={60} color="#00E654" strokeWidth={1.5} />
+              <User size={60} color={DesignTokens.colors.primary.main} strokeWidth={1.5} />
             )}
           </View>
 
@@ -227,7 +265,7 @@ export default function UserProfileScreen({ navigation }: any) {
           }}>
             <Text style={{
               fontSize: 14,
-              color: '#00E654',
+              color: DesignTokens.colors.primary.main,
               fontWeight: '600',
               marginRight: 8
             }}>
@@ -252,7 +290,7 @@ export default function UserProfileScreen({ navigation }: any) {
           }}>
             <Text style={{
               fontSize: 14,
-              color: '#00E654',
+              color: DesignTokens.colors.primary.main,
               fontWeight: '600'
             }}>
               מנוי חודשי
@@ -318,7 +356,7 @@ export default function UserProfileScreen({ navigation }: any) {
                 }}>
                   <item.icon 
                     size={20} 
-                    color="#00E654" 
+                    color={DesignTokens.colors.primary.main} 
                     strokeWidth={2} 
                   />
                 </View>
@@ -382,7 +420,7 @@ export default function UserProfileScreen({ navigation }: any) {
                 }}>
                   <item.icon 
                     size={20} 
-                    color="#00E654" 
+                    color={DesignTokens.colors.primary.main} 
                     strokeWidth={2} 
                   />
                 </View>
@@ -416,20 +454,20 @@ export default function UserProfileScreen({ navigation }: any) {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              backgroundColor: `${DesignTokens.colors.danger.main}1A`,
               paddingVertical: 14,
               paddingHorizontal: 20,
               borderRadius: 12,
               borderWidth: 1,
-              borderColor: 'rgba(239, 68, 68, 0.3)',
+              borderColor: `${DesignTokens.colors.danger.main}33`,
               marginBottom: 32
             }}
           >
-            <LogOut size={20} color="#EF4444" strokeWidth={2} style={{ marginRight: 8 }} />
+            <LogOut size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} style={{ marginRight: 8 }} />
             <Text style={{
               fontSize: 16,
               fontWeight: '600',
-              color: '#EF4444'
+              color: DesignTokens.colors.danger.main
             }}>
               התנתקות
             </Text>

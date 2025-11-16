@@ -7,13 +7,16 @@ import {
   Image, 
   Dimensions, 
   SafeAreaView,
-  StatusBar 
+  StatusBar,
+  Platform 
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Video as VideoIcon, ImageIcon, Music, FileText, ArrowRight } from 'lucide-react-native';
 import { MediaViewer } from '../../components/chat';
 import { supabase } from '../../lib/supabase';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 const { width: screenWidth } = Dimensions.get('window');
 const itemSize = (screenWidth - 60) / 3; // 3 columns with margins
@@ -31,8 +34,10 @@ interface MediaItem {
 }
 
 export default function MediaGalleryScreen() {
+  const DesignTokens = useDesignTokens();
   const route = useRoute();
   const navigation = useNavigation();
+  const tabBarInsets = useSafeAreaInsets();
   const { chatId, channelName } = route.params as { chatId: string; channelName: string };
   
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -40,6 +45,38 @@ export default function MediaGalleryScreen() {
   const [selectedTab, setSelectedTab] = useState<'media' | 'documents'>('media');
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+
+  // הסתר TabBar כשנכנסים למסך זה
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = (navigation as any).getParent();
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: { display: 'none' }
+        });
+      }
+      
+      return () => {
+        if (parent) {
+          parent.setOptions({
+            tabBarStyle: { 
+              backgroundColor: DesignTokens.colors.background.primary, 
+              borderTopWidth: 0,
+              height: Platform.OS === 'ios' ? 90 : 70 + tabBarInsets.bottom,
+              paddingBottom: Platform.OS === 'ios' ? 15 : tabBarInsets.bottom + 10,
+              paddingTop: 15,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+              display: 'flex'
+            }
+          });
+        }
+      };
+    }, [navigation, tabBarInsets])
+  );
 
   useEffect(() => {
     loadMediaItems();
@@ -199,17 +236,15 @@ export default function MediaGalleryScreen() {
         style={{ 
           width: itemSize, 
           height: itemSize,
-          marginBottom: 8,
-          marginHorizontal: 4
+          marginBottom: 6,
+          marginHorizontal: 3
         }}
       >
         <View style={{
           width: '100%',
           height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.3)',
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: 'rgba(0,230,84,0.15)',
+          backgroundColor: 'DesignTokens.colors.background.secondary',
+          borderRadius: 12,
           overflow: 'hidden',
           position: 'relative'
         }}>
@@ -240,7 +275,7 @@ export default function MediaGalleryScreen() {
                 bottom: 0,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.3)'
+                backgroundColor: DesignTokens.colors.overlay
               }}>
                 <VideoIcon size={24} color="#fff" strokeWidth={2} />
               </View>
@@ -253,13 +288,13 @@ export default function MediaGalleryScreen() {
               justifyContent: 'center'
             }}>
               {isImage ? (
-                <ImageIcon size={32} color="#00E654" strokeWidth={2} />
+                <ImageIcon size={32} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               ) : isVideo ? (
-                <VideoIcon size={32} color="#00E654" strokeWidth={2} />
+                <VideoIcon size={32} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               ) : isAudio ? (
-                <Music size={32} color="#00E654" strokeWidth={2} />
+                <Music size={32} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               ) : (
-                <FileText size={32} color="#00E654" strokeWidth={2} />
+                <FileText size={32} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               )}
             </View>
           )}
@@ -272,29 +307,29 @@ export default function MediaGalleryScreen() {
           }}>
             {isVideo && (
               <View style={{
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                borderRadius: 12,
-                padding: 4
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                borderRadius: 8,
+                padding: 6
               }}>
-                <VideoIcon size={12} color="#fff" strokeWidth={2} />
+                <VideoIcon size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
             )}
             {isAudio && (
               <View style={{
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                borderRadius: 12,
-                padding: 4
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                borderRadius: 8,
+                padding: 6
               }}>
-                <Music size={12} color="#fff" strokeWidth={2} />
+                <Music size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
             )}
             {isDocument && (
               <View style={{
-                backgroundColor: 'rgba(0,0,0,0.7)',
-                borderRadius: 12,
-                padding: 4
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                borderRadius: 8,
+                padding: 6
               }}>
-                <FileText size={12} color="#fff" strokeWidth={2} />
+                <FileText size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
             )}
           </View>
@@ -308,47 +343,69 @@ export default function MediaGalleryScreen() {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 32
+      padding: 40
     }}>
       <View style={{ alignItems: 'center' }}>
         {selectedTab === 'media' ? (
           <>
-            <ImageIcon size={64} color="#666" strokeWidth={1.5} />
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: `${DesignTokens.colors.success.main}1A`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 20
+            }}>
+              <ImageIcon size={40} color={DesignTokens.colors.primary.main} strokeWidth={1.5} />
+            </View>
             <Text style={{
-              color: '#B0B0B0',
-              fontSize: 18,
-              marginTop: 16,
+              color: DesignTokens.colors.text.primary,
+              fontSize: 20,
+              fontWeight: '600',
+              marginBottom: 8,
               textAlign: 'center'
             }}>
-              אין מדיה בקבוצה זו
+              אין מדיה בקבוצה
             </Text>
             <Text style={{
-              color: '#808080',
-              fontSize: 14,
-              marginTop: 8,
-              textAlign: 'center'
+              color: 'DesignTokens.colors.text.tertiary',
+              fontSize: 15,
+              textAlign: 'center',
+              lineHeight: 22
             }}>
-              תמונות, סרטונים וקבצי אודיו יופיעו כאן
+              תמונות, סרטונים וקבצי אודיו{'\n'}יופיעו כאן
             </Text>
           </>
         ) : (
           <>
-            <FileText size={64} color="#666" strokeWidth={1.5} />
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: `${DesignTokens.colors.success.main}1A`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 20
+            }}>
+              <FileText size={40} color={DesignTokens.colors.primary.main} strokeWidth={1.5} />
+            </View>
             <Text style={{
-              color: '#B0B0B0',
-              fontSize: 18,
-              marginTop: 16,
+              color: DesignTokens.colors.text.primary,
+              fontSize: 20,
+              fontWeight: '600',
+              marginBottom: 8,
               textAlign: 'center'
             }}>
-              אין מסמכים בקבוצה זו
+              אין מסמכים בקבוצה
             </Text>
             <Text style={{
-              color: '#808080',
-              fontSize: 14,
-              marginTop: 8,
-              textAlign: 'center'
+              color: 'DesignTokens.colors.text.tertiary',
+              fontSize: 15,
+              textAlign: 'center',
+              lineHeight: 22
             }}>
-              קבצי PDF, Word וקבצים אחרים יופיעו כאן
+              קבצי PDF, Word וקבצים אחרים{'\n'}יופיעו כאן
             </Text>
           </>
         )}
@@ -360,90 +417,141 @@ export default function MediaGalleryScreen() {
   const documentCount = mediaItems.filter(item => item.type === 'document').length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+      <StatusBar barStyle="light-content" backgroundColor="DesignTokens.colors.background.primary" />
       
       {/* Header */}
       <View style={{
         flexDirection: 'row-reverse',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#333333'
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        backgroundColor: DesignTokens.colors.background.primary
       }}>
         <View style={{
           flexDirection: 'row-reverse',
-          alignItems: 'center'
+          alignItems: 'center',
+          flex: 1
         }}>
           <TouchableOpacity 
             onPress={() => navigation.goBack()}
-            style={{ marginLeft: 16 }}
+            style={{ 
+              marginLeft: 16,
+              width: 40,
+              height: 40,
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            <ArrowRight size={24} color="#00E654" strokeWidth={2} />
+            <ArrowRight size={24} color={DesignTokens.colors.primary.main} strokeWidth={2} />
           </TouchableOpacity>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={{
-              color: '#FFFFFF',
-              fontSize: 18,
-              fontWeight: 'bold',
-              textAlign: 'right'
-            }}>
-              {channelName}
-            </Text>
-            <Text style={{
-              color: '#B0B0B0',
-              fontSize: 14,
+              color: DesignTokens.colors.text.primary,
+              fontSize: 20,
+              fontWeight: '700',
               textAlign: 'right'
             }}>
               גלריית מדיה
             </Text>
+            <Text style={{
+              color: 'DesignTokens.colors.text.tertiary',
+              fontSize: 14,
+              textAlign: 'right',
+              marginTop: 2
+            }}>
+              {channelName}
+            </Text>
           </View>
         </View>
-        
       </View>
 
       {/* Tabs */}
       <View style={{
-        flexDirection: 'row-reverse',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        marginHorizontal: 16,
-        marginTop: 16,
-        borderRadius: 16,
+        flexDirection: 'row',
+        backgroundColor: 'DesignTokens.colors.background.secondary',
+        marginHorizontal: 20,
+        marginTop: 12,
+        marginBottom: 16,
+        borderRadius: 30,
         padding: 4,
-        borderWidth: 1,
-        borderColor: 'rgba(0,230,84,0.15)'
+        alignSelf: 'center',
+        width: '100%',
+        maxWidth: 400
       }}>
         <TouchableOpacity
           onPress={() => setSelectedTab('media')}
+          activeOpacity={1}
           style={{
             flex: 1,
-            paddingVertical: 12,
-            borderRadius: 12,
-            backgroundColor: selectedTab === 'media' ? '#00E654' : 'transparent'
+            height: 44,
+            borderRadius: 26,
+            backgroundColor: 'transparent',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            marginHorizontal: 2
           }}
         >
+          {selectedTab === 'media' && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                borderRadius: 26,
+                backgroundColor: `${DesignTokens.colors.success.main}14`,
+              }}
+            />
+          )}
           <Text style={{
             textAlign: 'center',
-            fontWeight: '600',
-            color: selectedTab === 'media' ? '#000000' : '#B0B0B0'
+            fontWeight: selectedTab === 'media' ? '700' : '600',
+            fontSize: 14,
+            color: selectedTab === 'media' ? 'DesignTokens.colors.success.main' : 'DesignTokens.colors.text.tertiary',
+            position: 'relative',
+            zIndex: 1
           }}>
             מדיה ({mediaCount})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setSelectedTab('documents')}
+          activeOpacity={1}
           style={{
             flex: 1,
-            paddingVertical: 12,
-            borderRadius: 12,
-            backgroundColor: selectedTab === 'documents' ? '#00E654' : 'transparent'
+            height: 44,
+            borderRadius: 26,
+            backgroundColor: 'transparent',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            marginHorizontal: 2
           }}
         >
+          {selectedTab === 'documents' && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                borderRadius: 26,
+                backgroundColor: `${DesignTokens.colors.success.main}14`,
+              }}
+            />
+          )}
           <Text style={{
             textAlign: 'center',
-            fontWeight: '600',
-            color: selectedTab === 'documents' ? '#000000' : '#B0B0B0'
+            fontWeight: selectedTab === 'documents' ? '700' : '600',
+            fontSize: 14,
+            color: selectedTab === 'documents' ? 'DesignTokens.colors.success.main' : 'DesignTokens.colors.text.tertiary',
+            position: 'relative',
+            zIndex: 1
           }}>
             מסמכים ({documentCount})
           </Text>
@@ -451,16 +559,28 @@ export default function MediaGalleryScreen() {
       </View>
 
       {/* Media Grid */}
-      <View style={{ flex: 1, padding: 16 }}>
+      <View style={{ flex: 1, paddingHorizontal: 20 }}>
         {loading ? (
           <View style={{
             flex: 1,
             alignItems: 'center',
             justifyContent: 'center'
           }}>
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: `${DesignTokens.colors.success.main}1A`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 16
+            }}>
+              <ImageIcon size={40} color={DesignTokens.colors.primary.main} strokeWidth={1.5} />
+            </View>
             <Text style={{
-              color: '#B0B0B0',
-              fontSize: 16
+              color: DesignTokens.colors.text.primary,
+              fontSize: 17,
+              fontWeight: '500'
             }}>טוען מדיה...</Text>
           </View>
         ) : (
@@ -472,6 +592,7 @@ export default function MediaGalleryScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 20 }}
             ListEmptyComponent={renderEmptyState}
+            columnWrapperStyle={{ justifyContent: 'flex-start' }}
           />
         )}
       </View>

@@ -128,28 +128,73 @@ export class EarningsService {
   /**
    * טעינת כל דיווחי התוצאות מהמסד נתונים (טווח: 08/10/2025 - 03/10/2026)
    */
-  static async getAll(limit: number = 2000): Promise<EarningsReport[]> {
+  static async getAll(limit: number = 5000): Promise<EarningsReport[]> {
     try {
+      console.log('🔄 EarningsService.getAll(): Starting fetch...');
+      console.log(`📊 Limit: ${limit}`);
+      
       // טווח מדויק כמו ב-Edge Function
       const startDateStr = '2025-10-08';
+      console.log(`📅 Start date filter: ${startDateStr}`);
       
+      const queryStartTime = Date.now();
       const { data, error } = await supabase
         .from('earnings_calendar')
         .select('*')
         .like('code', '%.US') // רק מניירות אמריקאיות
         .gte('report_date', startDateStr) // מ-08/10/2025
-        .order('report_date', { ascending: true }) // מהישן לחדש
+        .order('report_date', { ascending: false }) // מהחדש לישן - כך נקבל את התאריכים העדכניים ביותר
         .limit(limit);
 
-      if (error) throw error;
+      const queryTime = Date.now() - queryStartTime;
+      console.log(`⏱️ Database query completed in ${queryTime}ms`);
+
+      if (error) {
+        console.error('❌ EarningsService.getAll(): Database error:', error);
+        console.error('❌ Error code:', error.code);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error details:', error.details);
+        throw error;
+      }
       
-      // סינון למניות מהאינדקסים הגדולים בלבד
-      const majorIndexReports = filterMajorIndexStocks(data || []);
-      console.log(`📊 Filtered to major indices: ${majorIndexReports.length}/${(data || []).length} reports (from ${startDateStr})`);
+      console.log(`📊 Raw data from database: ${(data || []).length} reports`);
       
-      return majorIndexReports;
+      if ((data || []).length > 0) {
+        console.log('📋 Sample raw report:', {
+          id: data![0].id,
+          code: data![0].code,
+          report_date: data![0].report_date,
+          before_after_market: data![0].before_after_market
+        });
+      }
+      
+      // החזרת כל הנתונים ללא סינון (הסרת הסינון למניות מהאינדקסים הגדולים)
+      console.log(`📊 Total reports from database: ${(data || []).length} reports`);
+      console.log(`📅 Date range: from ${startDateStr}`);
+      
+      if ((data || []).length > 0) {
+        const dates = (data || []).map(r => r.report_date).filter((v, i, a) => a.indexOf(v) === i).sort();
+        console.log(`📅 Available dates: ${dates.length} unique dates`);
+        console.log(`📅 First date: ${dates[0]}, Last date: ${dates[dates.length - 1]}`);
+        
+        // פירוט כמה דיווחים יש לכל תאריך (5 הראשונים)
+        const dateCounts = dates.slice(0, 5).map(date => {
+          const count = (data || []).filter(r => r.report_date === date).length;
+          return `${date}: ${count} reports`;
+        });
+        console.log(`📊 Reports per date (first 5):`, dateCounts);
+      }
+      
+      console.log('✅ EarningsService.getAll(): Completed successfully');
+      return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings reports:', error);
+      console.error('❌ EarningsService.getAll(): ===== Error =====');
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error:', error);
+      if (error instanceof Error) {
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
+      }
       return [];
     }
   }
@@ -318,9 +363,10 @@ export class EarningsService {
   static async refreshData() {
     try {
       const supabaseUrl = 'https://wpmrtczbfcijoocguime.supabase.co';
-      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ1MjE4MjAsImV4cCI6MjA1MDA5NzgyMH0.JQwC3xJv8zJQwC3xJv8zJQwC3xJv8zJQwC3xJv8zJ';
+      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDczNTEsImV4cCI6MjA2Njc4MzM1MX0.YHfniy3w94LVODC54xb7Us-Daw_pRx2WWFOoR-59kGQ';
 
-      console.log('🔄 Calling refresh function...');
+      console.log('🔄 EarningsService.refreshData(): Calling Edge Function...');
+      console.log('🔄 Function URL:', `${supabaseUrl}/functions/v1/daily-earnings-sync-major-indices`);
       
       const response = await fetch(`${supabaseUrl}/functions/v1/daily-earnings-sync-major-indices`, {
         method: 'POST',
@@ -331,15 +377,34 @@ export class EarningsService {
       });
 
       console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Function error:', errorText);
-        throw new Error(`Function error: ${response.status} - ${errorText}`);
+        console.error('❌ Edge Function returned error status:', response.status);
+        console.error('❌ Error response body:', errorText);
+        
+        // ניסיון לפרסר את השגיאה כ-JSON
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error('❌ Parsed error:', errorJson);
+          return {
+            success: false,
+            message: errorJson.error || errorJson.message || `Function error: ${response.status}`,
+            error: errorJson
+          };
+        } catch (parseError) {
+          return {
+            success: false,
+            message: `Function error: ${response.status} - ${errorText}`,
+            error: { status: response.status, text: errorText }
+          };
+        }
       }
 
       const result = await response.json();
-      console.log(`✅ Refresh completed:`, result);
+      console.log(`✅ EarningsService.refreshData(): Edge Function completed successfully`);
+      console.log('📊 Result:', result);
 
       return {
         success: true,
@@ -347,7 +412,13 @@ export class EarningsService {
         data: result
       };
     } catch (error) {
-      console.error('❌ Error refreshing earnings data:', error);
+      console.error('❌ EarningsService.refreshData(): ===== Exception =====');
+      console.error('❌ Error type:', typeof error);
+      console.error('❌ Error:', error);
+      if (error instanceof Error) {
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error stack:', error.stack);
+      }
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Error refreshing data',

@@ -16,11 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { AlertCircle, Video as VideoIcon, Music, FileText, MessageCircle, Forward, Share as ShareIcon, Download, X } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Message } from '../../services/supabase';
 import { useAuth } from '../../context/AuthContext';
 import ForwardModal from './ForwardModal';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface MediaViewerProps {
   visible: boolean;
@@ -45,7 +46,9 @@ export default function MediaViewer({
   onReply,
   onForward
 }: MediaViewerProps) {
+  console.log('🎯 MediaViewer: Rendering with:', { visible, mediaUrl, mediaType });
   
+  const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const [isPlaying, setIsPlaying] = useState(false);
@@ -58,6 +61,11 @@ export default function MediaViewer({
   const scrollViewRef = useRef<ScrollView>(null);
   const zoomTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const imageScale = useRef(new Animated.Value(1)).current;
+
+  // לוג כשה-visible משתנה
+  useEffect(() => {
+    console.log('🎯 MediaViewer visible changed to:', visible);
+  }, [visible]);
 
   // בדיקת מצב כוכב ראשוני
   useEffect(() => {
@@ -328,9 +336,9 @@ export default function MediaViewer({
     if (!mediaUrl || mediaUrl.trim() === '') {
       console.log('❌ MediaViewer: No mediaUrl provided');
       return (
-        <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'black' }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <AlertCircle size={64} color="white" strokeWidth={1.5} />
-          <Text className="text-white text-lg mt-4 text-center">
+          <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, marginTop: 16, textAlign: 'center' }}>
             לא ניתן לטעון את המדיה
           </Text>
         </View>
@@ -340,65 +348,59 @@ export default function MediaViewer({
     switch (mediaType) {
       case 'image':
         return (
-          <View style={{ flex: 1, backgroundColor: 'black' }}>
-            <ScrollView
-              ref={scrollViewRef}
-              style={{ flex: 1 }}
-              contentContainerStyle={{
-                minHeight: screenHeight,
-                minWidth: screenWidth,
-                justifyContent: 'center',
-                alignItems: 'center',
+          <ScrollView
+            ref={scrollViewRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              minHeight: screenHeight,
+              minWidth: screenWidth,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            maximumZoomScale={3}
+            minimumZoomScale={1}
+            bouncesZoom={true}
+            centerContent={true}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            onScrollBeginDrag={() => {
+              // נקה טיימרים קודמים כשמתחילים גלילה חדשה
+              if (zoomTimeoutRef.current) {
+                clearTimeout(zoomTimeoutRef.current);
+                zoomTimeoutRef.current = null;
+              }
+            }}
+            onScrollEndDrag={() => {
+              resetImagePosition();
+            }}
+            onMomentumScrollEnd={() => {
+              resetImagePosition();
+            }}
+          >
+            <Animated.Image
+              source={{ uri: mediaUrl }}
+              style={{
+                width: screenWidth * 1.15,
+                height: screenHeight * 1.05,
+                transform: [{ scale: imageScale }],
               }}
-              maximumZoomScale={3}
-              minimumZoomScale={1}
-              bouncesZoom={true}
-              centerContent={true}
-              showsHorizontalScrollIndicator={false}
-              showsVerticalScrollIndicator={false}
-              scrollEventThrottle={16}
-              decelerationRate="fast"
-              onScrollBeginDrag={() => {
-                // נקה טיימרים קודמים כשמתחילים גלילה חדשה
-                if (zoomTimeoutRef.current) {
-                  clearTimeout(zoomTimeoutRef.current);
-                  zoomTimeoutRef.current = null;
-                }
+              resizeMode="cover"
+              onLoad={() => {
+                console.log('✅ Image loaded successfully:', mediaUrl);
               }}
-              onScrollEndDrag={() => {
-                resetImagePosition();
+              onError={(error) => {
+                console.error('❌ Image load error:', error);
+                console.error('❌ Failed URL:', mediaUrl);
               }}
-              onMomentumScrollEnd={() => {
-                resetImagePosition();
-              }}
-            >
-              <Animated.Image
-                source={{ uri: mediaUrl }}
-                style={{
-                  width: screenWidth * 1.15,
-                  height: screenHeight * 1.05,
-                  transform: [{ scale: imageScale }],
-                }}
-                resizeMode="cover"
-                onLoad={() => {
-                  console.log('✅ Image loaded successfully:', mediaUrl);
-                }}
-                onError={(error) => {
-                  console.error('❌ Image load error:', error);
-                  console.error('❌ Failed URL:', mediaUrl);
-                }}
-              />
-            </ScrollView>
-          </View>
+            />
+          </ScrollView>
         );
 
       case 'video':
         return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            backgroundColor: 'black', 
-            paddingTop: 80,
-            paddingBottom: 120 
-          }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             {mediaUrl && mediaUrl.trim() !== '' && (mediaUrl.startsWith('http') || mediaUrl.startsWith('file://') || mediaUrl.startsWith('content://')) ? (
             <Video
               source={{ uri: mediaUrl }}
@@ -428,7 +430,7 @@ export default function MediaViewer({
             ) : (
               <View style={{ alignItems: 'center', justifyContent: 'center' }}>
                 <VideoIcon size={64} color="white" strokeWidth={1.5} />
-                <Text className="text-white text-lg mt-4 text-center">
+                <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, marginTop: 16, textAlign: 'center' }}>
                   לא ניתן לטעון את הווידאו
                 </Text>
               </View>
@@ -438,19 +440,27 @@ export default function MediaViewer({
 
       case 'audio':
         return (
-          <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'black' }}>
-            <View className="w-40 h-40 bg-green-500 rounded-full items-center justify-center mb-8">
-              <Music size={64} color="white" strokeWidth={1.5} />
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ 
+              width: 160, 
+              height: 160, 
+              backgroundColor: DesignTokens.colors.success.main, 
+              borderRadius: 80, 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              marginBottom: 32 
+            }}>
+              <Music size={64} color={DesignTokens.colors.text.primary} strokeWidth={1.5} />
             </View>
-            <Text className="text-white text-xl mb-4">קובץ אודיו</Text>
+            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 20, marginBottom: 16 }}>קובץ אודיו</Text>
           </View>
         );
 
       default:
         return (
-          <View className="flex-1 justify-center items-center" style={{ backgroundColor: 'black' }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <FileText size={64} color="white" strokeWidth={1.5} />
-            <Text className="text-white text-lg mt-4">מסמך</Text>
+            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, marginTop: 16 }}>מסמך</Text>
           </View>
         );
     }
@@ -459,53 +469,53 @@ export default function MediaViewer({
   const renderActionBar = () => {
     return (
       <View 
-        className="absolute bottom-0 left-0 right-0"
         style={{ 
-          backgroundColor: '#181818', // אפור של האפליקציה
-          borderTopWidth: 1,
-          borderTopColor: 'rgba(255,255,255,0.1)',
-          paddingBottom: 30, // מרווח פנימי מהתחתית
+          backgroundColor: DesignTokens.colors.background.secondary,
+          paddingBottom: insets.bottom + 16
         }}
       >
-        {/* סרגל פעולות קבוע כמו WhatsApp */}
-        <View className="flex-row justify-around items-center py-6 px-8">
+        {/* סרגל פעולות */}
+        <View style={{ 
+          flexDirection: 'row', 
+          justifyContent: 'space-around', 
+          alignItems: 'center', 
+          paddingVertical: 16,
+          paddingHorizontal: 32
+        }}>
           <Pressable
             onPress={() => {
               console.log('💬 Reply button pressed!');
               onReply && onReply();
             }}
-            className="w-16 h-16 rounded-full items-center justify-center"
             style={{
-              backgroundColor: '#1A1A1A',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 12
             }}
           >
-            <MessageCircle size={24} color="white" strokeWidth={2} />
+            <MessageCircle size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </Pressable>
 
           <Pressable
             onPress={handleForward}
-            className="w-16 h-16 rounded-full items-center justify-center"
             style={{
-              backgroundColor: '#1A1A1A',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 12
             }}
           >
-            <Forward size={24} color="white" strokeWidth={2} />
+            <Forward size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </Pressable>
 
           <Pressable
             onPress={shareMedia}
-            className="w-16 h-16 rounded-full items-center justify-center"
             style={{
-              backgroundColor: '#1A1A1A',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 12
             }}
           >
-            <ShareIcon size={24} color="white" strokeWidth={2} />
+            <ShareIcon size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </Pressable>
 
           <Pressable
@@ -513,30 +523,28 @@ export default function MediaViewer({
               console.log('⭐ Star button pressed!');
               toggleStar();
             }}
-            className="w-16 h-16 rounded-full items-center justify-center"
             style={{
-              backgroundColor: '#1A1A1A',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 12
             }}
           >
             <Ionicons 
               name={isStarred ? "star" : "star-outline"} 
-              size={24} 
-              color={isStarred ? "#FFD700" : "white"} 
+              size={26} 
+              color={isStarred ? DesignTokens.colors.warning.main : DesignTokens.colors.text.primary} 
             />
           </Pressable>
 
           <Pressable
             onPress={downloadFile}
-            className="w-16 h-16 rounded-full items-center justify-center"
             style={{
-              backgroundColor: '#1A1A1A',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 12
             }}
           >
-            <Download size={24} color="white" strokeWidth={2} />
+            <Download size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </Pressable>
         </View>
       </View>
@@ -546,100 +554,86 @@ export default function MediaViewer({
   return (
     <Modal
       visible={visible}
-      transparent={true}
+      transparent={false}
       animationType="fade"
-      presentationStyle="overFullScreen"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
-      style={{ zIndex: 9999 }}
+      statusBarTranslucent={false}
     >
-      <Animated.View 
-        className="flex-1 bg-black"
+      <View 
         style={{ 
-          opacity: fadeAnim
+          flex: 1,
+          backgroundColor: DesignTokens.colors.background.primary
         }}
       >
         {/* Header */}
         <View 
-          className="flex-row justify-between items-center px-4 py-4"
           style={{
-            backgroundColor: '#181818', // אפור של האפליקציה
-            borderBottomWidth: 1,
-            borderBottomColor: 'rgba(255,255,255,0.1)',
-            paddingTop: insets.top + 16
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            backgroundColor: DesignTokens.colors.background.secondary,
+            paddingTop: insets.top + 12
           }}
         >
-          <View className="w-12" />
+          <View style={{ width: 48 }} />
           
-          <View className="flex-1 items-center">
-            <>
-              <Text 
-                className="text-white font-semibold text-lg"
-            style={{ 
-                  textShadowColor: 'rgba(0,0,0,0.8)',
-                  textShadowOffset: { width: 0, height: 1 },
-                  textShadowRadius: 3,
-                }}
-              >
-                {message?.sender?.full_name || 'שם לא ידוע'}
-              </Text>
-              <Text 
-                className="text-gray-300 text-sm mt-1"
-                style={{
-                  textShadowColor: 'rgba(0,0,0,0.8)',
-                  textShadowOffset: { width: 0, height: 1 },
-                  textShadowRadius: 3,
-                }}
-              >
-                {formatMessageTime(message?.created_at || new Date().toISOString())}
-              </Text>
-            </>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text 
+              style={{ 
+                color: DesignTokens.colors.text.primary,
+                fontWeight: '700',
+                fontSize: 18
+              }}
+            >
+              {message?.sender?.full_name || 'שם לא ידוע'}
+            </Text>
+            <Text 
+              style={{
+                color: DesignTokens.colors.text.tertiary,
+                fontSize: 14,
+                marginTop: 4
+              }}
+            >
+              {formatMessageTime(message?.created_at || new Date().toISOString())}
+            </Text>
           </View>
           
           <Pressable 
             onPress={onClose} 
-            className="w-12 h-12 rounded-full items-center justify-center"
             style={{ 
-              backgroundColor: '#1A1A1A',
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.2)',
+              padding: 8
             }}
           >
-            <X size={22} color="white" strokeWidth={2} />
+            <X size={24} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
           </Pressable>
         </View>
 
         {/* Media Content */}
-        <View className="flex-1 justify-center items-center bg-black">
-          <Animated.View 
-            style={{ 
-              transform: [{ translateY: slideAnim }],
-              opacity: fadeAnim,
-              width: '100%',
-              height: '100%',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-        >
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
           {renderMediaContent()}
-          </Animated.View>
         </View>
 
         {/* Caption */}
         {caption && (
           <View 
-            className="absolute left-4 right-4 px-4 py-3 rounded-2xl"
             style={{
-              backgroundColor: 'rgba(0,0,0,0.7)',
-              bottom: 140, // הזזה למעלה כדי שלא יגלוש על Action Bar
+              marginHorizontal: 20,
+              marginBottom: 16
             }}
           >
             <Text 
-              className="text-center text-base leading-5"
               style={{ 
-                color: 'white',
-                textShadowColor: 'rgba(0,0,0,0.8)',
+                color: DesignTokens.colors.text.primary,
+                textAlign: 'center',
+                fontSize: 15,
+                lineHeight: 20,
+                fontWeight: '500',
+                textShadowColor: DesignTokens.colors.overlay,
                 textShadowOffset: { width: 0, height: 1 },
-                textShadowRadius: 3,
+                textShadowRadius: 4
               }}
             >
               {caption}
@@ -696,7 +690,7 @@ export default function MediaViewer({
             }
           }}
         />
-      </Animated.View>
+      </View>
     </Modal>
   );
 }

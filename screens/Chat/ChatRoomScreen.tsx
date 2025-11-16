@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { View, FlatList, KeyboardAvoidingView, Platform, Text, Image, TouchableOpacity, Animated, ImageBackground, Alert, Pressable, TextInput, TouchableWithoutFeedback, Keyboard, ActivityIndicator, LayoutAnimation, UIManager } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { IconButton } from 'react-native-paper';
 import ChatBubble from '../../components/chat/ChatBubble';
 import MessageInputBar from '../../components/chat/MessageInputBar';
@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ArrowRight, X, ChevronDown, AtSign, ImageIcon, Video, Music, FileText, MessageCircle, XCircle } from 'lucide-react-native';
 import { mediaService } from '../../services/mediaService';
 import { supabase } from '../../lib/supabase';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 // פונקציה לזיהוי שפה
 const detectLanguage = (text: string): 'rtl' | 'ltr' => {
@@ -53,6 +53,7 @@ const detectLanguage = (text: string): 'rtl' | 'ltr' => {
 };
 
 export default function ChatRoomScreen() {
+  const DesignTokens = useDesignTokens();
   const { messages, sendMessage, chats, currentChatId, markMessageAsRead, markMessageAsDelivered, updateMessage, deleteMessage, loadMessages, typingUsers, startTyping, stopTyping } = useChat();
 
   // State for reply
@@ -156,6 +157,7 @@ export default function ChatRoomScreen() {
   const { user } = useAuth();
   const { backgroundImage } = useTheme();
   const navigation = useNavigation() as any;
+  const tabBarInsets = useSafeAreaInsets();
   const [membersCount, setMembersCount] = useState<number>(0);
   const [channelImageUrl, setChannelImageUrl] = useState<string | null>(null);
   const [channelMembers, setChannelMembers] = useState<string[]>([]);
@@ -171,12 +173,44 @@ export default function ChatRoomScreen() {
   const [latestMentionMessageId, setLatestMentionMessageId] = useState<string | null>(null);
   const mentionButtonOpacity = useRef(new Animated.Value(0)).current;
   
-  // מרווחים דינמיים מול ה-MessageInputBar והטאב התחתון
-  const INPUT_BAR_HEIGHT = 60; // גובה משוער - עודכן לגובה החדש
-  const EXTRA_BOTTOM_PADDING = 240; // עוד ריווח לבועה האחרונה
-  const LIST_BOTTOM_PADDING = INPUT_BAR_HEIGHT + EXTRA_BOTTOM_PADDING; // ריווח תחתון לרשימה
-  const SCROLL_BTN_BOTTOM = 100; // מיקום נוח מעל הטאב
-  const MENTION_BTN_BOTTOM = 130; // מעט מעל כפתור הגלילה - עודכן לגובה החדש
+  // הסתר TabBar כשנכנסים למסך זה
+  useFocusEffect(
+    useCallback(() => {
+      const parent = navigation.getParent();
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: { display: 'none' }
+        });
+      }
+      
+      return () => {
+        if (parent) {
+          parent.setOptions({
+            tabBarStyle: { 
+              backgroundColor: DesignTokens.colors.background.primary, 
+              borderTopWidth: 0,
+              height: Platform.OS === 'ios' ? 90 : 70 + tabBarInsets.bottom,
+              paddingBottom: Platform.OS === 'ios' ? 15 : tabBarInsets.bottom + 10,
+              paddingTop: 15,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+              display: 'flex'
+            }
+          });
+        }
+      };
+    }, [navigation])
+  );
+  
+  // מרווחים דינמיים מול ה-MessageInputBar (ללא TabBar)
+  const INPUT_BAR_HEIGHT = 60; // גובה משוער
+  const EXTRA_BOTTOM_PADDING = 200; // ריווח לבועה האחרונה (הוגדל עוד יותר כדי למנוע בליעה)
+  const LIST_BOTTOM_PADDING = INPUT_BAR_HEIGHT + EXTRA_BOTTOM_PADDING + tabBarInsets.bottom; // ריווח תחתון לרשימה כולל SafeArea
+  const SCROLL_BTN_BOTTOM = 90 + tabBarInsets.bottom; // מיקום מעל ה-InputBar כולל SafeArea
+  const MENTION_BTN_BOTTOM = 140 + tabBarInsets.bottom; // מעט מעל כפתור הגלילה כולל SafeArea
   
   // State לחיפוש
   const [isSearchVisible, setIsSearchVisible] = useState(false);
@@ -491,6 +525,7 @@ export default function ChatRoomScreen() {
     console.log('🔍 messagesWithDividers: Processing messages:', messages.length);
     
     const data: Array<Message | { type: 'divider'; date: Date; id: string } | { type: 'unread'; count: number; id: string }> = [];
+    const addedDividers = new Set<string>(); // עוקב אחרי dividers שכבר נוספו
     
     messages.forEach((message, index) => {
       // יצירת תאריך בצורה בטוחה יותר
@@ -522,13 +557,18 @@ export default function ChatRoomScreen() {
       });
       
       // Add day divider if it's the first message or if the day changed
+      const dividerKey = messageDate.toISOString().split('T')[0];
+      
       if (index === 0) {
-        console.log('🔍 messagesWithDividers: First message, adding divider');
-        data.push({
-          type: 'divider',
-          date: messageDate,
-          id: `divider-${messageDate.toISOString().split('T')[0]}`,
-        });
+        if (!addedDividers.has(dividerKey)) {
+          console.log('🔍 messagesWithDividers: First message, adding divider');
+          data.push({
+            type: 'divider',
+            date: messageDate,
+            id: `divider-${dividerKey}`,
+          });
+          addedDividers.add(dividerKey);
+        }
       } else {
         const prevMessageDate = new Date(messages[index - 1].created_at);
         const sameDay = isSameDay(messageDate, prevMessageDate);
@@ -538,13 +578,14 @@ export default function ChatRoomScreen() {
           sameDay
         });
         
-        if (!sameDay) {
+        if (!sameDay && !addedDividers.has(dividerKey)) {
           console.log('🔍 messagesWithDividers: Day changed, adding divider');
           data.push({
             type: 'divider',
             date: messageDate,
-            id: `divider-${messageDate.toISOString().split('T')[0]}`,
+            id: `divider-${dividerKey}`,
           });
+          addedDividers.add(dividerKey);
         }
       }
       
@@ -733,16 +774,16 @@ export default function ChatRoomScreen() {
   const handleScroll = (event: any) => {
     const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
     
-    // בדיקה אם המשתמש בתחתית (עם טולרנס קטן)
-    const isAtBottomNow = contentOffset.y <= 50;
+    // בדיקה אם המשתמש בתחתית (עם טולרנס קטן יותר)
+    const isAtBottomNow = contentOffset.y <= 30;
     setIsAtBottom(isAtBottomNow);
     
     // הצג/הסתר כפתור גלילה לתחתית
-    // אם המשתמש גולל למעלה (y > 100) ולא בתחתית
-    const shouldShowScrollButton = contentOffset.y > 100 && !isAtBottomNow;
+    // אם המשתמש גולל למעלה (y > 50) ולא בתחתית
+    const shouldShowScrollButton = contentOffset.y > 50 && !isAtBottomNow;
     setShowScrollToBottom(shouldShowScrollButton);
     
-    // אנימציה לכפתור הגלילה
+    // אנימציה לכפתור הגלילה - תמיד תציג אם צריך
     Animated.timing(scrollButtonOpacity, {
       toValue: shouldShowScrollButton ? 1 : 0,
       duration: 200,
@@ -769,22 +810,39 @@ export default function ChatRoomScreen() {
 
   // פונקציה לגלילה לתחתית
   const scrollToBottom = () => {
-    if (flatListRef.current && messagesWithDividers.length > 0) {
-      flatListRef.current.scrollToIndex({
-        index: 0, // בתצוגה הפוכה, index 0 הוא התחתית
-        animated: true,
-        viewPosition: 0
-      });
-      
-      // אפס את unreadCount כשגוללים לתחתית
-      if (unreadCount > 0 && currentChatId && user?.id) {
-        console.log('📜 ChatRoomScreen: Scrolling to bottom - resetting unread count');
-        setUnreadCount(0);
-        // עדכן גם במסד הנתונים
-        if (messages.length > 0) {
-          const lastMessage = messages[0]; // ההודעה החדשה ביותר
-          ChatService.markMessagesAsRead(currentChatId, user.id, lastMessage.id);
+    console.log('📜 ChatRoomScreen: scrollToBottom called');
+    if (flatListRef.current) {
+      try {
+        if (messagesWithDividers.length > 0) {
+          // נסה לגלול ל-index 0 (התחתית בתצוגה הפוכה)
+          flatListRef.current.scrollToIndex({
+            index: 0,
+            animated: true,
+            viewPosition: 0
+          });
+        } else {
+          // אם אין הודעות, גלול לתחילת הרשימה
+          flatListRef.current.scrollToOffset({ offset: 0, animated: true });
         }
+        
+        // אפס את unreadCount כשגוללים לתחתית
+        if (unreadCount > 0 && currentChatId && user?.id) {
+          console.log('📜 ChatRoomScreen: Scrolling to bottom - resetting unread count');
+          setUnreadCount(0);
+          // עדכן גם במסד הנתונים
+          if (messages.length > 0) {
+            const lastMessage = messages[0]; // ההודעה החדשה ביותר
+            ChatService.markMessagesAsRead(currentChatId, user.id, lastMessage.id);
+          }
+        }
+        
+        // סמן שאנחנו בתחתית
+        setIsAtBottom(true);
+        setShowScrollToBottom(false);
+      } catch (error) {
+        console.log('⚠️ ChatRoomScreen: Error scrolling to index, trying scrollToOffset:', error);
+        // Fallback - גלול לתחילת הרשימה
+        flatListRef.current.scrollToOffset({ offset: 0, animated: true });
       }
     }
   };
@@ -1010,17 +1068,18 @@ export default function ChatRoomScreen() {
           flexDirection: 'row-reverse',
           alignItems: 'center',
           paddingHorizontal: 16,
-          paddingTop: Platform.OS === 'ios' ? 40 : 20,
+          paddingTop: tabBarInsets.top + 10,
           paddingBottom: 10,
           borderBottomWidth: 1,
-          borderBottomColor: '#666666',
+          borderBottomColor: DesignTokens.colors.border.main,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 3 },
           shadowOpacity: 0.25,
           shadowRadius: 8,
           elevation: 8,
-          minHeight: Platform.OS === 'ios' ? 100 : 80,
-          overflow: 'hidden'
+          minHeight: tabBarInsets.top + 60,
+          overflow: 'hidden',
+          backgroundColor: DesignTokens.colors.background.secondary
         }}
       >
         {/* חזרה לרקע המקורי */}
@@ -1030,7 +1089,7 @@ export default function ChatRoomScreen() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: '#181818'
+          backgroundColor: DesignTokens.colors.background.secondary
         }} />
         {/* חץ חזרה - ימין */}
         <TouchableOpacity 
@@ -1042,7 +1101,7 @@ export default function ChatRoomScreen() {
             justifyContent: 'center'
           }}
         >
-          <ArrowRight size={24} color="#00E654" strokeWidth={2} />
+          <ArrowRight size={24} color={DesignTokens.colors.primary.main} strokeWidth={2} />
         </TouchableOpacity>
 
         {/* תמונה/אייקון הקבוצה */}
@@ -1066,8 +1125,8 @@ export default function ChatRoomScreen() {
                 borderRadius: 18,
                 marginLeft: 12,
                 borderWidth: 2,
-                borderColor: '#00E654',
-                shadowColor: '#00E654',
+                borderColor: DesignTokens.colors.primary.main,
+                shadowColor: DesignTokens.colors.primary.main,
                 shadowOpacity: 0.3,
                 shadowRadius: 4,
                 shadowOffset: { width: 0, height: 2 }
@@ -1078,18 +1137,18 @@ export default function ChatRoomScreen() {
               width: 36,
               height: 36,
               borderRadius: 18,
-              backgroundColor: '#00E654',
+              backgroundColor: DesignTokens.colors.primary.main,
               alignItems: 'center',
               justifyContent: 'center',
               marginLeft: 12,
               borderWidth: 2,
-              borderColor: '#00E654',
-              shadowColor: '#00E654',
+              borderColor: DesignTokens.colors.primary.main,
+              shadowColor: DesignTokens.colors.primary.main,
               shadowOpacity: 0.3,
               shadowRadius: 4,
               shadowOffset: { width: 0, height: 2 }
             }}>
-              <Ionicons name={iconName as any} size={18} color="#000000" />
+              <Ionicons name={iconName as any} size={18} color={DesignTokens.colors.text.primary} />
             </View>
           )}
           
@@ -1104,7 +1163,7 @@ export default function ChatRoomScreen() {
             </Text>
             <Text style={{
               fontSize: 12,
-              color: typingUsers.length > 0 ? '#00E654' : '#ccc',
+              color: typingUsers.length > 0 ? DesignTokens.colors.success.main : DesignTokens.colors.text.tertiary,
               marginTop: 2
             }} numberOfLines={1}>
               {typingUsers.length > 0 
@@ -1132,7 +1191,7 @@ export default function ChatRoomScreen() {
           <Ionicons 
             name={isSearchVisible ? "close" : "search"} 
             size={24} 
-            color="#00E654" 
+            color={DesignTokens.colors.primary.main} 
           />
         </TouchableOpacity>
       </View>
@@ -1142,9 +1201,9 @@ export default function ChatRoomScreen() {
   // מסך טעינה
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0b0b0b' }}>
+      <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
         <LinearGradient 
-          colors={['rgba(0,230,84,0.08)', 'rgba(0,230,84,0.03)', 'rgba(0,230,84,0.05)']} 
+          colors={[`${DesignTokens.colors.success.main}14`, `${DesignTokens.colors.success.main}08`, `${DesignTokens.colors.success.main}0D`]} 
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
         />
         <ImageBackground
@@ -1162,17 +1221,17 @@ export default function ChatRoomScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['left','right']}>
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <View style={{
-              backgroundColor: 'rgba(0,0,0,0.6)',
+              backgroundColor: DesignTokens.colors.background.secondary,
               paddingHorizontal: 32,
               paddingVertical: 24,
               borderRadius: 16,
               alignItems: 'center',
               borderWidth: 1,
-              borderColor: 'rgba(0,230,84,0.2)'
+              borderColor: `${DesignTokens.colors.success.main}33`
             }}>
-              <ActivityIndicator size="large" color="#00E654" />
+              <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
               <Text style={{ 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 fontSize: 16, 
                 fontWeight: '500',
                 marginTop: 16,
@@ -1190,8 +1249,9 @@ export default function ChatRoomScreen() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1, backgroundColor: '#121212' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
       >
       <ImageBackground 
         source={{ uri: backgroundImage }}
@@ -1233,7 +1293,7 @@ export default function ChatRoomScreen() {
       {isSearchVisible && (
         <View 
           style={{ 
-            backgroundColor: 'rgba(0,0,0,0.85)',
+            backgroundColor: DesignTokens.colors.background.secondary,
             borderBottomColor: '#333',
             borderBottomWidth: 1,
             paddingHorizontal: 12,
@@ -1244,7 +1304,7 @@ export default function ChatRoomScreen() {
             style={{ 
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.06)',
+              backgroundColor: DesignTokens.colors.background.tertiary,
               borderColor: '#333',
               borderWidth: 1,
               borderRadius: 14,
@@ -1260,12 +1320,12 @@ export default function ChatRoomScreen() {
             <Ionicons 
               name="search" 
               size={20} 
-              color="#00E654" 
+              color={DesignTokens.colors.primary.main} 
               style={{ marginLeft: 8 }} 
             />
             <TextInput
               placeholder="חיפוש בהודעות..."
-              placeholderTextColor="#9AA0A6"
+              placeholderTextColor={DesignTokens.colors.text.tertiary}
               value={searchQuery}
               onChangeText={(text: string) => {
                 setSearchQuery(text);
@@ -1275,7 +1335,7 @@ export default function ChatRoomScreen() {
                 flex: 1,
                 textAlign: 'right',
                 fontSize: 16,
-                color: '#FFFFFF'
+                color: DesignTokens.colors.text.primary
               }}
             />
             {searchQuery.length > 0 && (
@@ -1286,7 +1346,7 @@ export default function ChatRoomScreen() {
                 }}
                 style={{ marginLeft: 8 }}
               >
-                  <XCircle size={20} color="#6E7681" strokeWidth={2} />
+                  <XCircle size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
               </TouchableOpacity>
             )}
           </View>
@@ -1399,37 +1459,48 @@ export default function ChatRoomScreen() {
           showsVerticalScrollIndicator={false}
         />
         {/* כפתור גלילה לתחתית */}
-        <Animated.View
-          style={{
-            position: 'absolute',
-            bottom: SCROLL_BTN_BOTTOM,
-            right: 16,
-            opacity: scrollButtonOpacity,
-            transform: [
-              {
-                scale: scrollButtonOpacity.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
-          }}
-          pointerEvents={showScrollToBottom ? 'auto' : 'none'}
-        >
-          <TouchableOpacity
-            onPress={scrollToBottom}
-            className="w-12 h-12 bg-gray-900 rounded-full items-center justify-center shadow-lg"
+        {showScrollToBottom && (
+          <Animated.View
             style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
+              position: 'absolute',
+              bottom: SCROLL_BTN_BOTTOM,
+              right: 16,
+              opacity: scrollButtonOpacity,
+              transform: [
+                {
+                  scale: scrollButtonOpacity.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+              zIndex: 1000,
             }}
+            pointerEvents="auto"
           >
-            <ChevronDown size={24} color="#fff" strokeWidth={2} />
-          </TouchableOpacity>
-        </Animated.View>
+            <TouchableOpacity
+              onPress={scrollToBottom}
+              activeOpacity={0.7}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: DesignTokens.colors.background.secondary,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: DesignTokens.colors.border.primary,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.4,
+                shadowRadius: 8,
+                elevation: 8,
+              }}
+            >
+              <ChevronDown size={28} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* כפתור גלילה להודעה עם mention */}
         <Animated.View
@@ -1451,9 +1522,21 @@ export default function ChatRoomScreen() {
         >
           <TouchableOpacity
             onPress={scrollToMention}
-            className="w-12 h-12 bg-[#00E654] rounded-full items-center justify-center shadow-lg"
+            style={{ 
+              width: 48,
+              height: 48,
+              backgroundColor: DesignTokens.colors.success.main,
+              borderRadius: 24,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8
+            }}
             style={{
-              shadowColor: '#00E654',
+              shadowColor: DesignTokens.colors.primary.main,
               shadowOffset: { width: 0, height: 3 },
               shadowOpacity: 0.3,
               shadowRadius: 8,
@@ -1471,40 +1554,40 @@ export default function ChatRoomScreen() {
                 position: 'absolute',
                 left: 0,
                 right: 0,
-                bottom: INPUT_BAR_HEIGHT + 1,
+                bottom: INPUT_BAR_HEIGHT + tabBarInsets.bottom + 10,
                 zIndex: 1001,
                 marginHorizontal: 0,
-                backgroundColor: 'rgba(19, 19, 19, 0.8)',
+                backgroundColor: DesignTokens.colors.background.secondary,
                 borderRadius: 0,
                 paddingVertical: 10,
                 paddingHorizontal: 16,
                 borderLeftWidth: 3,
-                borderLeftColor: '#00E654',
+                borderLeftColor: DesignTokens.colors.success.main,
                 borderWidth: 0,
                 borderBottomWidth: 1,
-                borderColor: 'rgba(255,255,255,0.06)'
+                borderColor: DesignTokens.colors.border.primary
               }}
             >
               <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start' }}>
                 {/* אייקון לפי סוג */}
                 <View style={{
                   width: 32, height: 32, borderRadius: 16,
-                  backgroundColor: 'rgba(0,230,84,0.15)',
+                  backgroundColor: `${DesignTokens.colors.success.main}26`,
                   alignItems: 'center', justifyContent: 'center',
                   marginLeft: 10, marginTop: 2,
-                  borderWidth: 1, borderColor: 'rgba(0,230,84,0.25)'
+                  borderWidth: 1, borderColor: `${DesignTokens.colors.success.main}40`
                 }}>
-                  {replyingTo.type === 'image' && <ImageIcon size={16} color="#00E654" strokeWidth={2} />}
-                  {replyingTo.type === 'video' && <Video size={16} color="#00E654" strokeWidth={2} />}
-                  {replyingTo.type === 'audio' && <Music size={16} color="#00E654" strokeWidth={2} />}
-                  {replyingTo.type === 'document' && <FileText size={16} color="#00E654" strokeWidth={2} />}
-                  {!replyingTo.type && <MessageCircle size={16} color="#00E654" strokeWidth={2} />}
+                  {replyingTo.type === 'image' && <ImageIcon size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                  {replyingTo.type === 'video' && <Video size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                  {replyingTo.type === 'audio' && <Music size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                  {replyingTo.type === 'document' && <FileText size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                  {!replyingTo.type && <MessageCircle size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
                 </View>
 
                 {/* תוכן */}
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700', textAlign: 'right' }}>
+                    <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 13, fontWeight: '700', textAlign: 'right' }}>
                       {replyingTo.sender?.full_name || 'משתמש'}
                     </Text>
                     <Pressable onPress={cancelReply} hitSlop={10}>
@@ -1513,7 +1596,7 @@ export default function ChatRoomScreen() {
                   </View>
                   <Text 
                     style={{ 
-                      color: '#B0B0B0', 
+                      color: DesignTokens.colors.text.secondary, 
                       fontSize: 12, 
                       textAlign: replyingTo.content && replyingTo.content.trim().length > 0 
                         ? (detectLanguage(replyingTo.content) === 'rtl' ? 'right' : 'left')

@@ -6,6 +6,7 @@ import { User, Mail, Lock } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { AuthService } from '../../services/authService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 export default function RegisterScreen({ navigation }: any) {
   const [fullName, setFullName] = useState('');
@@ -105,7 +106,7 @@ export default function RegisterScreen({ navigation }: any) {
         style={{ flex: 1 }}
       >
         <LinearGradient
-          colors={['#1a1a1a', '#2d3a2d', '#1f2a1f', '#1a1a1a']}
+          colors={[DesignTokens.colors.background.secondary, DesignTokens.colors.background.tertiary, DesignTokens.colors.background.tertiary, DesignTokens.colors.background.secondary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ flex: 1 }}
@@ -121,7 +122,7 @@ export default function RegisterScreen({ navigation }: any) {
                   top: dot.y,
                   width: dot.size,
                   height: dot.size,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   opacity: dot.opacity,
                   borderRadius: dot.size / 2
                 }}
@@ -168,7 +169,7 @@ export default function RegisterScreen({ navigation }: any) {
               <Text style={{ 
                 fontSize: 32, 
                 fontWeight: '800', 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 marginBottom: 8,
                 letterSpacing: -0.8,
                 textAlign: 'center',
@@ -180,7 +181,7 @@ export default function RegisterScreen({ navigation }: any) {
               {/* Subtitle */}
               <Text style={{ 
                 fontSize: 16, 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontWeight: '400',
                 letterSpacing: 0.3,
                 textAlign: 'center',
@@ -194,7 +195,7 @@ export default function RegisterScreen({ navigation }: any) {
               <View style={{
                 width: 60,
                 height: 2,
-                backgroundColor: '#00E654',
+                backgroundColor: DesignTokens.colors.primary.main,
                 marginTop: 16,
                 borderRadius: 1
               }} />
@@ -205,7 +206,7 @@ export default function RegisterScreen({ navigation }: any) {
               {/* Full Name Input */}
               <View>
                 <Text style={{ 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   fontSize: 14, 
                   fontWeight: '600', 
                   marginBottom: 8,
@@ -216,20 +217,20 @@ export default function RegisterScreen({ navigation }: any) {
                   שם מלא
                 </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  borderColor: '#333333',
+                  borderColor: DesignTokens.colors.border.main,
                   paddingHorizontal: 16,
                   paddingVertical: 4,
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <User size={20} color="#666666" strokeWidth={2} />
+                  <User size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -237,7 +238,7 @@ export default function RegisterScreen({ navigation }: any) {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס את שמך המלא"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={fullName}
                     onChangeText={setFullName}
                     autoCapitalize="words"
@@ -249,7 +250,7 @@ export default function RegisterScreen({ navigation }: any) {
               {/* Email Input */}
               <View>
                 <Text style={{ 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   fontSize: 14, 
                   fontWeight: '600', 
                   marginBottom: 8,
@@ -260,20 +261,20 @@ export default function RegisterScreen({ navigation }: any) {
                   כתובת אימייל
                 </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  borderColor: '#333333',
+                  borderColor: DesignTokens.colors.border.main,
                   paddingHorizontal: 16,
                   paddingVertical: 4,
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Mail size={20} color="#666666" strokeWidth={2} />
+                  <Mail size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -281,7 +282,7 @@ export default function RegisterScreen({ navigation }: any) {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס את כתובת האימייל"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
@@ -294,7 +295,7 @@ export default function RegisterScreen({ navigation }: any) {
               {/* Password Input */}
               <View>
                 <Text style={{ 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   fontSize: 14, 
                   fontWeight: '600', 
                   marginBottom: 8,
@@ -305,20 +306,20 @@ export default function RegisterScreen({ navigation }: any) {
                   סיסמה
                 </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  borderColor: '#333333',
+                  borderColor: DesignTokens.colors.border.main,
                   paddingHorizontal: 16,
                   paddingVertical: 4,
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Lock size={20} color="#666666" strokeWidth={2} />
+                  <Lock size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -326,7 +327,7 @@ export default function RegisterScreen({ navigation }: any) {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס סיסמה (לפחות 6 תווים)"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -339,7 +340,7 @@ export default function RegisterScreen({ navigation }: any) {
                     <Ionicons 
                       name={showPassword ? "eye-off-outline" : "eye-outline"} 
                       size={20} 
-                      color="#666666" 
+                      color={DesignTokens.colors.text.tertiary} 
                     />
                   </Pressable>
                 </View>
@@ -348,7 +349,7 @@ export default function RegisterScreen({ navigation }: any) {
               {/* Confirm Password Input */}
               <View>
                 <Text style={{ 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   fontSize: 14, 
                   fontWeight: '600', 
                   marginBottom: 8,
@@ -359,20 +360,20 @@ export default function RegisterScreen({ navigation }: any) {
                   אימות סיסמה
                 </Text>
                 <View style={{
-                  backgroundColor: '#1a1a1a',
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   borderRadius: 14,
                   borderWidth: 1.5,
-                  borderColor: '#333333',
+                  borderColor: DesignTokens.colors.border.main,
                   paddingHorizontal: 16,
                   paddingVertical: 4,
                   flexDirection: 'row',
                   alignItems: 'center'
                 }}>
-                  <Lock size={20} color="#666666" strokeWidth={2} />
+                  <Lock size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   <TextInput
                     style={{
                       flex: 1,
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       paddingHorizontal: 12,
                       paddingVertical: 16,
                       fontSize: 16,
@@ -380,7 +381,7 @@ export default function RegisterScreen({ navigation }: any) {
                       textAlign: 'right'
                     }}
                     placeholder="הכנס שוב את הסיסמה"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showConfirmPassword}
@@ -393,7 +394,7 @@ export default function RegisterScreen({ navigation }: any) {
                     <Ionicons 
                       name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
                       size={20} 
-                      color="#666666" 
+                      color={DesignTokens.colors.text.tertiary} 
                     />
                   </Pressable>
                 </View>
@@ -401,13 +402,13 @@ export default function RegisterScreen({ navigation }: any) {
 
               {/* Register Button */}
               <LinearGradient
-                colors={['#00E654', '#00B84A', '#008F3A']}
+                colors={[DesignTokens.colors.primary.main, DesignTokens.colors.primary.dark, DesignTokens.colors.primary.darker]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
                   borderRadius: 14,
                   marginTop: 12,
-                  shadowColor: '#00E654',
+                  shadowColor: DesignTokens.colors.primary.main,
                   shadowOffset: { width: 0, height: 6 },
                   shadowOpacity: 0.4,
                   shadowRadius: 12,
@@ -425,7 +426,7 @@ export default function RegisterScreen({ navigation }: any) {
                   }}
                 >
                   <Text style={{ 
-                    color: '#000000', 
+                    color: DesignTokens.colors.background.primary, 
                     fontSize: 16, 
                     fontWeight: '700',
                     letterSpacing: 0.5,
@@ -445,12 +446,12 @@ export default function RegisterScreen({ navigation }: any) {
                 marginTop: 24,
                 gap: 6
               }}>
-                <Text style={{ color: '#A0A0A0', fontSize: 14, fontWeight: '400' }}>
+                <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 14, fontWeight: '400' }}>
                   יש לך כבר חשבון?
                 </Text>
                 <Pressable onPress={() => navigation.navigate('Login')}>
                   <Text style={{ 
-                    color: '#00E654', 
+                    color: DesignTokens.colors.primary.main, 
                     fontSize: 14, 
                     fontWeight: '600',
                     letterSpacing: 0.2,

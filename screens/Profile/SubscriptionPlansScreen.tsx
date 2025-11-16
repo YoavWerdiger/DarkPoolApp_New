@@ -27,6 +27,7 @@ import { useAuth } from '../../context/AuthContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedToggle from '../../components/ui/AnimatedToggle';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = Math.round(screenWidth * 0.78);
@@ -46,11 +47,12 @@ interface SubscriptionPlan {
   color: string;
 }
 
-type BillingPeriod = 'monthly' | 'quarterly' | 'yearly';
+type BillingPeriod = 'monthly' | 'yearly';
 
 export default function SubscriptionPlansScreen({ navigation }: any) {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
+  const DesignTokens = useDesignTokens();
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [scrollX] = useState(new Animated.Value(0));
@@ -61,13 +63,13 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
 
   // רשימת כל התכונות האפשריות
   const allFeatures = [
-    'חדשות כלכליות יומיות',
-    'חדשות מתפרצות בזמן אמת וציוצים',
-    'גישה לקהילה הכללית',
-    'חדר סווינגים והשקעות',
-    'איתותי מסחר יומי',
-    'איתותי Penny Stocks',
-    'יומן מסחר אישי',
+    'חדשות כלכליות',
+    'הכרזות רשמיות של ברוך ודוד אריאל',
+    'קבוצה חינמית של מאות סוחרים ומשקיעים',
+    'חדשות מתפרצות בזמן אמת',
+    'דיווחי תוצאות של חברות',
+    'יומן מסחר',
+    'גישה לקהילה הפרימיום',
     'קורס הלוויתנים במתנה'
   ];
 
@@ -80,18 +82,14 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
     
     if (period === 'monthly') {
       plans.push(
-        SUBSCRIPTION_PLANS.gold_monthly,
-        SUBSCRIPTION_PLANS.premium_monthly,
+        SUBSCRIPTION_PLANS.monthly,
         SUBSCRIPTION_PLANS.platinum_monthly
       );
-    } else if (period === 'quarterly') {
-      plans.push(
-        SUBSCRIPTION_PLANS.gold_quarterly,
-        SUBSCRIPTION_PLANS.premium_quarterly,
-        SUBSCRIPTION_PLANS.platinum_quarterly
-      );
     } else if (period === 'yearly') {
-      plans.push(SUBSCRIPTION_PLANS.platinum_pro_yearly);
+      plans.push(
+        SUBSCRIPTION_PLANS.platinum_yearly,
+        SUBSCRIPTION_PLANS.elite_yearly
+      );
     }
     
     return plans;
@@ -115,7 +113,15 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
     }
     
     setSelectedPlan(planId);
-    // מעבר למסך התשלום
+    // לא נכנס ישר לדף הרשמה - רק כשלוחצים על "הצטרפות למסלול"
+  };
+
+  const handleJoinPlan = (planId: string) => {
+    if (planId === 'free') {
+      return;
+    }
+    
+    // מעבר למסך התשלום רק כשלוחצים על "הצטרפות למסלול"
     navigation.navigate('CreditCardCheckout', { 
       planId: planId,
       fromRegistration: false 
@@ -126,13 +132,11 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
     switch (planName) {
       case 'חינמי':
         return Users;
-      case 'Gold':
+      case 'מסלול פרימיום':
         return Star;
-      case 'Premium':
+      case 'מסלול פלטינום':
         return Crown;
-      case 'Platinum':
-        return Zap;
-      case 'Platinum Pro':
+      case 'מסלול עלית':
         return Gift;
       default:
         return Users;
@@ -142,17 +146,15 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
   const getPlanGradient = (planName: string) => {
     switch (planName) {
       case 'חינמי':
-        return ['#6B7280', '#9CA3AF'];
-      case 'Gold':
-        return ['#F59E0B', '#FCD34D'];
-      case 'Premium':
+        return [DesignTokens.colors.text.tertiary, DesignTokens.colors.text.secondary];
+      case 'מסלול פרימיום':
         return ['#3B82F6', '#60A5FA'];
-      case 'Platinum':
+      case 'מסלול פלטינום':
         return ['#8B5CF6', '#A78BFA'];
-      case 'Platinum Pro':
+      case 'מסלול עלית':
         return ['#F59E0B', '#FCD34D'];
       default:
-        return ['#6B7280', '#9CA3AF'];
+        return [DesignTokens.colors.text.tertiary, DesignTokens.colors.text.secondary];
     }
   };
 
@@ -246,7 +248,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           style={{
             width: CARD_WIDTH,
             minHeight: 520,
-            backgroundColor: theme.cardBackground,
+            backgroundColor: isDarkMode ? '#2A2A2A' : '#FFFFFF',
             borderRadius: 24,
             padding: 24,
             borderWidth: isSelected ? 2 : 1,
@@ -346,7 +348,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                   }}>
                     <Text style={{
                       fontSize: 12,
-                      color: '#ffffff',
+                      color: DesignTokens.colors.text.primary,
                       fontWeight: '700'
                     }}>
                       {savings}
@@ -404,33 +406,34 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
 
           {/* CTA Button */}
           <View style={{ marginTop: 12 }}>
-            <View style={{
-              backgroundColor: plan.price === 0 
-                ? 'rgba(255, 255, 255, 0.05)' 
-                : isSelected 
-                  ? plan.color 
-                  : plan.color + '15',
-              paddingVertical: 14,
-              paddingHorizontal: 24,
-              borderRadius: 16,
-              alignItems: 'center',
-              borderWidth: plan.price === 0 ? 0 : 2,
-              borderColor: plan.price === 0 
-                ? 'transparent' 
-                : plan.color + '40'
-            }}>
+            <TouchableOpacity
+              onPress={() => plan.price > 0 && handleJoinPlan(plan.id)}
+              disabled={plan.price === 0}
+              style={{
+                backgroundColor: plan.price === 0 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : plan.color,
+                paddingVertical: 14,
+                paddingHorizontal: 24,
+                borderRadius: 16,
+                alignItems: 'center',
+                borderWidth: plan.price === 0 ? 0 : 2,
+                borderColor: plan.price === 0 
+                  ? 'transparent' 
+                  : plan.color + '40',
+                opacity: plan.price === 0 ? 0.6 : 1
+              }}
+            >
               <Text style={{
                 fontSize: 16,
                 fontWeight: '700',
                 color: plan.price === 0 
                   ? theme.textSecondary 
-                  : isSelected 
-                    ? '#ffffff' 
-                    : plan.color
+                  : DesignTokens.colors.text.primary
               }}>
-                {plan.price === 0 ? 'מסלול נוכחי' : isSelected ? '✓ נבחר' : 'בחר מסלול'}
+                {plan.price === 0 ? 'מסלול נוכחי' : 'הצטרפות למסלול'}
               </Text>
-            </View>
+            </TouchableOpacity>
           </View>
         </AnimatedCard>
       </Animated.View>
@@ -540,7 +543,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             borderWidth: 1,
             borderColor: 'rgba(255, 255, 255, 0.08)'
           }}>
-            {(['monthly', 'quarterly', 'yearly'] as BillingPeriod[]).map((period, index) => {
+            {(['monthly', 'yearly'] as BillingPeriod[]).map((period, index) => {
               const isSelected = billingPeriod === period;
               return (
                 <TouchableOpacity
@@ -569,17 +572,6 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                   }}>
                     {getPeriodText(period)}
                   </Text>
-                  {period === 'quarterly' && (
-                        <Text style={{
-                          fontSize: 10,
-                          color: isSelected 
-                            ? 'rgba(5, 209, 87, 0.8)' 
-                            : theme.textTertiary,
-                          fontWeight: '500'
-                        }}>
-                          💰 חיסכון 16%
-                        </Text>
-                  )}
                   {period === 'yearly' && (
                         <Text style={{
                           fontSize: 10,
@@ -778,25 +770,35 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                     }}>
                       {hasFeature ? (
                         <View style={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: 9,
-                          backgroundColor: `${plan.color}20`,
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: `${plan.color}30`,
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          shadowColor: plan.color,
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.5,
+                          shadowRadius: 4,
+                          elevation: 4
                         }}>
-                          <Check size={12} color={plan.color} strokeWidth={2.5} />
+                          <Check size={14} color={plan.color} strokeWidth={3} />
                         </View>
                       ) : (
                         <View style={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: 9,
-                          backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: 'rgba(239, 68, 68, 0.2)',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          shadowColor: '#EF4444',
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 4,
+                          elevation: 3
                         }}>
-                          <X size={12} color={theme.textTertiary} strokeWidth={2.5} />
+                          <X size={14} color="#EF4444" strokeWidth={3} />
                         </View>
                       )}
                     </View>

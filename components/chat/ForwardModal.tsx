@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useDesignTokens } from "../ui/DesignTokens";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,15 +7,11 @@ import {
   FlatList,
   Image,
   StyleSheet,
-  Dimensions,
-  Alert,
-  Modal,
-  Animated,
-  Pressable,
-  PanResponder
+  Alert
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
+import UIBottomSheet from '../ui/UIBottomSheet';
 
 interface ForwardModalProps {
   visible: boolean;
@@ -22,8 +19,6 @@ interface ForwardModalProps {
   onForward: (channelId: string, channelName: string) => void;
   messageId: string;
 }
-
-const { width, height } = Dimensions.get('window');
 
 const ForwardModal: React.FC<ForwardModalProps> = ({
   visible,
@@ -40,9 +35,6 @@ const ForwardModal: React.FC<ForwardModalProps> = ({
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [forwarding, setForwarding] = useState(false);
-  const slideAnim = useRef(new Animated.Value(height)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const panY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     console.log('📤 ForwardModal visible changed to:', visible);
@@ -50,73 +42,8 @@ const ForwardModal: React.FC<ForwardModalProps> = ({
       console.log('📤 ForwardModal opening...');
       loadChannels();
       setSelectedChannels([]); // נקה בחירות קודמות
-      // אנימציה להצגה
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      // אנימציה להסתרה
-      panY.setValue(0); // איפוס הגרירה
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: height,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
     }
   }, [visible]);
-
-  // PanResponder לגרירה - רק על ההנדל
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        // התחל גרירה אם מושכים למטה יותר מ-5 פיקסלים
-        return Math.abs(gestureState.dy) > 5;
-      },
-      onPanResponderGrant: () => {
-        // התחלת גרירה
-        panY.setOffset(panY._value);
-        panY.setValue(0);
-      },
-      onPanResponderMove: (evt, gestureState) => {
-        // גרירה בכל כיוון אבל רק כלפי מטה באמת זז
-        if (gestureState.dy >= 0) {
-          panY.setValue(gestureState.dy);
-        }
-      },
-      onPanResponderRelease: (evt, gestureState) => {
-        panY.flattenOffset();
-        if (gestureState.dy > 120) {
-          // סגירה אם גוררים יותר מ-120px למטה
-          onClose();
-        } else {
-          // חזרה למקום
-          Animated.spring(panY, {
-            toValue: 0,
-            useNativeDriver: false,
-            tension: 100,
-            friction: 8,
-          }).start();
-        }
-      },
-    })
-  ).current;
 
   const loadChannels = async () => {
     setLoading(true);
@@ -183,44 +110,32 @@ const ForwardModal: React.FC<ForwardModalProps> = ({
   };
 
   return (
-    <Modal
+    <UIBottomSheet
       visible={visible}
-      transparent={true}
-      animationType="none"
-      onRequestClose={onClose}
+      onClose={onClose}
+      maxHeight="75%"
+      dragToClose={true}
+      contentStyle={{ padding: 0 }}
     >
-      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        <Animated.View 
-          style={[
-            styles.container,
-            {
-              transform: [
-                { translateY: slideAnim },
-                { translateY: panY }
-              ]
-            }
-          ]}
-        >
-          {/* Gradient overlay - green→dark theme */}
-          <LinearGradient
-            colors={['rgba(0, 230, 84, 0.12)', 'transparent', 'rgba(0, 230, 84, 0.10)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-          {/* Drag handle removed per new design */}
-          
-          <View style={styles.header}>
-            <Text style={styles.title}>Forward to...</Text>
-            {selectedChannels.length > 0 && (
-              <Text style={styles.selectedCount}>{selectedChannels.length} selected</Text>
-            )}
-          </View>
+      <View style={{ position: 'relative', height: '100%' }}>
+        {/* Gradient overlay - green→dark theme */}
+        <LinearGradient
+          colors={['rgba(0, 230, 84, 0.12)', 'transparent', 'rgba(0, 230, 84, 0.10)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
+        />
+        
+        <View style={styles.header}>
+          <Text style={styles.title}>העבר ל...</Text>
+          {selectedChannels.length > 0 && (
+            <Text style={styles.selectedCount}>{selectedChannels.length} נבחרו</Text>
+          )}
+        </View>
           
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Loading...</Text>
+              <Text style={styles.loadingText}>טוען ערוצים...</Text>
             </View>
           ) : (
             <>
@@ -256,7 +171,7 @@ const ForwardModal: React.FC<ForwardModalProps> = ({
                 }}
                 ListEmptyComponent={
                   <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyText}>No channels found</Text>
+                    <Text style={styles.emptyText}>לא נמצאו ערוצים</Text>
                   </View>
                 }
               />
@@ -272,71 +187,19 @@ const ForwardModal: React.FC<ForwardModalProps> = ({
                     disabled={forwarding}
                   >
                     <Text style={styles.forwardButtonText}>
-                      {forwarding ? 'Sending...' : `Send to ${selectedChannels.length}`}
+                      {forwarding ? 'שולח...' : `שלח ל-${selectedChannels.length}`}
                     </Text>
                   </TouchableOpacity>
                 </View>
               )}
             </>
           )}
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+      </View>
+    </UIBottomSheet>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    zIndex: 9999, // גבוה מאוד כדי להיות מעל MediaViewer
-  },
-  backdrop: {
-    flex: 1,
-  },
-  container: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#1A1A1A',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: height * 0.75,
-    minHeight: height * 0.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.15,
-    zIndex: 10000, // עוד יותר גבוה
-    shadowRadius: 10,
-    elevation: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
-  },
-  handleContainer: {
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-  },
-  handle: {
-    width: 48,
-    height: 4,
-    backgroundColor: '#666',
-    borderRadius: 2,
-    marginBottom: 8,
-  },
-  dragHint: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dragHintDot: {
-    width: 4,
-    height: 4,
-    backgroundColor: '#8A8A8A',
-    borderRadius: 2,
-    marginHorizontal: 2,
-  },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,

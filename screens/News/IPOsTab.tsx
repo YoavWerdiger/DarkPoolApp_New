@@ -8,7 +8,7 @@ import {
   Pressable
 } from 'react-native';
 import { Rocket, Calendar, DollarSign } from 'lucide-react-native';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
 
 interface IPO {
@@ -30,7 +30,7 @@ interface IPO {
 const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
   const getDealTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'priced': return '#00D84A';
+      case 'priced': return 'DesignTokens.colors.success.main';
       case 'expected': return '#F59E0B';
       case 'filed': return '#3B82F6';
       case 'amended': return '#8B5CF6';
@@ -73,12 +73,6 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
         paddingVertical: 14,
         paddingHorizontal: 16,
         backgroundColor: DesignTokens.colors.background.secondary,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
-        elevation: 6,
-        borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.06)'
       }}
     >
@@ -143,13 +137,12 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       {(hasPricing || ipo.shares > 0) && (
         <View style={{ flexDirection: 'row-reverse', marginTop: 8 }}>
           {hasPricing && (
-            <View style={{ flex: 1, marginLeft: 8, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}>
               <DollarSign size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginBottom: 4 }} />
               <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>
                 {ipo.offer_price > 0 ? 'מחיר הצעה' : 'טווח מחירים'}
               </Text>
               {ipo.offer_price > 0 ? (
-                <Text style={{ fontSize: 17, fontWeight: '700', color: '#00D84A' }}>
+                <Text style={{ fontSize: 17, fontWeight: '700', color: 'DesignTokens.colors.success.main' }}>
                   ${ipo.offer_price.toFixed(2)}
                 </Text>
               ) : (
@@ -161,7 +154,6 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
           )}
 
           {ipo.shares > 0 && (
-            <View style={{ flex: 1, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}>
               <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>
                 מניות
               </Text>
@@ -248,7 +240,7 @@ export default function IPOsTab() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-        <ActivityIndicator size="large" color="#00D84A" />
+        <ActivityIndicator size="large" color="DesignTokens.colors.success.main" />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען הנפקות...
         </Text>
@@ -266,8 +258,8 @@ export default function IPOsTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#00D84A"
-            colors={['#00D84A']}
+            tintColor="DesignTokens.colors.success.main"
+            colors={['DesignTokens.colors.success.main']}
           />
         }
         ListEmptyComponent={renderEmptyState}

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 const tracks = [
   { id: '1', name: 'מסלול משקיעים מתחילים', icon: 'trending-up' },
@@ -25,7 +26,7 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
       <Animatable.Text animation="fadeInDown" duration={700} style={{ fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 16, textAlign: 'right' }}>
         בחר מסלול
       </Animatable.Text>
-      <Animatable.Text animation="fadeInDown" delay={100} style={{ color: '#00E654', fontSize: 16, marginBottom: 32, textAlign: 'right' }}>
+      <Animatable.Text animation="fadeInDown" delay={100} style={{ color: DesignTokens.colors.primary.main, fontSize: 16, marginBottom: 32, textAlign: 'right' }}>
         בחר את המסלול המתאים ביותר עבורך
       </Animatable.Text>
       <Animatable.View animation="fadeInUp" delay={200} style={{ flex: 1 }}>
@@ -62,7 +63,7 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
         <TouchableOpacity
           onPress={handleNext}
           activeOpacity={0.8}
-          style={{ backgroundColor: selectedTrack ? '#00E654' : '#333', paddingVertical: 16, borderRadius: 12, marginTop: 12, shadowColor: '#00E654', shadowOpacity: selectedTrack ? 0.3 : 0, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}
+          style={{ backgroundColor: selectedTrack ? '#00E654' : '#333', paddingVertical: 16, borderRadius: 12, marginTop: 12, shadowColor: DesignTokens.colors.primary.main, shadowOpacity: selectedTrack ? 0.3 : 0, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }}
           disabled={!selectedTrack}
         >
           <Animatable.Text animation="pulse" iterationCount="infinite" style={{ color: selectedTrack ? '#111' : '#888', fontWeight: 'bold', fontSize: 18, textAlign: 'center' }}>

@@ -5,20 +5,85 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="dc0faa45-f8d2-4a54-8e53-ba585d94c810" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/App.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/GOOGLE_PLAY_UPLOAD_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/GOOGLE_PLAY_UPLOAD_GUIDE.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/src/main/java/com/darkpoolapp/DarkPool/MainActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/src/main/java/com/darkpoolapp/DarkPool/MainApplication.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/values/strings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/src/main/res/values/strings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/adaptive-icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/adaptive-icon.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/favicon.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/icon.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/splash-icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/splash-icon.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/ActionMenu.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/ActionMenu.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/ChannelsList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/ChannelsList.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/ChatBubble.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/ChatBubble.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/ContextMenu.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/ContextMenu.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/ForwardModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/ForwardModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/GroupHeader.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/GroupHeader.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/LongPressOverlay.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/LongPressOverlay.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/MediaMessageRenderer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/MediaMessageRenderer.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/components/chat/MediaPreviewModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/MediaPreviewModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/MediaViewer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/MediaViewer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/MessageActionSheet.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/MessageActionSheet.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/MessageContextMenu.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/MessageContextMenu.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/MessageInputBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/MessageInputBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/MessagePreview.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/MessagePreview.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/ReactionBar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/ReactionBar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/ReactionDetailsModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/ReactionDetailsModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/chat/UnreadCounter.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/chat/UnreadCounter.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/learning/CourseCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/learning/CourseCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/learning/LessonRow.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/learning/LessonRow.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/learning/ModuleSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/learning/ModuleSection.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/DesignTokens.ts" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/DesignTokens.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/components/ui/UIBottomSheet.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/components/ui/UIBottomSheet.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/create_pinned_messages_table.sql" beforeDir="false" afterPath="$PROJECT_DIR$/create_pinned_messages_table.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/supabase.ts" beforeDir="false" afterPath="$PROJECT_DIR$/lib/supabase.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/navigation/MainTabs.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/navigation/MainTabs.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/LoginScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/LoginScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/RegisterScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/RegisterScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/RegistrationDetailsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/RegistrationDetailsScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/RegistrationIntroScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/RegistrationIntroScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/RegistrationPaymentScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/RegistrationPaymentScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/RegistrationProfileImageScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/RegistrationProfileImageScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/RegistrationSummaryScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/RegistrationSummaryScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/RegistrationTrackScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/RegistrationTrackScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Auth/TestRegistrationScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Auth/TestRegistrationScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Chat/ChannelsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Chat/ChannelsScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Chat/ChatRoomScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Chat/ChatRoomScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Chat/ChatsListScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Chat/ChatsListScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Chat/CombinedChatsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Chat/CombinedChatsScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Chat/GroupInfoScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Chat/GroupInfoScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Chat/MediaGalleryScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Chat/MediaGalleryScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Chat/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Chat/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Journal/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Journal/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Learning/CourseDetailScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Learning/CourseDetailScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Learning/CoursesScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Learning/CoursesScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Learning/LearningScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Learning/LearningScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Learning/LessonPlayerScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Learning/LessonPlayerScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Learning/MyLearningScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Learning/MyLearningScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/ArticleDetailScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/ArticleDetailScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/BreakingNewsTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/BreakingNewsTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/DividendsTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/DividendsTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/EarningsReportsTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/EarningsReportsTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/EarningsTrendsTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/EarningsTrendsTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/EconomicCalendarTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/EconomicCalendarTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/IPOsTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/IPOsTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/LikedArticlesScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/LikedArticlesScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/SplitsTab.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/SplitsTab.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/News/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/News/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Payment/CheckoutScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Payment/CheckoutScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Payment/CreditCardCheckoutScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Payment/CreditCardCheckoutScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Profile/EditProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Profile/EditProfileScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Profile/NotificationsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Profile/NotificationsScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Profile/SettingsScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Profile/SettingsScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Profile/SubscriptionPlansScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Profile/SubscriptionPlansScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Profile/SubscriptionScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Profile/SubscriptionScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/Profile/UserProfileScreen.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/screens/Profile/UserProfileScreen.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/authService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/services/authService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/chatService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/services/chatService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/earningsService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/services/earningsService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/mediaService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/services/mediaService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/paymentService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/services/paymentService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/services/supabase.ts" beforeDir="false" afterPath="$PROJECT_DIR$/services/supabase.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/supabase/functions/daily-earnings-sync-major-indices/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/supabase/functions/daily-earnings-sync-major-indices/index.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

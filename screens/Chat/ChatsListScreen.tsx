@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, FlatList, Text, TouchableOpacity, TextInput, Pressable, Image, ImageBackground, Modal, Animated } from 'react-native';
+import { View, FlatList, Text, TouchableOpacity, TextInput, Pressable, Image, ImageBackground, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,8 @@ import { supabase } from '../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { MessageCircle, ChevronLeft, AlertTriangle, Bitcoin, Users, Newspaper, Trophy, Bell, Briefcase, Home, Star } from 'lucide-react-native';
 import UnreadCounter from '../../components/chat/UnreadCounter';
+import UIBottomSheet from '../../components/ui/UIBottomSheet';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 const groupIcons: Record<string, string> = {
   'דיונים - כללי': 'home',
@@ -22,6 +24,7 @@ const groupIcons: Record<string, string> = {
 };
 
 export default function ChatsListScreen() {
+  const DesignTokens = useDesignTokens();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [chats, setChats] = useState<ChatListItem[]>([]);
@@ -32,7 +35,6 @@ export default function ChatsListScreen() {
   const [joining, setJoining] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
-  const [slideAnimation] = useState(new Animated.Value(0));
 
   const loadChats = async (userId?: string) => {
     const currentUserId = userId || user?.id;
@@ -269,26 +271,74 @@ export default function ChatsListScreen() {
     }
   };
 
-  const openGroupModal = (group: any) => {
+  const openGroupModal = async (group: any) => {
+    console.log('🎯 ChatsListScreen: openGroupModal called', { groupId: group.id, groupName: group.name });
+    
+    // הגדר את הקבוצה הבסיסית מיד כדי שהמודל יוכל להציג משהו
     setSelectedGroup(group);
+    // פתח את המודל מיד עם הנתונים הבסיסיים
     setShowModal(true);
-    Animated.timing(slideAnimation, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    
+    // טען את כל הנתונים המלאים של הקבוצה ברקע
+    try {
+      // טען את נתוני הקבוצה
+      const { data: fullGroupData, error: groupError } = await supabase
+        .from('channels')
+        .select('*')
+        .eq('id', group.id)
+        .single();
+      
+      if (groupError) {
+        console.error('❌ ChatsListScreen: Error loading full group data:', groupError);
+        // נשתמש בנתונים הבסיסיים שכבר הגדרנו
+        return;
+      }
+      
+      // טען את מספר החברים
+      const { count: membersCount, error: countError } = await supabase
+        .from('channel_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('channel_id', group.id);
+      
+      if (countError) {
+        console.error('❌ ChatsListScreen: Error loading members count:', countError);
+      }
+      
+      // נשתמש בנתונים המלאים
+      const groupWithCount = {
+        ...fullGroupData,
+        member_count: membersCount || fullGroupData.member_count || 0
+      };
+      
+      console.log('✅ ChatsListScreen: Full group data loaded:', {
+        name: groupWithCount.name,
+        image_url: groupWithCount.image_url,
+        description: groupWithCount.description,
+        member_count: groupWithCount.member_count
+      });
+      
+      // עדכן את הנתונים המלאים (המודל כבר פתוח)
+      setSelectedGroup(groupWithCount);
+    } catch (error) {
+      console.error('❌ ChatsListScreen: Exception loading group data:', error);
+      // נשתמש בנתונים הבסיסיים שכבר הגדרנו
+    }
   };
 
   const closeModal = () => {
-    Animated.timing(slideAnimation, {
-      toValue: 0,
-      duration: 250,
-      useNativeDriver: true,
-    }).start(() => {
-      setShowModal(false);
-      setSelectedGroup(null);
-    });
+    console.log('🔴 ChatsListScreen: closeModal called');
+    setShowModal(false);
+    setSelectedGroup(null);
   };
+
+  // Debug: Track modal state changes
+  useEffect(() => {
+    console.log('🔍 ChatsListScreen: Modal state changed:', {
+      showModal,
+      hasSelectedGroup: !!selectedGroup,
+      selectedGroupName: selectedGroup?.name
+    });
+  }, [showModal, selectedGroup]);
 
   useEffect(() => {
     if (!search) setFiltered(chats);
@@ -326,7 +376,7 @@ export default function ChatsListScreen() {
           paddingVertical: 15,
           backgroundColor: 'transparent',
           borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255,255,255,0.05)'
+          borderBottomColor: DesignTokens.colors.border.primary
         }}
         onPress={() => navigation.navigate('ChatRoom', { chatId: item.id, isGroup: item.is_group })}
       >
@@ -339,8 +389,8 @@ export default function ChatsListScreen() {
               borderRadius: 24,
               marginRight: 12,
               borderWidth: 2,
-              borderColor: '#00E654',
-              shadowColor: '#00E654',
+              borderColor: DesignTokens.colors.primary.main,
+              shadowColor: DesignTokens.colors.primary.main,
               shadowOpacity: 0.3,
               shadowRadius: 6,
               shadowOffset: { width: 0, height: 2 }
@@ -351,18 +401,18 @@ export default function ChatsListScreen() {
             width: 48,
             height: 48,
             borderRadius: 24,
-            backgroundColor: '#181818',
+            backgroundColor: DesignTokens.colors.background.secondary,
             alignItems: 'center',
             justifyContent: 'center',
             marginRight: 16,
             borderWidth: 1,
-            borderColor: '#2a2a2a',
+            borderColor: DesignTokens.colors.border.main,
             shadowColor: '#000',
             shadowOpacity: 0.3,
             shadowRadius: 6,
             shadowOffset: { width: 0, height: 2 }
           }}>
-            <Text style={{ color: '#00E654', fontSize: 16, fontWeight: 'bold' }}>
+            <Text style={{ color: DesignTokens.colors.primary.main, fontSize: 16, fontWeight: 'bold' }}>
               {item.name.charAt(0)}
             </Text>
           </View>
@@ -374,7 +424,7 @@ export default function ChatsListScreen() {
             alignItems: 'center'
           }}>
             <Text style={{
-              color: '#FFFFFF',
+              color: DesignTokens.colors.text.primary,
               fontWeight: '600',
               fontSize: 15,
               textAlign: 'right',
@@ -382,7 +432,7 @@ export default function ChatsListScreen() {
               flex: 1
             }}>{item.name}</Text>
             <Text style={{
-              color: '#666666',
+              color: DesignTokens.colors.text.tertiary,
               fontSize: 11,
               marginRight: 22,
               textAlign: 'right'
@@ -400,7 +450,7 @@ export default function ChatsListScreen() {
               flex: 1
             }}>
               <Text style={{
-                color: '#999999',
+                color: DesignTokens.colors.text.tertiary,
                 fontSize: 13,
                 textAlign: 'right',
                 marginRight: 12,
@@ -410,7 +460,7 @@ export default function ChatsListScreen() {
               </Text>
               {item.has_unread_mentions && (
                 <Text style={{
-                  color: '#00E654',
+                  color: DesignTokens.colors.primary.main,
                   fontWeight: 'bold',
                   fontSize: 14,
                   marginLeft: 12
@@ -425,28 +475,22 @@ export default function ChatsListScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0b0b0b' }}>
-      <LinearGradient
-        colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-
-      />
+    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+      {/* Background Gradient removed - SwiftUI style: clean backgrounds */}
       {/* Community Header */}
         <View style={{
-          flexDirection: 'row-reverse',
-        alignItems: 'center',
-        paddingHorizontal: 24,
-        paddingTop: 50, // Add top padding for status bar
-        paddingBottom: 16, // Reduced padding
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0,230,84,0.2)',
-        position: 'relative',
-        minHeight: 80 // Set minimum height
-      }}>
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+          paddingTop: 50,
+          paddingBottom: 20,
+          borderBottomWidth: 1,
+          borderBottomColor: DesignTokens.colors.border.primary,
+          position: 'relative',
+          minHeight: 100
+        }}>
         <LinearGradient
-          colors={['rgba(0, 230, 84, 0.08)', 'rgba(0, 230, 84, 0.03)', 'rgba(0, 230, 84, 0.05)']}
+          colors={[`${DesignTokens.colors.success.main}14`, `${DesignTokens.colors.success.main}08`, `${DesignTokens.colors.success.main}0D`]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -455,7 +499,7 @@ export default function ChatsListScreen() {
           source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
           style={{
             position: 'absolute',
-            top: 20, // Move down to avoid notch
+            top: 20,
             left: 0,
             right: 0,
             bottom: 0,
@@ -463,36 +507,22 @@ export default function ChatsListScreen() {
           }}
           resizeMode="cover"
         />
-        <View style={{ flex: 1 }}>
-          <Text style={{
-            color: '#FFFFFF',
-            fontWeight: 'bold',
-            fontSize: 18,
-            marginRight: 20,
-            textAlign: 'right'
-          }}>קהילת - DarkPool</Text>
-          <Text style={{
-            color: '#B0B0B0',
-            fontSize: 14,
-            marginTop: 4,
-            marginRight: 20,
-            textAlign: 'right'
-          }}>{communityMembersCount} חברים בקהילה</Text>
-        </View>
-        <Image
-          source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/9.png' }}
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            borderWidth: 2,
-            borderColor: '#00E654',
-            shadowColor: '#00E654',
-            shadowOpacity: 0.25,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 2 }
-          }}
-        />
+        <Text style={{
+          color: DesignTokens.colors.text.primary,
+          fontWeight: '700',
+          fontSize: 24,
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 10
+        }}>קהילת DarkPool</Text>
+        <Text style={{
+          color: DesignTokens.colors.text.secondary,
+          fontSize: 15,
+          marginTop: 6,
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 10
+        }}>{communityMembersCount} חברים בקהילה</Text>
       </View>
       
       
@@ -512,12 +542,12 @@ export default function ChatsListScreen() {
                 alignItems: 'center',
                 paddingHorizontal: 20,
                 paddingVertical: 16,
-                backgroundColor: 'rgba(0,0,0,0.2)',
+                backgroundColor: DesignTokens.colors.background.secondary,
                 borderBottomWidth: 1,
-                borderBottomColor: 'rgba(0,230,84,0.2)'
+                borderBottomColor: `${DesignTokens.colors.success.main}33`
               }}>
                 <Text style={{
-                  color: '#00E654',
+                  color: DesignTokens.colors.primary.main,
                   fontSize: 16,
                   fontWeight: '700',
                   textAlign: 'right',
@@ -528,11 +558,11 @@ export default function ChatsListScreen() {
                 <View style={{
                   flex: 1,
                   height: 1,
-                  backgroundColor: 'rgba(0,230,84,0.3)',
+                  backgroundColor: `${DesignTokens.colors.success.main}4D`,
                   marginRight: 12
                 }} />
                 <Text style={{
-                  color: '#00E654',
+                  color: DesignTokens.colors.primary.main,
                   fontSize: 14,
                   fontWeight: '500',
                   marginRight: 12
@@ -553,7 +583,7 @@ export default function ChatsListScreen() {
                     paddingVertical: 16,
                     backgroundColor: 'transparent',
                     borderBottomWidth: index < availableGroups.length - 1 ? 1 : 0,
-                    borderBottomColor: 'rgba(255,255,255,0.05)'
+                    borderBottomColor: DesignTokens.colors.border.primary
                   }}
                 >
                   {group.image_url ? (
@@ -565,8 +595,8 @@ export default function ChatsListScreen() {
                         borderRadius: 24,
                         marginRight: 1,
                         borderWidth: 2,
-                        borderColor: '#00E654',
-                        shadowColor: '#00E654',
+                        borderColor: DesignTokens.colors.primary.main,
+                        shadowColor: DesignTokens.colors.primary.main,
                         shadowOpacity: 0.3,
                         shadowRadius: 6,
                         shadowOffset: { width: 0, height: 2 }
@@ -577,21 +607,21 @@ export default function ChatsListScreen() {
                       width: 48,
                       height: 48,
                       borderRadius: 24,
-                      backgroundColor: '#00E654',
+                      backgroundColor: DesignTokens.colors.primary.main,
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginRight: 16,
-                      shadowColor: '#00E654',
+                      shadowColor: DesignTokens.colors.primary.main,
                       shadowOpacity: 0.3,
                       shadowRadius: 6,
                       shadowOffset: { width: 0, height: 2 }
                     }}>
-                      <MessageCircle size={24} color="#000000" strokeWidth={2} />
+                      <MessageCircle size={24} color={DesignTokens.colors.text.primary} strokeWidth={2} />
                     </View>
                   )}
                   <View style={{ flex: 1 }}>
                     <Text style={{
-                      color: '#FFFFFF',
+                      color: DesignTokens.colors.text.primary,
                       fontSize: 15,
                       fontWeight: '600',
                       textAlign: 'right',
@@ -601,7 +631,7 @@ export default function ChatsListScreen() {
                       {group.name}
                     </Text>
                     <Text style={{
-                      color: '#999999',
+                      color: DesignTokens.colors.text.tertiary,
                       fontSize: 13,
                       textAlign: 'right',
                       marginRight: 12,
@@ -609,7 +639,7 @@ export default function ChatsListScreen() {
                       {group.member_count} חברים
                     </Text>
                   </View>
-                  <ChevronLeft size={18} color="#666666" strokeWidth={2} />
+                  <ChevronLeft size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -617,161 +647,161 @@ export default function ChatsListScreen() {
         )}
       />
 
-      {/* Bottom Sheet Modal */}
-      <Modal
+      {/* Bottom Sheet Modal - SwiftUI style */}
+      <UIBottomSheet
         visible={showModal}
-        transparent={true}
-        animationType="none"
-        onRequestClose={closeModal}
+        onClose={closeModal}
+        showHandle={true}
+        dragToClose={true}
+        maxHeight="70%"
       >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
-          <TouchableOpacity 
-            style={{ flex: 1 }} 
-            onPress={closeModal}
-          />
-          <Animated.View
-            style={{
-              backgroundColor: '#1a1a1a',
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              padding: 20,
-              paddingBottom: 40,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-              transform: [{
-                translateY: slideAnimation.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [300, 0],
-                })
-              }]
-            }}
-          >
-            {/* Handle Bar */}
-            <View style={{ 
-              width: 40, 
-              height: 4, 
-              backgroundColor: '#333', 
-              borderRadius: 2,
-              alignSelf: 'center', 
-              marginBottom: 20 
-            }} />
+        {selectedGroup ? (
+          <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40 }}>
+            {/* תמונת הקבוצה */}
+            <View style={{ alignItems: 'center', marginBottom: 36 }}>
+              {selectedGroup.image_url ? (
+                <View style={{
+                  shadowColor: DesignTokens.colors.primary.main,
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 16,
+                  elevation: 8,
+                }}>
+                  <Image 
+                    source={{ uri: selectedGroup.image_url }} 
+                    style={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: 50,
+                      borderWidth: 3,
+                      borderColor: DesignTokens.colors.primary.main,
+                    }}
+                  />
+                </View>
+              ) : (
+                <View style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                  backgroundColor: `${DesignTokens.colors.success.main}26`,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 3,
+                  borderColor: DesignTokens.colors.primary.main,
+                  shadowColor: DesignTokens.colors.primary.main,
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 16,
+                  elevation: 8,
+                }}>
+                  <MessageCircle size={48} color={DesignTokens.colors.primary.main} strokeWidth={2.5} />
+                </View>
+              )}
+              
+              <Text style={{
+                color: DesignTokens.colors.text.primary,
+                fontSize: 28,
+                fontWeight: '700',
+                textAlign: 'center',
+                marginTop: 24,
+                marginBottom: 12,
+                letterSpacing: -0.5
+              }}>
+                {selectedGroup.name}
+              </Text>
+              
+              {selectedGroup.description && (
+                <Text style={{ 
+                  color: DesignTokens.colors.text.secondary, 
+                  fontSize: 16, 
+                  textAlign: 'center',
+                  lineHeight: 24,
+                  marginBottom: 20,
+                  paddingHorizontal: 16
+                }}>
+                  {selectedGroup.description}
+                </Text>
+              )}
+              
+              <LinearGradient
+                colors={[`${DesignTokens.colors.success.main}26`, `${DesignTokens.colors.success.main}14`]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingHorizontal: 18,
+                  paddingVertical: 10,
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: `${DesignTokens.colors.success.main}4D`
+                }}
+              >
+                <Users size={16} color={DesignTokens.colors.primary.main} strokeWidth={2.5} />
+                <Text style={{ 
+                  color: DesignTokens.colors.primary.main, 
+                  fontSize: 15, 
+                  fontWeight: '600',
+                  marginLeft: 10
+                }}>
+                  {selectedGroup.members_count || selectedGroup.member_count || communityMembersCount} משתתפים
+                </Text>
+              </LinearGradient>
+            </View>
 
-            {selectedGroup && (
-              <>
-                {/* Group Header */}
-                <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                  {selectedGroup.image_url ? (
-                    <Image 
-                      source={{ uri: selectedGroup.image_url }} 
-                      style={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: 40,
-                        marginBottom: 16,
-                        borderWidth: 2,
-                        borderColor: '#00E654',
-                        shadowColor: '#00E654',
-                        shadowOpacity: 0.3,
-                        shadowRadius: 10,
-                        shadowOffset: { width: 0, height: 4 }
-                      }}
-                    />
-                  ) : (
-                    <View style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 40,
-                      backgroundColor: '#00E654',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: 16,
-                      borderWidth: 2,
-                      borderColor: '#00E654',
-                      shadowColor: '#00E654',
-                      shadowOpacity: 0.3,
-                      shadowRadius: 10,
-                      shadowOffset: { width: 0, height: 4 }
-                    }}>
-                      <MessageCircle size={32} color="#000000" strokeWidth={2} />
-                    </View>
-                  )}
+            {/* כפתורי פעולה - SwiftUI style */}
+            <View style={{ gap: 14 }}>
+              <TouchableOpacity
+                onPress={() => handleJoinGroup(selectedGroup.id)}
+                disabled={joining === selectedGroup.id}
+                style={{
+                  backgroundColor: DesignTokens.colors.primary.main,
+                  paddingVertical: 18,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  opacity: joining === selectedGroup.id ? 0.7 : 1,
+                  shadowColor: DesignTokens.colors.primary.main,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 12,
+                  elevation: 6,
+                }}
+              >
+                {joining === selectedGroup.id ? (
+                  <ActivityIndicator color="#000" size="small" />
+                ) : (
                   <Text style={{
-                    color: '#FFFFFF',
-                    fontSize: 22,
-                    fontWeight: 'bold',
-                    textAlign: 'center',
-                    marginBottom: 8
+                    color: '#000',
+                    fontSize: 18,
+                    fontWeight: '700',
+                    letterSpacing: 0.3
                   }}>
-                    {selectedGroup.name}
+                    הצטרף לקבוצה
                   </Text>
-                  {selectedGroup.description && (
-                    <Text style={{
-                      color: '#B0B0B0',
-                      fontSize: 14,
-                      textAlign: 'center',
-                      marginBottom: 16,
-                      paddingHorizontal: 16,
-                      lineHeight: 20
-                    }}>
-                      {selectedGroup.description}
-                    </Text>
-                  )}
-                </View>
+                )}
+              </TouchableOpacity>
 
-                {/* Action Buttons */}
-                <View style={{ gap: 12 }}>
-                  <TouchableOpacity
-                    onPress={() => handleJoinGroup(selectedGroup.id)}
-                    disabled={joining === selectedGroup.id}
-                    style={{
-                      backgroundColor: '#00E654',
-                      paddingVertical: 16,
-                      paddingHorizontal: 32,
-                      borderRadius: 12,
-                      alignItems: 'center',
-                      shadowColor: '#00E654',
-                      shadowOpacity: 0.3,
-                      shadowRadius: 10,
-                      shadowOffset: { width: 0, height: 4 },
-                      elevation: 4
-                    }}
-                  >
-                    <Text style={{
-                      color: '#000000',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                      textAlign: 'center'
-                    }}>
-                      {joining === selectedGroup.id ? 'מצטרף לקבוצה...' : 'הצטרף לקבוצה'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={closeModal}
-                    style={{
-                      backgroundColor: '#333',
-                      paddingVertical: 16,
-                      paddingHorizontal: 32,
-                      borderRadius: 12,
-                      alignItems: 'center'
-                    }}
-                  >
-                    <Text style={{
-                      color: '#FFFFFF',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                      textAlign: 'center'
-                    }}>ביטול</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </Animated.View>
-        </View>
-      </Modal>
+              <TouchableOpacity
+                onPress={closeModal}
+                style={{
+                  paddingVertical: 16,
+                  alignItems: 'center',
+                  borderRadius: 14,
+                  backgroundColor: DesignTokens.colors.background.secondary,
+                }}
+              >
+                <Text style={{
+                  color: DesignTokens.colors.text.secondary,
+                  fontSize: 17,
+                  fontWeight: '600',
+                }}>
+                  ביטול
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+      </UIBottomSheet>
     </View>
   );
 }

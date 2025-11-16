@@ -59,18 +59,18 @@ function OptionItem({ option, index, isLast, onSelect }: OptionItemProps) {
         accessibilityHint={option.label}
         activeOpacity={1}
       >
-        <Ionicons 
-          name={option.icon as any} 
-          size={24} 
-          color={option.danger ? '#FF453A' : '#FFFFFF'}
-          style={styles.optionIcon}
-        />
         <Text style={[
           styles.optionLabel, 
-          option.danger && { color: '#FF453A' }
+          option.danger && { color: '#FF3B30' }
         ]}>
           {option.label}
         </Text>
+        <Ionicons 
+          name={option.icon as any} 
+          size={22} 
+          color={option.danger ? '#FF3B30' : '#FFFFFF'}
+          style={styles.optionIcon}
+        />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -78,6 +78,8 @@ function OptionItem({ option, index, isLast, onSelect }: OptionItemProps) {
 
 export default function ContextMenu({ onSelect, isAdmin = false }: { onSelect: (key: string) => void; isAdmin?: boolean }) {
   const [dialogScale] = useState(new Animated.Value(1));
+
+  console.log('🎯 ContextMenu: Rendering with isAdmin:', isAdmin);
 
   const options: OptionDef[] = useMemo(() => {
     const base: OptionDef[] = [
@@ -130,55 +132,53 @@ export default function ContextMenu({ onSelect, isAdmin = false }: { onSelect: (
 
 const styles = StyleSheet.create({
   dialog: {
-    backgroundColor: '#2C2C2E',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: 'rgba(28, 28, 30, 0.98)',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     overflow: 'hidden',
     width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    paddingBottom: 34
   },
   handleBar: {
     width: 36,
     height: 5,
-    backgroundColor: '#8E8E93',
-    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 2.5,
     alignSelf: 'center',
     marginTop: 8,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   optionsContainer: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0
   },
   option: {
     borderBottomWidth: 0.5,
-    borderBottomColor: '#48484A',
+    borderBottomColor: 'rgba(255,255,255,0.1)',
   },
   optionTouchable: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    minHeight: 50,
-    backgroundColor: '#2C2C2E',
+    paddingVertical: 14,
+    minHeight: 54,
+    backgroundColor: 'transparent',
   },
   optionPressed: {
-    backgroundColor: '#3A3A3C',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   lastOption: {
     borderBottomWidth: 0,
   },
   optionIcon: {
-    marginRight: 12,
-    width: 24,
+    marginLeft: 16,
+    width: 22,
   },
   optionLabel: {
     fontSize: 17,
     fontWeight: '400',
     color: '#FFFFFF',
     flex: 1,
+    textAlign: 'right'
   },
 });

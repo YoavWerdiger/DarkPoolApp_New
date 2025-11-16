@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { AuthService } from '../../services/authService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 const TestRegistrationScreen = () => {
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,7 @@ const TestRegistrationScreen = () => {
 
       <TouchableOpacity
         onPress={testEmailCheck}
-        style={{ backgroundColor: '#00E654', padding: 16, borderRadius: 12, marginBottom: 16 }}
+        style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >
         {loading ? (
@@ -65,7 +66,7 @@ const TestRegistrationScreen = () => {
 
       <TouchableOpacity
         onPress={testPhoneCheck}
-        style={{ backgroundColor: '#00E654', padding: 16, borderRadius: 12, marginBottom: 16 }}
+        style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >
         {loading ? (
@@ -79,7 +80,7 @@ const TestRegistrationScreen = () => {
 
       <TouchableOpacity
         onPress={testCompleteRegistration}
-        style={{ backgroundColor: '#00E654', padding: 16, borderRadius: 12, marginBottom: 16 }}
+        style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >
         {loading ? (

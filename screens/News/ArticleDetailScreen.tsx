@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { NewsArticle, newsService, formatNewsDate, getNewsCategoryColor, getNewsCategoryIcon } from '../../services/newsService';
 
 type RootStackParamList = {

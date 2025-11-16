@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
@@ -113,7 +114,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   top: dot.y,
                   width: dot.size,
                   height: dot.size,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   opacity: dot.opacity,
                   borderRadius: dot.size / 2
                 }}
@@ -160,7 +161,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               <Text style={{ 
                 fontSize: 32, 
                 fontWeight: '800', 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 marginBottom: 8,
                 letterSpacing: -0.8,
                 textAlign: 'center',
@@ -172,7 +173,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               {/* Subtitle */}
               <Text style={{ 
                 fontSize: 16, 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontWeight: '400',
                 letterSpacing: 0.3,
                 textAlign: 'center',
@@ -186,7 +187,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               <View style={{
                 width: 60,
                 height: 2,
-                backgroundColor: '#00E654',
+                backgroundColor: DesignTokens.colors.primary.main,
                 marginTop: 16,
                 borderRadius: 1
               }} />
@@ -210,12 +211,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       position: 'absolute',
                       top: -10,
                       right: 20,
-                      backgroundColor: '#00E654',
+                      backgroundColor: DesignTokens.colors.primary.main,
                       paddingHorizontal: 12,
                       paddingVertical: 4,
                       borderRadius: 12
                     }}>
-                      <Text style={{ color: '#000000', fontSize: 12, fontWeight: '700' }}>
+                      <Text style={{ color: DesignTokens.colors.background.primary, fontSize: 12, fontWeight: '700' }}>
                         מומלץ
                       </Text>
                     </View>
@@ -224,7 +225,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <View>
                       <Text style={{ 
-                        color: '#FFFFFF', 
+                        color: DesignTokens.colors.text.primary, 
                         fontSize: 20, 
                         fontWeight: '700',
                         writingDirection: 'rtl'
@@ -233,7 +234,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                         <Text style={{ 
-                          color: '#00E654', 
+                          color: DesignTokens.colors.primary.main, 
                           fontSize: 24, 
                           fontWeight: '800',
                           writingDirection: 'rtl'
@@ -241,7 +242,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                           {plan.price}
                         </Text>
                         <Text style={{ 
-                          color: '#B0B0B0', 
+                          color: DesignTokens.colors.text.secondary, 
                           fontSize: 14, 
                           marginLeft: 4,
                           writingDirection: 'rtl'
@@ -268,9 +269,9 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   <View style={{ gap: 8 }}>
                     {plan.features.map((feature, index) => (
                       <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="checkmark-circle" size={16} color="#00E654" style={{ marginLeft: 8 }} />
+                        <Ionicons name="checkmark-circle" size={16} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
                         <Text style={{ 
-                          color: '#B0B0B0', 
+                          color: DesignTokens.colors.text.secondary, 
                           fontSize: 14,
                           writingDirection: 'rtl',
                           flex: 1
@@ -294,7 +295,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   end={{ x: 1, y: 1 }}
                   style={{
                     borderRadius: 14,
-                    shadowColor: '#00E654',
+                    shadowColor: DesignTokens.colors.primary.main,
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: 0.4,
                     shadowRadius: 12,
@@ -317,7 +318,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Ionicons name="card" size={20} color="#000000" style={{ marginLeft: 8 }} />
                         <Text style={{ 
-                          color: '#000000', 
+                          color: DesignTokens.colors.background.primary, 
                           fontSize: 16, 
                           fontWeight: '700',
                           letterSpacing: 0.5,
@@ -337,7 +338,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   end={{ x: 1, y: 1 }}
                   style={{
                     borderRadius: 14,
-                    shadowColor: '#00E654',
+                    shadowColor: DesignTokens.colors.primary.main,
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: 0.4,
                     shadowRadius: 12,
@@ -353,7 +354,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     }}
                   >
                     <Text style={{ 
-                      color: '#000000', 
+                      color: DesignTokens.colors.background.primary, 
                       fontSize: 16, 
                       fontWeight: '700',
                       letterSpacing: 0.5,
@@ -379,7 +380,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   }}
                 >
                   <Text style={{ 
-                    color: '#B0B0B0', 
+                    color: DesignTokens.colors.text.secondary, 
                     fontSize: 16, 
                     fontWeight: '600',
                     letterSpacing: 0.3,

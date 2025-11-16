@@ -13,13 +13,15 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
 import { CourseCard } from '../../components/learning';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { AccessLevel, CourseWithProgress } from '../../types/learning';
 
 export const CoursesScreen: React.FC = () => {
   console.log('🎓 CoursesScreen: Component rendering...');
   
   const navigation = useNavigation();
+  const DesignTokens = useDesignTokens();
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const [searchText, setSearchText] = useState('');
   const [selectedAccess, setSelectedAccess] = useState<AccessLevel | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -196,7 +198,7 @@ export const CoursesScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: DesignTokens.colors.background,
@@ -218,63 +220,63 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   myLearningButton: {
-    backgroundColor: DesignTokens.colors.primary,
-    paddingHorizontal: DesignTokens.spacing.md,
-    paddingVertical: DesignTokens.spacing.sm,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.primary,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.lg,
   },
   myLearningButtonText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
   },
   searchContainer: {
-    paddingHorizontal: DesignTokens.spacing.lg,
-    marginBottom: DesignTokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    marginBottom: tokens.spacing.md,
   },
   searchInput: {
-    backgroundColor: DesignTokens.colors.surface,
-    borderRadius: DesignTokens.borderRadius.lg,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.textPrimary,
-    borderWidth: DesignTokens.layout.borderWidth.normal,
-    borderColor: DesignTokens.colors.border,
+    backgroundColor: tokens.colors.surface,
+    borderRadius: tokens.borderRadius.lg,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    fontSize: tokens.typography.fontSize.base,
+    color: tokens.colors.textPrimary,
+    borderWidth: tokens.layout.borderWidth.normal,
+    borderColor: tokens.colors.border,
   },
   filtersContainer: {
-    paddingHorizontal: DesignTokens.spacing.lg,
-    marginBottom: DesignTokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    marginBottom: tokens.spacing.md,
   },
   filtersTitle: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'right',
   },
   filtersRow: {
     flexDirection: 'row',
-    gap: DesignTokens.spacing.sm,
+    gap: tokens.spacing.sm,
   },
   filterChip: {
-    paddingHorizontal: DesignTokens.spacing.md,
-    paddingVertical: DesignTokens.spacing.sm,
-    borderRadius: DesignTokens.borderRadius.lg,
-    backgroundColor: DesignTokens.colors.surface,
-    borderWidth: DesignTokens.layout.borderWidth.normal,
-    borderColor: DesignTokens.colors.border,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.lg,
+    backgroundColor: tokens.colors.surface,
+    borderWidth: tokens.layout.borderWidth.normal,
+    borderColor: tokens.colors.border,
   },
   filterChipActive: {
-    backgroundColor: DesignTokens.colors.primary,
-    borderColor: DesignTokens.colors.primary,
+    backgroundColor: tokens.colors.primary,
+    borderColor: tokens.colors.primary,
   },
   filterChipText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
+    fontWeight: tokens.typography.fontWeight.medium,
   },
   filterChipTextActive: {
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
   },
   listWrapper: {
     flex: 1,
@@ -288,61 +290,61 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   listContainer: {
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingBottom: DesignTokens.spacing['4xl'],
+    paddingHorizontal: tokens.spacing.lg,
+    paddingBottom: tokens.spacing['4xl'],
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: DesignTokens.spacing['5xl'],
+    paddingVertical: tokens.spacing['5xl'],
   },
   emptyStateIcon: {
     fontSize: 48,
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   emptyStateTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'center',
   },
   emptyStateSubtitle: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
     textAlign: 'center',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.lg,
   },
   errorIcon: {
     fontSize: 48,
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   errorTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.textPrimary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   retryButton: {
-    backgroundColor: DesignTokens.colors.primary,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.primary,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.lg,
   },
   retryButtonText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
   },
 });

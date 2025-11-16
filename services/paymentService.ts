@@ -31,17 +31,15 @@ export const SUBSCRIPTION_PLANS = {
     price: 0,
     period: 'monthly',
     features: [
-      'חדשות כלכליות יומיות',
-      'הכרזות רשמיות',
-      'קבוצה חינמית אחת'
+      'חדשות כלכליות',
+      'הכרזות רשמיות של ברוך ודוד אריאל',
+      'קבוצה חינמית של מאות סוחרים ומשקיעים'
     ],
     excludedFeatures: [
       'חדשות מתפרצות בזמן אמת',
-      'גישה לקהילה',
-      'חדרי סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'איתותי Penny Stocks',
-      'יומן מסחר אישי',
+      'דיווחי תוצאות של חברות',
+      'יומן מסחר',
+      'קהילה פרימיום',
       'קורס הלוויתנים'
     ],
     role: 'free_user',
@@ -49,115 +47,43 @@ export const SUBSCRIPTION_PLANS = {
     color: '#6B7280'
   },
   
-  // מסלול Gold
-  gold_monthly: {
-    id: 'gold_monthly',
-    name: 'Gold',
-    description: 'חדשות בזמן אמת וקהילה פעילה',
+  // מסלול חודשי (פרימיום)
+  monthly: {
+    id: 'monthly',
+    name: 'מסלול פרימיום',
+    description: 'מסלול פרימיום חודשי',
     price: 99,
     period: 'monthly',
     features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית'
+      'חדשות כלכליות',
+      'חדשות מתפרצות בזמן אמת',
+      'דיווחי תוצאות של חברות',
+      'קבוצה חינמית של מאות סוחרים ומשקיעים',
+      'יומן מסחר'
     ],
     excludedFeatures: [
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'איתותי Penny Stocks',
-      'יומן מסחר אישי',
+      'קהילה פרימיום',
       'קורס הלוויתנים'
     ],
-    role: 'gold_user',
+    role: 'premium_user',
     popular: true,
-    color: '#F59E0B'
-  },
-  gold_quarterly: {
-    id: 'gold_quarterly',
-    name: 'Gold',
-    description: 'חדשות בזמן אמת וקהילה פעילה',
-    price: 249,
-    period: 'quarterly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'הנחה של 16%'
-    ],
-    excludedFeatures: [
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'איתותי Penny Stocks',
-      'יומן מסחר אישי',
-      'קורס הלוויתנים'
-    ],
-    role: 'gold_user',
-    popular: false,
-    color: '#F59E0B'
+    color: '#3B82F6'
   },
   
-  // מסלול Premium
-  premium_monthly: {
-    id: 'premium_monthly',
-    name: 'Premium',
-    description: 'הבחירה של רוב הסוחרים',
+  // מסלול פלטינום (חודשי ושנתי)
+  platinum_monthly: {
+    id: 'platinum_monthly',
+    name: 'מסלול פלטינום',
+    description: 'כל מה שבמסלול פרימיום + קהילה פרימיום',
     price: 149,
     period: 'monthly',
     features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי'
-    ],
-    excludedFeatures: [
-      'איתותי Penny Stocks',
-      'קורס הלוויתנים'
-    ],
-    role: 'premium_user',
-    popular: true,
-    color: '#3B82F6'
-  },
-  premium_quarterly: {
-    id: 'premium_quarterly',
-    name: 'Premium',
-    description: 'הבחירה של רוב הסוחרים',
-    price: 399,
-    period: 'quarterly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי',
-      'הנחה של 11%'
-    ],
-    excludedFeatures: [
-      'איתותי Penny Stocks',
-      'קורס הלוויתנים'
-    ],
-    role: 'premium_user',
-    popular: false,
-    color: '#3B82F6'
-  },
-  
-  // מסלול Platinum
-  platinum_monthly: {
-    id: 'platinum_monthly',
-    name: 'Platinum',
-    description: 'גישה מלאה לכל העולמות',
-    price: 199,
-    period: 'monthly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי',
-      'איתותי Penny Stocks'
+      'חדשות כלכליות',
+      'חדשות מתפרצות בזמן אמת',
+      'דיווחי תוצאות של חברות',
+      'קבוצה חינמית של מאות סוחרים ומשקיעים',
+      'יומן מסחר',
+      'גישה לקהילה הפרימיום'
     ],
     excludedFeatures: [
       'קורס הלוויתנים'
@@ -166,50 +92,46 @@ export const SUBSCRIPTION_PLANS = {
     popular: false,
     color: '#8B5CF6'
   },
-  platinum_quarterly: {
-    id: 'platinum_quarterly',
-    name: 'Platinum',
-    description: 'גישה מלאה לכל העולמות',
-    price: 549,
-    period: 'quarterly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי',
-      'איתותי Penny Stocks',
-      'הנחה של 8%'
-    ],
-    excludedFeatures: [
-      'קורס הלוויתנים'
-    ],
-    role: 'platinum_user',
-    popular: false,
-    color: '#8B5CF6'
-  },
-  
-  // מסלול Platinum Pro (שנתי)
-  platinum_pro_yearly: {
-    id: 'platinum_pro_yearly',
-    name: 'Platinum Pro',
-    description: 'חבילת הפרימיום המלאה ביותר',
-    price: 1849,
+  platinum_yearly: {
+    id: 'platinum_yearly',
+    name: 'מסלול פלטינום',
+    description: 'כל מה שבמסלול פרימיום + קהילה פרימיום',
+    price: 1490,
     period: 'yearly',
     features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי',
-      'איתותי Penny Stocks',
-      'קורס הלוויתנים במתנה',
-      'חיסכון של ₪350'
+      'חדשות כלכליות',
+      'חדשות מתפרצות בזמן אמת',
+      'דיווחי תוצאות של חברות',
+      'קבוצה חינמית של מאות סוחרים ומשקיעים',
+      'יומן מסחר',
+      'גישה לקהילה הפרימיום'
+    ],
+    excludedFeatures: [
+      'קורס הלוויתנים'
+    ],
+    role: 'platinum_user',
+    popular: false,
+    color: '#8B5CF6'
+  },
+  
+  // מסלול עלית (שנתי בלבד)
+  elite_yearly: {
+    id: 'elite_yearly',
+    name: 'מסלול עלית',
+    description: 'הכל פלוס קורס הלוויתנים במתנה',
+    price: 1404,
+    period: 'yearly',
+    features: [
+      'חדשות כלכליות',
+      'חדשות מתפרצות בזמן אמת',
+      'דיווחי תוצאות של חברות',
+      'קבוצה חינמית של מאות סוחרים ומשקיעים',
+      'יומן מסחר',
+      'גישה לקהילה הפרימיום',
+      'קורס הלוויתנים במתנה'
     ],
     excludedFeatures: [],
-    role: 'platinum_pro_user',
+    role: 'elite_user',
     popular: false,
     color: '#F59E0B'
   }

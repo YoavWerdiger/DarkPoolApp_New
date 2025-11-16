@@ -5,6 +5,7 @@ import { useRegistration } from '../../context/RegistrationContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import DropDownPicker from 'react-native-dropdown-picker';
+import { DesignTokens } from '../../components/ui/DesignTokens';
 
 const marketOptions = [
   { label: '🇺🇸 מניות אמריקאיות', value: 'us_stocks' },
@@ -106,7 +107,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                   top: dot.y,
                   width: dot.size,
                   height: dot.size,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   opacity: dot.opacity,
                   borderRadius: dot.size / 2
                 }}
@@ -154,7 +155,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                 <Text style={{ 
                   fontSize: 32, 
                   fontWeight: '800', 
-                  color: '#FFFFFF', 
+                  color: DesignTokens.colors.text.primary, 
                   marginBottom: 8,
                   letterSpacing: -0.8,
                   textAlign: 'center',
@@ -166,7 +167,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                 {/* Subtitle */}
                 <Text style={{ 
                   fontSize: 16, 
-                  color: '#B0B0B0', 
+                  color: DesignTokens.colors.text.secondary, 
                   fontWeight: '400',
                   letterSpacing: 0.3,
                   textAlign: 'center',
@@ -180,7 +181,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                 <View style={{
                   width: 60,
                   height: 2,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   marginTop: 16,
                   borderRadius: 1
                 }} />
@@ -191,7 +192,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                 {/* Markets Selection */}
                 <View>
                   <Text style={{ 
-                    color: '#FFFFFF', 
+                    color: DesignTokens.colors.text.primary, 
                     fontSize: 14, 
                     fontWeight: '600', 
                     marginBottom: 8,
@@ -202,10 +203,10 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                     שווקים מעניינים
                   </Text>
                   <View style={{
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: DesignTokens.colors.background.secondary,
                     borderRadius: 14,
                     borderWidth: 1.5,
-                    borderColor: '#333333',
+                    borderColor: DesignTokens.colors.border.main,
                     paddingHorizontal: 16,
                     paddingVertical: 4
                   }}>
@@ -217,31 +218,31 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
         setValue={setMarkets}
         multiple={true}
                       placeholder="בחר שווקים"
-                      placeholderStyle={{ color: '#666666', textAlign: 'right' }}
+                      placeholderStyle={{ color: DesignTokens.colors.text.tertiary, textAlign: 'right' }}
         style={{
                         backgroundColor: 'transparent',
                         borderWidth: 0,
                         minHeight: 48
                       }}
                       textStyle={{
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         fontSize: 16,
                         fontWeight: '500',
                         textAlign: 'right'
         }}
         dropDownContainerStyle={{
-                        backgroundColor: '#1a1a1a',
-                        borderColor: '#333333',
+                        backgroundColor: DesignTokens.colors.background.secondary,
+                        borderColor: DesignTokens.colors.border.main,
                         borderWidth: 1.5,
                         borderRadius: 14
                       }}
                       listItemLabelStyle={{
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         fontSize: 14,
                         textAlign: 'right'
                       }}
                       selectedItemLabelStyle={{
-                        color: '#00E654',
+                        color: DesignTokens.colors.primary.main,
                         fontWeight: '600'
                       }}
                       tickIconStyle={{
@@ -254,7 +255,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                 {/* Experience */}
                 <View>
                   <Text style={{ 
-                    color: '#FFFFFF', 
+                    color: DesignTokens.colors.text.primary, 
                     fontSize: 14, 
                     fontWeight: '600', 
                     marginBottom: 8,
@@ -265,10 +266,10 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                     ניסיון בסחר
                   </Text>
                   <View style={{
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: DesignTokens.colors.background.secondary,
                     borderRadius: 14,
                     borderWidth: 1.5,
-                    borderColor: '#333333',
+                    borderColor: DesignTokens.colors.border.main,
                     paddingHorizontal: 16,
                     paddingVertical: 4
                   }}>
@@ -279,31 +280,31 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
         setOpen={setExperienceOpen}
         setValue={setExperience}
                       placeholder="בחר ניסיון"
-                      placeholderStyle={{ color: '#666666', textAlign: 'right' }}
+                      placeholderStyle={{ color: DesignTokens.colors.text.tertiary, textAlign: 'right' }}
         style={{
                         backgroundColor: 'transparent',
                         borderWidth: 0,
                         minHeight: 48
                       }}
                       textStyle={{
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         fontSize: 16,
                         fontWeight: '500',
                         textAlign: 'right'
         }}
         dropDownContainerStyle={{
-                        backgroundColor: '#1a1a1a',
-                        borderColor: '#333333',
+                        backgroundColor: DesignTokens.colors.background.secondary,
+                        borderColor: DesignTokens.colors.border.main,
                         borderWidth: 1.5,
                         borderRadius: 14
                       }}
                       listItemLabelStyle={{
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         fontSize: 14,
                         textAlign: 'right'
                       }}
                       selectedItemLabelStyle={{
-                        color: '#00E654',
+                        color: DesignTokens.colors.primary.main,
                         fontWeight: '600'
                       }}
                       tickIconStyle={{
@@ -316,7 +317,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                 {/* Full Time */}
                 <View>
                   <Text style={{ 
-                    color: '#FFFFFF', 
+                    color: DesignTokens.colors.text.primary, 
                     fontSize: 14, 
                     fontWeight: '600', 
                     marginBottom: 8,
@@ -327,10 +328,10 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                     סטטוס סחר
                   </Text>
                   <View style={{
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: DesignTokens.colors.background.secondary,
                     borderRadius: 14,
                     borderWidth: 1.5,
-                    borderColor: '#333333',
+                    borderColor: DesignTokens.colors.border.main,
                     paddingHorizontal: 16,
                     paddingVertical: 4
                   }}>
@@ -341,31 +342,31 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
         setOpen={setFullTimeOpen}
         setValue={setFullTime}
                       placeholder="בחר סטטוס"
-                      placeholderStyle={{ color: '#666666', textAlign: 'right' }}
+                      placeholderStyle={{ color: DesignTokens.colors.text.tertiary, textAlign: 'right' }}
         style={{
                         backgroundColor: 'transparent',
                         borderWidth: 0,
                         minHeight: 48
         }}
         textStyle={{
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         fontSize: 16,
                         fontWeight: '500',
                         textAlign: 'right'
         }}
         dropDownContainerStyle={{
-                        backgroundColor: '#1a1a1a',
-                        borderColor: '#333333',
+                        backgroundColor: DesignTokens.colors.background.secondary,
+                        borderColor: DesignTokens.colors.border.main,
                         borderWidth: 1.5,
                         borderRadius: 14
                       }}
                       listItemLabelStyle={{
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         fontSize: 14,
                         textAlign: 'right'
                       }}
                       selectedItemLabelStyle={{
-                        color: '#00E654',
+                        color: DesignTokens.colors.primary.main,
                         fontWeight: '600'
                       }}
                       tickIconStyle={{
@@ -378,7 +379,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                 {/* Trading Style */}
                 <View>
                   <Text style={{ 
-                    color: '#FFFFFF', 
+                    color: DesignTokens.colors.text.primary, 
                     fontSize: 14, 
                     fontWeight: '600', 
                     marginBottom: 8,
@@ -389,10 +390,10 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                     סגנון סחר
                   </Text>
                   <View style={{
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: DesignTokens.colors.background.secondary,
                     borderRadius: 14,
                     borderWidth: 1.5,
-                    borderColor: '#333333',
+                    borderColor: DesignTokens.colors.border.main,
                     paddingHorizontal: 16,
                     paddingVertical: 4
                   }}>
@@ -403,31 +404,31 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                       setOpen={setStyleOpen}
                       setValue={setStyle}
                       placeholder="בחר סגנון"
-                      placeholderStyle={{ color: '#666666', textAlign: 'right' }}
+                      placeholderStyle={{ color: DesignTokens.colors.text.tertiary, textAlign: 'right' }}
         style={{
                         backgroundColor: 'transparent',
                         borderWidth: 0,
                         minHeight: 48
         }}
         textStyle={{
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         fontSize: 16,
                         fontWeight: '500',
                         textAlign: 'right'
         }}
         dropDownContainerStyle={{
-                        backgroundColor: '#1a1a1a',
-                        borderColor: '#333333',
+                        backgroundColor: DesignTokens.colors.background.secondary,
+                        borderColor: DesignTokens.colors.border.main,
                         borderWidth: 1.5,
                         borderRadius: 14
                       }}
                       listItemLabelStyle={{
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         fontSize: 14,
                         textAlign: 'right'
                       }}
                       selectedItemLabelStyle={{
-                        color: '#00E654',
+                        color: DesignTokens.colors.primary.main,
                         fontWeight: '600'
                       }}
                       tickIconStyle={{
@@ -440,7 +441,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                 {/* Goals */}
                 <View>
                   <Text style={{ 
-                    color: '#FFFFFF', 
+                    color: DesignTokens.colors.text.primary, 
                     fontSize: 14, 
                     fontWeight: '600', 
                     marginBottom: 8,
@@ -451,16 +452,16 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                     מטרות
                   </Text>
                   <View style={{
-                    backgroundColor: '#1a1a1a',
+                    backgroundColor: DesignTokens.colors.background.secondary,
                     borderRadius: 14,
                     borderWidth: 1.5,
-                    borderColor: '#333333',
+                    borderColor: DesignTokens.colors.border.main,
           paddingHorizontal: 16, 
                     paddingVertical: 4
                   }}>
       <TextInput
         style={{ 
-                        color: '#FFFFFF',
+                        color: DesignTokens.colors.text.primary,
                         paddingVertical: 16,
                         fontSize: 16,
                         fontWeight: '500',
@@ -469,7 +470,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                         textAlignVertical: 'top'
                       }}
                       placeholder="ספר לנו על המטרות שלך..."
-                      placeholderTextColor="#666666"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
                       value={goals}
                       onChangeText={setGoals}
                       multiline
@@ -486,7 +487,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                   style={{
                     borderRadius: 14,
                     marginTop: 12,
-                    shadowColor: '#00E654',
+                    shadowColor: DesignTokens.colors.primary.main,
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: 0.4,
                     shadowRadius: 12,
@@ -502,7 +503,7 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                     }}
                   >
                     <Text style={{ 
-                      color: '#000000', 
+                      color: DesignTokens.colors.background.primary, 
                       fontSize: 16, 
                       fontWeight: '700',
                       letterSpacing: 0.5,

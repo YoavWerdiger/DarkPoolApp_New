@@ -52,16 +52,16 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 
   const getStatusColor = () => {
     if (isLockedForUser) {
-      return DesignTokens.colors.textMuted;
+      return DesignTokens.colors.text.tertiary;
     }
     
     switch (lesson.progress?.status) {
       case 'completed':
-        return DesignTokens.colors.success;
+        return DesignTokens.colors.success.main;
       case 'in_progress':
-        return DesignTokens.colors.primary;
+        return DesignTokens.colors.primary.main;
       default:
-        return DesignTokens.colors.textSecondary;
+        return DesignTokens.colors.text.secondary;
     }
   };
 
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   container: {
     padding: DesignTokens.spacing.lg,
     borderBottomWidth: DesignTokens.layout.borderWidth.thin,
-    borderBottomColor: DesignTokens.colors.border,
+    borderBottomColor: DesignTokens.colors.border.primary,
   },
   lockedContainer: {
     opacity: 0.6,
@@ -167,14 +167,15 @@ const styles = StyleSheet.create({
     marginRight: DesignTokens.spacing.md,
   },
   title: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: DesignTokens.colors.text.primary,
     marginBottom: DesignTokens.spacing.xs,
     textAlign: 'right',
+    letterSpacing: 0.2,
   },
   lockedText: {
-    color: DesignTokens.colors.textMuted,
+    color: DesignTokens.colors.text.tertiary,
   },
   metaContainer: {
     flexDirection: 'row',
@@ -183,10 +184,10 @@ const styles = StyleSheet.create({
   },
   duration: {
     fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.textSecondary,
+    color: DesignTokens.colors.text.secondary,
   },
   previewBadge: {
-    backgroundColor: DesignTokens.colors.info,
+    backgroundColor: DesignTokens.colors.info.main,
     paddingHorizontal: DesignTokens.spacing.xs,
     paddingVertical: 2,
     borderRadius: DesignTokens.borderRadius.sm,
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
   previewText: {
     fontSize: DesignTokens.typography.fontSize.xs,
     color: '#FFFFFF',
-    fontWeight: DesignTokens.typography.fontWeight.medium,
+    fontWeight: '500' as any,
   },
   rightContent: {
     alignItems: 'center',
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: DesignTokens.typography.fontSize.xs,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
+    fontWeight: '500' as any,
     textAlign: 'center',
   },
 });

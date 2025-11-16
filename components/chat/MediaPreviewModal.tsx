@@ -17,6 +17,7 @@ import { ImageIcon, Video as VideoIcon, FileText, File, X, Trash2, ArrowRight } 
 import { Video, ResizeMode } from 'expo-av';
 import { Audio } from 'expo-av';
 import { MediaMetadata, MediaFile } from '../../services/mediaService';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface MediaPreviewModalProps {
   visible: boolean;
@@ -33,6 +34,9 @@ export default function MediaPreviewModal({
   onSend, 
   mediaFiles 
 }: MediaPreviewModalProps) {
+  console.log('📱 MediaPreviewModal: Rendering with:', { visible, mediaFilesCount: mediaFiles.length });
+  
+  const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [captions, setCaptions] = useState<Record<string, string>>({});
@@ -45,7 +49,9 @@ export default function MediaPreviewModal({
 
   // אנימציה כניסה
   useEffect(() => {
+    console.log('📱 MediaPreviewModal: visible changed to:', visible);
     if (visible) {
+      console.log('📱 MediaPreviewModal: Starting fade-in animation');
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
@@ -159,9 +165,7 @@ export default function MediaPreviewModal({
             contentContainerStyle={{ 
               flexGrow: 1, 
               justifyContent: 'center', 
-              alignItems: 'center',
-              paddingTop: 80,
-              paddingBottom: 120
+              alignItems: 'center'
             }}
             maximumZoomScale={3}
             minimumZoomScale={1}
@@ -172,10 +176,8 @@ export default function MediaPreviewModal({
               <Image
                 source={{ uri: currentMedia.uri }}
                 style={{
-                  width: screenWidth * 0.9,
-                  height: screenHeight * 0.6,
-                  alignSelf: 'center',
-                  borderRadius: 12,
+                  width: screenWidth,
+                  height: '100%'
                 }}
                 resizeMode="contain"
                 onError={(error) => {
@@ -184,15 +186,13 @@ export default function MediaPreviewModal({
               />
             ) : (
               <View style={{
-                width: screenWidth * 0.9,
+                width: screenWidth,
                 height: screenHeight * 0.6,
-                alignSelf: 'center',
-                borderRadius: 12,
-                backgroundColor: '#2A2A2A',
                 justifyContent: 'center',
-                alignItems: 'center'
+                alignItems: 'center',
+                backgroundColor: DesignTokens.colors.background.primary
               }}>
-                <ImageIcon size={64} color="#666" strokeWidth={1.5} />
+                <ImageIcon size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
               </View>
             )}
           </ScrollView>
@@ -200,117 +200,142 @@ export default function MediaPreviewModal({
 
       case 'video':
         return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            paddingTop: 80,
-            paddingBottom: 120 
+          <View style={{ 
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center'
           }}>
             {currentMedia.uri && currentMedia.uri.trim() !== '' && (currentMedia.uri.startsWith('http') || currentMedia.uri.startsWith('file://') || currentMedia.uri.startsWith('content://')) ? (
               <Video
                 source={{ uri: currentMedia.uri }}
                 style={{
-                  width: screenWidth * 0.9,
-                  height: screenHeight * 0.6,
-                borderRadius: 12,
-              }}
-              resizeMode={ResizeMode.CONTAIN}
-              useNativeControls
-              shouldPlay={false}
-              onLoadStart={() => {
-                console.log('Video loading started in MediaPreviewModal:', currentMedia.uri);
-              }}
-              onLoad={(status) => {
-                console.log('Video loaded successfully in MediaPreviewModal:', status);
-              }}
-              onError={(error) => {
-                console.error('Video load error in MediaPreviewModal:', error);
-                console.error('Video URL:', currentMedia.uri);
-              }}
-              onPlaybackStatusUpdate={(status) => {
-                if ('error' in status && status.error) {
-                  console.error('Video playback error in MediaPreviewModal:', status.error);
-                }
-              }}
-            />
-          ) : (
-            <View style={{
-              width: screenWidth * 0.9,
-              height: screenHeight * 0.6,
-              borderRadius: 12,
-              backgroundColor: '#2A2A2A',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <VideoIcon size={64} color="#666" strokeWidth={1.5} />
-            </View>
-          )}
+                  width: screenWidth,
+                  height: '100%'
+                }}
+                resizeMode={ResizeMode.CONTAIN}
+                useNativeControls
+                shouldPlay={false}
+                onLoadStart={() => {
+                  console.log('Video loading started in MediaPreviewModal:', currentMedia.uri);
+                }}
+                onLoad={(status) => {
+                  console.log('Video loaded successfully in MediaPreviewModal:', status);
+                }}
+                onError={(error) => {
+                  console.error('Video load error in MediaPreviewModal:', error);
+                  console.error('Video URL:', currentMedia.uri);
+                }}
+                onPlaybackStatusUpdate={(status) => {
+                  if ('error' in status && status.error) {
+                    console.error('Video playback error in MediaPreviewModal:', status.error);
+                  }
+                }}
+              />
+            ) : (
+              <View style={{
+                width: screenWidth,
+                height: screenHeight * 0.6,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: DesignTokens.colors.background.primary
+              }}>
+                <VideoIcon size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
+              </View>
+            )}
           </View>
         );
 
       case 'audio':
         return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            paddingTop: 80,
-            paddingBottom: 120 
+          <View style={{ 
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center'
           }}>
-            <View className="w-40 h-40 bg-gradient-to-br from-primary to-[#00ff88] rounded-full items-center justify-center mb-8 shadow-lg">
+            <View style={{
+              width: 140,
+              height: 140,
+              borderRadius: 70,
+              backgroundColor: `${DesignTokens.colors.success.main}1F`,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 24
+            }}>
               <Pressable
                 onPress={() => toggleAudio(currentMedia.id)}
-                className="w-24 h-24 bg-white rounded-full items-center justify-center shadow-lg"
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  backgroundColor: DesignTokens.colors.success.main,
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
               >
                 <Ionicons
                   name={isPlaying[currentMedia.id] ? 'pause' : 'play'}
-                  size={48}
-                  color="#000"
+                  size={40}
+                  color={DesignTokens.colors.text.primary}
                 />
               </Pressable>
             </View>
-            <Text className="text-white text-xl mb-2 font-bold">
+            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, fontWeight: '700', marginBottom: 8 }}>
               {currentMedia.name || 'הקלטת קול'}
             </Text>
-            <Text className="text-gray-400 text-lg">
+            <Text style={{ color: DesignTokens.colors.text.tertiary, fontSize: 16 }}>
               {currentMedia.duration ? formatDuration(currentMedia.duration) : '0:00'}
             </Text>
-            {currentMedia.size && (
-              <Text className="text-gray-500 text-sm mt-2">
-                {formatFileSize(currentMedia.size)}
-              </Text>
-            )}
           </View>
         );
 
       case 'document':
         return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            paddingTop: 80,
-            paddingBottom: 120 
+          <View style={{ 
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center'
           }}>
-            <View className="w-40 h-40 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full items-center justify-center mb-8 shadow-lg">
-              <FileText size={80} color="white" strokeWidth={1.5} />
+            <View style={{
+              width: 140,
+              height: 140,
+              borderRadius: 70,
+              backgroundColor: DesignTokens.colors.background.secondary,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 24
+            }}>
+              <FileText size={70} color={DesignTokens.colors.text.primary} strokeWidth={1.5} />
             </View>
-            <Text className="text-white text-xl mb-2 font-bold text-center">
+            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, fontWeight: '700', marginBottom: 8, textAlign: 'center' }}>
               {currentMedia.name || 'מסמך'}
             </Text>
             {currentMedia.size && (
-              <Text className="text-gray-400 text-lg">
+              <Text style={{ color: DesignTokens.colors.text.tertiary, fontSize: 16 }}>
                 {formatFileSize(currentMedia.size)}
               </Text>
             )}
-            <Text className="text-gray-500 text-sm mt-2 text-center">
-              {currentMedia.type === 'document' ? 'PDF או מסמך אחר' : currentMedia.type}
-            </Text>
           </View>
         );
 
       default:
         return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            paddingTop: 80,
-            paddingBottom: 120 
+          <View style={{ 
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center'
           }}>
-            <View className="w-40 h-40 bg-gradient-to-br from-gray-500 to-gray-600 rounded-full items-center justify-center mb-8">
-              <File size={80} color="white" strokeWidth={1.5} />
+            <View style={{
+              width: 160,
+              height: 160,
+              borderRadius: 80,
+              backgroundColor: DesignTokens.colors.background.secondary,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 32
+            }}>
+              <File size={80} color={DesignTokens.colors.text.primary} strokeWidth={1.5} />
             </View>
-            <Text className="text-white text-xl">סוג מדיה לא נתמך</Text>
+            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 20, fontWeight: '600' }}>סוג מדיה לא נתמך</Text>
           </View>
         );
     }
@@ -319,118 +344,132 @@ export default function MediaPreviewModal({
   return (
     <Modal
       visible={visible}
-      transparent={true}
+      transparent={false}
       animationType="fade"
-      presentationStyle="overFullScreen"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
+      statusBarTranslucent={false}
     >
-      <Animated.View 
-        className="flex-1 bg-black"
-        style={{ opacity: fadeAnim }}
+      <View 
+        style={{ 
+          flex: 1, 
+          backgroundColor: DesignTokens.colors.background.primary
+        }}
       >
           {/* Header */}
           <View 
-            className="flex-row justify-between items-center px-4 py-4"
             style={{
-              backgroundColor: '#181818',
-              borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255,255,255,0.1)',
-              paddingTop: insets.top + 16
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+              backgroundColor: DesignTokens.colors.background.secondary,
+              paddingTop: insets.top + 12,
+              position: 'relative'
             }}
           >
+            {/* כפתור סגירה - שמאל */}
             <Pressable 
               onPress={onClose} 
-              className="w-11 h-11 bg-white/15 border border-white/25 rounded-full items-center justify-center"
-              style={{ shadowColor: '#fff', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+              style={{ 
+                position: 'absolute',
+                left: 20,
+                top: insets.top + 12,
+                padding: 8
+              }}
             >
-              <X size={22} color="white" strokeWidth={2} />
+              <X size={24} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
             </Pressable>
             
-            <View className="items-center">
-              <Text className="text-white text-lg font-bold mb-1">
-                {mediaFiles.length > 1 ? `${currentIndex + 1} מתוך ${mediaFiles.length}` : 'תצוגה מקדימה'}
-              </Text>
-              <Text className="text-gray-300 text-sm font-medium">
-                {currentMedia.type === 'image' ? 'תמונה' : 
-                 currentMedia.type === 'video' ? 'וידאו' : 
-                 currentMedia.type === 'audio' ? 'הקלטה' : 'מסמך'}
-              </Text>
-            </View>
-            
-            <Pressable 
-              onPress={handleSend} 
-              className="bg-primary px-6 py-3 rounded-full shadow-lg"
-              style={{ shadowColor: '#00E654', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
-            >
-              <Text className="text-black font-bold text-base">שלח</Text>
-            </Pressable>
+            {/* כותרת ממורכזת */}
+            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 17, fontWeight: '700' }}>
+              {mediaFiles.length > 1 ? `${currentIndex + 1} מתוך ${mediaFiles.length}` : 'תצוגה מקדימה'}
+            </Text>
           </View>
 
           {/* Media Content */}
-          <View className="flex-1 justify-center items-center bg-black">
+          <View style={{ 
+            flex: 1, 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            backgroundColor: DesignTokens.colors.background.primary
+          }}>
             {renderMediaContent()}
           </View>
 
-          {/* Caption Input - מעוצב כמו וואצפ */}
-          <View className="p-4 bg-gradient-to-t from-black/90 to-black/70">
-            <View className="bg-white/10 rounded-2xl p-3 border border-white/20">
-              <TextInput
-                placeholder="הוסף כיתוב (אופציונלי)..."
-                placeholderTextColor="#999"
-                value={captions[currentMedia.id] || ''}
-                onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
-                className="text-white text-right text-base"
-                multiline
-                maxLength={500}
-                style={{ minHeight: 40 }}
-              />
-              <Text className="text-gray-400 text-xs text-left mt-1">
-                {captions[currentMedia.id]?.length || 0}/500
-              </Text>
-            </View>
+          {/* Caption Input */}
+          <View style={{ 
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            backgroundColor: DesignTokens.colors.background.secondary,
+            borderTopWidth: 1,
+            borderTopColor: DesignTokens.colors.border.primary
+          }}>
+            <TextInput
+              placeholder="הוסף כיתוב..."
+              placeholderTextColor={DesignTokens.colors.text.tertiary}
+              value={captions[currentMedia.id] || ''}
+              onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
+              style={{ 
+                color: DesignTokens.colors.text.primary, 
+                textAlign: 'right', 
+                fontSize: 15,
+                backgroundColor: DesignTokens.colors.background.tertiary,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderRadius: 12,
+                minHeight: 44
+              }}
+              multiline
+              maxLength={200}
+            />
           </View>
 
-          {/* Navigation Dots - מעוצב כמו וואצפ */}
-          {mediaFiles.length > 1 && (
-            <View className="flex-row justify-center items-center p-4 bg-black/80">
-              {mediaFiles.map((_, index) => (
-                <Pressable
-                  key={index}
-                  onPress={() => setCurrentIndex(index)}
-                  className={`w-2.5 h-2.5 rounded-full mx-1 transition-all duration-200 ${
-                    index === currentIndex ? 'bg-primary w-8' : 'bg-white/40'
-                  }`}
-                />
-              ))}
-            </View>
-          )}
 
           {/* Action Buttons */}
-          <View className="flex-row justify-around p-4 bg-gradient-to-t from-black/95 via-black/80 to-black/60">
+          <View style={{ 
+            paddingHorizontal: 20,
+            paddingVertical: 20,
+            paddingBottom: insets.bottom + 20,
+            backgroundColor: DesignTokens.colors.background.secondary
+          }}>
+            {/* כפתור שלח */}
             <Pressable
-              onPress={() => removeMedia(currentMedia.id)}
-              className="bg-red-500/20 border border-red-500/50 px-6 py-3 rounded-2xl items-center min-w-[80px]"
-              style={{ shadowColor: '#ef4444', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+              onPress={handleSend}
+              style={{
+                backgroundColor: DesignTokens.colors.success.main,
+                paddingVertical: 16,
+                borderRadius: 16,
+                alignItems: 'center',
+                marginBottom: mediaFiles.length > 1 ? 12 : 0
+              }}
             >
-              <Trash2 size={20} color="#ef4444" strokeWidth={2} />
-              <Text className="text-red-400 text-sm font-semibold mt-1.5">הסר</Text>
+              <Text style={{ color: DesignTokens.colors.text.primary, fontWeight: '700', fontSize: 17 }}>שלח</Text>
             </Pressable>
 
+            {/* כפתור הבא (רק אם יש מספר קבצים) */}
             {mediaFiles.length > 1 && (
               <Pressable
                 onPress={() => {
                   const newIndex = (currentIndex + 1) % mediaFiles.length;
                   setCurrentIndex(newIndex);
                 }}
-                className="bg-white/15 border border-white/25 px-6 py-3 rounded-2xl items-center min-w-[80px]"
-                style={{ shadowColor: '#fff', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
+                style={{
+                  backgroundColor: `${DesignTokens.colors.success.main}26`,
+                  paddingVertical: 14,
+                  borderRadius: 14,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center'
+                }}
               >
-                <ArrowRight size={20} color="white" strokeWidth={2} />
-                <Text className="text-white text-sm font-semibold mt-1.5">הבא</Text>
+                <Text style={{ color: DesignTokens.colors.success.main, fontSize: 16, fontWeight: '600', marginRight: 8 }}>הבא</Text>
+                <ArrowRight size={18} color={DesignTokens.colors.success.main} strokeWidth={2} />
               </Pressable>
             )}
           </View>
-        </Animated.View>
+        </View>
       </Modal>
   );
 }

@@ -36,7 +36,7 @@ const UnreadCounter: React.FC<UnreadCounterProps> = ({
         height: config.height,
         minWidth: config.width,
         minHeight: config.height,
-        backgroundColor: '#00E654'
+        backgroundColor: 'DesignTokens.colors.success.main'
       }}
     >
       <Text 

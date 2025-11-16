@@ -1,6 +1,6 @@
 import { supabase, Message, Chat, ReactionSummary, ReactionDetail } from './supabase';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export type ChatListItem = {
   id: string;

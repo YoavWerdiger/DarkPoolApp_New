@@ -22,6 +22,9 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { DesignTokens } from '../../components/ui/DesignTokens';
+import { supabase } from '../../lib/supabase';
+import { Users } from 'lucide-react-native';
 
 interface NotificationSettings {
   notifications: boolean;
@@ -31,6 +34,9 @@ interface NotificationSettings {
   newsNotifications: boolean;
   earningsNotifications: boolean;
   economicCalendarNotifications: boolean;
+  newsSound: boolean;
+  communitySound: boolean;
+  groupNotifications: Record<string, boolean>;
 }
 
 interface NotificationOption {
@@ -39,6 +45,12 @@ interface NotificationOption {
   subtitle: string;
   icon: any;
   key: keyof NotificationSettings;
+}
+
+interface Channel {
+  id: string;
+  name: string;
+  image_url?: string;
 }
 
 export default function NotificationsScreen({ navigation }: any) {
@@ -51,19 +63,55 @@ export default function NotificationsScreen({ navigation }: any) {
     messageNotifications: true,
     newsNotifications: true,
     earningsNotifications: true,
-    economicCalendarNotifications: true
+    economicCalendarNotifications: true,
+    newsSound: true,
+    communitySound: true,
+    groupNotifications: {}
   });
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadSettings();
+    loadChannels();
   }, [user]);
+
+  const loadChannels = async () => {
+    try {
+      if (!user) return;
+      
+      // שלוף את כל הקבוצות שהמשתמש חבר בהן
+      const { data: memberRows } = await supabase
+        .from('channel_members')
+        .select('channel_id')
+        .eq('user_id', user.id);
+
+      if (memberRows && memberRows.length > 0) {
+        const channelIds = memberRows.map(row => row.channel_id);
+        const { data: channelsData } = await supabase
+          .from('channels')
+          .select('id, name, image_url')
+          .in('id', channelIds)
+          .order('name');
+        
+        setChannels(channelsData || []);
+      }
+    } catch (error) {
+      console.error('Error loading channels:', error);
+    }
+  };
 
   const loadSettings = async () => {
     try {
       const saved = await AsyncStorage.getItem('notificationSettings');
       if (saved) {
-        setSettings(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setSettings({
+          ...parsed,
+          groupNotifications: parsed.groupNotifications || {},
+          newsSound: parsed.newsSound !== undefined ? parsed.newsSound : true,
+          communitySound: parsed.communitySound !== undefined ? parsed.communitySound : true
+        });
       }
       setLoading(false);
     } catch (error) {
@@ -76,6 +124,26 @@ export default function NotificationsScreen({ navigation }: any) {
     const newSettings = {
       ...settings,
       [key]: !settings[key]
+    };
+    
+    setSettings(newSettings);
+    
+    try {
+      await AsyncStorage.setItem('notificationSettings', JSON.stringify(newSettings));
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
+  };
+
+  const handleGroupToggle = async (channelId: string) => {
+    const newGroupNotifications = {
+      ...settings.groupNotifications,
+      [channelId]: !settings.groupNotifications[channelId]
+    };
+    
+    const newSettings = {
+      ...settings,
+      groupNotifications: newGroupNotifications
     };
     
     setSettings(newSettings);
@@ -104,7 +172,7 @@ export default function NotificationsScreen({ navigation }: any) {
     },
     {
       id: 'sound',
-      title: 'צלילים',
+      title: 'צלילים כלליים',
       subtitle: 'הפעל צלילי התראות',
       icon: Volume2,
       key: 'sound'
@@ -144,9 +212,9 @@ export default function NotificationsScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#121212' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00E654" />
+          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען הגדרות...</Text>
         </View>
       </SafeAreaView>
@@ -234,8 +302,8 @@ export default function NotificationsScreen({ navigation }: any) {
                 <Switch
                   value={settings[option.key]}
                   onValueChange={() => handleToggle(option.key)}
-                  trackColor={{ false: theme.switchTrackOff, true: '#00E654' }}
-                  thumbColor={settings[option.key] ? '#ffffff' : theme.switchThumbOff}
+                  trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
+                  thumbColor={settings[option.key] ? DesignTokens.colors.text.primary : theme.switchThumbOff}
                   ios_backgroundColor={theme.switchTrackOff}
                   style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                 />
@@ -269,7 +337,7 @@ export default function NotificationsScreen({ navigation }: any) {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <option.icon size={22} color="#00E654" strokeWidth={2} />
+                  <option.icon size={22} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                 </View>
               </View>
             ))}
@@ -291,7 +359,8 @@ export default function NotificationsScreen({ navigation }: any) {
           <View style={{
             backgroundColor: theme.cardBackground,
             borderRadius: 16,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            marginBottom: 24
           }}>
             {newsNotificationOptions.map((option, index) => (
               <View
@@ -309,8 +378,8 @@ export default function NotificationsScreen({ navigation }: any) {
                 <Switch
                   value={settings[option.key]}
                   onValueChange={() => handleToggle(option.key)}
-                  trackColor={{ false: theme.switchTrackOff, true: '#00E654' }}
-                  thumbColor={settings[option.key] ? '#ffffff' : theme.switchThumbOff}
+                  trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
+                  thumbColor={settings[option.key] ? DesignTokens.colors.text.primary : theme.switchThumbOff}
                   ios_backgroundColor={theme.switchTrackOff}
                   style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                 />
@@ -344,11 +413,195 @@ export default function NotificationsScreen({ navigation }: any) {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <option.icon size={22} color="#00E654" strokeWidth={2} />
+                  <option.icon size={22} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                 </View>
               </View>
             ))}
           </View>
+
+          {/* Sounds Section */}
+          <Text style={{
+            fontSize: 14,
+            fontWeight: '600',
+            color: theme.textSecondary,
+            marginBottom: 12,
+            textAlign: 'right',
+            textTransform: 'uppercase',
+            letterSpacing: 0.5
+          }}>
+            צלילים
+          </Text>
+
+          <View style={{
+            backgroundColor: theme.cardBackground,
+            borderRadius: 16,
+            overflow: 'hidden',
+            marginBottom: 24
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 16,
+              paddingHorizontal: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: theme.border
+            }}>
+              <Switch
+                value={settings.newsSound}
+                onValueChange={() => handleToggle('newsSound')}
+                trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
+                thumbColor={settings.newsSound ? DesignTokens.colors.text.primary : theme.switchThumbOff}
+                ios_backgroundColor={theme.switchTrackOff}
+                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+              />
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: theme.textPrimary,
+                  marginBottom: 4,
+                  textAlign: 'right'
+                }}>
+                  צליל לחדשות
+                </Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: theme.textTertiary,
+                  textAlign: 'right'
+                }}>
+                  צליל נפרד להתראות חדשות
+                </Text>
+              </View>
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Newspaper size={22} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+              </View>
+            </View>
+
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingVertical: 16,
+              paddingHorizontal: 16
+            }}>
+              <Switch
+                value={settings.communitySound}
+                onValueChange={() => handleToggle('communitySound')}
+                trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
+                thumbColor={settings.communitySound ? DesignTokens.colors.text.primary : theme.switchThumbOff}
+                ios_backgroundColor={theme.switchTrackOff}
+                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+              />
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: theme.textPrimary,
+                  marginBottom: 4,
+                  textAlign: 'right'
+                }}>
+                  צליל לקהילה
+                </Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: theme.textTertiary,
+                  textAlign: 'right'
+                }}>
+                  צליל נפרד להתראות קהילה
+                </Text>
+              </View>
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Users size={22} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+              </View>
+            </View>
+          </View>
+
+          {/* Group Notifications Section */}
+          {channels.length > 0 && (
+            <>
+              <Text style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: theme.textSecondary,
+                marginBottom: 12,
+                textAlign: 'right',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5
+              }}>
+                התראות קבוצות
+              </Text>
+
+              <View style={{
+                backgroundColor: theme.cardBackground,
+                borderRadius: 16,
+                overflow: 'hidden'
+              }}>
+                {channels.map((channel, index) => (
+                  <View
+                    key={channel.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 16,
+                      paddingHorizontal: 16,
+                      borderBottomWidth: index < channels.length - 1 ? 1 : 0,
+                      borderBottomColor: theme.border
+                    }}
+                  >
+                    <Switch
+                      value={settings.groupNotifications[channel.id] !== false}
+                      onValueChange={() => handleGroupToggle(channel.id)}
+                      trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
+                      thumbColor={settings.groupNotifications[channel.id] !== false ? DesignTokens.colors.text.primary : theme.switchThumbOff}
+                      ios_backgroundColor={theme.switchTrackOff}
+                      style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                    />
+                    <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                      <Text style={{
+                        fontSize: 16,
+                        fontWeight: '600',
+                        color: theme.textPrimary,
+                        marginBottom: 4,
+                        textAlign: 'right'
+                      }}>
+                        {channel.name}
+                      </Text>
+                      <Text style={{
+                        fontSize: 13,
+                        color: theme.textTertiary,
+                        textAlign: 'right'
+                      }}>
+                        התראות מהקבוצה
+                      </Text>
+                    </View>
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <MessageSquare size={22} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
     </View>

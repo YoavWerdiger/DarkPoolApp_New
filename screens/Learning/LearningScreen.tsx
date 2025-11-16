@@ -3,15 +3,16 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, 
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
-import { XCircle, CheckCircle2, ArrowRight, RefreshCw, ChevronLeft, ChevronRight, Edit3, ChevronUp, Save, X, Type, ImageIcon, Palette, PlusCircle, Star, Clock, TrendingUp, Video as VideoIcon } from 'lucide-react-native';
+import { XCircle, CheckCircle2, ArrowRight, RefreshCw, ChevronLeft, ChevronRight, Edit3, ChevronUp, ChevronDown, Save, X, Type, ImageIcon, Palette, PlusCircle, Star, Clock, TrendingUp, Video as VideoIcon } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { WebView } from 'react-native-webview';
 import { learningProgressService } from '../../services/learningProgressService';
 import { courseService } from '../../services/courseService';
 import { mediaService } from '../../services/mediaService';
 import { useAuth } from '../../context/AuthContext';
+import UIBottomSheet from '../../components/ui/UIBottomSheet';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -135,6 +136,8 @@ const DEMO_COURSE = {
 
 function LearningScreen() {
   const { user } = useAuth();
+  const DesignTokens = useDesignTokens();
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -149,11 +152,11 @@ function LearningScreen() {
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [selectedColor, setSelectedColor] = useState('#FFFFFF');
+  const [selectedColor, setSelectedColor] = useState(DesignTokens.colors.text.primary);
   const [richTextContent, setRichTextContent] = useState<any[]>([]);
   const [currentFormatting, setCurrentFormatting] = useState({
     bold: false,
-    color: '#FFFFFF',
+    color: DesignTokens.colors.text.primary,
     link: null,
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -638,14 +641,14 @@ function LearningScreen() {
             type: 'text',
             content: notes.notes_content,
             bold: false,
-            color: '#FFFFFF'
+            color: DesignTokens.colors.text.primary
           }]);
           setLastSavedContent(JSON.stringify([{
             id: Date.now().toString(),
             type: 'text',
             content: notes.notes_content,
             bold: false,
-            color: '#FFFFFF'
+            color: DesignTokens.colors.text.primary
           }]));
         }
       } else {
@@ -674,7 +677,7 @@ function LearningScreen() {
               style={[
                 styles.flowingText,
                 element.bold && styles.boldText,
-                { color: element.color || '#000000' }
+                { color: element.color || DesignTokens.colors.text.primary }
               ]}
             >
               {element.content}
@@ -754,7 +757,7 @@ function LearningScreen() {
                   style={[
                     styles.notesText,
                     element.bold && styles.boldText,
-                    { color: element.color || '#FFFFFF' }
+                    { color: element.color || DesignTokens.colors.text.primary }
                   ]}
                 >
                   {element.content}
@@ -963,17 +966,16 @@ function LearningScreen() {
             }}
           />
           ) : (
-            <View style={[styles.thumbnailImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ color: 'white', fontSize: 24 }}>🎥</Text>
+            <View style={[styles.thumbnailImage, { backgroundColor: DesignTokens.colors.background.secondary, justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 24 }}>🎥</Text>
             </View>
           )}
-          <View style={styles.thumbnailGradient} />
           <View style={styles.durationBadge}>
             <Text style={styles.durationText}>{lesson.duration || '00:00'}</Text>
           </View>
           {lesson.completed && (
             <View style={styles.completedBadge}>
-              <CheckCircle2 size={24} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+              <CheckCircle2 size={24} color="#05d157" strokeWidth={2} />
             </View>
           )}
         </View>
@@ -1014,19 +1016,12 @@ function LearningScreen() {
             style={styles.newBackButton}
             onPress={() => setSelectedLesson(null)}
           >
-            <ArrowRight size={20} color="white" strokeWidth={2} />
+            <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </TouchableOpacity>
         </View>
         
         {/* Safe Area for content */}
         <SafeAreaView style={styles.safeAreaContent}>
-          {/* Background Gradient - only between header and content */}
-          <LinearGradient
-            colors={['rgba(0, 230, 84, 0.08)', 'rgba(0, 230, 84, 0.03)', 'rgba(0, 230, 84, 0.05)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.contentGradient}
-          />
           
           {/* Main Content */}
           <View style={styles.lessonMainContent}>
@@ -1135,7 +1130,7 @@ function LearningScreen() {
               {isLoading && (
                 <View style={styles.loadingOverlay}>
                   <View style={styles.loadingSpinner}>
-                    <RefreshCw size={32} color="white" strokeWidth={2} />
+                    <RefreshCw size={32} color={DesignTokens.colors.text.primary} strokeWidth={2} />
                   </View>
                   <Text style={styles.loadingText}>טוען וידאו...</Text>
                 </View>
@@ -1231,9 +1226,9 @@ function LearningScreen() {
               onPress={() => setNotesModalVisible(true)}
             >
               <View style={styles.simpleNotesHeader}>
-                <Edit3 size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                <Text style={styles.simpleNotesTitle}>הערות שלי</Text>
-                <ChevronUp size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                <Edit3 size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                <Text style={styles.simpleNotesTitle}>הערות אישיות על השיעור</Text>
+                <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   </View>
               <Text style={styles.notesPreview}>
                 {userNotes.trim() ? 
@@ -1244,118 +1239,101 @@ function LearningScreen() {
           </ScrollView>
               </View>
               
-        {/* Notes Modal */}
-        <Modal
+        {/* Notes Bottom Sheet */}
+        <UIBottomSheet
           visible={notesModalVisible}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setNotesModalVisible(false)}
+          onClose={() => {
+            if (!isSaving) {
+              setNotesModalVisible(false);
+            }
+          }}
+          maxHeight="80%"
+          dragToClose={!isSaving}
+          closeOnBackdropPress={!isSaving}
         >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-            <View style={{ 
-              backgroundColor: '#1C1C1E', 
-              borderTopLeftRadius: 24, 
-              borderTopRightRadius: 24,
-              maxHeight: '70%',
-            }}>
-              <View style={{ 
-                width: 40, 
-                height: 5, 
-                backgroundColor: 'rgba(255,255,255,0.3)', 
-                alignSelf: 'center', 
-                marginTop: 12,
-                marginBottom: 8,
-                borderRadius: 3
-              }} />
-              {/* Header - פשוט ומינימלי */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
-                <TouchableOpacity 
-                  onPress={() => setNotesModalVisible(false)}
-              style={{ 
-                width: 36, 
-                height: 36, 
-                borderRadius: 18, 
-                backgroundColor: 'rgba(255,255,255,0.08)', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}
-            >
-              <X size={20} color="#FFFFFF" strokeWidth={2} />
-            </TouchableOpacity>
-            
-            <Text style={{ fontSize: 20, fontWeight: '700', color: '#FFFFFF' }}>
-              הערות שלי
-            </Text>
-            
-            <TouchableOpacity 
-              onPress={async () => {
-                if (selectedLesson) {
-                  try {
-                    setIsSaving(true);
-                    await saveUserNotes(selectedLesson.id, userNotes);
-                    Alert.alert('נשמר!', 'ההערות נשמרו בהצלחה');
-                  } catch (error) {
-                    console.error('Error saving notes:', error);
-                    Alert.alert('שגיאה', 'לא ניתן לשמור את ההערות');
-                  } finally {
-                    setIsSaving(false);
-                  }
-                }
-              }}
-              style={{ 
-                width: 36, 
-                height: 36, 
-                borderRadius: 18, 
-                backgroundColor: 'rgba(0, 230, 84, 0.15)', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}
-            >
-              {isSaving ? (
-                <RefreshCw size={20} color="#00E654" strokeWidth={2} />
-              ) : (
-                <Save size={20} color="#00E654" strokeWidth={2} />
-              )}
-            </TouchableOpacity>
-          </View>
-          
-              {/* איזור כתיבה - עם רקע ומסגרת נפרדים */}
-              <ScrollView 
-                style={{ flex: 1, backgroundColor: '#1C1C1E' }}
-                contentContainerStyle={{ padding: 20, paddingBottom: 20 }}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.notesSheetContent}
+          >
+            <View style={styles.notesSheetHeader}>
+              <TouchableOpacity
+                onPress={() => !isSaving && setNotesModalVisible(false)}
+                style={[styles.notesSheetIconButton, isSaving && styles.notesSheetIconButtonDisabled]}
+                disabled={isSaving}
               >
-            <View style={{
-              backgroundColor: '#2C2C2E',
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
-              padding: 16,
-              minHeight: 400
-            }}>
-              <TextInput
-                ref={textInputRef}
-                style={{
-                  fontSize: 16,
-                  color: '#FFFFFF',
-                  textAlign: 'right',
-                  textAlignVertical: 'top',
-                  minHeight: 400,
-                  lineHeight: 24
+                <X size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+              </TouchableOpacity>
+              <Text style={styles.notesSheetTitle}>הערות אישיות על השיעור</Text>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (selectedLesson && !isSaving) {
+                    try {
+                      setIsSaving(true);
+                      await saveUserNotes(selectedLesson.id, userNotes);
+                      Alert.alert('נשמר!', 'ההערות נשמרו בהצלחה');
+                    } catch (error) {
+                      console.error('Error saving notes:', error);
+                      Alert.alert('שגיאה', 'לא ניתן לשמור את ההערות');
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }
                 }}
-                placeholder="התחל לכתוב הערות..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={userNotes}
-                onChangeText={setUserNotes}
-                multiline
-                autoFocus
-              />
+                style={[styles.notesSheetSaveButton, isSaving && styles.notesSheetSaveButtonDisabled]}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <RefreshCw size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                ) : (
+                  <Text style={styles.notesSheetSaveText}>שמור</Text>
+                )}
+              </TouchableOpacity>
             </View>
-              </ScrollView>
+
+            <ScrollView
+              style={styles.notesSheetScroll}
+              contentContainerStyle={styles.notesSheetScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.notesSheetInputWrapper}>
+                <TextInput
+                  ref={textInputRef}
+                  style={styles.notesSheetInput}
+                  placeholder="כתבו מחשבות, רעיונות ותזכורות מהשיעור..."
+                  placeholderTextColor={DesignTokens.colors.text.tertiary}
+                  value={userNotes}
+                  onChangeText={setUserNotes}
+                  multiline
+                  autoFocus
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.notesSheetFooter}>
+              <Text style={styles.notesSheetHint}>
+                ההערות נשמרות אוטומטית לחשבון שלך ותמיד זמינות מכל מכשיר
+              </Text>
+              <TouchableOpacity
+                onPress={() => setUserNotes('')}
+                disabled={!userNotes.length || isSaving}
+                style={[
+                  styles.notesSheetClearButton,
+                  (!userNotes.length || isSaving) && styles.notesSheetClearButtonDisabled,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.notesSheetClearText,
+                    (!userNotes.length || isSaving) && styles.notesSheetClearTextDisabled,
+                  ]}
+                >
+                  נקה הכל
+                </Text>
+              </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
+          </KeyboardAvoidingView>
+        </UIBottomSheet>
 
         {/* Link Dialog */}
         <Modal
@@ -1455,55 +1433,19 @@ function LearningScreen() {
         <Text style={styles.courseTitle}>{DEMO_COURSE.title}</Text>
         <Text style={styles.courseDescription}>{DEMO_COURSE.description}</Text>
           
-          {/* דירוג ומידע */}
-          <View style={styles.ratingContainer}>
-            <View style={styles.rating}>
-              <Star size={16} color="#F59E0B" strokeWidth={2} />
-              <Text style={styles.ratingText}>{DEMO_COURSE.rating}</Text>
-              <Text style={styles.ratingCount}>({DEMO_COURSE.students} תלמידים)</Text>
-            </View>
-          </View>
-          
           {/* מרצה */}
           <View style={styles.instructorContainer}>
             <Image source={{ uri: DEMO_COURSE.instructor.avatar }} style={styles.instructorAvatar} />
             <View style={styles.instructorInfo}>
               <Text style={styles.instructorName}>{DEMO_COURSE.instructor.name}</Text>
-              <View style={styles.instructorRating}>
-                <Star size={14} color="#F59E0B" strokeWidth={2} />
-                <Text style={styles.instructorRatingText}>{DEMO_COURSE.instructor.rating}</Text>
-                <Text style={styles.instructorStudents}>({DEMO_COURSE.instructor.students} תלמידים)</Text>
-              </View>
+              <Text style={styles.instructorRole}>מנהל הקהילה</Text>
             </View>
-          </View>
-          
-          {/* מטא דאטה */}
-          <View style={styles.courseMeta}>
-            <View style={styles.metaItem}>
-              <Clock size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              <Text style={styles.metaValue}>{DEMO_COURSE.duration}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <TrendingUp size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              <Text style={styles.metaValue}>{DEMO_COURSE.level}</Text>
-            </View>
-              <View style={styles.metaItem}>
-                <VideoIcon size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                <Text style={styles.metaValue}>{(lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons).length} שיעורים</Text>
-              </View>
           </View>
         </View>
       </View>
 
       {/* רשימת השיעורים */}
       <View style={styles.lessonsSection}>
-        {/* Background Gradient - only for lessons section */}
-        <LinearGradient
-          colors={['rgba(0, 230, 84, 0.04)', 'rgba(0, 230, 84, 0.03)', 'rgba(0, 230, 84, 0.05)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.lessonsGradient}
-        />
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>שיעורי הקורס</Text>
           <View style={styles.progressContainer}>
@@ -1573,10 +1515,10 @@ function LearningScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.primary,
+    backgroundColor: tokens.colors.background.primary,
   },
   
   // Background Gradient
@@ -1592,18 +1534,10 @@ const styles = StyleSheet.create({
   // Lesson Page Styles
   lessonContainer: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.primary,
+    backgroundColor: tokens.colors.background.primary,
   },
   safeAreaContent: {
     flex: 1,
-  },
-  contentGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
   },
   // New Lesson Header Styles
   newLessonHeader: {
@@ -1612,16 +1546,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50, // Add top padding for status bar
     paddingBottom: 16,
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: DesignTokens.colors.border.primary,
+    backgroundColor: tokens.colors.background.primary,
+    borderBottomWidth: 0,
     minHeight: 100,
   },
   newBackButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tokens.colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 16,
@@ -1634,43 +1567,43 @@ const styles = StyleSheet.create({
   newLessonNumber: {
     fontSize: 15,
     fontWeight: '500',
-    color: DesignTokens.colors.primary.main,
+    color: tokens.colors.primary.main,
     marginBottom: 2,
   },
   newLessonTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     lineHeight: 24,
     textAlign: 'right',
   },
   lessonCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     flex: 1,
     marginRight: 12,
   },
   lessonDuration: {
     fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
     textAlign: 'right',
   },
   menuButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tokens.colors.border.primary,
   },
   lessonMainContent: {
     flex: 1,
   },
   videoSection: {
-    backgroundColor: '#000',
+    backgroundColor: tokens.colors.background.primary,
   },
   videoContainer: {
     aspectRatio: 16/9,
-    backgroundColor: '#000',
+    backgroundColor: tokens.colors.background.primary,
   },
   videoPlayer: {
     width: '100%',
@@ -1687,11 +1620,10 @@ const styles = StyleSheet.create({
   
   // Lesson Info Card
   lessonInfoCard: {
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    ...DesignTokens.shadows.md,
   },
   lessonInfoHeader: {
     flexDirection: 'row',
@@ -1705,14 +1637,14 @@ const styles = StyleSheet.create({
   lessonInfoTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 8,
     lineHeight: 28,
   },
   lessonInfoDescription: {
     fontSize: 16,
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     lineHeight: 24,
   },
@@ -1729,7 +1661,7 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
     textAlign: 'right',
   },
   
@@ -1739,10 +1671,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   progressCard: {
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 16,
     padding: 20,
-    ...DesignTokens.shadows.sm,
   },
   progressCardHeader: {
     flexDirection: 'row',
@@ -1753,7 +1684,7 @@ const styles = StyleSheet.create({
   progressCardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     flex: 1,
     marginRight: 12,
@@ -1761,24 +1692,24 @@ const styles = StyleSheet.create({
   progressCardPercentage: {
     fontSize: 18,
     fontWeight: '700',
-    color: DesignTokens.colors.primary.main,
+    color: tokens.colors.primary.main,
     textAlign: 'right',
   },
   progressCardBar: {
     height: 8,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressCardFill: {
     height: '100%',
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     borderRadius: 4,
   },
   progressCardTime: {
     fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
     textAlign: 'right',
   },
   
@@ -1790,7 +1721,7 @@ const styles = StyleSheet.create({
   },
   primaryActionButton: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -1798,10 +1729,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    ...DesignTokens.shadows.sm,
   },
   primaryActionButtonText: {
-    color: 'white',
+    color: tokens.colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'right',
@@ -1812,15 +1742,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: DesignTokens.colors.primary.main,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   secondaryActionButtonText: {
-    color: DesignTokens.colors.primary.main,
+    color: tokens.colors.primary.main,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'right',
@@ -1834,7 +1762,7 @@ const styles = StyleSheet.create({
   },
   navButton: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -1842,21 +1770,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    ...DesignTokens.shadows.sm,
   },
   navButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'center',
   },
   
   // Notes Card
   notesCard: {
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 16,
     padding: 20,
-    ...DesignTokens.shadows.sm,
   },
   notesCardHeader: {
     flexDirection: 'row',
@@ -1867,7 +1793,7 @@ const styles = StyleSheet.create({
   notesCardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     flex: 1,
     marginRight: 12,
@@ -1879,10 +1805,10 @@ const styles = StyleSheet.create({
   notesActionButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
   },
   notesInput: {
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -1890,39 +1816,36 @@ const styles = StyleSheet.create({
   },
   notesTextInput: {
     fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlignVertical: 'top',
     lineHeight: 24,
     textAlign: 'right',
   },
   notesHint: {
     fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
     fontStyle: 'italic',
     textAlign: 'right',
   },
   
   // Simple Lesson Page Styles
   simpleLessonInfo: {
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    ...DesignTokens.shadows.sm,
   },
   simpleLessonTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 8,
     lineHeight: 28,
   },
   simpleLessonDescription: {
     fontSize: 16,
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     lineHeight: 24,
   },
@@ -1933,7 +1856,7 @@ const styles = StyleSheet.create({
   },
   simpleNavButton: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
@@ -1941,54 +1864,151 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    ...DesignTokens.shadows.sm,
   },
   simpleNavButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'center',
   },
   simpleNotesSection: {
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 16,
     padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    ...DesignTokens.shadows.sm,
   },
   simpleNotesHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'space-between',
     marginBottom: 16,
   },
   simpleNotesTitle: {
-    fontSize: 18,
+    flex: 1,
+    fontSize: 16,
     fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'right',
+    color: tokens.colors.text.primary,
+    textAlign: 'center',
   },
   simpleNotesInput: {
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 12,
     padding: 16,
     minHeight: 100,
   },
   simpleNotesTextInput: {
     fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlignVertical: 'top',
     lineHeight: 24,
     textAlign: 'right',
   },
   notesPreview: {
     fontSize: 14,
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     fontStyle: 'italic',
+  },
+
+  // Notes bottom sheet
+  notesSheetContent: {
+    flex: 1,
+    paddingHorizontal: tokens.spacing.xl,
+    paddingBottom: tokens.spacing.xl,
+    paddingTop: tokens.spacing.lg,
+  },
+  notesSheetHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: tokens.spacing.lg,
+  },
+  notesSheetIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: tokens.colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesSheetIconButtonDisabled: {
+    opacity: 0.5,
+  },
+  notesSheetTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '700',
+    color: tokens.colors.text.primary,
+  },
+  notesSheetSaveButton: {
+    minWidth: 88,
+    height: 40,
+    paddingHorizontal: tokens.spacing.lg,
+    borderRadius: 20,
+    backgroundColor: tokens.colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesSheetSaveButtonDisabled: {
+    opacity: 0.5,
+  },
+  notesSheetSaveText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  notesSheetScroll: {
+    flex: 1,
+    marginBottom: tokens.spacing.lg,
+  },
+  notesSheetScrollContent: {
+    paddingBottom: tokens.spacing.lg,
+  },
+  notesSheetInputWrapper: {
+    backgroundColor: tokens.colors.background.tertiary,
+    borderRadius: tokens.borderRadius.lg,
+    borderWidth: tokens.layout?.borderWidth?.thin || 1,
+    borderColor: tokens.colors.border.primary,
+    padding: tokens.spacing.lg,
+    minHeight: 240,
+  },
+  notesSheetInput: {
+    fontSize: 16,
+    color: tokens.colors.text.primary,
+    lineHeight: 24,
+    textAlign: 'right',
+    textAlignVertical: 'top',
+    minHeight: 200,
+  },
+  notesSheetFooter: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacing.md,
+  },
+  notesSheetHint: {
+    flex: 1,
+    fontSize: 13,
+    color: tokens.colors.text.tertiary,
+    textAlign: 'right',
+  },
+  notesSheetClearButton: {
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: 20,
+    borderWidth: tokens.layout?.borderWidth?.thin || 1,
+    borderColor: tokens.colors.border.primary,
+  },
+  notesSheetClearButtonDisabled: {
+    opacity: 0.5,
+  },
+  notesSheetClearText: {
+    fontSize: 14,
+    color: tokens.colors.text.primary,
+    fontWeight: '500',
+  },
+  notesSheetClearTextDisabled: {
+    color: tokens.colors.text.tertiary,
   },
   
   // Bottom Sheet Styles
@@ -1998,11 +2018,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: tokens.colors.backdrop,
     justifyContent: 'flex-end',
   },
   bottomSheet: {
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '90%',
@@ -2014,7 +2034,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: DesignTokens.colors.border.primary,
+    borderBottomColor: tokens.colors.border.primary,
     minHeight: 60,
   },
   dragHandle: {
@@ -2024,14 +2044,14 @@ const styles = StyleSheet.create({
     marginLeft: -20,
     width: 40,
     height: 4,
-    backgroundColor: DesignTokens.colors.text.tertiary,
+    backgroundColor: tokens.colors.text.tertiary,
     borderRadius: 2,
     alignSelf: 'center',
   },
   bottomSheetTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     lineHeight: 24,
     textAlignVertical: 'center',
@@ -2041,7 +2061,7 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tokens.colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2050,7 +2070,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: DesignTokens.colors.border.primary,
+    borderBottomColor: tokens.colors.border.primary,
     gap: 12,
     minHeight: 60,
     justifyContent: 'space-around',
@@ -2059,7 +2079,7 @@ const styles = StyleSheet.create({
   toolbarButton: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tokens.colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2072,7 +2092,7 @@ const styles = StyleSheet.create({
   },
   notesTextArea: {
     fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlignVertical: 'top',
     lineHeight: 24,
     textAlign: 'right',
@@ -2088,37 +2108,37 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
   },
   saveButton: {
     flex: 1,
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     alignItems: 'center',
   },
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: tokens.colors.text.primary,
   },
   
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: tokens.colors.backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 16,
     padding: 20,
     width: '80%',
@@ -2128,16 +2148,16 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 20,
   },
   modalInput: {
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 16,
   },
@@ -2150,19 +2170,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     alignItems: 'center',
   },
   modalButtonPrimary: {
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
   },
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
   },
   modalButtonTextPrimary: {
-    color: 'white',
+    color: tokens.colors.text.primary,
   },
   colorPicker: {
     flexDirection: 'row',
@@ -2174,11 +2194,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    borderWidth: 2,
     borderColor: 'transparent',
   },
   selectedColor: {
-    borderColor: DesignTokens.colors.primary.main,
     borderWidth: 3,
   },
   
@@ -2193,7 +2211,7 @@ const styles = StyleSheet.create({
   richTextElement: {
     fontSize: 16,
     lineHeight: 24,
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     marginBottom: 8,
     textAlign: 'right',
   },
@@ -2206,11 +2224,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   linkText: {
-    color: DesignTokens.colors.primary.main,
+    color: tokens.colors.primary.main,
     textDecorationLine: 'underline',
   },
   datetimeText: {
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     fontSize: 14,
     fontStyle: 'italic',
   },
@@ -2219,13 +2237,13 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: 16,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 40,
   },
   activeToolbarButton: {
-    backgroundColor: DesignTokens.colors.primary.main + '20',
+    backgroundColor: tokens.colors.primary.main + '20',
   },
   
   // Text Input Styles
@@ -2236,17 +2254,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingBottom: Platform.OS === 'ios' ? 8 : 12,
     borderTopWidth: 1,
-    borderTopColor: DesignTokens.colors.border.primary,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    borderTopColor: tokens.colors.border.primary,
+    backgroundColor: tokens.colors.background.tertiary,
   },
   textInput: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     maxHeight: 100,
     marginRight: 8,
@@ -2255,7 +2273,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2267,7 +2285,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 10,
     padding: 2,
   },
@@ -2283,7 +2301,7 @@ const styles = StyleSheet.create({
   flowingText: {
     fontSize: 16,
     lineHeight: 24,
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 4,
   },
@@ -2311,7 +2329,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     lineHeight: 24,
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     textAlignVertical: 'top',
     minHeight: 200,
@@ -2320,7 +2338,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: DesignTokens.colors.border.primary,
+    borderTopColor: tokens.colors.border.primary,
   },
   addNoteButton: {
     flexDirection: 'row',
@@ -2328,15 +2346,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 8,
     marginTop: 16,
-    borderWidth: 1,
-    borderColor: DesignTokens.colors.border.primary,
   },
   addNoteText: {
     fontSize: 16,
-    color: DesignTokens.colors.primary.main,
+    color: tokens.colors.primary.main,
     marginLeft: 8,
     fontWeight: '500',
   },
@@ -2358,7 +2374,7 @@ const styles = StyleSheet.create({
   },
   savingText: {
     fontSize: 12,
-    color: DesignTokens.colors.primary.main,
+    color: tokens.colors.primary.main,
     marginLeft: 4,
   },
   
@@ -2369,7 +2385,7 @@ const styles = StyleSheet.create({
   notesText: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 4,
   },
@@ -2383,7 +2399,7 @@ const styles = StyleSheet.create({
   },
   formatText: {
     fontSize: 12,
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   
@@ -2392,7 +2408,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: DesignTokens.colors.border.primary,
+    borderTopColor: tokens.colors.border.primary,
   },
   progressTimeRow: {
     flexDirection: 'row',
@@ -2402,24 +2418,24 @@ const styles = StyleSheet.create({
   },
   progressTimeText: {
     fontSize: 14,
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     fontWeight: '500',
   },
   progressPercentageText: {
     fontSize: 14,
-    color: DesignTokens.colors.primary.main,
+    color: tokens.colors.primary.main,
     fontWeight: '600',
   },
   progressBarContainer: {
     height: 4,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     borderRadius: 2,
   },
   completedStatus: {
@@ -2429,14 +2445,14 @@ const styles = StyleSheet.create({
   },
   completedText: {
     fontSize: 14,
-    color: DesignTokens.colors.success.main,
+    color: tokens.colors.success.main,
     fontWeight: '500',
   },
   
   // Course Header
   courseHeader: {
     padding: 0,
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
   },
   courseImageContainer: {
     position: 'relative',
@@ -2453,29 +2469,29 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 100,
-    backgroundColor: 'rgba(0, 216, 74, 0.3)',
+    backgroundColor: tokens.colors.background.primary,
   },
   priceContainer: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: tokens.colors.overlay,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: DesignTokens.borderRadius.md,
+    borderRadius: tokens.borderRadius.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   originalPrice: {
     fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
     textDecorationLine: 'line-through',
   },
   currentPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: DesignTokens.colors.success.main,
+    color: tokens.colors.success.main,
   },
   
   courseInfo: {
@@ -2485,20 +2501,20 @@ const styles = StyleSheet.create({
   courseTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     lineHeight: 34,
     textAlign: 'right',
   },
   courseSubtitle: {
     fontSize: 18,
     fontWeight: '500',
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     marginBottom: 0,
     textAlign: 'right',
   },
   courseDescription: {
     fontSize: 16,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
     lineHeight: 24,
     textAlign: 'right',
   },
@@ -2515,11 +2531,11 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 16,
     fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
   },
   ratingCount: {
     fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
   },
   
   // Instructor
@@ -2540,8 +2556,14 @@ const styles = StyleSheet.create({
   instructorName: {
     fontSize: 16,
     fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
+  },
+  instructorRole: {
+    fontSize: 14,
+    color: tokens.colors.text.secondary,
+    textAlign: 'right',
+    marginTop: 4,
   },
   instructorRating: {
     flexDirection: 'row-reverse',
@@ -2552,12 +2574,12 @@ const styles = StyleSheet.create({
   instructorRatingText: {
     fontSize: 14,
     fontWeight: '500',
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
   instructorStudents: {
     fontSize: 12,
-    color: DesignTokens.colors.text.tertiary,
+    color: tokens.colors.text.tertiary,
     textAlign: 'right',
   },
   
@@ -2576,7 +2598,7 @@ const styles = StyleSheet.create({
   metaValue: {
     fontSize: 14,
     fontWeight: '500',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
   },
   
@@ -2584,14 +2606,6 @@ const styles = StyleSheet.create({
   lessonsSection: {
     padding: 20,
     position: 'relative',
-  },
-  lessonsGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
   },
   
   // Chapter Sections
@@ -2605,12 +2619,12 @@ const styles = StyleSheet.create({
   chapterTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#00D84A',
+    color: tokens.colors.primary.main,
     textAlign: 'right',
   },
   chapterDivider: {
     height: 1,
-    backgroundColor: '#00D84A',
+    backgroundColor: tokens.colors.primary.main,
     marginBottom: 20,
   },
   sectionHeader: {
@@ -2622,7 +2636,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
   },
   progressContainer: {
@@ -2631,32 +2645,29 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 14,
     textAlign: 'right',
-    color: DesignTokens.colors.text.secondary,
+    color: tokens.colors.text.secondary,
     marginBottom: 4,
   },
   progressBar: {
     width: 120,
     height: 6,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 3,
     overflow: 'hidden',
     marginTop: 4,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     borderRadius: 3,
   },
   
   // Lesson Cards
   lessonCard: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.background.secondary,
+    borderRadius: tokens.borderRadius.lg,
     marginBottom: 16,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    ...DesignTokens.shadows.md,
   },
   lessonTouchable: {
     flex: 1,
@@ -2668,7 +2679,7 @@ const styles = StyleSheet.create({
   thumbnailImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#1a1a1a', // צבע רקע אם התמונה לא נטענת
+    backgroundColor: tokens.colors.background.secondary, // צבע רקע אם התמונה לא נטענת
   },
   thumbnailGradient: {
     position: 'absolute',
@@ -2676,37 +2687,39 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   durationBadge: {
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: DesignTokens.borderRadius.sm,
+    borderRadius: tokens.borderRadius.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   durationText: {
-    color: 'white',
+    color: '#000000',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   completedBadge: {
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 4,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   
   lessonContent: {
@@ -2723,12 +2736,12 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#00D84A',
+    backgroundColor: tokens.colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
   },
   lessonNumberText: {
-    color: '#000000',
+    color: tokens.colors.background.primary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -2737,7 +2750,7 @@ const styles = StyleSheet.create({
   },
   lessonDescription: {
     fontSize: 16,
-    color: '#6c757d',
+    color: tokens.colors.text.tertiary,
     lineHeight: 24,
     textAlign: 'right',
   },
@@ -2748,7 +2761,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: DesignTokens.colors.success.main,
+    backgroundColor: tokens.colors.success.main,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2757,7 +2770,6 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: DesignTokens.colors.text.tertiary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2769,7 +2781,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: tokens.colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
@@ -2778,7 +2790,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   loadingText: {
-    color: 'white',
+    color: tokens.colors.text.primary,
     fontSize: 16,
     fontWeight: '500',
   },

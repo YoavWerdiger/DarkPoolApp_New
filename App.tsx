@@ -9,7 +9,6 @@ import { View, ActivityIndicator, Text, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-// import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import OnboardingNavigator from './navigation/OnboardingNavigator';
 import { RegistrationProvider } from './context/RegistrationContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -103,7 +102,7 @@ function AppContent() {
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {user ? (
-            <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Main" component={MainTabs} />
           ) : (
             <>
               <Stack.Screen name="Auth" component={AuthStack} />

@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import EconomicCalendarService, { EconomicEvent } from '../../services/economicCalendarService';
 // הימנעות מ-`import type` כדי למנוע בעיות טרנספילציה ב-Metro
 type EconEvent = EconomicEvent;
@@ -27,12 +27,14 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
   event, 
   onPress 
 }) => {
+  const DesignTokens = useDesignTokens();
+  
   const getImportanceColor = (importance: string) => {
     switch (importance) {
       case 'high': return DesignTokens.colors.danger.main;
       case 'medium': return DesignTokens.colors.warning.main;
       case 'low': return DesignTokens.colors.success.main;
-      default: return 'rgba(255,255,255,0.18)';
+      default: return DesignTokens.colors.border.primary;
     }
   };
 
@@ -62,108 +64,106 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
       style={{
         marginHorizontal: 16,
         marginBottom: 12,
-        borderRadius: 16,
+        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0,
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
         paddingVertical: 16,
         paddingHorizontal: 16,
         backgroundColor: DesignTokens.colors.background.secondary,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)'
+        flexDirection: 'row',
+        alignItems: 'flex-start'
       }}
     >
-      {/* פס חשיבות דק מיושר לימין, עם פינות מעוגלות */}
-      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, backgroundColor: importanceColor, borderTopRightRadius: 16, borderBottomRightRadius: 16 }} />
+      {/* פס חשיבות דק מיושר לשמאל, מעוגל בפינות - מתאים לגובה הכרטיסיה */}
+      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: DesignTokens.colors.background.tertiary, borderTopLeftRadius: 12, borderBottomLeftRadius: 12 }} />
 
-      {/* כותרת נקייה */}
-      <Text 
-        style={{ 
-          fontSize: 16, 
-          fontWeight: '700', 
-          color: DesignTokens.colors.text.primary,
-          textAlign: 'right',
-          lineHeight: 22
-        }}
-        numberOfLines={2}
-      >
-        {cleanTitle}
-      </Text>
-
-      {/* מטא־דאטה ניטרלי: שעה בלבד + מדינה/מטבע */}
-      <View style={{ flexDirection: 'row-reverse', marginTop: 12, gap: 8 }}>
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          paddingHorizontal: 10, 
-          paddingVertical: 6, 
-          borderRadius: 12, 
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.08)'
-        }}>
-          <Clock size={12} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginLeft: 6 }} />
-          <Text style={{ fontSize: 12, color: DesignTokens.colors.text.secondary, fontWeight: '600' }}>{event.time}</Text>
+      {/* תוכן משמאל */}
+      <View style={{ flex: 1, alignItems: 'flex-start', marginLeft: 12 }}>
+        {/* שורה עליונה - כותרת וזמן */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
+          <Text 
+            style={{ 
+              fontSize: 18, 
+              fontWeight: '700', 
+              color: DesignTokens.colors.text.primary,
+              textAlign: 'left',
+              lineHeight: 24,
+              flex: 1,
+              marginRight: 8
+            }}
+            numberOfLines={2}
+          >
+            {cleanTitle}
+          </Text>
+          <View style={{
+            backgroundColor: 'rgba(0, 216, 74, 0.15)',
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 20
+          }}>
+            <Text style={{ 
+              fontSize: 16, 
+              color: '#00D84A',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              {event.time}
+            </Text>
+          </View>
         </View>
-        <View style={{ 
-          paddingHorizontal: 10, 
-          paddingVertical: 6, 
-          borderRadius: 12, 
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.08)'
-        }}>
-          <Text style={{ fontSize: 12, color: DesignTokens.colors.text.secondary, fontWeight: '500' }}>{event.country} ({event.currency})</Text>
-        </View>
-      </View>
 
-      {/* בלוק ערכים ויזואלי – קופסאות */}
-      {(event.actual || event.forecast || event.previous) && (
-        <View style={{ flexDirection: 'row-reverse', marginTop: 14, gap: 8 }}>
-          {event.actual && (
-            <View style={{ 
-              flex: 1, 
-              paddingVertical: 12, 
-              paddingHorizontal: 10, 
-              borderRadius: 12, 
-              backgroundColor: 'rgba(0, 216, 74, 0.08)', 
-              borderWidth: 1, 
-              borderColor: 'rgba(0, 216, 74, 0.2)', 
-              alignItems: 'center' 
+      {/* בלוק ערכים ויזואلي – ללא מסגרות, עם פסי הפרדה */}
+      {(event.actual || event.forecast || event.previous) ? (
+        <View style={{ marginTop: 12 }}>
+          {/* פס הפרדה אופקי עליון */}
+          <View style={{ height: 1, backgroundColor: DesignTokens.colors.background.tertiary, marginBottom: 12 }} />
+          
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start', width: '100%' }}>
+            {event.actual && (
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>תוצאה</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: getActualColor(), textAlign: 'center' }}>{event.actual}</Text>
+              </View>
+            )}
+            {event.actual && (event.forecast || event.previous) && (
+              <View style={{ width: 1, height: 40, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
+            )}
+            {event.forecast && (
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>תחזית</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center' }}>{event.forecast}</Text>
+              </View>
+            )}
+            {event.forecast && event.previous && (
+              <View style={{ width: 1, height: 40, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
+            )}
+            {event.previous && (
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>קודם</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'center' }}>{event.previous}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      ) : (
+        <View style={{ marginTop: 12 }}>
+          {/* פס הפרדה */}
+          <View style={{ height: 1, backgroundColor: DesignTokens.colors.background.tertiary, marginBottom: 12 }} />
+          
+          <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+            <Text style={{ 
+              fontSize: 13, 
+              color: DesignTokens.colors.text.tertiary,
+              fontWeight: '500',
+              textAlign: 'center'
             }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, fontWeight: '500' }}>תוצאה</Text>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: getActualColor() }}>{event.actual}</Text>
-            </View>
-          )}
-          {event.forecast && (
-            <View style={{ 
-              flex: 1, 
-              paddingVertical: 12, 
-              paddingHorizontal: 10, 
-              borderRadius: 12, 
-              backgroundColor: 'rgba(255,255,255,0.05)', 
-              borderWidth: 1, 
-              borderColor: 'rgba(255,255,255,0.08)', 
-              alignItems: 'center' 
-            }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, fontWeight: '500' }}>תחזית</Text>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: DesignTokens.colors.text.primary }}>{event.forecast}</Text>
-            </View>
-          )}
-          {event.previous && (
-            <View style={{ 
-              flex: 1, 
-              paddingVertical: 12, 
-              paddingHorizontal: 10, 
-              borderRadius: 12, 
-              backgroundColor: 'rgba(255,255,255,0.05)', 
-              borderWidth: 1, 
-              borderColor: 'rgba(255,255,255,0.08)', 
-              alignItems: 'center' 
-            }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, fontWeight: '500' }}>קודם</Text>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: DesignTokens.colors.text.secondary }}>{event.previous}</Text>
-            </View>
-          )}
+              נתונים יפורסמו בעת האירוע
+            </Text>
+          </View>
         </View>
       )}
+      </View>
     </Pressable>
   );
 };
@@ -218,6 +218,7 @@ const CRITICAL_EVENTS = [
 ];
 
 export default function EconomicCalendarTab() {
+  const DesignTokens = useDesignTokens();
   const [events, setEvents] = useState<EconEvent[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<EconEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -545,7 +546,7 @@ export default function EconomicCalendarTab() {
             width: 120, 
             height: 120, 
             borderRadius: 60, 
-            backgroundColor: 'rgba(0, 216, 74, 0.1)',
+            backgroundColor: DesignTokens.colors.background.secondary,
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 24
@@ -554,7 +555,7 @@ export default function EconomicCalendarTab() {
           <Ionicons 
             name="calendar-outline" 
             size={56} 
-            color="#00D84A" 
+            color={DesignTokens.colors.success.main} 
           />
         </View>
         <Text 
@@ -588,16 +589,14 @@ export default function EconomicCalendarTab() {
           paddingHorizontal: 28,
           paddingVertical: 14,
           borderRadius: 14,
-          backgroundColor: 'rgba(0, 216, 74, 0.15)',
-          borderWidth: 1,
-          borderColor: 'rgba(0, 216, 74, 0.3)'
+          backgroundColor: DesignTokens.colors.background.secondary
         }}
         onPress={loadEconomicEvents}
       >
         <Text style={{
           fontSize: 15,
           fontWeight: '700',
-          color: '#00D84A'
+          color: DesignTokens.colors.success.main
         }}>
           רענן נתונים
         </Text>
@@ -626,43 +625,40 @@ export default function EconomicCalendarTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ניווט יומי */}
+      {/* ניווט תאריכים - SwiftUI style */}
       <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
         <View style={{ 
-          backgroundColor: 'rgba(255, 255, 255, 0.04)',
-          borderRadius: 16,
+          backgroundColor: DesignTokens.colors.background.secondary,
+          borderRadius: 20,
           paddingHorizontal: 16,
           paddingVertical: 14,
-          marginBottom: 12,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.08)'
+          marginBottom: 12
         }}>
           {/* שורה עליונה - ניווט תאריכים */}
           <View style={{ 
             flexDirection: 'row', 
             alignItems: 'center', 
             justifyContent: 'space-between',
-            marginBottom: 14
+            marginBottom: 8
           }}>
             {/* חץ שמאל - יום קודם */}
             <TouchableOpacity
               onPress={goToPreviousDay}
+              activeOpacity={1}
               style={{
-                padding: 10,
+                padding: 8,
                 borderRadius: 12,
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.1)'
+                backgroundColor: DesignTokens.colors.background.tertiary
               }}
             >
-              <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
+              <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
             </TouchableOpacity>
 
             {/* תאריך נוכחי */}
             <View style={{ alignItems: 'center', flex: 1 }}>
               <Text style={{
-                fontSize: 17,
-                fontWeight: '700',
+                fontSize: 18,
+                fontWeight: '600',
                 color: DesignTokens.colors.text.primary,
                 textAlign: 'center'
               }}>
@@ -676,9 +672,9 @@ export default function EconomicCalendarTab() {
               {selectedDate.toDateString() === new Date().toDateString() && (
                 <Text style={{
                   fontSize: 12,
-                  color: '#00D84A',
-                  fontWeight: '600',
-                  marginTop: 3
+                  color: DesignTokens.colors.primary.main,
+                  fontWeight: '500',
+                  marginTop: 2
                 }}>
                   היום
                 </Text>
@@ -688,15 +684,14 @@ export default function EconomicCalendarTab() {
             {/* חץ ימין - יום הבא */}
             <TouchableOpacity
               onPress={goToNextDay}
+              activeOpacity={1}
               style={{
-                padding: 10,
+                padding: 8,
                 borderRadius: 12,
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.1)'
+                backgroundColor: DesignTokens.colors.background.tertiary
               }}
             >
-              <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
+              <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
@@ -710,26 +705,19 @@ export default function EconomicCalendarTab() {
             {/* כפתור אירועים חשובים */}
             <TouchableOpacity
               onPress={() => setShowCriticalOnly(!showCriticalOnly)}
+              activeOpacity={1}
               style={{
-                flexDirection: 'row',
                 alignItems: 'center',
+                justifyContent: 'center',
                 paddingHorizontal: 16,
                 paddingVertical: 9,
-                borderRadius: 12,
-                backgroundColor: showCriticalOnly ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                borderWidth: 1,
-                borderColor: showCriticalOnly ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.1)'
+                borderRadius: 20,
+                backgroundColor: showCriticalOnly ? `${DesignTokens.colors.warning.main}26` : DesignTokens.colors.background.tertiary
               }}
             >
-              <Ionicons 
-                name={showCriticalOnly ? "star" : "star-outline"} 
-                size={15} 
-                color={showCriticalOnly ? '#F59E0B' : DesignTokens.colors.text.secondary} 
-                style={{ marginLeft: 5 }}
-              />
               <Text style={{
                 fontSize: 12,
-                color: showCriticalOnly ? '#F59E0B' : DesignTokens.colors.text.secondary,
+                color: showCriticalOnly ? DesignTokens.colors.warning.main : DesignTokens.colors.text.secondary,
                 fontWeight: '600'
               }}>
                 {showCriticalOnly ? 'כל האירועים' : 'רק חשובים'}
@@ -740,26 +728,19 @@ export default function EconomicCalendarTab() {
             {selectedDate.toDateString() !== new Date().toDateString() && (
               <TouchableOpacity
                 onPress={goToToday}
+                activeOpacity={1}
                 style={{
-                  flexDirection: 'row',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   paddingHorizontal: 16,
                   paddingVertical: 9,
-                  borderRadius: 12,
-                  backgroundColor: 'rgba(0, 216, 74, 0.15)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(0, 216, 74, 0.3)'
+                  borderRadius: 20,
+                  backgroundColor: `${DesignTokens.colors.primary.main}26`
                 }}
               >
-                <Ionicons 
-                  name="today" 
-                  size={15} 
-                  color="#00D84A" 
-                  style={{ marginLeft: 5 }}
-                />
                 <Text style={{
                   fontSize: 12,
-                  color: '#00D84A',
+                  color: DesignTokens.colors.primary.main,
                   fontWeight: '600'
                 }}>
                   היום
@@ -768,7 +749,6 @@ export default function EconomicCalendarTab() {
             )}
           </View>
         </View>
-
       </View>
 
       {/* כפתור טעינת נתונים היסטוריים – בוטל לפי דרישה */}

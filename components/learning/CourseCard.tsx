@@ -48,7 +48,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
               progress={progressPercentage}
               size={40}
               strokeWidth={3}
-              color={DesignTokens.colors.primary}
+              color={DesignTokens.colors.primary.main}
             />
           </View>
         )}
@@ -107,7 +107,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: DesignTokens.colors.surface,
+    backgroundColor: DesignTokens.colors.background.secondary,
     borderRadius: DesignTokens.borderRadius.lg,
     marginBottom: DesignTokens.spacing.lg,
     overflow: 'hidden',
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   coverPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: DesignTokens.colors.elevated,
+    backgroundColor: DesignTokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -148,15 +148,16 @@ const styles = StyleSheet.create({
     padding: DesignTokens.spacing.lg,
   },
   title: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: DesignTokens.colors.text.primary,
     marginBottom: DesignTokens.spacing.sm,
     textAlign: 'right',
+    letterSpacing: 0.3,
   },
   subtitle: {
     fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    color: DesignTokens.colors.text.secondary,
     marginBottom: DesignTokens.spacing.md,
     textAlign: 'right',
     lineHeight: DesignTokens.typography.lineHeight.normal * DesignTokens.typography.fontSize.sm,
@@ -168,21 +169,21 @@ const styles = StyleSheet.create({
   },
   instructorLabel: {
     fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.textMuted,
+    color: DesignTokens.colors.text.tertiary,
     marginLeft: DesignTokens.spacing.xs,
   },
   instructorName: {
     fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
+    color: DesignTokens.colors.text.secondary,
+    fontWeight: '500' as any,
   },
   progressInfo: {
     marginBottom: DesignTokens.spacing.sm,
   },
   progressText: {
     fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.primary,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
+    color: DesignTokens.colors.primary.main,
+    fontWeight: '500' as any,
     textAlign: 'right',
   },
   tagsContainer: {
@@ -191,14 +192,14 @@ const styles = StyleSheet.create({
     gap: DesignTokens.spacing.xs,
   },
   tag: {
-    backgroundColor: DesignTokens.colors.elevated,
+    backgroundColor: DesignTokens.colors.background.tertiary,
     paddingHorizontal: DesignTokens.spacing.sm,
     paddingVertical: DesignTokens.spacing.xs,
     borderRadius: DesignTokens.borderRadius.sm,
   },
   tagText: {
     fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.textSecondary,
+    color: DesignTokens.colors.text.secondary,
   },
 });
 

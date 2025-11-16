@@ -109,10 +109,39 @@ serve(async (req) => {
             continue
           }
 
+          // תיקון תאריך: אם יש תוצאה בפועל (actual) והתאריך הוא עתידי, 
+          // זה אומר שהדיווח כבר יצא והתאריך צריך להיות היום או אתמול
+          let correctedReportDate = earnings.report_date
+          const today = new Date()
+          const todayStr = today.toISOString().split('T')[0]
+          const reportDate = new Date(earnings.report_date)
+          
+          // אם יש תוצאה בפועל והתאריך הוא עתידי (מחר ומעלה)
+          if (earnings.actual !== null && earnings.actual !== undefined && 
+              earnings.report_date > todayStr) {
+            console.log(`⚠️ ${earnings.code}: תאריך עתידי (${earnings.report_date}) עם תוצאה בפועל - מתקן לתאריך היום`)
+            
+            // לוגיקה מתוקנת: אם הדיווח הוא "אחרי סגירה" בארה"ב והשעה בישראל היא 
+            // אחרי חצות, התאריך צריך להיות היום. אחרת, אתמול.
+            const israelHour = today.getHours()
+            
+            if (earnings.before_after_market === 'AfterMarket' && israelHour >= 0 && israelHour < 6) {
+              // אם הדיווח היה אחרי סגירה בארה"ב והשעה בישראל היא 00:00-06:00,
+              // זה אומר שהדיווח יצא "אתמול" בארה"ב אבל "היום" בישראל
+              correctedReportDate = todayStr
+            } else if (earnings.before_after_market === 'BeforeMarket') {
+              // אם הדיווח הוא לפני פתיחה, זה אומר שהוא צריך להיות היום
+              correctedReportDate = todayStr
+            } else {
+              // במקרים אחרים, נשאיר את התאריך כמו שהוא
+              // (הדיווח עדיין לא יצא בפועל למרות שיש תוצאה מוערכת)
+            }
+          }
+
           const earningsData = {
-            id: `earnings_${earnings.code}_${earnings.report_date}`,
+            id: `earnings_${earnings.code}_${correctedReportDate}`,
             code: earnings.code,
-            report_date: earnings.report_date,
+            report_date: correctedReportDate,
             date: earnings.date,
             before_after_market: earnings.before_after_market || null,
             currency: earnings.currency || null,

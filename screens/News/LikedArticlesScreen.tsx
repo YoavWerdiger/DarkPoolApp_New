@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ArrowRight, Trash2 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LikedArticlesService, LikedArticle } from '../../services/likedArticlesService';
 import { formatNewsDate } from '../../services/newsService';
 
@@ -35,11 +35,6 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
         borderRadius: 16,
         overflow: 'hidden',
         backgroundColor: DesignTokens.colors.background.secondary,
-        shadowColor: DesignTokens.colors.primary.main,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4
       }}
     >
       {/* תמונה אם קיימת */}

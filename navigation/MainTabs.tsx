@@ -1,4 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import NewsScreen from '../screens/News';
 import JournalScreen from '../screens/Journal';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,7 +75,31 @@ export default function MainTabs() {
         }}
       />
       <Tab.Screen name="Journal" component={JournalScreen} options={{ title: 'יומן' }} />
-      <Tab.Screen name="Chat" component={ChatStack} options={{ title: 'קהילה' }} />
+      <Tab.Screen 
+        name="Chat" 
+        component={ChatStack} 
+        options={({ route }) => ({
+          title: 'קהילה',
+          tabBarStyle: ((route) => {
+            const routeName = getFocusedRouteNameFromRoute(route) ?? 'ChatGroupsList';
+            
+            // הסתר טאבים במסכי הצ'אט והמידע
+            if (routeName === 'ChatGroup' || routeName === 'ChatGroupInfo') {
+              return { display: 'none' };
+            }
+            
+            // הצג טאבים ברשימת הקבוצות
+            return {
+              height: 60 + insets.bottom,
+              paddingBottom: Math.max(insets.bottom, 8),
+              paddingTop: 8,
+              backgroundColor: DesignTokens.colors.background.primary,
+              borderTopWidth: 0,
+              elevation: 0,
+            };
+          })(route),
+        })}
+      />
       <Tab.Screen 
         name="Courses" 
         component={LearningStack} 

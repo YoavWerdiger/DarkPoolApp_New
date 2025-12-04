@@ -1,6 +1,5 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-// מערכת צ'אט חדשה
 import ChatGroupsListScreen from '../screens/ChatNew/ChatGroupsListScreen';
 import ChatGroupScreen from '../screens/ChatNew/ChatGroupScreen';
 import ChatGroupInfoScreen from '../screens/ChatNew/ChatGroupInfoScreen';
@@ -20,9 +19,21 @@ export default function ChatStack() {
         },
       }}
     >
-      <Stack.Screen name="ChatGroupsList" component={ChatGroupsListScreen} />
-      <Stack.Screen name="ChatGroup" component={ChatGroupScreen} />
-      <Stack.Screen name="ChatGroupInfo" component={ChatGroupInfoScreen} />
+      <Stack.Screen 
+        name="ChatGroupsList" 
+        component={ChatGroupsListScreen}
+      />
+      <Stack.Screen 
+        name="ChatGroup" 
+        component={ChatGroupScreen}
+        options={{
+          presentation: 'card',
+        }}
+      />
+      <Stack.Screen 
+        name="ChatGroupInfo" 
+        component={ChatGroupInfoScreen}
+      />
     </Stack.Navigator>
   );
 }

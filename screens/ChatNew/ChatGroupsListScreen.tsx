@@ -1,5 +1,5 @@
 // ============================================
-// Chat Groups List Screen - RTL + הפרדת קבוצות
+// Chat Groups List Screen - RTL + DesignTokens
 // ============================================
 
 import React, { useMemo, useEffect, useState } from 'react';
@@ -21,7 +21,7 @@ interface GroupWithMembership extends ChatGroup {
   my_membership_id?: string;
 }
 
-// מיפוי אייקונים לקבוצות
+// מיפוי אייקונים
 const GROUP_ICONS: { [key: string]: keyof typeof Ionicons.glyphMap } = {
   'הכרזות': 'megaphone',
   'דיונים - כללי': 'chatbubbles',
@@ -34,18 +34,6 @@ const GROUP_ICONS: { [key: string]: keyof typeof Ionicons.glyphMap } = {
   'מסחר פניסטוקס - סיכון גבוה': 'warning',
 };
 
-const GROUP_COLORS: { [key: string]: string } = {
-  'הכרזות': '#FF9500',
-  'דיונים - כללי': '#007AFF',
-  'נטו ניתוחים!': '#34C759',
-  'דיוני - פניסטוקס': '#5856D6',
-  'שאלות ותשובות בשוק': '#FF2D55',
-  'עסקאות מסחר יומי': '#FF3B30',
-  'חדשות מתפרצות': '#FF9500',
-  'סווינגים וסטאפים': '#30B0C7',
-  'מסחר פניסטוקס - סיכון גבוה': '#FF3B30',
-};
-
 export default function ChatGroupsListScreen() {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
@@ -55,7 +43,6 @@ export default function ChatGroupsListScreen() {
   const [allGroups, setAllGroups] = useState<GroupWithMembership[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // טעינת קבוצות
   const loadGroups = async () => {
     if (!user) return;
 
@@ -96,7 +83,6 @@ export default function ChatGroupsListScreen() {
     loadGroups();
   }, [user]);
 
-  // הצטרפות
   const handleJoinGroup = async (group: GroupWithMembership) => {
     if (!user) return;
 
@@ -120,7 +106,6 @@ export default function ChatGroupsListScreen() {
     }
   };
 
-  // עזיבה
   const handleLeaveGroup = async (group: GroupWithMembership) => {
     if (!user || !group.my_membership_id) return;
 
@@ -137,7 +122,6 @@ export default function ChatGroupsListScreen() {
               .from('chat_group_members')
               .delete()
               .eq('id', group.my_membership_id!);
-
             loadGroups();
           },
         },
@@ -145,7 +129,6 @@ export default function ChatGroupsListScreen() {
     );
   };
 
-  // פתיחה
   const handleGroupPress = (group: GroupWithMembership) => {
     if (!group.is_member) {
       Alert.alert(
@@ -165,7 +148,6 @@ export default function ChatGroupsListScreen() {
   // רינדור קבוצה
   const renderGroup = ({ item }: { item: GroupWithMembership }) => {
     const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
-    const iconColor = GROUP_COLORS[item.name] || '#007AFF';
 
     return (
       <TouchableOpacity
@@ -174,8 +156,8 @@ export default function ChatGroupsListScreen() {
         activeOpacity={0.7}
       >
         {/* אייקון */}
-        <View style={[styles.iconContainer, { backgroundColor: iconColor + '15' }]}>
-          <Ionicons name={iconName} size={26} color={iconColor} />
+        <View style={styles.iconContainer}>
+          <Ionicons name={iconName} size={24} color={DesignTokens.colors.accent.primary} />
         </View>
 
         {/* מידע */}
@@ -186,9 +168,18 @@ export default function ChatGroupsListScreen() {
           </Text>
         </View>
 
-        {/* סטטוס */}
+        {/* כפתור/סטטוס */}
         {item.is_member ? (
-          <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+          <TouchableOpacity
+            style={styles.memberBadge}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleLeaveGroup(item);
+            }}
+          >
+            <Ionicons name="checkmark-circle" size={20} color={DesignTokens.colors.accent.primary} />
+            <Text style={styles.memberBadgeText}>חבר</Text>
+          </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={styles.joinButton}
@@ -197,6 +188,7 @@ export default function ChatGroupsListScreen() {
               handleJoinGroup(item);
             }}
           >
+            <Ionicons name="add-circle-outline" size={20} color={DesignTokens.colors.text.secondary} />
             <Text style={styles.joinButtonText}>הצטרף</Text>
           </TouchableOpacity>
         )}
@@ -204,14 +196,16 @@ export default function ChatGroupsListScreen() {
     );
   };
 
-  // הפרדה לקבוצות
+  // הפרדה
   const myGroups = allGroups.filter(g => g.is_member);
   const availableGroups = allGroups.filter(g => !g.is_member);
 
   const renderSectionHeader = (title: string, count: number) => (
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionCount}>{count}</Text>
+      <View style={styles.sectionBadge}>
+        <Text style={styles.sectionCount}>{count}</Text>
+      </View>
     </View>
   );
 
@@ -219,8 +213,8 @@ export default function ChatGroupsListScreen() {
     if (isLoading && allGroups.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.emptyText}>טוען קבוצות...</Text>
+          <ActivityIndicator size="large" color={DesignTokens.colors.accent.primary} />
+          <Text style={styles.emptyText}>טוען...</Text>
         </View>
       );
     }
@@ -228,63 +222,54 @@ export default function ChatGroupsListScreen() {
     if (allGroups.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubbles-outline" size={64} color="#8E8E93" />
+          <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.secondary} />
           <Text style={styles.emptyTitle}>אין קבוצות</Text>
-          <Text style={styles.emptySubtitle}>הקבוצות יווספו בקרוב</Text>
         </View>
       );
     }
 
     return (
-      <>
-        {/* הקבוצות שלי */}
+      <View>
         {myGroups.length > 0 && (
           <>
             {renderSectionHeader('הקבוצות שלי', myGroups.length)}
             {myGroups.map(group => (
-              <View key={group.id}>
-                {renderGroup({ item: group })}
-              </View>
+              <View key={group.id}>{renderGroup({ item: group })}</View>
             ))}
           </>
         )}
 
-        {/* קבוצות זמינות */}
         {availableGroups.length > 0 && (
           <>
             {renderSectionHeader('קבוצות זמינות', availableGroups.length)}
             {availableGroups.map(group => (
-              <View key={group.id}>
-                {renderGroup({ item: group })}
-              </View>
+              <View key={group.id}>{renderGroup({ item: group })}</View>
             ))}
           </>
         )}
-      </>
+      </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>קבוצות קהילה</Text>
           <Text style={styles.headerSubtitle}>
-            {myGroups.length} מתוך {allGroups.length} קבוצות
+            {myGroups.length} מתוך {allGroups.length}
           </Text>
         </View>
 
-        {/* Content */}
         <FlatList
           data={[{ key: 'content' }]}
-          renderItem={() => renderContent()}
+          renderItem={renderContent}
           keyExtractor={item => item.key}
           refreshControl={
             <RefreshControl
               refreshing={isLoading}
               onRefresh={loadGroups}
-              tintColor="#007AFF"
+              tintColor={DesignTokens.colors.accent.primary}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -295,110 +280,132 @@ export default function ChatGroupsListScreen() {
 }
 
 // ============================================
-// Styles - RTL + Contrast
+// Styles - RTL + DesignTokens
 // ============================================
 
 const createStyles = (tokens: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: tokens.colors.background.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: tokens.colors.background.primary,
   },
   
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
-    backgroundColor: '#1C1C1E',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
+    backgroundColor: tokens.colors.background.primary,
   },
   headerTitle: {
     fontSize: 34,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     marginBottom: 4,
     textAlign: 'right',
   },
   headerSubtitle: {
     fontSize: 15,
-    color: '#8E8E93',
-    fontWeight: '500',
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
   
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#2C2C2E',
-    borderBottomWidth: 1,
-    borderBottomColor: '#3A3A3C',
+    paddingVertical: 10,
+    backgroundColor: tokens.colors.background.secondary,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    textAlign: 'right',
-  },
-  sectionCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: tokens.colors.text.secondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'right',
+  },
+  sectionBadge: {
+    backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginRight: 8,
+  },
+  sectionCount: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: tokens.colors.text.secondary,
   },
   
   groupCard: {
-    flexDirection: 'row-reverse', // RTL
+    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 20,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: tokens.colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
+    borderBottomColor: tokens.colors.background.secondary,
   },
   
   iconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: tokens.colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 0,
-    marginRight: 14,
+    marginLeft: 12,
   },
   
   groupInfo: {
     flex: 1,
-    alignItems: 'flex-start', // RTL
+    alignItems: 'flex-end',
   },
   groupName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     marginBottom: 4,
     textAlign: 'right',
   },
   memberCount: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
   
   joinButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 18,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: tokens.colors.background.secondary,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 16,
+    gap: 4,
   },
   joinButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.secondary,
+  },
+  
+  memberBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: tokens.colors.accent.primary + '15',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  memberBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: tokens.colors.accent.primary,
   },
   
   emptyContainer: {
@@ -408,19 +415,16 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingVertical: 100,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
     marginTop: 16,
-    marginBottom: 4,
-  },
-  emptySubtitle: {
-    fontSize: 15,
-    color: '#8E8E93',
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: tokens.colors.text.secondary,
     marginTop: 12,
+    textAlign: 'center',
   },
 });

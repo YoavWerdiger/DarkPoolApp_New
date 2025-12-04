@@ -329,12 +329,12 @@ export default function ChatGroupScreen() {
 const createStyles = (tokens: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000', // שחור טהור לסטטוס בר
+    backgroundColor: tokens.colors.background.primary,
   },
   
   container: {
     flex: 1,
-    backgroundColor: '#1C1C1E', // אפור כהה - רקע הצ'אט
+    backgroundColor: tokens.colors.background.primary,
   },
 
   header: {
@@ -342,9 +342,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#2C2C2E', // אפור בהיר - header
+    backgroundColor: tokens.colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#3A3A3C',
+    borderBottomColor: tokens.colors.background.secondary,
   },
 
   backButton: {
@@ -412,13 +412,13 @@ const createStyles = (tokens: any) => StyleSheet.create({
   typingContainer: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#1C1C1E',
+    backgroundColor: tokens.colors.background.primary,
   },
 
   inputContainer: {
-    backgroundColor: '#2C2C2E', // אפור בהיר - input area
+    backgroundColor: tokens.colors.background.primary,
     borderTopWidth: 1,
-    borderTopColor: '#3A3A3C',
+    borderTopColor: tokens.colors.background.secondary,
   },
 
   loadingContainer: {

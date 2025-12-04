@@ -337,7 +337,7 @@ export default function ChatInput({
 
 const createStyles = (tokens: any) => StyleSheet.create({
   container: {
-    backgroundColor: '#2C2C2E', // אפור בהיר
+    backgroundColor: tokens.colors.background.primary,
     paddingBottom: 8,
   },
   
@@ -346,9 +346,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
-    backgroundColor: '#3A3A3C',
+    backgroundColor: tokens.colors.background.secondary,
     borderLeftWidth: 3,
-    borderLeftColor: '#007AFF',
+    borderLeftColor: tokens.colors.accent.primary,
   },
   replyContent: {
     flex: 1,
@@ -389,20 +389,21 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flex: 1,
     minHeight: 40,
     maxHeight: 120,
-    backgroundColor: '#3A3A3C', // אפור בהיר יותר
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 16,
-    color: '#FFFFFF', // טקסט לבן
+    color: tokens.colors.text.primary,
     textAlignVertical: 'center',
+    textAlign: 'right',
   },
   
   recordingContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#3A3A3C',
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,

@@ -354,11 +354,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     maxWidth: '100%',
   },
   myBubble: {
-    backgroundColor: '#007AFF', // כחול בהיר
+    backgroundColor: tokens.colors.accent.primary,
     borderBottomRightRadius: 4,
   },
   theirBubble: {
-    backgroundColor: '#3A3A3C', // אפור בהיר - contrast טוב
+    backgroundColor: tokens.colors.background.secondary,
     borderBottomLeftRadius: 4,
   },
   deletedBubble: {
@@ -456,11 +456,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   editedText: {
     fontStyle: 'italic',
+    opacity: 0.7,
   },
   timeText: {
     fontSize: 11,
     opacity: 0.7,
-    color: '#FFFFFF',
   },
   
   reactionsContainer: {

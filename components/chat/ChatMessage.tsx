@@ -8,8 +8,7 @@ import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
-import { formatDistanceToNow } from 'date-fns';
-import { he } from 'date-fns/locale';
+import { format } from 'date-fns';
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -61,10 +60,7 @@ export default function ChatMessage({
     );
   }
 
-  const timeText = formatDistanceToNow(new Date(message.created_at), {
-    addSuffix: true,
-    locale: he,
-  });
+  const timeText = format(new Date(message.created_at), 'HH:mm');
 
   return (
     <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}>
@@ -135,14 +131,9 @@ export default function ChatMessage({
           {/* Metadata */}
           <View style={styles.metadata}>
             {message.is_edited && (
-              <Text style={styles.editedText}>נערך · </Text>
+              <Text style={[styles.timeText, styles.editedText]}>נערך · </Text>
             )}
             <Text style={styles.timeText}>{timeText}</Text>
-            {isMe && (
-              <Text style={styles.checkmark}>
-                {message.is_sending ? '⏱' : message.read_by_count > 0 ? '✓✓' : '✓'}
-              </Text>
-            )}
           </View>
         </TouchableOpacity>
 
@@ -464,16 +455,12 @@ const createStyles = (tokens: any) => StyleSheet.create({
     gap: 4,
   },
   editedText: {
-    fontSize: 11,
-    opacity: 0.6,
+    fontStyle: 'italic',
   },
   timeText: {
     fontSize: 11,
-    opacity: 0.6,
-  },
-  checkmark: {
-    fontSize: 12,
-    marginLeft: 4,
+    opacity: 0.7,
+    color: '#FFFFFF',
   },
   
   reactionsContainer: {

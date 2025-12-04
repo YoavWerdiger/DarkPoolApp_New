@@ -337,9 +337,8 @@ export default function ChatInput({
 
 const createStyles = (tokens: any) => StyleSheet.create({
   container: {
-    backgroundColor: tokens.colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: tokens.colors.background.secondary,
+    backgroundColor: '#2C2C2E', // אפור בהיר
+    paddingBottom: 8,
   },
   
   replyPreview: {
@@ -347,9 +346,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
-    backgroundColor: tokens.colors.background.secondary,
+    backgroundColor: '#3A3A3C',
     borderLeftWidth: 3,
-    borderLeftColor: tokens.colors.accent.primary,
+    borderLeftColor: '#007AFF',
   },
   replyContent: {
     flex: 1,
@@ -390,12 +389,12 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flex: 1,
     minHeight: 40,
     maxHeight: 120,
-    backgroundColor: tokens.colors.background.secondary,
+    backgroundColor: '#3A3A3C', // אפור בהיר יותר
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 16,
-    color: tokens.colors.text.primary,
+    color: '#FFFFFF', // טקסט לבן
     textAlignVertical: 'center',
   },
   
@@ -403,7 +402,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: tokens.colors.background.secondary,
+    backgroundColor: '#3A3A3C',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,

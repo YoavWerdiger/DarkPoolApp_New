@@ -363,11 +363,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     maxWidth: '100%',
   },
   myBubble: {
-    backgroundColor: tokens.colors.accent.primary,
+    backgroundColor: '#007AFF', // כחול בהיר
     borderBottomRightRadius: 4,
   },
   theirBubble: {
-    backgroundColor: tokens.colors.background.tertiary || '#2C2C2E',
+    backgroundColor: '#3A3A3C', // אפור בהיר - contrast טוב
     borderBottomLeftRadius: 4,
   },
   deletedBubble: {

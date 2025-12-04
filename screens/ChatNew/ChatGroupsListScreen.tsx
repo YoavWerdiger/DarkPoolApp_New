@@ -358,13 +358,14 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
     marginLeft: 0,
   },
   
   groupInfo: {
     flex: 1,
     alignItems: 'flex-end',
+    paddingRight: 12,
   },
   groupName: {
     fontSize: 17,

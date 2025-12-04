@@ -13,6 +13,7 @@ import { Audio } from 'expo-av';
 import { ChatMessageType } from '../../types/chat.types';
 import { chatMediaService } from '../../services/chat';
 import { Ionicons } from '@expo/vector-icons';
+import VoiceWaveform from './VoiceWaveform';
 
 interface ChatInputProps {
   groupId: string;
@@ -271,11 +272,14 @@ export default function ChatInput({
           {/* Text Input or Recording UI */}
           {isRecording ? (
             <View style={styles.recordingContainer}>
-              <View style={styles.recordingIndicator}>
+              {/* Waveform */}
+              <VoiceWaveform isRecording={isRecording} audioLevel={0.7} />
+              
+              {/* Timer */}
+              <View style={styles.timerContainer}>
                 <View style={styles.recordingDot} />
                 <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
               </View>
-              <Text style={styles.recordingText}>מקליט...</Text>
             </View>
           ) : (
             <TextInput
@@ -401,18 +405,19 @@ const createStyles = (tokens: any) => StyleSheet.create({
   
   recordingContainer: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     backgroundColor: tokens.colors.background.secondary,
     borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
-  recordingIndicator: {
+  timerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+    paddingRight: 8,
   },
   recordingDot: {
     width: 8,
@@ -421,13 +426,10 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: '#FF3B30',
   },
   recordingTime: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: tokens.colors.text.primary,
-  },
-  recordingText: {
-    fontSize: 16,
-    color: tokens.colors.text.secondary,
+    minWidth: 45,
   },
   
   sendButton: {

@@ -313,7 +313,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   
   sectionHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: 20,
@@ -326,14 +326,14 @@ const createStyles = (tokens: any) => StyleSheet.create({
     color: tokens.colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    textAlign: 'right',
   },
   sectionBadge: {
     backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.primary,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
-    marginRight: 8,
+    marginLeft: 8,
+    marginRight: 0,
   },
   sectionCount: {
     fontSize: 12,
@@ -342,7 +342,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   
   groupCard: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -358,7 +358,8 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
+    marginRight: 12,
+    marginLeft: 0,
   },
   
   groupInfo: {

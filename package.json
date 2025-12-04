@@ -6,7 +6,19 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "supabase:login": "npx supabase login",
+    "supabase:link": "npx supabase link",
+    "supabase:status": "npx supabase status",
+    "supabase:secrets:set": "npx supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC",
+    "supabase:deploy:earnings": "npx supabase functions deploy daily-earnings-sync-simple",
+    "supabase:deploy:economics": "npx supabase functions deploy benzinga-economics-sync",
+    "supabase:deploy:scheduler": "npx supabase functions deploy economic-scheduler",
+    "supabase:deploy:all": "npm run supabase:deploy:earnings && npm run supabase:deploy:economics && npm run supabase:deploy:scheduler",
+    "supabase:logs:earnings": "npx supabase functions logs daily-earnings-sync-simple",
+    "supabase:logs:economics": "npx supabase functions logs benzinga-economics-sync",
+    "supabase:logs:scheduler": "npx supabase functions logs economic-scheduler",
+    "benzinga:setup": "npm run supabase:secrets:set && npm run supabase:deploy:all"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

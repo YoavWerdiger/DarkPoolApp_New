@@ -75,19 +75,53 @@ serve(async (req) => {
     // קריאה ל-Benzinga API - אירועים בעלי חשיבות 2+ בלבד (medium-high)
     const apiUrl = new URL('https://api.benzinga.com/api/v2/calendar/economics')
     apiUrl.searchParams.append('token', benzingaApiKey)
-    apiUrl.searchParams.append('accept', 'application/json')
     apiUrl.searchParams.append('parameters[date_from]', fromDate)
     apiUrl.searchParams.append('parameters[date_to]', toDate)
     apiUrl.searchParams.append('parameters[country]', 'US') // רק ארה"ב כרגע
     apiUrl.searchParams.append('parameters[importance]', '2') // חשיבות 2 ומעלה
     apiUrl.searchParams.append('pagesize', '1000')
     
-    const response = await fetch(apiUrl.toString())
+    console.log(`📡 API URL: ${apiUrl.toString()}`)
+    
+    const response = await fetch(apiUrl.toString(), {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    console.log(`📡 Response status: ${response.status} ${response.statusText}`)
+    console.log(`📡 Content-Type: ${response.headers.get('content-type')}`)
+    
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`❌ API Error Response: ${errorText.substring(0, 500)}`)
+      
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Benzinga API error: ${response.status} ${response.statusText}`
+          error: `Benzinga API error: ${response.status} ${response.statusText}`,
+          details: errorText.substring(0, 200)
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      )
+    }
+
+    // בדיקה שזה JSON ולא XML
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      const responseText = await response.text()
+      console.error(`❌ Unexpected content type: ${contentType}`)
+      console.error(`❌ Response: ${responseText.substring(0, 500)}`)
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Unexpected response type: ${contentType}`,
+          response: responseText.substring(0, 200)
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

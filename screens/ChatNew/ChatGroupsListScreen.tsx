@@ -11,11 +11,37 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { ChatGroup } from '../../types/chat.types';
+import { Ionicons } from '@expo/vector-icons';
 
 interface GroupWithMembership extends ChatGroup {
   is_member: boolean;
   my_membership_id?: string;
 }
+
+// מיפוי אייקונים לקבוצות
+const GROUP_ICONS: { [key: string]: keyof typeof Ionicons.glyphMap } = {
+  'הכרזות': 'megaphone',
+  'דיונים - כללי': 'chatbubbles',
+  'נטו ניתוחים!': 'analytics',
+  'דיוני - פניסטוקס': 'trending-up',
+  'שאלות ותשובות בשוק': 'help-circle',
+  'עסקאות מסחר יומי': 'flash',
+  'חדשות מתפרצות': 'newspaper',
+  'סווינגים וסטאפים': 'swap-horizontal',
+  'מסחר פניסטוקס - סיכון גבוה': 'warning',
+};
+
+const GROUP_COLORS: { [key: string]: string } = {
+  'הכרזות': '#FF9500',
+  'דיונים - כללי': '#007AFF',
+  'נטו ניתוחים!': '#34C759',
+  'דיוני - פניסטוקס': '#5856D6',
+  'שאלות ותשובות בשוק': '#FF2D55',
+  'עסקאות מסחר יומי': '#FF3B30',
+  'חדשות מתפרצות': '#FF9500',
+  'סווינגים וסטאפים': '#30B0C7',
+  'מסחר פניסטוקס - סיכון גבוה': '#FF3B30',
+};
 
 export default function ChatGroupsListScreen() {
   const DesignTokens = useDesignTokens();
@@ -88,7 +114,6 @@ export default function ChatGroupsListScreen() {
         return;
       }
 
-      Alert.alert('הצלחה', `הצטרפת לקבוצה "${group.name}"`);
       loadGroups();
     } catch (error) {
       console.error(error);
@@ -118,7 +143,6 @@ export default function ChatGroupsListScreen() {
               return;
             }
 
-            Alert.alert('הצלחה', `עזבת את הקבוצה "${group.name}"`);
             loadGroups();
           },
         },
@@ -130,8 +154,8 @@ export default function ChatGroupsListScreen() {
   const handleGroupPress = (group: GroupWithMembership) => {
     if (!group.is_member) {
       Alert.alert(
-        'הצטרף לקבוצה',
-        `כדי לצפות בקבוצה "${group.name}" עליך להצטרף אליה תחילה.`,
+        group.name,
+        `כדי לצפות בקבוצה יש להצטרף תחילה`,
         [
           { text: 'ביטול', style: 'cancel' },
           { text: 'הצטרף', onPress: () => handleJoinGroup(group) },
@@ -144,63 +168,65 @@ export default function ChatGroupsListScreen() {
   };
 
   // רינדור קבוצה
-  const renderGroup = ({ item }: { item: GroupWithMembership }) => (
-    <TouchableOpacity
-      style={styles.groupCard}
-      onPress={() => handleGroupPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.groupInfo}>
-        <Text style={styles.groupName}>{item.name}</Text>
-        {item.description && (
-          <Text style={styles.groupDescription} numberOfLines={2}>
-            {item.description}
-          </Text>
-        )}
-        <View style={styles.metaRow}>
-          <Text style={styles.memberCount}>
-            👥 {item.members_count || 0} חברים
-          </Text>
-          {item.settings?.onlyAdminsCanSend && (
-            <Text style={styles.adminOnly}>🔒 רק אדמינים</Text>
+  const renderGroup = ({ item }: { item: GroupWithMembership }) => {
+    const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
+    const iconColor = GROUP_COLORS[item.name] || DesignTokens.colors.accent.primary;
+
+    return (
+      <TouchableOpacity
+        style={styles.groupCard}
+        onPress={() => handleGroupPress(item)}
+        activeOpacity={0.7}
+      >
+        {/* אייקון */}
+        <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
+          <Ionicons name={iconName} size={28} color={iconColor} />
+        </View>
+
+        {/* מידע */}
+        <View style={styles.groupInfo}>
+          <Text style={styles.groupName}>{item.name}</Text>
+          {item.description && (
+            <Text style={styles.groupDescription} numberOfLines={1}>
+              {item.description}
+            </Text>
           )}
         </View>
-      </View>
 
-      {item.is_member ? (
-        <View style={styles.buttonContainer}>
+        {/* כפתור */}
+        {item.is_member ? (
           <TouchableOpacity
-            style={styles.openButton}
-            onPress={() => handleGroupPress(item)}
+            style={[styles.statusButton, styles.memberButton]}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleLeaveGroup(item);
+            }}
           >
-            <Text style={styles.openButtonText}>פתח →</Text>
+            <Ionicons name="checkmark-circle" size={20} color={DesignTokens.colors.accent.primary} />
+            <Text style={styles.memberButtonText}>חבר</Text>
           </TouchableOpacity>
+        ) : (
           <TouchableOpacity
-            style={styles.leaveButton}
-            onPress={() => handleLeaveGroup(item)}
+            style={[styles.statusButton, styles.joinButton]}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleJoinGroup(item);
+            }}
           >
-            <Text style={styles.leaveButtonText}>עזוב</Text>
+            <Ionicons name="add-circle-outline" size={20} color={DesignTokens.colors.text.secondary} />
+            <Text style={styles.joinButtonText}>הצטרף</Text>
           </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={styles.joinButton}
-          onPress={() => handleJoinGroup(item)}
-        >
-          <Text style={styles.joinButtonText}>+ הצטרף</Text>
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
-  );
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <View>
-        <Text style={styles.headerTitle}>קבוצות קהילה</Text>
-        <Text style={styles.headerSubtitle}>
-          בחר את הקבוצות שמעניינות אותך
-        </Text>
-      </View>
+      <Text style={styles.headerTitle}>קבוצות הקהילה</Text>
+      <Text style={styles.headerSubtitle}>
+        {allGroups.filter(g => g.is_member).length} מתוך {allGroups.length} קבוצות
+      </Text>
     </View>
   );
 
@@ -216,25 +242,20 @@ export default function ChatGroupsListScreen() {
 
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>💬</Text>
+        <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.secondary} />
         <Text style={styles.emptyTitle}>אין קבוצות זמינות</Text>
         <Text style={styles.emptyText}>הקבוצות יווספו בקרוב</Text>
       </View>
     );
   };
 
-  // חלוקה לקבוצות - קבוצות שלי וזמינות
-  const myGroups = allGroups.filter(g => g.is_member);
-  const availableGroups = allGroups.filter(g => !g.is_member);
-
   return (
     <View style={styles.container}>
-      {renderHeader()}
-      
       <FlatList
         data={allGroups}
         renderItem={renderGroup}
         keyExtractor={item => item.id}
+        ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
           <RefreshControl
@@ -242,15 +263,6 @@ export default function ChatGroupsListScreen() {
             onRefresh={loadGroups}
             tintColor={DesignTokens.colors.accent.primary}
           />
-        }
-        ListHeaderComponent={
-          myGroups.length > 0 ? (
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                📌 הקבוצות שלי ({myGroups.length})
-              </Text>
-            </View>
-          ) : null
         }
         contentContainerStyle={allGroups.length === 0 && styles.emptyListContent}
       />
@@ -269,45 +281,44 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   
   header: {
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.background.secondary,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 16,
+    backgroundColor: tokens.colors.background.primary,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
     color: tokens.colors.text.primary,
     marginBottom: 4,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: tokens.colors.text.secondary,
-  },
-  
-  sectionHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: tokens.colors.background.secondary,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: tokens.colors.text.primary,
+    fontWeight: '500',
   },
   
   groupCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     backgroundColor: tokens.colors.background.primary,
     borderBottomWidth: 1,
     borderBottomColor: tokens.colors.background.secondary,
   },
   
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
+  },
+  
   groupInfo: {
     flex: 1,
-    marginRight: 12,
   },
   groupName: {
     fontSize: 17,
@@ -318,63 +329,33 @@ const createStyles = (tokens: any) => StyleSheet.create({
   groupDescription: {
     fontSize: 14,
     color: tokens.colors.text.secondary,
-    marginBottom: 8,
   },
   
-  metaRow: {
+  statusButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  memberCount: {
-    fontSize: 13,
-    color: tokens.colors.text.secondary,
-  },
-  adminOnly: {
-    fontSize: 12,
-    color: '#FF9500',
-    fontWeight: '500',
-  },
-  
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
   },
   
   joinButton: {
-    backgroundColor: tokens.colors.accent.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: tokens.colors.background.secondary,
   },
   joinButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  
-  openButton: {
-    backgroundColor: tokens.colors.accent.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  openButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  
-  leaveButton: {
-    backgroundColor: tokens.colors.background.secondary,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  leaveButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
     color: tokens.colors.text.secondary,
+  },
+  
+  memberButton: {
+    backgroundColor: tokens.colors.accent.primary + '20',
+  },
+  memberButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: tokens.colors.accent.primary,
   },
   
   emptyListContent: {
@@ -385,19 +366,17 @@ const createStyles = (tokens: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    marginTop: 100,
   },
   emptyTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: tokens.colors.text.primary,
+    marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },

@@ -112,16 +112,6 @@ export async function getChatMessages(
           display_name,
           profile_picture,
           is_online
-        ),
-        reply_to:chat_messages!chat_messages_reply_to_message_id_fkey (
-          id,
-          content,
-          message_type,
-          sender_id,
-          media_url,
-          sender:users!chat_messages_sender_id_fkey (
-            display_name
-          )
         )
       `, { count: 'exact' })
       .eq('group_id', groupId)
@@ -232,14 +222,6 @@ export async function getChatMessages(
         reactions: reactionGroups,
         is_starred_by_me: starredIds.has(msg.id),
         is_read_by_me: readIds.has(msg.id),
-        reply_to: msg.reply_to ? {
-          message_id: msg.reply_to.id,
-          content: msg.reply_to.content,
-          sender_id: msg.reply_to.sender_id,
-          sender_name: msg.reply_to.sender?.display_name || 'משתמש',
-          message_type: msg.reply_to.message_type,
-          media_url: msg.reply_to.media_url,
-        } : undefined,
       };
     });
 

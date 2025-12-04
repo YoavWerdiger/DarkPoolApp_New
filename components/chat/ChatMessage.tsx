@@ -357,8 +357,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   
   bubble: {
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     maxWidth: '100%',
   },
   myBubble: {
@@ -366,7 +367,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   theirBubble: {
-    backgroundColor: tokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.tertiary || '#2C2C2E',
     borderBottomLeftRadius: 4,
   },
   deletedBubble: {

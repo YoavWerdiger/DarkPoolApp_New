@@ -5,7 +5,7 @@
 // ============================================
 
 import React, { useMemo, useEffect, useState } from 'react';
-import { View, FlatList, Text, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from 'react-native';
+import { View, FlatList, Text, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
@@ -186,11 +186,6 @@ export default function ChatGroupsListScreen() {
         {/* מידע */}
         <View style={styles.groupInfo}>
           <Text style={styles.groupName}>{item.name}</Text>
-          {item.description && (
-            <Text style={styles.groupDescription} numberOfLines={1}>
-              {item.description}
-            </Text>
-          )}
         </View>
 
         {/* כפתור */}
@@ -250,7 +245,7 @@ export default function ChatGroupsListScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <FlatList
         data={allGroups}
         renderItem={renderGroup}
@@ -266,7 +261,7 @@ export default function ChatGroupsListScreen() {
         }
         contentContainerStyle={allGroups.length === 0 && styles.emptyListContent}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -275,7 +270,7 @@ export default function ChatGroupsListScreen() {
 // ============================================
 
 const createStyles = (tokens: any) => StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: tokens.colors.background.primary,
   },

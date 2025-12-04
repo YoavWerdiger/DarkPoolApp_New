@@ -12,6 +12,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import { ChatMessageType } from '../../types/chat.types';
 import { chatMediaService } from '../../services/chat';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ChatInputProps {
   groupId: string;
@@ -249,7 +250,7 @@ export default function ChatInput({
               <Text style={styles.replyText} numberOfLines={1}>{replyTo.content}</Text>
             </View>
             <TouchableOpacity onPress={onCancelReply} style={styles.cancelReply}>
-              <Text style={styles.cancelReplyText}>✕</Text>
+              <Ionicons name="close" size={20} color={DesignTokens.colors.text.secondary} />
             </TouchableOpacity>
           </View>
         )}
@@ -263,7 +264,7 @@ export default function ChatInput({
               style={styles.iconButton}
               disabled={disabled || isUploading}
             >
-              <Text style={styles.icon}>📎</Text>
+              <Ionicons name="add-circle" size={28} color={DesignTokens.colors.text.secondary} />
             </TouchableOpacity>
           )}
 
@@ -294,18 +295,18 @@ export default function ChatInput({
           {text.trim().length > 0 ? (
             <TouchableOpacity 
               onPress={handleSend} 
-              style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
+              style={styles.sendButton}
               disabled={!canSend || disabled || isUploading}
             >
-              <Text style={styles.sendIcon}>➤</Text>
+              <Ionicons name="send" size={24} color="#FFFFFF" />
             </TouchableOpacity>
           ) : isRecording ? (
             <View style={styles.recordingButtons}>
               <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton}>
-                <Text style={styles.cancelIcon}>✕</Text>
+                <Ionicons name="close-circle" size={32} color="#FF3B30" />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => stopRecording(true)} style={styles.stopButton}>
-                <Text style={styles.stopIcon}>⏹</Text>
+                <Ionicons name="stop-circle" size={32} color={DesignTokens.colors.accent.primary} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -314,7 +315,7 @@ export default function ChatInput({
               style={styles.voiceButton}
               disabled={disabled || isUploading}
             >
-              <Text style={styles.voiceIcon}>🎤</Text>
+              <Ionicons name="mic" size={24} color={DesignTokens.colors.text.secondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -384,9 +385,6 @@ const createStyles = (tokens: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  icon: {
-    fontSize: 24,
-  },
   
   textInput: {
     flex: 1,
@@ -440,13 +438,6 @@ const createStyles = (tokens: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  sendButtonDisabled: {
-    opacity: 0.5,
-  },
-  sendIcon: {
-    fontSize: 20,
-    color: '#FFFFFF',
-  },
   
   voiceButton: {
     width: 40,
@@ -454,37 +445,18 @@ const createStyles = (tokens: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  voiceIcon: {
-    fontSize: 24,
-  },
   
   recordingButtons: {
     flexDirection: 'row',
     gap: 8,
   },
   cancelButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FF3B30',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  cancelIcon: {
-    fontSize: 20,
-    color: '#FFFFFF',
   },
   stopButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: tokens.colors.accent.primary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  stopIcon: {
-    fontSize: 20,
-    color: '#FFFFFF',
   },
   
   uploadingContainer: {

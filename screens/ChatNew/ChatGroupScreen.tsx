@@ -13,8 +13,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';

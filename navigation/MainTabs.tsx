@@ -13,30 +13,33 @@ import { useDesignTokens } from '../components/ui/DesignTokens';
 const Tab = createBottomTabNavigator();
 
 export default function MainTabs() {
-  console.log('🎓 MainTabs: Rendering...');
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   
   return (
-    <Tab.Navigator
-      initialRouteName="Chat"
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: DesignTokens.colors.success.main,
-        tabBarInactiveTintColor: DesignTokens.colors.text.tertiary,
-        tabBarStyle: { 
-          backgroundColor: DesignTokens.colors.background.primary, 
-          borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 90 : 70 + insets.bottom,
-          paddingBottom: Platform.OS === 'ios' ? 15 : insets.bottom + 10,
-          paddingTop: 15,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 8,
-        },
-        tabBarIcon: ({ color, size, focused }) => {
+    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+      <Tab.Navigator
+        initialRouteName="Chat"
+        sceneContainerStyle={{
+          backgroundColor: DesignTokens.colors.background.primary,
+        }}
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarActiveTintColor: DesignTokens.colors.primary.main,
+          tabBarInactiveTintColor: DesignTokens.colors.text.secondary,
+          tabBarStyle: { 
+            backgroundColor: DesignTokens.colors.background.primary, 
+            borderTopWidth: 0,
+            height: Platform.OS === 'ios' ? 90 : 70 + insets.bottom,
+            paddingBottom: Platform.OS === 'ios' ? 15 : insets.bottom + 10,
+            paddingTop: 15,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          },
+          tabBarIcon: ({ color, size, focused }) => {
           if (route.name === 'Chat') {
             return <MessageCircle size={size + 2} color={color} strokeWidth={2} />;
           } else if (route.name === 'Profile') {
@@ -48,14 +51,15 @@ export default function MainTabs() {
           } else if (route.name === 'Courses') {
             return <GraduationCap size={size + 2} color={color} strokeWidth={2} />;
           }
-          return null;
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          marginTop: 4,
-        },
-      })}
-    >
+            return null;
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            marginTop: 4,
+            fontWeight: '600',
+          },
+        })}
+      >
       <Tab.Screen 
         name="News" 
         component={NewsScreen} 
@@ -70,11 +74,11 @@ export default function MainTabs() {
         }}
       />
       <Tab.Screen name="Journal" component={JournalScreen} options={{ title: 'יומן' }} />
-      <Tab.Screen name="Chat" component={ChatStack} options={{ title: 'צאטים' }} />
+      <Tab.Screen name="Chat" component={ChatStack} options={{ title: 'קהילה' }} />
       <Tab.Screen 
         name="Courses" 
         component={LearningStack} 
-        options={{ title: 'קורסים' }}
+        options={{ title: 'אקדמיה' }}
         listeners={{
           tabPress: () => {
             console.log('🎓 MainTabs: Courses tab pressed');
@@ -82,6 +86,7 @@ export default function MainTabs() {
         }}
       />
       <Tab.Screen name="Profile" component={ProfileStack} options={{ title: 'פרופיל' }} />
-    </Tab.Navigator>
+      </Tab.Navigator>
+    </View>
   );
 } 

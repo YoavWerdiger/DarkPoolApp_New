@@ -1,107 +1,25 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, Alert, Pressable, ActionSheetIOS, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, Alert, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { MediaService, MediaMetadata } from '../../services/mediaService';
+import { MediaMetadata } from '../../services/mediaService';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { Audio } from 'expo-av';
-import { UIBottomSheet, UIButton } from '../ui';
-import DesignTokens from '../ui/DesignTokens';
+import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface MediaPickerProps {
   visible: boolean;
   onClose: () => void;
   onMediaSelected: (mediaType: string, uri: string, metadata?: MediaMetadata) => void;
-  onPollRequest: () => void; // callback ליצירת סקר
+  onPollRequest: () => void;
   chatId: string;
 }
 
-export default function MediaPicker({ visible, onClose, onMediaSelected, onPollRequest, chatId }: MediaPickerProps) {
-  const { colors, spacing, typography } = DesignTokens;
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const recordingRef = useRef<Audio.Recording | null>(null);
-  const durationInterval = useRef<NodeJS.Timeout | null>(null);
-
-  // Show ActionSheet when visible changes to true
-  React.useEffect(() => {
-    console.log('📱 MediaPicker useEffect:', { visible });
-    if (visible) {
-      showActionSheet();
-    }
-  }, [visible]);
-
-  // ניקוי הקלטה בעת unmount
-  React.useEffect(() => {
-    return () => {
-      if (recordingRef.current) {
-        console.log('🎤 MediaPicker: Cleaning up recording on unmount...');
-        try {
-          recordingRef.current.stopAndUnloadAsync();
-        } catch (error) {
-          console.log('🎤 MediaPicker: Cleanup error on unmount:', error);
-        }
-        recordingRef.current = null;
-      }
-      if (durationInterval.current) {
-        clearInterval(durationInterval.current);
-      }
-    };
-  }, []);
-
-  const showActionSheet = () => {
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['ביטול', 'מצלמה', 'גלריה', 'וידאו', 'קובץ', 'אודיו', 'סקר'],
-          cancelButtonIndex: 0,
-          title: 'בחר מדיה',
-        },
-        (buttonIndex) => {
-          onClose(); // סגור את MediaPicker
-          
-          if (buttonIndex === 0) {
-            return;
-          }
-          
-          const actions = ['camera', 'gallery', 'video', 'document', 'audio', 'poll'];
-          const action = actions[buttonIndex - 1];
-          handleAction(action);
-        }
-      );
-    } else {
-      // For Android, show a custom bottom sheet
-      showAndroidActionSheet();
-    }
-  };
-
-  const showAndroidActionSheet = () => {
-    Alert.alert(
-      'בחר מדיה',
-      '',
-      [
-        { text: 'ביטול', style: 'cancel', onPress: onClose },
-        { text: 'מצלמה', onPress: () => { onClose(); handleAction('camera'); } },
-        { text: 'גלריה', onPress: () => { onClose(); handleAction('gallery'); } },
-        { text: 'וידאו', onPress: () => { onClose(); handleAction('video'); } },
-        { text: 'קובץ', onPress: () => { onClose(); handleAction('document'); } },
-        { text: 'אודיו', onPress: () => { onClose(); handleAction('audio'); } },
-        { text: 'סקר', onPress: () => { onClose(); handleAction('poll'); } },
-      ],
-      { cancelable: true, onDismiss: onClose }
-    );
-  };
-
-  // פורמט זמן להקלטה
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+export default function MediaPicker({ visible, onClose, onMediaSelected, onPollRequest }: MediaPickerProps) {
+  const DesignTokens = useDesignTokens();
 
   // טיפול בבחירת פעולה
   const handleAction = async (actionType: string) => {
-    console.log('📱 MediaPicker handleAction:', actionType);
     try {
       switch (actionType) {
         case 'camera':
@@ -120,8 +38,8 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
           await handleAudioFilePick();
           break;
         case 'poll':
-          onClose(); // סגור את MediaPicker
-          onPollRequest(); // פתח את PollCreationModal
+          onClose();
+          onPollRequest();
           break;
       }
     } catch (error) {
@@ -132,6 +50,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // צילום תמונה
   const handleCameraCapture = async () => {
     try {
+      console.log('📷 MediaPicker: Starting camera capture...');
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('אישור נדרש', 'אנא אשר גישה למצלמה');
@@ -144,8 +63,14 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         quality: 0.8,
       });
 
+      console.log('📷 MediaPicker: Camera result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
+      
       if (!result.canceled && result.assets[0]) {
-        onMediaSelected('image', result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        console.log('📷 MediaPicker: Calling onMediaSelected with uri:', uri);
+        onMediaSelected('image', uri);
+        // סגירת ה-BottomSheet - ה-MessageInputBar יטפל ב-state שלו בנפרד
+        onClose();
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -156,6 +81,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // בחירת תמונה מהגלריה
   const handleGalleryPick = async () => {
     try {
+      console.log('🖼️ MediaPicker: Starting gallery pick...');
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('אישור נדרש', 'אנא אשר גישה לגלריה');
@@ -168,8 +94,13 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         quality: 0.8,
       });
 
+      console.log('🖼️ MediaPicker: Gallery result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
+
       if (!result.canceled && result.assets[0]) {
-        onMediaSelected('image', result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        console.log('🖼️ MediaPicker: Calling onMediaSelected with uri:', uri);
+        onMediaSelected('image', uri);
+        onClose();
       }
     } catch (error) {
       console.error('Error picking from gallery:', error);
@@ -180,6 +111,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // צילום וידאו
   const handleVideoCapture = async () => {
     try {
+      console.log('🎬 MediaPicker: Starting video capture...');
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('אישור נדרש', 'אנא אשר גישה למצלמה');
@@ -193,8 +125,13 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         quality: 0.8,
       });
 
+      console.log('🎬 MediaPicker: Video result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
+
       if (!result.canceled && result.assets[0]) {
-        onMediaSelected('video', result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        console.log('🎬 MediaPicker: Calling onMediaSelected with uri:', uri);
+        onMediaSelected('video', uri);
+        onClose();
       }
     } catch (error) {
       console.error('Error taking video:', error);
@@ -205,13 +142,19 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // בחירת קובץ
   const handleDocumentPick = async () => {
     try {
+      console.log('📄 MediaPicker: Starting document pick...');
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
         copyToCacheDirectory: true,
       });
 
+      console.log('📄 MediaPicker: Document result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
+
       if (!result.canceled && result.assets[0]) {
-        onMediaSelected('document', result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        console.log('📄 MediaPicker: Calling onMediaSelected with uri:', uri);
+        onMediaSelected('document', uri);
+        onClose();
       }
     } catch (error) {
       console.error('Error picking document:', error);
@@ -222,13 +165,19 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // בחירת קובץ אודיו
   const handleAudioFilePick = async () => {
     try {
+      console.log('🎵 MediaPicker: Starting audio pick...');
       const result = await DocumentPicker.getDocumentAsync({
         type: 'audio/*',
         copyToCacheDirectory: true,
       });
 
+      console.log('🎵 MediaPicker: Audio result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
+
       if (!result.canceled && result.assets[0]) {
-        onMediaSelected('audio', result.assets[0].uri);
+        const uri = result.assets[0].uri;
+        console.log('🎵 MediaPicker: Calling onMediaSelected with uri:', uri);
+        onMediaSelected('audio', uri);
+        onClose();
       }
     } catch (error) {
       console.error('Error picking audio file:', error);
@@ -236,191 +185,132 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
     }
   };
 
-  // הקלטת קול
-  const handleAudioRecording = async () => {
-    if (isRecording) {
-      // עצור הקלטה
-      await stopAudioRecording();
-    } else {
-      // התחל הקלטה
-      await startAudioRecording();
-    }
-  };
-
-  // התחלת הקלטה
-  const startAudioRecording = async () => {
-    try {
-      // נקה הקלטה קודמת אם קיימת
-      if (recordingRef.current) {
-        console.log('🎤 MediaPicker: Cleaning up previous recording...');
-        try {
-          await recordingRef.current.stopAndUnloadAsync();
-        } catch (cleanupError) {
-          console.log('🎤 MediaPicker: Cleanup error (expected):', cleanupError);
-        }
-        recordingRef.current = null;
-      }
-      
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('אישור נדרש', 'אנא אשר גישה למיקרופון');
-        return;
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-
-      recordingRef.current = recording;
-      setIsRecording(true);
-      setRecordingDuration(0);
-
-      // עדכן משך כל שנייה
-      durationInterval.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      Alert.alert('שגיאה', 'שגיאה בהתחלת ההקלטה');
-    }
-  };
-
-  // עצירת הקלטה
-  const stopAudioRecording = async () => {
-    try {
-      if (!recordingRef.current) return;
-
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      
-      if (durationInterval.current) {
-        clearInterval(durationInterval.current);
-      }
-
-      setIsRecording(false);
-      setRecordingDuration(0);
-      recordingRef.current = null;
-
-      if (uri) {
-        onMediaSelected('audio', uri);
-      }
-    } catch (error) {
-      console.error('Error stopping recording:', error);
-      Alert.alert('שגיאה', 'שגיאה בעצירת ההקלטה');
-    }
-  };
-
-  // אפשר לעצור הקלטה
-  const stopRecording = async () => {
-    await stopAudioRecording();
-  };
-
-
-
-  // Media Options Buttons
+  // Media Options - iOS Style עם עיגולים צבעוניים גדולים
   const mediaOptions = [
     {
       icon: 'camera' as keyof typeof Ionicons.glyphMap,
       title: 'מצלמה',
       action: 'camera',
-      color: colors.primary,
+      gradient: ['#FF2D55', '#FF375F'], // iOS Pink
     },
     {
       icon: 'images' as keyof typeof Ionicons.glyphMap,
       title: 'גלריה',
       action: 'gallery',
-      color: colors.primary,
+      gradient: ['#34C759', '#30D158'], // iOS Green
     },
     {
       icon: 'videocam' as keyof typeof Ionicons.glyphMap,
       title: 'וידאו',
       action: 'video',
-      color: colors.primary,
+      gradient: ['#AF52DE', '#BF5AF2'], // iOS Purple
     },
     {
-      icon: 'document' as keyof typeof Ionicons.glyphMap,
+      icon: 'document-text' as keyof typeof Ionicons.glyphMap,
       title: 'קובץ',
       action: 'document',
-      color: colors.primary,
+      gradient: ['#007AFF', '#0A84FF'], // iOS Blue
     },
     {
-      icon: 'mic' as keyof typeof Ionicons.glyphMap,
+      icon: 'musical-notes' as keyof typeof Ionicons.glyphMap,
       title: 'אודיו',
       action: 'audio',
-      color: colors.primary,
+      gradient: ['#FF9500', '#FF9F0A'], // iOS Orange
     },
     {
-      icon: 'bar-chart' as keyof typeof Ionicons.glyphMap,
+      icon: 'stats-chart' as keyof typeof Ionicons.glyphMap,
       title: 'סקר',
       action: 'poll',
-      color: colors.primary,
+      gradient: ['#5AC8FA', '#64D2FF'], // iOS Cyan
     },
   ];
 
-  // Recording Status Component
-  const RecordingStatus = () => (
-    <View style={{ 
-      padding: spacing.lg,
+  const styles = React.useMemo(() => StyleSheet.create({
+    container: {
+      backgroundColor: DesignTokens.colors.background.primary,
+      paddingTop: DesignTokens.spacing.md,
+      paddingBottom: DesignTokens.spacing.xl + 10,
+      paddingHorizontal: DesignTokens.spacing.xl,
+    },
+    title: {
+      fontSize: 17,
+      fontWeight: '600',
+      color: DesignTokens.colors.text.primary,
+      textAlign: 'center',
+      marginBottom: DesignTokens.spacing.xl + 4,
+      letterSpacing: -0.4,
+    },
+    optionsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-around',
+      paddingHorizontal: DesignTokens.spacing.sm,
+    },
+    optionItem: {
+      width: '33.33%',
       alignItems: 'center',
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    }}>
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: colors.danger,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.md,
-        borderRadius: 20,
-        marginBottom: spacing.md,
-      }}>
-        <View style={{
-          width: 8,
-          height: 8,
-          borderRadius: 4,
-          backgroundColor: '#fff',
-          marginRight: spacing.sm,
-        }} />
-        <Text style={{
-          color: '#fff',
-          fontSize: typography.fontSize.base,
-          fontWeight: '500' as const,
-        }}>
-          מקליט... {formatDuration(recordingDuration)}
-        </Text>
+      marginBottom: DesignTokens.spacing.lg + 4,
+    },
+    optionButton: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    optionButtonPressed: {
+      transform: [{ scale: 0.9 }],
+      opacity: 0.85,
+    },
+    optionText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: DesignTokens.colors.text.secondary,
+      textAlign: 'center',
+      letterSpacing: -0.2,
+    },
+  }), [DesignTokens]);
+
+  return (
+    <BottomSheet
+      isOpen={visible}
+      onClose={onClose}
+      snapPoints={[0.38]}
+      showHandle={true}
+      enablePanDownToClose={true}
+      useModal={true}
+      backdropOpacity={0.15}
+    >
+      <View style={styles.container}>
+        <Text style={styles.title}>שתף</Text>
+        <View style={styles.optionsGrid}>
+          {mediaOptions.map((option) => (
+            <View key={option.action} style={styles.optionItem}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.optionButton,
+                  { backgroundColor: option.gradient[0] },
+                  pressed && styles.optionButtonPressed,
+                ]}
+                onPress={() => handleAction(option.action)}
+              >
+                <Ionicons
+                  name={option.icon}
+                  size={26}
+                  color="#FFFFFF"
+                />
+              </Pressable>
+              <Text style={styles.optionText}>{option.title}</Text>
+            </View>
+          ))}
+        </View>
       </View>
-      
-      <UIButton
-        title="עצור הקלטה"
-        variant="secondary"
-        size="sm"
-        onPress={stopRecording}
-        icon="stop"
-      />
-    </View>
+    </BottomSheet>
   );
-
-  // For recording status, show a simple modal
-  if (isRecording) {
-    return (
-      <UIBottomSheet
-        visible={isRecording}
-        onClose={() => {}}
-        showHandle={true}
-        dragToClose={false}
-        contentStyle={{ padding: 0 }}
-      >
-        <RecordingStatus />
-      </UIBottomSheet>
-    );
-  }
-
-  // For normal media picker, ActionSheet handles everything
-  return null;
 }

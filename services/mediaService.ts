@@ -6,8 +6,10 @@ export interface LessonMedia {
   id?: string;
   course_id: string;
   lesson_id: string;
-  vimeo_id: string;
-  vimeo_url: string;
+  vimeo_id?: string;
+  vimeo_url?: string;
+  youtube_id?: string;
+  youtube_url?: string;
   thumbnail_url?: string;
   title: string;
   description?: string;
@@ -103,6 +105,33 @@ class MediaService {
     } catch (error) {
       console.error('Error in updateLessonMedia:', error);
       return null;
+    }
+  }
+
+  // עדכון duration של שיעור לפי course_id ו-lesson_id
+  async updateLessonDuration(courseId: string, lessonId: string, durationSeconds: number): Promise<boolean> {
+    try {
+      const durationMinutes = Math.round(durationSeconds / 60);
+      
+      const { error } = await supabase
+        .from('lesson_media_links')
+        .update({ 
+          duration_minutes: durationMinutes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('course_id', courseId)
+        .eq('lesson_id', lessonId);
+
+      if (error) {
+        console.error('Error updating lesson duration:', error);
+        return false;
+      }
+
+      console.log('✅ Updated lesson duration:', { courseId, lessonId, durationMinutes });
+      return true;
+    } catch (error) {
+      console.error('Error in updateLessonDuration:', error);
+      return false;
     }
   }
 
@@ -239,6 +268,44 @@ class MediaService {
     } catch (error) {
       console.error('Error in createWhalesCourseMedia:', error);
       return false;
+    }
+  }
+
+  // יצירת שיעור עם קישור יוטיוב לקורס הכשרה של דוד
+  async createDavidTrainingLessonMedia(
+    courseId: string,
+    lessonId: string,
+    title: string,
+    youtubeUrl: string,
+    description?: string,
+    durationMinutes?: number
+  ): Promise<LessonMedia | null> {
+    try {
+      // חילוץ YouTube ID מהקישור
+      const youtubeIdMatch = youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+      const youtubeId = youtubeIdMatch ? youtubeIdMatch[1] : null;
+
+      if (!youtubeId) {
+        console.error('Invalid YouTube URL:', youtubeUrl);
+        return null;
+      }
+
+      const media: Omit<LessonMedia, 'id'> = {
+        course_id: courseId,
+        lesson_id: lessonId,
+        youtube_id: youtubeId,
+        youtube_url: youtubeUrl,
+        thumbnail_url: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
+        title: title,
+        description: description,
+        duration_minutes: durationMinutes,
+        is_active: true,
+      };
+
+      return await this.saveLessonMedia(media);
+    } catch (error) {
+      console.error('Error in createDavidTrainingLessonMedia:', error);
+      return null;
     }
   }
 

@@ -250,26 +250,26 @@ class EconomicDataCacheService {
 
       console.log(`🔄 Refreshing cache: ${cacheKey}`);
       
-      // טעינת נתונים חדשים
+      // טעינת נתונים חדשים - עכשיו מ-Benzinga דרך EODHD Service
       let events: EconomicEvent[] = [];
-      let source = 'FRED';
+      let source = 'Benzinga';
 
       try {
-        // ניסיון טעינה מ-EODHD
-        const isEODHDAvailable = await EODHDService.checkApiAvailability();
-        if (isEODHDAvailable) {
-          console.log('📊 Loading from EODHD API...');
-          const eodhdEvents = await EODHDService.getPopularEconomicIndicators();
-          events = eodhdEvents.map(event => EODHDService.convertToAppFormat(event));
-          source = 'EODHD';
-        } else {
-          throw new Error('EODHD not available');
-        }
-      } catch (eodhdError) {
-        console.log('⚠️ EODHD failed, falling back to FRED');
+        // EODHDService כבר משתמש ב-Benzinga מאחורי הקלעים
+        console.log('📊 Loading from Benzinga API (via EODHD Service)...');
+        const eodhdEvents = await EODHDService.getPopularEconomicIndicators();
+        events = eodhdEvents.map(event => EODHDService.convertToAppFormat(event));
+        source = 'Benzinga';
+      } catch (benzingaError) {
+        console.log('⚠️ Benzinga failed, falling back to FRED');
         // גיבוי ל-FRED
-        events = await EconomicCalendarService.getEconomicEvents();
-        source = 'FRED';
+        try {
+          events = await EconomicCalendarService.getEconomicEvents();
+          source = 'FRED';
+        } catch (fredError) {
+          console.error('❌ Both Benzinga and FRED failed:', fredError);
+          throw fredError;
+        }
       }
 
       // שמירה במסד הנתונים

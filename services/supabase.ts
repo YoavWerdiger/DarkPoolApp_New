@@ -32,12 +32,13 @@ export interface Message {
   channel_id?: string; // לתמיכה בפורמט החדש
   sender_id: string;
   content: string;
-  type: 'text' | 'image' | 'voice' | 'file' | 'media' | 'reply' | 'audio' | 'video' | 'document' | 'poll' | 'news';
+  type: 'text' | 'image' | 'voice' | 'file' | 'media' | 'reply' | 'audio' | 'video' | 'document' | 'poll' | 'news' | 'trade';
   file_url?: string;
   media_files?: MediaFile[];
   reply_to_message_id?: string; // השם הנכון במסד הנתונים
   poll_id?: string; // עבור הודעות סקר
   news_data?: any; // עבור הודעות חדשות
+  trade_data?: any; // עבור הודעות טריידים
   reactions?: Record<string, string[]>;
   created_at: string;
   updated_at?: string;

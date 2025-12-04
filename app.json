@@ -9,7 +9,7 @@
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
-     "resizeMode": "contain",
+      "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
@@ -25,7 +25,8 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.darkpool.app"
+      "package": "com.darkpool.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,6 +35,25 @@
       "eas": {
         "projectId": "c6140546-bf96-4ca0-85a5-26807f0742f6"
       }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "mode": "production",
+          "icon": "./assets/icon.png",
+          "color": "#000000",
+          "sounds": []
+        }
+      ]
+    ],
+    "notification": {
+      "icon": "./assets/icon.png",
+      "color": "#000000",
+      "androidMode": "default",
+      "androidCollapsedTitle": "DarkPool",
+      "iosDisplayInForeground": true,
+      "androidDisplayInForeground": true
     },
     "bundler": "metro",
     "owner": "darkpoolapp"

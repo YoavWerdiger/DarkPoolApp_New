@@ -11,6 +11,8 @@ interface ModuleSectionProps {
   onToggle: () => void;
   onLessonPress: (lesson: any) => void;
   enrollment?: Enrollment;
+  courseId?: string;
+  lessonStartIndex?: number;
 }
 
 export const ModuleSection: React.FC<ModuleSectionProps> = ({
@@ -18,7 +20,9 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
   isExpanded,
   onToggle,
   onLessonPress,
-  enrollment
+  enrollment,
+  courseId,
+  lessonStartIndex = 0
 }) => {
   const isEnrolled = !!enrollment;
   const totalLessons = module.lessons?.length || 0;
@@ -90,6 +94,8 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
               onPress={onLessonPress}
               enrollment={enrollment}
               isLocked={!isEnrolled && !lesson.is_preview}
+              courseId={courseId}
+              index={lessonStartIndex + index}
             />
           ))}
         </View>

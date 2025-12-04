@@ -38,7 +38,7 @@ interface MenuItem {
 }
 
 export default function UserProfileScreen({ navigation }: any) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
   const { theme } = useTheme();
   const [profileData, setProfileData] = useState<any>(null);
 
@@ -308,18 +308,17 @@ export default function UserProfileScreen({ navigation }: any) {
           overflow: 'hidden'
         }}>
             {mainMenuItems.map((item, index) => (
-              <TouchableOpacity
-                key={item.id}
-                onPress={item.onPress}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  borderBottomWidth: index < mainMenuItems.length - 1 ? 1 : 0,
-                  borderBottomColor: theme.border
-                }}
-              >
+              <View key={item.id}>
+                <TouchableOpacity
+                  onPress={item.onPress}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingTop: 16,
+                    paddingBottom: index < mainMenuItems.length - 1 ? 12 : 16,
+                    paddingHorizontal: 16,
+                  }}
+                >
                 {/* Chevron - שמאל */}
                 <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
 
@@ -361,6 +360,13 @@ export default function UserProfileScreen({ navigation }: any) {
                   />
                 </View>
               </TouchableOpacity>
+              {index < mainMenuItems.length - 1 && (
+                <View style={{
+                  height: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                }} />
+              )}
+            </View>
             ))}
         </View>
 
@@ -372,18 +378,17 @@ export default function UserProfileScreen({ navigation }: any) {
           overflow: 'hidden'
         }}>
             {secondaryMenuItems.map((item, index) => (
-              <TouchableOpacity
-                key={item.id}
-                onPress={item.onPress}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  borderBottomWidth: index < secondaryMenuItems.length - 1 ? 1 : 0,
-                  borderBottomColor: theme.border
-                }}
-              >
+              <View key={item.id}>
+                <TouchableOpacity
+                  onPress={item.onPress}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingTop: 16,
+                    paddingBottom: index < secondaryMenuItems.length - 1 ? 12 : 16,
+                    paddingHorizontal: 16,
+                  }}
+                >
                 {/* Chevron - שמאל */}
                 <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
 
@@ -425,6 +430,13 @@ export default function UserProfileScreen({ navigation }: any) {
                   />
                 </View>
               </TouchableOpacity>
+              {index < secondaryMenuItems.length - 1 && (
+                <View style={{
+                  height: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                }} />
+              )}
+            </View>
             ))}
         </View>
 
@@ -441,9 +453,18 @@ export default function UserProfileScreen({ navigation }: any) {
                     style: 'destructive',
                     onPress: async () => {
                       try {
-                        await supabase.auth.signOut();
+                        console.log('🔄 UserProfileScreen: Signing out...');
+                        const { error } = await signOut();
+                        if (error) {
+                          console.error('❌ UserProfileScreen: Error signing out:', error);
+                          Alert.alert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
+                        } else {
+                          console.log('✅ UserProfileScreen: Signed out successfully');
+                          // הניווט יתבצע אוטומטית דרך AuthContext
+                        }
                       } catch (error) {
-                        console.error('Error signing out:', error);
+                        console.error('❌ UserProfileScreen: Exception signing out:', error);
+                        Alert.alert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
                       }
                     }
                   }

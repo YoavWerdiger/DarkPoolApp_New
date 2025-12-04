@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
-  Image, 
-  Dimensions, 
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Image,
+  Dimensions,
   SafeAreaView,
   StatusBar,
-  Platform 
+  Platform
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,7 +39,7 @@ export default function MediaGalleryScreen() {
   const navigation = useNavigation();
   const tabBarInsets = useSafeAreaInsets();
   const { chatId, channelName } = route.params as { chatId: string; channelName: string };
-  
+
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'media' | 'documents'>('media');
@@ -55,12 +55,12 @@ export default function MediaGalleryScreen() {
           tabBarStyle: { display: 'none' }
         });
       }
-      
+
       return () => {
         if (parent) {
           parent.setOptions({
-            tabBarStyle: { 
-              backgroundColor: DesignTokens.colors.background.primary, 
+            tabBarStyle: {
+              backgroundColor: DesignTokens.colors.background.primary,
               borderTopWidth: 0,
               height: Platform.OS === 'ios' ? 90 : 70 + tabBarInsets.bottom,
               paddingBottom: Platform.OS === 'ios' ? 15 : tabBarInsets.bottom + 10,
@@ -85,7 +85,7 @@ export default function MediaGalleryScreen() {
   const loadMediaItems = async () => {
     try {
       console.log('🖼️ Loading media items for gallery:', chatId);
-      
+
       // Get all media type messages
       const { data: mediaData, error: mediaError } = await supabase
         .from('messages')
@@ -114,7 +114,7 @@ export default function MediaGalleryScreen() {
       const processedMediaItems = await Promise.all(
         (mediaData || []).map(async (item) => {
           let mediaUrl = item.file_url || item.content;
-          
+
           // If we have a file_url, use it directly
           if (item.file_url) {
             return {
@@ -123,23 +123,23 @@ export default function MediaGalleryScreen() {
               isValid: true
             };
           }
-          
+
           // Skip invalid content
-          if (!item.content || 
-              item.content === '[image]' || 
-              item.content === '[video]' || 
-              item.content === '[audio]' || 
-              item.content === '[document]' ||
-              item.content.includes('אחאח') ||
-              item.content.includes('היידה') ||
-              item.content.includes('שלום')) {
+          if (!item.content ||
+            item.content === '[image]' ||
+            item.content === '[video]' ||
+            item.content === '[audio]' ||
+            item.content === '[document]' ||
+            item.content.includes('אחאח') ||
+            item.content.includes('היידה') ||
+            item.content.includes('שלום')) {
             return {
               ...item,
               content: null,
               isValid: false
             };
           }
-          
+
           // Get signed URL if needed
           if (item.content && !item.content.startsWith('http')) {
             try {
@@ -147,11 +147,11 @@ export default function MediaGalleryScreen() {
               if (item.type === 'video' || item.type === 'audio' || item.type === 'document') {
                 bucketName = 'media';
               }
-              
+
               const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                 .from(bucketName)
                 .createSignedUrl(item.content, 3600);
-              
+
               if (!signedUrlError) {
                 mediaUrl = signedUrlData.signedUrl;
               }
@@ -159,7 +159,7 @@ export default function MediaGalleryScreen() {
               console.error('❌ Error getting signed URL:', error);
             }
           }
-          
+
           return {
             ...item,
             content: mediaUrl,
@@ -183,7 +183,7 @@ export default function MediaGalleryScreen() {
           } : undefined
         }));
       setMediaItems(validItems);
-      
+
     } catch (error) {
       console.error('❌ Exception loading media items:', error);
     } finally {
@@ -233,8 +233,8 @@ export default function MediaGalleryScreen() {
     return (
       <TouchableOpacity
         onPress={() => handleMediaPress(item)}
-        style={{ 
-          width: itemSize, 
+        style={{
+          width: itemSize,
           height: itemSize,
           marginBottom: 6,
           marginHorizontal: 3
@@ -243,14 +243,14 @@ export default function MediaGalleryScreen() {
         <View style={{
           width: '100%',
           height: '100%',
-          backgroundColor: 'DesignTokens.colors.background.secondary',
-          borderRadius: 12,
+          backgroundColor: DesignTokens.colors.background.secondary,
+          borderRadius: 8,
           overflow: 'hidden',
           position: 'relative'
         }}>
           {isImage && !item.content?.startsWith('placeholder_') && item.content ? (
-            <Image 
-              source={{ uri: item.content }} 
+            <Image
+              source={{ uri: item.content }}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
               onError={(error) => {
@@ -259,8 +259,8 @@ export default function MediaGalleryScreen() {
             />
           ) : isVideo && !item.content?.startsWith('placeholder_') && item.content ? (
             <View style={{ width: '100%', height: '100%', position: 'relative' }}>
-              <Image 
-                source={{ uri: item.content }} 
+              <Image
+                source={{ uri: item.content }}
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
                 onError={(error) => {
@@ -298,7 +298,7 @@ export default function MediaGalleryScreen() {
               )}
             </View>
           )}
-          
+
           {/* Media type indicator */}
           <View style={{
             position: 'absolute',
@@ -369,7 +369,7 @@ export default function MediaGalleryScreen() {
               אין מדיה בקבוצה
             </Text>
             <Text style={{
-              color: 'DesignTokens.colors.text.tertiary',
+              color: DesignTokens.colors.text.secondary,
               fontSize: 15,
               textAlign: 'center',
               lineHeight: 22
@@ -400,7 +400,7 @@ export default function MediaGalleryScreen() {
               אין מסמכים בקבוצה
             </Text>
             <Text style={{
-              color: 'DesignTokens.colors.text.tertiary',
+              color: DesignTokens.colors.text.secondary,
               fontSize: 15,
               textAlign: 'center',
               lineHeight: 22
@@ -418,8 +418,8 @@ export default function MediaGalleryScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-      <StatusBar barStyle="light-content" backgroundColor="DesignTokens.colors.background.primary" />
-      
+      <StatusBar barStyle="light-content" backgroundColor={DesignTokens.colors.background.primary} />
+
       {/* Header */}
       <View style={{
         flexDirection: 'row-reverse',
@@ -434,9 +434,9 @@ export default function MediaGalleryScreen() {
           alignItems: 'center',
           flex: 1
         }}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{ 
+            style={{
               marginLeft: 16,
               width: 40,
               height: 40,
@@ -456,7 +456,7 @@ export default function MediaGalleryScreen() {
               גלריית מדיה
             </Text>
             <Text style={{
-              color: 'DesignTokens.colors.text.tertiary',
+              color: DesignTokens.colors.text.secondary,
               fontSize: 14,
               textAlign: 'right',
               marginTop: 2
@@ -470,12 +470,12 @@ export default function MediaGalleryScreen() {
       {/* Tabs */}
       <View style={{
         flexDirection: 'row',
-        backgroundColor: 'DesignTokens.colors.background.secondary',
+        backgroundColor: DesignTokens.colors.background.primary,
         marginHorizontal: 20,
         marginTop: 12,
         marginBottom: 16,
-        borderRadius: 30,
-        padding: 4,
+        borderRadius: 0,
+        padding: 0,
         alignSelf: 'center',
         width: '100%',
         maxWidth: 400
@@ -486,32 +486,22 @@ export default function MediaGalleryScreen() {
           style={{
             flex: 1,
             height: 44,
-            borderRadius: 26,
+            borderRadius: 0,
             backgroundColor: 'transparent',
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
-            marginHorizontal: 2
+            marginHorizontal: 0,
+            borderBottomWidth: selectedTab === 'media' ? 2 : 0,
+            borderBottomColor: DesignTokens.colors.primary.main
           }}
         >
-          {selectedTab === 'media' && (
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                borderRadius: 26,
-                backgroundColor: `${DesignTokens.colors.success.main}14`,
-              }}
-            />
-          )}
+
           <Text style={{
             textAlign: 'center',
             fontWeight: selectedTab === 'media' ? '700' : '600',
             fontSize: 14,
-            color: selectedTab === 'media' ? 'DesignTokens.colors.success.main' : 'DesignTokens.colors.text.tertiary',
+            color: selectedTab === 'media' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary,
             position: 'relative',
             zIndex: 1
           }}>
@@ -524,32 +514,22 @@ export default function MediaGalleryScreen() {
           style={{
             flex: 1,
             height: 44,
-            borderRadius: 26,
+            borderRadius: 0,
             backgroundColor: 'transparent',
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
-            marginHorizontal: 2
+            marginHorizontal: 0,
+            borderBottomWidth: selectedTab === 'documents' ? 2 : 0,
+            borderBottomColor: DesignTokens.colors.primary.main
           }}
         >
-          {selectedTab === 'documents' && (
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                borderRadius: 26,
-                backgroundColor: `${DesignTokens.colors.success.main}14`,
-              }}
-            />
-          )}
+
           <Text style={{
             textAlign: 'center',
             fontWeight: selectedTab === 'documents' ? '700' : '600',
             fontSize: 14,
-            color: selectedTab === 'documents' ? 'DesignTokens.colors.success.main' : 'DesignTokens.colors.text.tertiary',
+            color: selectedTab === 'documents' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary,
             position: 'relative',
             zIndex: 1
           }}>

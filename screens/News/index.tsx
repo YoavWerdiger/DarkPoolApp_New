@@ -107,30 +107,54 @@ export default function NewsScreen() {
     >
       <StatusBar style="light" backgroundColor={DesignTokens.colors.background.primary} />
       
+      {/* Header */}
+      <View style={{ 
+        backgroundColor: DesignTokens.colors.background.secondary,
+        borderBottomLeftRadius: DesignTokens.borderRadius.lg,
+        borderBottomRightRadius: DesignTokens.borderRadius.lg,
+        overflow: 'hidden',
+      }}>
+        <SafeAreaView edges={['top']} style={{ backgroundColor: DesignTokens.colors.background.secondary }}>
+          <View style={{ 
+            paddingHorizontal: DesignTokens.spacing.lg,
+            paddingTop: DesignTokens.spacing.md,
+            paddingBottom: DesignTokens.spacing.md,
+          }}>
+            <Text style={{ 
+              fontSize: DesignTokens.typography.fontSize['2xl'],
+              fontWeight: DesignTokens.typography.fontWeight.bold,
+              color: DesignTokens.colors.text.primary,
+              textAlign: 'right',
+            }}>
+              חדשות פיננסיות
+            </Text>
+            <Text style={{ 
+              fontSize: DesignTokens.typography.fontSize.base,
+              fontWeight: DesignTokens.typography.fontWeight.normal,
+              color: DesignTokens.colors.text.secondary,
+              textAlign: 'right',
+              marginTop: DesignTokens.spacing.xs,
+            }}>
+              כל אירוע פיננסי שסוחר צריך - בזמן אמת
+            </Text>
+          </View>
+        </SafeAreaView>
+      </View>
+
       <SafeAreaView 
         style={{ 
           flex: 1,
           backgroundColor: DesignTokens.colors.background.primary,
         }}
-        edges={['top']}
+        edges={[]}
       >
-        {/* Header */}
-        <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-            <Text style={{ 
-              fontSize: 22, 
-              fontWeight: '800',
-              color: DesignTokens.colors.text.primary,
-              textAlign: 'right',
-              letterSpacing: 0.2
-            }}>
-              חדשות פיננסיות
-            </Text>
-          </View>
-        </View>
 
         {/* טאבים */}
-        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+        <View style={{ 
+          paddingHorizontal: DesignTokens.spacing.lg, 
+          paddingTop: DesignTokens.spacing.md,
+          marginBottom: DesignTokens.spacing.md 
+        }}>
           <View style={{ 
             flexDirection: 'row',
             backgroundColor: DesignTokens.colors.background.secondary,
@@ -190,7 +214,6 @@ export default function NewsScreen() {
             })}
           </View>
         </View>
-        <View style={{ height: 1, backgroundColor: DesignTokens.colors.border.primary, marginTop: 6 }} />
         
         {/* תוכן הטאב הפעיל עם Error Boundary */}
         <View style={{ flex: 1 }}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,10 +11,11 @@ import {
   Image,
   ScrollView,
   TextInput,
-  Dimensions
+  Dimensions,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Clock, Sun, Moon, ChevronLeft, ChevronRight, Search, X } from 'lucide-react-native';
+import { Clock, Sun, Moon, ChevronLeft, ChevronRight, Search, X, ChevronUp } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 import { supabase } from '../../lib/supabase';
@@ -243,6 +244,33 @@ export default function EarningsReportsTab() {
   const [selectedReport, setSelectedReport] = useState<EarningsReport | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Refs וstate לכפתור גלילה לראש
+  const flatListRef = useRef<FlatList>(null);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
+  const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
+
+  // פונקציה לגלילה לראש הרשימה
+  const scrollToTop = useCallback(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+    }
+  }, []);
+
+  // טיפול באירוע גלילה
+  const handleScroll = useCallback((event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    const shouldShow = offsetY > 300; // הצג כפתור אחרי גלילה של 300px
+    
+    if (shouldShow !== showScrollToTop) {
+      setShowScrollToTop(shouldShow);
+      Animated.timing(scrollButtonOpacity, {
+        toValue: shouldShow ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [showScrollToTop, scrollButtonOpacity]);
 
   // פונקציות ניווט יומי
   const goToPreviousDay = () => {
@@ -444,7 +472,7 @@ export default function EarningsReportsTab() {
             width: 120, 
             height: 120, 
             borderRadius: 60, 
-            backgroundColor: `${DesignTokens.colors.success.main}1A`,
+            backgroundColor: `${DesignTokens.colors.primary.main}1A`,
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 24
@@ -453,7 +481,7 @@ export default function EarningsReportsTab() {
           <Ionicons 
             name="bar-chart-outline" 
             size={56} 
-            color={DesignTokens.colors.success.main} 
+            color={DesignTokens.colors.primary.main} 
           />
         </View>
         <Text 
@@ -487,15 +515,14 @@ export default function EarningsReportsTab() {
             paddingHorizontal: 28,
             paddingVertical: 14,
             borderRadius: 14,
-            backgroundColor: `${DesignTokens.colors.success.main}26`,
-            borderColor: `${DesignTokens.colors.success.main}4D`
+            backgroundColor: DesignTokens.colors.background.secondary
           }}
           onPress={loadEarningsReports}
         >
           <Text style={{
             fontSize: 15,
             fontWeight: '700',
-            color: '#00D84A'
+            color: DesignTokens.colors.primary.main
           }}>
             רענן נתונים
           </Text>
@@ -667,6 +694,7 @@ export default function EarningsReportsTab() {
 
       {/* רשימת דיווחים */}
       <FlatList
+        ref={flatListRef}
         data={filteredReports}
         keyExtractor={(item, index) => `${item.id}-${index}`}
         renderItem={({ item, index }) => renderReport({ item, index })}
@@ -681,7 +709,53 @@ export default function EarningsReportsTab() {
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 24 }}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       />
+      
+      {/* כפתור גלילה לראש */}
+      {showScrollToTop && (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            bottom: 90,
+            right: 16,
+            opacity: scrollButtonOpacity,
+            transform: [
+              {
+                scale: scrollButtonOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.8, 1],
+                }),
+              },
+            ],
+            zIndex: 1000,
+          }}
+          pointerEvents="auto"
+        >
+          <TouchableOpacity
+            onPress={scrollToTop}
+            activeOpacity={0.8}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: DesignTokens.colors.background.secondary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: DesignTokens.colors.border.primary,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.3,
+              shadowRadius: 6,
+              elevation: 6,
+            }}
+          >
+            <ChevronUp size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.3} />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
 
       {/* Bottom Sheet לפירוט דיווח */}
       {selectedReport && (

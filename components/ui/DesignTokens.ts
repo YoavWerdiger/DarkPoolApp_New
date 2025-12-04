@@ -22,31 +22,31 @@ const darkColors = {
   accent: {
     main: '#00E5FF',
   },
-  
+
   // Background
   background: {
-    primary: '#121212',
+    primary: '#000000',
     secondary: '#1A1A1A',
     tertiary: '#2A2A2A',
   },
-  
+
   // Chat
   bubbleMe: '#05d157',
-  bubbleOther: '#1a1a1a',
-  
+  bubbleOther: '#2A2A2A', // אפור כהה - שיפור ניגודיות במצב כהה
+
   // Text
   text: {
     primary: '#FFFFFF',
-    secondary: 'rgba(255,255,255,0.6)',
+    secondary: 'rgba(255,255,255,0.65)',
     tertiary: 'rgba(255,255,255,0.5)',
     danger: '#EF4444',
   },
-  
+
   // Border
   border: {
-    main: '#2a2a2a',
+    main: '#1F1F1F',
     primary: 'rgba(255,255,255,0.08)',
-    active: 'rgba(255,255,255,0.12)',
+    active: 'rgba(255,255,255,0.14)',
   },
 };
 
@@ -64,18 +64,18 @@ const lightColors = {
   accent: {
     main: '#0284C7',
   },
-  
+
   // Background
   background: {
     primary: '#F5F5F7',
     secondary: '#FFFFFF',
     tertiary: '#E5E5E5',
   },
-  
+
   // Chat
   bubbleMe: '#DCF8C6',
   bubbleOther: '#FFFFFF',
-  
+
   // Text
   text: {
     primary: '#000000',
@@ -83,7 +83,7 @@ const lightColors = {
     tertiary: 'rgba(0,0,0,0.4)',
     danger: '#DC2626',
   },
-  
+
   // Border
   border: {
     main: 'rgba(0,0,0,0.1)',
@@ -96,17 +96,10 @@ const lightColors = {
 // משתמש ב-ThemeContext - מתעדכן אוטומטית כשמחליפים theme!
 export const useDesignTokens = () => {
   const { isDarkMode } = useTheme();
-  
-  // Log לדיבאג
-  console.log('🎨 useDesignTokens נקרא! isDarkMode =', isDarkMode);
-  
+
   // בחירת צבעים בהתאם ל-theme
   const themeColors = isDarkMode ? darkColors : lightColors;
-  
-  console.log('🎨 Theme נבחר:', isDarkMode ? '🌙 Dark' : '☀️ Light');
-  console.log('🎨 צבע רקע:', themeColors.background.primary);
-  console.log('🎨 צבע טקסט:', themeColors.text.primary);
-  
+
   // שימוש ב-useMemo כדי לא ליצור אובייקט חדש בכל רינדור
   return React.useMemo(() => ({
     colors: {

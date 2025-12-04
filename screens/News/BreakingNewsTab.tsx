@@ -20,7 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import UIBottomSheet from '../../components/ui/UIBottomSheet';
+import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { 
   newsService, 
@@ -31,11 +32,13 @@ import {
   getNewsCategoryIcon
 } from '../../services/newsService';
 import { LikedArticlesService } from '../../services/likedArticlesService';
+import FearAndGreedCard from '../../components/News/FearAndGreedCard';
 
 interface NewsCardProps {
   article: NewsArticle;
   onPress: (article: NewsArticle) => void;
   onLike: (article: NewsArticle) => void;
+  onShare?: (article: NewsArticle) => void;
   isLiked: boolean;
 }
 
@@ -54,6 +57,10 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
   useEffect(() => {
     if (visible && article) {
       loadChatGroups();
+    } else {
+      // איפוס כשסוגרים
+      setChatGroups([]);
+      setLoading(false);
     }
   }, [visible, article]);
 
@@ -230,14 +237,18 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
     }
   };
 
-  if (!article) return null;
+  // Early return - אבל רק אחרי כל ה-hooks
+  if (!article || !visible) {
+    return null;
+  }
 
   return (
-    <UIBottomSheet
-      visible={visible}
+    <BottomSheet
+      isOpen={visible}
       onClose={onClose}
-      maxHeight="80%"
-      dragToClose={true}
+      snapPoints={[0.5, 0.9]}
+      enablePanDownToClose={true}
+      backdropOpacity={0.5}
       showHandle={true}
     >
       <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 }}>
@@ -484,7 +495,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
         )}
           </ScrollView>
         </View>
-    </UIBottomSheet>
+    </BottomSheet>
   );
 };
 
@@ -515,7 +526,25 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   onPrevious
 }) => {
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
+  const [likeCount, setLikeCount] = useState<number>(0);
+  
+  // טעינת מספר המועדפים - לפני return null
+  useEffect(() => {
+    if (visible && article?.id) {
+      const articleId = article.id;
+      LikedArticlesService.getArticleLikeCount(articleId).then(count => {
+        setLikeCount(count);
+      }).catch(error => {
+        console.error('Error loading like count:', error);
+      });
+    } else {
+      setLikeCount(0);
+    }
+  }, [visible, article?.id]);
+
   console.log('📰 NewsDetailModal: visible =', visible, 'article =', article?.title);
+  
   if (!article) return null;
 
   const categoryColor = getNewsCategoryColor(article.category);
@@ -533,64 +562,146 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                        article.id?.length > 15;
 
   return (
-    <UIBottomSheet
-      visible={visible}
+    <BottomSheet
+      isOpen={visible}
       onClose={onClose}
-      maxHeight="90%"
-      dragToClose={true}
+      snapPoints={[0.7, 0.95]}
+      enablePanDownToClose={true}
+      backdropOpacity={0.5}
+      showHandle={!article.image_url}
     >
       <View style={{ flex: 1 }}>
-        {/* כפתור סגירה */}
-        <View style={{ position: 'absolute', top: 8, left: 12, zIndex: 100 }}>
-          <TouchableOpacity
-            onPress={onClose}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: 'rgba(0, 0, 0, 0.6)',
-              alignItems: 'center',
-              justifyContent: 'center'
+        {/* תמונה - עד לחלק העליון של ה-BottomSheet */}
+        {article.image_url ? (
+          <View 
+            style={{ 
+              width: '100%', 
+              height: 240, 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 1,
+              overflow: 'hidden',
             }}
+            pointerEvents="box-none"
           >
-            <Ionicons 
-              name="close" 
-              size={20} 
-              color={DesignTokens.colors.text.primary} 
+            <Image
+              source={{ uri: article.image_url }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
             />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView 
-          contentContainerStyle={{ paddingBottom: 32 }}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* תמונה */}
-          {article.image_url && (
-            <View style={{ width: '100%', height: 240, marginBottom: 16 }}>
-              <Image
-                source={{ uri: article.image_url }}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
+            {/* פס גרירה - מעל התמונה */}
+            <View 
+              style={{ 
+                position: 'absolute', 
+                top: 12, 
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+                zIndex: 10,
+              }}
+              pointerEvents="none"
+            >
+              <View
+                style={{
+                  width: 40,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 4,
+                  elevation: 5,
+                }}
               />
             </View>
-          )}
-
-          {/* תוכן */}
-          <View style={{ paddingHorizontal: 20 }}>
-            {/* מקור ותאריך */}
-            <Text 
+            {/* כפתור סגירה - על התמונה */}
+            <View 
               style={{ 
-                fontSize: 12,
-                color: '#666',
-                fontWeight: '500',
-                textAlign: 'right',
-                marginBottom: 10
+                position: 'absolute', 
+                top: 12, 
+                right: 12, 
+                zIndex: 100,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 5,
+              }}
+              pointerEvents="auto"
+            >
+              <TouchableOpacity
+                onPress={onClose}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Ionicons 
+                  name="close" 
+                  size={22} 
+                  color="#FFF" 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          /* כפתור סגירה - כשאין תמונה */
+          <View style={{ 
+            position: 'absolute', 
+            top: 12, 
+            right: 12, 
+            zIndex: 100,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: DesignTokens.colors.background.tertiary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 5,
+          }}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={{
+                width: '100%',
+                height: '100%',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
-              {article.source || 'חדשה'} • {formatNewsDate(article.published_at)}
-            </Text>
+              <Ionicons 
+                name="close" 
+                size={22} 
+                color={DesignTokens.colors.text.primary} 
+              />
+            </TouchableOpacity>
+          </View>
+        )}
 
+        {/* תוכן - ScrollView */}
+        <ScrollView 
+          contentContainerStyle={{ 
+            paddingBottom: 40, // מרווח תחתון נוסף - ה-safe area כבר מטופל ב-BottomSheet
+            paddingTop: article.image_url ? 240 : 0, // מקום לתמונה
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* תוכן */}
+          <View style={{ paddingHorizontal: 20, paddingTop: article.image_url ? 20 : 20 }}>
             {/* כותרת */}
             <Text 
               style={{ 
@@ -599,10 +710,23 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                 color: DesignTokens.colors.text.primary,
                 textAlign: 'right',
                 lineHeight: 28,
-                marginBottom: 14
+                marginBottom: 10
               }}
             >
               {article.label || article.title}
+            </Text>
+
+            {/* מקור ותאריך - מתחת לכותרת */}
+            <Text 
+              style={{ 
+                fontSize: 12,
+                color: DesignTokens.colors.text.secondary,
+                fontWeight: '500',
+                textAlign: 'right',
+                marginBottom: 16
+              }}
+            >
+              {article.source || 'חדשה'} • {formatNewsDate(article.published_at)}
             </Text>
 
             {/* תוכן הכתבה */}
@@ -610,7 +734,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               style={{ 
                 fontSize: 15,
                 lineHeight: 23,
-                color: '#CCC',
+                color: DesignTokens.colors.text.secondary,
                 textAlign: 'right',
                 marginBottom: 20
               }}
@@ -618,156 +742,118 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               {article.content || article.summary}
             </Text>
 
-          </View>
-
-          {/* כפתורי פעולה - SwiftUI style */}
-          <View style={{ 
-            paddingHorizontal: 20, 
-            marginTop: 16,
-            marginBottom: 16,
-            gap: 10
-          }}>
-            {/* לייק */}
-            <TouchableOpacity 
-              style={{ 
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 14,
-                borderRadius: 10,
-                backgroundColor: isLiked ? '#FF3B5C' : '#1a1a1a',
-              }}
-              onPress={() => onLike(article)}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name={isLiked ? "heart" : "heart-outline"} 
-                size={18} 
-                color={isLiked ? "#FFF" : "#666"}
-                style={{ marginRight: 8 }}
-              />
-              <Text 
-                style={{ 
-                  fontSize: 15,
-                  fontWeight: '600',
-                  color: isLiked ? "#FFF" : "#666"
-                }}
-              >
-                {isLiked ? 'שמור' : 'שמור למועדפים'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* שיתוף */}
-            <TouchableOpacity 
-              style={{ 
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 12,
-              }}
-              onPress={() => onShare(article)}
-              activeOpacity={0.7}
-            >
-              <Ionicons 
-                name="share-outline" 
-                size={18} 
-                color="#666"
-                style={{ marginRight: 8 }}
-              />
-              <Text 
-                style={{ 
-                  fontSize: 15,
-                  fontWeight: '500',
-                  color: "#666"
-                }}
-              >
-                שיתוף
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* כפתורי ניווט */}
-          {onNext && onPrevious && currentIndex !== undefined && totalArticles !== undefined && (
+            {/* כפתורי פעולה - אופקיים, ממורכזים, ממלאים את הרוחב */}
             <View style={{ 
-              paddingHorizontal: 20,
-              paddingBottom: 16,
-              flexDirection: 'row', 
+              flexDirection: 'row',
               gap: 12,
-              justifyContent: 'center'
+              marginTop: 8,
+              marginBottom: 20,
             }}>
-              {/* קודמת */}
+              {/* לייק */}
               <TouchableOpacity 
                 style={{ 
                   flex: 1,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: 10,
-                  backgroundColor: currentIndex > 0 ? '#1a1a1a' : '#111',
                   paddingVertical: 12,
-                  opacity: currentIndex > 0 ? 1 : 0.4
+                  paddingHorizontal: 16,
+                  borderRadius: 24,
+                  backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.7)' : DesignTokens.colors.background.tertiary,
+                  shadowColor: isLiked ? '#FF3B5C' : 'transparent',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: isLiked ? 0.2 : 0,
+                  shadowRadius: 2,
+                  elevation: isLiked ? 2 : 0,
                 }}
-                onPress={onPrevious}
-                disabled={currentIndex === 0}
+                onPress={() => {
+                  if (!article?.id) return;
+                  onLike(article);
+                  // עדכון ה-count אחרי לחיצה
+                  LikedArticlesService.getArticleLikeCount(article.id).then(count => {
+                    setLikeCount(count);
+                  }).catch(error => {
+                    console.error('Error updating like count:', error);
+                  });
+                }}
+                activeOpacity={0.7}
               >
-                <Text style={{ fontSize: 15, fontWeight: '500', color: '#666' }}>
-                  קודמת
-                </Text>
                 <Ionicons 
-                  name="chevron-forward-outline" 
+                  name={isLiked ? "heart" : "heart-outline"} 
                   size={18} 
-                  color="#666"
-                  style={{ marginLeft: 6 }}
+                  color={isLiked ? "#FFF" : DesignTokens.colors.text.secondary}
+                  style={{ marginRight: 8 }}
                 />
+                <Text 
+                  style={{ 
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: isLiked ? "#FFF" : DesignTokens.colors.text.secondary
+                  }}
+                >
+                  {isLiked ? 'שמור' : 'שמור למועדפים'}
+                </Text>
+                {likeCount > 0 && (
+                  <Text style={{
+                    fontSize: 12,
+                    fontWeight: '600',
+                    color: isLiked ? "#FFF" : DesignTokens.colors.text.secondary,
+                    marginRight: 6,
+                  }}>
+                    ({likeCount})
+                  </Text>
+                )}
               </TouchableOpacity>
 
-              {/* הבאה */}
+              {/* שיתוף */}
               <TouchableOpacity 
                 style={{ 
                   flex: 1,
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  borderRadius: 10,
-                  backgroundColor: currentIndex < totalArticles - 1 ? '#1a1a1a' : '#111',
                   paddingVertical: 12,
-                  opacity: currentIndex < totalArticles - 1 ? 1 : 0.4
+                  paddingHorizontal: 16,
+                  borderRadius: 24,
+                  backgroundColor: DesignTokens.colors.background.tertiary,
                 }}
-                onPress={onNext}
-                disabled={currentIndex >= totalArticles - 1}
+                onPress={() => onShare(article)}
+                activeOpacity={0.7}
               >
                 <Ionicons 
-                  name="chevron-back-outline" 
+                  name="share-outline" 
                   size={18} 
-                  color="#666"
-                  style={{ marginRight: 6 }}
+                  color={DesignTokens.colors.text.secondary}
+                  style={{ marginRight: 8 }}
                 />
-                <Text style={{ fontSize: 15, fontWeight: '500', color: '#666' }}>
-                  הבאה
+                <Text 
+                  style={{ 
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: DesignTokens.colors.text.secondary
+                  }}
+                >
+                  שתף
                 </Text>
               </TouchableOpacity>
             </View>
-          )}
+          </View>
         </ScrollView>
       </View>
-    </UIBottomSheet>
+    </BottomSheet>
   );
 };
 
-const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, isLiked }) => {
+const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, onShare, isLiked }) => {
   const DesignTokens = useDesignTokens();
-  const [shareModalVisible, setShareModalVisible] = useState(false);
   const categoryColor = getNewsCategoryColor(article.category);
   const categoryIcon = getNewsCategoryIcon(article.category);
   
   const handleSharePress = () => {
     console.log('🔗 Share button pressed, opening modal...');
-    setShareModalVisible(true);
-  };
-  
-  const handleShareClose = () => {
-    console.log('🔗 Closing modal...');
-    setShareModalVisible(false);
+    if (onShare) {
+      onShare(article);
+    }
   };
   
   // זיהוי אם זה טוויטר או חדשה רגילה
@@ -781,13 +867,13 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
                        article.source_url?.includes('twitter.com') ||
                        article.id?.length > 15; // טוויטר IDs ארוכים
 
-  return (
+  const cardContent = (
     <Pressable
       onPress={() => onPress(article)}
       className="mx-4 py-4"
       style={{
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+        borderBottomColor: 'rgba(255, 255, 255, 0.25)',
         paddingBottom: 16,
         marginBottom: 8
       }}
@@ -938,15 +1024,10 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, i
           )}
         </View>
       </View>
-
-      {/* מודל שיתוף */}
-      <ShareModal
-        article={article}
-        onClose={handleShareClose}
-        visible={shareModalVisible}
-      />
     </Pressable>
   );
+  
+  return cardContent;
 };
 
 export default function BreakingNewsTab() {
@@ -964,6 +1045,10 @@ export default function BreakingNewsTab() {
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [selectedArticleIndex, setSelectedArticleIndex] = useState<number>(0);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  
+  // מצב מודל שיתוף
+  const [shareArticle, setShareArticle] = useState<NewsArticle | null>(null);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
 
   // טעינת החדשות שאהב המשתמש
   const loadLikedArticles = useCallback(async () => {
@@ -1025,22 +1110,22 @@ export default function BreakingNewsTab() {
       console.log('⚡ BreakingNewsTab: Loading breaking news');
       console.log('🔗 BreakingNewsTab: Supabase client:', supabase);
       
-      // חיבור ישיר לטבלת app_news
-      console.log('🔍 BreakingNewsTab: Attempting to fetch from app_news table...');
+      // חיבור ישיר לטבלת app_news_clean
+      console.log('🔍 BreakingNewsTab: Attempting to fetch from app_news_clean table...');
       
       // נסה קודם לבדוק אם הטבלה קיימת
       const { data: testData, error: testError } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('count')
         .limit(1);
       
       console.log('🧪 BreakingNewsTab: Table test result:', { testData, testError });
       
-      // עכשיו נשלוף את הנתונים (ללא מגבלה - יציג את כל החדשות)
+      // עכשיו נשלוף את הנתונים - מסודרים לפי time
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
-        .order('id', { ascending: false });
+        .order('time', { ascending: false });
       
       console.log('📊 BreakingNewsTab: Raw database response:', { data, error });
       
@@ -1109,11 +1194,8 @@ export default function BreakingNewsTab() {
         }
         
         // אם לא מצאנו כלום, נציג רשימה ריקה
+        console.error('❌ BreakingNewsTab: Failed to load news, showing empty state');
         setArticles([]);
-        Alert.alert(
-          'שגיאה בטעינת חדשות', 
-          `לא ניתן לטעון חדשות מהמסד: ${error.message}\n\nנסה לבדוק שהטבלה 'app_news' קיימת.`
-        );
         return;
       }
 
@@ -1157,29 +1239,45 @@ export default function BreakingNewsTab() {
         const category = row.category || row.type || row.topic || 
                         row.section || row.tag || 'כללי';
         
-        // עיבוד תאריך משופר
-        const rawDate = row.time || row.published_at || row.created_at || row.date || row.timestamp || row.posted_at;
+        // עיבוד תאריך משופר - משתמש ב-time מהמסד הנתונים
+        let rawDate = row.time || row.published_at || row.created_at || row.date || row.timestamp || row.posted_at;
+        
+        // ניקוי של newlines ו-whitespace
+        if (rawDate && typeof rawDate === 'string') {
+          rawDate = rawDate.trim();
+        }
+        
         console.log(`🕐 BreakingNewsTab: Raw date for article ${index}:`, {
           rawDate,
           type: typeof rawDate,
-          rowKeys: Object.keys(row).filter(key => key.includes('time') || key.includes('date') || key.includes('created') || key.includes('posted'))
+          rowTime: row.time,
+          rowCreatedAt: row.created_at
         });
 
-        // בדיקת תקינות התאריך
-        let validatedDate = rawDate;
+        // בדיקת תקינות התאריך והמרה לפורמט ISO
+        let validatedDate: string;
         if (rawDate) {
           try {
-            const testDate = new Date(rawDate);
+            // אם זה בפורמט "YYYY-MM-DD HH:mm:ss", נמיר אותו לפורמט ISO
+            let dateToParse = rawDate;
+            if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(rawDate)) {
+              // המרה מ-"YYYY-MM-DD HH:mm:ss" ל-"YYYY-MM-DDTHH:mm:ss"
+              dateToParse = rawDate.replace(' ', 'T');
+            }
+            
+            const testDate = new Date(dateToParse);
             if (isNaN(testDate.getTime()) || testDate.getTime() < 0) {
-              console.log(`⚠️ BreakingNewsTab: Invalid date for article ${index}, using current time`);
-              validatedDate = new Date().toISOString();
+              console.log(`⚠️ BreakingNewsTab: Invalid date for article ${index}, using created_at or current time`);
+              validatedDate = row.created_at || new Date().toISOString();
+            } else {
+              validatedDate = testDate.toISOString();
             }
           } catch (error) {
             console.log(`❌ BreakingNewsTab: Error validating date for article ${index}:`, error);
-            validatedDate = new Date().toISOString();
+            validatedDate = row.created_at || new Date().toISOString();
           }
         } else {
-          validatedDate = new Date().toISOString();
+          validatedDate = row.created_at || new Date().toISOString();
         }
         
         const article = {
@@ -1234,13 +1332,13 @@ export default function BreakingNewsTab() {
     console.log('🔄 BreakingNewsTab: Setting up realtime subscription');
     
     const subscription = supabase
-      .channel('app_news_changes')
+      .channel('app_news_clean_changes')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'app_news'
+          table: 'app_news_clean'
         },
         (payload) => {
           console.log('⚡ BreakingNewsTab: New article received via realtime:', payload.new);
@@ -1349,12 +1447,25 @@ export default function BreakingNewsTab() {
     }
   }, []);
 
+  // פתיחת מודל שיתוף
+  const handleSharePress = useCallback((article: NewsArticle) => {
+    setShareArticle(article);
+    setShareModalVisible(true);
+  }, []);
+  
+  // סגירת מודל שיתוף
+  const handleShareClose = useCallback(() => {
+    setShareModalVisible(false);
+    setShareArticle(null);
+  }, []);
+  
   // רינדור כתבה
   const renderArticle = ({ item }: { item: NewsArticle }) => (
     <BreakingNewsCard
       article={item}
       onPress={handleArticlePress}
       onLike={handleLike}
+      onShare={handleSharePress}
       isLiked={likedArticles.has(item.id)}
     />
   );
@@ -1446,24 +1557,38 @@ export default function BreakingNewsTab() {
             colors={[DesignTokens.colors.primary.main]}
           />
         }
+        ListHeaderComponent={() => (
+          <View style={{ paddingTop: 12 }}>
+            <FearAndGreedCard />
+          </View>
+        )}
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 12, paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 24 }}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       />
       
       {/* מודל מפורט לחדשות */}
-      <NewsDetailModal
-        visible={detailModalVisible}
-        article={selectedArticle}
-        isLiked={selectedArticle ? likedArticles.has(selectedArticle.id) : false}
-        onClose={handleCloseDetailModal}
-        onLike={handleLike}
-        onShare={handleShareFromModal}
-        currentIndex={selectedArticleIndex}
-        totalArticles={articles.length}
-        onNext={handleNextArticle}
-        onPrevious={handlePreviousArticle}
+      {detailModalVisible && selectedArticle && (
+        <NewsDetailModal
+          visible={detailModalVisible}
+          article={selectedArticle}
+          isLiked={likedArticles.has(selectedArticle.id)}
+          onClose={handleCloseDetailModal}
+          onLike={handleLike}
+          onShare={handleShareFromModal}
+          currentIndex={selectedArticleIndex}
+          totalArticles={articles.length}
+          onNext={handleNextArticle}
+          onPrevious={handlePreviousArticle}
+        />
+      )}
+
+      {/* מודל שיתוף - העברת חדשה לקבוצות צ'אט */}
+      <ShareModal
+        article={shareArticle}
+        onClose={handleShareClose}
+        visible={shareModalVisible}
       />
 
     </View>

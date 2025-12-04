@@ -28,7 +28,13 @@ export const MyLearningScreen: React.FC = () => {
   }, [refetch]);
 
   const handleCoursePress = useCallback((course: CourseWithProgress) => {
-    navigation.navigate('CourseDetailScreen' as never, { courseId: course.id } as never);
+    // אם זה קורס הלוויתנים או קורס דוד איראל, נוביל ל-LearningScreen
+    if (course.slug === 'whales-course' || course.id === 'whales-course-1' || course.title === 'קורס הלוויתנים' ||
+        course.id === 'david-training-course' || course.title === 'הכשרה של דוד אריאל') {
+      navigation.navigate('LearningScreen' as never, { courseId: course.id } as never);
+    } else {
+      navigation.navigate('CourseDetailScreen' as never, { courseId: course.id } as never);
+    }
   }, [navigation]);
 
   const handleContinueLearning = useCallback((course: CourseWithProgress) => {
@@ -37,8 +43,13 @@ export const MyLearningScreen: React.FC = () => {
         lessonId: course.progress.last_lesson_id 
       } as never);
     } else {
-      // Navigate to course detail to start learning
-      navigation.navigate('CourseDetailScreen' as never, { courseId: course.id } as never);
+      // אם זה קורס הלוויתנים או קורס דוד איראל, נוביל ל-LearningScreen
+      if (course.slug === 'whales-course' || course.id === 'whales-course-1' || course.title === 'קורס הלוויתנים' ||
+          course.id === 'david-training-course' || course.title === 'הכשרה של דוד אריאל') {
+        navigation.navigate('LearningScreen' as never, { courseId: course.id } as never);
+      } else {
+        navigation.navigate('CourseDetailScreen' as never, { courseId: course.id } as never);
+      }
     }
   }, [navigation]);
 

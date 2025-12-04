@@ -11,31 +11,31 @@ const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
     console.log('🔍 DayDivider: Processing date:', date);
     console.log('🔍 DayDivider: Date type:', typeof date);
     console.log('🔍 DayDivider: Date value:', date);
-    
+
     // קבלת התאריך הנוכחי
     const now = new Date();
-    
-    // השוואה פשוטה לפי יום, חודש ושנה (זמן מקומי)
-    const isToday = date.getFullYear() === now.getFullYear() &&
-                    date.getMonth() === now.getMonth() &&
-                    date.getDate() === now.getDate();
-    
+
+    // השוואה פשוטה לפי יום, חודש ושנה (UTC time to avoid timezone issues)
+    const isToday = date.getUTCFullYear() === now.getUTCFullYear() &&
+      date.getUTCMonth() === now.getUTCMonth() &&
+      date.getUTCDate() === now.getUTCDate();
+
     // חישוב אתמול
     const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const isYesterday = date.getFullYear() === yesterday.getFullYear() &&
-                        date.getMonth() === yesterday.getMonth() &&
-                        date.getDate() === yesterday.getDate();
-    
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+    const isYesterday = date.getUTCFullYear() === yesterday.getUTCFullYear() &&
+      date.getUTCMonth() === yesterday.getUTCMonth() &&
+      date.getUTCDate() === yesterday.getUTCDate();
+
     console.log('🔍 DayDivider: Date parts:', {
-      messageDate: `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`,
-      todayDate: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`,
-      yesterdayDate: `${yesterday.getDate()}/${yesterday.getMonth() + 1}/${yesterday.getFullYear()}`,
+      messageDate: `${date.getUTCDate()}/${date.getUTCMonth() + 1}/${date.getUTCFullYear()}`,
+      todayDate: `${now.getUTCDate()}/${now.getUTCMonth() + 1}/${now.getUTCFullYear()}`,
+      yesterdayDate: `${yesterday.getUTCDate()}/${yesterday.getUTCMonth() + 1}/${yesterday.getUTCFullYear()}`,
       isToday,
       isYesterday
     });
-    
+
     // החזרת הטקסט המתאים
     if (isToday) {
       console.log('🔍 DayDivider: Returning היום');
@@ -45,24 +45,24 @@ const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
       console.log('🔍 DayDivider: Returning אתמול');
       return 'אתמול';
     }
-    
+
     // אם זה השנה הנוכחית
-    if (date.getFullYear() === now.getFullYear()) {
+    if (date.getUTCFullYear() === now.getUTCFullYear()) {
       const months = [
         'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
         'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
       ];
-      const result = `${date.getDate()} ב${months[date.getMonth()]}`;
+      const result = `${date.getUTCDate()} ב${months[date.getUTCMonth()]}`;
       console.log('🔍 DayDivider: Returning same year:', result);
       return result;
     }
-    
+
     // אם זה שנה אחרת
     const months = [
       'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
       'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
     ];
-    const result = `${date.getDate()} ב${months[date.getMonth()]} ${date.getFullYear()}`;
+    const result = `${date.getUTCDate()} ב${months[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
     console.log('🔍 DayDivider: Returning different year:', result);
     return result;
   };
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   text: {
     color: '#E5E7EB',
     fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
+    fontWeight: DesignTokens.typography.fontWeight.medium as any,
     textAlign: 'center',
   },
 });

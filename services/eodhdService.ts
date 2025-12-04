@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import benzingaService from './benzingaService';
 
 // טיפוסים עבור EODHD API
 export interface EODHDEconomicEvent {
@@ -174,7 +175,7 @@ class EODHDService {
     }
   }
 
-  // שליפת אירועים כלכליים
+  // שליפת אירועים כלכליים - משתמש ב-Benzinga API (עדכונים בזמן אמת)
   async getEconomicEvents(params: {
     country?: string;
     type?: string;
@@ -185,10 +186,41 @@ class EODHDService {
     importance?: 'high' | 'medium' | 'low';
   } = {}): Promise<EODHDEconomicEvent[]> {
     try {
-      const events = await this.makeRequest<EODHDEconomicEvent[]>('economic-events', params);
-      return Array.isArray(events) ? events : [];
+      // משתמש ב-Benzinga API במקום EODHD
+      const countries = params.country ? [params.country] : ['US'];
+      
+      // ממיר importance מפורמט מחרוזת למספר של Benzinga
+      let importanceNum: number | undefined = undefined;
+      if (params.importance === 'high') {
+        importanceNum = 4;
+      } else if (params.importance === 'medium') {
+        importanceNum = 2;
+      }
+
+      const benzingaEvents = await benzingaService.getEconomicCalendar({
+        dateFrom: params.from,
+        dateTo: params.to,
+        countries,
+        importance: importanceNum,
+      });
+
+      // המרה לפורמט EODHD (תאימות עם הקוד הקיים)
+      return benzingaEvents.map(event => ({
+        id: event.id,
+        date: event.date,
+        time: event.time,
+        country: event.country,
+        country_code: event.country,
+        event: event.event_name,
+        type: params.type || 'economic',
+        importance: event.importance >= 4 ? 'high' : event.importance >= 2 ? 'medium' : 'low',
+        actual: event.actual || undefined,
+        estimate: event.consensus || undefined,
+        previous: event.prior || undefined,
+        period: event.event_period || undefined,
+      }));
     } catch (error) {
-      console.error('Error fetching economic events:', error);
+      console.error('Error fetching economic events from Benzinga:', error);
       return [];
     }
   }
@@ -312,86 +344,52 @@ class EODHDService {
     });
   }
 
-  // שליפת מדדים כלכליים פופולריים (ארה"ב בלבד)
+  // שליפת מדדים כלכליים פופולריים (ארה"ב בלבד) - משתמש ב-Benzinga
   async getPopularEconomicIndicators(): Promise<EODHDEconomicEvent[]> {
-    const popularTypes = [
-      'CPI',
-      'PPI', 
-      'NFP',
-      'PMI',
-      'GDP',
-      'Interest Rate Decision',
-      'Retail Sales',
-      'Unemployment Rate'
-    ];
+    try {
+      // שליפת אירועים בעלי חשיבות גבוהה מ-Benzinga
+      const benzingaEvents = await benzingaService.getHighImportanceEconomicEvents(60, 2); // 60 ימים, חשיבות 2+
 
-    const allEvents: EODHDEconomicEvent[] = [];
-    
-    for (const type of popularTypes) {
-      try {
-        const events = await this.getEconomicEvents({
-          country: 'US', // ארה"ב בלבד
-          type,
-          from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 ימים אחרונים
-          to: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 30 ימים הבאים
-        });
-        allEvents.push(...events);
-      } catch (error) {
-        console.error(`Error fetching ${type} events:`, error);
-      }
+      // המרה לפורמט EODHD
+      return benzingaEvents.map(event => ({
+        id: event.id,
+        date: event.date,
+        time: event.time,
+        country: event.country,
+        country_code: event.country,
+        event: event.event_name,
+        type: 'economic',
+        importance: event.importance >= 4 ? 'high' as const : event.importance >= 2 ? 'medium' as const : 'low' as const,
+        actual: event.actual || undefined,
+        estimate: event.consensus || undefined,
+        previous: event.prior || undefined,
+        period: event.event_period || undefined,
+      })).sort((a, b) => {
+        const dateA = new Date(`${a.date} ${a.time}`);
+        const dateB = new Date(`${b.date} ${b.time}`);
+        return dateA.getTime() - dateB.getTime();
+      });
+    } catch (error) {
+      console.error('Error fetching popular economic indicators from Benzinga:', error);
+      return [];
     }
-
-    // מיון לפי תאריך ושעה
-    return allEvents.sort((a, b) => {
-      const dateA = new Date(`${a.date} ${a.time}`);
-      const dateB = new Date(`${b.date} ${b.time}`);
-      return dateA.getTime() - dateB.getTime();
-    });
   }
 
-  // שליפת דיווחי רווחים
+  // שליפת דיווחי רווחים - משתמש ב-Benziga API (עדכונים בזמן אמת)
   async getEarningsCalendar(params: {
     from?: string;
     to?: string;
     symbols?: string; // סמלים מופרדים בפסיק, לדוגמה: "AAPL.US,MSFT.US"
   } = {}): Promise<EODHDEarningsReport[]> {
     try {
-      const earnings = await this.makeRequest<any>('calendar/earnings', params);
-      
-      // EODHD מחזיר אובייקט שבו המפתחות הם תאריכים והערכים הם מערכים של דיווחים
-      if (typeof earnings === 'object' && !Array.isArray(earnings)) {
-        const allEarnings: EODHDEarningsReport[] = [];
-        
-        // המרת האובייקט למערך של דיווחים
-        Object.entries(earnings).forEach(([date, reports]: [string, any]) => {
-          if (Array.isArray(reports)) {
-            const dateReports = reports.map((report: any) => ({
-              ...report,
-              report_date: date,
-              date: report.date || date
-            }));
-            allEarnings.push(...dateReports);
-          }
-        });
-        
-        // מיון לפי תאריך
-        return allEarnings.sort((a, b) => {
-          const dateA = new Date(a.report_date);
-          const dateB = new Date(b.report_date);
-          return dateB.getTime() - dateA.getTime(); // מהחדש לישן
-        });
-      }
-      
-      return [];
+      // משתמש ב-Benziga API במקום EODHD
+      return await benzingaService.getEarningsCalendar({
+        from: params.from,
+        to: params.to,
+        symbols: params.symbols
+      });
     } catch (error) {
-      console.error('Error fetching earnings calendar:', error);
-      
-      // אם יש שגיאת 402 או 403, נחזיר נתונים דמה לבדיקה
-      if (error instanceof Error && (error.message.includes('402') || error.message.includes('403'))) {
-        console.log('API key issue detected (402/403), returning sample data for testing');
-        return this.getSampleEarningsData();
-      }
-      
+      console.error('Error fetching earnings calendar from Benzinga:', error);
       return [];
     }
   }

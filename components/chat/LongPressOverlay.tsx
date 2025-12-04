@@ -59,21 +59,31 @@ export default function LongPressOverlay({
   const menuSlideAnim = useRef(new Animated.Value(300)).current;
   const menuOpacityAnim = useRef(new Animated.Value(0)).current;
 
+  // עדכן shouldRender מיד כש-visible משתנה ל-true
   useEffect(() => {
-    if (visible) {
-      console.log('🎯 LongPressOverlay: Opening overlay');
+    if (visible && message) {
+      console.log('🎯 LongPressOverlay: Setting shouldRender to true immediately, message:', message.id);
       setShouldRender(true);
+    } else if (!visible && shouldRender) {
+      // נשאיר shouldRender עד שהאנימציה מסתיימת (נסגור ב-animation callback)
+    }
+  }, [visible, message]);
+
+  useEffect(() => {
+    if (visible && message) {
+      console.log('🎯 LongPressOverlay: Opening overlay, message:', message.id);
       // רטט קצר מאוד בעת פתיחה (אסתטי ועדין)
       try { Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Light); } catch {}
 
-      // איפוס ערכים לפני אנימציה
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-      menuOpacityAnim.setValue(0);
-      menuSlideAnim.setValue(300);
-      console.log('🎯 LongPressOverlay: Animation values reset, menuSlideAnim starts at 300');
+      // איפוס ערכים לפני אנימציה - נתחיל מ-1 כדי שהתוכן יהיה נראה מיד
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      menuOpacityAnim.setValue(1);
+      menuSlideAnim.setValue(0);
+      console.log('🎯 LongPressOverlay: Animation values set to visible, starting animations');
 
-      // פתיחה: רקע + תצוגות
+      // פתיחה: נעשה אנימציה עדינה מהמצב הנוכחי
+      // קודם נציג את התוכן מיד ואז נעשה אנימציה עדינה
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -89,19 +99,19 @@ export default function LongPressOverlay({
           Animated.timing(menuOpacityAnim, {
             toValue: 1,
             duration: 250,
-            delay: 100,
+            delay: 50,
             useNativeDriver: true,
           }),
           Animated.spring(menuSlideAnim, {
             toValue: 0,
             tension: 80,
             friction: 8,
-            delay: 100,
+            delay: 50,
             useNativeDriver: true,
           }),
         ]),
       ]).start();
-    } else {
+    } else if (!visible && shouldRender) {
       // סגירה - האנימציה רצה ואז נסגר המודל
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -126,12 +136,16 @@ export default function LongPressOverlay({
         }),
       ]).start(() => {
         // סגור את המודל רק אחרי שהאנימציה מסתיימת
+        console.log('🎯 LongPressOverlay: Closing animation finished, setting shouldRender to false');
         setShouldRender(false);
       });
     }
-  }, [visible]);
+  }, [visible, message, shouldRender]);
 
-  if (!shouldRender || !message) return null;
+  // אם אין message או visible הוא false, לא נרנדר (אלא אם כן אנחנו באמצע אנימציית סגירה)
+  if (!message || (!visible && !shouldRender)) {
+    return null;
+  }
 
   const handleReaction = (emoji: string) => {
     onAction('react', { messageId: message?.id, emoji });
@@ -169,16 +183,19 @@ export default function LongPressOverlay({
           style={[
             styles.reactionWrapper,
             {
-              opacity: fadeAnim,
+              opacity: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 1],
+                extrapolate: 'clamp'
+              }),
               transform: [{ translateY: slideAnim }]
             }
           ]}
+          pointerEvents="auto"
         >
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View>
-              <ReactionBar onReaction={handleReaction} />
-            </View>
-          </TouchableWithoutFeedback>
+          <View pointerEvents="auto">
+            <ReactionBar onReaction={handleReaction} />
+          </View>
         </Animated.View>
 
         {/* Bottom Action Sheet */}
@@ -186,18 +203,20 @@ export default function LongPressOverlay({
           style={[
             styles.actionSheet,
             {
-              opacity: menuOpacityAnim,
+              opacity: menuOpacityAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 1],
+                extrapolate: 'clamp'
+              }),
               transform: [{ translateY: menuSlideAnim }],
             }
           ]}
-          pointerEvents="box-none"
+          pointerEvents="auto"
         >
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View style={{ paddingBottom: Math.max(insets.bottom, 20) }}>
-              {console.log('🎯 LongPressOverlay: Rendering ContextMenu, isAdmin:', isAdmin)}
-              <ContextMenu onSelect={handleOptionSelect} isAdmin={isAdmin} />
-            </View>
-          </TouchableWithoutFeedback>
+          <View style={{ paddingBottom: Math.max(insets.bottom, 20) }} pointerEvents="auto">
+            {console.log('🎯 LongPressOverlay: Rendering ContextMenu, isAdmin:', isAdmin)}
+            <ContextMenu onSelect={handleOptionSelect} isAdmin={isAdmin} />
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -221,10 +240,12 @@ const styles = StyleSheet.create({
   },
   reactionWrapper: {
     zIndex: 20,
+    elevation: 20,
   },
   actionSheet: {
     width: '100%',
     zIndex: 10,
+    elevation: 10,
     backgroundColor: 'transparent',
     position: 'absolute',
     bottom: 0,

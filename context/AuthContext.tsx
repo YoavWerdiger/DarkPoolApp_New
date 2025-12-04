@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthService, AuthUser, LoginCredentials, RegisterCredentials } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NotificationService } from '../services/notificationService';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -34,10 +35,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('🔄 AuthContext: Initializing...');
     initializeAuth();
-    const { data: { subscription } } = AuthService.onAuthStateChange((user) => {
+    const { data: { subscription } } = AuthService.onAuthStateChange(async (user) => {
       console.log('🔄 AuthContext: Auth state changed, user:', user?.id);
       setUser(user);
       setIsLoading(false);
+      
+      // רישום device token כשהמשתמש נכנס
+      if (user) {
+        console.log('📱 AuthContext: Registering device token for user:', user.id);
+        // נחכה קצת כדי לוודא שהכל מוכן
+        setTimeout(async () => {
+          console.log('⏰ AuthContext: Timeout completed, calling registerDeviceToken...');
+          const result = await NotificationService.registerDeviceToken();
+          console.log('📱 AuthContext: registerDeviceToken result:', result);
+        }, 2000);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -53,7 +65,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await attemptAutoLogin();
     }
     
-    console.log('✅ AuthContext: Initialization complete, user:', user?.id);
+    // רישום device token אם יש משתמש מחובר
+    if (currentUser) {
+      console.log('📱 AuthContext: User found in initializeAuth, registering device token...');
+      setTimeout(async () => {
+        const result = await NotificationService.registerDeviceToken();
+        console.log('📱 AuthContext: registerDeviceToken result (initializeAuth):', result);
+      }, 2000);
+    }
+    
+    console.log('✅ AuthContext: Initialization complete, user:', currentUser?.id);
     setIsLoading(false);
   };
 
@@ -65,6 +86,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (user) {
         console.log('✅ AuthContext: Current user loaded:', user?.id);
         setUser(user);
+        // רישום device token
+        setTimeout(async () => {
+          console.log('⏰ AuthContext: Timeout completed (checkUser), calling registerDeviceToken...');
+          const result = await NotificationService.registerDeviceToken();
+          console.log('📱 AuthContext: registerDeviceToken result (checkUser):', result);
+        }, 2000);
         return user;
       }
 
@@ -97,6 +124,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else if (user) {
           console.log('✅ AuthContext: Auto-login successful');
           setUser(user);
+          // רישום device token
+          setTimeout(async () => {
+            console.log('⏰ AuthContext: Timeout completed (auto-login), calling registerDeviceToken...');
+            const result = await NotificationService.registerDeviceToken();
+            console.log('📱 AuthContext: registerDeviceToken result (auto-login):', result);
+          }, 2000);
         }
       }
     } catch (error) {
@@ -115,6 +148,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       console.log('✅ AuthContext: User signed in successfully:', user?.id);
       setUser(user);
+      // רישום device token
+      setTimeout(async () => {
+        console.log('⏰ AuthContext: Timeout completed (signIn), calling registerDeviceToken...');
+        const result = await NotificationService.registerDeviceToken();
+        console.log('📱 AuthContext: registerDeviceToken result (signIn):', result);
+      }, 2000);
       return { error: null };
     } catch (error: any) {
       console.error('❌ AuthContext: Sign in exception:', error);
@@ -147,8 +186,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async (keepCredentials: boolean = false): Promise<{ error: string | null }> => {
     setIsLoading(true);
     try {
+      console.log('🔄 AuthContext: Starting sign out...');
+      
+      // ביטול device token לפני התנתקות
+      try {
+        console.log('📱 AuthContext: Unregistering device token...');
+        await NotificationService.unregisterDeviceToken();
+        console.log('✅ AuthContext: Device token unregistered');
+      } catch (tokenError) {
+        console.error('⚠️ AuthContext: Error unregistering device token (non-critical):', tokenError);
+        // לא נכשל אם זה לא עובד - זה לא קריטי
+      }
+      
       const { error } = await AuthService.signOut();
-      if (error) return { error };
+      if (error) {
+        console.error('❌ AuthContext: Error signing out:', error);
+        return { error };
+      }
       
       // מחיקת נתוני התחברות שמורים בהתנתקות (אלא אם כן המשתמש בחר לשמור)
       if (!keepCredentials) {
@@ -165,8 +219,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       
       setUser(null);
+      console.log('✅ AuthContext: Sign out completed successfully');
       return { error: null };
     } catch (error: any) {
+      console.error('❌ AuthContext: Exception in sign out:', error);
       return { error: error.message };
     } finally {
       setIsLoading(false);

@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  Modal, 
-  Pressable, 
-  Image, 
+import {
+  View,
+  Text,
+  Modal,
+  Pressable,
+  Image,
   Dimensions,
   ScrollView,
   Alert,
@@ -36,18 +36,18 @@ interface MediaViewerProps {
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-export default function MediaViewer({ 
-  visible, 
-  onClose, 
-  mediaUrl, 
-  mediaType, 
+export default function MediaViewer({
+  visible,
+  onClose,
+  mediaUrl,
+  mediaType,
   caption,
   message,
   onReply,
   onForward
 }: MediaViewerProps) {
   console.log('🎯 MediaViewer: Rendering with:', { visible, mediaUrl, mediaType });
-  
+
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
@@ -86,7 +86,7 @@ export default function MediaViewer({
         }
       }
     };
-    
+
     checkStarredStatus();
   }, [visible, message?.id, user?.id]);
 
@@ -96,11 +96,11 @@ export default function MediaViewer({
     if (zoomTimeoutRef.current) {
       clearTimeout(zoomTimeoutRef.current);
     }
-    
+
     zoomTimeoutRef.current = setTimeout(() => {
       // החזר את ה-ScrollView למרכז עם אנימציה
       scrollViewRef.current?.scrollTo({ x: 0, y: 0, animated: true });
-      
+
       // החזר את גודל התמונה למקור עם אנימציה חלקה וטבעית
       Animated.spring(imageScale, {
         toValue: 1,
@@ -119,7 +119,7 @@ export default function MediaViewer({
       console.log('🎯 MediaViewer opening - resetting states');
       setShowActions(false);
       imageScale.setValue(1);
-      
+
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -136,17 +136,17 @@ export default function MediaViewer({
       setShowActions(false);
       setIsStarred(false);
       setIsPlaying(false);
-      
+
       if (audioRef.current) {
         audioRef.current.unloadAsync();
         audioRef.current = null;
       }
-      
+
       if (zoomTimeoutRef.current) {
         clearTimeout(zoomTimeoutRef.current);
         zoomTimeoutRef.current = null;
       }
-      
+
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
       imageScale.setValue(1);
@@ -156,7 +156,7 @@ export default function MediaViewer({
   const downloadFile = async () => {
     try {
       console.log('📥 Download button pressed - mediaUrl:', mediaUrl);
-      
+
       if (!mediaUrl || mediaUrl.trim() === '') {
         console.log('❌ Invalid mediaUrl:', mediaUrl);
         Alert.alert('שגיאה', 'URL לא תקין');
@@ -170,26 +170,26 @@ export default function MediaViewer({
         if (await Sharing.isAvailableAsync()) {
           console.log('📥 Sharing local file:', mediaUrl);
           await Sharing.shareAsync(mediaUrl);
-      } else {
+        } else {
           Alert.alert('שיתוף', 'הקובץ קיים במכשיר');
         }
         return;
       }
 
       // אם זה URL מהאינטרנט, נוריד אותו
-      const fileExtension = mediaType === 'image' ? 'jpg' : 
-                           mediaType === 'video' ? 'mp4' : 
-                           mediaType === 'audio' ? 'mp3' : 'file';
-      
+      const fileExtension = mediaType === 'image' ? 'jpg' :
+        mediaType === 'video' ? 'mp4' :
+          mediaType === 'audio' ? 'mp3' : 'file';
+
       const fileName = `media_${Date.now()}.${fileExtension}`;
       const fileUri = FileSystem.documentDirectory + fileName;
-      
+
       console.log('📥 Starting download from URL:', { mediaUrl, fileUri });
-      
+
       const downloadResult = await FileSystem.downloadAsync(mediaUrl, fileUri);
-      
+
       console.log('📥 Download result:', downloadResult);
-      
+
       if (downloadResult && downloadResult.uri) {
         if (await Sharing.isAvailableAsync()) {
           console.log('📥 Sharing downloaded file:', downloadResult.uri);
@@ -210,7 +210,7 @@ export default function MediaViewer({
   const shareMedia = async () => {
     try {
       console.log('📤 Share button pressed - mediaUrl:', mediaUrl);
-      
+
       if (!mediaUrl || mediaUrl.trim() === '') {
         console.log('❌ Invalid mediaUrl for sharing:', mediaUrl);
         Alert.alert('שגיאה', 'URL לא תקין');
@@ -248,20 +248,20 @@ export default function MediaViewer({
   const handleStarMessage = async () => {
     try {
       if (!user?.id) return;
-      
+
       console.log('⭐ MediaViewer: Attempting to star message:', {
         messageId: message?.id,
         userId: user.id
       });
-      
+
       const ChatService = await import('../../services/chatService');
       const success = await ChatService.ChatService.starMessage(
         message?.id || '',
         user.id
       );
-      
+
       console.log('⭐ MediaViewer: Star message result:', success);
-      
+
       if (success) {
         setIsStarred(true);
         Alert.alert('הצלחה', 'ההודעה סומנה בכוכב');
@@ -272,7 +272,7 @@ export default function MediaViewer({
           user.id
         );
         setIsStarred(currentStatus);
-        
+
         if (currentStatus) {
           Alert.alert('מידע', 'ההודעה כבר מסומנת בכוכב');
         } else {
@@ -288,20 +288,20 @@ export default function MediaViewer({
   const handleUnstarMessage = async () => {
     try {
       if (!user?.id) return;
-      
+
       console.log('⭐ MediaViewer: Attempting to unstar message:', {
         messageId: message?.id,
         userId: user.id
       });
-      
+
       const ChatService = await import('../../services/chatService');
       const success = await ChatService.ChatService.unstarMessage(
         message?.id || '',
         user.id
       );
-      
+
       console.log('⭐ MediaViewer: Unstar message result:', success);
-      
+
       if (success) {
         setIsStarred(false);
         Alert.alert('הצלחה', 'הכוכב הוסר מההודעה');
@@ -332,7 +332,7 @@ export default function MediaViewer({
 
   const renderMediaContent = () => {
     console.log('🎯 MediaViewer renderMediaContent - mediaUrl:', mediaUrl, 'mediaType:', mediaType);
-    
+
     if (!mediaUrl || mediaUrl.trim() === '') {
       console.log('❌ MediaViewer: No mediaUrl provided');
       return (
@@ -402,30 +402,30 @@ export default function MediaViewer({
         return (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             {mediaUrl && mediaUrl.trim() !== '' && (mediaUrl.startsWith('http') || mediaUrl.startsWith('file://') || mediaUrl.startsWith('content://')) ? (
-            <Video
-              source={{ uri: mediaUrl }}
-              style={{
-                width: screenWidth,
-                height: screenHeight * 0.8,
-              }}
-              resizeMode={ResizeMode.CONTAIN}
-              useNativeControls
-              shouldPlay={false}
-              onLoadStart={() => {
-                console.log('Video loading started:', mediaUrl);
-              }}
-              onLoad={(status) => {
-                console.log('Video loaded successfully:', status);
-              }}
-              onError={(error) => {
-                console.error('Video load error:', error);
-                console.error('Video URL:', mediaUrl);
-              }}
-              onPlaybackStatusUpdate={(status) => {
-                if ('error' in status && status.error) {
-                  console.error('Video playback error:', status.error);
-                }
-              }}
+              <Video
+                source={{ uri: mediaUrl }}
+                style={{
+                  width: screenWidth,
+                  height: screenHeight * 0.8,
+                }}
+                resizeMode={ResizeMode.CONTAIN}
+                useNativeControls
+                shouldPlay={false}
+                onLoadStart={() => {
+                  console.log('Video loading started:', mediaUrl);
+                }}
+                onLoad={(status) => {
+                  console.log('Video loaded successfully:', status);
+                }}
+                onError={(error) => {
+                  console.error('Video load error:', error);
+                  console.error('Video URL:', mediaUrl);
+                }}
+                onPlaybackStatusUpdate={(status) => {
+                  if ('error' in status && status.error) {
+                    console.error('Video playback error:', status.error);
+                  }
+                }}
               />
             ) : (
               <View style={{ alignItems: 'center', justifyContent: 'center' }}>
@@ -441,14 +441,14 @@ export default function MediaViewer({
       case 'audio':
         return (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{ 
-              width: 160, 
-              height: 160, 
-              backgroundColor: DesignTokens.colors.success.main, 
-              borderRadius: 80, 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              marginBottom: 32 
+            <View style={{
+              width: 160,
+              height: 160,
+              backgroundColor: DesignTokens.colors.success.main,
+              borderRadius: 80,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 32
             }}>
               <Music size={64} color={DesignTokens.colors.text.primary} strokeWidth={1.5} />
             </View>
@@ -468,19 +468,21 @@ export default function MediaViewer({
 
   const renderActionBar = () => {
     return (
-      <View 
-        style={{ 
+      <View
+        style={{
           backgroundColor: DesignTokens.colors.background.secondary,
-          paddingBottom: insets.bottom + 16
+          paddingBottom: insets.bottom + 16,
+          borderTopWidth: 1,
+          borderTopColor: DesignTokens.colors.border.primary
         }}
       >
         {/* סרגל פעולות */}
-        <View style={{ 
-          flexDirection: 'row', 
-          justifyContent: 'space-around', 
-          alignItems: 'center', 
+        <View style={{
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+          alignItems: 'center',
           paddingVertical: 16,
-          paddingHorizontal: 32
+          paddingHorizontal: 24
         }}>
           <Pressable
             onPress={() => {
@@ -490,10 +492,12 @@ export default function MediaViewer({
             style={{
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 12
+              padding: 12,
+              borderRadius: 24,
+              backgroundColor: DesignTokens.colors.background.tertiary
             }}
           >
-            <MessageCircle size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+            <MessageCircle size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </Pressable>
 
           <Pressable
@@ -501,10 +505,12 @@ export default function MediaViewer({
             style={{
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 12
+              padding: 12,
+              borderRadius: 24,
+              backgroundColor: DesignTokens.colors.background.tertiary
             }}
           >
-            <Forward size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+            <Forward size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </Pressable>
 
           <Pressable
@@ -512,10 +518,12 @@ export default function MediaViewer({
             style={{
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 12
+              padding: 12,
+              borderRadius: 24,
+              backgroundColor: DesignTokens.colors.background.tertiary
             }}
           >
-            <ShareIcon size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+            <ShareIcon size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </Pressable>
 
           <Pressable
@@ -526,13 +534,15 @@ export default function MediaViewer({
             style={{
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 12
+              padding: 12,
+              borderRadius: 24,
+              backgroundColor: isStarred ? 'rgba(255, 193, 7, 0.15)' : DesignTokens.colors.background.tertiary
             }}
           >
-            <Ionicons 
-              name={isStarred ? "star" : "star-outline"} 
-              size={26} 
-              color={isStarred ? DesignTokens.colors.warning.main : DesignTokens.colors.text.primary} 
+            <Ionicons
+              name={isStarred ? "star" : "star-outline"}
+              size={22}
+              color={isStarred ? DesignTokens.colors.warning.main : DesignTokens.colors.text.primary}
             />
           </Pressable>
 
@@ -541,10 +551,12 @@ export default function MediaViewer({
             style={{
               alignItems: 'center',
               justifyContent: 'center',
-              padding: 12
+              padding: 12,
+              borderRadius: 24,
+              backgroundColor: DesignTokens.colors.background.tertiary
             }}
           >
-            <Download size={26} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+            <Download size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
           </Pressable>
         </View>
       </View>
@@ -560,54 +572,58 @@ export default function MediaViewer({
       onRequestClose={onClose}
       statusBarTranslucent={false}
     >
-      <View 
-        style={{ 
+      <View
+        style={{
           flex: 1,
           backgroundColor: DesignTokens.colors.background.primary
         }}
       >
         {/* Header */}
-        <View 
+        <View
           style={{
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            paddingHorizontal: 20,
-            paddingVertical: 12,
+            paddingHorizontal: 16,
+            paddingVertical: 14,
             backgroundColor: DesignTokens.colors.background.secondary,
-            paddingTop: insets.top + 12
+            paddingTop: insets.top + 14,
+            borderBottomWidth: 1,
+            borderBottomColor: DesignTokens.colors.border.primary
           }}
         >
-          <View style={{ width: 48 }} />
-          
+          <View style={{ width: 40 }} />
+
           <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text 
-              style={{ 
+            <Text
+              style={{
                 color: DesignTokens.colors.text.primary,
                 fontWeight: '700',
-                fontSize: 18
+                fontSize: 17
               }}
             >
               {message?.sender?.full_name || 'שם לא ידוע'}
             </Text>
-            <Text 
+            <Text
               style={{
-                color: DesignTokens.colors.text.tertiary,
-                fontSize: 14,
-                marginTop: 4
+                color: DesignTokens.colors.text.secondary,
+                fontSize: 13,
+                marginTop: 2
               }}
             >
               {formatMessageTime(message?.created_at || new Date().toISOString())}
             </Text>
           </View>
-          
-          <Pressable 
-            onPress={onClose} 
-            style={{ 
-              padding: 8
+
+          <Pressable
+            onPress={onClose}
+            style={{
+              padding: 8,
+              borderRadius: 20,
+              backgroundColor: DesignTokens.colors.background.tertiary
             }}
           >
-            <X size={24} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
+            <X size={20} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
           </Pressable>
         </View>
 
@@ -618,26 +634,34 @@ export default function MediaViewer({
 
         {/* Caption */}
         {caption && (
-          <View 
+          <View
             style={{
-              marginHorizontal: 20,
-              marginBottom: 16
+              position: 'absolute',
+              bottom: 80,
+              left: 16,
+              right: 16,
+              alignItems: 'center'
             }}
           >
-            <Text 
-              style={{ 
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'center',
-                fontSize: 15,
-                lineHeight: 20,
-                fontWeight: '500',
-                textShadowColor: DesignTokens.colors.overlay,
-                textShadowOffset: { width: 0, height: 1 },
-                textShadowRadius: 4
-              }}
-            >
-              {caption}
-            </Text>
+            <View style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: 20,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              maxWidth: '90%'
+            }}>
+              <Text
+                style={{
+                  color: '#FFFFFF',
+                  textAlign: 'center',
+                  fontSize: 15,
+                  lineHeight: 20,
+                  fontWeight: '500'
+                }}
+              >
+                {caption}
+              </Text>
+            </View>
           </View>
         )}
 
@@ -662,13 +686,13 @@ export default function MediaViewer({
 
               console.log('📤 Sending message to channel:', channelId);
               const ChatService = await import('../../services/chatService');
-              
+
               // אם זה מדיה, נעביר את ה-mediaUrl
               let content = message?.content || 'מדיה מועברת';
               if (mediaUrl) {
-                content = mediaType === 'image' ? '[תמונה]' : 
-                         mediaType === 'video' ? '[וידאו]' : 
-                         mediaType === 'audio' ? '[אודיו]' : '[מסמך]';
+                content = mediaType === 'image' ? '[תמונה]' :
+                  mediaType === 'video' ? '[וידאו]' :
+                    mediaType === 'audio' ? '[אודיו]' : '[מסמך]';
                 content += `\n${mediaUrl}`;
                 if (caption) {
                   content += `\n${caption}`;
@@ -699,10 +723,10 @@ export default function MediaViewer({
 const formatMessageTime = (timestamp: string) => {
   const date = new Date(timestamp);
   const now = new Date();
-  
+
   const diffInMs = now.getTime() - date.getTime();
   const diffInHours = diffInMs / (1000 * 60 * 60);
-  
+
   if (diffInHours < 24) {
     // אותו יום - הצג רק שעה
     return date.toLocaleTimeString('he-IL', {

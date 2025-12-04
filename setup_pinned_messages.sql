@@ -102,3 +102,9 @@ GRANT SELECT, INSERT, DELETE ON pinned_messages TO authenticated;
 -- Add comment
 COMMENT ON FUNCTION get_pinned_messages(UUID) IS 'Returns all pinned messages for a channel with sender and pinner information';
 
+
+
+
+
+
+

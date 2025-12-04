@@ -178,7 +178,7 @@ CREATE POLICY "Anyone can view media links" ON lesson_media_links
 
 -- הוספת נתוני דמה
 INSERT INTO courses (id, title, subtitle, description, cover_url, instructor_name, instructor_avatar, duration_hours, level, rating, students_count, price, original_price, is_active) VALUES
-('whales-course-1', 'קורס הלוויתנים', 'הפריצה לשוק - דוד אריא', 'קהילת הסוחרים של ישראל - קורס מקיף למסחר מתקדם עם מודל PO3 ואסטרטגיות מתקדמות.', 'https://via.placeholder.com/400x250/1a1a1a/FFFFFF?text=קורס+הלוויתנים', 'דוד אריא', 'https://via.placeholder.com/60x60/10B981/FFFFFF?text=ד.א', 8, 'מתקדם', 4.8, 1250, 299, 599, true);
+('whales-course-1', 'קורס הלוויתנים', 'הפריצה לשוק - דוד אריאל', 'קורס דיגיטלי פרקטי ומעשי שכולל בתוכו קונספטים ואסטרטגיית מסחר יומי מוכחת! הקורס פונה לסוחרים מתקדמים בשוק ההון שרוצים לקחת את המסחר שלהם לרמה הבאה! וללמוד אסטרטגיית מסחר מקצועית במסחר יומי!', 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/Wheles.png', 'דוד אריאל', 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg', 8, 'מתקדם', 4.8, 1250, 299, 599, true);
 
 INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active) VALUES
 ('lesson-1', 'whales-course-1', 'הכירות עם הקורס', 'הכרות עם הקורס והנושאים שילמדו בו', 45, 1, false, true),

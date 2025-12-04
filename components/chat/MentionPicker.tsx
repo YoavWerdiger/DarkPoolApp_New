@@ -48,24 +48,24 @@ const MentionPicker: React.FC<MentionPickerProps> = ({
 
   const loadChannelMembers = async () => {
     if (!channelId) return;
-    
+
     try {
       console.log('🔄 MentionPicker: Loading channel members for chat:', channelId);
-      
+
       // שלוף חברי הערוץ עם הנתונים המלאים
       const { data: membersData, error: membersError } = await supabase
         .from('channel_members')
         .select('user_id, role, user_data')
         .eq('channel_id', channelId);
-      
+
       if (membersError) {
         console.error('❌ MentionPicker: Error loading channel members:', membersError);
         return;
       }
-      
+
       console.log('✅ MentionPicker: Channel members loaded:', membersData?.length || 0);
       console.log('📋 MentionPicker: First few members:', membersData?.slice(0, 3));
-      
+
       if (membersData && membersData.length > 0) {
         // המר את הנתונים לפורמט הנכון
         const formattedMembers = membersData.map(member => ({
@@ -76,7 +76,7 @@ const MentionPicker: React.FC<MentionPickerProps> = ({
           display_name: member.user_data?.display_name || member.user_data?.full_name || `User ${member.user_id.slice(0, 8)}`,
           role: member.role
         }));
-        
+
         console.log('🔗 MentionPicker: Formatted members data:', formattedMembers.slice(0, 2));
         setMembers(formattedMembers);
       } else {
@@ -93,17 +93,17 @@ const MentionPicker: React.FC<MentionPickerProps> = ({
   const loadFallbackMembers = async (altMemberData: any) => {
     try {
       console.log('🔍 MentionPicker: Loading fallback members from channel_members...');
-      
+
       const { data: fallbackMemberData, error: fallbackError } = await supabase
         .from('channel_members')
         .select('user_id, role, joined_at')
         .eq('channel_id', channelId);
-      
+
       if (fallbackError) {
         console.error('❌ MentionPicker: Fallback approach failed:', fallbackError);
         return;
       }
-      
+
       // יצירת אובייקטים פשוטים עם המידע שיש לנו
       const fallbackMembers = fallbackMemberData.map(member => ({
         id: member.user_id,
@@ -111,7 +111,7 @@ const MentionPicker: React.FC<MentionPickerProps> = ({
         display_name: `User ${member.user_id.slice(0, 8)}`,
         profile_picture: null
       }));
-      
+
       console.log('🔍 MentionPicker: Using fallback members:', fallbackMembers.length);
       setMembers(fallbackMembers);
     } catch (error) {
@@ -121,7 +121,7 @@ const MentionPicker: React.FC<MentionPickerProps> = ({
 
   const filteredMembers = useMemo(() => {
     if (!searchText) return members;
-    
+
     const query = searchText.toLowerCase().replace('@', '');
     return members.filter(member => {
       const name = (member.full_name || member.display_name || '').toLowerCase();
@@ -171,7 +171,7 @@ const MentionPicker: React.FC<MentionPickerProps> = ({
             <Text style={styles.closeText}>✕</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   container: {
     position: 'absolute',
-    bottom: 80, // מעל ל-MessageInputBar
+    bottom: 120, // מעל ל-MessageInputBar - הגדלתי מ-80 ל-120
     left: 20,
     right: 20,
     zIndex: 1000,

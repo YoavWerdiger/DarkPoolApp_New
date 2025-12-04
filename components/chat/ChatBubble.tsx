@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, Alert, Image, Animated, Dimensions, Linking, Modal, Clipboard } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Image, Dimensions, Animated, Easing, Alert, TouchableOpacity, Linking, Clipboard, I18nManager } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { MessageCircle, Forward, FileText, Play, Star } from 'lucide-react-native';
@@ -22,6 +22,7 @@ import MediaMessageRenderer from './MediaMessageRenderer';
 import MessageReactions from './MessageReactions';
 import MessageContent from './MessageContent';
 import ActionMenu from './ActionMenu';
+import TradeMessage from './TradeMessage';
 // import { MediaFile } from '../../services/mediaService';
 import { PollService, PollWithVotes } from '../../services/pollService';
 import { useAuth } from '../../context/AuthContext';
@@ -29,39 +30,47 @@ import { extractTextSegments } from '../../utils/textRanges';
 import { Audio } from 'expo-av';
 import { useNavigation } from '@react-navigation/native';
 // רטט נשאר פעיל - אם יש התקנה
-let Haptics: any = { impactAsync: async () => {}, ImpactFeedbackStyle: { Light: 'Light' } };
-try { Haptics = require('expo-haptics'); } catch {}
+let Haptics: any = { impactAsync: async () => { }, ImpactFeedbackStyle: { Light: 'Light' } };
+try { Haptics = require('expo-haptics'); } catch { }
 import { supabase } from '../../lib/supabase';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { ChatService } from '../../services/chatService';
 
-// פונקציה לזיהוי שפה
+// פונקציה לזיהוי שפה - משופרת עם ספירת תווים
 const detectLanguage = (text: string): 'rtl' | 'ltr' => {
   if (!text || text.trim().length === 0) {
     return 'rtl'; // ברירת מחדל - עברית
   }
-  
+
   // בדיקה אם הטקסט מכיל תווים עבריים
-  const hebrewRegex = /[\u0590-\u05FF]/;
-  const arabicRegex = /[\u0600-\u06FF]/;
-  
+  const hebrewRegex = /[\u0590-\u05FF]/g;
+  const arabicRegex = /[\u0600-\u06FF]/g;
+
   // בדיקה אם הטקסט מכיל תווים לטיניים (אנגלית)
-  const latinRegex = /[a-zA-Z]/;
-  
-  const hasHebrew = hebrewRegex.test(text);
-  const hasArabic = arabicRegex.test(text);
-  const hasLatin = latinRegex.test(text);
-  
-  // אם יש עברית או ערבית - RTL
-  if (hasHebrew || hasArabic) {
+  const latinRegex = /[a-zA-Z]/g;
+
+  // ספירת תווים מכל שפה
+  const hebrewMatches = text.match(hebrewRegex);
+  const arabicMatches = text.match(arabicRegex);
+  const latinMatches = text.match(latinRegex);
+
+  const hebrewCount = hebrewMatches ? hebrewMatches.length : 0;
+  const arabicCount = arabicMatches ? arabicMatches.length : 0;
+  const latinCount = latinMatches ? latinMatches.length : 0;
+
+  const rtlCount = hebrewCount + arabicCount;
+
+  // אם יש עברית או ערבית - RTL (גם אם יש גם לטינית, העברית/ערבית דומיננטית)
+  if (rtlCount > 0) {
     return 'rtl';
   }
-  
+
   // אם יש רק לטינית - LTR
-  if (hasLatin && !hasHebrew && !hasArabic) {
+  if (latinCount > 0 && rtlCount === 0) {
     return 'ltr';
   }
-  
-  // ברירת מחדל - עברית
+
+  // ברירת מחדל - עברית (RTL)
   return 'rtl';
 };
 
@@ -71,6 +80,7 @@ interface ChatBubbleProps {
   onReply?: (msg: Message) => void;
   onEditMessage?: (msg: Message) => void;
   onDeleteMessage?: (messageId: string) => void;
+  onRetryMessage?: (message: Message) => void; // Retry failed message
   allMessages?: Message[];
   onJumpToMessage?: (id: string) => void;
   channelMembers?: string[]; // Array of user IDs in the channel
@@ -80,9 +90,10 @@ interface ChatBubbleProps {
   isGroupStart?: boolean; // Whether this is the first message in a group
   isGroupEnd?: boolean; // Whether this is the last message in a group
   hasPrevFromSameSender?: boolean; // Whether there's a previous message from same sender in same minute
+  isNewMessage?: boolean; // Whether this is a new message that just arrived
 }
 
-export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDeleteMessage, allMessages, onJumpToMessage, channelMembers, currentUserId, shouldHighlight, isGrouped, isGroupStart, isGroupEnd, hasPrevFromSameSender }: ChatBubbleProps) {
+export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDeleteMessage, onRetryMessage, allMessages, onJumpToMessage, channelMembers, currentUserId, shouldHighlight, isGrouped, isGroupStart, isGroupEnd, hasPrevFromSameSender, isNewMessage }: ChatBubbleProps) {
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const navigation = useNavigation<any>();
@@ -103,70 +114,65 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   // const [swipeEnabled, setSwipeEnabled] = useState(true); // Removed - Swipeable not compatible with New Architecture
   // const swipeableRef = useRef<Swipeable>(null); // Removed - Swipeable not compatible with New Architecture
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const hasAnimatedRef = useRef(false);
 
   // פונקציה לאיפוס כל ה-states (למעט MediaViewer)
   const resetAllStates = () => {
-    console.log('🔄 resetAllStates called');
-    
+    // console.log('🔄 resetAllStates called');
+
     // Swipeable removed - not compatible with New Architecture
-    
+
     setSelectedMessage(null);
     setShowMessageContextMenu(false);
     setActionMenuVisible(false);
-    console.log('🔄 resetAllStates completed');
+    // console.log('🔄 resetAllStates completed');
   };
 
   // פונקציה לאיפוס מלא כולל MediaViewer
   const resetAllStatesIncludingMedia = () => {
-    console.log('🔄 resetAllStatesIncludingMedia called');
-    
+    // console.log('🔄 resetAllStatesIncludingMedia called');
+
     // Swipeable removed - not compatible with New Architecture
-    
+
     setSelectedMessage(null);
     setShowMessageContextMenu(false);
     setActionMenuVisible(false);
     setShowMediaViewer(false);
     setSelectedMedia(null);
-    console.log('🔄 resetAllStatesIncludingMedia completed');
+    // console.log('🔄 resetAllStatesIncludingMedia completed');
   };
   const [pollData, setPollData] = useState<PollWithVotes | null>(null);
   const [isMessageStarred, setIsMessageStarred] = useState(false);
   const [replyPreviewWidth, setReplyPreviewWidth] = useState(0);
-  
+
   // בדיקה אם זו הודעה זמנית
   const isTemporary = message.id.startsWith('temp_');
   const isSending = isTemporary; // הודעה זמנית נחשבת כנשלחת
 
   // Debug: עקוב אחרי שינויים ב-showSeenBySheet
   useEffect(() => {
-    console.log('🔍 ChatBubble: showSeenBySheet changed to:', showSeenBySheet);
-    if (showSeenBySheet) {
-      console.log('🎯 ChatBubble: About to render SeenBySheet with props:', {
-        visible: showSeenBySheet,
-        readByUserIds: message.read_by || [],
-        messageTimestamp: message.created_at
-      });
-    }
+    // Debug logs removed for production
   }, [showSeenBySheet, message.read_by, message.created_at]);
 
   // Debug: עקוב אחרי שינויים ב-showMediaViewer
   useEffect(() => {
-    console.log('🎯 ChatBubble: showMediaViewer changed to:', showMediaViewer);
+    // console.log('🎯 ChatBubble: showMediaViewer changed to:', showMediaViewer);
   }, [showMediaViewer]);
 
   // Debug: עקוב אחרי שינויים ב-selectedMessage
   useEffect(() => {
-    console.log('🎯 ChatBubble: selectedMessage changed to:', selectedMessage?.id);
+    // console.log('🎯 ChatBubble: selectedMessage changed to:', selectedMessage?.id);
   }, [selectedMessage]);
 
   // swipeEnabled removed - Swipeable not compatible with New Architecture
-  
+
   // State לניהול הקלטה
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
-  
+
   // בוטל זום – נשתמש רק בפייד דרך fadeAnim
   const pressScale = useRef(new Animated.Value(1)).current;
   const screenWidth = Dimensions.get('window').width;
@@ -174,38 +180,32 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
 
   // לוג לבדיקת פרטי השולח
   useEffect(() => {
-    console.log('💬 ChatBubble render:', {
-      messageId: message.id,
-      content: message.content,
-      senderId: message.sender_id,
-      sender: message.sender,
-      isMe
-    });
+    // Debug log removed for production
   }, [message]);
 
   // Check if message is starred by current user
   useEffect(() => {
     const checkStarStatus = async () => {
       if (!user?.id) return;
-      
+
       try {
-        console.log('⭐ ChatBubble: Checking star status for message:', message.id);
-        
+        // console.log('⭐ ChatBubble: Checking star status for message:', message.id);
+
         const ChatService = await import('../../services/chatService');
         const isStarred = await ChatService.ChatService.isMessageStarred(
           message.id,
           user.id
         );
-        
-        console.log('⭐ ChatBubble: Star status result:', { isStarred });
-        
+
+        // console.log('⭐ ChatBubble: Star status result:', { isStarred });
+
         setIsMessageStarred(isStarred);
       } catch (error) {
         console.error('❌ Error checking star status:', error);
         setIsMessageStarred(false);
       }
     };
-    
+
     checkStarStatus();
   }, [user?.id, message.id]);
 
@@ -215,15 +215,15 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
       if (sound) {
         await sound.unloadAsync();
       }
-      
+
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: message.file_url! },
         { shouldPlay: false },
         onPlaybackStatusUpdate
       );
-      
+
       setSound(newSound);
-      
+
       // קבלת משך ההקלטה
       const status = await newSound.getStatusAsync();
       if (status.isLoaded) {
@@ -238,7 +238,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     if (status.isLoaded) {
       setCurrentTime(status.positionMillis || 0);
       setIsPlaying(status.isPlaying);
-      
+
       if (status.didJustFinish) {
         setIsPlaying(false);
         setCurrentTime(0);
@@ -252,7 +252,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         await loadAudio();
         return;
       }
-      
+
       if (isPlaying) {
         await sound.pauseAsync();
       } else {
@@ -276,7 +276,12 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   const formatTime = (millis: number) => {
     const minutes = Math.floor(millis / 60000);
     const seconds = Math.floor((millis % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    // בלי template string כדי למנוע באג בפרסר: MM:SS
+    return (
+      String(minutes) +
+      ':' +
+      seconds.toString().padStart(2, '0')
+    );
   };
 
   // ניקוי הקלטה בעת unmount
@@ -291,9 +296,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   // זיהוי כיוון שפה לפי תוכן ההודעה
   const getTextDirection = () => {
     if (!message.content) return 'rtl'; // ברירת מחדל
-    
+
     const language = detectLanguage(message.content);
-    console.log('🌐 Language detection:', { content: message.content, language });
+    // console.log('🌐 Language detection:', { content: message.content, language });
     return language;
   };
 
@@ -310,25 +315,73 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     return undefined;
   }, []);
 
-  // אנימציית פייד להוספת הודעה - רק עבור הודעות זמניות
+  // אנימציית פייד ו-scale להוספת הודעה - עבור הודעות זמניות וחדשות
   useEffect(() => {
-    // הפעל אנימציה רק עבור הודעות זמניות (לפני אישור מהשרת)
-    // כך נמנע fade in כפול - פעם בשליחה ופעם באישור מהשרת
-    if (message.id.startsWith('temp_')) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      // הודעות אמיתיות מהשרת - אין אנימציה
-      fadeAnim.setValue(1);
+    // אם כבר עשינו אנימציה להודעה הזו, אל תעשה שוב
+    if (hasAnimatedRef.current) {
+      return;
     }
-  }, []);
+    
+    // הפעל אנימציה עבור:
+    // 1. הודעות זמניות (שנשלחו על ידי המשתמש)
+    // 2. הודעות חדשות שמגיעות מהשרת (isNewMessage = true)
+    const shouldAnimate = message.id.startsWith('temp_') || isNewMessage === true;
+    
+    if (shouldAnimate) {
+      fadeAnim.setValue(0.3); // התחל מ-30% (לא 0 כדי לא להיראות כמו טעינה)
+      scaleAnim.setValue(0.98); // התחל מ-98% (שינוי קטן יותר)
+      
+      // אנימציה משולבת - fade + scale (מהירה וחלקה, לא נראית כמו טעינה)
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 250,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 150,
+          friction: 10,
+          useNativeDriver: true,
+        })
+      ]).start(() => {
+        hasAnimatedRef.current = true; // סמן שכבר עשינו אנימציה
+      });
+    } else {
+      // הודעות ישנות - אין אנימציה (מוצגות מיד)
+      fadeAnim.setValue(1);
+      scaleAnim.setValue(1);
+      hasAnimatedRef.current = true;
+    }
+  }, [message.id, isNewMessage]);
 
   // טעינת ריאקציות
   useEffect(() => {
     loadReactions();
+
+    // Real-time subscription לריאקשנים
+    const reactionSubscription = supabase
+      .channel(`message_reactions:${message.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'message_reactions',
+          filter: `message_id=eq.${message.id}`
+        },
+        (payload) => {
+          // console.log('🔄 Reaction update received:', payload);
+          // רענן את הריאקשנים
+          loadReactions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      reactionSubscription.unsubscribe();
+    };
   }, [message.id]);
 
   // טען נתוני סקר אם ההודעה היא מסוג poll
@@ -340,10 +393,10 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
 
   // אנימציית הדגשה להודעה עם mention
   useEffect(() => {
-    console.log('🎯 ChatBubble: useEffect shouldHighlight triggered:', { shouldHighlight, messageId: message.id });
+    // console.log('🎯 ChatBubble: useEffect shouldHighlight triggered:', { shouldHighlight, messageId: message.id });
     if (shouldHighlight) {
-      console.log('🎯 ChatBubble: Starting highlight animation for message:', message.id);
-      
+      // console.log('🎯 ChatBubble: Starting highlight animation for message:', message.id);
+
       // אנימציה של הדגשה
       Animated.sequence([
         Animated.timing(highlightAnimation, {
@@ -362,7 +415,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
 
   const loadPollData = async () => {
     if (!message.poll_id) return;
-    
+
     try {
       const poll = await PollService.getPollResults(message.poll_id);
       setPollData(poll);
@@ -386,18 +439,12 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   // Get read receipt status - תיקון להצגה נכונה של סימני קריאה
   const getReadReceiptStatus = () => {
     if (!isMe || !channelMembers) return null;
-    
+
     const readByCount = message.read_by ? message.read_by.length : 0;
     const totalRecipients = channelMembers.length - 1; // Exclude sender
-    
-    console.log('📋 Read Receipt Status:', {
-      messageId: message.id,
-      status: message.status,
-      readByCount,
-      totalRecipients,
-      readBy: message.read_by
-    });
-    
+
+    // Debug log removed for production
+
     // בדיקה לפי status ו-read_by
     if (message.status === 'sent' && readByCount === 0) {
       return { icon: '✓', color: DesignTokens.colors.text.tertiary }; // נשלח אבל לא נקרא על ידי אף אחד
@@ -411,54 +458,49 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   };
 
   const handleSeenByPress = async () => {
-    console.log('👀 ChatBubble: SeenBy pressed for message:', {
-      messageId: message.id,
-      readBy: message.read_by,
-      readByLength: message.read_by?.length || 0,
-      status: message.status
-    });
-    
+    // Debug log removed for production
+
     // Mark message as viewed by current user
     if (user?.id) {
       try {
         const ChatService = await import('../../services/chatService');
         await ChatService.ChatService.markMessageAsViewed(message.id, user.id);
-        console.log('✅ ChatBubble: Message marked as viewed by user');
+        // console.log('✅ ChatBubble: Message marked as viewed by user');
       } catch (error) {
         console.error('❌ ChatBubble: Error marking message as viewed:', error);
       }
     }
-    
+
     // פתח את הדיאלוג תמיד, גם אם אין משתמשים שראו
-    console.log('✅ ChatBubble: Opening SeenBySheet for message:', message.id);
+    // console.log('✅ ChatBubble: Opening SeenBySheet for message:', message.id);
     setShowSeenBySheet(true);
-    console.log('🎯 ChatBubble: showSeenBySheet set to true');
+    // console.log('🎯 ChatBubble: showSeenBySheet set to true');
   };
 
   const onLongPress = async () => {
-    console.log('🎯 onLongPress called');
-    
+    // console.log('🎯 onLongPress called');
+
     // בדוק אם אנחנו כבר במצב של long press
     if (selectedMessage) {
-      console.log('🎯 Already in long press mode, ignoring');
+      // console.log('🎯 Already in long press mode, ignoring');
       return;
     }
-    
-    try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+
+    try { await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { }
     // אנימציית scale קצרה לבועה
     try {
       Animated.sequence([
         Animated.timing(pressScale, { toValue: 0.96, duration: 80, useNativeDriver: true }),
         Animated.spring(pressScale, { toValue: 1, useNativeDriver: true })
       ]).start();
-    } catch {}
-    
+    } catch { }
+
     // אפס רק את ה-states הרלוונטיים
     setShowMediaViewer(false);
     setSelectedMedia(null);
     setShowMessageContextMenu(false);
     setActionMenuVisible(false);
-    
+
     const snapshot: MessageSnapshot = {
       id: message.id,
       content: message.content || '',
@@ -477,34 +519,35 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     };
     setSelectedMessage(snapshot);
     // setSwipeEnabled(false); // Removed - Swipeable not compatible with New Architecture
-    setActionMenuVisible(true);
-    
-    console.log('🎯 selectedMessage set, actionMenuVisible set to true');
+    // לא נפתח ActionMenu ב-long press - רק LongPressOverlay
+    // setActionMenuVisible(true);
+
+    // console.log('🎯 selectedMessage set, LongPressOverlay should open now');
   };
-  
-  const onCopy = () => { 
+
+  const onCopy = () => {
     // העתקה אמיתית ל-Clipboard
     if (message.content) {
       Clipboard.setString(message.content);
       Alert.alert('הועתק!', 'הטקסט הועתק ללוח');
     }
   };
-  
-  const onDelete = () => { 
-    Alert.alert('נמחק!', 'ההודעה נמחקה'); 
+
+  const onDelete = () => {
+    Alert.alert('נמחק!', 'ההודעה נמחקה');
   };
-  
-  const handleReply = () => { 
+
+  const handleReply = () => {
     setIsReplying(true);
-    onReply && onReply(message); 
+    onReply && onReply(message);
   };
-  
+
   const handleForward = () => {
     // פתיחת Forward Modal להודעות טקסט
     setShowForwardModal(true);
   };
-  
-  const onReact = () => { 
+
+  const onReact = () => {
     setShowReactionPicker(true);
   };
 
@@ -518,18 +561,13 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   const handleReaction = async (emoji: string) => {
     try {
       setLoadingReactions(true);
-      
+
       // קריאה ל-ChatService
       const ChatService = await import('../../services/chatService');
       const wasAdded = await ChatService.ChatService.toggleReaction(message.id, emoji);
-      
-      if (wasAdded) {
-        // ריאקציה נוספה - עדכן את הרשימה
-        await loadReactions();
-      } else {
-        // ריאקציה הוסרה - עדכן את הרשימה
-        await loadReactions();
-      }
+
+      // עדכן את הרשימה בכל מקרה
+      await loadReactions();
     } catch (error) {
       console.error('❌ Error handling reaction:', error);
       Alert.alert('שגיאה', 'שגיאה בהוספת ריאקציה');
@@ -549,28 +587,32 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   };
 
   const handleReactionDetails = () => {
+    // console.log('🎯 ChatBubble: handleReactionDetails called, messageId:', message.id);
+    // console.log('🎯 ChatBubble: Current showReactionDetailsModal state:', showReactionDetailsModal);
     // פתיחת מודל פירוט ריאקציות
     setShowReactionDetailsModal(true);
+    // console.log('🎯 ChatBubble: showReactionDetailsModal set to true');
+    // בדיקה שהסטייט השתנה
+    setTimeout(() => {
+      // console.log('🎯 ChatBubble: After 100ms, showReactionDetailsModal should be true');
+    }, 100);
   };
 
   // Star/Unstar message functions
   const handleStarMessage = async () => {
     try {
       if (!user?.id) return;
-      
-      console.log('⭐ ChatBubble: Attempting to star message:', {
-        messageId: message.id,
-        userId: user.id
-      });
-      
+
+      // Debug log removed for production
+
       const ChatService = await import('../../services/chatService');
       const success = await ChatService.ChatService.starMessage(
         message.id,
         user.id
       );
-      
-      console.log('⭐ ChatBubble: Star message result:', success);
-      
+
+      // console.log('⭐ ChatBubble: Star message result:', success);
+
       if (success) {
         setIsMessageStarred(true);
         Alert.alert('הצלחה', 'ההודעה סומנה בכוכב');
@@ -586,20 +628,17 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   const handleUnstarMessage = async () => {
     try {
       if (!user?.id) return;
-      
-      console.log('⭐ ChatBubble: Attempting to unstar message:', {
-        messageId: message.id,
-        userId: user.id
-      });
-      
+
+      // Debug log removed for production
+
       const ChatService = await import('../../services/chatService');
       const success = await ChatService.ChatService.unstarMessage(
         message.id,
         user.id
       );
-      
-      console.log('⭐ ChatBubble: Unstar message result:', success);
-      
+
+      // console.log('⭐ ChatBubble: Unstar message result:', success);
+
       if (success) {
         setIsMessageStarred(false);
         Alert.alert('הצלחה', 'ההודעה הוסרה מהכוכבים');
@@ -637,7 +676,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     const remainingCount = reactions.length > 3 ? reactions.length - 3 : 0;
 
     return (
-      <Pressable 
+      <Pressable
         onPress={handleReactionDetails}
         className="absolute -bottom-1 -left-1 flex-row items-center"
       >
@@ -693,20 +732,20 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
       </Pressable>
     );
   };
-  
+
   const handleMediaPress = (media: any) => {
-    console.log('🎯 handleMediaPress called with:', media);
-    
+    // console.log('🎯 handleMediaPress called with:', media);
+
     // אפס רק את ה-states הרלוונטיים, לא את showMediaViewer
     setSelectedMessage(null);
     setShowMessageContextMenu(false);
     setActionMenuVisible(false);
     // setSwipeEnabled removed - not compatible with New Architecture
-    
+
     setSelectedMedia(media);
     setShowMediaViewer(true);
-    
-    console.log('🎯 showMediaViewer set to true');
+
+    // console.log('🎯 showMediaViewer set to true');
   };
 
   // מצא את הודעת ה-reply אם יש (תמיכה בשם שדה חלופי)
@@ -719,12 +758,16 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   // רנדר סטטוס הודעה
   const renderMessageStatus = () => {
     if (!isMe) return null;
-    
+
     const status = message.status || 'sent';
     let icon = '';
     let color = '#888';
-    
+
     switch (status) {
+      case 'sending':
+        icon = 'time-outline';
+        color = DesignTokens.colors.text.tertiary;
+        break;
       case 'sent':
         icon = 'checkmark';
         color = '#888';
@@ -737,8 +780,12 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         icon = 'checkmark-done';
         color = DesignTokens.colors.success.main;
         break;
+      case 'failed':
+        icon = 'alert-circle';
+        color = DesignTokens.colors.danger.main;
+        break;
     }
-    
+
     return (
       <View className="flex-row items-center">
         <Ionicons name={icon as any} size={14} color={color} />
@@ -746,17 +793,49 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     );
   };
 
+  // רנדור כפתור "נסה שוב" להודעות שנכשלו
+  const renderRetryButton = () => {
+    if (!isMe || message.status !== 'failed') return null;
+
+    return (
+      <Pressable
+        onPress={() => onRetryMessage?.(message)}
+        style={{
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          backgroundColor: `${DesignTokens.colors.danger.main}20`,
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          borderRadius: 12,
+          marginTop: 6,
+          borderWidth: 1,
+          borderColor: DesignTokens.colors.danger.main,
+        }}
+      >
+        <Ionicons name="refresh" size={14} color={DesignTokens.colors.danger.main} />
+        <Text style={{ 
+          color: DesignTokens.colors.danger.main, 
+          fontSize: 12, 
+          fontWeight: '600',
+          marginRight: 6 
+        }}>
+          נסה שוב
+        </Text>
+      </Pressable>
+    );
+  };
+
   // Swipe Actions
   const renderLeftActions = () => (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 20 }}>
       {/* Reply Action - Circle */}
-      <RectButton
+      <TouchableOpacity
         onPress={handleSwipeReply}
         style={{
           backgroundColor: DesignTokens.colors.accent.main,
           width: 40,
           height: 40,
-          borderRadius: 30,
+          borderRadius: 20,
           alignItems: 'center',
           justifyContent: 'center',
           shadowColor: '#000',
@@ -767,20 +846,20 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         }}
       >
         <MessageCircle size={20} color="white" strokeWidth={2} />
-      </RectButton>
+      </TouchableOpacity>
     </View>
   );
 
   const renderRightActions = () => (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 20 }}>
       {/* Forward Action - Circle */}
-      <RectButton
+      <TouchableOpacity
         onPress={handleSwipeForward}
         style={{
           backgroundColor: DesignTokens.colors.warning.main,
           width: 40,
           height: 40,
-          borderRadius: 30,
+          borderRadius: 20,
           alignItems: 'center',
           justifyContent: 'center',
           shadowColor: '#000',
@@ -791,7 +870,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         }}
       >
         <Forward size={20} color="white" strokeWidth={2} />
-      </RectButton>
+      </TouchableOpacity>
     </View>
   );
 
@@ -800,10 +879,10 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     if (!replyId) return null;
     if (!replyMsg) {
       return (
-          <View
-            onLayout={(e) => setReplyPreviewWidth(e.nativeEvent.layout.width)}
-            style={{
-            backgroundColor: DesignTokens.colors.background.secondary,
+        <View
+          onLayout={(e) => setReplyPreviewWidth(e.nativeEvent.layout.width)}
+          style={{
+            backgroundColor: isMe ? `${DesignTokens.colors.primary.dark}80` : DesignTokens.colors.background.secondary,
             paddingVertical: 6,
             paddingHorizontal: 8,
             borderRadius: 8,
@@ -819,9 +898,9 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             maxWidth: maxBubbleWidth - 20,
             minWidth: 230
           }}
-          >
+        >
           <View style={{ flex: 1 }}>
-            <Text style={{ 
+            <Text style={{
               color: isMe ? '#000000' : '#FFFFFF',
               fontSize: 11,
               fontWeight: 'bold',
@@ -832,7 +911,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             }}>
               תשובה להודעה
             </Text>
-            <Text style={{ 
+            <Text style={{
               color: isMe ? '#000000' : '#FFFFFF',
               fontSize: 10,
               textAlign: 'right',
@@ -844,21 +923,21 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         </View>
       );
     }
-    
+
     let icon = '';
     let previewText = '';
     const rawContent = (replyMsg.content && replyMsg.content.trim().length > 0)
       ? replyMsg.content
       : (
-          (replyMsg as any)?.caption ||
-          (replyMsg as any)?.text ||
-          (replyMsg as any)?.message ||
-          (replyMsg as any)?.metadata?.caption ||
-          (replyMsg as any)?.meta?.caption ||
-          (replyMsg as any)?.file_caption ||
-          (replyMsg as any)?.extra?.text ||
-          ''
-        );
+        (replyMsg as any)?.caption ||
+        (replyMsg as any)?.text ||
+        (replyMsg as any)?.message ||
+        (replyMsg as any)?.metadata?.caption ||
+        (replyMsg as any)?.meta?.caption ||
+        (replyMsg as any)?.file_caption ||
+        (replyMsg as any)?.extra?.text ||
+        ''
+      );
     const contentText = typeof rawContent === 'string' ? rawContent : '';
     switch (replyMsg.type) {
       case 'image':
@@ -878,7 +957,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
     if (!previewText || previewText.trim().length === 0) {
       previewText = 'הודעה';
     }
-    
+
     const senderName =
       (replyMsg as any)?.sender?.full_name ||
       (replyMsg as any)?.user?.full_name ||
@@ -888,13 +967,20 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
       (replyMsg as any)?.sender_full_name ||
       (replyMsg as any)?.user_full_name ||
       (replyMsg as any)?.display_name ||
-      (replyMsg.sender_id ? `משתמש ${replyMsg.sender_id.slice(0, 4)}` : 'משתמש');
-    
+      (replyMsg.sender_id
+        ? 'משתמש ' + String(replyMsg.sender_id).slice(0, 4)
+        : 'משתמש');
+
     return (
-        <Pressable 
-        onPress={() => onJumpToMessage && replyId && onJumpToMessage(replyId)} 
-        style={{ 
-          backgroundColor: DesignTokens.colors.background.secondary,
+      <Pressable
+        onPress={() => {
+          if (onJumpToMessage && replyId) {
+            // console.log('🎯 Jumping to message:', replyId);
+            onJumpToMessage(replyId);
+          }
+        }}
+        style={{
+          backgroundColor: isMe ? `${DesignTokens.colors.primary.dark}80` : DesignTokens.colors.background.secondary,
           paddingVertical: 8,
           paddingHorizontal: 10,
           borderRadius: 8,
@@ -908,13 +994,14 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           borderColor: DesignTokens.colors.border.primary,
           flexShrink: 1,
           maxWidth: maxBubbleWidth - 12,
-          minWidth: Math.max(230, Math.min(replyPreviewWidth + 24, maxBubbleWidth - 12))
+          minWidth: Math.max(230, Math.min(replyPreviewWidth + 24, maxBubbleWidth - 12)),
+          alignSelf: isMe ? 'flex-end' : 'flex-start'
         }}
       >
         {/* תוכן התשובה */}
         <View style={{ flex: 1 }}>
-          <Text 
-            style={{ 
+          <Text
+            style={{
               color: isMe ? '#000000' : '#FFFFFF',
               fontSize: 11,
               fontWeight: 'bold',
@@ -926,8 +1013,8 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           >
             {senderName}
           </Text>
-          <Text 
-            style={{ 
+          <Text
+            style={{
               color: isMe ? '#000000' : '#FFFFFF',
               fontSize: 10,
               textAlign: detectLanguage(previewText) === 'rtl' ? 'right' : 'left',
@@ -943,18 +1030,81 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   };
 
   const renderContent = () => {
+    // בדיקה אם זו הודעת טרייד
+    if (message.type === 'trade') {
+      console.log('📈 Trade message rendering:', {
+        id: message.id,
+        has_trade_data: !!(message as any).trade_data,
+        content: message.content,
+        tradeData: (message as any).trade_data
+      });
+
+      let tradeData = (message as any).trade_data;
+
+      // אם אין trade_data, נסה לחלץ מה-content
+      if (!tradeData && message.content && message.content.startsWith('📈TRADE_DATA:')) {
+        try {
+          const jsonStr = message.content.replace('📈TRADE_DATA:', '');
+          tradeData = JSON.parse(jsonStr);
+          console.log('📈 Parsed trade data from content:', tradeData);
+        } catch (e) {
+          console.error('❌ Error parsing trade data from content:', e);
+          return null;
+        }
+      }
+
+      if (!tradeData) {
+        console.error('❌ No trade data found for message:', message.id, 'Full message:', message);
+        // במקרה שאין trade_data, נציג הודעה פשוטה במקום להסתיר את ההודעה
+        return (
+          <View style={{
+            padding: DesignTokens.spacing.md,
+            backgroundColor: isMe ? `${DesignTokens.colors.primary.main}20` : `${DesignTokens.colors.background.tertiary}`,
+            borderRadius: DesignTokens.borderRadius.md,
+            alignItems: 'flex-end',
+          }}>
+            <Text style={{
+              fontSize: DesignTokens.typography.fontSize.base,
+              fontWeight: '700' as any,
+              color: isMe ? DesignTokens.colors.text.primary : DesignTokens.colors.text.primary,
+              textAlign: 'right',
+              marginBottom: DesignTokens.spacing.xs,
+            }}>
+              {message.content || 'טרייד משותף'}
+            </Text>
+            <Text style={{
+              fontSize: DesignTokens.typography.fontSize.sm,
+              color: isMe ? DesignTokens.colors.text.secondary : DesignTokens.colors.text.secondary,
+              textAlign: 'right',
+            }}>
+              נתוני הטרייד לא זמינים
+            </Text>
+          </View>
+        );
+      }
+
+      // console.log('✅ Rendering trade with data:', tradeData);
+
+      return (
+        <TradeMessage
+          trade={tradeData}
+          isMe={isMe}
+        />
+      );
+    }
+
     // בדיקה אם זו הודעת חדשות
     if (message.type === 'news') {
       // נסה לקבל את הנתונים מ-news_data או מ-content (fallback)
       let newsData = (message as any).news_data;
-      
-      console.log('📰 News message rendering:', { 
-        id: message.id, 
+
+      console.log('📰 News message rendering:', {
+        id: message.id,
         has_news_data: !!newsData,
         content: message.content,
-        newsData 
+        newsData
       });
-      
+
       // אם אין news_data, נסה לחלץ מה-content
       if (!newsData && message.content && message.content.startsWith('📰NEWS_DATA:')) {
         try {
@@ -966,14 +1116,14 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           return null;
         }
       }
-      
+
       if (!newsData) {
         console.error('❌ No news data found for message:', message.id);
         return null;
       }
-      
-      console.log('✅ Rendering news with data:', newsData);
-      
+
+      // console.log('✅ Rendering news with data:', newsData);
+
       // פונקציה לטיפול בלחיצה על החדשה
       const handleNewsPress = () => {
         Alert.alert(
@@ -1007,119 +1157,138 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           ]
         );
       };
-      
+
       return (
         <Pressable
           onPress={handleNewsPress}
           style={({ pressed }) => ({
-            opacity: pressed ? 0.8 : 1
+            opacity: pressed ? 0.9 : 1,
+            marginBottom: 4
           })}
         >
-          <View 
-            className="rounded-2xl overflow-hidden"
+          <View
             style={{
               backgroundColor: DesignTokens.colors.background.secondary,
+              borderRadius: 16,
+              overflow: 'hidden',
+              maxWidth: '85%',
+              minWidth: 280,
               borderWidth: 1,
-              borderColor: DesignTokens.colors.border.primary,
-              maxWidth: 280
+              borderColor: DesignTokens.colors.border.primary
             }}
           >
-          {/* תמונה אם קיימת */}
-          {newsData.image_url && (
-            <View className="relative h-32">
-              <Image
-                source={{ uri: newsData.image_url }}
-                className="w-full h-full"
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-                locations={[0, 0.6, 1]}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0
-                }}
-              />
-              <View className="absolute bottom-2 right-3 left-3">
-                <View className="flex-row items-center justify-between">
-                  <View 
-                    className="px-2 py-1 rounded-full"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-                  >
-                    <Text 
-                      className="text-xs font-medium"
-                      style={{ color: '#FFFFFF' }}
+            {/* תמונה אם קיימת */}
+            {newsData.image_url && (
+              <View style={{ height: 180, width: '100%', position: 'relative' }}>
+                <Image
+                  source={{ uri: newsData.image_url }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.2)'
+                  }}
+                />
+                <View style={{ position: 'absolute', bottom: 12, right: 12, left: 12 }}>
+                  <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 12,
+                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.2)'
+                      }}
                     >
-                      {newsData.source}
-                    </Text>
-                  </View>
-                  <View 
-                    className="px-2 py-1 rounded-full"
-                    style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-                  >
-                    <Text 
-                      className="text-xs font-medium"
-                      style={{ color: '#FFFFFF' }}
-                    >
-                      חדשות
-                    </Text>
+                      <Text
+                        style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}
+                      >
+                        חדשות
+                      </Text>
+                    </View>
+                    {newsData.source && (
+                      <View
+                        style={{
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 12,
+                          backgroundColor: 'rgba(0,0,0,0.7)',
+                          borderWidth: 1,
+                          borderColor: 'rgba(255,255,255,0.2)'
+                        }}
+                      >
+                        <Text
+                          style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}
+                        >
+                          {newsData.source}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>
-            </View>
-          )}
-          
-          {/* תוכן החדשה */}
-          <View className="p-4">
-            <Text 
-              className="text-base font-bold mb-2 leading-6"
-              style={{ 
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'right'
-              }}
-              numberOfLines={3}
-            >
-              {newsData.title}
-            </Text>
-            
-            {newsData.summary && (
-              <Text 
-                className="text-sm leading-5"
-                style={{ 
-                  color: DesignTokens.colors.text.secondary,
-                  textAlign: 'right'
+            )}
+
+            {/* תוכן החדשה */}
+            <View style={{ padding: 14 }}>
+              <Text
+                style={{
+                  color: DesignTokens.colors.text.primary,
+                  fontSize: 15,
+                  fontWeight: '700',
+                  marginBottom: 8,
+                  textAlign: 'right',
+                  lineHeight: 22
                 }}
                 numberOfLines={3}
               >
-                {newsData.summary}
+                {newsData.title}
               </Text>
-            )}
-            
-            {/* מידע תחתון */}
-            <View className="flex-row items-center justify-between mt-3 pt-3 border-t-2" style={{ borderTopColor: DesignTokens.colors.border.primary }}>
-              <Text 
-                className="text-xs font-medium"
-                style={{ color: DesignTokens.colors.text.tertiary }}
-              >
-                {new Date(newsData.published_at).toLocaleDateString('he-IL')}
-              </Text>
-              <View 
-                className="px-2 py-1 rounded-full"
-                style={{ backgroundColor: `${DesignTokens.colors.success.main}26` }}
-              >
-                <Text 
-                  className="text-xs font-bold"
-                  style={{ color: DesignTokens.colors.success.main }}
+
+              {newsData.summary && (
+                <Text
+                  style={{
+                    color: DesignTokens.colors.text.secondary,
+                    fontSize: 13,
+                    textAlign: 'right',
+                    lineHeight: 20,
+                    marginBottom: 12
+                  }}
+                  numberOfLines={3}
                 >
-                  📰 חדשות
+                  {newsData.summary}
                 </Text>
+              )}
+
+              {/* מידע תחתון */}
+              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                <Text style={{ color: DesignTokens.colors.text.tertiary, fontSize: 11 }}>
+                  {new Date(newsData.published_at || Date.now()).toLocaleDateString('he-IL')}
+                </Text>
+                {newsData.sentiment && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{
+                      color: newsData.sentiment === 'Positive' ? DesignTokens.colors.success.main :
+                        newsData.sentiment === 'Negative' ? DesignTokens.colors.danger.main :
+                          DesignTokens.colors.text.tertiary,
+                      fontSize: 11,
+                      fontWeight: '600'
+                    }}>
+                      {newsData.sentiment === 'Positive' ? 'חיובי' :
+                        newsData.sentiment === 'Negative' ? 'שלילי' : 'ניטרלי'}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
-        </View>
         </Pressable>
       );
     }
@@ -1153,7 +1322,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         />
       );
     }
-    
+
     if (message.type === 'video' && message.file_url) {
       return (
         <MediaMessageRenderer
@@ -1167,7 +1336,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         />
       );
     }
-    
+
     if (message.type === 'audio' && message.file_url) {
       return (
         <MediaMessageRenderer
@@ -1181,7 +1350,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         />
       );
     }
-    
+
     if (message.type === 'document' && message.file_url) {
       return (
         <MediaMessageRenderer
@@ -1195,27 +1364,27 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         />
       );
     }
-    
+
     // בדיקה אם ההודעה מכילה URL של תמונה (פורמט ישן)
     if (message.content && message.content.includes('http') && (message.content.includes('.jpg') || message.content.includes('.png') || message.content.includes('.jpeg'))) {
       const lines = message.content.split('\n');
       const imageUrl = lines.find(line => line.includes('http') && (line.includes('.jpg') || line.includes('.png') || line.includes('.jpeg')));
       const caption = lines.filter(line => !line.includes('http')).join('\n').trim();
-      
+
       // בדיקה מחמירה יותר של URL
       if (imageUrl && imageUrl.trim() !== '' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
         return (
           <View>
-            <Image 
-              source={{ uri: imageUrl.trim() }} 
-              style={{ width: 180, height: 180, borderRadius: 12, marginBottom: 8 }} 
+            <Image
+              source={{ uri: imageUrl.trim() }}
+              style={{ width: 180, height: 180, borderRadius: 12, marginBottom: 8 }}
               onError={(error) => {
                 console.error('Image load error in ChatBubble (legacy format):', error);
               }}
             />
             {caption ? (
-              <Text style={{ 
-                color: isMe ? '#000' : '#fff', 
+              <Text style={{
+                color: isMe ? '#000' : '#fff',
                 textAlign: textDirection === 'rtl' ? 'right' : 'left',
                 writingDirection: textDirection
               }}>
@@ -1226,26 +1395,26 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         );
       }
     }
-    
+
     // תמיכה בפורמט הישן (לאחור)
     if (message.content && message.content.startsWith('[תמונה]')) {
       const url = message.content.split('\n')[1];
       const extra = message.content.split('\n').slice(2).join('\n');
-      
+
       // בדיקה מחמירה יותר של URL
       if (url && url.trim() !== '' && (url.startsWith('http://') || url.startsWith('https://'))) {
         return (
           <View>
-            <Image 
-              source={{ uri: url.trim() }} 
-              style={{ width: 180, height: 180, borderRadius: 12, marginBottom: 8 }} 
+            <Image
+              source={{ uri: url.trim() }}
+              style={{ width: 180, height: 180, borderRadius: 12, marginBottom: 8 }}
               onError={(error) => {
                 console.error('Image load error in ChatBubble (old format):', error);
               }}
             />
             {extra ? (
-              <Text style={{ 
-                color: isMe ? '#000' : '#fff', 
+              <Text style={{
+                color: isMe ? '#000' : '#fff',
                 textAlign: textDirection === 'rtl' ? 'right' : 'left',
                 writingDirection: textDirection
               }}>
@@ -1256,7 +1425,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         );
       }
     }
-    
+
     if (message.content.startsWith('[קובץ]')) {
       const lines = message.content.split('\n');
       const name = lines[0].replace('[קובץ]', '').trim();
@@ -1269,9 +1438,12 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
             <Text style={{ color: isMe ? '#000' : '#fff', marginLeft: 8 }}>{name || 'קובץ'}</Text>
           </Pressable>
           {extra ? (
-            <Text style={{ 
-              color: isMe ? '#000' : '#fff', 
-              textAlign: textDirection === 'rtl' ? 'right' : 'left',
+            <Text style={{
+              color: isMe ? '#000' : '#fff',
+              // ב-RTL mode, 'right' ו-'left' מתהפכים אוטומטית
+              textAlign: I18nManager.isRTL 
+                ? (textDirection === 'rtl' ? 'left' : 'right')
+                : (textDirection === 'rtl' ? 'right' : 'left'),
               writingDirection: textDirection
             }}>
               {extra}
@@ -1280,7 +1452,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         </View>
       );
     }
-    
+
     if (message.content.startsWith('[הקלטה]')) {
       const url = message.content.split('\n')[1];
       return (
@@ -1290,7 +1462,7 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         </Pressable>
       );
     }
-    
+
     // ברירת מחדל: טקסט רגיל
     return renderTextWithMentions(message.content, message.mentions);
   };
@@ -1298,193 +1470,167 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   // זמן
   const formattedTime = new Date(message.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
 
+  // className לחישוב דינמי בלי template strings כדי לא לבלבל את הפרסר
+  const rowClassName =
+    'w-full flex-row ' +
+    (hasPrevFromSameSender ? 'mb-0.5 ' : 'mb-2 ');
+
   return (
     <>
-      <Animated.View 
-        className={`w-full ${hasPrevFromSameSender ? 'mb-0.5' : 'mb-2'} flex-row${isMe ? '-reverse' : ''}`}
-        style={{ opacity: fadeAnim }}
+      <Animated.View
+        className={rowClassName}
+        style={{ 
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+          flexDirection: 'row',
+          width: '100%',
+          justifyContent: isMe ? 'flex-start' : 'flex-end'
+        }}
       >
-        {/* תמונת משתמש - רק עבור אחרים ורק אם זה לא grouped או שזה תחילת הקבוצה */}
-         {!isMe && (
-           <View style={{ 
-             flexDirection: 'column', 
-             alignItems: 'center', 
-             justifyContent: 'flex-end', 
-             marginRight: 3,
-             marginBottom: 2,
-             width: 24, // שמור על הרוחב תמיד
-           }}>
-             {(!isGrouped || isGroupStart) && (
-               <>
-                 {(message.sender && typeof (message.sender as any).profile_picture === 'string' && (message.sender as any).profile_picture) ? (
-                   <Image 
-                 source={{ uri: (message.sender as any).profile_picture }} 
-                 style={{ 
-                   width: 24, 
-                   height: 24, 
-                   borderRadius: 12,
-                       borderWidth: 1,
-                       borderColor: DesignTokens.colors.success.main
-                     }} 
-                   />
-                 ) : (
-                   <View 
-                     style={{ 
-                       width: 24, 
-                       height: 24, 
-                       borderRadius: 12, 
-                       alignItems: 'center', 
-                       justifyContent: 'center',
-                       backgroundColor: DesignTokens.colors.bubbleMe,
-                       borderWidth: 1,
-                       borderColor: DesignTokens.colors.success.main
-                     }}
-                   >
-                     <Text 
-                     style={{ 
-                       color: '#FFFFFF',
-                       fontSize: 10,
-                       fontWeight: 'bold'
-                     }}
-                     >
-                       {message.sender?.full_name ? message.sender.full_name[0] : 'מ'}
-                     </Text>
-                   </View>
-                 )}
-               </>
-             )}
-           </View>
-         )}
         <Animated.View
           style={{
             backgroundColor: highlightAnimation.interpolate({
               inputRange: [0, 1],
-              outputRange: ['transparent', `${DesignTokens.colors.success.main}1A`],
+              // צבע רקע מודגש ללא template string (RGBA במקום HEX+אלפא טקסטואלי)
+              outputRange: ['transparent', DesignTokens.colors.success.main],
             }),
-            borderRadius: isGrouped ? (
-              isGroupStart ? (isMe ? [12, 12, 4, 12] : [12, 12, 12, 4]) : 
-              isGroupEnd ? (isMe ? [4, 12, 12, 12] : [12, 4, 12, 12]) :
-              (isMe ? [4, 12, 4, 12] : [12, 4, 12, 4])
-            ) : 12,
+            borderRadius: 12,
             margin: highlightAnimation.interpolate({
               inputRange: [0, 1],
               outputRange: [0, 4],
             }),
             flexShrink: 1,
-            alignSelf: isMe ? 'flex-end' : 'flex-start'
+            // isMe משמאל, אחרים מימין
+            alignSelf: isMe ? 'flex-start' : 'flex-end'
           }}
         >
           {/* Swipeable removed - not compatible with New Architecture */}
           <Animated.View
-          style={{
-               alignSelf: isMe ? 'flex-end' : 'flex-start',
-               marginLeft: isMe ? 0 : 8,
-               marginRight: isMe ? 8 : 0,
-               marginVertical: hasPrevFromSameSender ? 0.5 : 1,
-               flexDirection: 'row',
-               alignItems: 'flex-end',
+            style={{
+              alignSelf: isMe ? 'flex-start' : 'flex-end',
+              marginLeft: isMe ? 0 : 8,
+              marginRight: isMe ? 8 : 0,
+              marginVertical: hasPrevFromSameSender ? 0.5 : 1,
+              flexDirection: 'row',
+              alignItems: 'flex-end',
             }}
           >
-             <View style={{ position: 'relative' }}>
+            <View
+              style={{
+                position: 'relative',
+                // בהודעות שלי (שמאל) השעון/סטטוס יהיו מימין; בהודעות אחרים (ימין) – מימין
+                flexDirection: isMe ? 'row-reverse' : 'row-reverse',
+                marginBottom: reactions && reactions.length > 0 ? 8 : undefined, // מרווח תחתון רק כשיש ריאקשנים
+              }}
+            >
               {/* עיטוף ניטרלי בלבד */}
               <HoldItem>
-              <Pressable
-                onPress={() => {
-                  console.log('🎯 ChatBubble onPress (short press) - selectedMessage:', !!selectedMessage);
-                  // לחיצה קצרה לא עושה כלום - רק MediaViewer או LongPress
-                }}
-                onLongPress={onLongPress}
-                delayLongPress={180}
-                hitSlop={14}
-                pressRetentionOffset={{ top: 18, left: 18, right: 18, bottom: 18 }}
-                disabled={false}
-              >
-              <Animated.View
-                style={{ 
-                  transform: [{ scale: pressScale }],
-                  alignItems: 'flex-end', 
-                   backgroundColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
-                  borderRadius: 16,
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderWidth: 0.5,
-                  borderColor: DesignTokens.colors.border.primary,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 2,
-                  elevation: 1,
-                  minWidth: 50,
-                  maxWidth: maxBubbleWidth,
-                  width: 'auto',
-                  flexShrink: 1
-                }}
-              >
-                 {/* תוכן ההודעה */}
-                 <View style={{ 
-                   maxWidth: maxBubbleWidth - 8, 
-                   width: '100%',
-                   flexShrink: 1,
-                   flexWrap: 'wrap'
-                 }}>
-                   {/* שם השולח בראש הבועה (רק אצל אחרים) - רק אם זה לא הודעת מדיה ורק אם זה תחילת קבוצה */}
-                   {!isMe && message.type === 'text' && (!isGrouped || isGroupStart) && (
-                     <Text 
-                       style={{ 
-                         textAlign: 'right',
-                         writingDirection: 'rtl',
-                         color: DesignTokens.colors.success.main,
-                         fontSize: 12,
-                         fontWeight: 'bold',
-                         marginBottom: 3,
-                         flexWrap: 'wrap'
-                       }}
-                     >
-                       {message.sender?.full_name || 'משתמש'}
-                     </Text>
-                   )}
-                   {renderReplyPreview()}
-                   {renderContent()}
-                </View>
-                
-                {/* Footer - סטטוס ושעה - תמיד בצד ימין */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-                  {/* צד שמאל - כוכב אם ההודעה מסומנת */}
-                  {isMessageStarred && (
-                    <Star 
-                      size={9} 
-                      color={isMe ? DesignTokens.colors.bubbleOther : DesignTokens.colors.success.main} 
-                      strokeWidth={2}
-                      fill={isMe ? DesignTokens.colors.bubbleOther : DesignTokens.colors.success.main}
-                    />
-                  )}
-                  
-                  {/* צד ימין - שעה */}
-                  <Text 
-                    style={{ 
-                      color: isMe ? '#000000' : '#FFFFFF',
-                      textAlign: 'right',
-                      writingDirection: 'ltr',
-                      fontSize: 9,
-                      marginLeft: 'auto',
+                <Pressable
+                  onPress={() => {
+                    // console.log('🎯 ChatBubble onPress (short press) - selectedMessage:', !!selectedMessage);
+                    // לחיצה קצרה לא עושה כלום - רק MediaViewer או LongPress
+                  }}
+                  onLongPress={onLongPress}
+                  delayLongPress={180}
+                  hitSlop={14}
+                  pressRetentionOffset={{ top: 18, left: 18, right: 18, bottom: 18 }}
+                  disabled={false}
+                >
+                  <Animated.View
+                    style={{
+                      transform: [{ scale: pressScale }],
+                      alignItems: isMe ? 'flex-end' : 'flex-end',
+                      backgroundColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
+                      borderRadius: 16,
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      paddingBottom: reactions && reactions.length > 0 ? 20 : undefined, // מרווח תחתון רק כשיש ריאקשנים
+                      borderWidth: 0.5,
+                      borderColor: DesignTokens.colors.border.primary,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 2,
+                      elevation: 1,
+                      minWidth: 50,
+                      maxWidth: maxBubbleWidth,
+                      width: 'auto',
+                      flexShrink: 1,
+                      position: 'relative', // כדי שהריאקשנים יהיו יחסית לבועה
                     }}
                   >
-                    {formattedTime}
-                  </Text>
-                </View>
-              </Animated.View>
-              </Pressable>
+                    {/* תוכן ההודעה */}
+                    <View style={{
+                      maxWidth: maxBubbleWidth - 8,
+                      width: '100%',
+                      flexShrink: 1,
+                      flexWrap: 'wrap',
+                      alignItems: isMe ? 'flex-end' : 'flex-end'
+                    }}>
+                      {/* שם השולח בראש הבועה (רק אצל אחרים) - רק אם זה לא הודעת מדיה ורק אם זה תחילת קבוצה */}
+                      {!isMe && message.type === 'text' && (!isGrouped || isGroupStart) && (
+                        <Text
+                          style={{
+                            textAlign: 'right',
+                            writingDirection: 'rtl',
+                            color: DesignTokens.colors.success.main,
+                            fontSize: 12,
+                            fontWeight: '700' as any,
+                            marginBottom: 3,
+                            flexWrap: 'wrap',
+                            alignSelf: 'flex-end'
+                          }}
+                        >
+                          {message.sender?.full_name || 'משתמש'}
+                        </Text>
+                      )}
+                      {renderReplyPreview()}
+                      {renderContent()}
+                      {/* כפתור "נסה שוב" להודעות שנכשלו */}
+                      {renderRetryButton()}
+                    </View>
+
+                    {/* Footer - סטטוס ושעה */}
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: isMe ? 'space-between' : 'flex-end', marginTop: 2 }}>
+                      {/* כוכב אם ההודעה מסומנת */}
+                      {isMessageStarred && (
+                        <Star
+                          size={9}
+                          color={isMe ? DesignTokens.colors.bubbleOther : DesignTokens.colors.success.main}
+                          strokeWidth={2}
+                          fill={isMe ? DesignTokens.colors.bubbleOther : DesignTokens.colors.success.main}
+                        />
+                      )}
+
+                      {/* שעה */}
+                      <Text
+                        style={{
+                          color: isMe ? '#000000' : '#FFFFFF',
+                          textAlign: 'right',
+                          writingDirection: 'ltr',
+                          fontSize: 9,
+                          marginRight: isMessageStarred ? 4 : 0,
+                        }}
+                      >
+                        {formattedTime}
+                      </Text>
+                    </View>
+                  </Animated.View>
+                </Pressable>
               </HoldItem>
-            
-              {/* ריאקציות - מוצגות בפינה התחתונה-שמאלית של הבועה */}
-              <MessageReactions
-                reactions={reactions}
-                onReactionDetails={handleReactionDetails}
-              />
+
+              {/* ריאקציות - מוצגות בפינה התחתונה של הבועה */}
+              {reactions && reactions.length > 0 && (
+                <MessageReactions
+                  reactions={reactions}
+                  onReactionDetails={handleReactionDetails}
+                  isMe={isMe}
+                />
+              )}
             </View>
           </Animated.View>
           {/* Swipeable removed - not compatible with New Architecture */}
-      </Animated.View>
+        </Animated.View>
       </Animated.View>
 
       <ActionMenu
@@ -1526,44 +1672,44 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
           { key: 'copy', label: 'העתק', icon: 'copy', onPress: onCopy },
           { key: 'info', label: 'פרטים', icon: 'info', onPress: () => setShowSeenBySheet(true) },
           { key: 'star', label: isMessageStarred ? 'הסר כוכב' : 'סמן בכוכב', icon: 'star', onPress: () => (isMessageStarred ? handleUnstarMessage() : handleStarMessage()) },
-          { key: 'pin', label: 'הצמד', icon: 'pin', onPress: () => {} },
+          { key: 'pin', label: 'הצמד', icon: 'pin', onPress: () => { } },
           { key: 'delete', label: 'מחק', icon: 'trash', destructive: true, onPress: () => onDeleteMessage?.(message.id) },
         ]}
       />
 
       {/* Media Viewer Modal */}
-       <MediaViewer
-         visible={showMediaViewer}
-         onClose={() => {
-           console.log('🎯 MediaViewer onClose called');
-           resetAllStatesIncludingMedia();
-         }}
-         mediaUrl={selectedMedia?.uri || message.file_url || ''}
-         mediaType={selectedMedia?.type || message.type || 'image'}
-         caption={selectedMedia?.name || message.content}
-         message={message}
-         onReply={() => {
-           setShowMediaViewer(false);
-           setIsReplying(true);
-           onReply && onReply(message);
-         }}
-         onForward={() => {
-           console.log('📤 MediaViewer onForward called - opening ForwardModal');
-           console.log('📤 Current showForwardModal state:', showForwardModal);
-           setShowForwardModal(true);
-           console.log('📤 setShowForwardModal(true) called');
-         }}
-       />
+      <MediaViewer
+        visible={showMediaViewer}
+        onClose={() => {
+          // console.log('🎯 MediaViewer onClose called');
+          resetAllStatesIncludingMedia();
+        }}
+        mediaUrl={selectedMedia?.uri || message.file_url || ''}
+        mediaType={selectedMedia?.type || message.type || 'image'}
+        caption={selectedMedia?.name || message.content}
+        message={message}
+        onReply={() => {
+          setShowMediaViewer(false);
+          setIsReplying(true);
+          onReply && onReply(message);
+        }}
+        onForward={() => {
+          console.log('📤 MediaViewer onForward called - opening ForwardModal');
+          console.log('📤 Current showForwardModal state:', showForwardModal);
+          setShowForwardModal(true);
+          console.log('📤 setShowForwardModal(true) called');
+        }}
+      />
 
-       {/* Forward Modal for text messages */}
-       <ForwardModal
-         visible={showForwardModal}
-         onClose={() => {
-           console.log('📤 ForwardModal onClose called');
-           setShowForwardModal(false);
-         }}
-         messageId={message.id}
-                 onForward={async (channelId, channelName) => {
+      {/* Forward Modal for text messages */}
+      <ForwardModal
+        visible={showForwardModal}
+        onClose={() => {
+          console.log('📤 ForwardModal onClose called');
+          setShowForwardModal(false);
+        }}
+        messageId={message.id}
+        onForward={async (channelId, channelName) => {
           console.log('🚀 onForward called:', { channelId, channelName, userId: user?.id });
           try {
             if (!user?.id) {
@@ -1581,30 +1727,33 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
               type: 'channel'
             });
 
-            console.log('✅ Message forwarded successfully:', { channelName, result });
+            // console.log('✅ Message forwarded successfully:', { channelName, result });
           } catch (error) {
             console.error('❌ Error forwarding message:', error);
             Alert.alert('שגיאה', 'לא ניתן להעביר את ההודעה: ' + (error instanceof Error ? error.message : String(error)));
           }
         }}
-       />
+      />
 
-       {/* Reaction Picker */}
-       <ReactionPicker
-         visible={showReactionPicker}
-         onClose={() => setShowReactionPicker(false)}
-         onReaction={handleReaction}
-       />
+      {/* Reaction Picker */}
+      <ReactionPicker
+        visible={showReactionPicker}
+        onClose={() => setShowReactionPicker(false)}
+        onReaction={handleReaction}
+      />
 
-       {/* Reaction Details Modal */}
-       <ReactionDetailsModal
-         visible={showReactionDetailsModal}
-         onClose={() => setShowReactionDetailsModal(false)}
-         messageId={message.id}
-       />
+      {/* Reaction Details Modal */}
+      <ReactionDetailsModal
+        visible={showReactionDetailsModal}
+        onClose={() => {
+          // console.log('🎯 ChatBubble: ReactionDetailsModal onClose called');
+          setShowReactionDetailsModal(false);
+        }}
+        messageId={message.id}
+      />
 
       {/* Seen By Sheet */}
-             <SeenBySheet
+      <SeenBySheet
         visible={showSeenBySheet}
         onClose={() => setShowSeenBySheet(false)}
         messageId={message.id}
@@ -1616,54 +1765,54 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
         visible={!!selectedMessage}
         message={selectedMessage}
         onClose={() => {
-          console.log('🎯 LongPressOverlay onClose called');
+          // console.log('🎯 LongPressOverlay onClose called');
           resetAllStates();
         }}
         onAction={(actionName, payload) => {
-          console.log('🎯 LongPressOverlay action:', actionName, payload);
-          
+          // console.log('🎯 LongPressOverlay action:', actionName, payload);
+
           // אפס states לפני הפעולה כדי לסגור את ה-overlay
           resetAllStates();
-          
+
           // אז בצע את הפעולה
           switch (actionName) {
             case 'react':
               if (payload?.emoji) {
-                console.log('🎯 Adding reaction:', payload.emoji);
+                // console.log('🎯 Adding reaction:', payload.emoji);
                 handleReaction(payload.emoji);
               }
               break;
             case 'reply':
-              console.log('🎯 Reply action');
+              // console.log('🎯 Reply action');
               handleReply();
               break;
             case 'forward':
-              console.log('🎯 Forward action');
+              // console.log('🎯 Forward action');
               handleForward();
               break;
             case 'copy':
-              console.log('🎯 Copy action');
+              // console.log('🎯 Copy action');
               onCopy();
               break;
             case 'info':
-              console.log('🎯 Info action');
+              // console.log('🎯 Info action');
               setShowSeenBySheet(true);
               break;
             case 'star':
-              console.log('🎯 Star action');
+              // console.log('🎯 Star action');
               handleStarMessage();
               break;
             case 'pin':
-              console.log('🎯 Pin action');
+              // console.log('🎯 Pin action');
               // TODO: Implement pin
               break;
             case 'delete':
-              console.log('🎯 Delete action');
+              // console.log('🎯 Delete action');
               onDeleteMessage?.(message.id);
               break;
           }
         }}
       />
-     </>
-   );
- }
+    </>
+  );
+}

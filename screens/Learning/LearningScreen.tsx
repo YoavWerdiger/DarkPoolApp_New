@@ -3,16 +3,19 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, 
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRoute } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { XCircle, CheckCircle2, ArrowRight, RefreshCw, ChevronLeft, ChevronRight, Edit3, ChevronUp, ChevronDown, Save, X, Type, ImageIcon, Palette, PlusCircle, Star, Clock, TrendingUp, Video as VideoIcon } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { WebView } from 'react-native-webview';
+import YoutubePlayer from 'react-native-youtube-iframe';
 import { learningProgressService } from '../../services/learningProgressService';
 import { courseService } from '../../services/courseService';
 import { mediaService } from '../../services/mediaService';
 import { useAuth } from '../../context/AuthContext';
-import UIBottomSheet from '../../components/ui/UIBottomSheet';
+import { useTheme } from '../../context/ThemeContext';
+import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -135,8 +138,11 @@ const DEMO_COURSE = {
 };
 
 function LearningScreen() {
+  const route = useRoute();
+  const { courseId: routeCourseId, lessonId: routeLessonId } = route.params as { courseId?: string; lessonId?: string } || {};
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -167,35 +173,222 @@ function LearningScreen() {
   const [courseData, setCourseData] = useState<any>(null); // נתוני הקורס מהמסד
   const [lessonsData, setLessonsData] = useState<any[]>([]); // נתוני השיעורים מהמסד
   const videoRef = useRef(null);
-  const [animatedValues] = useState(() => 
-    DEMO_COURSE.lessons.map(() => new Animated.Value(1))
-  );
+  const youtubePlayerRef = useRef<any>(null);
+  const vimeoWebViewRef = useRef<any>(null);
+  const [initialVideoPosition, setInitialVideoPosition] = useState<number>(0);
+  const [animatedValues, setAnimatedValues] = useState<Animated.Value[]>([]);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isYouTubePlayerReady, setIsYouTubePlayerReady] = useState(false);
+  const durationUpdatedRef = useRef<Set<string>>(new Set()); // מעקב אחרי שיעורים שכבר עדכנו את ה-duration
+  const durationCheckInProgressRef = useRef<Set<string>>(new Set()); // מעקב אחרי שיעורים שבתהליך בדיקה
+  const lastProgressSaveTimeRef = useRef<number>(0); // מעקב אחרי הזמן האחרון שעודכן במסד נתונים
+  const lastProgressPercentageRef = useRef<number>(0); // מעקב אחרי האחוז האחרון (למניעת קפיצות ל-0)
 
+  // מעקב התקדמות YouTube דרך interval
+  useEffect(() => {
+    // ניקוי interval קודם אם קיים
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    
+    if (selectedLesson && youtubePlayerRef.current && isYouTubePlayerReady) {
+      const isYouTube = !!(selectedLesson.youtubeId || selectedLesson.youtubeUrl);
+      if (isYouTube) {
+        console.log('🔄 Starting YouTube progress tracking interval');
+        
+        // התחלת מעקב התקדמות דרך getCurrentTime ו-getDuration
+        progressIntervalRef.current = setInterval(async () => {
+          // בדיקה אם ה-ref עדיין קיים
+          if (!youtubePlayerRef.current) {
+            console.log('⚠️ YouTube ref is null, stopping interval');
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+              progressIntervalRef.current = null;
+            }
+            return;
+          }
+          
+          try {
+            const currentTime = await youtubePlayerRef.current.getCurrentTime();
+            const duration = await youtubePlayerRef.current.getDuration();
+            
+            // עדכון גם אם הסרטון לא מנגן (כדי לראות את המיקום)
+            if (duration > 0 && currentTime >= 0) {
+              console.log('📊 YouTube progress (interval):', { 
+                currentTime: currentTime.toFixed(1), 
+                duration: duration.toFixed(1),
+                isPlaying 
+              });
+              setProgress(currentTime);
+              setDuration(duration);
+              const progressPercentage = Math.round((currentTime / duration) * 100);
+              
+              // בדיקה שהפרוגרס תקין ולא קופץ ל-0 (למניעת קפיצות)
+              if (progressPercentage >= 0 && progressPercentage <= 100) {
+                // אם הפרוגרס קופץ ל-0 בעוד שהיה ערך לפני, נשמור את הערך הקודם
+                if (progressPercentage === 0 && lastProgressPercentageRef.current > 0 && currentTime > 1) {
+                  // לא נעדכן אם הפרוגרס קופץ ל-0 בעוד שהזמן הנוכחי הוא יותר מ-1 שנייה
+                  console.log('⚠️ Skipping progress update - jumped to 0:', { 
+                    currentTime, 
+                    previousProgress: lastProgressPercentageRef.current 
+                  });
+                } else {
+                  setLessonProgress(progressPercentage);
+                  lastProgressPercentageRef.current = progressPercentage;
+                }
+              }
+              
+              // עדכון duration במסד נתונים ובכרטיסיה אם זה שיעור YouTube
+              if (selectedLesson && courseData && duration > 0) {
+                const isYouTube = !!(selectedLesson.youtubeId || selectedLesson.youtubeUrl);
+                if (isYouTube) {
+                  // עדכון מיידי של ה-duration ב-lessonsData כדי שהכרטיסיה תתעדכן
+                  const formatDuration = (seconds: number): string => {
+                    const hours = Math.floor(seconds / 3600);
+                    const remainingSeconds = seconds % 3600;
+                    const minutes = Math.floor(remainingSeconds / 60);
+                    const secs = remainingSeconds % 60;
+                    
+                    if (hours > 0) {
+                      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    } else {
+                      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+                    }
+                  };
+                  
+                  const formattedDuration = formatDuration(duration);
+                  
+                  // עדכון lessonsData ישירות
+                  setLessonsData((prevLessons: any[]) => {
+                    const updated = prevLessons.map((lesson: any) => {
+                      if (lesson.id === selectedLesson.id) {
+                        return {
+                          ...lesson,
+                          duration: formattedDuration,
+                          duration_seconds: duration
+                        };
+                      }
+                      return lesson;
+                    });
+                    return updated;
+                  });
+                  
+                  const lessonKey = `${courseData.id}_${selectedLesson.id}`;
+                  // עדכון duration במסד נתונים רק פעם אחת לכל שיעור
+                  if (!durationUpdatedRef.current.has(lessonKey) && !durationCheckInProgressRef.current.has(lessonKey)) {
+                    durationCheckInProgressRef.current.add(lessonKey);
+                    // בדיקה אם יש duration במסד נתונים
+                    const checkAndUpdateDuration = async () => {
+                      try {
+                        const media = await mediaService.getLessonMedia(courseData.id, selectedLesson.id);
+                        if (media && (!media.duration_minutes || media.duration_minutes === 0)) {
+                          durationUpdatedRef.current.add(lessonKey);
+                          // עדכון duration במסד נתונים
+                          const success = await mediaService.updateLessonDuration(courseData.id, selectedLesson.id, duration);
+                          if (success) {
+                            console.log('✅ Updated lesson duration in database:', { 
+                              courseId: courseData.id, 
+                              lessonId: selectedLesson.id, 
+                              durationMinutes: Math.round(duration / 60),
+                              durationSeconds: duration
+                            });
+                          }
+                        }
+                      } catch (error) {
+                        console.error('❌ Error checking/updating duration:', error);
+                      } finally {
+                        durationCheckInProgressRef.current.delete(lessonKey);
+                      }
+                    };
+                    checkAndUpdateDuration();
+                  }
+                }
+              }
+              
+              // עדכון התקדמות במסד נתונים כל 5 שניות (רק כשמנגן)
+              // שיפור: בודקים שהזמן השתנה ב-5 שניות לפחות מהעדכון האחרון
+              const currentTimeInt = Math.floor(currentTime);
+              if (isPlaying && currentTimeInt > 0 && currentTimeInt % 5 === 0 && currentTimeInt !== lastProgressSaveTimeRef.current) {
+                lastProgressSaveTimeRef.current = currentTimeInt;
+                updateLessonProgress(currentTime, duration);
+              }
+            } else {
+              console.log('⚠️ Invalid time values:', { currentTime, duration });
+            }
+          } catch (error) {
+            console.error('❌ Error getting YouTube progress:', error);
+            // לא עוצרים את ה-interval גם אם יש שגיאה - מנסים שוב בפעם הבאה
+          }
+        }, 1000); // בדיקה כל שנייה
+      }
+    }
+    
+    // ניקוי ה-interval כשהקומפוננטה נסגרת או כשהשיעור משתנה
+    return () => {
+      console.log('🧹 Cleaning up YouTube progress interval');
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      // איפוס refs כשהקומפוננטה נסגרת
+      lastProgressSaveTimeRef.current = 0;
+      lastProgressPercentageRef.current = 0;
+    };
+  }, [selectedLesson?.id, isYouTubePlayerReady]);
 
   // טעינת נתונים מהמסד
   useEffect(() => {
-    console.log('useEffect triggered, user:', user?.id);
+    console.log('useEffect triggered, user:', user?.id, 'courseId:', routeCourseId);
     loadCourseData();
-  }, [user]);
+  }, [user, routeCourseId]);
+
+  // פתיחת שיעור ספציפי אם יש lessonId
+  useEffect(() => {
+    if (routeLessonId && lessonsData.length > 0 && courseData) {
+      const lesson = lessonsData.find((l: any) => l.id === routeLessonId);
+      if (lesson) {
+        console.log('Opening specific lesson:', routeLessonId);
+        // נשתמש ב-handleLessonPress כדי לפתוח את השיעור
+        const lessonIndex = lessonsData.findIndex((l: any) => l.id === routeLessonId);
+        if (lessonIndex !== -1) {
+          handleLessonPress(lesson, lessonIndex);
+        }
+      }
+    }
+  }, [routeLessonId, lessonsData, courseData]);
 
   // טעינת נתוני הקורס
   const loadCourseData = async () => {
     console.log('loadCourseData called');
     try {
       // נטען את הקורס מהמסד (או ניצור אותו אם לא קיים)
-      const courseId = 'whales-course-1';
+      // אם אין routeCourseId, לא נטען כלום (לא נשתמש ב-default)
+      if (!routeCourseId) {
+        console.log('No courseId provided, skipping load');
+        return;
+      }
+      const courseId = routeCourseId;
       console.log('Getting course by ID:', courseId);
       let course = await courseService.getCourseById(courseId);
       console.log('Course from database:', course);
       
       if (!course) {
-        // אם הקורס לא קיים, ניצור אותו
-        await courseService.createWhalesCourse();
+        // אם הקורס לא קיים, ניצור אותו בהתאם לסוג הקורס
+        if (courseId === 'david-training-course' || courseId === 'david-training-course-1') {
+          await courseService.createDavidTrainingCourse();
+        } else {
+          await courseService.createWhalesCourse();
+        }
         course = await courseService.getCourseById(courseId);
         
         // ניצור גם את קישורי המדיה
         if (course) {
-          await mediaService.createWhalesCourseMedia(courseId);
+          if (courseId === 'david-training-course' || courseId === 'david-training-course-1') {
+            // קישורי המדיה של דוד איראל נוצרים יחד עם השיעורים
+          } else {
+            await mediaService.createWhalesCourseMedia(courseId);
+          }
         }
       }
 
@@ -224,8 +417,24 @@ function LearningScreen() {
               const media = mediaLinks.find(m => m.lesson_id === lesson.id);
               console.log(`Lesson ${lesson.id} media:`, media);
               
-              // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE
+              // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE או מהמסד נתונים
               let duration = '00:00';
+              
+              // פונקציה לעיצוב duration בפורמט MM:SS או HH:MM:SS
+              const formatDuration = (minutes?: number) => {
+                if (!minutes) return '00:00';
+                const totalSeconds = minutes * 60;
+                const hours = Math.floor(totalSeconds / 3600);
+                const remainingSeconds = totalSeconds % 3600;
+                const mins = Math.floor(remainingSeconds / 60);
+                const secs = remainingSeconds % 60;
+                
+                if (hours > 0) {
+                  return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                } else {
+                  return `${mins}:${secs.toString().padStart(2, '0')}`;
+                }
+              };
               
               // נחפש את השיעור בנתונים האמיתיים
               const demoLesson = DEMO_COURSE.lessons.find(demo => demo.id === lesson.id);
@@ -234,19 +443,24 @@ function LearningScreen() {
                 duration = demoLesson.duration;
                 console.log(`Lesson ${lesson.id} using demo duration:`, duration);
               } else if (media?.duration_minutes) {
-                const minutes = media.duration_minutes;
-                const hours = Math.floor(minutes / 60);
-                const remainingMinutes = minutes % 60;
-                duration = hours > 0 ? `${hours}:${remainingMinutes.toString().padStart(2, '0')}` : `${remainingMinutes.toString().padStart(2, '0')}:00`;
+                duration = formatDuration(media.duration_minutes);
+                console.log(`Lesson ${lesson.id} using media duration:`, duration);
               } else if (lesson.duration_minutes) {
-                const minutes = lesson.duration_minutes;
-                const hours = Math.floor(minutes / 60);
-                const remainingMinutes = minutes % 60;
-                duration = hours > 0 ? `${hours}:${remainingMinutes.toString().padStart(2, '0')}` : `${remainingMinutes.toString().padStart(2, '0')}:00`;
+                duration = formatDuration(lesson.duration_minutes);
+                console.log(`Lesson ${lesson.id} using lesson duration:`, duration);
               }
               
-              // נשתמשאמבנייל מ-Vimeo במקום placeholder
-              const thumbnailUrl = media?.vimeo_id ? `https://vumbnail.com/${media.vimeo_id}.jpg` : `https://vumbnail.com/${lesson.id}.jpg`;
+              // נשתמש ב-thumbnail מ-Vimeo או YouTube
+              let thumbnailUrl = '';
+              if (media?.vimeo_id) {
+                thumbnailUrl = `https://vumbnail.com/${media.vimeo_id}.jpg`;
+              } else if (media?.youtube_id) {
+                thumbnailUrl = `https://img.youtube.com/vi/${media.youtube_id}/maxresdefault.jpg`;
+              } else if (lesson.youtubeId) {
+                thumbnailUrl = `https://img.youtube.com/vi/${lesson.youtubeId}/maxresdefault.jpg`;
+              } else {
+                thumbnailUrl = `https://vumbnail.com/${lesson.id}.jpg`;
+              }
               console.log(`Lesson ${lesson.id} thumbnail URL:`, thumbnailUrl);
               console.log(`Lesson ${lesson.id} media vimeo_id:`, media?.vimeo_id);
               console.log(`Lesson ${lesson.id} lesson id:`, lesson.id);
@@ -264,9 +478,11 @@ function LearningScreen() {
                 ...lesson,
                 completed: userProgress?.is_completed || false,
                 progress: userProgress?.progress_percentage || 0,
-                vimeoId: media?.vimeo_id || lesson.id,
+                vimeoId: media?.vimeo_id || undefined,
+                youtubeId: media?.youtube_id || lesson.youtubeId || undefined,
+                youtubeUrl: media?.youtube_url || lesson.youtubeUrl || undefined,
                 thumbnail: thumbnailUrl,
-                videoUrl: media?.vimeo_url || `https://vimeo.com/${media?.vimeo_id || lesson.id}?share=copy`,
+                videoUrl: media?.vimeo_url || media?.youtube_url || `https://vimeo.com/${media?.vimeo_id || lesson.id}?share=copy`,
                 duration: duration,
                 type: 'video'
               };
@@ -275,14 +491,17 @@ function LearningScreen() {
           console.log('Updated lessons with media:', updatedLessons);
           console.log('Setting lessons data...');
           setLessonsData(updatedLessons);
+          // עדכון animatedValues למספר השיעורים
+          setAnimatedValues(updatedLessons.map(() => new Animated.Value(1)));
           console.log('Lessons data set successfully');
           console.log('First lesson thumbnail:', updatedLessons[0]?.thumbnail);
           console.log('First lesson duration:', updatedLessons[0]?.duration);
           console.log('All lessons durations:', updatedLessons.map(l => ({ id: l.id, title: l.title, duration: l.duration })));
         } else {
-          // אם אין שיעורים במסד, נשתמש בנתונים הבסיסיים
-          console.log('No lessons found in database, using demo data');
-          setLessonsData(DEMO_COURSE.lessons);
+          // אם אין שיעורים במסד, לא נציג כלום
+          console.log('No lessons found in database');
+          setLessonsData([]);
+          setAnimatedValues([]);
         }
         
         // נטען את ההתקדמות הכללית
@@ -291,16 +510,17 @@ function LearningScreen() {
           setTotalProgress(totalProgress);
         }
       } else {
-        // אם אין קורס במסד, נשתמש בנתונים הבסיסיים
-        setCourseData(DEMO_COURSE);
-        setLessonsData(DEMO_COURSE.lessons);
+        // אם אין קורס במסד, לא נציג כלום (לא DEMO_COURSE)
+        console.log('Course not found in database');
+        setCourseData(null);
+        setLessonsData([]);
         setTotalProgress(0);
       }
     } catch (error) {
       console.error('Error loading course data:', error);
-      // אם יש שגיאה, נשתמש בנתונים הבסיסיים
-      setCourseData(DEMO_COURSE);
-      setLessonsData(DEMO_COURSE.lessons);
+      // אם יש שגיאה, לא נציג כלום (לא DEMO_COURSE)
+      setCourseData(null);
+      setLessonsData([]);
       setTotalProgress(0);
     }
   };
@@ -782,13 +1002,14 @@ function LearningScreen() {
 
   const handleLessonPress = async (lesson: any, index: number) => {
     // אנימציה של לחיצה
+    const animatedValue = animatedValues[index] || new Animated.Value(1);
     Animated.sequence([
-      Animated.timing(animatedValues[index], {
+      Animated.timing(animatedValue, {
         toValue: 0.95,
         duration: 100,
         useNativeDriver: true,
       }),
-      Animated.timing(animatedValues[index], {
+      Animated.timing(animatedValue, {
         toValue: 1,
         duration: 100,
         useNativeDriver: true,
@@ -797,17 +1018,53 @@ function LearningScreen() {
 
     setSelectedLesson(lesson);
     
+    // איפוס refs כששיעור חדש נבחר
+    lastProgressSaveTimeRef.current = 0;
+    lastProgressPercentageRef.current = 0;
+    
     // נטען את ההתקדמות הקיימת של המשתמש
     if (user && courseData) {
+      console.log('📊 Loading user progress for lesson:', lesson.id);
       const userProgress = await learningProgressService.getUserProgress(user.id, courseData.id, lesson.id);
+      
+      // בדיקה אם זה YouTube או Vimeo (ללא שימוש בפונקציה חיצונית)
+      const isYouTube = !!(lesson.youtubeId || lesson.youtubeUrl);
+      console.log('🎥 Video type detection:', {
+        lessonId: lesson.id,
+        isYouTube,
+        youtubeId: lesson.youtubeId,
+        youtubeUrl: lesson.youtubeUrl,
+        vimeoId: lesson.vimeoId
+      });
+      
       if (userProgress) {
+        console.log('✅ User progress found:', {
+          current_time_seconds: userProgress.current_time_seconds,
+          total_duration_seconds: userProgress.total_duration_seconds,
+          progress_percentage: userProgress.progress_percentage,
+          is_completed: userProgress.is_completed
+        });
+        
         setLessonProgress(userProgress.progress_percentage);
         setProgress(userProgress.current_time_seconds);
         setDuration(userProgress.total_duration_seconds);
+        lastProgressPercentageRef.current = userProgress.progress_percentage;
+        
+        // שמירת המיקום האחרון רק עבור YouTube (Vimeo מטפל בזה בעצמו)
+        if (isYouTube) {
+          console.log('🎬 Setting initial video position for YouTube:', userProgress.current_time_seconds);
+          setInitialVideoPosition(userProgress.current_time_seconds);
+        } else {
+          console.log('🎬 Vimeo detected - not setting initial position (handles it itself)');
+          setInitialVideoPosition(0); // Vimeo לא צריך את זה - הוא מטפל בזה בעצמו
+        }
       } else {
+        console.log('ℹ️ No user progress found - starting from beginning');
         setLessonProgress(0);
         setProgress(0);
         setDuration(0);
+        setInitialVideoPosition(0);
+        lastProgressPercentageRef.current = 0;
       }
       
       // נטען את ההערות של המשתמש עבור השיעור הספציפי
@@ -820,8 +1077,24 @@ function LearningScreen() {
       const media = await loadLessonMedia(lesson.id);
       console.log(`Media for lesson ${lesson.id}:`, media);
       if (media) {
-        // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE
+        // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE או מהמסד נתונים
         let duration = lesson.duration || '00:00';
+        
+        // פונקציה לעיצוב duration בפורמט MM:SS או HH:MM:SS
+        const formatDuration = (minutes?: number) => {
+          if (!minutes) return '00:00';
+          const totalSeconds = minutes * 60;
+          const hours = Math.floor(totalSeconds / 3600);
+          const remainingSeconds = totalSeconds % 3600;
+          const mins = Math.floor(remainingSeconds / 60);
+          const secs = remainingSeconds % 60;
+          
+          if (hours > 0) {
+            return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+          } else {
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+          }
+        };
         
         // נחפש את השיעור בנתונים האמיתיים
         const demoLesson = DEMO_COURSE.lessons.find(demo => demo.id === lesson.id);
@@ -830,10 +1103,8 @@ function LearningScreen() {
           duration = demoLesson.duration;
           console.log(`Lesson ${lesson.id} using demo duration in handleLessonPress:`, duration);
         } else if (media.duration_minutes) {
-          const minutes = media.duration_minutes;
-          const hours = Math.floor(minutes / 60);
-          const remainingMinutes = minutes % 60;
-          duration = hours > 0 ? `${hours}:${remainingMinutes.toString().padStart(2, '0')}` : `${remainingMinutes.toString().padStart(2, '0')}:00`;
+          duration = formatDuration(media.duration_minutes);
+          console.log(`Lesson ${lesson.id} using media duration in handleLessonPress:`, duration);
         }
         
         const updatedLesson = {
@@ -851,20 +1122,28 @@ function LearningScreen() {
 
   // חישוב התקדמות כללית של הקורס
   const calculateTotalProgress = () => {
-    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+    if (lessons.length === 0) return 0;
     const completedLessons = lessons.filter((lesson: any) => lesson.completed).length;
     const totalLessons = lessons.length;
     return Math.round((completedLessons / totalLessons) * 100);
   };
 
-  // עדכון התקדמות השיעור הנוכחי
+  // עדכון התקדמות השיעור הנוכחי במסד נתונים
+  // הערה: lessonProgress מתעדכן ישירות ב-onProgress, כאן רק שומרים למסד נתונים
   const updateLessonProgress = async (currentTime: number, totalTime: number) => {
     if (totalTime > 0) {
-      const progress = (currentTime / totalTime) * 100;
-      setLessonProgress(Math.round(progress));
-      
-      // שמירה במסד נתונים
+      // שמירה במסד נתונים בלבד (lessonProgress מתעדכן ב-onProgress)
       if (user && courseData && selectedLesson) {
+        const progress = Math.round((currentTime / totalTime) * 100);
+        console.log('💾 Updating lesson progress in database:', {
+          userId: user.id,
+          courseId: courseData.id,
+          lessonId: selectedLesson.id,
+          currentTime: Math.floor(currentTime),
+          totalTime: Math.floor(totalTime),
+          progressPercentage: progress
+        });
         await learningProgressService.updateWatchingTime(
           user.id,
           courseData.id,
@@ -872,6 +1151,12 @@ function LearningScreen() {
           currentTime,
           totalTime
         );
+      } else {
+        console.log('⚠️ Cannot update progress - missing data:', {
+          hasUser: !!user,
+          hasCourseData: !!courseData,
+          hasSelectedLesson: !!selectedLesson
+        });
       }
     }
   };
@@ -913,8 +1198,12 @@ function LearningScreen() {
     setProgress(status.positionMillis / 1000);
   };
 
-  const handleVideoEnd = () => {
+  const handleVideoEnd = async () => {
     setIsPlaying(false);
+    // שמירת המיקום האחרון לפני סגירה
+    if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
+      await updateLessonProgress(progress, duration);
+    }
     Alert.alert('מעולה!', 'השיעור הושלם בהצלחה!', [
       { text: 'המשך', onPress: () => setSelectedLesson(null) }
     ]);
@@ -939,12 +1228,15 @@ function LearningScreen() {
       vimeoId: lesson.vimeoId,
       duration: lesson.duration
     });
+    const animatedValue = animatedValues[index] || new Animated.Value(1);
+    // משתמשים ב-duration ב-key כדי ש-React יעדכן את הקומפוננטה כשהערך משתנה
+    const lessonKey = `${lesson.id}_${lesson.duration || '00:00'}`;
     return (
     <Animated.View
-      key={lesson.id}
+      key={lessonKey}
       style={[
         styles.lessonCard,
-        { transform: [{ scale: animatedValues[index] }] }
+        { transform: [{ scale: animatedValue }] }
       ]}
     >
       <TouchableOpacity
@@ -957,6 +1249,7 @@ function LearningScreen() {
           <Image 
             source={{ uri: lesson.thumbnail }} 
             style={styles.thumbnailImage}
+            resizeMode="cover"
               onError={(error) => {
               // אם התמונה לא נטענת, נשתמש בצבע רקע
                 console.log('Thumbnail failed to load for lesson:', lesson.title, 'URL:', lesson.thumbnail, 'Error:', error);
@@ -970,11 +1263,26 @@ function LearningScreen() {
               <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 24 }}>🎥</Text>
             </View>
           )}
-          <View style={styles.durationBadge}>
-            <Text style={styles.durationText}>{lesson.duration || '00:00'}</Text>
+          <View style={[
+            styles.durationBadge,
+            {
+              backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : '#FFFFFF',
+            }
+          ]}>
+            <Text style={[
+              styles.durationText,
+              {
+                color: isDarkMode ? '#FFFFFF' : '#000000',
+              }
+            ]}>{lesson.duration || '00:00'}</Text>
           </View>
           {lesson.completed && (
-            <View style={styles.completedBadge}>
+            <View style={[
+              styles.completedBadge,
+              {
+                backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : '#FFFFFF',
+              }
+            ]}>
               <CheckCircle2 size={24} color="#05d157" strokeWidth={2} />
             </View>
           )}
@@ -994,43 +1302,152 @@ function LearningScreen() {
   );
   };
 
+  // פונקציה לחילוץ YouTube ID מקישור
+  const extractYouTubeId = (url: string): string | null => {
+    if (!url) return null;
+    console.log('Extracting YouTube ID from URL:', url);
+    
+    // ניקוי URL
+    const cleanUrl = url.trim();
+    
+    // דפוסים שונים של קישורי YouTube
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+      /youtu\.be\/([^&\n?#]+)/,
+      /youtube\.com\/embed\/([^&\n?#]+)/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = cleanUrl.match(pattern);
+      if (match && match[1]) {
+        const videoId = match[1];
+        console.log('Extracted YouTube ID:', videoId);
+        return videoId;
+      }
+    }
+    
+    // אם זה כבר ID (11 תווים)
+    if (/^[a-zA-Z0-9_-]{11}$/.test(cleanUrl)) {
+      console.log('URL is already a YouTube ID:', cleanUrl);
+      return cleanUrl;
+    }
+    
+    console.log('Could not extract YouTube ID from URL:', url);
+    return null;
+  };
+
+  // בדיקה אם השיעור הוא מיוטיוב או מ-Vimeo
+  const getVideoType = (lesson: any): 'youtube' | 'vimeo' | null => {
+    if (lesson.youtubeId || lesson.youtubeUrl) {
+      return 'youtube';
+    }
+    if (lesson.vimeoId || lesson.vimeoUrl) {
+      return 'vimeo';
+    }
+    return null;
+  };
+
+  const getVideoId = (lesson: any): string | null => {
+    const videoType = getVideoType(lesson);
+    console.log('Getting video ID for lesson:', {
+      videoType,
+      youtubeId: lesson.youtubeId,
+      youtubeUrl: lesson.youtubeUrl,
+      vimeoId: lesson.vimeoId
+    });
+    
+    if (videoType === 'youtube') {
+      // נסה קודם youtubeId
+      if (lesson.youtubeId) {
+        console.log('Using youtubeId:', lesson.youtubeId);
+        return lesson.youtubeId;
+      }
+      // אם אין, נסה לחלץ מ-youtubeUrl
+      if (lesson.youtubeUrl) {
+        const extractedId = extractYouTubeId(lesson.youtubeUrl);
+        if (extractedId) {
+          console.log('Extracted ID from youtubeUrl:', extractedId);
+          return extractedId;
+        }
+      }
+    }
+    
+    if (videoType === 'vimeo') {
+      return lesson.vimeoId || null;
+    }
+    
+    console.log('No video ID found');
+    return null;
+  };
+
   if (selectedLesson) {
-    return (
-      <View style={styles.lessonContainer}>
-        {/* Header - extends to top of screen */}
-        <View style={styles.newLessonHeader}>
-          <View style={styles.newHeaderContent}>
-            <Text style={styles.newLessonNumber}>
-              שיעור {(() => {
-                const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-                const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                return currentIndex + 1;
-              })()}
-            </Text>
-            <Text style={styles.newLessonTitle} numberOfLines={2}>
-              {selectedLesson.title}
-            </Text>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.newBackButton}
-            onPress={() => setSelectedLesson(null)}
-          >
-            <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Safe Area for content */}
-        <SafeAreaView style={styles.safeAreaContent}>
-          
-          {/* Main Content */}
-          <View style={styles.lessonMainContent}>
-          {/* Video Section */}
-          <View style={styles.videoSection}>
-            <View style={styles.videoContainer}>
-            <WebView
-              source={{ 
-                html: `
+    const videoType = getVideoType(selectedLesson);
+    const videoId = getVideoId(selectedLesson);
+    
+    console.log('Selected lesson:', {
+      id: selectedLesson.id,
+      title: selectedLesson.title,
+      youtubeId: selectedLesson.youtubeId,
+      youtubeUrl: selectedLesson.youtubeUrl,
+      vimeoId: selectedLesson.vimeoId,
+      videoType,
+      videoId
+    });
+    
+    // יצירת HTML לפי סוג הוידאו
+    const getVideoHTML = () => {
+      if (videoType === 'youtube' && videoId) {
+        console.log('Creating YouTube HTML with videoId:', videoId);
+        // שימוש ב-YouTube embed URL ישירות ללא API
+        return `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+              <style>
+                * {
+                  margin: 0;
+                  padding: 0;
+                  box-sizing: border-box;
+                }
+                html, body {
+                  width: 100%;
+                  height: 100%;
+                  overflow: hidden;
+                  background: #000;
+                }
+                .video-container { 
+                  position: relative; 
+                  width: 100%; 
+                  height: 100%;
+                  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+                }
+                iframe { 
+                  position: absolute; 
+                  top: 0; 
+                  left: 0; 
+                  width: 100%; 
+                  height: 100%; 
+                  border: none; 
+                }
+              </style>
+            </head>
+            <body>
+              <div class="video-container">
+                <iframe 
+                  src="https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1&controls=1&showinfo=0" 
+                  frameborder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  allowfullscreen
+                  title="${selectedLesson.title}">
+                </iframe>
+              </div>
+            </body>
+          </html>
+        `;
+      } else if (videoType === 'vimeo' && videoId) {
+        return `
                   <!DOCTYPE html>
                   <html>
                     <head>
@@ -1057,7 +1474,7 @@ function LearningScreen() {
                       <div class="video-container">
                         <iframe 
                           id="vimeo-player"
-                          src="https://player.vimeo.com/video/${selectedLesson.vimeoId}?badge=0&autopause=0&player_id=0&app_id=58479" 
+                  src="https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479" 
                           frameborder="0" 
                           allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
                           referrerpolicy="strict-origin-when-cross-origin" 
@@ -1100,16 +1517,205 @@ function LearningScreen() {
                       </script>
                     </body>
                   </html>
-                `
-              }}
+        `;
+      }
+      return null;
+    };
+
+    const videoHTML = getVideoHTML();
+    
+    console.log('Video HTML created:', videoHTML ? 'Yes' : 'No');
+    
+    if (!videoHTML) {
+      console.error('No video HTML generated!', {
+        videoType,
+        videoId,
+        lesson: selectedLesson
+      });
+    }
+
+    return (
+      <View style={styles.lessonContainer}>
+        {/* Header - extends to top of screen */}
+        <View style={styles.newLessonHeader}>
+          <View style={styles.newHeaderContent}>
+            <Text style={styles.newLessonNumber}>
+              שיעור {(() => {
+                const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                return currentIndex >= 0 ? currentIndex + 1 : 1;
+              })()}
+            </Text>
+            <Text style={styles.newLessonTitle} numberOfLines={2}>
+              {selectedLesson.title}
+            </Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.newBackButton}
+            onPress={async () => {
+              // שמירת המיקום האחרון לפני סגירה
+              if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
+                await updateLessonProgress(progress, duration);
+              }
+              setIsYouTubePlayerReady(false); // איפוס flag כשסוגרים
+              durationUpdatedRef.current.clear(); // איפוס מעקב duration כשסוגרים
+              durationCheckInProgressRef.current.clear(); // איפוס מעקב בדיקות duration
+              setSelectedLesson(null);
+            }}
+          >
+            <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Safe Area for content */}
+        <SafeAreaView style={styles.safeAreaContent}>
+          
+          {/* Main Content */}
+          <View style={styles.lessonMainContent}>
+          {/* Video Section */}
+          <View style={styles.videoSection}>
+            <View style={styles.videoContainer}>
+            {videoType === 'youtube' && videoId ? (
+              <YoutubePlayer
+                ref={youtubePlayerRef}
+                height={(screenWidth * 9) / 16}
+                videoId={videoId}
+                play={isPlaying}
+                onChangeState={(event: string) => {
+                  console.log('YouTube player state changed:', event);
+                  if (event === 'ended') {
+                    markLessonAsCompleted();
+                  } else if (event === 'playing') {
+                    setIsPlaying(true);
+                  } else if (event === 'paused') {
+                    setIsPlaying(false);
+                  }
+                }}
+                onReady={() => {
+                  console.log('✅ YouTube player ready');
+                  console.log('📊 Initial video position:', initialVideoPosition);
+                  console.log('📊 Current progress state:', { progress, duration, lessonProgress });
+                  console.log('🔗 YouTube player ref:', youtubePlayerRef.current ? 'exists' : 'null');
+                  setIsLoading(false);
+                  setIsYouTubePlayerReady(true); // סמן שהפלייר מוכן להתחיל מעקב
+                  
+                  // הצבת הסרטון במיקום האחרון כשהפלייר מוכן
+                  if (initialVideoPosition > 0 && youtubePlayerRef.current) {
+                    console.log('⏩ Seeking to position:', initialVideoPosition, 'seconds');
+                    setTimeout(() => {
+                      try {
+                        youtubePlayerRef.current?.seekTo(initialVideoPosition, true);
+                        console.log('✅ YouTube player seeked to position:', initialVideoPosition);
+                      } catch (error) {
+                        console.error('❌ Error seeking YouTube player:', error);
+                      }
+                    }, 500); // המתנה קצרה כדי לוודא שהפלייר מוכן
+                  } else {
+                    console.log('ℹ️ Not seeking - initialVideoPosition:', initialVideoPosition, 'ref exists:', !!youtubePlayerRef.current);
+                  }
+                }}
+                onProgress={(data: { currentTime: number; duration: number }) => {
+                  // מעקב התקדמות - בדומה ל-Vimeo
+                  console.log('📊 YouTube onProgress called:', {
+                    currentTime: data.currentTime,
+                    duration: data.duration,
+                    data: JSON.stringify(data)
+                  });
+                  
+                  const currentTime = data.currentTime;
+                  const duration = data.duration;
+                  
+                  if (duration > 0 && currentTime >= 0) {
+                    console.log('✅ Updating progress state:', {
+                      currentTime,
+                      duration,
+                      progressPercentage: Math.round((currentTime / duration) * 100)
+                    });
+                    
+                    setProgress(currentTime);
+                    setDuration(duration);
+                    // עדכון ה-timeline כל הזמן (לצורך תצוגה)
+                    const progressPercentage = Math.round((currentTime / duration) * 100);
+                    
+                    // בדיקה שהפרוגרס תקין ולא קופץ ל-0 (למניעת קפיצות)
+                    if (progressPercentage >= 0 && progressPercentage <= 100) {
+                      // אם הפרוגרס קופץ ל-0 בעוד שהיה ערך לפני, נשמור את הערך הקודם
+                      if (progressPercentage === 0 && lastProgressPercentageRef.current > 0 && currentTime > 1) {
+                        // לא נעדכן אם הפרוגרס קופץ ל-0 בעוד שהזמן הנוכחי הוא יותר מ-1 שנייה
+                        console.log('⚠️ Skipping progress update - jumped to 0:', { 
+                          currentTime, 
+                          previousProgress: lastProgressPercentageRef.current 
+                        });
+                      } else {
+                        setLessonProgress(progressPercentage);
+                        lastProgressPercentageRef.current = progressPercentage;
+                      }
+                    }
+                    
+                    // עדכון התקדמות במסד נתונים כל 5 שניות (כדי לא להעמיס על המסד נתונים)
+                    // שיפור: בודקים שהזמן השתנה ב-5 שניות לפחות מהעדכון האחרון
+                    const currentTimeInt = Math.floor(currentTime);
+                    if (currentTimeInt > 0 && currentTimeInt % 5 === 0 && currentTimeInt !== lastProgressSaveTimeRef.current) {
+                      lastProgressSaveTimeRef.current = currentTimeInt;
+                      console.log('💾 Saving YouTube progress:', {
+                        currentTime: currentTimeInt,
+                        duration: Math.floor(duration),
+                        percentage: progressPercentage
+                      });
+                      updateLessonProgress(currentTime, duration);
+                    }
+                  } else {
+                    console.log('⚠️ Duration is 0 or invalid:', { duration, currentTime });
+                  }
+                }}
+                onError={(error: any) => {
+                  console.error('YouTube player error:', error);
+                  Alert.alert('שגיאה', 'שגיאה בטעינת הסרטון. נסה לפתוח ב-YouTube.');
+                }}
+                initialPlayerParams={{
+                  modestbranding: 1,
+                  rel: 0,
+                  controls: 1,
+                  start: initialVideoPosition > 0 ? Math.floor(initialVideoPosition) : undefined,
+                  enablejsapi: 1,
+                }}
+                webViewStyle={{ opacity: 0.99 }}
+                webViewProps={{
+                  allowsInlineMediaPlayback: true,
+                  mediaPlaybackRequiresUserAction: false,
+                }}
+              />
+            ) : videoType === 'vimeo' && videoHTML ? (
+              <WebView
+                source={{ html: videoHTML }}
               style={styles.videoPlayer}
               allowsFullscreenVideo={true}
               mediaPlaybackRequiresUserAction={false}
-              onLoadStart={() => setIsLoading(true)}
-              onLoadEnd={() => setIsLoading(false)}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              startInLoadingState={true}
+              onLoadStart={() => {
+                console.log('WebView loading started');
+                setIsLoading(true);
+              }}
+              onLoadEnd={() => {
+                console.log('WebView loading ended');
+                setIsLoading(false);
+              }}
+              onError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.error('WebView error:', nativeEvent);
+                Alert.alert('שגיאה', `שגיאה בטעינת הסרטון: ${nativeEvent.description || 'שגיאה לא ידועה'}`);
+              }}
+              onHttpError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.error('WebView HTTP error:', nativeEvent);
+              }}
               onMessage={(event) => {
                 try {
                   const data = JSON.parse(event.nativeEvent.data);
+                  console.log('WebView message:', data);
                   
                   if (data.type === 'progress') {
                     updateLessonProgress(data.currentTime, data.duration);
@@ -1125,6 +1731,28 @@ function LearningScreen() {
                 }
               }}
             />
+            ) : (
+              <View style={styles.videoErrorContainer}>
+                <Text style={styles.videoErrorIcon}>⚠️</Text>
+                <Text style={styles.videoErrorText}>וידאו לא זמין</Text>
+                {selectedLesson.youtubeUrl && (
+                  <TouchableOpacity 
+                    style={styles.youtubeButton}
+                    onPress={() => {
+                      console.log('Opening YouTube URL:', selectedLesson.youtubeUrl);
+                      Linking.openURL(selectedLesson.youtubeUrl);
+                    }}
+                  >
+                    <Text style={styles.youtubeButtonText}>פתח ב-YouTube</Text>
+                  </TouchableOpacity>
+                )}
+                {!selectedLesson.youtubeId && !selectedLesson.youtubeUrl && (
+                  <Text style={styles.videoErrorSubtext}>
+                    לא נמצא קישור יוטיוב לשיעור זה
+                  </Text>
+                )}
+              </View>
+            )}
               
               {/* Loading Overlay */}
               {isLoading && (
@@ -1158,7 +1786,7 @@ function LearningScreen() {
                   <Text style={styles.progressPercentageText}>{lessonProgress}%</Text>
                 </View>
                 <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBarFill, { width: `${lessonProgress}%` }]} />
+                  <View style={[styles.progressBarFill, { width: `${Math.min(Math.max(lessonProgress, 0), 100)}%` }]} />
                 </View>
                 {selectedLesson.completed && (
                   <View style={styles.completedStatus}>
@@ -1173,22 +1801,22 @@ function LearningScreen() {
             <View style={styles.simpleNavigationButtons}>
                   <TouchableOpacity
                 style={[styles.simpleNavButton, { opacity: (() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
                   const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex < lessons.length - 1 ? 1 : 0.5;
+                  return currentIndex >= 0 && currentIndex < lessons.length - 1 ? 1 : 0.5;
                 })() }]}
                     onPress={() => {
-                      const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+                      const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
                       const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  if (currentIndex < lessons.length - 1) {
+                  if (currentIndex >= 0 && currentIndex < lessons.length - 1) {
                     const nextLesson = lessons[currentIndex + 1];
                     handleLessonPress(nextLesson, currentIndex + 1);
                   }
                 }}
                 disabled={(() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
                   const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex >= lessons.length - 1;
+                  return currentIndex < 0 || currentIndex >= lessons.length - 1;
                 })()}
               >
                 <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
@@ -1197,12 +1825,12 @@ function LearningScreen() {
               
               <TouchableOpacity
                 style={[styles.simpleNavButton, { opacity: (() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
                   const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
                   return currentIndex > 0 ? 1 : 0.5;
                 })() }]}
                 onPress={() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
                   const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
                   if (currentIndex > 0) {
                     const prevLesson = lessons[currentIndex - 1];
@@ -1210,7 +1838,7 @@ function LearningScreen() {
                   }
                 }}
                 disabled={(() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
                   const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
                   return currentIndex <= 0;
                 })()}
@@ -1240,16 +1868,16 @@ function LearningScreen() {
               </View>
               
         {/* Notes Bottom Sheet */}
-        <UIBottomSheet
-          visible={notesModalVisible}
+        <BottomSheet
+          isOpen={notesModalVisible}
           onClose={() => {
             if (!isSaving) {
               setNotesModalVisible(false);
             }
           }}
-          maxHeight="80%"
-          dragToClose={!isSaving}
-          closeOnBackdropPress={!isSaving}
+          snapPoints={[0.7, 0.9]}
+          enablePanDownToClose={!isSaving}
+          backdropOpacity={0.5}
         >
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1333,7 +1961,7 @@ function LearningScreen() {
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
-        </UIBottomSheet>
+        </BottomSheet>
 
         {/* Link Dialog */}
         <Modal
@@ -1420,25 +2048,58 @@ function LearningScreen() {
     );
   }
 
+  // נתוני הקורס להצגה - לא נציג DEMO_COURSE אם עדיין טוען או אם אין courseData
+  const displayCourse = courseData;
+  const displayCoverUrl = courseData?.cover_url;
+  const displayTitle = courseData?.title;
+  const displayDescription = courseData?.description;
+  const displayInstructorName = courseData?.instructor_name || courseData?.owner?.display_name;
+  const displayInstructorAvatar = courseData?.instructor_avatar || courseData?.owner?.avatar_url;
+
+  // אם אין courseData, לא נציג כלום
+  if (!courseData) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* כותרת הקורס */}
       <View style={styles.courseHeader}>
         <View style={styles.courseImageContainer}>
-          <Image source={{ uri: DEMO_COURSE.cover_url }} style={styles.courseImage} />
+          {displayCoverUrl ? (
+            <Image source={{ uri: displayCoverUrl }} style={styles.courseImage} />
+          ) : (
+            <View style={[styles.courseImage, { backgroundColor: DesignTokens.colors.background.secondary, justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ fontSize: 48 }}>📚</Text>
+            </View>
+          )}
         </View>
         
         <View style={styles.courseInfo}>
-        <Text style={styles.courseTitle}>{DEMO_COURSE.title}</Text>
-        <Text style={styles.courseDescription}>{DEMO_COURSE.description}</Text>
+        <Text style={styles.courseTitle}>{displayTitle}</Text>
+        {courseData?.subtitle && (
+          <Text style={styles.courseSubtitle}>{courseData.subtitle}</Text>
+        )}
+        <Text style={styles.courseDescription}>{displayDescription}</Text>
+          
           
           {/* מרצה */}
           <View style={styles.instructorContainer}>
-            <Image source={{ uri: DEMO_COURSE.instructor.avatar }} style={styles.instructorAvatar} />
+            {displayInstructorAvatar ? (
+              <Image source={{ uri: displayInstructorAvatar }} style={styles.instructorAvatar} />
+            ) : (
+              <View style={[styles.instructorAvatar, { backgroundColor: DesignTokens.colors.background.secondary, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 20, fontWeight: '600' }}>
+                  {displayInstructorName.charAt(0)}
+                </Text>
+              </View>
+            )}
             <View style={styles.instructorInfo}>
-              <Text style={styles.instructorName}>{DEMO_COURSE.instructor.name}</Text>
-              <Text style={styles.instructorRole}>מנהל הקהילה</Text>
+              <Text style={styles.instructorName}>{displayInstructorName}</Text>
+              <Text style={styles.instructorRole}>
+                {courseData?.owner?.bio || 'מנהל הקהילה'}
+              </Text>
             </View>
           </View>
         </View>
@@ -1450,7 +2111,7 @@ function LearningScreen() {
           <Text style={styles.sectionTitle}>שיעורי הקורס</Text>
           <View style={styles.progressContainer}>
             {(() => {
-              const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+              const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
               const completedLessons = lessonsToRender.filter(lesson => lesson.completed).length;
               const totalLessons = lessonsToRender.length;
               const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
@@ -1478,7 +2139,7 @@ function LearningScreen() {
           </View>
           <View style={styles.chapterDivider} />
           {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
             const chapter1Lessons = lessonsToRender.slice(0, 1); // שיעור ראשון
             return chapter1Lessons.map((lesson, index) => renderLessonCard(lesson, index));
           })()}
@@ -1491,7 +2152,7 @@ function LearningScreen() {
           </View>
           <View style={styles.chapterDivider} />
           {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
             const chapter2Lessons = lessonsToRender.slice(1, 8); // שיעורים 2-8
             return chapter2Lessons.map((lesson, index) => renderLessonCard(lesson, index + 1));
           })()}
@@ -1504,7 +2165,7 @@ function LearningScreen() {
           </View>
           <View style={styles.chapterDivider} />
           {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
             const chapter3Lessons = lessonsToRender.slice(8); // שיעור אחרון
             return chapter3Lessons.map((lesson, index) => renderLessonCard(lesson, index + 8));
           })()}
@@ -1546,7 +2207,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingHorizontal: 20,
     paddingTop: 50, // Add top padding for status bar
     paddingBottom: 16,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: tokens.colors.background.secondary,
     borderBottomWidth: 0,
     minHeight: 100,
   },
@@ -2601,6 +3262,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     textAlign: 'right',
   },
+  metaLabel: {
+    fontSize: 14,
+    color: tokens.colors.text.secondary,
+    textAlign: 'right',
+  },
   
   // Lessons Section
   lessonsSection: {
@@ -2675,11 +3341,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   lessonThumbnail: {
     position: 'relative',
     height: 120,
+    backgroundColor: '#000000',
+    overflow: 'hidden',
   },
   thumbnailImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: tokens.colors.background.secondary, // צבע רקע אם התמונה לא נטענת
+    backgroundColor: '#000000',
   },
   thumbnailGradient: {
     position: 'absolute',
@@ -2693,7 +3361,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: tokens.borderRadius.sm,
@@ -2704,7 +3371,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     elevation: 2,
   },
   durationText: {
-    color: '#000000',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -2712,7 +3378,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 4,
     shadowColor: '#000',
@@ -2794,6 +3459,44 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: 16,
     fontWeight: '500',
   },
+  videoErrorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: tokens.colors.background.secondary,
+    minHeight: 200,
+    padding: 20,
+  },
+  videoErrorIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  videoErrorText: {
+    color: tokens.colors.text.secondary,
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  videoErrorSubtext: {
+    color: tokens.colors.text.tertiary,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  youtubeButton: {
+    backgroundColor: '#FF0000',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  youtubeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
 
 export default LearningScreen;
+

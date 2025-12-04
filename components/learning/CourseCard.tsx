@@ -1,25 +1,42 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { CourseWithProgress, AccessLevel } from '../../types/learning';
-import { DesignTokens } from '../ui/DesignTokens';
 import { ProgressRing } from './ProgressRing';
 import { AccessBadge } from './AccessBadge';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface CourseCardProps {
   course: CourseWithProgress;
   onPress: (course: CourseWithProgress) => void;
   onEnroll?: (course: CourseWithProgress) => void;
+  hideBadges?: boolean;
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({
   course,
   onPress,
-  onEnroll
+  onEnroll,
+  hideBadges = false
 }) => {
   console.log('🎓 CourseCard: Rendering course:', course.title);
+  const DesignTokens = useDesignTokens();
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   
   const isEnrolled = !!course.enrollment;
-  const progressPercentage = course.progress?.progress_percentage || 0;
+  const totalLessons =
+    course.progress?.total_lessons ??
+    (course as any).total_lessons ??
+    (Array.isArray((course as any).lessons) ? (course as any).lessons.length : 0);
+  const completedLessons = course.progress?.completed_lessons || 0;
+  const progressPercentage =
+    totalLessons > 0
+      ? (completedLessons / totalLessons) * 100
+      : course.progress?.progress_percentage || 0;
+  
+  // קבלת מחיר מהקורס (אם יש)
+  const coursePrice = (course as any).price || 0;
+  const originalPrice = (course as any).original_price || 0;
+  const hasDiscount = originalPrice > 0 && originalPrice > coursePrice;
 
   return (
     <TouchableOpacity
@@ -27,7 +44,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
       onPress={() => onPress(course)}
       activeOpacity={0.7}
     >
-      {/* Cover Image */}
+      {/* Cover Image - Full Width */}
       <View style={styles.coverContainer}>
         {course.cover_url ? (
           <Image
@@ -41,6 +58,27 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           </View>
         )}
         
+        {/* Price Badge - Top Right */}
+        {coursePrice > 0 && (
+          <View style={styles.priceBadge}>
+            {hasDiscount && (
+              <Text style={styles.originalPriceBadge}>
+                ₪{originalPrice.toFixed(0)}
+              </Text>
+            )}
+            <Text style={styles.currentPriceBadge}>
+              ₪{coursePrice.toFixed(0)}
+            </Text>
+          </View>
+        )}
+
+        {/* Free Badge */}
+        {!hideBadges && coursePrice === 0 && (
+          <View style={styles.freeBadgeOverlay}>
+            <Text style={styles.freeBadgeOverlayText}>חינם</Text>
+          </View>
+        )}
+
         {/* Progress Ring for enrolled courses */}
         {isEnrolled && (
           <View style={styles.progressContainer}>
@@ -54,9 +92,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         )}
 
         {/* Access Badge */}
-        <View style={styles.badgeContainer}>
-          <AccessBadge access={course.access} />
-        </View>
+        {!hideBadges && (
+          <View style={styles.badgeContainer}>
+            <AccessBadge access={course.access} />
+          </View>
+        )}
       </View>
 
       {/* Content */}
@@ -71,21 +111,31 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           </Text>
         )}
 
-        {/* Instructor */}
-        {course.owner && (
-          <View style={styles.instructorContainer}>
-            <Text style={styles.instructorLabel}>מרצה:</Text>
-            <Text style={styles.instructorName}>
-              {course.owner.display_name}
-            </Text>
-          </View>
+        {/* Description */}
+        {course.description && (
+          <Text style={styles.description} numberOfLines={2}>
+            {course.description}
+          </Text>
         )}
 
-        {/* Progress Info for enrolled courses */}
-        {isEnrolled && course.progress && (
+        {/* Progress Info */}
+        {totalLessons > 0 && (
           <View style={styles.progressInfo}>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${progressPercentage}%`,
+                  },
+                ]}
+              />
+              <Text style={styles.progressPercentLabel}>
+                {Math.round(progressPercentage)}%
+              </Text>
+            </View>
             <Text style={styles.progressText}>
-              {course.progress.completed_lessons} מתוך {course.progress.total_lessons} שיעורים
+              {completedLessons} מתוך {totalLessons} שיעורים הושלמו
             </Text>
           </View>
         )}
@@ -100,22 +150,25 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             ))}
           </View>
         )}
+
       </View>
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: DesignTokens.borderRadius.lg,
-    marginBottom: DesignTokens.spacing.lg,
+    backgroundColor: tokens.colors.background.secondary,
+    borderRadius: tokens.borderRadius.lg,
+    marginBottom: tokens.spacing.md,
     overflow: 'hidden',
-    ...DesignTokens.shadows.md,
+    borderWidth: tokens.layout?.borderWidth?.thin || 0.5,
+    borderColor: tokens.colors.border.primary,
   },
   coverContainer: {
     position: 'relative',
     height: 160,
+    width: '100%',
   },
   coverImage: {
     width: '100%',
@@ -124,82 +177,195 @@ const styles = StyleSheet.create({
   coverPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   coverPlaceholderText: {
-    fontSize: DesignTokens.typography.fontSize['3xl'],
+    fontSize: tokens.typography.fontSize['3xl'],
   },
   progressContainer: {
     position: 'absolute',
-    top: DesignTokens.spacing.md,
-    right: DesignTokens.spacing.md,
+    top: tokens.spacing.md,
+    right: tokens.spacing.md,
     backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: DesignTokens.borderRadius.full,
-    padding: DesignTokens.spacing.xs,
+    borderRadius: tokens.borderRadius.full,
+    padding: tokens.spacing.xs,
   },
   badgeContainer: {
     position: 'absolute',
-    top: DesignTokens.spacing.md,
-    left: DesignTokens.spacing.md,
+    top: tokens.spacing.md,
+    left: tokens.spacing.md,
+  },
+  priceBadge: {
+    position: 'absolute',
+    top: tokens.spacing.md,
+    right: tokens.spacing.md,
+    backgroundColor: tokens.colors.overlay || 'rgba(0,0,0,0.7)',
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  originalPriceBadge: {
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.tertiary,
+    textDecorationLine: 'line-through',
+  },
+  currentPriceBadge: {
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.success.main || tokens.colors.primary.main,
+  },
+  freeBadgeOverlay: {
+    position: 'absolute',
+    top: tokens.spacing.md,
+    right: tokens.spacing.md,
+    backgroundColor: tokens.colors.primary.main + 'E6',
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.md,
+  },
+  freeBadgeOverlayText: {
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.text.primary,
   },
   content: {
-    padding: DesignTokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.lg,
+    gap: tokens.spacing.sm,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
-    letterSpacing: 0.3,
+    lineHeight: 28,
   },
   subtitle: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.secondary,
-    marginBottom: DesignTokens.spacing.md,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.medium,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
-    lineHeight: DesignTokens.typography.lineHeight.normal * DesignTokens.typography.fontSize.sm,
+  },
+  description: {
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.tertiary,
+    lineHeight: 20,
+    textAlign: 'right',
   },
   instructorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: DesignTokens.spacing.sm,
+    marginBottom: tokens.spacing.sm,
   },
   instructorLabel: {
-    fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.text.tertiary,
-    marginLeft: DesignTokens.spacing.xs,
+    fontSize: tokens.typography.fontSize.xs,
+    color: tokens.colors.text.tertiary,
+    marginLeft: tokens.spacing.xs,
   },
   instructorName: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.secondary,
-    fontWeight: '500' as any,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
+    fontWeight: tokens.typography.fontWeight.medium,
   },
   progressInfo: {
-    marginBottom: DesignTokens.spacing.sm,
+    marginBottom: tokens.spacing.sm,
+    marginTop: tokens.spacing.sm,
   },
   progressText: {
-    fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.primary.main,
-    fontWeight: '500' as any,
+    fontSize: tokens.typography.fontSize.xs,
+    color: tokens.colors.primary.main,
+    fontWeight: tokens.typography.fontWeight.medium,
     textAlign: 'right',
+  },
+  progressTrack: {
+    width: '100%',
+    height: 18,
+    borderRadius: tokens.borderRadius.full,
+    backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.secondary,
+    marginBottom: tokens.spacing.xs,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressPercentLabel: {
+    position: 'absolute',
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.bold,
+  },
+  progressFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: tokens.borderRadius.full,
   },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: DesignTokens.spacing.xs,
+    gap: tokens.spacing.xs,
   },
   tag: {
-    backgroundColor: DesignTokens.colors.background.tertiary,
-    paddingHorizontal: DesignTokens.spacing.sm,
-    paddingVertical: DesignTokens.spacing.xs,
-    borderRadius: DesignTokens.borderRadius.sm,
+    backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.primary,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.sm,
   },
   tagText: {
-    fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.text.secondary,
+    fontSize: tokens.typography.fontSize.xs,
+    color: tokens.colors.text.secondary,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: tokens.spacing.sm,
+    paddingTop: tokens.spacing.md,
+    borderTopWidth: tokens.layout?.borderWidth?.thin || 1,
+    borderTopColor: tokens.colors.border.primary,
+  },
+  priceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  originalPrice: {
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.tertiary,
+    textDecorationLine: 'line-through',
+  },
+  currentPrice: {
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.primary.main,
+  },
+  freeBadge: {
+    backgroundColor: tokens.colors.primary.main + '20',
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.md,
+  },
+  freeBadgeText: {
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.primary.main,
+  },
+  premiumBadge: {
+    backgroundColor: tokens.colors.error + '20',
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.md,
+  },
+  premiumBadgeText: {
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.error,
   },
 });
 

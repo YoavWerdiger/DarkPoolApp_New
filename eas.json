@@ -23,6 +23,9 @@
         "buildType": "app-bundle",
         "image": "latest"
       },
+      "ios": {
+        "image": "latest"
+      },
       "cache": {
         "key": "production-cache-v2"
       }
@@ -33,6 +36,11 @@
       "android": {
         "serviceAccountKeyPath": "./google-service-account-key.json",
         "track": "production"
+      },
+      "ios": {
+        "appleId": "yoavwerdiger1308@gmail.com",
+        "ascAppId": "6755930835",
+        "appleTeamId": "367962DC5B"
       }
     }
   }

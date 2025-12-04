@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, FlatList, ActivityIndicator, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable, FlatList, ActivityIndicator, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { MessageCircle, Users } from 'lucide-react-native';
-import UIBottomSheet from '../ui/UIBottomSheet';
+import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 
 interface Channel {
@@ -51,35 +51,31 @@ export default function ChannelsList() {
   };
 
   const handleJoinClick = async (channel: Channel) => {
-    console.log('🎯 ChannelsList: handleJoinClick called', { channelId: channel.id, channelName: channel.name });
-    
     // הגדר את הערוץ הבסיסי מיד כדי שהמודל יוכל להציג משהו
     setSelectedChannel(channel);
+    setShowJoinSheet(true);
     
-    // טען את כל הנתונים המלאים של הקבוצה
+    // טען את כל הנתונים המלאים של הקבוצה ברקע
     try {
-      // טען את נתוני הקבוצה
-      const { data: fullChannelData, error: channelError } = await supabase
-        .from('channels')
-        .select('*')
-        .eq('id', channel.id)
-        .single();
+      // טען את נתוני הקבוצה ומספר החברים במקביל
+      const [
+        { data: fullChannelData, error: channelError },
+        { count: membersCount, error: countError }
+      ] = await Promise.all([
+        supabase
+          .from('channels')
+          .select('*')
+          .eq('id', channel.id)
+          .single(),
+        supabase
+          .from('channel_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('channel_id', channel.id)
+      ]);
       
       if (channelError) {
         console.error('❌ ChannelsList: Error loading full channel data:', channelError);
-        // נשתמש בנתונים הבסיסיים שכבר הגדרנו
-        setShowJoinSheet(true);
         return;
-      }
-      
-      // טען את מספר החברים
-      const { count: membersCount, error: countError } = await supabase
-        .from('channel_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('channel_id', channel.id);
-      
-      if (countError) {
-        console.error('❌ ChannelsList: Error loading members count:', countError);
       }
       
       // נשתמש בנתונים המלאים
@@ -88,23 +84,11 @@ export default function ChannelsList() {
         member_count: membersCount || fullChannelData.member_count || 0
       };
       
-      console.log('✅ ChannelsList: Full channel data loaded:', {
-        name: channelWithCount.name,
-        image_url: channelWithCount.image_url,
-        description: channelWithCount.description,
-        member_count: channelWithCount.member_count
-      });
-      
       // עדכן את הנתונים המלאים
       setSelectedChannel(channelWithCount);
     } catch (error) {
       console.error('❌ ChannelsList: Exception loading channel data:', error);
-      // נשתמש בנתונים הבסיסיים שכבר הגדרנו
     }
-    
-    // פתח את המודל אחרי שהגדרנו את selectedChannel
-    setShowJoinSheet(true);
-    console.log('🎯 ChannelsList: setShowJoinSheet(true) done');
   };
 
   const handleJoin = async () => {
@@ -201,17 +185,27 @@ export default function ChannelsList() {
       </View>
 
       {/* Bottom Sheet להצטרפות לקבוצה - SwiftUI style */}
-      <UIBottomSheet
-        visible={showJoinSheet}
-        onClose={() => setShowJoinSheet(false)}
-        maxHeight="70%"
-        showHandle={true}
-        dragToClose={true}
-      >
-        {selectedChannel ? (
-          <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40 }}>
-            {/* תמונת הקבוצה */}
-            <View style={{ alignItems: 'center', marginBottom: 36 }}>
+      {showJoinSheet && (
+        <BottomSheet
+          isOpen={showJoinSheet}
+          onClose={() => {
+            setShowJoinSheet(false);
+            setSelectedChannel(null);
+          }}
+          snapPoints={[0.75, 0.9]}
+          enablePanDownToClose={true}
+          backdropOpacity={0.5}
+          showHandle={true}
+        >
+          {selectedChannel ? (
+            <View style={{ flex: 1 }}>
+              <ScrollView 
+                style={{ flexGrow: 1 }} 
+                contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 20 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {/* תמונת הקבוצה */}
+                <View style={{ alignItems: 'center', marginBottom: 36 }}>
               {selectedChannel.image_url ? (
                 <View style={{
                   shadowColor: DesignTokens.colors.success.main,
@@ -296,17 +290,27 @@ export default function ChannelsList() {
                   {selectedChannel.member_count || 0} משתתפים
                 </Text>
               </View>
-            </View>
+                </View>
+              </ScrollView>
 
-            {/* כפתורי פעולה - SwiftUI style */}
-            <View style={{ gap: 14 }}>
-              <TouchableOpacity
+              {/* כפתורי פעולה - SwiftUI style - תמיד גלויים בתחתית */}
+              <View style={{ 
+                paddingHorizontal: 24, 
+                paddingTop: 16, 
+                paddingBottom: 180, 
+                gap: 14, 
+                borderTopWidth: 1, 
+                borderTopColor: DesignTokens.colors.border.main,
+                backgroundColor: DesignTokens.colors.background.secondary
+              }}>
+                <TouchableOpacity
                 onPress={handleJoin}
                 disabled={joining === selectedChannel.id}
                 style={{
                   backgroundColor: DesignTokens.colors.success.main,
-                  paddingVertical: 18,
-                  borderRadius: 14,
+                  paddingVertical: 14,
+                  paddingHorizontal: 32,
+                  borderRadius: 24,
                   alignItems: 'center',
                   opacity: joining === selectedChannel.id ? 0.7 : 1,
                   shadowColor: DesignTokens.colors.success.main,
@@ -321,36 +325,31 @@ export default function ChannelsList() {
                 ) : (
                   <Text style={{
                     color: '#000',
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: '700',
                     letterSpacing: 0.3
                   }}>
                     הצטרף לקבוצה
                   </Text>
                 )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setShowJoinSheet(false)}
-                style={{
-                  paddingVertical: 16,
-                  alignItems: 'center',
-                  borderRadius: 14,
-                  backgroundColor: DesignTokens.colors.background.secondary,
-                }}
-              >
-                <Text style={{
-                  color: DesignTokens.colors.text.secondary,
-                  fontSize: 17,
-                  fontWeight: '600',
-                }}>
-                  ביטול
-                </Text>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </View>
             </View>
+          ) : (
+          <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40 }}>
+            <ActivityIndicator color={DesignTokens.colors.success.main} size="large" />
+            <Text style={{ 
+              color: DesignTokens.colors.text.secondary, 
+              fontSize: 16, 
+              textAlign: 'center',
+              marginTop: 20
+            }}>
+              טוען פרטי קבוצה...
+            </Text>
           </View>
-        ) : null}
-      </UIBottomSheet>
+        )}
+        </BottomSheet>
+      )}
     </>
   );
 } 

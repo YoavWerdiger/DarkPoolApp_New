@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { prepareEarningsRecord } from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -61,24 +62,24 @@ serve(async (req) => {
     // Process each earning
     for (const earning of data.earnings) {
       try {
-        const record = {
-          id: `earnings_${earning.code}_${earning.report_date}`,
-          code: earning.code,
-          report_date: earning.report_date,
-          date: earning.date,
-          before_after_market: earning.before_after_market || null,
-          currency: earning.currency || null,
-          actual: earning.actual || null,
-          estimate: earning.estimate || null,
-          difference: earning.difference || null,
-          percent: earning.percent || null,
-          source: 'EODHD',
-          updated_at: new Date().toISOString()
+        const prepared = prepareEarningsRecord(earning, {
+          requireUSCode: true,
+          skipPreferredShares: true
+        })
+
+        if (!prepared) {
+          continue
+        }
+
+        if (prepared.meta.adjusted) {
+          console.log(
+            `🕒 Adjusted ${earning.code} report date ${earning.report_date} → ${prepared.record.report_date} (${prepared.meta.adjustmentReason})`
+          )
         }
 
         const { error: upsertError } = await supabase
           .from('earnings_calendar')
-          .upsert(record, { 
+          .upsert(prepared.record, { 
             onConflict: 'id',
             ignoreDuplicates: false 
           })

@@ -152,7 +152,8 @@ export interface ModuleWithLessons extends Module {
 }
 
 export interface CourseWithModules extends Course {
-  modules: ModuleWithLessons[];
+  modules?: ModuleWithLessons[];
+  lessons?: LessonWithProgress[];
   enrollment?: Enrollment;
 }
 

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { prepareEarningsRecord } from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,8 +34,8 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // EODHD API Key
-    const eodhdApiKey = '68e3c3af900997.85677801'
+    // Benzinga API Key
+    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY') || 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC'
     
     // חישוב טווח תאריכים - שבוע אחורה + 3 חודשים קדימה
     const today = new Date()
@@ -48,15 +49,20 @@ serve(async (req) => {
 
     console.log(`📅 Fetching earnings from ${fromDate} to ${toDate}...`)
 
-    // קריאה ל-EODHD API
-    const apiUrl = `https://eodhd.com/api/calendar/earnings?from=${fromDate}&to=${toDate}&api_token=${eodhdApiKey}&fmt=json`
+    // קריאה ל-Benziga API
+    const apiUrl = new URL('https://api.benzinga.com/api/v2/calendar/earnings')
+    apiUrl.searchParams.append('token', benzingaApiKey)
+    apiUrl.searchParams.append('accept', 'application/json')
+    apiUrl.searchParams.append('parameters[date_from]', fromDate)
+    apiUrl.searchParams.append('parameters[date_to]', toDate)
+    apiUrl.searchParams.append('pagesize', '1000')
     
-    const response = await fetch(apiUrl)
+    const response = await fetch(apiUrl.toString())
     if (!response.ok) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: `EODHD API error: ${response.status} ${response.statusText}`
+          error: `Benzinga API error: ${response.status} ${response.statusText}`
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -72,7 +78,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Invalid response format from EODHD API'
+          error: 'Invalid response format from Benzinga API'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -81,33 +87,89 @@ serve(async (req) => {
       )
     }
 
+    // המרת Benzinga earnings לפורמט EODHD (תואם ל-earnings-utils)
+    const convertedEarnings = data.earnings.map((earning: any) => {
+      let before_after_market: string | null = null;
+      if (earning.time) {
+        const hour = parseInt(earning.time.split(':')[0]);
+        if (hour >= 4 && hour < 10) {
+          before_after_market = 'Before Market';
+        } else if (hour >= 16 && hour < 20) {
+          before_after_market = 'After Market';
+        }
+      }
+
+      let actual: number | null = null;
+      let estimate: number | null = null;
+      let difference: number | null = null;
+      let percent: number | null = null;
+
+      if (earning.eps && earning.eps !== '') {
+        actual = parseFloat(earning.eps);
+        if (!isNaN(actual)) {
+          if (earning.eps_est && earning.eps_est !== '') {
+            estimate = parseFloat(earning.eps_est);
+            if (!isNaN(estimate)) {
+              difference = actual - estimate;
+              percent = estimate !== 0 ? (difference / Math.abs(estimate)) * 100 : 0;
+            }
+          }
+        }
+      } else if (earning.revenue && earning.revenue !== '') {
+        actual = parseFloat(earning.revenue);
+        if (!isNaN(actual)) {
+          if (earning.revenue_est && earning.revenue_est !== '') {
+            estimate = parseFloat(earning.revenue_est);
+            if (!isNaN(estimate)) {
+              difference = actual - estimate;
+              percent = estimate !== 0 ? (difference / Math.abs(estimate)) * 100 : 0;
+            }
+          }
+        }
+      }
+
+      const tickerCode = earning.ticker.includes('.') ? earning.ticker : `${earning.ticker}.US`;
+
+      return {
+        code: tickerCode,
+        name: earning.name || earning.ticker,
+        report_date: earning.date,
+        date: earning.date,
+        before_after_market,
+        currency: earning.currency || 'USD',
+        actual,
+        estimate,
+        difference,
+        percent,
+      };
+    })
+
     let totalProcessed = 0
     let totalInserted = 0
 
     // עיבוד כל דיווח תוצאות
-    for (const earnings of data.earnings) {
+    for (const earnings of convertedEarnings) {
       totalProcessed++
 
       try {
-        const earningsData = {
-          id: `earnings_${earnings.code}_${earnings.report_date}`,
-          code: earnings.code,
-          report_date: earnings.report_date,
-          date: earnings.date,
-          before_after_market: earnings.before_after_market || null,
-          currency: earnings.currency || null,
-          actual: earnings.actual || null,
-          estimate: earnings.estimate || null,
-          difference: earnings.difference || null,
-          percent: earnings.percent || null,
-          source: 'EODHD',
-          updated_at: new Date().toISOString()
+        const prepared = prepareEarningsRecord(earnings, {
+          requireUSCode: true,
+          skipPreferredShares: true
+        })
+
+        if (!prepared) {
+          continue
         }
 
-        // הכנסה/עדכון במסד הנתונים
+        if (prepared.meta.adjusted) {
+          console.log(
+            `🕒 Adjusted ${earnings.code} report date ${earnings.report_date} → ${prepared.record.report_date} (${prepared.meta.adjustmentReason})`
+          )
+        }
+
         const { error } = await supabase
           .from('earnings_calendar')
-          .upsert(earningsData, { 
+          .upsert(prepared.record, { 
             onConflict: 'id',
             ignoreDuplicates: false 
           })

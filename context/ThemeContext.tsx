@@ -69,15 +69,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     : 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/2.png';
 
   const theme = {
-    background: isDarkMode ? '#121212' : '#F5F5F7',
+    background: isDarkMode ? '#000000' : '#F5F5F7',
     cardBackground: isDarkMode ? '#1A1A1A' : '#FFFFFF',
     textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
-    textSecondary: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
+    textSecondary: isDarkMode ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.6)',
     textTertiary: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
-    border: isDarkMode ? '#2a2a2a' : 'rgba(0,0,0,0.1)',
-    headerBorder: isDarkMode ? '#1a1a1a' : 'rgba(0,0,0,0.1)',
+    border: isDarkMode ? '#1f1f1f' : 'rgba(0,0,0,0.1)',
+    headerBorder: isDarkMode ? '#131313' : 'rgba(0,0,0,0.1)',
     switchTrackOff: isDarkMode ? '#2a2a2a' : '#E5E5E7',
-    switchThumbOff: isDarkMode ? '#4a4a4a' : '#FFFFFF'
+    switchThumbOff: isDarkMode ? '#FFFFFF' : '#FFFFFF'
   };
 
   if (isLoading) {

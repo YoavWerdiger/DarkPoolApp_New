@@ -9,7 +9,7 @@ import { supabase } from '../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { MessageCircle, ChevronLeft, AlertTriangle, Bitcoin, Users, Newspaper, Trophy, Bell, Briefcase, Home, Star } from 'lucide-react-native';
 import UnreadCounter from '../../components/chat/UnreadCounter';
-import UIBottomSheet from '../../components/ui/UIBottomSheet';
+import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 const groupIcons: Record<string, string> = {
@@ -44,9 +44,11 @@ export default function ChatsListScreen() {
     }
     
     console.log('🔄 ChatsListScreen: Loading chats for user:', currentUserId);
+    const startTime = Date.now();
     try {
       const chats = await ChatService.getChatList(currentUserId);
-      console.log('📋 ChatsListScreen: Loaded chats:', chats);
+      const loadTime = Date.now() - startTime;
+      console.log(`📋 ChatsListScreen: Loaded ${chats.length} chats in ${loadTime}ms`);
       setChats(chats);
       setFiltered(chats); // עדכן גם את הרשימה המסוננת
     } catch (error) {
@@ -160,49 +162,35 @@ export default function ChatsListScreen() {
   };
 
   const loadAvailableGroups = async () => {
-    console.log('🔄 ChatsListScreen: loadAvailableGroups called');
     if (!user?.id) {
-      console.log('⚠️ ChatsListScreen: No user ID for loadAvailableGroups');
       return;
     }
     
     try {
-      console.log('🔄 ChatsListScreen: Loading available groups for user:', user.id);
-      
-      // שלוף את כל הקבוצות הציבוריות
-      const { data: groups, error: groupsError } = await supabase
-        .from('channels')
-        .select('*')
-        .eq('is_public', true)
-        .order('created_at');
+      // שלוף את כל הקבוצות הציבוריות והחברויות במקביל
+      const [
+        { data: groups, error: groupsError },
+        { data: userGroups, error: userGroupsError }
+      ] = await Promise.all([
+        supabase
+          .from('channels')
+          .select('*')
+          .eq('is_public', true)
+          .order('created_at'),
+        supabase
+          .from('channel_members')
+          .select('channel_id')
+          .eq('user_id', user.id)
+      ]);
 
-      if (groupsError) {
-        console.error('❌ ChatsListScreen: Error loading groups:', groupsError);
-        return;
-      }
-
-      console.log('📋 ChatsListScreen: Found public groups:', groups?.length || 0);
-      console.log('📋 ChatsListScreen: Public groups details:', groups?.map(g => ({ id: g.id, name: g.name, is_public: g.is_public })));
-
-      // שלוף את הקבוצות שהמשתמש כבר חבר בהן
-      const { data: userGroups, error: userGroupsError } = await supabase
-        .from('channel_members')
-        .select('channel_id')
-        .eq('user_id', user.id);
-
-      if (userGroupsError) {
-        console.error('❌ ChatsListScreen: Error loading user groups:', userGroupsError);
+      if (groupsError || userGroupsError) {
+        console.error('❌ ChatsListScreen: Error loading groups:', groupsError || userGroupsError);
         return;
       }
 
       const memberGroupIds = userGroups?.map(g => g.channel_id) || [];
-      console.log('👥 ChatsListScreen: User is member of groups:', memberGroupIds);
-      console.log('👥 ChatsListScreen: User groups details:', userGroups);
-      
       // סנן רק קבוצות שהמשתמש לא חבר בהן
       const available = groups?.filter(group => !memberGroupIds.includes(group.id)) || [];
-      console.log('✅ ChatsListScreen: Available groups for joining:', available.length);
-      console.log('✅ ChatsListScreen: Available groups details:', available.map(g => ({ id: g.id, name: g.name })));
       setAvailableGroups(available);
     } catch (error) {
       console.error('❌ ChatsListScreen: Error loading available groups:', error);
@@ -211,58 +199,37 @@ export default function ChatsListScreen() {
 
   const handleJoinGroup = async (groupId: string) => {
     if (!user?.id) {
-      console.log('⚠️ ChatsListScreen: No user ID for handleJoinGroup');
       return;
     }
     
-    console.log('🔄 ChatsListScreen: Joining group:', groupId);
     setJoining(groupId);
     
     try {
-      // בדיקה אם המשתמש כבר חבר בקבוצה
-      const { data: existingMember, error: checkError } = await supabase
-        .from('channel_members')
-        .select('id')
-        .eq('channel_id', groupId)
-        .eq('user_id', user.id)
-        .single();
-        
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('❌ ChatsListScreen: Error checking existing membership:', checkError);
-        return;
-      }
-      
-      if (existingMember) {
-        console.log('ℹ️ ChatsListScreen: User is already a member of this group');
-        // המשתמש כבר חבר, נסגור את המודל ונעדכן את הרשימה
-        setShowModal(false);
-        return;
-      }
-      
-      // המשתמש לא חבר, נוסיף אותו
+      // RLS כבר בודק הרשאות - אין צורך בבדיקה מקדימה
       const { error: insertError } = await supabase.from('channel_members').insert({ 
         channel_id: groupId, 
         user_id: user.id 
       });
       
       if (insertError) {
+        // אם זה שגיאה של duplicate - המשתמש כבר חבר, זה בסדר
+        if (insertError.code === '23505') { // Unique violation
+          setShowModal(false);
+          return;
+        }
         console.error('❌ ChatsListScreen: Error joining group:', insertError);
         return;
       }
       
-      console.log('✅ ChatsListScreen: Successfully joined group:', groupId);
+      // רענן את הרשימות במקביל
+      Promise.all([
+        ChatService.getChatList(user.id).then((chats) => {
+          setChats(chats);
+          setFiltered(chats);
+        }),
+        loadAvailableGroups()
+      ]);
       
-      // רענן את הרשימות
-      console.log('🔄 ChatsListScreen: Refreshing chat list...');
-      ChatService.getChatList(user.id).then((chats) => {
-        console.log('📋 ChatsListScreen: Refreshed chats:', chats);
-        setChats(chats);
-        setFiltered(chats); // עדכן גם את הרשימה המסוננת
-      }).catch((error) => {
-        console.error('❌ ChatsListScreen: Error refreshing chats:', error);
-      });
-      
-      loadAvailableGroups();
       setShowModal(false);
     } catch (error) {
       console.error('❌ ChatsListScreen: Error joining group:', error);
@@ -281,12 +248,21 @@ export default function ChatsListScreen() {
     
     // טען את כל הנתונים המלאים של הקבוצה ברקע
     try {
-      // טען את נתוני הקבוצה
-      const { data: fullGroupData, error: groupError } = await supabase
-        .from('channels')
-        .select('*')
-        .eq('id', group.id)
-        .single();
+      // טען את נתוני הקבוצה ומספר החברים במקביל
+      const [
+        { data: fullGroupData, error: groupError },
+        { count: membersCount, error: countError }
+      ] = await Promise.all([
+        supabase
+          .from('channels')
+          .select('*')
+          .eq('id', group.id)
+          .single(),
+        supabase
+          .from('channel_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('channel_id', group.id)
+      ]);
       
       if (groupError) {
         console.error('❌ ChatsListScreen: Error loading full group data:', groupError);
@@ -294,28 +270,11 @@ export default function ChatsListScreen() {
         return;
       }
       
-      // טען את מספר החברים
-      const { count: membersCount, error: countError } = await supabase
-        .from('channel_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('channel_id', group.id);
-      
-      if (countError) {
-        console.error('❌ ChatsListScreen: Error loading members count:', countError);
-      }
-      
       // נשתמש בנתונים המלאים
       const groupWithCount = {
         ...fullGroupData,
         member_count: membersCount || fullGroupData.member_count || 0
       };
-      
-      console.log('✅ ChatsListScreen: Full group data loaded:', {
-        name: groupWithCount.name,
-        image_url: groupWithCount.image_url,
-        description: groupWithCount.description,
-        member_count: groupWithCount.member_count
-      });
       
       // עדכן את הנתונים המלאים (המודל כבר פתוח)
       setSelectedGroup(groupWithCount);
@@ -326,19 +285,9 @@ export default function ChatsListScreen() {
   };
 
   const closeModal = () => {
-    console.log('🔴 ChatsListScreen: closeModal called');
     setShowModal(false);
     setSelectedGroup(null);
   };
-
-  // Debug: Track modal state changes
-  useEffect(() => {
-    console.log('🔍 ChatsListScreen: Modal state changed:', {
-      showModal,
-      hasSelectedGroup: !!selectedGroup,
-      selectedGroupName: selectedGroup?.name
-    });
-  }, [showModal, selectedGroup]);
 
   useEffect(() => {
     if (!search) setFiltered(chats);
@@ -648,15 +597,16 @@ export default function ChatsListScreen() {
       />
 
       {/* Bottom Sheet Modal - SwiftUI style */}
-      <UIBottomSheet
-        visible={showModal}
+      <BottomSheet
+        isOpen={showModal}
         onClose={closeModal}
+        snapPoints={[0.6, 0.75]}
+        enablePanDownToClose={true}
+        backdropOpacity={0.5}
         showHandle={true}
-        dragToClose={true}
-        maxHeight="70%"
       >
         {selectedGroup ? (
-          <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40 }}>
+          <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 200 }}>
             {/* תמונת הקבוצה */}
             <View style={{ alignItems: 'center', marginBottom: 36 }}>
               {selectedGroup.image_url ? (
@@ -756,8 +706,9 @@ export default function ChatsListScreen() {
                 disabled={joining === selectedGroup.id}
                 style={{
                   backgroundColor: DesignTokens.colors.primary.main,
-                  paddingVertical: 18,
-                  borderRadius: 14,
+                  paddingVertical: 14,
+                  paddingHorizontal: 32,
+                  borderRadius: 24,
                   alignItems: 'center',
                   opacity: joining === selectedGroup.id ? 0.7 : 1,
                   shadowColor: DesignTokens.colors.primary.main,
@@ -772,7 +723,7 @@ export default function ChatsListScreen() {
                 ) : (
                   <Text style={{
                     color: '#000',
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: '700',
                     letterSpacing: 0.3
                   }}>
@@ -780,28 +731,10 @@ export default function ChatsListScreen() {
                   </Text>
                 )}
               </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={closeModal}
-                style={{
-                  paddingVertical: 16,
-                  alignItems: 'center',
-                  borderRadius: 14,
-                  backgroundColor: DesignTokens.colors.background.secondary,
-                }}
-              >
-                <Text style={{
-                  color: DesignTokens.colors.text.secondary,
-                  fontSize: 17,
-                  fontWeight: '600',
-                }}>
-                  ביטול
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
         ) : null}
-      </UIBottomSheet>
+      </BottomSheet>
     </View>
   );
 }

@@ -1,6 +1,6 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface ReactionBarProps {
   onReaction: (emoji: string) => void;
@@ -9,40 +9,45 @@ interface ReactionBarProps {
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥'];
 
 export default function ReactionBar({ onReaction }: ReactionBarProps) {
+  const DesignTokens = useDesignTokens();
+  
+  const styles = useMemo(() => StyleSheet.create({
+    row: {
+      flexDirection: 'row-reverse',
+      backgroundColor: DesignTokens.colors.background.secondary,
+      paddingHorizontal: DesignTokens.spacing.sm,
+      paddingVertical: DesignTokens.spacing.xs,
+      borderRadius: 50,
+      alignItems: 'center',
+      gap: DesignTokens.spacing.xs,
+    },
+    emojiBtn: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 22,
+    },
+    emoji: {
+      fontSize: 28,
+    }
+  }), [DesignTokens]);
+
   return (
     <View style={styles.row}>
       {EMOJIS.map(emoji => (
-        <TouchableOpacity
+        <Pressable
           key={emoji}
           onPress={() => onReaction(emoji)}
-          style={styles.emojiBtn}
+          style={({ pressed }) => [
+            styles.emojiBtn,
+            pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] }
+          ]}
           accessibilityLabel={`React ${emoji}`}
-          activeOpacity={0.6}
         >
           <Text style={styles.emoji}>{emoji}</Text>
-        </TouchableOpacity>
+        </Pressable>
       ))}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(28, 28, 30, 0.95)',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 50,
-    alignItems: 'center'
-  },
-  emojiBtn: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 24
-  },
-  emoji: {
-    fontSize: 28,
-  }
-});

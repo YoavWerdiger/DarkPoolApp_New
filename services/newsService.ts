@@ -52,9 +52,9 @@ export class NewsService {
       console.log('📰 NewsService: Fetching news with filters:', filters);
 
       let query = supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
-        .order('published_at', { ascending: false });
+        .order('time', { ascending: false });
 
       // יישום פילטרים
       if (filters.category) {
@@ -106,7 +106,7 @@ export class NewsService {
       console.log('⭐ NewsService: Fetching featured news');
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
         .eq('is_featured', true)
         .order('published_at', { ascending: false })
@@ -131,7 +131,7 @@ export class NewsService {
       console.log('📂 NewsService: Fetching news by category:', category);
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
         .eq('category', category)
         .order('published_at', { ascending: false })
@@ -156,7 +156,7 @@ export class NewsService {
       console.log('📂 NewsService: Fetching available categories');
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('category')
         .not('category', 'is', null);
 
@@ -182,7 +182,7 @@ export class NewsService {
       console.log('📰 NewsService: Fetching available sources');
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('source')
         .not('source', 'is', null);
 
@@ -208,7 +208,7 @@ export class NewsService {
       console.log('🔍 NewsService: Searching news for:', query);
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
         .or(`title.ilike.%${query}%,content.ilike.%${query}%,summary.ilike.%${query}%`)
         .order('published_at', { ascending: false })
@@ -237,13 +237,13 @@ export class NewsService {
     }
 
     this.realtimeSubscription = supabase
-      .channel('app_news_changes')
+      .channel('app_news_clean_changes')
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'app_news'
+          table: 'app_news_clean'
         },
         (payload) => {
           console.log('📰 NewsService: New article received via realtime:', payload.new);
@@ -282,7 +282,7 @@ export class NewsService {
 
       // בדיקה אם יש עוד נתונים
       const { count } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*', { count: 'exact', head: true });
 
       const hasMore = offset + articles.length < (count || 0);
@@ -343,8 +343,8 @@ export const formatNewsDate = (dateString: string): string => {
   console.log('🕐 formatNewsDate: Input dateString:', dateString);
   
   if (!dateString) {
-    console.log('⚠️ formatNewsDate: Empty dateString, using current time');
-    return 'לפני פחות משעה';
+    console.log('⚠️ formatNewsDate: Empty dateString, returning "תאריך לא זמין"');
+    return 'תאריך לא זמין';
   }
 
   // ניסיון לפרסר את התאריך
@@ -368,52 +368,43 @@ export const formatNewsDate = (dateString: string): string => {
 
     // בדיקה אם התאריך תקין
     if (isNaN(date.getTime()) || date.getTime() < 0) {
-      console.log('❌ formatNewsDate: Invalid date, using current time');
-      date = new Date();
+      console.log('❌ formatNewsDate: Invalid date, returning "תאריך לא זמין"');
+      return 'תאריך לא זמין';
     }
   } catch (error) {
-    console.log('❌ formatNewsDate: Error parsing date, using current time:', error);
-    date = new Date();
+    console.log('❌ formatNewsDate: Error parsing date, returning "תאריך לא זמין":', error);
+    return 'תאריך לא זמין';
   }
 
-  // המרה לשעון ישראל - עם בדיקת תקינות
-  let israelDate: Date;
-  let israelNow: Date;
-  
+  // תצוגת תאריך ושעה לפי שעון ישראל
   try {
-    israelDate = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
-    const now = new Date();
-    israelNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
+    // המרה ישירה לשעון ישראל
+    const formatted = date.toLocaleString('he-IL', {
+      timeZone: 'Asia/Jerusalem',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     
-    // בדיקה נוספת אם ההמרה הצליחה
-    if (isNaN(israelDate.getTime()) || isNaN(israelNow.getTime())) {
-      throw new Error('Invalid timezone conversion');
-    }
+    console.log('🕐 formatNewsDate: Formatted date (Israel timezone):', {
+      originalDate: dateString,
+      formatted: formatted
+    });
+    
+    return formatted;
   } catch (error) {
-    console.log('❌ formatNewsDate: Timezone conversion failed, using UTC:', error);
-    // נפילה ל-UTC אם המרת timezone נכשלת
-    israelDate = date;
-    israelNow = new Date();
+    console.log('❌ formatNewsDate: Error formatting with timezone, using fallback:', error);
+    // נפילה - תצוגה פשוטה
+    return date.toLocaleDateString('he-IL', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
-  
-  const diffInMs = israelNow.getTime() - israelDate.getTime();
-  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-  console.log('🕐 formatNewsDate: Formatted date:', {
-    originalDate: dateString,
-    israelDate: israelDate.toISOString()
-  });
-
-  // תצוגת תאריך ושעה פשוטה
-  return israelDate.toLocaleDateString('he-IL', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
 };
 
 export const truncateText = (text: string, maxLength: number = 150): string => {

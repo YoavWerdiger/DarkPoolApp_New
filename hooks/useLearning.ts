@@ -1,153 +1,122 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LearningService } from '../services/learningService';
+import { CourseListParams, CourseWithProgress, CourseWithModules, LessonWithProgress, Enrollment, LessonProgress, ProgressUpdateRequest, SignedUrlRequest } from '../types/learning';
 
-// קורס דמה פשוט
-const DEMO_COURSE = {
-  id: 'demo-course-1',
-  title: 'קורס React Native למתחילים',
-  subtitle: 'למד לבנות אפליקציות מובייל עם React Native',
-  description: 'קורס מקיף שילמד אותך את כל היסודות של React Native, מהתקנה ועד לפרסום אפליקציה בחנויות.',
-  cover_url: 'https://via.placeholder.com/300x200/4F46E5/FFFFFF?text=React+Native',
-  instructor: {
-    name: 'יואב וייס',
-    avatar: 'https://via.placeholder.com/50x50/10B981/FFFFFF?text=YW'
-  },
-  duration: '4 שעות',
-  level: 'מתחילים',
-  lessons: [
-    {
-      id: 'lesson-1',
-      title: 'התקנה והגדרה',
-      duration: '45 דקות',
-      description: 'איך להתקין את React Native ולהגדיר את הסביבה',
-      completed: true,
-      type: 'video'
-    },
-    {
-      id: 'lesson-2', 
-      title: 'קומפוננטים בסיסיים',
-      duration: '60 דקות',
-      description: 'למד על View, Text, TouchableOpacity ועוד',
-      completed: true,
-      type: 'video'
-    },
-    {
-      id: 'lesson-3',
-      title: 'ניווט בין מסכים',
-      duration: '50 דקות', 
-      description: 'איך ליצור ניווט בין מסכים שונים',
-      completed: false,
-      type: 'video'
-    },
-    {
-      id: 'lesson-4',
-      title: 'עבודה עם API',
-      duration: '45 דקות',
-      description: 'איך לחבר את האפליקציה לשרת',
-      completed: false,
-      type: 'video'
-    }
-  ]
+// Query keys
+export const learningKeys = {
+  all: ['learning'] as const,
+  courses: (params?: CourseListParams) => [...learningKeys.all, 'courses', params] as const,
+  course: (id: string) => [...learningKeys.all, 'course', id] as const,
+  lesson: (id: string) => [...learningKeys.all, 'lesson', id] as const,
+  enrollments: () => [...learningKeys.all, 'enrollments'] as const,
+  progress: (courseId: string) => [...learningKeys.all, 'progress', courseId] as const,
 };
 
-export function useCourses() {
-  const [courses, setCourses] = useState([DEMO_COURSE]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const fetchCourses = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // סימולציה של טעינה
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setCourses([DEMO_COURSE]);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCourses();
-  }, []);
-
-  return {
-    courses,
-    loading,
-    error,
-    refetch: fetchCourses
-  };
+// Hook לקבלת רשימת קורסים
+export function useCourses(params?: CourseListParams) {
+  return useQuery({
+    queryKey: learningKeys.courses(params),
+    queryFn: () => LearningService.fetchCourses(params || {}),
+    staleTime: 5 * 60 * 1000, // 5 דקות
+  });
 }
 
+// Hook לקבלת קורס ספציפי
 export function useCourse(courseId: string) {
-  const [course, setCourse] = useState(DEMO_COURSE);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const fetchCourse = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // סימולציה של טעינה
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setCourse(DEMO_COURSE);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (courseId) {
-      fetchCourse();
-    }
-  }, [courseId]);
-
-  return {
-    course,
-    loading,
-    error,
-    refetch: fetchCourse
-  };
+  return useQuery({
+    queryKey: learningKeys.course(courseId),
+    queryFn: () => LearningService.fetchCourse(courseId),
+    enabled: !!courseId,
+    staleTime: 5 * 60 * 1000,
+  });
 }
 
+// Hook לקבלת שיעור ספציפי
 export function useLesson(lessonId: string) {
-  const [lesson, setLesson] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  return useQuery({
+    queryKey: learningKeys.lesson(lessonId),
+    queryFn: () => LearningService.fetchLesson(lessonId),
+    enabled: !!lessonId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
 
-  const fetchLesson = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // סימולציה של טעינה
-      await new Promise(resolve => setTimeout(resolve, 200));
+// Hook להרשמה לקורס
+export function useEnrollInCourse() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (courseId: string) => LearningService.enrollInCourse(courseId),
+    onSuccess: () => {
+      // עדכון cache לאחר הרשמה מוצלחת
+      queryClient.invalidateQueries({ queryKey: learningKeys.enrollments() });
+      queryClient.invalidateQueries({ queryKey: learningKeys.courses() });
+    },
+  });
+}
+
+// Hook לקבלת התקדמות קורס
+export function useCourseProgress(courseId: string) {
+  return useQuery({
+    queryKey: learningKeys.progress(courseId),
+    queryFn: async () => {
+      const course = await LearningService.fetchCourse(courseId);
+      if (!course.modules) {
+        return { progressPercentage: 0, lastLessonId: null };
+      }
       
-      // מצא את השיעור בקורס הדמה
-      const foundLesson = DEMO_COURSE.lessons.find(l => l.id === lessonId);
-      setLesson(foundLesson || null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (lessonId) {
-      fetchLesson();
-    }
-  }, [lessonId]);
+      const totalLessons = course.modules.reduce((sum, module) => 
+        sum + (module.lessons?.length || 0), 0);
+      
+      const completedLessons = course.modules.reduce((sum, module) => 
+        sum + (module.lessons?.filter(l => l.progress?.status === 'completed').length || 0), 0);
+      
+      const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
+      
+      const lastLesson = course.modules
+        .flatMap(m => m.lessons || [])
+        .find(l => l.progress?.status === 'in_progress');
 
   return {
-    lesson,
-    loading,
-    error,
-    refetch: fetchLesson
-  };
+        progressPercentage,
+        lastLessonId: lastLesson?.id || null
+      };
+    },
+    enabled: !!courseId,
+    staleTime: 1 * 60 * 1000, // 1 דקה
+  });
+}
+
+// Hook לקבלת הקורסים שלי
+export function useMyEnrollments() {
+  return useQuery({
+    queryKey: learningKeys.enrollments(),
+    queryFn: () => LearningService.getMyEnrollments(),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Hook לשמירת התקדמות
+export function useSaveProgress() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: ProgressUpdateRequest) => LearningService.saveProgress(request),
+    onSuccess: (data, variables) => {
+      // עדכון cache לאחר שמירת התקדמות
+      if (variables.lesson_id) {
+        queryClient.invalidateQueries({ queryKey: learningKeys.lesson(variables.lesson_id) });
+      }
+      if (variables.course_id) {
+        queryClient.invalidateQueries({ queryKey: learningKeys.progress(variables.course_id) });
+      }
+    },
+  });
+}
+
+// Hook לקבלת URL חתום
+export function useGetSignedUrl() {
+  return useMutation({
+    mutationFn: (request: SignedUrlRequest) => LearningService.getSignedUrl(request),
+  });
 }

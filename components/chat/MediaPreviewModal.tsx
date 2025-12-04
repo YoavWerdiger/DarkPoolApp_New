@@ -34,7 +34,11 @@ export default function MediaPreviewModal({
   onSend, 
   mediaFiles 
 }: MediaPreviewModalProps) {
-  console.log('📱 MediaPreviewModal: Rendering with:', { visible, mediaFilesCount: mediaFiles.length });
+  console.log('📱 MediaPreviewModal: Rendering with:', { 
+    visible, 
+    mediaFilesCount: mediaFiles.length,
+    mediaFiles: mediaFiles.map(f => ({ id: f.id, type: f.type, uri: f.uri?.substring(0, 50) }))
+  });
   
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -155,7 +159,12 @@ export default function MediaPreviewModal({
     };
   }, []);
 
-  if (!visible || !currentMedia) return null;
+  if (!visible || !currentMedia) {
+    console.log('📱 MediaPreviewModal: NOT rendering - visible:', visible, 'currentMedia:', currentMedia);
+    return null;
+  }
+  
+  console.log('📱 MediaPreviewModal: RENDERING with currentMedia:', { id: currentMedia.id, type: currentMedia.type });
 
   const renderMediaContent = () => {
     switch (currentMedia.type) {
@@ -359,33 +368,41 @@ export default function MediaPreviewModal({
           {/* Header */}
           <View 
             style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
+              flexDirection: 'row-reverse',
+              justifyContent: 'space-between',
               alignItems: 'center',
               paddingHorizontal: 20,
               paddingVertical: 12,
-              backgroundColor: DesignTokens.colors.background.secondary,
+              backgroundColor: DesignTokens.colors.background.primary,
               paddingTop: insets.top + 12,
-              position: 'relative'
+              borderBottomWidth: 1,
+              borderBottomColor: DesignTokens.colors.border.primary
             }}
           >
-            {/* כפתור סגירה - שמאל */}
+            {/* כפתור סגירה - ימין */}
             <Pressable 
               onPress={onClose} 
               style={{ 
-                position: 'absolute',
-                left: 20,
-                top: insets.top + 12,
-                padding: 8
+                padding: 8,
+                marginRight: -8
               }}
             >
               <X size={24} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
             </Pressable>
             
             {/* כותרת ממורכזת */}
-            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 17, fontWeight: '700' }}>
+            <Text style={{ 
+              color: DesignTokens.colors.text.primary, 
+              fontSize: 17, 
+              fontWeight: '700',
+              flex: 1,
+              textAlign: 'center'
+            }}>
               {mediaFiles.length > 1 ? `${currentIndex + 1} מתוך ${mediaFiles.length}` : 'תצוגה מקדימה'}
             </Text>
+            
+            {/* רווח מימין לאיזון */}
+            <View style={{ width: 40 }} />
           </View>
 
           {/* Media Content */}
@@ -402,7 +419,7 @@ export default function MediaPreviewModal({
           <View style={{ 
             paddingHorizontal: 20,
             paddingVertical: 12,
-            backgroundColor: DesignTokens.colors.background.secondary,
+            backgroundColor: DesignTokens.colors.background.primary,
             borderTopWidth: 1,
             borderTopColor: DesignTokens.colors.border.primary
           }}>
@@ -415,11 +432,13 @@ export default function MediaPreviewModal({
                 color: DesignTokens.colors.text.primary, 
                 textAlign: 'right', 
                 fontSize: 15,
-                backgroundColor: DesignTokens.colors.background.tertiary,
+                backgroundColor: DesignTokens.colors.background.secondary,
                 paddingHorizontal: 16,
                 paddingVertical: 12,
                 borderRadius: 12,
-                minHeight: 44
+                minHeight: 44,
+                borderWidth: 1,
+                borderColor: DesignTokens.colors.border.primary
               }}
               multiline
               maxLength={200}
@@ -432,20 +451,32 @@ export default function MediaPreviewModal({
             paddingHorizontal: 20,
             paddingVertical: 20,
             paddingBottom: insets.bottom + 20,
-            backgroundColor: DesignTokens.colors.background.secondary
+            backgroundColor: DesignTokens.colors.background.primary,
+            borderTopWidth: 1,
+            borderTopColor: DesignTokens.colors.border.primary
           }}>
             {/* כפתור שלח */}
             <Pressable
               onPress={handleSend}
-              style={{
+              style={({ pressed }) => ({
                 backgroundColor: DesignTokens.colors.success.main,
                 paddingVertical: 16,
                 borderRadius: 16,
                 alignItems: 'center',
-                marginBottom: mediaFiles.length > 1 ? 12 : 0
-              }}
+                justifyContent: 'center',
+                marginBottom: mediaFiles.length > 1 ? 12 : 0,
+                opacity: pressed ? 0.8 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }]
+              })}
             >
-              <Text style={{ color: DesignTokens.colors.text.primary, fontWeight: '700', fontSize: 17 }}>שלח</Text>
+              <Text style={{ 
+                color: '#FFFFFF', 
+                fontWeight: '700', 
+                fontSize: 17,
+                textAlign: 'center'
+              }}>
+                שלח
+              </Text>
             </Pressable>
 
             {/* כפתור הבא (רק אם יש מספר קבצים) */}
@@ -455,17 +486,26 @@ export default function MediaPreviewModal({
                   const newIndex = (currentIndex + 1) % mediaFiles.length;
                   setCurrentIndex(newIndex);
                 }}
-                style={{
-                  backgroundColor: `${DesignTokens.colors.success.main}26`,
+                style={({ pressed }) => ({
+                  backgroundColor: DesignTokens.colors.background.secondary,
                   paddingVertical: 14,
                   borderRadius: 14,
                   alignItems: 'center',
-                  flexDirection: 'row',
-                  justifyContent: 'center'
-                }}
+                  flexDirection: 'row-reverse',
+                  justifyContent: 'center',
+                  opacity: pressed ? 0.8 : 1,
+                  transform: [{ scale: pressed ? 0.98 : 1 }]
+                })}
               >
-                <Text style={{ color: DesignTokens.colors.success.main, fontSize: 16, fontWeight: '600', marginRight: 8 }}>הבא</Text>
-                <ArrowRight size={18} color={DesignTokens.colors.success.main} strokeWidth={2} />
+                <Text style={{ 
+                  color: DesignTokens.colors.text.primary, 
+                  fontSize: 16, 
+                  fontWeight: '600', 
+                  marginLeft: 8 
+                }}>
+                  הבא
+                </Text>
+                <ArrowRight size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
               </Pressable>
             )}
           </View>

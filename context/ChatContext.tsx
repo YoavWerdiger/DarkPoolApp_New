@@ -1,641 +1,657 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { Message, Chat } from '../services/supabase';
-import { ChatService } from '../services/chatService';
-import { TypingService, TypingUser } from '../services/typingService';
-import { supabase } from '../services/supabase';
+// ============================================
+// Chat Context
+// ============================================
+// ניהול State גלובלי של מערכת הצ'אט
+// ============================================
+
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from './AuthContext';
+import {
+  ChatGroup,
+  ChatMessage,
+  ChatGroupWithDetails,
+  ChatTypingIndicator,
+  SendChatMessageInput,
+  CreateChatGroupInput,
+  UpdateChatGroupInput,
+} from '../types/chat.types';
+import {
+  chatGroupService,
+  chatMessageService,
+  chatRealtimeService,
+} from '../services/chat';
+import { Audio } from 'expo-av';
+
+// ============================================
+// Types
+// ============================================
 
 interface ChatContextType {
-  messages: Message[];
-  chats: Chat[];
-  currentChatId: string | null;
-  isLoading: boolean;
-  typingUsers: TypingUser[];
-  sendMessage: (content: string, replyTo?: string | null, mentions?: any[]) => Promise<void>;
-  sendFileMessage: (fileType: 'image' | 'voice' | 'file') => Promise<void>;
-  sendMediaMessage: (mediaUrl: string, mediaType: string, caption?: string, metadata?: any, replyTo?: string | null) => Promise<void>;
-  setCurrentChat: (chatId: string) => void;
-  loadMessages: (chatId: string) => Promise<void>;
-  loadChats: () => Promise<void>;
-  markMessageAsRead: (messageId: string) => Promise<void>;
-  markMessageAsDelivered: (messageId: string) => Promise<void>;
-  updateMessage: (messageId: string, newContent: string, mentions?: any[]) => Promise<void>;
-  deleteMessage: (messageId: string) => Promise<void>;
-  startTyping: () => void;
-  stopTyping: () => void;
+  // State
+  groups: ChatGroup[];
+  currentGroup: ChatGroupWithDetails | null;
+  messages: ChatMessage[];
+  typingUsers: ChatTypingIndicator[];
+  isLoadingGroups: boolean;
+  isLoadingMessages: boolean;
+  isSendingMessage: boolean;
+  
+  // Group Actions
+  loadGroups: () => Promise<void>;
+  selectGroup: (groupId: string) => Promise<void>;
+  createGroup: (input: CreateChatGroupInput) => Promise<{ success: boolean; groupId?: string; error?: string }>;
+  updateGroup: (groupId: string, input: UpdateChatGroupInput) => Promise<{ success: boolean; error?: string }>;
+  leaveGroup: (groupId: string) => Promise<{ success: boolean; error?: string }>;
+  
+  // Message Actions
+  sendMessage: (input: SendChatMessageInput) => Promise<{ success: boolean; error?: string }>;
+  loadMoreMessages: () => Promise<void>;
+  editMessage: (messageId: string, content: string) => Promise<{ success: boolean; error?: string }>;
+  deleteMessage: (messageId: string, deleteForEveryone: boolean) => Promise<{ success: boolean; error?: string }>;
+  forwardMessage: (messageId: string, groupIds: string[]) => Promise<{ success: boolean; error?: string }>;
+  addReaction: (messageId: string, emoji: string) => Promise<void>;
+  removeReaction: (messageId: string, emoji: string) => Promise<void>;
+  starMessage: (messageId: string, groupId: string) => Promise<void>;
+  unstarMessage: (messageId: string) => Promise<void>;
+  
+  // Typing
+  setTyping: (groupId: string, isTyping: boolean) => Promise<void>;
+  
+  // Read Receipts
+  markAsRead: (groupId: string, messageIds: string[]) => Promise<void>;
+  
+  // Realtime
+  isConnected: boolean;
+  
+  // Unread
+  totalUnreadCount: number;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export const useChat = () => {
-  const context = useContext(ChatContext);
-  if (!context) {
-    console.error('❌ useChat: Context not found - make sure ChatProvider is wrapping the component');
-    throw new Error('useChat must be used within a ChatProvider');
-  }
-  return context;
-};
+// ============================================
+// Provider
+// ============================================
 
-interface ChatProviderProps {
-  children: ReactNode;
-  userId: string;
-  initialChatId?: string;
-}
-
-export const ChatProvider: React.FC<ChatProviderProps> = ({ children, userId, initialChatId }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [currentChatId, setCurrentChatId] = useState<string | null>(initialChatId || null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>({});
-  const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
-  const [currentUserName, setCurrentUserName] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  // Load user name for typing indicator
+export function ChatProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  
+  // State
+  const [groups, setGroups] = useState<ChatGroup[]>([]);
+  const [currentGroup, setCurrentGroup] = useState<ChatGroupWithDetails | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [typingUsers, setTypingUsers] = useState<ChatTypingIndicator[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  
+  // Refs
+  const messagesOffset = useRef(0);
+  const hasMoreMessages = useRef(true);
+  const currentGroupId = useRef<string | null>(null);
+  const notificationSound = useRef<Audio.Sound | null>(null);
+  
+  // ============================================
+  // Load notification sound
+  // ============================================
+  
   useEffect(() => {
-    if (userId) {
-      console.log('🔄 ChatContext: Loading user name for:', userId);
-      
-      supabase
-        .from('users')
-        .select('full_name')
-        .eq('id', userId)
-        .single()
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('❌ ChatContext: Error loading user name:', error);
-            return;
-          }
-          
-          if (data?.full_name) {
-            setCurrentUserName(data.full_name);
-            console.log('✅ ChatContext: User name loaded:', data.full_name);
-          }
-        });
-    }
-  }, [userId]);
-
-
-  // טעינה מקדימה של הודעות לכל הצ'אטים אחרי שהם נטענו (CACHE בלבד, בלי להחליף UI)
-  useEffect(() => {
-    if (chats.length > 0 && userId) {
-      console.log('🚀 ChatContext: Preloading messages for all chats (cache only):', chats.length);
-      const startTime = Date.now();
-      
-      const chatsToPreload = chats.slice(0, 3);
-      Promise.all(
-        chatsToPreload.map(async (chat) => {
-          try {
-            const messageList = await ChatService.getMessages(chat.id);
-            setMessagesCache(prev => ({ ...prev, [chat.id]: messageList }));
-          } catch (error) {
-            console.error(`❌ Error preloading messages for chat ${chat.id}:`, error);
-          }
-        })
-      ).then(() => {
-        const endTime = Date.now();
-        console.log(`⏱️ ChatContext: Preloaded (cache) for ${chatsToPreload.length} chats in ${endTime - startTime}ms`);
-      });
-    }
-  }, [chats.length, userId]);
-
-  // טעינה מקדימה של מידע נוסף לצ'אט הראשי
-  useEffect(() => {
-    if (initialChatId && userId) {
-      console.log('🚀 ChatContext: Preloading additional data for initial chat:', initialChatId);
-      const startTime = Date.now();
-      
-      // טען מידע נוסף במקביל
-      Promise.all([
-        ChatService.getChannelMembersCount(initialChatId).then(({ count, error }) => {
-          if (!error && typeof count === 'number') {
-            console.log('✅ Preloaded members count:', count);
-          }
-        }),
-        ChatService.getChannelImageUrl(initialChatId).then(url => {
-          console.log('✅ Preloaded channel image:', url ? 'Yes' : 'No');
-        }),
-        // טען גם את רשימת החברים
-        ChatService.getChannelMembersCount(initialChatId).then(({ count, error }) => {
-          if (!error && typeof count === 'number') {
-            console.log('✅ Preloaded channel members count:', count);
-          }
-        })
-      ]).then(() => {
-        const endTime = Date.now();
-        console.log(`⏱️ ChatContext: Preloaded additional data in ${endTime - startTime}ms`);
-      });
-    }
-  }, [initialChatId, userId]);
-
-  // טעינה מקדימה של מידע נוסף לכל הצ'אטים
-  useEffect(() => {
-    if (chats.length > 0 && userId) {
-      console.log('🚀 ChatContext: Preloading additional data for all chats:', chats.length);
-      const startTime = Date.now();
-      
-      // טען מידע נוסף לכל הצ'אטים במקביל (רק 3 הראשונים)
-      const chatsToPreload = chats.slice(0, 3);
-      Promise.all(
-        chatsToPreload.map(chat => 
-          Promise.all([
-            ChatService.getChannelMembersCount(chat.id).then(({ count, error }) => {
-              if (!error && typeof count === 'number') {
-                console.log(`✅ Preloaded members count for ${chat.id}:`, count);
-              }
-            }),
-            ChatService.getChannelImageUrl(chat.id).then(url => {
-              console.log(`✅ Preloaded channel image for ${chat.id}:`, url ? 'Yes' : 'No');
-            })
-          ]).catch(error => 
-            console.error(`❌ Error preloading additional data for chat ${chat.id}:`, error)
-          )
-        )
-      ).then(() => {
-        const endTime = Date.now();
-        console.log(`⏱️ ChatContext: Preloaded additional data for ${chatsToPreload.length} chats in ${endTime - startTime}ms`);
-      });
-    }
-  }, [chats.length, userId]);
-
-  // טעינה מקדימה של מידע נוסף לצ'אט הראשי
-  useEffect(() => {
-    if (initialChatId && userId) {
-      console.log('🚀 ChatContext: Preloading additional data for initial chat:', initialChatId);
-      const startTime = Date.now();
-      
-      // טען מידע נוסף במקביל
-      Promise.all([
-        ChatService.getChannelMembersCount(initialChatId).then(({ count, error }) => {
-          if (!error && typeof count === 'number') {
-            console.log('✅ Preloaded members count:', count);
-          }
-        }),
-        ChatService.getChannelImageUrl(initialChatId).then(url => {
-          console.log('✅ Preloaded channel image:', url ? 'Yes' : 'No');
-        })
-      ]).then(() => {
-        const endTime = Date.now();
-        console.log(`⏱️ ChatContext: Preloaded additional data in ${endTime - startTime}ms`);
-      });
-    }
-  }, [initialChatId, userId]);
-
-  // Subscribe to real-time messages when chat changes
-  useEffect(() => {
-    if (!currentChatId) return;
-
-    console.log('🔔 Setting up real-time subscription for chat:', currentChatId);
-    
-    // טען הודעות מחדש כשהערוץ משתנה
-    loadMessages(currentChatId);
-    
-    const subscription = ChatService.subscribeToMessages(currentChatId, (newMessage) => {
-      console.log('📨 Received real-time message:', newMessage);
-      setMessages(prev => {
-        // בדיקה שההודעה לא קיימת כבר (למניעת כפילויות)
-        const exists = prev.some(msg => msg.id === newMessage.id);
-        if (exists) {
-          console.log('⚠️ Message already exists, skipping duplicate');
-          return prev;
-        }
-        
-        // בדיקה אם זו הודעה זמנית שצריך להחליף (רק למשתמש ששלח)
-        const tempMessageIndex = prev.findIndex(msg => {
-          const isTemp = msg.id.startsWith('temp_');
-          const sameSender = msg.sender_id === newMessage.sender_id;
-          const sameContent = (msg.content || '').trim() === (newMessage.content || '').trim();
-          const sameReply = (msg.reply_to_message_id || '') === (newMessage.reply_to_message_id || '');
-          return isTemp && sameSender && sameContent && sameReply;
-        });
-        
-        if (tempMessageIndex !== -1) {
-          console.log('🔄 Replacing temporary message with real-time message');
-          const newMessages = [...prev];
-          newMessages[tempMessageIndex] = { ...newMessage, status: 'sent' as const };
-          return newMessages;
-        }
-        
-        console.log('➕ Adding new real-time message from', newMessage.sender_id === userId ? 'self' : 'other user');
-        return [newMessage, ...prev];
-      });
-    });
-
-    // Subscribe to message updates (for edited messages)
-    const updateSubscription = ChatService.subscribeToMessageUpdates(currentChatId, (updatedMessage) => {
-      console.log('✏️ Received real-time message update:', updatedMessage);
-      setMessages(prev => prev.map(msg => 
-        msg.id === updatedMessage.id ? updatedMessage : msg
-      ));
-    });
-
-    return () => {
-      console.log('🔕 Unsubscribing from real-time messages for chat:', currentChatId);
-      subscription.unsubscribe();
-      updateSubscription.unsubscribe();
-    };
-  }, [currentChatId]);
-
-  // Subscribe to typing events when chat changes
-  useEffect(() => {
-    if (!currentChatId || !userId || !currentUserName) return;
-
-    console.log('👀 ChatContext: Setting up typing subscription for chat:', currentChatId);
-
-    const unsubscribe = TypingService.subscribeToTyping(
-      currentChatId,
-      userId,
-      (typingUsersList) => {
-        console.log('✍️ ChatContext: Typing users updated:', typingUsersList);
-        setTypingUsers(typingUsersList);
+    // קובץ הסאונד אופציונלי - אם לא קיים פשוט לא יהיה סאונד
+    async function loadSound() {
+      try {
+        const { sound } = await Audio.Sound.createAsync(
+          require('../assets/sounds/notification.mp3')
+        );
+        notificationSound.current = sound;
+      } catch (error) {
+        console.log('⚠️ Could not load notification sound:', error);
       }
-    );
-
-    return () => {
-      console.log('🔕 ChatContext: Unsubscribing from typing events');
-      unsubscribe();
-      setTypingUsers([]);
-    };
-  }, [currentChatId, userId, currentUserName]);
-
-  useEffect(() => {
-    if (initialChatId) {
-      setCurrentChatId(initialChatId);
-      loadMessages(initialChatId);
     }
-  }, [initialChatId]);
-
-  const loadChats = async () => {
-    setIsLoading(true);
-    setError(null);
+    
+    loadSound();
+    
+    return () => {
+      notificationSound.current?.unloadAsync();
+    };
+  }, []);
+  
+  // ============================================
+  // Load groups
+  // ============================================
+  
+  const loadGroups = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoadingGroups(true);
     try {
-      console.log('🔄 ChatContext: Loading chats for user:', userId);
-      const chatList = await ChatService.getChats(userId);
-      console.log('📋 ChatContext: Loaded chats:', chatList);
-      setChats(chatList);
-      
-      // אל תקבע צ'אט ראשון כברירת מחדל אם כבר הועבר initialChatId
-      // הגנה מרייס: נקבע רק אם אין currentChatId וגם אין initialChatId
-      if (chatList.length > 0 && !currentChatId && !initialChatId) {
-        console.log('🎯 ChatContext: No current/initial chat - setting first chat as default:', chatList[0].id);
-        setCurrentChatId(chatList[0].id);
-        loadMessages(chatList[0].id);
-      } else if (chatList.length === 0) {
-        console.log('⚠️ ChatContext: No chats found for user');
+      const { data, error } = await chatGroupService.getChatGroups(user.id);
+      if (data) {
+        setGroups(data);
       } else {
-        console.log('ℹ️ ChatContext: Current chat already set:', currentChatId);
+        console.error('❌ Error loading groups:', error);
       }
-    } catch (error) {
-      console.error('❌ ChatContext: Error loading chats:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load chats');
     } finally {
-      setIsLoading(false);
+      setIsLoadingGroups(false);
     }
-  };
-
-  const loadMessages = async (chatId: string) => {
-    if (!chatId) return;
+  }, [user]);
+  
+  // ============================================
+  // Select group
+  // ============================================
+  
+  const selectGroup = useCallback(async (groupId: string) => {
+    if (!user) return;
     
-    console.log('🔄 ChatContext: Loading messages for chat:', chatId);
-    const startTime = Date.now();
-    
-    // בדוק אם יש cache
-    if (messagesCache[chatId]) {
-      console.log('✅ ChatContext: Using cached messages for chat:', chatId);
-      setMessages(messagesCache[chatId]);
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
+    currentGroupId.current = groupId;
+    setIsLoadingMessages(true);
+    setMessages([]);
+    messagesOffset.current = 0;
+    hasMoreMessages.current = true;
     
     try {
-      const messageList = await ChatService.getMessages(chatId);
-      const endTime = Date.now();
-      console.log(`⏱️ ChatContext: Loaded ${messageList.length} messages in ${endTime - startTime}ms`);
+      // Load group details
+      const { data: groupData } = await chatGroupService.getChatGroupDetails(groupId, user.id);
+      if (groupData) {
+        setCurrentGroup(groupData);
+      }
       
-      // שמור ב-cache
-      setMessagesCache(prev => ({
-        ...prev,
-        [chatId]: messageList
-      }));
+      // Load messages
+      const { data: messagesData } = await chatMessageService.getChatMessages(
+        groupId,
+        user.id,
+        { limit: 50, offset: 0 }
+      );
       
-      // עדכון ישיר ללא בדיקות מיותרות
-      setMessages(messageList);
+      if (messagesData) {
+        setMessages(messagesData.messages);
+        messagesOffset.current = messagesData.messages.length;
+        hasMoreMessages.current = messagesData.has_more;
+        
+        // Mark as read
+        if (messagesData.messages.length > 0) {
+          const unreadIds = messagesData.messages
+            .filter(m => !m.is_read_by_me)
+            .map(m => m.id);
+          
+          if (unreadIds.length > 0) {
+            await markAsRead(groupId, unreadIds);
+          }
+        }
+      }
+      
+      // Subscribe to realtime updates
+      chatRealtimeService.subscribeToGroup(groupId, user.id, {
+        onMessage: (message, eventType) => {
+          if (eventType === 'INSERT') {
+            // New message
+            setMessages(prev => [...prev, message]);
+            
+            // Play sound if not from me
+            if (message.sender_id !== user.id) {
+              notificationSound.current?.replayAsync();
+            }
+            
+            // Auto mark as read
+            if (currentGroupId.current === groupId) {
+              markAsRead(groupId, [message.id]);
+            }
+          } else if (eventType === 'UPDATE') {
+            // Updated message
+            setMessages(prev => prev.map(m => m.id === message.id ? message : m));
+          } else if (eventType === 'DELETE') {
+            // Deleted message
+            setMessages(prev => prev.filter(m => m.id !== message.id));
+          }
+        },
+        onReaction: (reaction, eventType) => {
+          // Update reactions in messages
+          setMessages(prev => prev.map(m => {
+            if (m.id === reaction.message_id) {
+              // Refetch message with updated reactions
+              // או לעדכן ידנית את הריאקציות
+              return m;
+            }
+            return m;
+          }));
+        },
+        onTyping: (indicators) => {
+          setTypingUsers(indicators);
+        },
+        onMember: (data, eventType) => {
+          // Member added/removed/updated
+          if (currentGroup) {
+            // Reload group details
+            chatGroupService.getChatGroupDetails(groupId, user.id).then(({ data }) => {
+              if (data) {
+                setCurrentGroup(data);
+              }
+            });
+          }
+        },
+        onGroup: (data) => {
+          // Group updated
+          if (currentGroup) {
+            setCurrentGroup({ ...currentGroup, ...data });
+          }
+        },
+      });
+      
+      setIsConnected(true);
     } catch (error) {
-      console.error('❌ ChatContext: Error loading messages:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load messages');
+      console.error('❌ Error selecting group:', error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingMessages(false);
     }
-  };
+  }, [user]);
+  
+  // ============================================
+  // Load more messages
+  // ============================================
+  
+  const loadMoreMessages = useCallback(async () => {
+    if (!user || !currentGroupId.current || !hasMoreMessages.current || isLoadingMessages) {
+      return;
+    }
 
-  const sendMessage = async (content: string, replyTo?: string | null, mentions?: any[]) => {
-    console.log('🚀 ChatContext sendMessage called:', { content, replyTo, mentions, currentChatId, userId });
-    if (!currentChatId) {
-      console.error('❌ No current chat ID');
-      return;
+    setIsLoadingMessages(true);
+    try {
+      const { data } = await chatMessageService.getChatMessages(
+        currentGroupId.current,
+        user.id,
+        { limit: 50, offset: messagesOffset.current }
+      );
+      
+      if (data) {
+        setMessages(prev => [...data.messages, ...prev]);
+        messagesOffset.current += data.messages.length;
+        hasMoreMessages.current = data.has_more;
+      }
+    } finally {
+      setIsLoadingMessages(false);
     }
-    if (!userId) {
-      console.error('❌ No user ID');
-      return;
+  }, [user, isLoadingMessages]);
+  
+  // ============================================
+  // Create group
+  // ============================================
+  
+  const createGroup = useCallback(async (input: CreateChatGroupInput) => {
+    if (!user) return { success: false, error: 'לא מחובר' };
+    
+    const { data, error } = await chatGroupService.createChatGroup(input, user.id);
+    
+    if (data) {
+      // Add to groups list
+      setGroups(prev => [data, ...prev]);
+      return { success: true, groupId: data.id };
     }
     
-    // צור הודעה זמנית להצגה מיידית למשתמש ששלח
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    const tempMessage: Message = {
-      id: tempId,
-      channel_id: currentChatId,
-      sender_id: userId,
-      content,
-      type: 'text' as any,
+    return { success: false, error: error?.message };
+  }, [user]);
+  
+  // ============================================
+  // Update group
+  // ============================================
+  
+  const updateGroup = useCallback(async (groupId: string, input: UpdateChatGroupInput) => {
+    if (!user) return { success: false, error: 'לא מחובר' };
+    
+    const { data, error } = await chatGroupService.updateChatGroup(groupId, input, user.id);
+    
+    if (data) {
+      // Update in groups list
+      setGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...data } : g));
+      
+      // Update current group if selected
+      if (currentGroup?.id === groupId) {
+        setCurrentGroup({ ...currentGroup, ...data });
+      }
+      
+      return { success: true };
+    }
+    
+    return { success: false, error: error?.message };
+  }, [user, currentGroup]);
+  
+  // ============================================
+  // Leave group
+  // ============================================
+  
+  const leaveGroup = useCallback(async (groupId: string) => {
+    if (!user) return { success: false, error: 'לא מחובר' };
+    
+    const { error } = await chatGroupService.removeGroupMember(groupId, user.id, user.id);
+    
+    if (!error) {
+      // Remove from groups list
+      setGroups(prev => prev.filter(g => g.id !== groupId));
+      
+      // Clear current group if selected
+      if (currentGroup?.id === groupId) {
+        setCurrentGroup(null);
+        setMessages([]);
+        chatRealtimeService.unsubscribeFromGroup(groupId);
+      }
+      
+      return { success: true };
+    }
+    
+    return { success: false, error: error.message };
+  }, [user, currentGroup]);
+  
+  // ============================================
+  // Send message
+  // ============================================
+  
+  const sendMessage = useCallback(async (input: SendChatMessageInput) => {
+    if (!user) return { success: false, error: 'לא מחובר' };
+    
+    setIsSendingMessage(true);
+    
+    // Optimistic UI - add message immediately
+    const optimisticMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      group_id: input.group_id,
+      sender_id: user.id,
+      content: input.content,
+      message_type: input.message_type,
+      media_url: input.media_url,
+      media_thumbnail_url: input.media_thumbnail_url,
+      media_type: input.media_type,
+      is_forwarded: false,
+      mentioned_users: input.mentioned_users || [],
+      is_edited: false,
+      is_deleted: false,
+      deleted_for_everyone: false,
+      is_silent: input.is_silent || false,
+      is_system_message: false,
       created_at: new Date().toISOString(),
-      reply_to_message_id: replyTo || undefined,
-      mentions: mentions || undefined,
-      status: 'sending' as any,
+      reactions_count: 0,
+      read_by_count: 0,
+      sender: {
+        id: user.id,
+        display_name: user.display_name || 'אני',
+        profile_picture: user.profile_picture,
+        is_online: true,
+      },
+      is_sending: true,
     };
     
-    // הוסף הודעה זמנית רק למשתמש ששלח
-    console.log('📤 ChatContext: Adding temporary message for sender:', tempId);
-    setMessages(prev => [tempMessage, ...prev]);
+    setMessages(prev => [...prev, optimisticMessage]);
     
     try {
-      console.log('📤 ChatContext: Sending message via ChatService...');
-      const result = await ChatService.sendMessage({
-        channelId: currentChatId,
-        content,
-        senderId: userId,
-        type: 'channel',
-        recipientId: null,
-        replyTo: replyTo || null,
-        mentions
-      });
-      console.log('✅ ChatContext: Message sent successfully:', result);
+      const { data, error } = await chatMessageService.sendChatMessage(input, user.id);
       
-      // ההודעה האמיתית תגיע דרך realtime subscription
-      // ה-subscription יחליף את ההודעה הזמנית בהודעה האמיתית
-      
-      // עדכן גם את הצ'אט האחרון
-      if (result && result.id) {
-        setChats(prev => prev.map(chat => {
-          if (chat.id === currentChatId) {
-            return {
-              ...chat,
-              last_message: {
-                id: result.id,
-                content: result.content,
-                created_at: result.created_at,
-                status: 'sent' as const,
-                sender_id: result.sender_id,
-                type: result.type,
-                channel_id: result.channel_id,
-                chat_id: result.chat_id
-              } as Message
-            };
-          }
-          return chat;
-        }));
-        
-        console.log('✅ ChatContext: Chat updated with last message');
-      }
-      
-      console.log('✅ ChatContext: Message sent - waiting for realtime to replace temp message');
-    } catch (error) {
-      console.error('❌ ChatContext: Error sending message:', error);
-      
-      // הסר את ההודעה הזמנית במקרה של שגיאה
-      setMessages(prev => prev.filter(msg => msg.id !== tempId));
-    }
-  };
-
-  const sendFileMessage = async (fileType: 'image' | 'voice' | 'file') => {
-    if (!currentChatId) return;
-
-    try {
-      const newMessage = await ChatService.sendFileMessage(currentChatId, userId, fileType);
-      if (newMessage) {
-        setMessages(prev => [newMessage, ...prev]);
-      }
-    } catch (error) {
-      console.error('Error sending file message:', error);
-    }
-  };
-
-  const sendMediaMessage = async (mediaUrl: string, mediaType: string, caption?: string, metadata?: any, replyTo?: string | null) => {
-    if (!currentChatId) return;
-    if (!userId) return;
-
-    try {
-      const newMessage = await ChatService.sendMediaMessage({
-        channelId: currentChatId,
-        senderId: userId,
-        mediaUrl,
-        mediaType: mediaType as 'image' | 'video' | 'audio' | 'document',
-        caption,
-        metadata,
-        replyTo
-      });
-      
-      if (newMessage) {
-        console.log('✅ ChatContext: Media message sent successfully');
-        setMessages(prev => [newMessage, ...prev]);
-      }
-    } catch (error) {
-      console.error('Error sending media message:', error);
-    }
-  };
-
-  const setCurrentChat = (chatId: string) => {
-    console.log('🔄 ChatContext: Switching to chat:', chatId);
-    setCurrentChatId(chatId);
-
-    // הצג מיד הודעות מה־cache אם קיימות, אחרת נקה כדי למנוע הצגת צ'אט קודם
-    if (messagesCache[chatId]) {
-      setMessages(messagesCache[chatId]);
-    } else {
-      setMessages([]);
-    }
-
-    // ואז טען הודעות טריות
-    loadMessages(chatId);
-  };
-
-  const markMessageAsRead = async (messageId: string) => {
-    if (!currentChatId) return;
-    try {
-      console.log('🔄 ChatContext: Marking message as read:', { messageId, userId, currentChatId });
-      
-      // Mark message as read in the read_by array
-      await ChatService.markAsRead(messageId, userId);
-      
-      // Update last_read_message_id in channel_members
-      await ChatService.markMessagesAsRead(currentChatId, userId, messageId);
-      
-      console.log('✅ ChatContext: Message marked as read and last_read_message_id updated');
-      console.log('📊 ChatContext: This should trigger unread count update in ChatsListScreen');
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-    }
-  };
-
-  const markMessageAsDelivered = async (messageId: string) => {
-    if (!currentChatId) return;
-    try {
-      await ChatService.markAsDelivered(messageId);
-    } catch (error) {
-      console.error('Error marking message as delivered:', error);
-    }
-  };
-
-  const updateMessage = async (messageId: string, newContent: string, mentions?: any[]) => {
-    console.log('✏️ ChatContext: Updating message:', { messageId, newContent, mentions });
-    
-    try {
-      // עדכן את ההודעה במסד הנתונים
-      const updatedMessage = await ChatService.editMessage(messageId, newContent, mentions);
-      
-      if (updatedMessage) {
-        console.log('✅ ChatContext: Message updated successfully, updating local state');
-        
-        // עדכן את ההודעה ברשימה המקומית
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, content: newContent, mentions: mentions || undefined, updated_at: updatedMessage.updated_at }
-            : msg
+      if (data) {
+        // Replace optimistic message with real one
+        setMessages(prev => prev.map(m => 
+          m.id === optimisticMessage.id ? data : m
         ));
         
-        console.log('✅ ChatContext: Local state updated with edited message');
-      } else {
-        console.error('❌ ChatContext: Failed to update message');
-        throw new Error('Failed to update message');
-      }
-    } catch (error) {
-      console.error('❌ ChatContext: Error updating message:', error);
-      throw error;
-    }
-  };
-
-  const deleteMessage = async (messageId: string) => {
-    console.log('🗑️ ChatContext: Deleting message:', { messageId, userId });
-    
-    if (!userId) {
-      console.error('❌ ChatContext: No userId available for deletion');
-      throw new Error('User not authenticated');
-    }
-    
-    try {
-      // מחק את ההודעה ממסד הנתונים
-      const success = await ChatService.deleteMessage(messageId, userId);
-      
-      if (success) {
-        console.log('✅ ChatContext: Message deleted successfully, updating local state');
+        // Update group last message
+        setGroups(prev => prev.map(g => 
+          g.id === input.group_id 
+            ? { 
+                ...g, 
+                last_message_at: data.created_at,
+                last_message_preview: data.content || '📎 מדיה',
+                messages_count: g.messages_count + 1,
+              }
+            : g
+        ));
         
-        // הסר את ההודעה מהרשימה המקומית
-        setMessages(prev => prev.filter(msg => msg.id !== messageId));
-        
-        console.log('✅ ChatContext: Local state updated - message removed');
+        return { success: true };
       } else {
-        console.error('❌ ChatContext: Failed to delete message');
-        throw new Error('Failed to delete message');
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+        return { success: false, error: error?.message };
       }
-    } catch (error) {
-      console.error('❌ ChatContext: Error deleting message:', error);
-      throw error;
+    } finally {
+      setIsSendingMessage(false);
     }
-  };
-
-  const startTyping = () => {
-    if (!currentChatId || !userId || !currentUserName) return;
+  }, [user]);
+  
+  // ============================================
+  // Edit message
+  // ============================================
+  
+  const editMessage = useCallback(async (messageId: string, content: string) => {
+    if (!user) return { success: false, error: 'לא מחובר' };
     
-    console.log('✍️ ChatContext: User started typing');
-    TypingService.startTyping(currentChatId, userId, currentUserName);
-  };
-
-  const stopTyping = () => {
-    if (!currentChatId || !userId) return;
+    const { data, error } = await chatMessageService.editChatMessage(
+      { message_id: messageId, content },
+      user.id
+    );
     
-    console.log('🛑 ChatContext: User stopped typing');
-    TypingService.stopTyping(currentChatId, userId);
-  };
-
-  // Load chats and messages on mount - טעינה מקדימה
+    if (data) {
+      setMessages(prev => prev.map(m => m.id === messageId ? data : m));
+      return { success: true };
+    }
+    
+    return { success: false, error: error?.message };
+  }, [user]);
+  
+  // ============================================
+  // Delete message
+  // ============================================
+  
+  const deleteMessage = useCallback(async (messageId: string, deleteForEveryone: boolean) => {
+    if (!user) return { success: false, error: 'לא מחובר' };
+    
+    const { error } = await chatMessageService.deleteChatMessage(
+      { message_id: messageId, delete_for_everyone: deleteForEveryone },
+      user.id
+    );
+    
+    if (!error) {
+      if (deleteForEveryone) {
+        setMessages(prev => prev.filter(m => m.id !== messageId));
+      }
+      return { success: true };
+    }
+    
+    return { success: false, error: error.message };
+  }, [user]);
+  
+  // ============================================
+  // Forward message
+  // ============================================
+  
+  const forwardMessage = useCallback(async (messageId: string, groupIds: string[]) => {
+    if (!user) return { success: false, error: 'לא מחובר' };
+    
+    const { errors } = await chatMessageService.forwardChatMessage(
+      { message_id: messageId, to_group_ids: groupIds },
+      user.id
+    );
+    
+    if (!errors) {
+      return { success: true };
+    }
+    
+    return { success: false, error: 'שגיאה בהעברת ההודעה' };
+  }, [user]);
+  
+  // ============================================
+  // Reactions
+  // ============================================
+  
+  const addReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!user) return;
+    await chatMessageService.addReaction({ message_id: messageId, emoji }, user.id);
+  }, [user]);
+  
+  const removeReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!user) return;
+    await chatMessageService.removeReaction({ message_id: messageId, emoji }, user.id);
+  }, [user]);
+  
+  // ============================================
+  // Star message
+  // ============================================
+  
+  const starMessage = useCallback(async (messageId: string, groupId: string) => {
+    if (!user) return;
+    await chatMessageService.starMessage(messageId, groupId, user.id);
+    
+    // Update message in list
+    setMessages(prev => prev.map(m => 
+      m.id === messageId ? { ...m, is_starred_by_me: true } : m
+    ));
+  }, [user]);
+  
+  const unstarMessage = useCallback(async (messageId: string) => {
+    if (!user) return;
+    await chatMessageService.unstarMessage(messageId, user.id);
+    
+    // Update message in list
+    setMessages(prev => prev.map(m => 
+      m.id === messageId ? { ...m, is_starred_by_me: false } : m
+    ));
+  }, [user]);
+  
+  // ============================================
+  // Typing
+  // ============================================
+  
+  const setTyping = useCallback(async (groupId: string, isTyping: boolean) => {
+    if (!user) return;
+    await chatRealtimeService.setTypingStatus({ group_id: groupId, is_typing: isTyping }, user.id);
+  }, [user]);
+  
+  // ============================================
+  // Mark as read
+  // ============================================
+  
+  const markAsRead = useCallback(async (groupId: string, messageIds: string[]) => {
+    if (!user || messageIds.length === 0) return;
+    
+    await chatMessageService.markMessagesAsRead(
+      { group_id: groupId, message_ids: messageIds },
+      user.id
+    );
+    
+    // Update group unread count
+    setGroups(prev => prev.map(g => 
+      g.id === groupId ? { ...g, unread_count: 0 } : g
+    ));
+  }, [user]);
+  
+  // ============================================
+  // Calculate total unread
+  // ============================================
+  
+  const totalUnreadCount = groups.reduce((sum, g) => sum + (g.unread_count || 0), 0);
+  
+  // ============================================
+  // Effects
+  // ============================================
+  
+  // Load groups on mount
   useEffect(() => {
-    if (userId) {
-      console.log('🔄 ChatContext: userId changed, preloading data for:', userId);
-      const startTime = Date.now();
+    if (user) {
+      loadGroups();
       
-      // טען הכל במקביל
-      Promise.all([
-        loadChats(),
-        // אם יש chatId התחלתי, טען גם את ההודעות שלו
-        initialChatId ? loadMessages(initialChatId) : Promise.resolve()
-      ]).then(() => {
-        const endTime = Date.now();
-        console.log(`⏱️ ChatContext: Preloading completed in ${endTime - startTime}ms`);
-        setIsInitialized(true);
-      }).catch((error) => {
-        console.error('❌ ChatContext: Error preloading data:', error);
-        setError(error instanceof Error ? error.message : 'Failed to load data');
-        setIsInitialized(true); // גם במקרה של שגיאה, נאפשר גישה לקומפוננטה
-      });
-    } else {
-      console.log('⚠️ ChatContext: No userId yet');
-      setIsInitialized(true);
+      // Update online status
+      chatRealtimeService.updateOnlineStatus(user.id, true);
+      
+      // Start typing cleanup
+      chatRealtimeService.startTypingCleanup();
+      
+      // Subscribe to all user groups for notifications
+      chatRealtimeService.subscribeToAllUserGroups(
+        user.id,
+        (groupId, message) => {
+          // New message in a group
+          setGroups(prev => prev.map(g => 
+            g.id === groupId
+              ? {
+                  ...g,
+                  last_message_at: message.created_at,
+                  last_message_preview: message.content || '📎 מדיה',
+                  unread_count: (g.unread_count || 0) + 1,
+                }
+              : g
+          ));
+          
+          // Play notification sound
+          notificationSound.current?.replayAsync();
+        },
+        (groupId, data) => {
+          // Group updated
+          setGroups(prev => prev.map(g => 
+            g.id === groupId ? { ...g, ...data } : g
+          ));
+        }
+      );
     }
-  }, [userId, initialChatId]);
+    
+    return () => {
+      if (user) {
+        chatRealtimeService.updateOnlineStatus(user.id, false);
+        chatRealtimeService.stopTypingCleanup();
+        chatRealtimeService.unsubscribeAll();
+      }
+    };
+  }, [user, loadGroups]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (currentGroupId.current) {
+        chatRealtimeService.unsubscribeFromGroup(currentGroupId.current);
+      }
+    };
+  }, []);
+  
+  // ============================================
+  // Context value
+  // ============================================
 
   const value: ChatContextType = {
+    groups,
+    currentGroup,
     messages,
-    chats,
-    currentChatId,
-    isLoading,
     typingUsers,
+    isLoadingGroups,
+    isLoadingMessages,
+    isSendingMessage,
+    loadGroups,
+    selectGroup,
+    createGroup,
+    updateGroup,
+    leaveGroup,
     sendMessage,
-    sendFileMessage,
-    sendMediaMessage,
-    setCurrentChat,
-    loadMessages,
-    loadChats,
-    markMessageAsRead,
-    markMessageAsDelivered,
-    updateMessage,
+    loadMoreMessages,
+    editMessage,
     deleteMessage,
-    startTyping,
-    stopTyping,
+    forwardMessage,
+    addReaction,
+    removeReaction,
+    starMessage,
+    unstarMessage,
+    setTyping,
+    markAsRead,
+    isConnected,
+    totalUnreadCount,
   };
-
-  // אם עדיין לא הסתיים האתחול, הצג טוען
-  if (!isInitialized) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={{ marginTop: 10, color: '#666' }}>טוען צ'אט...</Text>
-      </View>
-    );
-  }
-
-  // אם יש שגיאה, הצג אותה
-  if (error) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-        <Text style={{ color: 'red', textAlign: 'center', marginBottom: 20 }}>
-          שגיאה בטעינת הצ'אט: {error}
-        </Text>
-        <TouchableOpacity 
-          style={{ backgroundColor: '#007AFF', padding: 10, borderRadius: 5 }}
-          onPress={() => setError(null)}
-        >
-          <Text style={{ color: 'white' }}>נסה שוב</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
     <ChatContext.Provider value={value}>
       {children}
     </ChatContext.Provider>
   );
-}; 
+}
+
+// ============================================
+// Hook
+// ============================================
+
+export function useChat() {
+  const context = useContext(ChatContext);
+  if (context === undefined) {
+    throw new Error('useChat must be used within a ChatProvider');
+  }
+  return context;
+}

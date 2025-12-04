@@ -6,6 +6,7 @@ export interface AuthUser {
   display_name?: string;
   full_name?: string;
   phone?: string;
+  gender?: 'male' | 'female';
   profile_picture?: string;
   account_type?: string;
   track_id?: string;
@@ -388,6 +389,7 @@ export class AuthService {
       display_name: data.display_name,
       full_name: data.full_name,
       phone: data.phone,
+      gender: data.gender,
       profile_picture: data.profile_picture,
       account_type: data.account_type,
       track_id: data.track_id,

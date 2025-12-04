@@ -8,15 +8,19 @@ import SubscriptionScreen from '../screens/Profile/SubscriptionScreen';
 import SubscriptionPlansScreen from '../screens/Profile/SubscriptionPlansScreen';
 import CheckoutScreen from '../screens/Payment/CheckoutScreen';
 import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
+import { useDesignTokens } from '../components/ui/DesignTokens';
 
 const Stack = createNativeStackNavigator();
 
 export default function ProfileStack() {
+  const DesignTokens = useDesignTokens();
+  
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#121212' }
+        cardStyle: { backgroundColor: DesignTokens.colors.background.primary },
+        contentStyle: { backgroundColor: DesignTokens.colors.background.primary },
       }}
     >
       <Stack.Screen name="ProfileMain" component={UserProfileScreen} />

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { prepareEarningsRecord } from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -78,29 +79,24 @@ serve(async (req) => {
         totalProcessed++
 
         try {
-          // סינון: רק מניות אמריקאיות
-          if (!earnings.code || !earnings.code.endsWith('.US')) {
+          const prepared = prepareEarningsRecord(earnings, {
+            requireUSCode: true,
+            skipPreferredShares: true
+          })
+
+          if (!prepared) {
             continue
           }
 
-          const earningsData = {
-            id: `earnings_${earnings.code}_${earnings.report_date}`,
-            code: earnings.code,
-            report_date: earnings.report_date,
-            date: earnings.date,
-            before_after_market: earnings.before_after_market || null,
-            currency: earnings.currency || 'USD',
-            actual: earnings.actual || null,
-            estimate: earnings.estimate || null,
-            difference: earnings.difference || null,
-            percent: earnings.percent || null,
-            source: 'EODHD',
-            updated_at: new Date().toISOString()
+          if (prepared.meta.adjusted) {
+            console.log(
+              `🕒 Adjusted ${earnings.code} report date ${earnings.report_date} → ${prepared.record.report_date} (${prepared.meta.adjustmentReason})`
+            )
           }
 
           const { error } = await supabase
             .from('earnings_calendar')
-            .upsert(earningsData, { 
+            .upsert(prepared.record, { 
               onConflict: 'id',
               ignoreDuplicates: false 
             })

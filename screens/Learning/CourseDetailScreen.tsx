@@ -10,9 +10,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
-import { ModuleSection } from '../../components/learning';
+import { ModuleSection, LessonRow } from '../../components/learning';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress } from '../../types/learning';
 
@@ -26,8 +26,18 @@ export const CourseDetailScreen: React.FC = () => {
   
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   
-  const { data: course, isLoading, error } = useCourse(courseId);
-  const { progressPercentage, lastLessonId } = useCourseProgress(courseId);
+  const { data: course, isLoading, error, refetch } = useCourse(courseId);
+  const { data: progressData, refetch: refetchProgress } = useCourseProgress(courseId);
+  
+  // טעינה מחדש של הנתונים כשהמשתמש חוזר למסך (למשל אחרי שצפה בסרטון)
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+      refetchProgress();
+    }, [refetch, refetchProgress])
+  );
+  const progressPercentage = progressData?.progressPercentage || 0;
+  const lastLessonId = progressData?.lastLessonId || null;
   const enrollMutation = useEnrollInCourse();
 
   const toggleModule = useCallback((moduleId: string) => {
@@ -106,8 +116,6 @@ export const CourseDetailScreen: React.FC = () => {
   }
 
   const isEnrolled = !!course.enrollment;
-  const totalLessons = course.modules?.reduce((sum, module) => 
-    sum + (module.lessons?.length || 0), 0) || 0;
 
   return (
     <View style={{ flex: 1 }}>
@@ -177,22 +185,6 @@ export const CourseDetailScreen: React.FC = () => {
               </View>
             </View>
           )}
-
-          {/* Course Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{totalLessons}</Text>
-              <Text style={styles.statLabel}>שיעורים</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{course.modules?.length || 0}</Text>
-              <Text style={styles.statLabel}>מודולים</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{course.language}</Text>
-              <Text style={styles.statLabel}>שפה</Text>
-            </View>
-          </View>
 
           {/* Progress (if enrolled) */}
           {isEnrolled && (
@@ -268,17 +260,45 @@ export const CourseDetailScreen: React.FC = () => {
         </View>
 
         {/* Modules */}
-        {course.modules && course.modules.length > 0 && (
+        {course.modules && course.modules.length > 0 && courseId !== 'david-training-course' && (
           <View style={styles.modulesContainer}>
             <Text style={styles.modulesTitle}>תוכן הקורס</Text>
-            {course.modules.map((module) => (
-              <ModuleSection
-                key={module.id}
-                module={module}
-                isExpanded={expandedModules.has(module.id)}
-                onToggle={() => toggleModule(module.id)}
-                onLessonPress={handleLessonPress}
+            {course.modules.map((module, moduleIndex) => {
+              // חישוב האינדקס ההתחלתי של השיעורים במודול זה
+              let lessonStartIndex = 0;
+              for (let i = 0; i < moduleIndex; i++) {
+                lessonStartIndex += course.modules![i].lessons?.length || 0;
+              }
+              
+              return (
+                <ModuleSection
+                  key={module.id}
+                  module={module}
+                  isExpanded={expandedModules.has(module.id)}
+                  onToggle={() => toggleModule(module.id)}
+                  onLessonPress={handleLessonPress}
+                  enrollment={course.enrollment}
+                  courseId={courseId}
+                  lessonStartIndex={lessonStartIndex}
+                />
+              );
+            })}
+          </View>
+        )}
+        
+        {/* Lessons directly (for courses without modules like david-training-course) */}
+        {course.lessons && course.lessons.length > 0 && (courseId === 'david-training-course' || !course.modules || course.modules.length === 0) && (
+          <View style={styles.modulesContainer}>
+            <Text style={styles.modulesTitle}>תוכן הקורס</Text>
+            {course.lessons.map((lesson, index) => (
+              <LessonRow
+                key={lesson.id}
+                lesson={lesson}
+                onPress={handleLessonPress}
                 enrollment={course.enrollment}
+                isLocked={!course.enrollment && !lesson.is_preview}
+                courseId={courseId}
+                index={index}
               />
             ))}
           </View>
@@ -289,7 +309,7 @@ export const CourseDetailScreen: React.FC = () => {
   );
 };
 
-const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: tokens.colors.background,

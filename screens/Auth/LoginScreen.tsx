@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, TextInput, Pressable, Alert, Platform, Dimensions, Keyboard, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { Mail, Lock, Check } from 'lucide-react-native';
@@ -13,6 +14,49 @@ export default function LoginScreen({ navigation }: any) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const { signIn, isLoading, attemptAutoLogin } = useAuth();
+
+  // לוגים למעקב אחרי מצב המקלדת
+  useEffect(() => {
+    console.log('🔑 LoginScreen: Component mounted');
+    
+    const keyboardWillShowListener = Keyboard.addListener('keyboardWillShow', (e) => {
+      console.log('⌨️ LoginScreen: Keyboard WILL SHOW', {
+        duration: e.duration,
+        endCoordinates: e.endCoordinates,
+        startCoordinates: e.startCoordinates
+      });
+    });
+    
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
+      console.log('⌨️ LoginScreen: Keyboard DID SHOW', {
+        endCoordinates: e.endCoordinates,
+        startCoordinates: e.startCoordinates
+      });
+    });
+    
+    const keyboardWillHideListener = Keyboard.addListener('keyboardWillHide', (e) => {
+      console.log('⌨️ LoginScreen: Keyboard WILL HIDE', {
+        duration: e.duration,
+        endCoordinates: e.endCoordinates,
+        startCoordinates: e.startCoordinates
+      });
+    });
+    
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', (e) => {
+      console.log('⌨️ LoginScreen: Keyboard DID HIDE', {
+        endCoordinates: e.endCoordinates,
+        startCoordinates: e.startCoordinates
+      });
+    });
+
+    return () => {
+      console.log('🔑 LoginScreen: Component unmounting, removing listeners');
+      keyboardWillShowListener.remove();
+      keyboardDidShowListener.remove();
+      keyboardWillHideListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // טעינת פרטי התחברות שמורים
   useEffect(() => {
@@ -85,10 +129,16 @@ export default function LoginScreen({ navigation }: any) {
     Alert.alert('איפוס סיסמה', 'נשלח לך אימייל לאיפוס הסיסמה');
   };
 
-  const { width, height } = Dimensions.get('window');
+  // שמירה על גודל קבוע כדי למנוע רצידה כשהמקלדת נפתחת/נסגרת
+  const { width, height } = useMemo(() => {
+    const dims = Dimensions.get('window');
+    console.log('📏 LoginScreen: useMemo dimensions', dims);
+    return dims;
+  }, []);
 
-  // Create subtle background pattern
-  const createBackgroundPattern = () => {
+  // Create subtle background pattern - רק פעם אחת
+  const backgroundPattern = useMemo(() => {
+    console.log('🎨 LoginScreen: Creating background pattern', { width, height });
     const patterns = [];
     for (let i = 0; i < 15; i++) {
       patterns.push({
@@ -98,18 +148,29 @@ export default function LoginScreen({ navigation }: any) {
         opacity: Math.random() * 0.05 + 0.02
       });
     }
+    console.log('🎨 LoginScreen: Background pattern created', { patternCount: patterns.length });
     return patterns;
-  };
+  }, [width, height]);
 
-  const backgroundPattern = createBackgroundPattern();
+  // לוג לפני כל רינדור
+  console.log('🎨 LoginScreen: Rendering', {
+    timestamp: new Date().toISOString(),
+    dimensions: {
+      width,
+      height
+    },
+    state: {
+      emailLength: email.length,
+      passwordLength: password.length,
+      showPassword,
+      rememberMe,
+      isLoading
+    }
+  });
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <LinearGradient
+    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+      <LinearGradient
           colors={[DesignTokens.colors.background.primary, DesignTokens.colors.background.secondary, DesignTokens.colors.background.tertiary, DesignTokens.colors.background.primary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -153,22 +214,37 @@ export default function LoginScreen({ navigation }: any) {
             alignItems: 'center',
             opacity: 0.15
           }}>
-            <ImageBackground
+            <Image
               source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
               style={{
-                width: width,
-                height: height,
-                resizeMode: 'contain'
-              }}
-              imageStyle={{
+                width: '100%',
+                height: '100%',
+                resizeMode: 'contain',
                 opacity: 0.3
               }}
             />
           </View>
 
-          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+          <View 
+            style={{ 
+              flex: 1, 
+              justifyContent: 'center', 
+              paddingHorizontal: 24
+            }}
+          >
             {/* Header Section */}
             <View style={{ alignItems: 'center', marginBottom: 48 }}>
+              {/* Logo */}
+              <Image
+                source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
+                style={{
+                  width: 200,
+                  height: 200,
+                  resizeMode: 'contain',
+                  marginBottom: 24,
+                }}
+              />
+              
                {/* Main Title */}
                <Text style={{ 
                  fontSize: 32, 
@@ -244,7 +320,16 @@ export default function LoginScreen({ navigation }: any) {
                     placeholder="הכנס את כתובת האימייל"
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(text) => {
+                      console.log('📧 LoginScreen: Email changed:', text.length, 'characters');
+                      setEmail(text);
+                    }}
+                    onFocus={() => {
+                      console.log('📧 LoginScreen: Email input FOCUSED');
+                    }}
+                    onBlur={() => {
+                      console.log('📧 LoginScreen: Email input BLURRED');
+                    }}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -289,7 +374,16 @@ export default function LoginScreen({ navigation }: any) {
                     placeholder="הכנס את הסיסמה"
                     placeholderTextColor={DesignTokens.colors.text.tertiary}
                     value={password}
-                    onChangeText={setPassword}
+                    onChangeText={(text) => {
+                      console.log('🔒 LoginScreen: Password changed:', text.length, 'characters');
+                      setPassword(text);
+                    }}
+                    onFocus={() => {
+                      console.log('🔒 LoginScreen: Password input FOCUSED');
+                    }}
+                    onBlur={() => {
+                      console.log('🔒 LoginScreen: Password input BLURRED');
+                    }}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
                   />
@@ -424,7 +518,6 @@ export default function LoginScreen({ navigation }: any) {
             </View>
           </View>
         </LinearGradient>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 }

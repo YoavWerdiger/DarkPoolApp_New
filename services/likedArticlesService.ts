@@ -193,4 +193,24 @@ export class LikedArticlesService {
       return false;
     }
   }
+
+  // קבלת מספר המשתמשים שאהבו חדשה מסוימת
+  static async getArticleLikeCount(articleId: string): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('liked_articles')
+        .select('*', { count: 'exact', head: true })
+        .eq('article_id', articleId);
+
+      if (error) {
+        console.error('❌ LikedArticlesService: Error getting article like count:', error);
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error('❌ LikedArticlesService: Error in getArticleLikeCount:', error);
+      return 0;
+    }
+  }
 }

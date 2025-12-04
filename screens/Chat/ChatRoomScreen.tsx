@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { View, FlatList, KeyboardAvoidingView, Platform, Text, Image, TouchableOpacity, Animated, ImageBackground, Alert, Pressable, TextInput, TouchableWithoutFeedback, Keyboard, ActivityIndicator, LayoutAnimation, UIManager } from 'react-native';
+import { View, FlatList, KeyboardAvoidingView, Platform, Text, Image, TouchableOpacity, Animated, ImageBackground, Alert, Pressable, TextInput, TouchableWithoutFeedback, Keyboard, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -26,39 +26,39 @@ const detectLanguage = (text: string): 'rtl' | 'ltr' => {
   if (!text || text.trim().length === 0) {
     return 'rtl'; // ברירת מחדל - עברית
   }
-  
+
   // בדיקה אם הטקסט מכיל תווים עבריים
   const hebrewRegex = /[\u0590-\u05FF]/;
   const arabicRegex = /[\u0600-\u06FF]/;
-  
+
   // בדיקה אם הטקסט מכיל תווים לטיניים (אנגלית)
   const latinRegex = /[a-zA-Z]/;
-  
+
   const hasHebrew = hebrewRegex.test(text);
   const hasArabic = arabicRegex.test(text);
   const hasLatin = latinRegex.test(text);
-  
+
   // אם יש עברית או ערבית - RTL
   if (hasHebrew || hasArabic) {
     return 'rtl';
   }
-  
+
   // אם יש רק לטינית - LTR
   if (hasLatin && !hasHebrew && !hasArabic) {
     return 'ltr';
   }
-  
+
   // ברירת מחדל - עברית
   return 'rtl';
 };
 
 export default function ChatRoomScreen() {
   const DesignTokens = useDesignTokens();
-  const { messages, sendMessage, chats, currentChatId, markMessageAsRead, markMessageAsDelivered, updateMessage, deleteMessage, loadMessages, typingUsers, startTyping, stopTyping } = useChat();
+  const { messages, sendMessage, chats, currentChatId, markMessageAsRead, markMessageAsDelivered, updateMessage, deleteMessage, retryMessage, loadMessages, typingUsers, startTyping, stopTyping } = useChat();
 
   // State for reply
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  
+
   // State for editing
   const [editingMessage, setEditingMessage] = useState<{ id: string; content: string } | null>(null);
 
@@ -91,10 +91,10 @@ export default function ChatRoomScreen() {
   const editMessage = useCallback(async (messageId: string, newContent: string, mentions?: any[]) => {
     try {
       console.log('✏️ ChatRoomScreen: Editing message:', { messageId, newContent, mentions });
-      
+
       // השתמש בפונקציה החדשה של ChatContext שמעדכנת גם את הרשימה המקומית
       await updateMessage(messageId, newContent, mentions);
-      
+
       console.log('✅ ChatRoomScreen: Message edited successfully');
       setEditingMessage(null);
     } catch (error) {
@@ -107,7 +107,7 @@ export default function ChatRoomScreen() {
   const handleDeleteMessage = useCallback(async (messageId: string) => {
     try {
       console.log('🗑️ ChatRoomScreen: Deleting message:', messageId);
-      
+
       // הצג הודעת אישור
       Alert.alert(
         'מחיקת הודעה',
@@ -144,10 +144,10 @@ export default function ChatRoomScreen() {
       console.log('Sending reply to message:', replyingTo.id);
       // כאן נשלח למסד הנתונים עם reply_to_message_id
     }
-    
+
     // שליחת ההודעה הרגילה
     sendMessage(text);
-    
+
     // איפוס ה-reply
     setReplyingTo(null);
   }, [replyingTo, sendMessage]);
@@ -172,7 +172,105 @@ export default function ChatRoomScreen() {
   const [showScrollToMention, setShowScrollToMention] = useState<boolean>(false);
   const [latestMentionMessageId, setLatestMentionMessageId] = useState<string | null>(null);
   const mentionButtonOpacity = useRef(new Animated.Value(0)).current;
-  
+
+  // טען תמונת הערוץ ומספר החברים
+  useEffect(() => {
+    if (!currentChatId) return;
+    
+    const loadChannelData = async () => {
+      try {
+        // טען פרטי הערוץ ומספר חברים במקביל
+        const [
+          { data: channelData, error: channelError },
+          { count }
+        ] = await Promise.all([
+          supabase
+            .from('channels')
+            .select('id, name, image_url, icon_name')
+            .eq('id', currentChatId)
+            .single(),
+          ChatService.getChannelMembersCount(currentChatId).then(r => r)
+        ]);
+        
+        if (channelError) {
+          console.error('❌ ChatRoomScreen: Error loading channel:', channelError);
+          return;
+        }
+        if (typeof count === 'number') {
+          setMembersCount(count);
+        }
+        
+        // טיפול בתמונה - אם זה path ב-storage, נקבל signed URL
+        if (channelData?.image_url) {
+          let finalImageUrl = channelData.image_url;
+          
+          // אם זה לא URL מלא, ננסה לקבל signed URL
+          if (!channelData.image_url.startsWith('http')) {
+            // ננסה מספר buckets אפשריים
+            const bucketsToTry = ['chat-files', 'media', 'app-media', 'avatars'];
+            let signedUrlFound = false;
+            
+            for (const bucketName of bucketsToTry) {
+              try {
+                const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                  .from(bucketName)
+                  .createSignedUrl(channelData.image_url, 3600);
+                
+                if (!signedUrlError && signedUrlData) {
+                  finalImageUrl = signedUrlData.signedUrl;
+                  signedUrlFound = true;
+                  break;
+                }
+              } catch (error) {
+                // Continue to next bucket
+              }
+            }
+            
+            if (!signedUrlFound) {
+              // אם לא מצאנו signed URL, ננסה להשתמש ב-URL הציבורי
+              finalImageUrl = `https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/chat-files/${channelData.image_url}`;
+            }
+          }
+          
+          setChannelImageUrl(finalImageUrl);
+        } else {
+          setChannelImageUrl(null);
+        }
+      } catch (error) {
+        console.error('❌ ChatRoomScreen: Error in loadChannelData:', error);
+      }
+    };
+    
+    loadChannelData();
+  }, [currentChatId]);
+
+  // עדכן isLoading ל-false אחרי שההודעות נטענו או שיש currentChatId
+  useEffect(() => {
+    if (!isLoading) return;
+    
+    if (currentChatId) {
+      // אם יש הודעות, סיים את הטעינה
+      if (messages.length > 0) {
+        setIsLoading(false);
+      } else {
+        // אם אין הודעות עדיין, נסה לטעון אותן
+        loadMessages(currentChatId).then(() => {
+          setIsLoading(false);
+        }).catch((error) => {
+          console.error('❌ ChatRoomScreen: Error loading messages:', error);
+          setIsLoading(false);
+        });
+      }
+    } else {
+      // אם אין currentChatId, סיים את הטעינה אחרי זמן קצר
+      const timeoutId = setTimeout(() => {
+        setIsLoading(false);
+      }, 1500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentChatId, messages.length, isLoading, loadMessages]);
+
   // הסתר TabBar כשנכנסים למסך זה
   useFocusEffect(
     useCallback(() => {
@@ -182,12 +280,12 @@ export default function ChatRoomScreen() {
           tabBarStyle: { display: 'none' }
         });
       }
-      
+
       return () => {
         if (parent) {
           parent.setOptions({
-            tabBarStyle: { 
-              backgroundColor: DesignTokens.colors.background.primary, 
+            tabBarStyle: {
+              backgroundColor: DesignTokens.colors.background.primary,
               borderTopWidth: 0,
               height: Platform.OS === 'ios' ? 90 : 70 + tabBarInsets.bottom,
               paddingBottom: Platform.OS === 'ios' ? 15 : tabBarInsets.bottom + 10,
@@ -204,42 +302,61 @@ export default function ChatRoomScreen() {
       };
     }, [navigation])
   );
-  
+
   // מרווחים דינמיים מול ה-MessageInputBar (ללא TabBar)
-  const INPUT_BAR_HEIGHT = 60; // גובה משוער
-  const EXTRA_BOTTOM_PADDING = 200; // ריווח לבועה האחרונה (הוגדל עוד יותר כדי למנוע בליעה)
-  const LIST_BOTTOM_PADDING = INPUT_BAR_HEIGHT + EXTRA_BOTTOM_PADDING + tabBarInsets.bottom; // ריווח תחתון לרשימה כולל SafeArea
+  const INPUT_BAR_HEIGHT = 40; // גובה משוער של אזור ההקלדה
+  // ברשימה הפוכה מספיק ריווח קטן נוסף כדי שהבועה האחרונה לא תתחבא מאחורי ה-InputBar
+  const LIST_BOTTOM_PADDING = INPUT_BAR_HEIGHT + tabBarInsets.bottom + 24; // ריווח עדין לבועה התחתונה
   const SCROLL_BTN_BOTTOM = 90 + tabBarInsets.bottom; // מיקום מעל ה-InputBar כולל SafeArea
   const MENTION_BTN_BOTTOM = 140 + tabBarInsets.bottom; // מעט מעל כפתור הגלילה כולל SafeArea
-  
+
   // State לחיפוש
   const [isSearchVisible, setIsSearchVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredMessages, setFilteredMessages] = useState<Message[]>([]);
-
-  // Check if two dates are the same day
-  const isSameDay = (date1: Date, date2: Date) => {
-    // בדיקה שהתאריכים תקינים
-    if (isNaN(date1.getTime()) || isNaN(date2.getTime())) {
-      console.error('❌ isSameDay: Invalid dates:', { date1, date2 });
-      return false;
+  const newMessagesSet = useRef<Set<string>>(new Set());
+  const previousMessagesRef = useRef<Set<string>>(new Set());
+  const isInitialLoadRef = useRef(true);
+  
+  // זיהוי הודעות חדשות - רק אחרי שהטעינה הראשונית הסתיימה
+  useEffect(() => {
+    // אם זה עדיין טעינה ראשונית, אל תסמן הודעות כחדשות
+    if (isInitialLoadRef.current) {
+      // עדכן את ה-ref אבל אל תסמן הודעות כחדשות
+      previousMessagesRef.current = new Set(messages.map(m => m.id));
+      // סמן שהטעינה הראשונית הסתיימה אחרי 1 שנייה
+      setTimeout(() => {
+        isInitialLoadRef.current = false;
+      }, 1000);
+      return;
     }
     
-    // השוואה פשוטה של יום, חודש ושנה לפי זמן מקומי
-    const sameYear = date1.getFullYear() === date2.getFullYear();
-    const sameMonth = date1.getMonth() === date2.getMonth();
-    const sameDate = date1.getDate() === date2.getDate();
+    const currentMessageIds = new Set(messages.map(m => m.id));
+    const previousMessageIds = previousMessagesRef.current;
     
-    console.log('🔍 isSameDay: Comparing dates:', {
-      date1: date1.toISOString(),
-      date2: date2.toISOString(),
-      date1Local: `${date1.getDate()}/${date1.getMonth() + 1}/${date1.getFullYear()}`,
-      date2Local: `${date2.getDate()}/${date2.getMonth() + 1}/${date2.getFullYear()}`,
-      result: sameYear && sameMonth && sameDate
+    // מצא הודעות חדשות (קיימות עכשיו אבל לא היו קודם)
+    messages.forEach(msg => {
+      if (!previousMessageIds.has(msg.id)) {
+        // זו הודעה חדשה - הוסף ל-Set
+        newMessagesSet.current.add(msg.id);
+        
+        // הסר אחרי 2 שניות (כדי שהאנימציה תופיע רק פעם אחת)
+        setTimeout(() => {
+          newMessagesSet.current.delete(msg.id);
+        }, 2000);
+      }
     });
     
-    return sameYear && sameMonth && sameDate;
-  };
+    // עדכן את ה-ref
+    previousMessagesRef.current = currentMessageIds;
+  }, [messages]);
+  
+  // איפוס כשעוברים לערוץ אחר
+  useEffect(() => {
+    isInitialLoadRef.current = true;
+    newMessagesSet.current.clear();
+    previousMessagesRef.current.clear();
+  }, [currentChatId]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredMessages, setFilteredMessages] = useState<Message[]>([]);
 
   // מצא את הצ'אט הנוכחי
   const currentChat: any = chats.find(c => c.id === currentChatId);
@@ -250,442 +367,176 @@ export default function ChatRoomScreen() {
       setFilteredMessages([]);
       return;
     }
-    
-    const filtered = messages.filter(message => 
+
+    const filtered = messages.filter(message =>
       message.content?.toLowerCase().includes(query.toLowerCase())
     );
-    
+
     setFilteredMessages(filtered);
   };
 
-  // הפעל LayoutAnimation עבור Android
-  useEffect(() => {
-    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-  }, []);
+  // Check if two dates are the same day (using UTC to match DayDivider)
+  const isSameDay = (date1: Date, date2: Date) => {
+    if (isNaN(date1.getTime()) || isNaN(date2.getTime())) return false;
 
-  // אנימציה חלקה וקלה כשהודעות חדשות נוספות
-  useEffect(() => {
-    if (messages.length > 0) {
-      LayoutAnimation.configureNext({
-        duration: 200,
-        create: {
-          type: LayoutAnimation.Types.easeOut,
-          property: LayoutAnimation.Properties.opacity,
-          springDamping: 0.9,
-        },
-        update: {
-          type: LayoutAnimation.Types.spring,
-          springDamping: 0.9,
-        },
-      });
-    }
-  }, [messages.length]);
+    // Use UTC methods to ensure consistency regardless of timezone
+    return date1.getUTCFullYear() === date2.getUTCFullYear() &&
+      date1.getUTCMonth() === date2.getUTCMonth() &&
+      date1.getUTCDate() === date2.getUTCDate();
+  };
 
-  // סמן הודעות כנקראו רק אחרי שהמשתמש רואה את ה-divider
-  useEffect(() => {
-    if (!messages.length || !user?.id || !currentChatId) return;
-
-    console.log('🔄 ChatRoomScreen: Checking if should mark messages as read:', {
-      unreadCount,
-      hasScrolledToUnread,
-      messagesLength: messages.length
-    });
-
-    // רק אם יש הודעות שלא נקראו והמשתמש כבר גלל ל-divider
-    if (unreadCount > 0 && hasScrolledToUnread) {
-      console.log('🔄 ChatRoomScreen: Marking messages as read after user saw divider');
-
-      // סמן הודעות של אחרים כנקראו
-      const unreadMessages = messages.filter(msg => 
-        msg.sender_id !== user.id && 
-        (!msg.read_by || !msg.read_by.includes(user.id))
-      );
-
-      console.log('🔄 ChatRoomScreen: Found unread messages to mark as read:', unreadMessages.length);
-
-      unreadMessages.forEach(async (msg) => {
-        markMessageAsRead(msg.id);
-        
-        // Also mark as viewed in the new viewed_by system
-        if (user?.id) {
-          try {
-            await ChatService.markMessageAsViewed(msg.id, user.id);
-          } catch (error) {
-            console.error('❌ ChatRoomScreen: Error marking message as viewed:', error);
-          }
-        }
-      });
-
-      // אפס את unreadCount אחרי סימון ההודעות
-      setUnreadCount(0);
-      console.log('✅ ChatRoomScreen: Messages marked as read, unreadCount reset to 0');
-    }
-  }, [messages, user, markMessageAsRead, currentChatId, unreadCount, hasScrolledToUnread]);
-
-  // לוגים לדיבוג שינויים ב-messages
-  useEffect(() => {
-    console.log('📊 ChatRoomScreen: messages changed:', {
-      count: messages.length,
-      firstMessage: messages[0] ? { id: messages[0].id, content: messages[0].content } : null,
-      lastMessage: messages[messages.length - 1] ? { id: messages[messages.length - 1].id, content: messages[messages.length - 1].content } : null
-    });
-    
-    // סגור את הטעינה אחרי שההודעות נטענו
-    if (messages.length > 0 && isLoading) {
-      console.log('✅ ChatRoomScreen: Messages loaded, closing loading screen');
-      setIsLoading(false);
-    }
-  }, [messages, isLoading]);
-
-  // התחל עם isLoading = false אם יש הודעות כבר (מטעינה מקדימה)
-  useEffect(() => {
-    if (messages.length > 0) {
-      console.log('✅ ChatRoomScreen: Messages already available, skipping loading screen');
-      setIsLoading(false);
-    }
-  }, [messages.length]);
-
-  // טעינה מקבילה של מידע נוסף כשנכנסים לצ'אט (רק אם לא נטען מראש)
-  useEffect(() => {
-    if (!currentChatId) return;
-    
-    // בדוק אם המידע כבר נטען (מטעינה מקדימה)
-    if (membersCount > 0 && channelImageUrl && channelMembers.length > 0) {
-      console.log('✅ ChatRoomScreen: Additional data already loaded from preload');
-      return;
-    }
-    
-    console.log('🚀 ChatRoomScreen: Starting parallel data loading for chat:', currentChatId);
-    const startTime = Date.now();
-    
-    // טען הכל במקביל
-    Promise.all([
-      // טען מידע על הערוץ
-      ChatService.getChannelMembersCount(currentChatId).then(({ count, error }) => {
-        if (!error && typeof count === 'number') {
-          setMembersCount(count);
-          console.log('✅ Members count loaded:', count);
-        }
-      }),
-      
-      // טען תמונה של הערוץ
-      ChatService.getChannelImageUrl(currentChatId).then(url => {
-        setChannelImageUrl(url);
-        console.log('✅ Channel image loaded:', url ? 'Yes' : 'No');
-      }),
-      
-      // טען חברי הערוץ
-      supabase
-        .from('channel_members')
-        .select('user_id, user_data')
-        .eq('channel_id', currentChatId)
-        .then(({ data, error }) => {
-          if (!error && data) {
-            const memberIds = data.map(member => member.user_id);
-            setChannelMembers(memberIds);
-            console.log('✅ Channel members loaded:', memberIds.length);
-          }
-        })
-    ]).then(() => {
-      const endTime = Date.now();
-      console.log(`⏱️ ChatRoomScreen: Parallel loading completed in ${endTime - startTime}ms`);
-    }).catch(error => {
-      console.error('❌ ChatRoomScreen: Error in parallel loading:', error);
-    });
-  }, [currentChatId, membersCount, channelImageUrl, channelMembers.length]);
-
-
-  // Load unread count when entering chat
-  useEffect(() => {
-    const loadUnreadCount = async () => {
-      if (!currentChatId || !user?.id) return;
-      
-      console.log('🔄 ChatRoomScreen: Loading unread count for:', { currentChatId, userId: user.id });
-      
-      try {
-        const count = await ChatService.getUnreadCount(currentChatId, user.id);
-        setUnreadCount(count);
-        setHasScrolledToUnread(false); // אפס דגל גלילה לצ'אט חדש
-        console.log('🔢 ChatRoomScreen: Unread count loaded:', count);
-        
-        // אם אין הודעות שלא נקראו, סמן שגללנו
-        if (count === 0) {
-          setHasScrolledToUnread(true);
-          console.log('✅ ChatRoomScreen: No unread messages, marking as scrolled');
-        }
-        
-        // טען גם את last_read_message_id
-        const lastReadId = await ChatService.getLastReadMessageId(currentChatId, user.id);
-        setLastReadMessageId(lastReadId);
-        console.log('📖 ChatRoomScreen: Last read message ID loaded:', lastReadId);
-        
-        // טען מידע על mentions
-        const hasUnreadMentions = await ChatService.hasUnreadMentions(currentChatId, user.id);
-        const latestMentionId = await ChatService.getLatestMentionMessageId(currentChatId, user.id);
-        setLatestMentionMessageId(latestMentionId);
-        setShowScrollToMention(hasUnreadMentions && !!latestMentionId);
-        
-        console.log('🔍 ChatRoomScreen: Mentions info loaded:', { hasUnreadMentions, latestMentionId });
-        
-        // לוג נוסף לדיבוג
-        if (count > 0) {
-          console.log('🎯 ChatRoomScreen: Found unread messages, should show UnreadDivider');
-        } else {
-          console.log('✅ ChatRoomScreen: No unread messages');
-        }
-      } catch (error) {
-        console.error('❌ ChatRoomScreen: Error loading unread count:', error);
-      }
-    };
-    
-    loadUnreadCount();
-  }, [currentChatId, user?.id]);
-
-  // עדכן מידע על mentions כשמגיעות הודעות חדשות
-  useEffect(() => {
-    const updateMentionInfo = async () => {
-      if (!currentChatId || !user?.id || !messages.length) return;
-      
-      try {
-        // בדוק אם יש mentions חדשים
-        const hasUnreadMentions = await ChatService.hasUnreadMentions(currentChatId, user.id);
-        const latestMentionId = await ChatService.getLatestMentionMessageId(currentChatId, user.id);
-        
-        console.log('🔍 ChatRoomScreen: Updating mention info:', { hasUnreadMentions, latestMentionId });
-        
-        setLatestMentionMessageId(latestMentionId);
-        setShowScrollToMention(hasUnreadMentions && !!latestMentionId);
-      } catch (error) {
-        console.error('❌ ChatRoomScreen: Error updating mention info:', error);
-      }
-    };
-    
-    updateMentionInfo();
-  }, [messages, currentChatId, user?.id]);
-
-  // עדכן last_read_message_id כשיוצאים מהצ'אט
-  useEffect(() => {
-    return () => {
-      // Cleanup - עדכן שההודעות נקראו כשיוצאים מהצ'אט
-      if (messages.length > 0 && currentChatId && user?.id) {
-        const lastMessage = messages[0];
-        console.log('🚪 ChatRoomScreen: Exiting chat - marking last message as read:', lastMessage.id);
-        ChatService.markMessagesAsRead(currentChatId, user.id, lastMessage.id);
-      }
-    };
-  }, [messages, currentChatId, user?.id]);
-
-
-
-  const handleSendMessage = async (content: string, mentions?: any[]) => {
+  const handleSendMessage = (content: string, mentions?: any[]) => {
     console.log('📱 ChatRoomScreen handleSendMessage:', { content, mentions, replyMessage: replyingTo?.id, user: user?.id, currentChatId });
     console.log('🔍 ChatRoomScreen: Mentions details:', mentions?.map(m => ({ user_id: m.user_id, display: m.display, start: m.start, end: m.end })));
-    
+
     if (!currentChatId) {
       console.error('❌ ChatRoomScreen: No currentChatId');
       return;
     }
-    
-    try {
-      // שליחת הודעה דרך ChatContext (שמעדכן את הרשימה המקומית)
-      if (replyingTo) {
-        console.log('📤 Sending reply to message:', replyingTo.id);
-        await sendMessage(content, replyingTo.id, mentions);
-      } else {
-        console.log('📤 Sending regular message');
-        await sendMessage(content, undefined, mentions);
-      }
-      
-      // איפוס ה-reply
-      setReplyingTo(null);
-      
-      // גלילה אוטומטית לתחתית אחרי שליחת הודעה
-      scrollToBottom();
-      
-    } catch (error) {
-      console.error('❌ Error sending message:', error);
-      Alert.alert('שגיאה', 'לא ניתן לשלוח הודעה');
+
+    // שליחת הודעה דרך ChatContext (שמעדכן את הרשימה המקומית באופן אופטימי)
+    if (replyingTo) {
+      console.log('📤 Sending reply to message:', replyingTo.id);
+      sendMessage(content, replyingTo.id, mentions).catch(error => {
+        console.error('❌ Error sending reply message:', error);
+        Alert.alert('שגיאה', 'לא ניתן לשלוח הודעה');
+      });
+    } else {
+      console.log('📤 Sending regular message');
+      sendMessage(content, undefined, mentions).catch(error => {
+        console.error('❌ Error sending message:', error);
+        Alert.alert('שגיאה', 'לא ניתן לשלוח הודעה');
+      });
     }
+
+    // איפוס ה-reply מיד אחרי השליחה
+    setReplyingTo(null);
+
+    // גלילה אוטומטית לתחתית מיד אחרי הוספת ההודעה המקומית
+    scrollToBottom();
   };
 
   // Create data with day dividers
   const messagesWithDividers = useMemo(() => {
-    console.log('🔍 messagesWithDividers: useMemo triggered with messages:', messages.length);
-    console.log('🔍 messagesWithDividers: unreadCount:', unreadCount);
-    console.log('🔍 messagesWithDividers: lastReadMessageId:', lastReadMessageId);
-    console.log('🔍 messagesWithDividers: user:', user?.id);
-    
-    if (!messages || messages.length === 0) {
-      console.log('🔍 messagesWithDividers: No messages, returning empty array');
-      return [];
-    }
-    
-    console.log('🔍 messagesWithDividers: Processing messages:', messages.length);
-    
+    if (!messages || messages.length === 0) return [];
+
     const data: Array<Message | { type: 'divider'; date: Date; id: string } | { type: 'unread'; count: number; id: string }> = [];
-    const addedDividers = new Set<string>(); // עוקב אחרי dividers שכבר נוספו
-    
-    messages.forEach((message, index) => {
-      // יצירת תאריך בצורה בטוחה יותר
+
+    // In an inverted list, we iterate from newest (index 0) to oldest.
+    // We want the divider to appear ABOVE the message group.
+    // In inverted list, "above" means a HIGHER index.
+    // So we should push the message first, then check if we need a divider (which will be at next index).
+
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i];
+      const nextMessage = i < messages.length - 1 ? messages[i + 1] : null;
+
+      // 1. Push the message itself
+      data.push(message);
+
+      // 2. Check if we need a DayDivider AFTER this message (which means ABOVE it visually)
+      // We need a divider if:
+      // a) It's the last message in the list (oldest message) - always gets a divider above it
+      // b) The next message (older) is from a different day
+
       let messageDate: Date;
       try {
         messageDate = new Date(message.created_at);
-        // בדיקה שהתאריך תקין
-        if (isNaN(messageDate.getTime())) {
-          console.error('❌ Invalid date:', message.created_at);
-          messageDate = new Date(); // fallback
-        }
-      } catch (error) {
-        console.error('❌ Error parsing date:', error);
-        messageDate = new Date(); // fallback
+      } catch (e) {
+        messageDate = new Date();
       }
-      
-      console.log(`🔍 messagesWithDividers: Message ${index}:`, {
-        id: message.id,
-        content: message.content,
-        created_at: message.created_at,
-        created_at_type: typeof message.created_at,
-        messageDate: messageDate.toISOString(),
-        messageDateLocal: messageDate.toLocaleDateString('he-IL'),
-        messageDateYear: messageDate.getFullYear(),
-        messageDateMonth: messageDate.getMonth(),
-        messageDateDay: messageDate.getDate(),
-        now: new Date().toISOString(),
-        nowLocal: new Date().toLocaleDateString('he-IL')
-      });
-      
-      // Add day divider if it's the first message or if the day changed
-      const dividerKey = messageDate.toISOString().split('T')[0];
-      
-      if (index === 0) {
-        if (!addedDividers.has(dividerKey)) {
-          console.log('🔍 messagesWithDividers: First message, adding divider');
-          data.push({
-            type: 'divider',
-            date: messageDate,
-            id: `divider-${dividerKey}`,
-          });
-          addedDividers.add(dividerKey);
-        }
+
+      let showDivider = false;
+
+      if (!nextMessage) {
+        // Last message (oldest) - always show divider
+        showDivider = true;
       } else {
-        const prevMessageDate = new Date(messages[index - 1].created_at);
-        const sameDay = isSameDay(messageDate, prevMessageDate);
-        console.log(`🔍 messagesWithDividers: Comparing with previous:`, {
-          current: messageDate.toLocaleDateString('he-IL'),
-          previous: prevMessageDate.toLocaleDateString('he-IL'),
-          sameDay
+        // Check if day changed compared to next (older) message
+        let nextDate: Date;
+        try {
+          nextDate = new Date(nextMessage.created_at);
+        } catch (e) {
+          nextDate = new Date();
+        }
+
+        if (!isSameDay(messageDate, nextDate)) {
+          showDivider = true;
+        }
+      }
+
+      if (showDivider) {
+        const dividerKey = messageDate.toISOString().split('T')[0];
+        data.push({
+          type: 'divider',
+          date: messageDate,
+          id: `divider-${dividerKey}-${i}`, // Unique ID
         });
-        
-        if (!sameDay && !addedDividers.has(dividerKey)) {
-          console.log('🔍 messagesWithDividers: Day changed, adding divider');
-          data.push({
-            type: 'divider',
-            date: messageDate,
-            id: `divider-${dividerKey}`,
-          });
-          addedDividers.add(dividerKey);
+      }
+    }
+
+    // Add unread divider logic
+    if (unreadCount > 0 && user && lastReadMessageId) {
+      // We want the unread divider to appear ABOVE the last read message.
+      // In inverted list, "above" means HIGHER index.
+      // So we need to find the last read message in 'data', and insert the divider AFTER it (higher index).
+
+      let lastReadIndex = -1;
+
+      // Find index of last read message in the new data array
+      for (let i = 0; i < data.length; i++) {
+        const item = data[i];
+        if ('id' in item && item.id === lastReadMessageId) {
+          lastReadIndex = i;
+          break;
         }
       }
-      
-      data.push(message);
-    });
-    
-    // Add unread divider at the correct position based on last_read_message_id
-    if (unreadCount > 0 && user) {
-      console.log('🔍 messagesWithDividers: Need to add unread divider with count:', unreadCount);
-      console.log('🔍 messagesWithDividers: lastReadMessageId:', lastReadMessageId);
-      
-      if (lastReadMessageId) {
-        // Find the position of the last read message
-        // Note: messages are in reverse chronological order (newest first)
-        // With inverted FlatList, index 0 displays at bottom
-        let lastReadIndex = -1;
-        for (let i = 0; i < data.length; i++) {
-          const item = data[i];
-          if ('id' in item && item.id === lastReadMessageId) {
-            lastReadIndex = i;
-            console.log('🔍 messagesWithDividers: Found last read message at index:', i);
-            break;
-          }
-        }
-        
-        if (lastReadIndex !== -1) {
-          // Since FlatList is inverted, we need to insert BEFORE the last read message
-          // to show the divider above the unread messages (which are at lower indices)
-          const insertIndex = lastReadIndex; // Insert at the same index (pushes lastRead down)
-          console.log('🔍 messagesWithDividers: Inserting unread divider at index:', insertIndex, '(before last read message)');
-          data.splice(insertIndex, 0, {
-            type: 'unread',
-            count: unreadCount,
-            id: 'unread-divider'
-          });
-        } else {
-          // If last read message not found, find where to put divider based on timestamps
-          console.log('🔍 messagesWithDividers: Last read message not in current data, finding position by timestamp');
-          
-          // Get the timestamp of the last read message from the original messages array
-          const lastReadMessage = messages.find(msg => msg.id === lastReadMessageId);
-          if (lastReadMessage) {
-            const lastReadTime = new Date(lastReadMessage.created_at).getTime();
-            
-            // Find the first message that is newer than lastReadMessage
-            let insertIndex = data.length; // Default to end if all messages are older
-            for (let i = 0; i < data.length; i++) {
-              const item = data[i];
-              if ('created_at' in item) {
-                const itemTime = new Date(item.created_at).getTime();
-                if (itemTime > lastReadTime) {
-                  insertIndex = i + 1; // Insert after this newer message
-                } else {
-                  break; // Found the boundary
-                }
-              }
-            }
-            
-            console.log('🔍 messagesWithDividers: Inserting divider at timestamp-based position:', insertIndex);
-            data.splice(insertIndex, 0, {
-              type: 'unread',
-              count: unreadCount,
-              id: 'unread-divider'
-            });
-          } else {
-            // Fallback: add at end (oldest position)
-            console.log('🔍 messagesWithDividers: Could not find last read message, adding at end');
-            data.push({
-              type: 'unread',
-              count: unreadCount,
-              id: 'unread-divider'
-            });
-          }
-        }
+
+      if (lastReadIndex !== -1) {
+        // Insert AFTER the last read message (so it appears above it)
+        // Note: If there was a day divider pushed after the message, we should probably put the unread divider
+        // BEFORE the day divider (so unread divider is below day divider visually, but above message).
+        // Wait, visually:
+        // [Day Divider]
+        // [Unread Divider]
+        // [Message (Last Read)]
+
+        // In inverted list (indices):
+        // 0: Message
+        // 1: Unread Divider
+        // 2: Day Divider
+
+        // Currently 'data' might look like: [..., Message, DayDivider, ...]
+        // If we insert at lastReadIndex + 1, we get: [..., Message, UnreadDivider, DayDivider, ...]
+        // This seems correct! The UnreadDivider will be "above" the message, and "below" the DayDivider.
+
+        data.splice(lastReadIndex + 1, 0, {
+          type: 'unread',
+          count: unreadCount,
+          id: 'unread-divider'
+        });
       } else {
-        // No lastReadMessageId - all messages are unread, add at the end (oldest position)
-        console.log('🔍 messagesWithDividers: No lastReadMessageId - all messages unread, adding divider at end');
+        // If last read message not found (maybe too old), put it at the end (top of chat visually)
+        // But wait, if all messages are unread, lastReadMessageId might be null or not in list.
+        // If unreadCount > 0 but we can't find the anchor, maybe we shouldn't show it or show at top?
+        // Let's stick to the logic: if not found, maybe it's very old.
+        // If we want to show "Unread Messages" bar at the top (oldest), we push to end of data.
         data.push({
           type: 'unread',
           count: unreadCount,
           id: 'unread-divider'
         });
       }
+    } else if (unreadCount > 0 && user && !lastReadMessageId) {
+      // All messages are unread (no last read message)
+      // Show divider at the very end (top of chat visually)
+      data.push({
+        type: 'unread',
+        count: unreadCount,
+        id: 'unread-divider'
+      });
     }
-    
-    console.log('🔍 messagesWithDividers: Final data length:', data.length);
-    console.log('🔍 messagesWithDividers: First few items:', data.slice(0, 5).map(item => ({
-      type: 'type' in item ? item.type : 'message',
-      id: item.id,
-      content: 'content' in item ? item.content?.substring(0, 30) + '...' : undefined
-    })));
-    
-    // חיפוש ספציפי אחרי unread divider
-    const unreadItem = data.find(item => 'type' in item && item.type === 'unread');
-    if (unreadItem) {
-      console.log('✅ messagesWithDividers: UnreadDivider found in data:', unreadItem);
-    } else {
-      console.log('❌ messagesWithDividers: UnreadDivider NOT found in data');
-    }
-    
+
     return data;
   }, [messages, unreadCount, user, lastReadMessageId]);
 
@@ -697,7 +548,7 @@ export default function ChatRoomScreen() {
       messagesLength: messagesWithDividers.length,
       hasScrolledToUnread
     });
-    
+
     if (!flatListRef.current || unreadCount === 0 || !messagesWithDividers.length || hasScrolledToUnread) {
       console.log('❌ ChatRoomScreen: Auto-scroll conditions not met:', {
         hasRef: !!flatListRef.current,
@@ -724,7 +575,7 @@ export default function ChatRoomScreen() {
 
     if (unreadDividerIndex !== -1) {
       console.log('🎯 ChatRoomScreen: Found UnreadDivider at index:', unreadDividerIndex);
-      
+
       // גלילה מיידית ללא עיכוב
       try {
         console.log('🎯 ChatRoomScreen: Executing immediate scrollToIndex to:', unreadDividerIndex);
@@ -733,11 +584,11 @@ export default function ChatRoomScreen() {
           animated: false, // ללא אנימציה לכניסה ישירה
           viewPosition: 0.5, // מציב את הדיווידר במרכז המסך בדיוק
         });
-        
+
         // סמן שגללנו מיד
         setHasScrolledToUnread(true);
         console.log('✅ ChatRoomScreen: Scrolled to UnreadDivider immediately');
-        
+
       } catch (error) {
         console.log('⚠️ ChatRoomScreen: Error scrolling to UnreadDivider, trying scrollToOffset instead:', error);
         // אם scrollToIndex נכשל, נסה גלילה כללית
@@ -745,7 +596,7 @@ export default function ChatRoomScreen() {
           offset: unreadDividerIndex * 100, // הערכה גסה של גובה איטם
           animated: false,
         });
-        
+
         // סמן שגללנו
         setHasScrolledToUnread(true);
         console.log('✅ ChatRoomScreen: Scrolled to UnreadDivider via offset');
@@ -760,92 +611,106 @@ export default function ChatRoomScreen() {
   // פונקציה לטיפול בלחיצה על UnreadDivider
   const handleUnreadDividerPress = useCallback(() => {
     console.log('🎯 ChatRoomScreen: UnreadDivider pressed, scrolling to bottom');
-    
+
     // גלול לתחתית
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
     }
-    
+
     // סמן שגללנו
     setHasScrolledToUnread(true);
   }, []);
 
   // פונקציה לטיפול בגלילה - מאפסת unread count רק אחרי גלילה משמעותית
-  const handleScroll = (event: any) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
-    
-    // בדיקה אם המשתמש בתחתית (עם טולרנס קטן יותר)
-    const isAtBottomNow = contentOffset.y <= 30;
+  const handleScroll = useCallback((event: any) => {
+    const { contentOffset } = event.nativeEvent;
+
+    /**
+     * ברשימה הפוכה (inverted = true):
+     * - כשהמשתמש בתחתית (הודעות חדשות) → y קרוב ל-0
+     * - כשהמשתמש גולל למעלה (הודעות ישנות) → y גדל
+     */
+
+    const y = contentOffset.y;
+    // האם אנחנו קרובים לתחתית (עם טולרנס)
+    const isAtBottomNow = y < 50;
     setIsAtBottom(isAtBottomNow);
+
+    // הצגת כפתור חזרה לתחתית:
+    // כשהמשתמש גולל יותר מ-100px מהתחתית, נציג את הכפתור
+    const shouldShowScrollButton = y > 100;
     
-    // הצג/הסתר כפתור גלילה לתחתית
-    // אם המשתמש גולל למעלה (y > 50) ולא בתחתית
-    const shouldShowScrollButton = contentOffset.y > 50 && !isAtBottomNow;
-    setShowScrollToBottom(shouldShowScrollButton);
-    
-    // אנימציה לכפתור הגלילה - תמיד תציג אם צריך
-    Animated.timing(scrollButtonOpacity, {
-      toValue: shouldShowScrollButton ? 1 : 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-    
-    // אנימציה לכפתור ה-mention
+    if (shouldShowScrollButton !== showScrollToBottom) {
+      setShowScrollToBottom(shouldShowScrollButton);
+      
+      // אנימציה לכפתור הגלילה
+      Animated.timing(scrollButtonOpacity, {
+        toValue: shouldShowScrollButton ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+
+    // אנימציה לכפתור ה-mention (תמיד מעודכן)
     Animated.timing(mentionButtonOpacity, {
       toValue: showScrollToMention ? 1 : 0,
       duration: 200,
       useNativeDriver: true,
     }).start();
-    
+
     // בינתיים, לא נאפס אוטומטית - רק אם המשתמש גולל הרבה
-    if (unreadCount > 0 && contentOffset.y > 200) { // רק אחרי גלילה של 200px
+    if (unreadCount > 0 && contentOffset.y > 200) {
       console.log('📜 ChatRoomScreen: User scrolled significantly (y:', contentOffset.y, '), considering reset');
-      // לא נאפס מיד - נחכה שהמשתמש יגמור לגלול
     }
-  };
+  }, [showScrollToBottom, showScrollToMention, unreadCount, scrollButtonOpacity, mentionButtonOpacity]);
 
   const handleGroupInfoPress = () => {
     navigation.navigate('GroupInfo', { chatId: currentChatId });
   };
 
   // פונקציה לגלילה לתחתית
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     console.log('📜 ChatRoomScreen: scrollToBottom called');
-    if (flatListRef.current) {
-      try {
-        if (messagesWithDividers.length > 0) {
-          // נסה לגלול ל-index 0 (התחתית בתצוגה הפוכה)
-          flatListRef.current.scrollToIndex({
-            index: 0,
-            animated: true,
-            viewPosition: 0
-          });
-        } else {
-          // אם אין הודעות, גלול לתחילת הרשימה
-          flatListRef.current.scrollToOffset({ offset: 0, animated: true });
-        }
-        
-        // אפס את unreadCount כשגוללים לתחתית
-        if (unreadCount > 0 && currentChatId && user?.id) {
-          console.log('📜 ChatRoomScreen: Scrolling to bottom - resetting unread count');
-          setUnreadCount(0);
-          // עדכן גם במסד הנתונים
-          if (messages.length > 0) {
-            const lastMessage = messages[0]; // ההודעה החדשה ביותר
-            ChatService.markMessagesAsRead(currentChatId, user.id, lastMessage.id);
-          }
-        }
-        
-        // סמן שאנחנו בתחתית
-        setIsAtBottom(true);
-        setShowScrollToBottom(false);
-      } catch (error) {
-        console.log('⚠️ ChatRoomScreen: Error scrolling to index, trying scrollToOffset:', error);
-        // Fallback - גלול לתחילת הרשימה
-        flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+    if (!flatListRef.current) return;
+
+    // ברשימה הפוכה, offset 0 = תחתית (הודעות חדשות)
+    flatListRef.current.scrollToOffset({ offset: 0, animated: true });
+
+    // עדכון מיידי של המצב
+    setIsAtBottom(true);
+    setShowScrollToBottom(false);
+    
+    // אנימציה להסתרת הכפתור
+    Animated.timing(scrollButtonOpacity, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+
+    // אפס את unreadCount כשגוללים לתחתית
+    if (unreadCount > 0 && currentChatId && user?.id) {
+      console.log('📜 ChatRoomScreen: Scrolling to bottom - resetting unread count');
+      setUnreadCount(0);
+      if (messages.length > 0) {
+        const lastMessage = messages[0]; // ההודעה החדשה ביותר
+        ChatService.markMessagesAsRead(currentChatId, user.id, lastMessage.id);
       }
     }
-  };
+  }, [unreadCount, currentChatId, user?.id, messages, scrollButtonOpacity]);
+
+  // גלילה אוטומטית לתחתית כאשר המשתמש בתחתית ונוספת הודעה חדשה
+  useEffect(() => {
+    if (!user?.id) return;
+    if (!isAtBottom) return; // רק אם המשתמש כבר בתחתית
+    if (!messages.length) return;
+
+    const latest = messages[0];
+    // אם ההודעה האחרונה היא של המשתמש הנוכחי – גלול אליה
+    if (latest.sender_id === user.id) {
+      console.log('📜 ChatRoomScreen: Auto scroll after own message');
+      scrollToBottom();
+    }
+  }, [messages.length, isAtBottom, user?.id]);
 
   // פונקציה לגלילה להודעה עם mention
   const scrollToMention = () => {
@@ -854,16 +719,16 @@ export default function ChatRoomScreen() {
       latestMentionMessageId,
       messagesLength: messagesWithDividers.length
     });
-    
+
     if (flatListRef.current && latestMentionMessageId && messagesWithDividers.length > 0) {
       // מצא את האינדקס של ההודעה עם ה-mention
-      const mentionIndex = messagesWithDividers.findIndex(item => 
+      const mentionIndex = messagesWithDividers.findIndex(item =>
         'id' in item && item.id === latestMentionMessageId
       );
-      
+
       console.log('🔍 ChatRoomScreen: Found mention index:', mentionIndex);
       console.log('🔍 ChatRoomScreen: Looking for message ID:', latestMentionMessageId);
-      
+
       if (mentionIndex !== -1) {
         console.log('🔍 ChatRoomScreen: Scrolling to mention message at index:', mentionIndex);
         try {
@@ -872,7 +737,7 @@ export default function ChatRoomScreen() {
             animated: true,
             viewPosition: 0.3
           });
-          
+
           // סמן שה-mention נקרא
           setShowScrollToMention(false);
           setLatestMentionMessageId(null);
@@ -910,10 +775,10 @@ export default function ChatRoomScreen() {
       console.log('📱 ChatRoomScreen: Media selected:', { mediaType, uri, metadata });
 
       console.log('📤 Uploading media to Supabase Storage:', { type: mediaType, uri });
-      
+
       // העלה את הקובץ ל-Supabase Storage
       const uploadResult = await mediaService.uploadMedia(uri, mediaType as 'image' | 'video' | 'audio' | 'document');
-      
+
       if (!uploadResult.success || !uploadResult.url) {
         console.error('❌ Failed to upload media:', uploadResult.error);
         Alert.alert('שגיאה', `שגיאה בהעלאת ${mediaType}: ${uploadResult.error}`);
@@ -962,26 +827,29 @@ export default function ChatRoomScreen() {
       for (const mediaFile of mediaFiles) {
         try {
           const caption = captions[mediaFile.id] || '';
-          
+
           // העלה את הקובץ ל-Supabase Storage
           let mediaUrl = '';
           let mediaMetadata: any | undefined;
 
           console.log('📤 Uploading media to Supabase Storage:', { type: mediaFile.type, uri: mediaFile.uri });
-          
+
           // העלה את הקובץ ל-Supabase Storage
           const uploadResult = await mediaService.uploadMedia(mediaFile.uri, mediaFile.type);
-          
+
           if (uploadResult.success && uploadResult.url) {
             mediaUrl = uploadResult.url;
-            mediaMetadata = uploadResult.metadata || {
-              file_name: mediaFile.fileName || undefined,
-              file_size: mediaFile.fileSize || undefined,
+            mediaMetadata = {
+              ...(uploadResult.metadata || {}),
+              file_name: mediaFile.fileName || mediaFile.name || undefined,
+              file_size: mediaFile.fileSize || mediaFile.size || undefined,
               duration: mediaFile.duration || undefined,
               width: mediaFile.width || undefined,
-              height: mediaFile.height || undefined
+              height: mediaFile.height || undefined,
+              // שמור waveformData אם יש (להקלטות)
+              ...(mediaFile.waveformData ? { waveformData: mediaFile.waveformData } : {})
             };
-            console.log('✅ Media uploaded successfully:', { type: mediaFile.type, url: mediaUrl });
+            console.log('✅ Media uploaded successfully:', { type: mediaFile.type, url: mediaUrl, metadata: mediaMetadata });
           } else {
             console.error('❌ Failed to upload media:', uploadResult.error);
             Alert.alert('שגיאה', `שגיאה בהעלאת ${mediaFile.type}: ${uploadResult.error}`);
@@ -1035,7 +903,7 @@ export default function ChatRoomScreen() {
       // עדכן את רשימת ההודעות אחרי שליחת כל המדיה
       console.log('🔄 ChatRoomScreen: Refreshing messages after media send');
       await loadMessages(currentChatId);
-      
+
       // גלילה אוטומטית לתחתית אחרי שליחת הודעות מדיה
       scrollToBottom();
 
@@ -1061,7 +929,7 @@ export default function ChatRoomScreen() {
       'Briefcase': 'briefcase',
     };
     const iconName = currentChat?.icon_name && iconMap[currentChat.icon_name] ? iconMap[currentChat.icon_name] : 'chatbubble-ellipses';
-    
+
     return (
       <View
         style={{
@@ -1079,7 +947,7 @@ export default function ChatRoomScreen() {
           elevation: 8,
           minHeight: tabBarInsets.top + 60,
           overflow: 'hidden',
-          backgroundColor: DesignTokens.colors.background.secondary
+          backgroundColor: DesignTokens.colors.background.primary
         }}
       >
         {/* חזרה לרקע המקורי */}
@@ -1089,10 +957,10 @@ export default function ChatRoomScreen() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: DesignTokens.colors.background.secondary
+          backgroundColor: DesignTokens.colors.background.primary
         }} />
         {/* חץ חזרה - ימין */}
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={{
             width: 36,
@@ -1105,9 +973,9 @@ export default function ChatRoomScreen() {
         </TouchableOpacity>
 
         {/* תמונה/אייקון הקבוצה */}
-        <TouchableOpacity 
-          onPress={handleGroupInfoPress} 
-          activeOpacity={0.8} 
+        <TouchableOpacity
+          onPress={handleGroupInfoPress}
+          activeOpacity={0.8}
           style={{
             flexDirection: 'row-reverse',
             alignItems: 'center',
@@ -1117,8 +985,8 @@ export default function ChatRoomScreen() {
         >
           {/* תמונה/אייקון - שמאל */}
           {channelImageUrl ? (
-            <Image 
-              source={{ uri: channelImageUrl }} 
+            <Image
+              source={{ uri: channelImageUrl }}
               style={{
                 width: 36,
                 height: 36,
@@ -1151,7 +1019,7 @@ export default function ChatRoomScreen() {
               <Ionicons name={iconName as any} size={18} color={DesignTokens.colors.text.primary} />
             </View>
           )}
-          
+
           {/* פרטי הקבוצה - ימין */}
           <View style={{ flex: 1, alignItems: 'flex-end', marginBottom: 2 }}>
             <Text style={{
@@ -1166,7 +1034,7 @@ export default function ChatRoomScreen() {
               color: typingUsers.length > 0 ? DesignTokens.colors.success.main : DesignTokens.colors.text.tertiary,
               marginTop: 2
             }} numberOfLines={1}>
-              {typingUsers.length > 0 
+              {typingUsers.length > 0
                 ? typingUsers.length === 1
                   ? `${typingUsers[0].userName} מקליד...`
                   : typingUsers.length === 2
@@ -1179,7 +1047,7 @@ export default function ChatRoomScreen() {
         </TouchableOpacity>
 
         {/* זכוכית מגדלת לחיפוש */}
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setIsSearchVisible(!isSearchVisible)}
           style={{
             width: 32,
@@ -1188,10 +1056,10 @@ export default function ChatRoomScreen() {
             justifyContent: 'center'
           }}
         >
-          <Ionicons 
-            name={isSearchVisible ? "close" : "search"} 
-            size={24} 
-            color={DesignTokens.colors.primary.main} 
+          <Ionicons
+            name={isSearchVisible ? "close" : "search"}
+            size={24}
+            color={DesignTokens.colors.primary.main}
           />
         </TouchableOpacity>
       </View>
@@ -1202,9 +1070,9 @@ export default function ChatRoomScreen() {
   if (isLoading) {
     return (
       <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-        <LinearGradient 
-          colors={[`${DesignTokens.colors.success.main}14`, `${DesignTokens.colors.success.main}08`, `${DesignTokens.colors.success.main}0D`]} 
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
+        <LinearGradient
+          colors={[`${DesignTokens.colors.success.main}14`, `${DesignTokens.colors.success.main}08`, `${DesignTokens.colors.success.main}0D`]}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
         <ImageBackground
           source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
@@ -1218,7 +1086,7 @@ export default function ChatRoomScreen() {
           }}
           resizeMode="cover"
         />
-        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['left','right']}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['left', 'right']}>
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <View style={{
               backgroundColor: DesignTokens.colors.background.secondary,
@@ -1230,9 +1098,9 @@ export default function ChatRoomScreen() {
               borderColor: `${DesignTokens.colors.success.main}33`
             }}>
               <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-              <Text style={{ 
-                color: DesignTokens.colors.text.primary, 
-                fontSize: 16, 
+              <Text style={{
+                color: DesignTokens.colors.text.primary,
+                fontSize: 16,
                 fontWeight: '500',
                 marginTop: 16,
                 textAlign: 'center'
@@ -1246,404 +1114,429 @@ export default function ChatRoomScreen() {
     );
   }
 
+  // שימוש ב-tabBarInsets שכבר הוגדר בראש הקומפוננטה (שורה 160)
+  // נמחק: const insets = useSafeAreaInsets(); - הפרה של Rules of Hooks
+  
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
-      >
-      <ImageBackground 
-        source={{ uri: backgroundImage }}
-        style={{ 
-          flex: 1
-        }}
-        resizeMode="cover"
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['left','right']}>
-      {renderHeader()}
-      
-      {/* Pinned Messages Header */}
-      {currentChatId && (
-        <PinnedMessagesHeader 
-          key={pinnedMessagesKey}
-          channelId={currentChatId}
-          onMessagePress={(messageId) => {
-            if (messageId === 'refresh_pinned') {
-              // This is a refresh request, not a message ID
-              // Force re-render of PinnedMessagesHeader
-              refreshPinnedMessages();
-              return;
-            }
-            
-            // Scroll to the pinned message
-            const messageIndex = messages.findIndex(m => m.id === messageId);
-            if (messageIndex !== -1) {
-              flatListRef.current?.scrollToIndex({
-                index: messageIndex,
-                animated: true,
-                viewPosition: 0.5
-              });
-            }
-          }}
-        />
-      )}
-      
-      {/* שדה חיפוש */}
-      {isSearchVisible && (
-        <View 
-          style={{ 
-            backgroundColor: DesignTokens.colors.background.secondary,
-            borderBottomColor: '#333',
-            borderBottomWidth: 1,
-            paddingHorizontal: 12,
-            paddingVertical: 12
-          }}
-        >
-          <View 
-            style={{ 
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: DesignTokens.colors.background.tertiary,
-              borderColor: '#333',
-              borderWidth: 1,
-              borderRadius: 14,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.15,
-              shadowRadius: 6,
-              elevation: 3,
-            }}
-          >
-            <Ionicons 
-              name="search" 
-              size={20} 
-              color={DesignTokens.colors.primary.main} 
-              style={{ marginLeft: 8 }} 
-            />
-            <TextInput
-              placeholder="חיפוש בהודעות..."
-              placeholderTextColor={DesignTokens.colors.text.tertiary}
-              value={searchQuery}
-              onChangeText={(text: string) => {
-                setSearchQuery(text);
-                filterMessages(text);
-              }}
-              style={{ 
-                flex: 1,
-                textAlign: 'right',
-                fontSize: 16,
-                color: DesignTokens.colors.text.primary
-              }}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchQuery('');
-                  setFilteredMessages([]);
-                }}
-                style={{ marginLeft: 8 }}
-              >
-                  <XCircle size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      )}
-      
-        <FlatList
-          ref={flatListRef}
-          data={searchQuery.trim() ? (filteredMessages || []) : (messagesWithDividers || [])}
-          keyExtractor={(item, index) => {
-            if ('id' in item) {
-              return item.id;
-            }
-            return `item-${index}`;
-          }}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          initialNumToRender={15}
-          maxToRenderPerBatch={8}
-          windowSize={10}
-          removeClippedSubviews={false}
-          updateCellsBatchingPeriod={100}
-          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-          renderItem={({ item, index }) => {
-            // Check if item is a day divider
-            if ('type' in item && item.type === 'divider') {
-              return <DayDivider date={item.date} />;
-            }
-            
-            // Check if item is an unread divider
-            if ('type' in item && item.type === 'unread') {
-              return <UnreadDivider unreadCount={item.count} onPress={handleUnreadDividerPress} />;
-            }
-            
-            // חישוב grouping (הודעות רצופות מאותו משתמש)
-            const currentMessage = item as Message;
-            let isGrouped = false;
-            let isGroupStart = false;
-            let isGroupEnd = false;
-            
-            // פונקציה להשוואת שעה ודקה
-            const isSameMinute = (date1: Date, date2: Date) => {
-              return date1.getHours() === date2.getHours() && 
-                     date1.getMinutes() === date2.getMinutes();
-            };
-            
-            // מצא את האינדקס של ההודעה הנוכחית במערך messages הרגיל
-            const messageIndex = messages.findIndex(m => m.id === currentMessage.id);
-            
-            // הגדר משתנים מחוץ ל-if block כדי שיהיו זמינים בשימוש ב-ChatBubble
-            let hasPrevFromSameSender = false;
-            let hasNextFromSameSender = false;
-            
-            if (messageIndex !== -1) {
-              const currentDate = new Date(currentMessage.created_at);
-              
-              // בדוק אם יש הודעה קודמת (לפני בזמן) מאותו משתמש באותה דקה
-              hasPrevFromSameSender = messageIndex < messages.length - 1 && (() => {
-                const prevMessage = messages[messageIndex + 1];
-                const prevDate = new Date(prevMessage.created_at);
-                return prevMessage.sender_id === currentMessage.sender_id && 
-                       isSameMinute(currentDate, prevDate);
-              })();
-              
-              // בדוק אם יש הודעה הבאה (אחרי בזמן) מאותו משתמש באותה דקה
-              hasNextFromSameSender = messageIndex > 0 && (() => {
-                const nextMessage = messages[messageIndex - 1];
-                const nextDate = new Date(nextMessage.created_at);
-                return nextMessage.sender_id === currentMessage.sender_id && 
-                       isSameMinute(currentDate, nextDate);
-              })();
-              
-              // קביעת מצב הקיבוץ
-              if (hasPrevFromSameSender || hasNextFromSameSender) {
-                isGrouped = true;
-                isGroupStart = !hasPrevFromSameSender && hasNextFromSameSender; // ראשון בקבוצה
-                isGroupEnd = hasPrevFromSameSender && !hasNextFromSameSender; // אחרון בקבוצה
-              }
-            }
-            
-            // Regular message
-            return (
-              <ChatBubble
-                message={currentMessage}
-                isMe={currentMessage.sender_id === user?.id}
-                onReply={handleReply}
-                onEditMessage={handleEditMessage}
-                onDeleteMessage={handleDeleteMessage}
-                allMessages={messages}
-                onJumpToMessage={handleJumpToMessage}
-                channelMembers={channelMembers}
-                currentUserId={user?.id}
-                shouldHighlight={latestMentionMessageId === currentMessage.id}
-                isGrouped={isGrouped}
-                isGroupStart={isGroupStart}
-                isGroupEnd={isGroupEnd}
-                hasPrevFromSameSender={hasPrevFromSameSender}
-              />
-            );
-          }}
-          ListEmptyComponent={
-            searchQuery.trim() ? (
-              <Text className="text-center text-gray-500 mt-8">לא נמצאו הודעות עבור "{searchQuery}"</Text>
-            ) : (
-              <Text className="text-center text-gray-500 mt-8">אין הודעות</Text>
-            )
-          }
-          inverted
-          contentContainerStyle={{ paddingTop: 8, paddingHorizontal: 8, paddingBottom: LIST_BOTTOM_PADDING }}
-          showsVerticalScrollIndicator={false}
-        />
-        {/* כפתור גלילה לתחתית */}
-        {showScrollToBottom && (
-          <Animated.View
-            style={{
-              position: 'absolute',
-              bottom: SCROLL_BTN_BOTTOM,
-              right: 16,
-              opacity: scrollButtonOpacity,
-              transform: [
-                {
-                  scale: scrollButtonOpacity.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  }),
-                },
-              ],
-              zIndex: 1000,
-            }}
-            pointerEvents="auto"
-          >
-            <TouchableOpacity
-              onPress={scrollToBottom}
-              activeOpacity={0.7}
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
-                backgroundColor: DesignTokens.colors.background.secondary,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: DesignTokens.colors.border.primary,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.4,
-                shadowRadius: 8,
-                elevation: 8,
-              }}
-            >
-              <ChevronDown size={28} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* כפתור גלילה להודעה עם mention */}
-        <Animated.View
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
+    >
+        <ImageBackground
+          source={{ uri: backgroundImage }}
           style={{
-            position: 'absolute',
-            bottom: MENTION_BTN_BOTTOM,
-            right: 16,
-            opacity: mentionButtonOpacity,
-            transform: [
-              {
-                scale: mentionButtonOpacity.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.8, 1],
-                }),
-              },
-            ],
+            flex: 1
           }}
-          pointerEvents={showScrollToMention ? 'auto' : 'none'}
+          resizeMode="cover"
         >
-          <TouchableOpacity
-            onPress={scrollToMention}
-            style={{ 
-              width: 48,
-              height: 48,
-              backgroundColor: DesignTokens.colors.success.main,
-              borderRadius: 24,
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8
-            }}
-            style={{
-              shadowColor: DesignTokens.colors.primary.main,
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 8,
-            }}
+          <SafeAreaView
+            style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
+            edges={['left', 'right', 'bottom']}
           >
-            <AtSign size={24} color="#000" strokeWidth={2} />
-          </TouchableOpacity>
-        </Animated.View>
+            {renderHeader()}
 
-          {/* Reply Preview - עיצוב חדש ועדין מעל שורת הקלט */}
-          {replyingTo && (
-            <View
-              style={{
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                bottom: INPUT_BAR_HEIGHT + tabBarInsets.bottom + 10,
-                zIndex: 1001,
-                marginHorizontal: 0,
-                backgroundColor: DesignTokens.colors.background.secondary,
-                borderRadius: 0,
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                borderLeftWidth: 3,
-                borderLeftColor: DesignTokens.colors.success.main,
-                borderWidth: 0,
-                borderBottomWidth: 1,
-                borderColor: DesignTokens.colors.border.primary
-              }}
-            >
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start' }}>
-                {/* אייקון לפי סוג */}
-                <View style={{
-                  width: 32, height: 32, borderRadius: 16,
-                  backgroundColor: `${DesignTokens.colors.success.main}26`,
-                  alignItems: 'center', justifyContent: 'center',
-                  marginLeft: 10, marginTop: 2,
-                  borderWidth: 1, borderColor: `${DesignTokens.colors.success.main}40`
-                }}>
-                  {replyingTo.type === 'image' && <ImageIcon size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                  {replyingTo.type === 'video' && <Video size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                  {replyingTo.type === 'audio' && <Music size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                  {replyingTo.type === 'document' && <FileText size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                  {!replyingTo.type && <MessageCircle size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                </View>
+            {/* Pinned Messages Header */}
+            {currentChatId && (
+              <PinnedMessagesHeader
+                key={pinnedMessagesKey}
+                channelId={currentChatId}
+                onMessagePress={(messageId) => {
+                  if (messageId === 'refresh_pinned') {
+                    // This is a refresh request, not a message ID
+                    // Force re-render of PinnedMessagesHeader
+                    refreshPinnedMessages();
+                    return;
+                  }
 
-                {/* תוכן */}
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 13, fontWeight: '700', textAlign: 'right' }}>
-                      {replyingTo.sender?.full_name || 'משתמש'}
-                    </Text>
-                    <Pressable onPress={cancelReply} hitSlop={10}>
-                      <X size={20} color="#888" strokeWidth={2} />
-                    </Pressable>
-                  </View>
-                  <Text 
-                    style={{ 
-                      color: DesignTokens.colors.text.secondary, 
-                      fontSize: 12, 
-                      textAlign: replyingTo.content && replyingTo.content.trim().length > 0 
-                        ? (detectLanguage(replyingTo.content) === 'rtl' ? 'right' : 'left')
-                        : 'right', // ברירת מחדל עברית לטקסטי מדיה
-                      writingDirection: replyingTo.content && replyingTo.content.trim().length > 0 
-                        ? detectLanguage(replyingTo.content) 
-                        : 'rtl'
-                    }} 
-                    numberOfLines={2} 
-                    ellipsizeMode="tail"
-                  >
-                    {replyingTo.content && replyingTo.content.trim().length > 0 
-                      ? replyingTo.content 
-                      : (replyingTo.type === 'image' 
-                          ? 'תמונה' 
-                          : replyingTo.type === 'video' 
-                            ? 'וידאו' 
-                            : replyingTo.type === 'audio' 
-                              ? 'הקלטת קול' 
-                              : replyingTo.type === 'document' 
-                                ? 'מסמך' 
-                                : '')}
-                  </Text>
+                  // Scroll to the pinned message
+                  const messageIndex = messages.findIndex(m => m.id === messageId);
+                  if (messageIndex !== -1) {
+                    flatListRef.current?.scrollToIndex({
+                      index: messageIndex,
+                      animated: true,
+                      viewPosition: 0.5
+                    });
+                  }
+                }}
+              />
+            )}
+
+            {/* שדה חיפוש */}
+            {isSearchVisible && (
+              <View
+                style={{
+                  backgroundColor: DesignTokens.colors.background.secondary,
+                  borderBottomColor: '#333',
+                  borderBottomWidth: 1,
+                  paddingHorizontal: 12,
+                  paddingVertical: 12
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: DesignTokens.colors.background.tertiary,
+                    borderColor: '#333',
+                    borderWidth: 1,
+                    borderRadius: 14,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 6,
+                    elevation: 3,
+                  }}
+                >
+                  <Ionicons
+                    name="search"
+                    size={20}
+                    color={DesignTokens.colors.primary.main}
+                    style={{ marginLeft: 8 }}
+                  />
+                  <TextInput
+                    placeholder="חיפוש בהודעות..."
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
+                    value={searchQuery}
+                    onChangeText={(text: string) => {
+                      setSearchQuery(text);
+                      filterMessages(text);
+                    }}
+                    style={{
+                      flex: 1,
+                      textAlign: 'right',
+                      fontSize: 16,
+                      color: DesignTokens.colors.text.primary
+                    }}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSearchQuery('');
+                        setFilteredMessages([]);
+                      }}
+                      style={{ marginLeft: 8 }}
+                    >
+                      <XCircle size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
-            </View>
-          )}
-          <MessageInputBar 
-            onSend={handleSendMessage}
-            onSendMedia={handleMediaPreviewSend}
-            onAttachmentPress={() => {
-              // הוספת רטט קצר מאוד לכפתור המדיה
-              import('../../utils/hapticFeedback').then(({ HapticFeedback }) => {
-                HapticFeedback.selection();
-              });
-            }}
-            onEditMessage={editMessage}
-            chatId={currentChatId || ''}
-            editingMessage={editingMessage}
-            onCancelEdit={cancelEdit}
-            startTyping={startTyping}
-            stopTyping={stopTyping}
-          />
-        </SafeAreaView>
-      </ImageBackground>
+            )}
+
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <FlatList
+                ref={flatListRef}
+                data={searchQuery.trim() ? (filteredMessages || []) : (messagesWithDividers || [])}
+                keyExtractor={(item, index) => {
+                  if ('id' in item) {
+                    return item.id;
+                  }
+                  return `item-${index}`;
+                }}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+              initialNumToRender={15}
+              maxToRenderPerBatch={8}
+              windowSize={10}
+              removeClippedSubviews={false}
+              updateCellsBatchingPeriod={100}
+              onScrollToIndexFailed={(info) => {
+                console.warn('⚠️ ChatRoomScreen: scrollToIndex failed, using offset fallback:', info);
+                setTimeout(() => {
+                  if (!flatListRef.current || !messagesWithDividers.length) {
+                    console.warn('❌ ChatRoomScreen: Cannot scroll, list not ready');
+                    return;
+                  }
+                  const estimatedItemHeight = 80;
+                  const targetOffset = Math.max(0, info.index * estimatedItemHeight - 100);
+                  console.log('📏 ChatRoomScreen: Scrolling to offset fallback:', targetOffset);
+                  try {
+                    flatListRef.current?.scrollToOffset({
+                      offset: targetOffset,
+                      animated: true,
+                    });
+                  } catch (error) {
+                    console.error('❌ ChatRoomScreen: Error in scrollToOffset fallback:', error);
+                  }
+                }, 100);
+              }}
+              renderItem={({ item, index }) => {
+                // Check if item is a day divider
+                if ('type' in item && item.type === 'divider') {
+                  return <DayDivider date={item.date} />;
+                }
+
+                // Check if item is an unread divider
+                if ('type' in item && item.type === 'unread') {
+                  return <UnreadDivider unreadCount={item.count} onPress={handleUnreadDividerPress} />;
+                }
+
+                // חישוב grouping (הודעות רצופות מאותו משתמש)
+                const currentMessage = item as Message;
+                let isGrouped = false;
+                let isGroupStart = false;
+                let isGroupEnd = false;
+
+                // פונקציה להשוואת שעה ודקה
+                const isSameMinute = (date1: Date, date2: Date) => {
+                  return date1.getHours() === date2.getHours() &&
+                    date1.getMinutes() === date2.getMinutes();
+                };
+
+                // מצא את האינדקס של ההודעה הנוכחית במערך messages הרגיל
+                const messageIndex = messages.findIndex(m => m.id === currentMessage.id);
+
+                // הגדר משתנים מחוץ ל-if block כדי שיהיו זמינים בשימוש ב-ChatBubble
+                let hasPrevFromSameSender = false;
+                let hasNextFromSameSender = false;
+
+                if (messageIndex !== -1) {
+                  const currentDate = new Date(currentMessage.created_at);
+
+                  // בדוק אם יש הודעה קודמת (לפני בזמן) מאותו משתמש באותה דקה
+                  hasPrevFromSameSender = messageIndex < messages.length - 1 && (() => {
+                    const prevMessage = messages[messageIndex + 1];
+                    const prevDate = new Date(prevMessage.created_at);
+                    return prevMessage.sender_id === currentMessage.sender_id &&
+                      isSameMinute(currentDate, prevDate);
+                  })();
+
+                  // בדוק אם יש הודעה הבאה (אחרי בזמן) מאותו משתמש באותה דקה
+                  hasNextFromSameSender = messageIndex > 0 && (() => {
+                    const nextMessage = messages[messageIndex - 1];
+                    const nextDate = new Date(nextMessage.created_at);
+                    return nextMessage.sender_id === currentMessage.sender_id &&
+                      isSameMinute(currentDate, nextDate);
+                  })();
+
+                  // קביעת מצב הקיבוץ
+                  if (hasPrevFromSameSender || hasNextFromSameSender) {
+                    isGrouped = true;
+                    isGroupStart = !hasPrevFromSameSender && hasNextFromSameSender; // ראשון בקבוצה
+                    isGroupEnd = hasPrevFromSameSender && !hasNextFromSameSender; // אחרון בקבוצה
+                  }
+                }
+
+                // Regular message
+                const isNewMessage = newMessagesSet.current.has(currentMessage.id);
+                return (
+                  <ChatBubble
+                    message={currentMessage}
+                    isMe={currentMessage.sender_id === user?.id}
+                    onReply={handleReply}
+                    onEditMessage={handleEditMessage}
+                    onDeleteMessage={handleDeleteMessage}
+                    onRetryMessage={retryMessage}
+                    allMessages={messages}
+                    onJumpToMessage={handleJumpToMessage}
+                    channelMembers={channelMembers}
+                    currentUserId={user?.id}
+                    shouldHighlight={latestMentionMessageId === currentMessage.id}
+                    isGrouped={isGrouped}
+                    isGroupStart={isGroupStart}
+                    isGroupEnd={isGroupEnd}
+                    hasPrevFromSameSender={hasPrevFromSameSender}
+                    isNewMessage={isNewMessage}
+                  />
+                );
+              }}
+              ListEmptyComponent={
+                searchQuery.trim() ? (
+                  <Text className="text-center text-gray-500 mt-8">לא נמצאו הודעות עבור "{searchQuery}"</Text>
+                ) : (
+                  <Text className="text-center text-gray-500 mt-8">אין הודעות</Text>
+                )
+              }
+              inverted
+              // ברשימה הפוכה (inverted), הפריט האחרון ויזואלית נמצא בתחתית,
+              // לכן את הריווח מתחתיו צריך לתת דרך paddingTop ולא paddingBottom.
+              contentContainerStyle={{
+                paddingTop: LIST_BOTTOM_PADDING,
+                paddingHorizontal: 8,
+                paddingBottom: 8,
+              }}
+              showsVerticalScrollIndicator={false}
+            />
+            </TouchableWithoutFeedback>
+            {/* כפתור גלילה לתחתית - תמיד מרונדר עם אנימציית opacity */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                bottom: SCROLL_BTN_BOTTOM,
+                right: 16,
+                opacity: scrollButtonOpacity,
+                transform: [
+                  {
+                    scale: scrollButtonOpacity.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
+                zIndex: 1000,
+              }}
+              pointerEvents={showScrollToBottom ? 'auto' : 'none'}
+            >
+              <TouchableOpacity
+                onPress={scrollToBottom}
+                activeOpacity={0.8}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: DesignTokens.colors.background.secondary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderWidth: 1,
+                  borderColor: DesignTokens.colors.border.primary,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 6,
+                  elevation: 6,
+                }}
+              >
+                <ChevronDown size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.3} />
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* כפתור גלילה להודעה עם mention */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                bottom: MENTION_BTN_BOTTOM,
+                right: 16,
+                opacity: mentionButtonOpacity,
+                transform: [
+                  {
+                    scale: mentionButtonOpacity.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
+              }}
+              pointerEvents={showScrollToMention ? 'auto' : 'none'}
+            >
+              <TouchableOpacity
+                onPress={scrollToMention}
+                style={{
+                  width: 48,
+                  height: 48,
+                  backgroundColor: DesignTokens.colors.success.main,
+                  borderRadius: 24,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: DesignTokens.colors.primary.main,
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 8,
+                }}
+              >
+                <AtSign size={24} color="#000" strokeWidth={2} />
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Reply Preview - עיצוב חדש ועדין מעל שורת הקלט */}
+            {replyingTo && (
+              <View
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  bottom: INPUT_BAR_HEIGHT + tabBarInsets.bottom + 10,
+                  zIndex: 1001,
+                  marginHorizontal: 0,
+                  backgroundColor: DesignTokens.colors.background.secondary,
+                  borderRadius: 0,
+                  paddingVertical: 10,
+                  paddingHorizontal: 16,
+                  borderLeftWidth: 3,
+                  borderLeftColor: DesignTokens.colors.success.main,
+                  borderWidth: 0,
+                  borderBottomWidth: 1,
+                  borderColor: DesignTokens.colors.border.primary
+                }}
+              >
+                <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-start' }}>
+                  {/* אייקון לפי סוג */}
+                  <View style={{
+                    width: 32, height: 32, borderRadius: 16,
+                    backgroundColor: `${DesignTokens.colors.success.main}26`,
+                    alignItems: 'center', justifyContent: 'center',
+                    marginLeft: 10, marginTop: 2,
+                    borderWidth: 1, borderColor: `${DesignTokens.colors.success.main}40`
+                  }}>
+                    {replyingTo.type === 'image' && <ImageIcon size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                    {replyingTo.type === 'video' && <Video size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                    {replyingTo.type === 'audio' && <Music size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                    {replyingTo.type === 'document' && <FileText size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                    {!replyingTo.type && <MessageCircle size={16} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                  </View>
+
+                  {/* תוכן */}
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 13, fontWeight: '700', textAlign: 'right' }}>
+                        {replyingTo.sender?.full_name || 'משתמש'}
+                      </Text>
+                      <Pressable onPress={cancelReply} hitSlop={10}>
+                        <X size={20} color="#888" strokeWidth={2} />
+                      </Pressable>
+                    </View>
+                    <Text
+                      style={{
+                        color: DesignTokens.colors.text.secondary,
+                        fontSize: 12,
+                        textAlign: replyingTo.content && replyingTo.content.trim().length > 0
+                          ? (detectLanguage(replyingTo.content) === 'rtl' ? 'right' : 'left')
+                          : 'right', // ברירת מחדל עברית לטקסטי מדיה
+                        writingDirection: replyingTo.content && replyingTo.content.trim().length > 0
+                          ? detectLanguage(replyingTo.content)
+                          : 'rtl'
+                      }}
+                      numberOfLines={2}
+                      ellipsizeMode="tail"
+                    >
+                      {replyingTo.content && replyingTo.content.trim().length > 0
+                        ? replyingTo.content
+                        : (replyingTo.type === 'image'
+                          ? 'תמונה'
+                          : replyingTo.type === 'video'
+                            ? 'וידאו'
+                            : replyingTo.type === 'audio'
+                              ? 'הקלטת קול'
+                              : replyingTo.type === 'document'
+                                ? 'מסמך'
+                                : '')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+            <MessageInputBar
+              onSend={handleSendMessage}
+              onSendMedia={handleMediaPreviewSend}
+              onAttachmentPress={() => {
+                // הוספת רטט קצר מאוד לכפתור המדיה
+                import('../../utils/hapticFeedback').then(({ HapticFeedback }) => {
+                  HapticFeedback.selection();
+                });
+              }}
+              onEditMessage={editMessage}
+              chatId={currentChatId || ''}
+              editingMessage={editingMessage}
+              onCancelEdit={cancelEdit}
+              startTyping={startTyping}
+              stopTyping={stopTyping}
+            />
+          </SafeAreaView>
+        </ImageBackground>
       </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
   );
 }
 

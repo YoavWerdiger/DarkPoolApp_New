@@ -174,6 +174,163 @@ class LearningProgressService {
     }
   }
 
+  // קבלת כל ההערות של משתמש
+  async getAllUserNotes(userId: string): Promise<(UserNotes & { course_title?: string; lesson_title?: string; thumbnail_url?: string })[]> {
+    try {
+      const { data: notes, error } = await supabase
+        .from('user_lesson_notes')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('Error getting all user notes:', error);
+        return [];
+      }
+
+      if (!notes || notes.length === 0) {
+        return [];
+      }
+
+      // שליפת שמות הקורסים והשיעורים
+      const courseIds = [...new Set(notes.map(n => n.course_id))];
+      const lessonIds = [...new Set(notes.map(n => n.lesson_id))];
+
+      const { data: courses } = await supabase
+        .from('courses')
+        .select('id, title, cover_url')
+        .in('id', courseIds);
+
+      const { data: lessons } = await supabase
+        .from('lessons')
+        .select('id, title')
+        .in('id', lessonIds);
+
+      // שליפת thumbnails מה-lesson_media_links
+      const { data: mediaLinks } = await supabase
+        .from('lesson_media_links')
+        .select('course_id, lesson_id, thumbnail_url, vimeo_id, youtube_id')
+        .in('course_id', courseIds)
+        .in('lesson_id', lessonIds)
+        .eq('is_active', true);
+
+      const coursesMap = new Map(courses?.map(c => [c.id, { title: c.title, cover_url: c.cover_url }]) || []);
+      const lessonsMap = new Map(lessons?.map(l => [l.id, l.title]) || []);
+      
+      // יצירת מפה של thumbnails
+      const thumbnailsMap = new Map<string, string>();
+      mediaLinks?.forEach((media) => {
+        const key = `${media.course_id}-${media.lesson_id}`;
+        if (media.thumbnail_url) {
+          thumbnailsMap.set(key, media.thumbnail_url);
+        } else if (media.vimeo_id) {
+          thumbnailsMap.set(key, `https://vumbnail.com/${media.vimeo_id}.jpg`);
+        } else if (media.youtube_id) {
+          thumbnailsMap.set(key, `https://img.youtube.com/vi/${media.youtube_id}/maxresdefault.jpg`);
+        }
+      });
+
+      return notes.map((note) => {
+        const thumbnailKey = `${note.course_id}-${note.lesson_id}`;
+        const courseData = coursesMap.get(note.course_id);
+        // עדיפות: thumbnail של השיעור > cover_url של הקורס
+        const thumbnailUrl = thumbnailsMap.get(thumbnailKey) || courseData?.cover_url;
+        return {
+          ...note,
+          course_title: courseData?.title,
+          lesson_title: lessonsMap.get(note.lesson_id),
+          thumbnail_url: thumbnailUrl,
+        };
+      });
+    } catch (error) {
+      console.error('Error in getAllUserNotes:', error);
+      return [];
+    }
+  }
+
+  // קבלת סטטיסטיקות למידה של משתמש
+  async getUserLearningStats(userId: string): Promise<{
+    totalCourses: number;
+    enrolledCourses: number;
+    completedLessons: number;
+    totalLessons: number;
+    totalNotes: number;
+    totalWatchTime: number; // בדקות
+  }> {
+    try {
+      // מספר קורסים שהמשתמש נרשם אליהם
+      const { count: enrolledCount } = await supabase
+        .from('user_course_progress')
+        .select('DISTINCT course_id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      // מספר שיעורים שהושלמו
+      const { count: completedCount } = await supabase
+        .from('user_course_progress')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_completed', true);
+
+      // מספר הערות
+      const { count: notesCount } = await supabase
+        .from('user_lesson_notes')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId);
+
+      // זמן צפייה כולל
+      const { data: progressData } = await supabase
+        .from('user_course_progress')
+        .select('current_time_seconds')
+        .eq('user_id', userId);
+
+      const totalWatchTime = progressData?.reduce((sum, p) => sum + (p.current_time_seconds || 0), 0) || 0;
+
+      // מספר שיעורים כולל בקורסים שהמשתמש נרשם אליהם
+      const { data: enrolledCourses } = await supabase
+        .from('user_course_progress')
+        .select('DISTINCT course_id')
+        .eq('user_id', userId);
+
+      const courseIds = enrolledCourses?.map(c => c.course_id) || [];
+      let totalLessons = 0;
+      
+      if (courseIds.length > 0) {
+        const { count } = await supabase
+          .from('lessons')
+          .select('*', { count: 'exact', head: true })
+          .in('course_id', courseIds)
+          .eq('is_active', true);
+        
+        totalLessons = count || 0;
+      }
+
+      // מספר קורסים זמינים כולל
+      const { count: totalCoursesCount } = await supabase
+        .from('courses')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
+
+      return {
+        totalCourses: totalCoursesCount || 0,
+        enrolledCourses: enrolledCount || 0,
+        completedLessons: completedCount || 0,
+        totalLessons,
+        totalNotes: notesCount || 0,
+        totalWatchTime: Math.round(totalWatchTime / 60), // המרה לדקות
+      };
+    } catch (error) {
+      console.error('Error in getUserLearningStats:', error);
+      return {
+        totalCourses: 0,
+        enrolledCourses: 0,
+        completedLessons: 0,
+        totalLessons: 0,
+        totalNotes: 0,
+        totalWatchTime: 0,
+      };
+    }
+  }
+
   // קבלת קישורי מדיה לשיעור
   async getLessonMedia(courseId: string, lessonId: string): Promise<LessonMedia | null> {
     try {

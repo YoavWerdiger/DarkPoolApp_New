@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
+import { Text, I18nManager } from 'react-native';
 import { DesignTokens } from '../ui/DesignTokens';
 import { extractTextSegments } from '../../utils/textRanges';
 
@@ -10,28 +10,28 @@ interface MessageContentProps {
   textDirection: 'rtl' | 'ltr';
 }
 
-export default function MessageContent({ 
-  content, 
-  mentions, 
-  isMe, 
-  textDirection 
+export default function MessageContent({
+  content,
+  mentions,
+  isMe,
+  textDirection
 }: MessageContentProps) {
-  
+
   // Render text with mentions
   const renderTextWithMentions = (text: string, mentions?: any[]) => {
     if (!mentions || mentions.length === 0) {
       return (
-        <Text 
+        <Text
           className="text-base"
-          style={{ 
-            textAlign: textDirection === 'rtl' ? 'right' : 'left',
-            direction: textDirection, 
+          style={{
+            textAlign: isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right',
             width: '100%',
             color: isMe ? '#000000' : '#FFFFFF',
             writingDirection: textDirection,
             flexWrap: 'wrap',
             flexShrink: 1
           }}
+          textAlign={isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right'}
         >
           {text}
         </Text>
@@ -46,27 +46,27 @@ export default function MessageContent({
     })));
 
     return (
-      <Text 
+      <Text
         className="text-base"
-        style={{ 
-          textAlign: textDirection === 'rtl' ? 'right' : 'left',
-          direction: textDirection, 
+        style={{
+          textAlign: isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right',
           width: '100%',
           writingDirection: textDirection,
           flexWrap: 'wrap',
           flexShrink: 1
         }}
+        textAlign={isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right'}
       >
         {segments.map((segment, index) => {
           if (segment.range && segment.range.type === 'mention') {
             const mention = segment.range.data;
-            
+
             return (
               <Text
                 key={index}
-                style={{ 
+                style={{
                   fontWeight: 'bold' as const,
-                  color: DesignTokens.colors.primary,
+                  color: DesignTokens.colors.primary.main,
                   fontSize: DesignTokens.typography.fontSize.base
                 }}
               >
@@ -74,11 +74,11 @@ export default function MessageContent({
               </Text>
             );
           }
-          
+
           return (
             <Text
               key={index}
-              style={{ 
+              style={{
                 color: isMe ? '#000000' : '#FFFFFF',
                 fontSize: DesignTokens.typography.fontSize.base
               }}

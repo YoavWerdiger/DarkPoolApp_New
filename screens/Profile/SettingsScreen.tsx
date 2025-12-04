@@ -28,6 +28,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { DesignTokens } from '../../components/ui/DesignTokens';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 interface SettingItem {
   id: string;
@@ -130,7 +131,6 @@ export default function SettingsScreen({ navigation }: any) {
     if (value) {
       try {
         // נבדוק אם יש תמיכה באימות ביומטרי
-        const { LocalAuthentication } = await import('expo-local-authentication');
         const compatible = await LocalAuthentication.hasHardwareAsync();
         
         if (!compatible) {
@@ -325,20 +325,19 @@ export default function SettingsScreen({ navigation }: any) {
                 overflow: 'hidden'
               }}>
                 {section.items.map((item, itemIndex) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={item.type === 'action' ? item.onPress : undefined}
-                    disabled={item.type === 'switch'}
-                    activeOpacity={item.type === 'action' ? 0.7 : 1}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 16,
-                      paddingHorizontal: 16,
-                      borderBottomWidth: itemIndex < section.items.length - 1 ? 1 : 0,
-                      borderBottomColor: theme.border
-                    }}
-                  >
+                  <View key={item.id}>
+                    <TouchableOpacity
+                      onPress={item.type === 'action' ? item.onPress : undefined}
+                      disabled={item.type === 'switch'}
+                      activeOpacity={item.type === 'action' ? 0.7 : 1}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingTop: 16,
+                        paddingBottom: itemIndex < section.items.length - 1 ? 12 : 16,
+                        paddingHorizontal: 16,
+                      }}
+                    >
                     {/* Switch/Chevron - שמאל */}
                     {item.type === 'switch' && item.onToggle ? (
                       <Switch
@@ -389,6 +388,13 @@ export default function SettingsScreen({ navigation }: any) {
                       />
                     </View>
                   </TouchableOpacity>
+                  {itemIndex < section.items.length - 1 && (
+                    <View style={{
+                      height: 1,
+                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    }} />
+                  )}
+                </View>
                 ))}
               </View>
             </View>

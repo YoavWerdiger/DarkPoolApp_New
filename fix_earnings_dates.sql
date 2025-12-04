@@ -69,3 +69,9 @@ WHERE report_date >= CURRENT_DATE - INTERVAL '2 days'
 GROUP BY report_date
 ORDER BY report_date;
 
+
+
+
+
+
+

@@ -43,12 +43,12 @@ export default function GroupInfoScreen() {
           tabBarStyle: { display: 'none' }
         });
       }
-      
+
       return () => {
         if (parent) {
           parent.setOptions({
-            tabBarStyle: { 
-              backgroundColor: DesignTokens.colors.background.primary, 
+            tabBarStyle: {
+              backgroundColor: DesignTokens.colors.background.primary,
               borderTopWidth: 0,
               height: Platform.OS === 'ios' ? 90 : 70 + tabBarInsets.bottom,
               paddingBottom: Platform.OS === 'ios' ? 15 : tabBarInsets.bottom + 10,
@@ -91,7 +91,7 @@ export default function GroupInfoScreen() {
   const debugDataStructure = (data: any) => {
     console.log('🔍 Debugging data structure:');
     console.log('📊 Raw data:', data);
-    
+
     if (Array.isArray(data)) {
       console.log('📋 Array length:', data.length);
       data.forEach((item, index) => {
@@ -114,32 +114,32 @@ export default function GroupInfoScreen() {
   const loadData = async () => {
     console.log('🔄 Starting to load group data for:', chatId);
     console.log('👤 Current user:', user?.id);
-    
+
     setLoading(true);
-    
+
     try {
       console.log('🔄 Loading group data...');
-      
+
       // טען נתוני הקבוצה
       const { data: groupData, error: groupError } = await supabase
         .from('channels')
         .select('*')
         .eq('id', chatId)
         .single();
-      
+
       if (groupError) {
         console.error('❌ Error loading group data:', groupError);
         Alert.alert('שגיאה', 'שגיאה בטעינת נתוני הקבוצה');
         return;
       }
-      
+
       if (!groupData) {
         console.error('❌ No group data found');
         Alert.alert('שגיאה', 'הקבוצה לא נמצאה');
         navigation.goBack();
         return;
       }
-      
+
       console.log('✅ Group data loaded:', groupData);
       setGroup(groupData);
       setIsPinned(!!groupData?.is_pinned);
@@ -147,21 +147,21 @@ export default function GroupInfoScreen() {
 
       // Load members - simple and reliable approach
       console.log('🔄 Loading members for channel:', chatId);
-      
+
       const { data: membersOnly, error: membersError } = await supabase
         .from('channel_members')
         .select('user_id, role, user_data')
         .eq('channel_id', chatId);
-      
+
       if (membersError) {
         console.error('❌ Error loading members:', membersError);
         Alert.alert('שגיאה', 'לא ניתן לטעון רשימת חברים');
         return;
       }
-      
+
       console.log('✅ Members loaded:', membersOnly?.length || 0);
       console.log('📋 First few members:', membersOnly?.slice(0, 3));
-      
+
       if (membersOnly && membersOnly.length > 0) {
         // המר את הנתונים לפורמט הנכון
         const membersData = membersOnly.map(member => {
@@ -178,23 +178,23 @@ export default function GroupInfoScreen() {
             }
           };
         });
-        
+
         console.log('🔗 Merged members data:', membersData.slice(0, 2));
-        
+
         const validMembers = membersData.filter(m => m.users && m.user_id);
         console.log('✅ Valid members count:', validMembers.length);
         setMembers(validMembers);
-        
+
         // בדוק אם המשתמש הנוכחי חבר בקבוצה
         const currentMember = validMembers?.find((m: any) => m.user_id === user?.id);
         const isUserMember = !!currentMember;
-        
+
         console.log('👤 Current user membership status:', {
           userId: user?.id,
           isMember: isUserMember,
           memberRole: currentMember?.role
         });
-        
+
         // אם המשתמש לא חבר וזו קבוצה ציבורית, הוסף אותו אוטומטית
         if (!isUserMember && !groupData.is_private && user?.id) {
           console.log('🔄 Auto-adding current user to public group');
@@ -206,7 +206,7 @@ export default function GroupInfoScreen() {
               .eq('channel_id', chatId)
               .eq('user_id', user.id)
               .single();
-              
+
             if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
               console.error('❌ Error checking existing membership:', checkError);
             } else if (existingMember) {
@@ -233,7 +233,7 @@ export default function GroupInfoScreen() {
                   user_id: user.id,
                   role: 'member'
                 });
-                
+
               if (addError) {
                 console.error('❌ Error auto-adding user to group:', addError);
               } else {
@@ -257,27 +257,27 @@ export default function GroupInfoScreen() {
             console.error('❌ Exception auto-adding user:', error);
           }
         }
-        
+
         // עדכן את הרשימה עם כל החברים (כולל המשתמש הנוכחי אם נוסף)
         console.log('🎯 Setting members state with (basic):', validMembers);
         setMembers(validMembers);
         const finalCurrentMember = validMembers?.find((m: any) => m.user_id === user?.id);
         setIsMember(!!finalCurrentMember);
         setIsAdmin(finalCurrentMember?.role === 'admin');
-        
+
       } else {
         console.log('ℹ️ No members found for this channel');
         setMembers([]);
         setIsMember(false);
         setIsAdmin(false);
       }
-      
+
       // Load media items
       await loadMediaItems();
-      
+
       // Load starred messages
       await loadStarredMessages();
-      
+
       console.log('✅ Data loading completed successfully');
     } catch (error) {
       console.error('❌ Error loading members:', error);
@@ -285,13 +285,13 @@ export default function GroupInfoScreen() {
     } finally {
       setLoading(false);
     }
-};
+  };
 
   // Load media items (images, videos, audio, documents)
   const loadMediaItems = async () => {
     try {
       console.log('🖼️ Loading media items for channel:', chatId);
-      
+
       // First, let's check what types of messages exist in this channel
       const { data: allMessages, error: allMessagesError } = await supabase
         .from('messages')
@@ -299,7 +299,7 @@ export default function GroupInfoScreen() {
         .eq('channel_id', chatId)
         .order('created_at', { ascending: false })
         .limit(100);
-      
+
       // Let's check what's actually in the content field for media messages
       const { data: mediaTypeMessages, error: mediaTypeError } = await supabase
         .from('messages')
@@ -308,12 +308,12 @@ export default function GroupInfoScreen() {
         .in('type', ['image', 'video', 'audio', 'document'])
         .order('created_at', { ascending: false })
         .limit(50);
-      
+
       console.log('🔍 Media type messages found:', mediaTypeMessages?.length || 0);
       if (mediaTypeMessages && mediaTypeMessages.length > 0) {
         console.log('📋 All media type messages:', mediaTypeMessages);
       }
-      
+
       // Let's also check for messages with actual file paths
       const { data: realMediaMessages, error: realMediaError } = await supabase
         .from('messages')
@@ -322,29 +322,29 @@ export default function GroupInfoScreen() {
         .or('content.like.*.jpg,content.like.*.png,content.like.*.jpeg,content.like.*.mp4,content.like.*.mp3,content.like.*.pdf')
         .order('created_at', { ascending: false })
         .limit(50);
-      
+
       console.log('🔍 Real media messages found:', realMediaMessages?.length || 0);
       if (realMediaMessages && realMediaMessages.length > 0) {
         console.log('📋 Sample real media:', realMediaMessages.slice(0, 3));
       }
-      
+
       if (allMessagesError) {
         console.error('❌ Error loading all messages:', allMessagesError);
         return;
       }
-      
+
       console.log('📊 All messages in channel:', allMessages?.length || 0);
       console.log('📋 Message types found:', allMessages?.map(m => m.type) || []);
-      
+
       // Use media type messages first, then real media messages, then filter from all messages
-      const mediaMessages = mediaTypeMessages && mediaTypeMessages.length > 0 
-        ? mediaTypeMessages 
-        : realMediaMessages && realMediaMessages.length > 0 
-        ? realMediaMessages 
-        : allMessages?.filter(msg => 
-            msg.type === 'image' || 
-            msg.type === 'video' || 
-            msg.type === 'audio' || 
+      const mediaMessages = mediaTypeMessages && mediaTypeMessages.length > 0
+        ? mediaTypeMessages
+        : realMediaMessages && realMediaMessages.length > 0
+          ? realMediaMessages
+          : allMessages?.filter(msg =>
+            msg.type === 'image' ||
+            msg.type === 'video' ||
+            msg.type === 'audio' ||
             msg.type === 'document' ||
             msg.content?.includes('http') ||
             msg.content?.includes('.jpg') ||
@@ -352,10 +352,10 @@ export default function GroupInfoScreen() {
             msg.content?.includes('.mp4') ||
             msg.content?.includes('.mp3')
           ) || [];
-      
+
       console.log('🎯 Media messages found:', mediaMessages.length);
       console.log('📋 Media message details:', mediaMessages.slice(0, 3));
-      
+
       // Now get user data for these messages
       const { data: mediaData, error: mediaError } = await supabase
         .from('messages')
@@ -372,29 +372,29 @@ export default function GroupInfoScreen() {
         .in('id', mediaMessages.map(m => m.id))
         .order('created_at', { ascending: false })
         .limit(50);
-      
+
       if (mediaError) {
         console.error('❌ Error loading media items with user data:', mediaError);
         // Fallback to the filtered messages without user data
         setMediaItems(mediaMessages);
         return;
       }
-      
+
       console.log('✅ Media items with user data loaded:', mediaData?.length || 0);
       console.log('📋 Sample media item:', mediaData?.[0]);
-      
+
       // Process media items to get proper URLs from Supabase Storage
       const processedMediaItems = await Promise.all(
         (mediaData || []).map(async (item) => {
           let mediaUrl = item.file_url || item.content;
-          
+
           console.log('🔍 Processing media item:', {
             id: item.id,
             type: item.type,
             content: item.content,
             file_url: item.file_url
           });
-          
+
           // If we have a file_url, use it directly
           if (item.file_url) {
             console.log('✅ Using file_url:', item.file_url);
@@ -404,16 +404,16 @@ export default function GroupInfoScreen() {
               isValid: true
             };
           }
-          
+
           // Skip items that don't have valid file paths
-          if (!item.content || 
-              item.content === '[image]' || 
-              item.content === '[video]' || 
-              item.content === '[audio]' || 
-              item.content === '[document]' ||
-              item.content.includes('אחאח') ||
-              item.content.includes('היידה') ||
-              item.content.includes('שלום')) {
+          if (!item.content ||
+            item.content === '[image]' ||
+            item.content === '[video]' ||
+            item.content === '[audio]' ||
+            item.content === '[document]' ||
+            item.content.includes('אחאח') ||
+            item.content.includes('היידה') ||
+            item.content.includes('שלום')) {
             console.log('⏭️ Skipping invalid media content:', item.content);
             return {
               ...item,
@@ -421,24 +421,24 @@ export default function GroupInfoScreen() {
               isValid: false
             };
           }
-          
+
           // If content looks like a file path, get signed URL
           if (item.content && !item.content.startsWith('http')) {
             try {
               console.log('🔄 Getting signed URL for:', item.content);
-              
+
               // Determine the correct bucket based on media type
               let bucketName = 'chat-files'; // Default for images
               if (item.type === 'video' || item.type === 'audio' || item.type === 'document') {
                 bucketName = 'media'; // Use media bucket for video/audio/documents
               }
-              
+
               console.log('📁 Using bucket:', bucketName, 'for type:', item.type);
-              
+
               const { data: signedUrlData, error: signedUrlError } = await supabase.storage
                 .from(bucketName)
                 .createSignedUrl(item.content, 3600); // 1 hour expiry
-              
+
               if (signedUrlError) {
                 console.error('❌ Error getting signed URL:', signedUrlError);
                 return {
@@ -464,7 +464,7 @@ export default function GroupInfoScreen() {
               };
             }
           }
-          
+
           return {
             ...item,
             content: mediaUrl,
@@ -472,10 +472,10 @@ export default function GroupInfoScreen() {
           };
         })
       );
-      
+
       // Filter out invalid media items
       const validMediaItems = processedMediaItems.filter(item => item.isValid && item.content);
-      
+
       console.log('🎯 Processed media items:', processedMediaItems.length);
       console.log('✅ Valid media items:', validMediaItems.length);
       setMediaItems(validMediaItems);
@@ -487,13 +487,12 @@ export default function GroupInfoScreen() {
   // Load pinned messages
   const loadStarredMessages = async () => {
     try {
-      if (!user?.id) return;
-      
+      if (!user?.id || !chatId) return;
+
       console.log('⭐ GroupInfoScreen: Loading starred messages for user:', user.id);
-      
-      const ChatService = await import('../../services/chatService');
-      const data = await ChatService.ChatService.getStarredMessages(user.id);
-      
+
+      const data = await ChatService.getStarredMessages(chatId, user.id);
+
       console.log('✅ GroupInfoScreen: Starred messages loaded:', data?.length || 0);
       setStarredMessages(data || []);
     } catch (error) {
@@ -515,25 +514,25 @@ export default function GroupInfoScreen() {
   // מיין: המשתמש הנוכחי, מנהלים, שאר החברים
   const sortedMembers = () => {
     if (!user) return members;
-    
+
     console.log('🔄 Sorting members:', {
       totalMembers: members.length,
       currentUserId: user.id
     });
-    
+
     const you = members.find((m: any) => m.user_id === user.id);
     const admins = members.filter((m: any) => m.role === 'admin' && m.user_id !== user.id);
     const others = members.filter((m: any) => m.role !== 'admin' && m.user_id !== user.id);
-    
+
     const sorted = [you, ...admins, ...others].filter(Boolean);
-    
+
     console.log('✅ Sorted members result:', {
       you: you ? { id: you.user_id, name: you.users?.full_name } : null,
       adminsCount: admins.length,
       othersCount: others.length,
       totalSorted: sorted.length
     });
-    
+
     return sorted;
   };
 
@@ -553,53 +552,55 @@ export default function GroupInfoScreen() {
   const handleExit = async () => {
     Alert.alert('יציאה מהקבוצה', 'האם אתה בטוח שברצונך לצאת מהקבוצה?', [
       { text: 'ביטול', style: 'cancel' },
-      { text: 'צא', style: 'destructive', onPress: async () => {
-        try {
-          const { error } = await supabase
-            .from('channel_members')
-            .delete()
-            .eq('channel_id', chatId)
-            .eq('user_id', user?.id);
-          
-          if (error) {
+      {
+        text: 'צא', style: 'destructive', onPress: async () => {
+          try {
+            const { error } = await supabase
+              .from('channel_members')
+              .delete()
+              .eq('channel_id', chatId)
+              .eq('user_id', user?.id);
+
+            if (error) {
+              console.error('Error leaving group:', error);
+              Alert.alert('שגיאה', 'לא ניתן לצאת מהקבוצה כעת');
+              return;
+            }
+
+            setIsMember(false);
+            Alert.alert('הצלחה', 'יצאת מהקבוצה בהצלחה');
+            navigation.goBack();
+          } catch (error) {
             console.error('Error leaving group:', error);
-            Alert.alert('שגיאה', 'לא ניתן לצאת מהקבוצה כעת');
-            return;
+            Alert.alert('שגיאה', 'שגיאה ביציאה מהקבוצה');
           }
-          
-          setIsMember(false);
-          Alert.alert('הצלחה', 'יצאת מהקבוצה בהצלחה');
-          navigation.goBack();
-        } catch (error) {
-          console.error('Error leaving group:', error);
-          Alert.alert('שגיאה', 'שגיאה ביציאה מהקבוצה');
         }
-      }}
+      }
     ]);
   };
 
   const handleJoin = async () => {
     try {
       console.log('🔄 User attempting to join group:', { userId: user?.id, chatId });
-      
+
       const { error } = await supabase
         .from('channel_members')
-        .insert({ 
-          channel_id: chatId, 
+        .insert({
+          channel_id: chatId,
           user_id: user?.id,
           role: 'member'
         });
-      
+
       if (error) {
         console.error('❌ Error joining group:', error);
         Alert.alert('שגיאה', 'לא ניתן להצטרף לקבוצה כעת');
         return;
       }
-      
+
       console.log('✅ User joined group successfully');
       setIsMember(true);
       Alert.alert('הצלחה', 'הצטרפת לקבוצה בהצלחה!');
-      
+
       // רענן את רשימת החברים
       await loadData();
     } catch (error) {
@@ -635,13 +636,13 @@ export default function GroupInfoScreen() {
                 .update({ role: 'admin' })
                 .eq('channel_id', chatId)
                 .eq('user_id', memberId);
-              
+
               if (error) {
                 console.error('Error promoting member:', error);
                 Alert.alert('שגיאה', 'לא ניתן להעלות למנהל כעת');
                 return;
               }
-              
+
               Alert.alert('הצלחה', `${memberName} הועלה למנהל בהצלחה!`);
               await loadData();
             } catch (error) {
@@ -670,13 +671,13 @@ export default function GroupInfoScreen() {
                 .delete()
                 .eq('channel_id', chatId)
                 .eq('user_id', memberId);
-              
+
               if (error) {
                 console.error('Error removing member:', error);
                 Alert.alert('שגיאה', 'לא ניתן להסיר חבר כעת');
                 return;
               }
-              
+
               Alert.alert('הצלחה', `${memberName} הוסר מהקבוצה בהצלחה!`);
               await loadData();
             } catch (error) {
@@ -696,7 +697,7 @@ export default function GroupInfoScreen() {
 
   const handleDeleteGroup = () => {
     if (!isOwner) return;
-    
+
     Alert.alert(
       'מחיקת קבוצה',
       'האם אתה בטוח שברצונך למחוק את הקבוצה? פעולה זו אינה הפיכה!',
@@ -711,13 +712,13 @@ export default function GroupInfoScreen() {
                 .from('channels')
                 .delete()
                 .eq('id', chatId);
-              
+
               if (error) {
                 console.error('Error deleting group:', error);
                 Alert.alert('שגיאה', 'לא ניתן למחוק את הקבוצה כעת');
                 return;
               }
-              
+
               Alert.alert('הצלחה', 'הקבוצה נמחקה בהצלחה!');
               navigation.goBack();
             } catch (error) {
@@ -757,9 +758,9 @@ export default function GroupInfoScreen() {
   // Navigate to pinned message
   const handleNavigateToPinnedMessage = (messageId: string) => {
     console.log('📌 Navigating to pinned message:', messageId);
-    navigation.navigate('ChatRoom', { 
-      chatId, 
-      jumpToMessage: messageId 
+    navigation.navigate('ChatRoom', {
+      chatId,
+      jumpToMessage: messageId
     });
   };
 
@@ -779,9 +780,9 @@ export default function GroupInfoScreen() {
             borderColor: DesignTokens.colors.border.primary
           }}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={{ 
-              color: DesignTokens.colors.text.primary, 
-              fontSize: DesignTokens.typography.fontSize.base, 
+            <Text style={{
+              color: DesignTokens.colors.text.primary,
+              fontSize: DesignTokens.typography.fontSize.base,
               fontWeight: '500' as any,
               marginTop: 16,
               textAlign: 'center'
@@ -797,12 +798,12 @@ export default function GroupInfoScreen() {
   if (!group) {
     return (
       <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ 
-          color: DesignTokens.colors.text.primary, 
+        <Text style={{
+          color: DesignTokens.colors.text.primary,
           fontSize: DesignTokens.typography.fontSize.lg,
-          marginBottom: 16 
+          marginBottom: 16
         }}>הקבוצה לא נמצאה</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={{
             backgroundColor: DesignTokens.colors.primary.main,
@@ -822,54 +823,46 @@ export default function GroupInfoScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-        {/* Header */}
-        <View style={{
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 20,
-          paddingTop: 60,
-          paddingBottom: 20,
-          backgroundColor: 'transparent',
-          borderBottomWidth: 1,
-          borderBottomColor: DesignTokens.colors.border.primary,
-          position: 'relative'
-        }}>
-        {/* כפתור שיתוף - משמאל */}
-        <TouchableOpacity 
-          onPress={handleShareGroup}
+      {/* Header */}
+      <View style={{
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 60,
+        paddingBottom: 16,
+        backgroundColor: DesignTokens.colors.background.primary,
+      }}>
+        {/* כפתור חזור - מימין */}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
           style={{
-            position: 'absolute',
-            left: 20,
-            top: 60,
             padding: 8
           }}
         >
-          <ShareIcon size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
+          <ArrowRight size={24} color={DesignTokens.colors.primary.main} strokeWidth={2.5} />
         </TouchableOpacity>
-        
+
         {/* כותרת ממורכזת */}
         <Text style={{
-          fontSize: 22,
+          fontSize: 18,
           fontWeight: '700',
           color: DesignTokens.colors.text.primary,
           textAlign: 'center'
         }}>פרטי קבוצה</Text>
-        
-        {/* כפתור חזור - מימין */}
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
+
+        {/* כפתור שיתוף - משמאל */}
+        <TouchableOpacity
+          onPress={handleShareGroup}
           style={{
-            position: 'absolute',
-            right: 20,
-            top: 60,
             padding: 8
           }}
         >
-          <ArrowRight size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
+          <ShareIcon size={24} color={DesignTokens.colors.primary.main} strokeWidth={2.5} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
@@ -877,59 +870,76 @@ export default function GroupInfoScreen() {
         {/* Group Header */}
         <View style={{
           alignItems: 'center',
-          marginHorizontal: 20,
+          marginHorizontal: 16,
           marginTop: 24,
-          paddingHorizontal: 24,
-          paddingVertical: 28,
+          paddingHorizontal: 20,
+          paddingVertical: 32,
           borderRadius: 16,
-          backgroundColor: DesignTokens.colors.background.secondary,
-          borderWidth: 0
+          backgroundColor: DesignTokens.colors.background.secondary
         }}>
           {/* תמונת קבוצה */}
-          {group?.image_url && (
+          {group?.image_url ? (
             <Image
               source={{ uri: group.image_url }}
               style={{
-                width: 110,
-                height: 110,
-                borderRadius: 55,
+                width: 100,
+                height: 100,
+                borderRadius: 50,
                 marginBottom: 16,
-                borderWidth: 3,
-                borderColor: DesignTokens.colors.primary.main
+                borderWidth: 4,
+                borderColor: DesignTokens.colors.background.primary
               }}
             />
+          ) : (
+            <View style={{
+              width: 100,
+              height: 100,
+              borderRadius: 50,
+              marginBottom: 16,
+              backgroundColor: DesignTokens.colors.primary.main,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 4,
+              borderColor: DesignTokens.colors.background.primary
+            }}>
+              <Text style={{ fontSize: 40, color: '#FFFFFF', fontWeight: 'bold' }}>
+                {group?.name ? group.name[0] : '?'}
+              </Text>
+            </View>
           )}
-          
+
           <Text style={{
-            fontSize: 26,
-            fontWeight: '700',
+            fontSize: 24,
+            fontWeight: '800',
             color: DesignTokens.colors.text.primary,
             textAlign: 'center',
             marginBottom: 8
           }}>{group?.name}</Text>
-          
+
           <Text style={{
             textAlign: 'center',
-            color: DesignTokens.colors.text.tertiary,
+            color: DesignTokens.colors.text.secondary,
             fontSize: 15,
             lineHeight: 22,
-            marginBottom: 16,
+            marginBottom: 20,
             paddingHorizontal: 16
           }}>
             {group?.description || 'אין תיאור זמין לקבוצה זו'}
           </Text>
-          
+
           <View style={{
-            backgroundColor: `${DesignTokens.colors.success.main}1F`,
-            paddingHorizontal: 18,
-            paddingVertical: 10,
+            backgroundColor: DesignTokens.colors.background.tertiary,
+            paddingHorizontal: 16,
+            paddingVertical: 8,
             borderRadius: 20,
-            borderWidth: 0
+            flexDirection: 'row',
+            alignItems: 'center'
           }}>
+            <Users size={14} color={DesignTokens.colors.primary.main} style={{ marginRight: 6 }} />
             <Text style={{
-              color: DesignTokens.colors.primary.main,
-              fontWeight: '700',
-              fontSize: 14
+              color: DesignTokens.colors.text.primary,
+              fontWeight: '600',
+              fontSize: 13
             }}>{members.length} משתתפים</Text>
           </View>
         </View>
@@ -958,7 +968,7 @@ export default function GroupInfoScreen() {
               justifyContent: 'space-around'
             }}>
               {isOwner && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={handleDeleteGroup}
                   style={{
                     alignItems: 'center',
@@ -967,9 +977,7 @@ export default function GroupInfoScreen() {
                     backgroundColor: `${DesignTokens.colors.danger.main}26`,
                     borderRadius: 12,
                     flex: 1,
-                    marginHorizontal: 4,
-                    borderWidth: 1,
-                    borderColor: `${DesignTokens.colors.danger.main}4D`
+                    marginHorizontal: 4
                   }}
                 >
                   <Trash2 size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
@@ -993,10 +1001,10 @@ export default function GroupInfoScreen() {
           borderRadius: 16,
           overflow: 'hidden'
         }}>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('MediaGallery', { 
-              chatId: chatId, 
-              channelName: group?.name || 'קבוצה' 
+          <TouchableOpacity
+            onPress={() => navigation.navigate('MediaGallery', {
+              chatId: chatId,
+              channelName: group?.name || 'קבוצה'
             })}
             style={{
               flexDirection: 'row',
@@ -1046,7 +1054,7 @@ export default function GroupInfoScreen() {
           borderRadius: 16,
           overflow: 'hidden'
         }}>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setShowPinnedMessages(!showPinnedMessages)}
             style={{
               flexDirection: 'row',
@@ -1056,10 +1064,10 @@ export default function GroupInfoScreen() {
             }}
           >
             {/* Chevron - שמאל */}
-            <Ionicons 
-              name={showPinnedMessages ? "chevron-up" : "chevron-down"} 
-              size={20} 
-              color={DesignTokens.colors.text.tertiary} 
+            <Ionicons
+              name={showPinnedMessages ? "chevron-up" : "chevron-down"}
+              size={20}
+              color={DesignTokens.colors.text.tertiary}
             />
 
             {/* Text Content - מרכז */}
@@ -1090,7 +1098,7 @@ export default function GroupInfoScreen() {
               <Star size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
             </View>
           </TouchableOpacity>
-          
+
           {showPinnedMessages && starredMessages.length > 0 && (
             <View style={{ marginTop: DesignTokens.spacing.lg }}>
               {starredMessages.slice(0, 3).map((message, index) => (
@@ -1098,9 +1106,7 @@ export default function GroupInfoScreen() {
                   backgroundColor: DesignTokens.colors.background.tertiary,
                   borderRadius: DesignTokens.borderRadius.md,
                   padding: DesignTokens.spacing.md,
-                  marginBottom: DesignTokens.spacing.sm,
-                  borderWidth: 1,
-                  borderColor: DesignTokens.colors.border.primary
+                  marginBottom: DesignTokens.spacing.sm
                 }}>
                   <Text style={{
                     color: DesignTokens.colors.text.primary,
@@ -1267,251 +1273,251 @@ export default function GroupInfoScreen() {
               borderRadius: 16,
               overflow: 'hidden'
             }}>
-            
-            {/* Group Description */}
-            <TouchableOpacity style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              paddingHorizontal: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: DesignTokens.colors.border.primary
-            }}>
-              {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
 
-              {/* Text Content - מרכז */}
-              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: DesignTokens.colors.text.primary,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>תיאור קבוצה</Text>
-                <Text style={{
-                  fontSize: 13,
-                  color: DesignTokens.colors.text.tertiary,
-                  textAlign: 'right'
-                }} numberOfLines={1}>
-                  {group?.description || 'אין תיאור'}
-                </Text>
-              </View>
-
-              {/* Icon - ימין */}
-              <View style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: `${DesignTokens.colors.success.main}1A`,
+              {/* Group Description */}
+              <TouchableOpacity style={{
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center'
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: DesignTokens.colors.border.primary
               }}>
-                <FileText size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-            
-            {/* Group Icon */}
-            <TouchableOpacity style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              paddingHorizontal: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: DesignTokens.colors.border.primary
-            }}>
-              {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
+                {/* Chevron - שמאל */}
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
 
-              {/* Text Content - מרכז */}
-              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: DesignTokens.colors.text.primary,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>אייקון קבוצה</Text>
-                <Text style={{
-                  fontSize: 13,
-                  color: DesignTokens.colors.text.tertiary,
-                  textAlign: 'right'
-                }}>שנה את האייקון</Text>
-              </View>
+                {/* Text Content - מרכז */}
+                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: 2,
+                    textAlign: 'right'
+                  }}>תיאור קבוצה</Text>
+                  <Text style={{
+                    fontSize: 13,
+                    color: DesignTokens.colors.text.tertiary,
+                    textAlign: 'right'
+                  }} numberOfLines={1}>
+                    {group?.description || 'אין תיאור'}
+                  </Text>
+                </View>
 
-              {/* Icon - ימין */}
-              <View style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: `${DesignTokens.colors.success.main}1A`,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <ImageIcon size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-            
-            {/* Group Name */}
-            <TouchableOpacity style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              paddingHorizontal: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: DesignTokens.colors.border.primary
-            }}>
-              {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
-
-              {/* Text Content - מרכז */}
-              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: DesignTokens.colors.text.primary,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>שם קבוצה</Text>
-                <Text style={{
-                  fontSize: 13,
-                  color: DesignTokens.colors.text.tertiary,
-                  textAlign: 'right'
-                }} numberOfLines={1}>
-                  {group?.name || 'ללא שם'}
-                </Text>
-              </View>
-
-              {/* Icon - ימין */}
-              <View style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: `${DesignTokens.colors.success.main}1A`,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Edit3 size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-            
-            {/* Clear Chat History */}
-            <TouchableOpacity style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              paddingHorizontal: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: DesignTokens.colors.border.primary
-            }}>
-              {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.danger.main} />
-
-              {/* Text Content - מרכז */}
-              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: DesignTokens.colors.danger.main,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>נקה היסטוריה</Text>
-                <Text style={{
-                  fontSize: 13,
-                  color: DesignTokens.colors.text.tertiary,
-                  textAlign: 'right'
-                }}>מחק את כל ההודעות</Text>
-              </View>
-
-              {/* Icon - ימין */}
-              <View style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: `${DesignTokens.colors.danger.main}1A`,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Trash2 size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-            
-            {/* Group Privacy */}
-            <TouchableOpacity style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              paddingHorizontal: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: DesignTokens.colors.border.primary
-            }}>
-              {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
-
-              {/* Text Content - מרכז */}
-              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: DesignTokens.colors.text.primary,
-                  marginBottom: 2,
-                  textAlign: 'right'
-                }}>הגדרות פרטיות</Text>
-                <Text style={{
-                  fontSize: 13,
-                  color: DesignTokens.colors.text.tertiary,
-                  textAlign: 'right'
+                {/* Icon - ימין */}
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: `${DesignTokens.colors.success.main}1A`,
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
-                  {group?.is_private ? 'קבוצה פרטית' : 'קבוצה ציבורית'}
-                </Text>
-              </View>
+                  <FileText size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
 
-              {/* Icon - ימין */}
-              <View style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: `${DesignTokens.colors.success.main}1A`,
+              {/* Group Icon */}
+              <TouchableOpacity style={{
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center'
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: DesignTokens.colors.border.primary
               }}>
-                <Lock size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-            
-            {/* More Admin Options */}
-            <TouchableOpacity style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              paddingHorizontal: 16
-            }}>
-              {/* Chevron - שמאל */}
-              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
+                {/* Chevron - שמאל */}
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
 
-              {/* Text Content - מרכז */}
-              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: DesignTokens.colors.text.primary,
-                  textAlign: 'right'
-                }}>אפשרויות נוספות</Text>
-              </View>
+                {/* Text Content - מרכז */}
+                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: 2,
+                    textAlign: 'right'
+                  }}>אייקון קבוצה</Text>
+                  <Text style={{
+                    fontSize: 13,
+                    color: DesignTokens.colors.text.tertiary,
+                    textAlign: 'right'
+                  }}>שנה את האייקון</Text>
+                </View>
 
-              {/* Icon - ימין */}
-              <View style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                backgroundColor: `${DesignTokens.colors.success.main}1A`,
+                {/* Icon - ימין */}
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: `${DesignTokens.colors.success.main}1A`,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <ImageIcon size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Group Name */}
+              <TouchableOpacity style={{
+                flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center'
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: DesignTokens.colors.border.primary
               }}>
-                <MoreVertical size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-          </View>
+                {/* Chevron - שמאל */}
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
+
+                {/* Text Content - מרכז */}
+                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: 2,
+                    textAlign: 'right'
+                  }}>שם קבוצה</Text>
+                  <Text style={{
+                    fontSize: 13,
+                    color: DesignTokens.colors.text.tertiary,
+                    textAlign: 'right'
+                  }} numberOfLines={1}>
+                    {group?.name || 'ללא שם'}
+                  </Text>
+                </View>
+
+                {/* Icon - ימין */}
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: `${DesignTokens.colors.success.main}1A`,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Edit3 size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Clear Chat History */}
+              <TouchableOpacity style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: DesignTokens.colors.border.primary
+              }}>
+                {/* Chevron - שמאל */}
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.danger.main} />
+
+                {/* Text Content - מרכז */}
+                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: DesignTokens.colors.danger.main,
+                    marginBottom: 2,
+                    textAlign: 'right'
+                  }}>נקה היסטוריה</Text>
+                  <Text style={{
+                    fontSize: 13,
+                    color: DesignTokens.colors.text.tertiary,
+                    textAlign: 'right'
+                  }}>מחק את כל ההודעות</Text>
+                </View>
+
+                {/* Icon - ימין */}
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: `${DesignTokens.colors.danger.main}1A`,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Trash2 size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+
+              {/* Group Privacy */}
+              <TouchableOpacity style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: DesignTokens.colors.border.primary
+              }}>
+                {/* Chevron - שמאל */}
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
+
+                {/* Text Content - מרכז */}
+                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: 2,
+                    textAlign: 'right'
+                  }}>הגדרות פרטיות</Text>
+                  <Text style={{
+                    fontSize: 13,
+                    color: DesignTokens.colors.text.tertiary,
+                    textAlign: 'right'
+                  }}>
+                    {group?.is_private ? 'קבוצה פרטית' : 'קבוצה ציבורית'}
+                  </Text>
+                </View>
+
+                {/* Icon - ימין */}
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: `${DesignTokens.colors.success.main}1A`,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Lock size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+
+              {/* More Admin Options */}
+              <TouchableOpacity style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 16,
+                paddingHorizontal: 16
+              }}>
+                {/* Chevron - שמאל */}
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
+
+                {/* Text Content - מרכז */}
+                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: DesignTokens.colors.text.primary,
+                    textAlign: 'right'
+                  }}>אפשרויות נוספות</Text>
+                </View>
+
+                {/* Icon - ימין */}
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: `${DesignTokens.colors.success.main}1A`,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <MoreVertical size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -1537,436 +1543,436 @@ export default function GroupInfoScreen() {
             borderRadius: 16,
             overflow: 'hidden'
           }}>
-          <TouchableOpacity 
-            onPress={() => setShowAll(!showAll)}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 16,
-              paddingHorizontal: 16
-            }}
-          >
-            {/* Chevron - שמאל */}
-            <Ionicons 
-              name={showAll ? "chevron-up" : "chevron-down"} 
-              size={20} 
-              color={DesignTokens.colors.text.tertiary} 
-            />
+            <TouchableOpacity
+              onPress={() => setShowAll(!showAll)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingVertical: 16,
+                paddingHorizontal: 16
+              }}
+            >
+              {/* Chevron - שמאל */}
+              <Ionicons
+                name={showAll ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={DesignTokens.colors.text.tertiary}
+              />
 
-            {/* Text Content - מרכז */}
-            <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
-              <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: DesignTokens.colors.text.primary,
-                marginBottom: 2,
-                textAlign: 'right'
-              }}>הצג את כל החברים</Text>
-              <Text style={{
-                fontSize: 13,
-                color: DesignTokens.colors.text.tertiary,
-                textAlign: 'right'
-              }}>לחץ להרחבה</Text>
-            </View>
-
-            {/* Icon - ימין */}
-            <View style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              backgroundColor: `${DesignTokens.colors.success.main}1A`,
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Users size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-            </View>
-          </TouchableOpacity>
-          
-        {loading ? (
-          <View style={{
-            alignItems: 'center',
-            paddingVertical: 32
-          }}>
-            <Text style={{
-              color: DesignTokens.colors.text.secondary,
-              fontSize: 16
-            }}>טוען חברים...</Text>
-          </View>
-        ) : members.length === 0 ? (
-            <View style={{
-              alignItems: 'center',
-              paddingVertical: 32
-            }}>
-            <Text style={{
-              color: DesignTokens.colors.text.secondary,
-              textAlign: 'center',
-              marginBottom: 16,
-              fontSize: 16
-            }}>אין חברים נוספים בקבוצה זו</Text>
-            <Text style={{
-              color: DesignTokens.colors.text.tertiary,
-              textAlign: 'center',
-              fontSize: 14,
-              marginBottom: 16,
-              lineHeight: 20
-            }}>
-              אתה יכול להזמין חברים או לחכות שחברים נוספים יצטרפו
-            </Text>
-            <View style={{
-              flexDirection: 'row'
-            }}>
-              <TouchableOpacity 
-                onPress={loadData} 
-                style={{
-                  backgroundColor: DesignTokens.colors.background.tertiary,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 12,
-                  marginRight: 8
-                }}
-              >
+              {/* Text Content - מרכז */}
+              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
                 <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
                   color: DesignTokens.colors.text.primary,
-                  fontWeight: '700',
-                  fontSize: 14
-                }}>רענן</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={handleShareGroup} 
-                style={{
-                  backgroundColor: DesignTokens.colors.primary.main,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 12
-                }}
-              >
+                  marginBottom: 2,
+                  textAlign: 'right'
+                }}>הצג את כל החברים</Text>
                 <Text style={{
-                  color: DesignTokens.colors.background.primary,
-                  fontWeight: '700',
-                  fontSize: 14
-                }}>הזמן חברים</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-            <View style={{ marginTop: 16 }}>
-              {/* Show first 5 members */}
-              {sortedMembers().slice(0, 5).map((item, index) => {
-                const memberName = item.users?.full_name || item.users?.display_name || 'משתמש';
-                const memberPhone = item.users?.phone;
-                const memberImage = item.users?.profile_picture;
-                
-                return (
-                  <View key={item.user_id} style={{
-                    flexDirection: 'row-reverse',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 8,
-                    padding: 14,
-                    backgroundColor: 'transparent',
-                    borderRadius: 12,
-                    borderBottomWidth: index < sortedMembers().slice(0, 5).length - 1 ? 1 : 0,
-                    borderBottomColor: DesignTokens.colors.border.primary
-                  }}>
-                    <View style={{
+                  fontSize: 13,
+                  color: DesignTokens.colors.text.tertiary,
+                  textAlign: 'right'
+                }}>לחץ להרחבה</Text>
+              </View>
+
+              {/* Icon - ימין */}
+              <View style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: `${DesignTokens.colors.success.main}1A`,
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Users size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+              </View>
+            </TouchableOpacity>
+
+            {loading ? (
+              <View style={{
+                alignItems: 'center',
+                paddingVertical: 32
+              }}>
+                <Text style={{
+                  color: DesignTokens.colors.text.secondary,
+                  fontSize: 16
+                }}>טוען חברים...</Text>
+              </View>
+            ) : members.length === 0 ? (
+              <View style={{
+                alignItems: 'center',
+                paddingVertical: 32
+              }}>
+                <Text style={{
+                  color: DesignTokens.colors.text.secondary,
+                  textAlign: 'center',
+                  marginBottom: 16,
+                  fontSize: 16
+                }}>אין חברים נוספים בקבוצה זו</Text>
+                <Text style={{
+                  color: DesignTokens.colors.text.tertiary,
+                  textAlign: 'center',
+                  fontSize: 14,
+                  marginBottom: 16,
+                  lineHeight: 20
+                }}>
+                  אתה יכול להזמין חברים או לחכות שחברים נוספים יצטרפו
+                </Text>
+                <View style={{
+                  flexDirection: 'row'
+                }}>
+                  <TouchableOpacity
+                    onPress={loadData}
+                    style={{
+                      backgroundColor: DesignTokens.colors.background.tertiary,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 12,
+                      marginRight: 8
+                    }}
+                  >
+                    <Text style={{
+                      color: DesignTokens.colors.text.primary,
+                      fontWeight: '700',
+                      fontSize: 14
+                    }}>רענן</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleShareGroup}
+                    style={{
+                      backgroundColor: DesignTokens.colors.primary.main,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 12
+                    }}
+                  >
+                    <Text style={{
+                      color: DesignTokens.colors.background.primary,
+                      fontWeight: '700',
+                      fontSize: 14
+                    }}>הזמן חברים</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={{ marginTop: 16 }}>
+                {/* Show first 5 members */}
+                {sortedMembers().slice(0, 5).map((item, index) => {
+                  const memberName = item.users?.full_name || item.users?.display_name || 'משתמש';
+                  const memberPhone = item.users?.phone;
+                  const memberImage = item.users?.profile_picture;
+
+                  return (
+                    <View key={item.user_id} style={{
                       flexDirection: 'row-reverse',
                       alignItems: 'center',
-                      flex: 1
+                      justifyContent: 'space-between',
+                      marginBottom: 8,
+                      padding: 14,
+                      backgroundColor: 'transparent',
+                      borderRadius: 12,
+                      borderBottomWidth: index < sortedMembers().slice(0, 5).length - 1 ? 1 : 0,
+                      borderBottomColor: DesignTokens.colors.border.primary
                     }}>
-                      {memberImage ? (
-                        <Image 
-                          source={{ uri: memberImage }} 
-                          style={{
+                      <View style={{
+                        flexDirection: 'row-reverse',
+                        alignItems: 'center',
+                        flex: 1
+                      }}>
+                        {memberImage ? (
+                          <Image
+                            source={{ uri: memberImage }}
+                            style={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 22,
+                              marginRight: 12
+                            }}
+                            onError={(error) => console.log('❌ Image load error:', error)}
+                          />
+                        ) : (
+                          <View style={{
                             width: 44,
                             height: 44,
                             borderRadius: 22,
+                            backgroundColor: DesignTokens.colors.background.tertiary,
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             marginRight: 12
-                          }}
-                          onError={(error) => console.log('❌ Image load error:', error)}
-                        />
-                      ) : (
-                        <View style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: 22,
-                          backgroundColor: DesignTokens.colors.background.tertiary,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          marginRight: 12
-                        }}>
-                          <User size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                        </View>
-                      )}
-                      
-                      <View style={{ flex: 1 }}>
-                        <View style={{
-                          flexDirection: 'row-reverse',
-                          alignItems: 'center',
-                          marginBottom: 4
-                        }}>
-                          <Text style={{
-                            color: DesignTokens.colors.text.primary,
-                            fontWeight: '600',
-                            fontSize: 14,
-                            marginRight: 8,
-                            textAlign: 'right',
-                            flex: 1
-                          }} numberOfLines={1}>
-                            {memberName}
-                          </Text>
-                          
-                          {item.role === 'admin' && (
-                            <View style={{
-                              backgroundColor: `${DesignTokens.colors.success.main}1A`,
-                              borderRadius: 6,
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              marginLeft: 4
-                            }}>
-                              <Text style={{
-                                color: DesignTokens.colors.primary.main,
-                                fontWeight: '700',
-                                fontSize: 9
-                              }}>מנהל</Text>
-                            </View>
-                          )}
-                          
-                          {item.user_id === user?.id && (
-                            <View style={{
-                              backgroundColor: DesignTokens.colors.background.tertiary,
-                              borderRadius: 6,
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              marginLeft: 4
-                            }}>
-                              <Text style={{
-                                color: DesignTokens.colors.text.secondary,
-                                fontWeight: '700',
-                                fontSize: 9
-                              }}>אתה</Text>
-                            </View>
-                          )}
-                        </View>
-                        
-                        {memberPhone && (
-                          <Text style={{
-                            color: DesignTokens.colors.text.tertiary,
-                            fontSize: 12,
-                            marginLeft: 8,
-                            textAlign: 'right'
-                          }}>{memberPhone}</Text>
+                          }}>
+                            <User size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                          </View>
                         )}
-                      </View>
-                    </View>
 
-                    {/* Admin Actions */}
-                    {(isAdmin || isOwner) && item.user_id !== user?.id && (
-                      <View style={{
-                        flexDirection: 'row-reverse'
-                      }}>
-                        {item.role !== 'admin' && (
-                          <TouchableOpacity 
-                            onPress={() => handlePromoteMember(item.user_id, memberName)}
+                        <View style={{ flex: 1 }}>
+                          <View style={{
+                            flexDirection: 'row-reverse',
+                            alignItems: 'center',
+                            marginBottom: 4
+                          }}>
+                            <Text style={{
+                              color: DesignTokens.colors.text.primary,
+                              fontWeight: '600',
+                              fontSize: 14,
+                              marginRight: 8,
+                              textAlign: 'right',
+                              flex: 1
+                            }} numberOfLines={1}>
+                              {memberName}
+                            </Text>
+
+                            {item.role === 'admin' && (
+                              <View style={{
+                                backgroundColor: `${DesignTokens.colors.success.main}1A`,
+                                borderRadius: 6,
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                marginLeft: 4
+                              }}>
+                                <Text style={{
+                                  color: DesignTokens.colors.primary.main,
+                                  fontWeight: '700',
+                                  fontSize: 9
+                                }}>מנהל</Text>
+                              </View>
+                            )}
+
+                            {item.user_id === user?.id && (
+                              <View style={{
+                                backgroundColor: DesignTokens.colors.background.tertiary,
+                                borderRadius: 6,
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                marginLeft: 4
+                              }}>
+                                <Text style={{
+                                  color: DesignTokens.colors.text.secondary,
+                                  fontWeight: '700',
+                                  fontSize: 9
+                                }}>אתה</Text>
+                              </View>
+                            )}
+                          </View>
+
+                          {memberPhone && (
+                            <Text style={{
+                              color: DesignTokens.colors.text.tertiary,
+                              fontSize: 12,
+                              marginLeft: 8,
+                              textAlign: 'right'
+                            }}>{memberPhone}</Text>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* Admin Actions */}
+                      {(isAdmin || isOwner) && item.user_id !== user?.id && (
+                        <View style={{
+                          flexDirection: 'row-reverse'
+                        }}>
+                          {item.role !== 'admin' && (
+                            <TouchableOpacity
+                              onPress={() => handlePromoteMember(item.user_id, memberName)}
+                              style={{
+                                backgroundColor: `${DesignTokens.colors.success.main}26`,
+                                padding: DesignTokens.spacing.sm,
+                                borderRadius: DesignTokens.borderRadius.sm,
+                                marginLeft: DesignTokens.spacing.sm
+                              }}
+                            >
+                              <Star size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                            </TouchableOpacity>
+                          )}
+
+                          <TouchableOpacity
+                            onPress={() => handleRemoveMember(item.user_id, memberName)}
                             style={{
-                              backgroundColor: `${DesignTokens.colors.success.main}26`,
+                              backgroundColor: `${DesignTokens.colors.danger.main}26`,
                               padding: DesignTokens.spacing.sm,
-                              borderRadius: DesignTokens.borderRadius.sm,
-                              marginLeft: DesignTokens.spacing.sm
+                              borderRadius: DesignTokens.borderRadius.sm
                             }}
                           >
-                            <Star size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                            <UserMinus size={14} color={DesignTokens.colors.danger.main} strokeWidth={2} />
                           </TouchableOpacity>
-                        )}
-                        
-                        <TouchableOpacity 
-                          onPress={() => handleRemoveMember(item.user_id, memberName)}
-                          style={{
-                            backgroundColor: `${DesignTokens.colors.danger.main}26`,
-                            padding: DesignTokens.spacing.sm,
-                            borderRadius: DesignTokens.borderRadius.sm
-                          }}
-                        >
-                          <UserMinus size={14} color={DesignTokens.colors.danger.main} strokeWidth={2} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-              
-              {/* Show all members if expanded */}
-              {showAll && sortedMembers().length > 5 && (
-                <View style={{ marginTop: 16 }}>
-                  {sortedMembers().slice(5).map((item) => {
-                    const memberName = item.users?.full_name || item.users?.display_name || 'משתמש';
-                    const memberPhone = item.users?.phone;
-                    const memberImage = item.users?.profile_picture;
-                    
-                    return (
-                      <View key={item.user_id} style={{
-                        flexDirection: 'row-reverse',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: DesignTokens.spacing.md,
-                        padding: DesignTokens.spacing.md,
-                        backgroundColor: DesignTokens.colors.background.tertiary,
-                        borderRadius: DesignTokens.borderRadius.md,
-                        borderWidth: 1,
-                        borderColor: DesignTokens.colors.border.primary
-                      }}>
-                        <View style={{
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+
+                {/* Show all members if expanded */}
+                {showAll && sortedMembers().length > 5 && (
+                  <View style={{ marginTop: 16 }}>
+                    {sortedMembers().slice(5).map((item) => {
+                      const memberName = item.users?.full_name || item.users?.display_name || 'משתמש';
+                      const memberPhone = item.users?.phone;
+                      const memberImage = item.users?.profile_picture;
+
+                      return (
+                        <View key={item.user_id} style={{
                           flexDirection: 'row-reverse',
                           alignItems: 'center',
-                          flex: 1
+                          justifyContent: 'space-between',
+                          marginBottom: DesignTokens.spacing.md,
+                          padding: DesignTokens.spacing.md,
+                          backgroundColor: DesignTokens.colors.background.tertiary,
+                          borderRadius: DesignTokens.borderRadius.md,
+                          borderWidth: 1,
+                          borderColor: DesignTokens.colors.border.primary
                         }}>
-                          {memberImage ? (
-                            <Image 
-                              source={{ uri: memberImage }} 
-                              style={{
+                          <View style={{
+                            flexDirection: 'row-reverse',
+                            alignItems: 'center',
+                            flex: 1
+                          }}>
+                            {memberImage ? (
+                              <Image
+                                source={{ uri: memberImage }}
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: DesignTokens.borderRadius.full,
+                                  marginRight: DesignTokens.spacing.md
+                                }}
+                                onError={(error) => console.log('❌ Image load error:', error)}
+                              />
+                            ) : (
+                              <View style={{
                                 width: 44,
                                 height: 44,
                                 borderRadius: DesignTokens.borderRadius.full,
+                                backgroundColor: DesignTokens.colors.background.tertiary,
+                                alignItems: 'center',
+                                justifyContent: 'center',
                                 marginRight: DesignTokens.spacing.md
-                              }}
-                              onError={(error) => console.log('❌ Image load error:', error)}
-                            />
-                          ) : (
-                            <View style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: DesignTokens.borderRadius.full,
-                              backgroundColor: DesignTokens.colors.background.tertiary,
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              marginRight: DesignTokens.spacing.md
-                            }}>
-                              <User size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                            </View>
-                          )}
-                          
-                          <View style={{ flex: 1 }}>
-                            <View style={{
-                              flexDirection: 'row-reverse',
-                              alignItems: 'center',
-                              marginBottom: 4
-                            }}>
-                              <Text style={{
-                                color: DesignTokens.colors.text.primary,
-                                fontWeight: '600' as any,
-                                fontSize: DesignTokens.typography.fontSize.sm,
-                                marginRight: DesignTokens.spacing.sm,
-                                textAlign: 'right',
-                                flex: 1
-                              }} numberOfLines={1}>
-                                {memberName}
-                              </Text>
-                              
-                              {item.role === 'admin' && (
-                                <View style={{
-                                  backgroundColor: `${DesignTokens.colors.success.main}26`,
-                                  borderRadius: DesignTokens.borderRadius.sm,
-                                  paddingHorizontal: DesignTokens.spacing.sm,
-                                  paddingVertical: 4,
-                                  marginLeft: 4
-                                }}>
-                                  <Text style={{
-                                    color: DesignTokens.colors.primary.main,
-                                    fontWeight: '700' as any,
-                                    fontSize: 9
-                                  }}>מנהל</Text>
-                                </View>
-                              )}
-                              
-                              {item.user_id === user?.id && (
-                                <View style={{
-                                  backgroundColor: DesignTokens.colors.background.tertiary,
-                                  borderRadius: DesignTokens.borderRadius.sm,
-                                  paddingHorizontal: DesignTokens.spacing.sm,
-                                  paddingVertical: 4,
-                                  marginLeft: 4
-                                }}>
-                                  <Text style={{
-                                    color: DesignTokens.colors.text.secondary,
-                                    fontWeight: '700' as any,
-                                    fontSize: 9
-                                  }}>אתה</Text>
-                                </View>
-                              )}
-                            </View>
-                            
-                            {memberPhone && (
-                              <Text style={{
-                                color: DesignTokens.colors.text.tertiary,
-                                fontSize: DesignTokens.typography.fontSize.xs,
-                                marginLeft: DesignTokens.spacing.sm,
-                                textAlign: 'right'
-                              }}>{memberPhone}</Text>
+                              }}>
+                                <User size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                              </View>
                             )}
-                          </View>
-                        </View>
 
-                        {/* Admin Actions */}
-                        {(isAdmin || isOwner) && item.user_id !== user?.id && (
-                          <View style={{
-                            flexDirection: 'row-reverse'
-                          }}>
-                            {item.role !== 'admin' && (
-                <TouchableOpacity 
-                                onPress={() => handlePromoteMember(item.user_id, memberName)}
+                            <View style={{ flex: 1 }}>
+                              <View style={{
+                                flexDirection: 'row-reverse',
+                                alignItems: 'center',
+                                marginBottom: 4
+                              }}>
+                                <Text style={{
+                                  color: DesignTokens.colors.text.primary,
+                                  fontWeight: '600' as any,
+                                  fontSize: DesignTokens.typography.fontSize.sm,
+                                  marginRight: DesignTokens.spacing.sm,
+                                  textAlign: 'right',
+                                  flex: 1
+                                }} numberOfLines={1}>
+                                  {memberName}
+                                </Text>
+
+                                {item.role === 'admin' && (
+                                  <View style={{
+                                    backgroundColor: `${DesignTokens.colors.success.main}26`,
+                                    borderRadius: DesignTokens.borderRadius.sm,
+                                    paddingHorizontal: DesignTokens.spacing.sm,
+                                    paddingVertical: 4,
+                                    marginLeft: 4
+                                  }}>
+                                    <Text style={{
+                                      color: DesignTokens.colors.primary.main,
+                                      fontWeight: '700' as any,
+                                      fontSize: 9
+                                    }}>מנהל</Text>
+                                  </View>
+                                )}
+
+                                {item.user_id === user?.id && (
+                                  <View style={{
+                                    backgroundColor: DesignTokens.colors.background.tertiary,
+                                    borderRadius: DesignTokens.borderRadius.sm,
+                                    paddingHorizontal: DesignTokens.spacing.sm,
+                                    paddingVertical: 4,
+                                    marginLeft: 4
+                                  }}>
+                                    <Text style={{
+                                      color: DesignTokens.colors.text.secondary,
+                                      fontWeight: '700' as any,
+                                      fontSize: 9
+                                    }}>אתה</Text>
+                                  </View>
+                                )}
+                              </View>
+
+                              {memberPhone && (
+                                <Text style={{
+                                  color: DesignTokens.colors.text.tertiary,
+                                  fontSize: DesignTokens.typography.fontSize.xs,
+                                  marginLeft: DesignTokens.spacing.sm,
+                                  textAlign: 'right'
+                                }}>{memberPhone}</Text>
+                              )}
+                            </View>
+                          </View>
+
+                          {/* Admin Actions */}
+                          {(isAdmin || isOwner) && item.user_id !== user?.id && (
+                            <View style={{
+                              flexDirection: 'row-reverse'
+                            }}>
+                              {item.role !== 'admin' && (
+                                <TouchableOpacity
+                                  onPress={() => handlePromoteMember(item.user_id, memberName)}
+                                  style={{
+                                    backgroundColor: `${DesignTokens.colors.success.main}26`,
+                                    padding: DesignTokens.spacing.sm,
+                                    borderRadius: DesignTokens.borderRadius.sm,
+                                    marginLeft: DesignTokens.spacing.sm
+                                  }}
+                                >
+                                  <Star size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                                </TouchableOpacity>
+                              )}
+
+                              <TouchableOpacity
+                                onPress={() => handleRemoveMember(item.user_id, memberName)}
                                 style={{
-                                  backgroundColor: `${DesignTokens.colors.success.main}26`,
+                                  backgroundColor: `${DesignTokens.colors.danger.main}26`,
                                   padding: DesignTokens.spacing.sm,
-                                  borderRadius: DesignTokens.borderRadius.sm,
-                                  marginLeft: DesignTokens.spacing.sm
+                                  borderRadius: DesignTokens.borderRadius.sm
                                 }}
                               >
-                                <Star size={14} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-                </TouchableOpacity>
-                            )}
-                            
-                            <TouchableOpacity 
-                              onPress={() => handleRemoveMember(item.user_id, memberName)}
-                              style={{
-                                backgroundColor: `${DesignTokens.colors.danger.main}26`,
-                                padding: DesignTokens.spacing.sm,
-                                borderRadius: DesignTokens.borderRadius.sm
-                              }}
-                            >
-                              <UserMinus size={14} color={DesignTokens.colors.danger.main} strokeWidth={2} />
-                            </TouchableOpacity>
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-                  
-              {/* Show more/less button */}
-              {members.length > 5 && (
-                <TouchableOpacity 
-                  onPress={() => setShowAll(!showAll)} 
-                  style={{
-                    marginTop: DesignTokens.spacing.md,
-                    backgroundColor: DesignTokens.colors.background.secondary,
-                    padding: DesignTokens.spacing.md,
-                    borderRadius: DesignTokens.borderRadius.md,
-                    borderWidth: 1,
-                    borderColor: DesignTokens.colors.border.primary
-                  }}
-                >
-                  <Text style={{
-                    color: DesignTokens.colors.text.secondary,
-                    textAlign: 'center',
-                    fontWeight: '600' as any,
-                    fontSize: DesignTokens.typography.fontSize.sm
-                  }}>
-                    {showAll ? `הצג פחות` : `הצג את כל ${members.length} החברים`}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
+                                <UserMinus size={14} color={DesignTokens.colors.danger.main} strokeWidth={2} />
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* Show more/less button */}
+                {members.length > 5 && (
+                  <TouchableOpacity
+                    onPress={() => setShowAll(!showAll)}
+                    style={{
+                      marginTop: DesignTokens.spacing.md,
+                      backgroundColor: DesignTokens.colors.background.secondary,
+                      padding: DesignTokens.spacing.md,
+                      borderRadius: DesignTokens.borderRadius.md,
+                      borderWidth: 1,
+                      borderColor: DesignTokens.colors.border.primary
+                    }}
+                  >
+                    <Text style={{
+                      color: DesignTokens.colors.text.secondary,
+                      textAlign: 'center',
+                      fontWeight: '600' as any,
+                      fontSize: DesignTokens.typography.fontSize.sm
+                    }}>
+                      {showAll ? `הצג פחות` : `הצג את כל ${members.length} החברים`}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
         </View>
 
@@ -1995,18 +2001,18 @@ export default function GroupInfoScreen() {
                     onPress: async () => {
                       try {
                         console.log('🚪 Attempting to leave group:', { chatId, userId: user?.id });
-                        
+
                         const { error } = await supabase
                           .from('channel_members')
                           .delete()
                           .eq('channel_id', chatId)
                           .eq('user_id', user?.id);
-                        
+
                         if (error) {
                           console.error('❌ Error leaving group:', error);
                           throw error;
                         }
-                        
+
                         console.log('✅ Successfully left group');
                         Alert.alert('הצלחה', 'יצאת מהקבוצה בהצלחה');
                         navigation.goBack();

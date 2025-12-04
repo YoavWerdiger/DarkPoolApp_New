@@ -358,7 +358,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
     marginLeft: 0,
   },
   

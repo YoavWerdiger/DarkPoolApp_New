@@ -7,6 +7,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 
+// עבור תאימות עם Expo Go - שימוש ב-MediaTypeOptions עדיין
+const MediaType = ImagePicker.MediaType || ImagePicker.MediaTypeOptions;
+
 interface MediaPickerProps {
   visible: boolean;
   onClose: () => void;
@@ -58,7 +61,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: MediaType.Images,
         allowsEditing: false,
         quality: 0.8,
       });
@@ -89,7 +92,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: MediaType.Images,
         allowsEditing: false,
         quality: 0.8,
       });
@@ -119,7 +122,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaType.Videos,
+        mediaTypes: MediaType.Videos,
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,

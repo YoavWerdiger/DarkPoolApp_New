@@ -8,6 +8,9 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { View, TextInput, TouchableOpacity, Text, StyleSheet, Platform, KeyboardAvoidingView, Alert } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import * as ImagePicker from 'expo-image-picker';
+
+// עבור תאימות עם Expo Go - שימוש ב-MediaTypeOptions עדיין
+const MediaType = ImagePicker.MediaType || ImagePicker.MediaTypeOptions;
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
 import { ChatMessageType } from '../../types/chat.types';
@@ -109,7 +112,7 @@ export default function ChatInput({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: MediaType.Images,
         allowsEditing: false,
         quality: 0.8,
       });
@@ -154,7 +157,7 @@ export default function ChatInput({
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: MediaType.Images,
         allowsEditing: false,
         quality: 0.8,
       });
@@ -329,7 +332,7 @@ export default function ChatInput({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Videos,
+        mediaTypes: MediaType.Videos,
         allowsEditing: false,
         quality: 0.8,
       });

@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, 
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+
+// עבור תאימות עם Expo Go - שימוש ב-MediaTypeOptions עדיין
+const MediaType = ImagePicker.MediaType || ImagePicker.MediaTypeOptions;
 import { useRoute } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
@@ -618,7 +621,7 @@ function LearningScreen() {
   const addImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: MediaType.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -693,7 +696,7 @@ function LearningScreen() {
   const addImageElement = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: MediaType.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,

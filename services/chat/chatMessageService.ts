@@ -700,17 +700,19 @@ async function updateUnreadCounts(
 ): Promise<void> {
   try {
     // עדכון unread_count לכל מי שלא השולח
-    await supabase.rpc('increment_unread_count', {
-      p_group_id: groupId,
-      p_exclude_user_id: senderId,
-    }).catch(() => {
+    try {
+      await supabase.rpc('increment_unread_count', {
+        p_group_id: groupId,
+        p_exclude_user_id: senderId,
+      });
+    } catch (rpcError) {
       // אם ה-RPC לא קיים, נעשה זאת ידנית
-      supabase
+      await supabase
         .from('chat_group_members')
         .update({ unread_count: supabase.sql`unread_count + 1` } as any)
         .eq('group_id', groupId)
         .neq('user_id', senderId);
-    });
+    }
 
     // עדכון mentioned_count למי שתויג
     if (mentionedUsers && mentionedUsers.length > 0) {

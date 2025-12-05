@@ -24,6 +24,8 @@ import ChatInput from '../../components/chat/ChatInput';
 import ChatTypingIndicator from '../../components/chat/ChatTypingIndicator';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
+import { format, isToday, isYesterday, isSameDay } from 'date-fns';
+import { he } from 'date-fns/locale';
 
 export default function ChatGroupScreen() {
   const DesignTokens = useDesignTokens();
@@ -227,22 +229,57 @@ export default function ChatGroupScreen() {
     );
   };
 
+  // פונקציה לזיהוי אם צריך divider
+  const shouldShowDateDivider = (currentMessage: ChatMessageType, prevMessage: ChatMessageType | null): boolean => {
+    if (!prevMessage) return true; // ההודעה הראשונה
+    
+    const currentDate = new Date(currentMessage.created_at);
+    const prevDate = new Date(prevMessage.created_at);
+    
+    return !isSameDay(currentDate, prevDate);
+  };
+
+  // פונקציה לניסוח תאריך
+  const formatDateDivider = (date: Date): string => {
+    if (isToday(date)) {
+      return 'היום';
+    }
+    if (isYesterday(date)) {
+      return 'אתמול';
+    }
+    return format(date, 'd בMMMM yyyy', { locale: he });
+  };
+
+  const renderDateDivider = (date: Date) => {
+    return (
+      <View style={styles.dateDivider}>
+        <View style={styles.dateDividerLine} />
+        <Text style={styles.dateDividerText}>{formatDateDivider(date)}</Text>
+        <View style={styles.dateDividerLine} />
+      </View>
+    );
+  };
+
   const renderMessage = ({ item, index }: { item: ChatMessageType; index: number }) => {
     const isMe = item.sender_id === user?.id;
     const prevMessage = index > 0 ? messages[index - 1] : null;
     const showAvatar = !prevMessage || prevMessage.sender_id !== item.sender_id;
     const showSenderName = !isMe && showAvatar;
+    const showDivider = shouldShowDateDivider(item, prevMessage);
 
     return (
-      <ChatMessage
-        message={item}
-        isMe={isMe}
-        showAvatar={showAvatar}
-        showSenderName={showSenderName}
-        onLongPress={() => handleMessageLongPress(item)}
-        onReply={() => handleReply(item)}
-        onReactionPress={(emoji) => handleReactionPress(item, emoji)}
-      />
+      <View>
+        {showDivider && renderDateDivider(new Date(item.created_at))}
+        <ChatMessage
+          message={item}
+          isMe={isMe}
+          showAvatar={showAvatar}
+          showSenderName={showSenderName}
+          onLongPress={() => handleMessageLongPress(item)}
+          onReply={() => handleReply(item)}
+          onReactionPress={(emoji) => handleReactionPress(item, emoji)}
+        />
+      </View>
     );
   };
 
@@ -383,6 +420,25 @@ const createStyles = (tokens: any) => StyleSheet.create({
   messagesList: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+
+  dateDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+    paddingHorizontal: 16,
+  },
+  dateDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: tokens.colors.background.secondary,
+  },
+  dateDividerText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: tokens.colors.text.secondary,
+    paddingHorizontal: 12,
+    textAlign: 'center',
   },
 
   emptyList: {

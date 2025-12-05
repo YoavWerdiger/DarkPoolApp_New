@@ -7,6 +7,7 @@ interface ReactionPickerProps {
   visible: boolean;
   onClose: () => void;
   onReaction: (emoji: string) => void;
+  messageReactions?: Array<{ emoji: string; reacted_by_me: boolean }>;
 }
 
 // רשימת אימוג'ים פופולריים - מסודרים בשורות של 8
@@ -19,9 +20,15 @@ const EMOJI_ROWS = [
 export default function ReactionPicker({ 
   visible, 
   onClose, 
-  onReaction 
+  onReaction,
+  messageReactions = []
 }: ReactionPickerProps) {
   const DesignTokens = useDesignTokens();
+  
+  // בדיקה אם ריאקציה כבר סומנה
+  const isReactionSelected = (emoji: string) => {
+    return messageReactions.some(r => r.emoji === emoji && r.reacted_by_me);
+  };
   
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -33,6 +40,12 @@ export default function ReactionPicker({
     header: {
       alignItems: 'center',
       marginBottom: DesignTokens.spacing.md,
+    },
+    titleContainer: {
+      backgroundColor: DesignTokens.colors.background.secondary,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
     },
     title: {
       color: DesignTokens.colors.text.primary,
@@ -53,14 +66,35 @@ export default function ReactionPicker({
       height: 48,
       alignItems: 'center',
       justifyContent: 'center',
+      borderRadius: 12,
     },
     emojiButtonPressed: {
       backgroundColor: DesignTokens.colors.background.secondary,
-      borderRadius: 12,
       transform: [{ scale: 1.15 }],
+    },
+    emojiButtonSelected: {
+      backgroundColor: DesignTokens.colors.primary.main + '20',
+      borderWidth: 2,
+      borderColor: DesignTokens.colors.primary.main,
     },
     emoji: {
       fontSize: 28,
+    },
+    selectedIndicator: {
+      position: 'absolute',
+      top: 2,
+      right: 2,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: DesignTokens.colors.primary.main,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    selectedIndicatorText: {
+      color: DesignTokens.colors.text.primary,
+      fontSize: 10,
+      fontWeight: '700',
     },
     cancelButton: {
       marginTop: DesignTokens.spacing.md,
@@ -95,25 +129,36 @@ export default function ReactionPicker({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>בחר ריאקציה</Text>
+          <View style={styles.titleContainer}>
+            <Text style={styles.title}>בחר ריאקציה</Text>
+          </View>
         </View>
 
         {/* Emojis Grid - שורות מסודרות */}
         <View style={styles.emojisGrid}>
           {EMOJI_ROWS.map((row, rowIndex) => (
             <View key={rowIndex} style={styles.row}>
-              {row.map((emoji, index) => (
-                <Pressable
-                  key={`${rowIndex}-${index}`}
-                  onPress={() => handleReaction(emoji)}
-                  style={({ pressed }) => [
-                    styles.emojiButton,
-                    pressed && styles.emojiButtonPressed
-                  ]}
-                >
-                  <Text style={styles.emoji}>{emoji}</Text>
-                </Pressable>
-              ))}
+              {row.map((emoji, index) => {
+                const isSelected = isReactionSelected(emoji);
+                return (
+                  <Pressable
+                    key={`${rowIndex}-${index}`}
+                    onPress={() => handleReaction(emoji)}
+                    style={({ pressed }) => [
+                      styles.emojiButton,
+                      isSelected && styles.emojiButtonSelected,
+                      pressed && styles.emojiButtonPressed
+                    ]}
+                  >
+                    <Text style={styles.emoji}>{emoji}</Text>
+                    {isSelected && (
+                      <View style={styles.selectedIndicator}>
+                        <Text style={styles.selectedIndicatorText}>✓</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
             </View>
           ))}
         </View>

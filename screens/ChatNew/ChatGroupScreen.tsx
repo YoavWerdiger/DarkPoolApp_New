@@ -492,6 +492,7 @@ export default function ChatGroupScreen() {
           setSelectedMessageForReaction(null);
         }}
         onReaction={handleReactionSelected}
+        messageReactions={selectedMessageForReaction?.reactions || []}
       />
 
       {/* Reaction Details Modal */}

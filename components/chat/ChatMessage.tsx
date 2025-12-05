@@ -354,7 +354,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     maxWidth: '100%',
   },
   myBubble: {
-    backgroundColor: tokens.colors.primary.main, // ירוק של האפליקציה
+    backgroundColor: tokens.colors.bubbleMe, // ירוק של האפליקציה #05d157
     borderBottomRightRadius: 4,
   },
   theirBubble: {

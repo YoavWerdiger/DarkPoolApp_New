@@ -22,6 +22,28 @@ interface ChatMessageProps {
   onAvatarPress?: () => void;
 }
 
+// פונקציה לזיהוי כיוון טקסט (RTL/LTR)
+const detectTextDirection = (text: string): 'right' | 'left' | 'auto' => {
+  if (!text) return 'auto';
+  
+  // בדיקה אם יש תווים עבריים
+  const hebrewRegex = /[\u0590-\u05FF]/;
+  const hasHebrew = hebrewRegex.test(text);
+  
+  // בדיקה אם יש תווים אנגליים/לטיניים
+  const latinRegex = /[A-Za-z]/;
+  const hasLatin = latinRegex.test(text);
+  
+  // אם יש עברית - RTL
+  if (hasHebrew) return 'right';
+  
+  // אם יש רק לטיני - LTR
+  if (hasLatin && !hasHebrew) return 'left';
+  
+  // אחרת - auto
+  return 'auto';
+};
+
 export default function ChatMessage({
   message,
   isMe,
@@ -123,7 +145,13 @@ export default function ChatMessage({
 
           {/* Text Content */}
           {message.content && (
-            <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.theirMessageText]}>
+            <Text 
+              style={[
+                styles.messageText, 
+                isMe ? styles.myMessageText : styles.theirMessageText,
+                { textAlign: detectTextDirection(message.content) }
+              ]}
+            >
               {message.content}
             </Text>
           )}
@@ -350,7 +378,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   bubble: {
     borderRadius: 18,
     paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     maxWidth: '100%',
   },
   myBubble: {

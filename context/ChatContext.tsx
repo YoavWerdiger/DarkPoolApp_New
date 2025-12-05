@@ -104,13 +104,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           require('../assets/sounds/notification.mp3')
         );
         notificationSound.current = sound;
-      } catch (error) {
+          } catch (error) {
         console.log('⚠️ Could not load notification sound:', error);
       }
     }
     
     loadSound();
-    
+
     return () => {
       notificationSound.current?.unloadAsync();
     };
@@ -204,13 +204,84 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             setMessages(prev => prev.filter(m => m.id !== message.id));
           }
         },
-        onReaction: (reaction, eventType) => {
-          // Update reactions in messages
+        onReaction: async (reaction, eventType) => {
+          // עדכון ריאקציות בהודעה
+          console.log('👍 Reaction event received:', eventType, reaction.emoji, 'for message', reaction.message_id);
+          
           setMessages(prev => prev.map(m => {
             if (m.id === reaction.message_id) {
-              // Refetch message with updated reactions
-              // או לעדכן ידנית את הריאקציות
-              return m;
+              const currentReactions = m.reactions || [];
+              const reactionGroup = currentReactions.find(r => r.emoji === reaction.emoji);
+              
+              if (eventType === 'INSERT') {
+                // הוספת ריאקציה
+                if (reactionGroup) {
+                  // אם יש כבר ריאקציה עם האימוג'י הזה
+                  return {
+                    ...m,
+                    reactions: currentReactions.map(r => 
+                      r.emoji === reaction.emoji
+                        ? { 
+                            ...r, 
+                            count: r.count + 1, 
+                            reacted_by_me: r.reacted_by_me || reaction.user_id === user.id,
+                            users: [...r.users, {
+                              id: reaction.user_id,
+                              name: reaction.user?.display_name || 'משתמש',
+                              profile_picture: reaction.user?.profile_picture,
+                            }]
+                          }
+                        : r
+                    ),
+                    reactions_count: (m.reactions_count || 0) + 1
+                  };
+                } else {
+                  // ריאקציה חדשה
+                  return {
+                    ...m,
+                    reactions: [
+                      ...currentReactions,
+                      {
+                        emoji: reaction.emoji,
+                        count: 1,
+                        reacted_by_me: reaction.user_id === user.id,
+                        users: [{
+                          id: reaction.user_id,
+                          name: reaction.user?.display_name || 'משתמש',
+                          profile_picture: reaction.user?.profile_picture,
+                        }]
+                      }
+                    ],
+                    reactions_count: (m.reactions_count || 0) + 1
+                  };
+                }
+              } else {
+                // DELETE - הסרת ריאקציה
+                if (reactionGroup && reactionGroup.count > 1) {
+                  // עדיין יש ריאקציות אחרות עם האימוג'י הזה
+                  return {
+                    ...m,
+                    reactions: currentReactions.map(r => 
+                      r.emoji === reaction.emoji
+                        ? { 
+                            ...r, 
+                            count: r.count - 1, 
+                            reacted_by_me: r.reacted_by_me && reaction.user_id !== user.id,
+                            users: r.users.filter(u => u.id !== reaction.user_id)
+                          }
+                        : r
+                    ),
+                    reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
+                  };
+                } else {
+                  // הסרת הריאקציה האחרונה עם האימוג'י הזה
+            return {
+                    ...m,
+                    reactions: currentReactions.filter(r => r.emoji !== reaction.emoji),
+                    reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
+                  };
+                }
+              }
             }
             return m;
           }));
@@ -330,7 +401,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // Clear current group if selected
       if (currentGroup?.id === groupId) {
         setCurrentGroup(null);
-        setMessages([]);
+      setMessages([]);
         chatRealtimeService.unsubscribeFromGroup(groupId);
       }
       
@@ -479,11 +550,99 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   
   const addReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user) return;
+    
+    // עדכון אופטימיסטי
+    setMessages(prev => prev.map(m => {
+      if (m.id === messageId) {
+        const currentReactions = m.reactions || [];
+        const reactionGroup = currentReactions.find(r => r.emoji === emoji);
+        
+        if (reactionGroup) {
+          // אם יש כבר ריאקציה עם האימוג'י הזה
+          return {
+            ...m,
+            reactions: currentReactions.map(r => 
+              r.emoji === emoji
+                ? { 
+                    ...r, 
+                    count: r.count + 1, 
+                    reacted_by_me: true,
+                    users: [...r.users, {
+                      id: user.id,
+                      name: user.display_name || 'אני',
+                      profile_picture: user.profile_picture,
+                    }]
+                  }
+                : r
+            ),
+            reactions_count: (m.reactions_count || 0) + 1
+          };
+        } else {
+          // ריאקציה חדשה
+          return {
+            ...m,
+            reactions: [
+              ...currentReactions,
+              {
+                emoji: emoji,
+                count: 1,
+                reacted_by_me: true,
+                users: [{
+                  id: user.id,
+                  name: user.display_name || 'אני',
+                  profile_picture: user.profile_picture,
+                }]
+              }
+            ],
+            reactions_count: (m.reactions_count || 0) + 1
+          };
+        }
+      }
+      return m;
+    }));
+    
+    // שליחה לשרת
     await chatMessageService.addReaction({ message_id: messageId, emoji }, user.id);
   }, [user]);
   
   const removeReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user) return;
+    
+    // עדכון אופטימיסטי
+    setMessages(prev => prev.map(m => {
+      if (m.id === messageId) {
+        const currentReactions = m.reactions || [];
+        const reactionGroup = currentReactions.find(r => r.emoji === emoji);
+        
+        if (reactionGroup && reactionGroup.count > 1) {
+          // עדיין יש ריאקציות אחרות עם האימוג'י הזה
+          return {
+            ...m,
+            reactions: currentReactions.map(r => 
+              r.emoji === emoji
+                ? { 
+                    ...r, 
+                    count: r.count - 1, 
+                    reacted_by_me: false,
+                    users: r.users.filter(u => u.id !== user.id)
+                  }
+                : r
+            ),
+            reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
+          };
+        } else {
+          // הסרת הריאקציה האחרונה עם האימוג'י הזה
+          return {
+            ...m,
+            reactions: currentReactions.filter(r => r.emoji !== emoji),
+            reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
+          };
+        }
+      }
+      return m;
+    }));
+    
+    // שליחה לשרת
     await chatMessageService.removeReaction({ message_id: messageId, emoji }, user.id);
   }, [user]);
   

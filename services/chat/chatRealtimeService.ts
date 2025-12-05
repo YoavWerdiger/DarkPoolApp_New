@@ -102,11 +102,28 @@ export function subscribeToGroup(
         table: 'chat_message_reactions',
         filter: `message_id=in.(select id from chat_messages where group_id='${groupId}')`,
       },
-      (payload: RealtimePostgresChangesPayload<any>) => {
+      async (payload: RealtimePostgresChangesPayload<any>) => {
         console.log('👍 Reaction event:', payload.eventType);
         
         if (payload.eventType === 'INSERT') {
-          listeners.onReaction!(payload.new as ChatReaction, 'INSERT');
+          // טעינת פרטי המשתמש
+          const reaction = payload.new as ChatReaction;
+          if (reaction.user_id) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('id, display_name, profile_picture')
+              .eq('id', reaction.user_id)
+              .single();
+            
+            if (userData) {
+              reaction.user = {
+                id: userData.id,
+                display_name: userData.display_name,
+                profile_picture: userData.profile_picture,
+              };
+            }
+          }
+          listeners.onReaction!(reaction, 'INSERT');
         } else if (payload.eventType === 'DELETE') {
           listeners.onReaction!(payload.old as ChatReaction, 'DELETE');
         }

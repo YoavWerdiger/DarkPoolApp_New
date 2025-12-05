@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { useMemo, useEffect, useState } from 'react';
-import { View, FlatList, Text, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, I18nManager } from 'react-native';
+import { View, FlatList, Text, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator, Alert, I18nManager, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
@@ -313,16 +313,18 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.primary,
   },
   headerTitle: {
-    fontSize: 34,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '600',
     color: tokens.colors.text.primary,
     marginBottom: 4,
     textAlign: 'right',
+    letterSpacing: 0.5,
   },
   headerTitleBold: {
-    fontSize: 34,
-    fontWeight: '900',
+    fontSize: 32,
+    fontWeight: '800',
     color: tokens.colors.accent.primary,
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
     fontSize: 15,

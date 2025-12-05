@@ -438,7 +438,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: tokens.colors.accent.main,
+    backgroundColor: tokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },

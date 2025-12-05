@@ -381,7 +381,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   headerTitleBrand: {
     fontSize: 32,
     fontWeight: '600',
-    color: tokens.colors.accent.main,
+    color: tokens.colors.primary.main,
     letterSpacing: 0.5,
   },
   headerSubtitle: {

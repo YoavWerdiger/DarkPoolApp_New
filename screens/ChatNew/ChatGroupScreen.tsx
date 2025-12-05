@@ -78,13 +78,15 @@ export default function ChatGroupScreen() {
     }
   }, [groupId]);
 
+  // גלילה אוטומטית למטה כשיש הודעות חדשות
   useEffect(() => {
     if (messages.length > 0) {
+      // גלילה קצת יותר מאוחר כדי לוודא שה-FlatList כבר עשה render
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      }, 200);
     }
-  }, [messages.length]);
+  }, [messages.length, messages[messages.length - 1]?.id]);
 
   // ============================================
   // Handlers
@@ -102,6 +104,11 @@ export default function ChatGroupScreen() {
     });
 
     setReplyTo(undefined);
+    
+    // גלילה למטה אחרי שליחת הודעה
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 300);
   };
 
   const handleTyping = (isTyping: boolean) => {
@@ -363,6 +370,12 @@ export default function ChatGroupScreen() {
             contentContainerStyle={messages.length === 0 ? styles.emptyList : styles.messagesList}
             showsVerticalScrollIndicator={false}
             style={styles.flatListTransparent}
+            onContentSizeChange={() => {
+              // גלילה אוטומטית למטה כשה-content משתנה
+              setTimeout(() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }, 100);
+            }}
           />
         </ImageBackground>
 
@@ -485,6 +498,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   messagesList: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+    paddingBottom: 100, // מקום מעל ה-input area
   },
 
   dateDivider: {

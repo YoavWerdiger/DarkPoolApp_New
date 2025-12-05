@@ -72,6 +72,8 @@ export default function ChatGroupScreen() {
 
   const [inputAreaHeight, setInputAreaHeight] = useState(0);
   const [typingAreaHeight, setTypingAreaHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [scrollViewHeight, setScrollViewHeight] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -383,12 +385,35 @@ export default function ChatGroupScreen() {
               ]}
               showsVerticalScrollIndicator={false}
               style={styles.flatListTransparent}
-              onContentSizeChange={() => {
+              onContentSizeChange={(width, height) => {
+                setContentHeight(height);
                 // גלילה אוטומטית למטה כשה-content משתנה
                 setTimeout(() => {
                   flatListRef.current?.scrollToEnd({ animated: true });
                 }, 100);
               }}
+              onLayout={(e) => {
+                const height = e.nativeEvent.layout.height;
+                setScrollViewHeight(height);
+              }}
+              onScroll={(e) => {
+                const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+                const maxScrollY = Math.max(0, contentSize.height - layoutMeasurement.height);
+                const currentScrollY = contentOffset.y;
+                
+                // הגבלת גלילה למטה - לא יותר מהמקסימום (עם מרווח לאזור הכתיבה)
+                const bottomPadding = inputAreaHeight + typingAreaHeight + 20;
+                const maxAllowedScroll = Math.max(0, contentSize.height - layoutMeasurement.height - bottomPadding);
+                
+                if (currentScrollY > maxScrollY) {
+                  flatListRef.current?.scrollToOffset({
+                    offset: maxScrollY,
+                    animated: false,
+                  });
+                }
+              }}
+              scrollEventThrottle={16}
+              bounces={false}
             />
           </ImageBackground>
         </View>

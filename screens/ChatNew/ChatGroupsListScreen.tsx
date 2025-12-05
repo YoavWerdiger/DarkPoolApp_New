@@ -168,7 +168,7 @@ export default function ChatGroupsListScreen() {
       >
         {/* אייקון */}
         <View style={styles.iconContainer}>
-          <Ionicons name={iconName} size={24} color={DesignTokens.colors.accent.primary} />
+          <Ionicons name={iconName} size={24} color={DesignTokens.colors.text.primary} />
         </View>
 
         {/* מידע */}

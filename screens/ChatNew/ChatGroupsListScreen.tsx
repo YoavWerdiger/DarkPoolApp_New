@@ -42,6 +42,7 @@ export default function ChatGroupsListScreen() {
 
   const [allGroups, setAllGroups] = useState<GroupWithMembership[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [totalMembers, setTotalMembers] = useState(0);
 
   const loadGroups = async () => {
     if (!user) return;
@@ -74,6 +75,16 @@ export default function ChatGroupsListScreen() {
       }));
 
       setAllGroups(groupsWithMembership);
+
+      // חישוב סך החברים הייחודיים בקהילה
+      const { data: allMembers, error: membersError } = await supabase
+        .from('chat_group_members')
+        .select('user_id');
+
+      if (!membersError && allMembers) {
+        const uniqueMembers = new Set(allMembers.map(m => m.user_id));
+        setTotalMembers(uniqueMembers.size);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -255,9 +266,11 @@ export default function ChatGroupsListScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>קבוצות קהילה</Text>
+          <Text style={styles.headerTitle}>
+            קהילת <Text style={styles.headerTitleBold}>D</Text>ARK <Text style={styles.headerTitleBold}>P</Text>OOL
+          </Text>
           <Text style={styles.headerSubtitle}>
-            {myGroups.length} מתוך {allGroups.length}
+            {totalMembers} חברים בקהילה
           </Text>
         </View>
 
@@ -305,6 +318,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     color: tokens.colors.text.primary,
     marginBottom: 4,
     textAlign: 'right',
+  },
+  headerTitleBold: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: tokens.colors.accent.primary,
   },
   headerSubtitle: {
     fontSize: 15,

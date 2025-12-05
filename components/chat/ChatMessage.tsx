@@ -19,6 +19,7 @@ interface ChatMessageProps {
   onPress?: () => void;
   onReply?: () => void;
   onReactionPress?: (emoji: string) => void;
+  onReactionDetailsPress?: (message: ChatMessageType) => void;
   onAvatarPress?: () => void;
 }
 
@@ -53,6 +54,7 @@ export default function ChatMessage({
   onPress,
   onReply,
   onReactionPress,
+  onReactionDetailsPress,
   onAvatarPress,
 }: ChatMessageProps) {
   const DesignTokens = useDesignTokens();
@@ -167,9 +169,9 @@ export default function ChatMessage({
           </View>
         </TouchableOpacity>
 
-        {/* Reactions */}
+        {/* Reactions - חופפות על הבועה */}
         {message.reactions && message.reactions.length > 0 && (
-          <View style={styles.reactionsContainer}>
+          <View style={[styles.reactionsContainer, { alignSelf: isMe ? 'flex-end' : 'flex-start' }]}>
             {message.reactions.map((reaction, index) => (
               <TouchableOpacity
                 key={index}
@@ -177,7 +179,8 @@ export default function ChatMessage({
                   styles.reactionBubble,
                   reaction.reacted_by_me && styles.myReaction,
                 ]}
-                onPress={() => onReactionPress?.(reaction.emoji)}
+                onPress={() => onReactionDetailsPress?.(message)}
+                onLongPress={() => onReactionPress?.(reaction.emoji)}
               >
                 <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
                 <Text style={styles.reactionCount}>{reaction.count}</Text>
@@ -498,21 +501,24 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 4,
-    marginTop: 4,
+    marginTop: -6, // חופף על בועת הטקסט
+    marginBottom: 4, // מרווח כדי שלא יעלה על הודעה מתחת
+    paddingHorizontal: 4,
   },
   reactionBubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: tokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.primary,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
     gap: 4,
+    borderWidth: 1,
+    borderColor: tokens.colors.background.secondary,
   },
   myReaction: {
-    backgroundColor: tokens.colors.accent.main + '20',
-    borderWidth: 1,
-    borderColor: tokens.colors.accent.main,
+    backgroundColor: tokens.colors.primary.main + '20',
+    borderColor: tokens.colors.primary.main,
   },
   reactionEmoji: {
     fontSize: 14,

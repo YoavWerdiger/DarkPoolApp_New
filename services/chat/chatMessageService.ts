@@ -18,6 +18,7 @@ import {
   ChatPaginationParams,
   ChatMessageFilters,
   ChatStarredMessage,
+  ChatReactionGroup,
   ChatError,
   ChatMessageType,
 } from '../../types/chat.types';
@@ -725,6 +726,64 @@ async function updateUnreadCounts(
 }
 
 // ============================================
+// קבלת פרטי ריאקציות להודעה
+// ============================================
+
+export async function getMessageReactionDetails(
+  messageId: string
+): Promise<{ data: ChatReactionGroup[] | null; error: ChatError | null }> {
+  try {
+    const { data: reactions, error } = await supabase
+      .from('chat_message_reactions')
+      .select(`
+        *,
+        user:users (
+          id,
+          display_name,
+          profile_picture
+        )
+      `)
+      .eq('message_id', messageId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('❌ Error fetching reaction details:', error);
+      return { data: null, error: { code: 'FETCH_REACTIONS_ERROR', message: error.message } };
+    }
+
+    // קיבוץ ריאקציות לפי אימוג'י
+    const reactionGroups = reactions?.reduce((acc, r) => {
+      const existing = acc.find((g: any) => g.emoji === r.emoji);
+      if (existing) {
+        existing.count++;
+        existing.users.push({
+          id: r.user.id,
+          name: r.user.display_name,
+          profile_picture: r.user.profile_picture,
+        });
+      } else {
+        acc.push({
+          emoji: r.emoji,
+          count: 1,
+          users: [{
+            id: r.user.id,
+            name: r.user.display_name,
+            profile_picture: r.user.profile_picture,
+          }],
+          reacted_by_me: false, // לא רלוונטי כאן
+        });
+      }
+      return acc;
+    }, [] as ChatReactionGroup[]) || [];
+
+    return { data: reactionGroups, error: null };
+  } catch (error: any) {
+    console.error('❌ Unexpected error fetching reaction details:', error);
+    return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
+  }
+}
+
+// ============================================
 // Export
 // ============================================
 
@@ -736,6 +795,7 @@ export const chatMessageService = {
   forwardChatMessage,
   addReaction,
   removeReaction,
+  getMessageReactionDetails,
   markMessagesAsRead,
   starMessage,
   unstarMessage,

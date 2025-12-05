@@ -7,42 +7,51 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  Image,
 } from 'react-native';
-import { User } from 'lucide-react-native';
-import { ReactionDetail } from '../../services/supabase';
+import { ChatMessage, ChatReactionGroup } from '../../types/chat.types';
+import { chatMessageService } from '../../services/chat';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 
 interface ReactionDetailsModalProps {
   visible: boolean;
   onClose: () => void;
-  messageId: string;
+  message: ChatMessage | null;
 }
 
 const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
   visible,
   onClose,
-  messageId
+  message
 }) => {
   const DesignTokens = useDesignTokens();
-  const [reactionDetails, setReactionDetails] = useState<ReactionDetail[]>([]);
+  const [reactionDetails, setReactionDetails] = useState<ChatReactionGroup[]>([]);
   const [selectedTab, setSelectedTab] = useState<'all' | string>('all');
   const [loading, setLoading] = useState(false);
 
   // טעינת פירוט הריאקציות
   useEffect(() => {
-    if (visible && messageId) {
+    if (visible && message?.id) {
       loadReactionDetails();
+    } else {
+      setReactionDetails([]);
+      setSelectedTab('all');
     }
-  }, [visible, messageId]);
+  }, [visible, message?.id]);
 
   const loadReactionDetails = async () => {
+    if (!message?.id) return;
+    
     setLoading(true);
     try {
-      const ChatService = await import('../../services/chatService');
-      const details = await ChatService.ChatService.getReactionDetails(messageId);
-      setReactionDetails(details);
+      const { data, error } = await chatMessageService.getMessageReactionDetails(message.id);
+      if (error) {
+        console.error('❌ ReactionDetailsModal: Error loading reaction details:', error);
+      } else if (data) {
+        setReactionDetails(data);
+      }
     } catch (error) {
-      console.error('❌ ReactionDetailsModal: Error loading reaction details:', error);
+      console.error('❌ ReactionDetailsModal: Unexpected error:', error);
     } finally {
       setLoading(false);
     }
@@ -51,10 +60,11 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
   // קבלת כל סוגי הריאקציות
   const reactionTypes = useMemo(() => reactionDetails.map(r => r.emoji), [reactionDetails]);
   const allReactions = useMemo(() => reactionDetails.flatMap(r => 
-    r.user_ids.map((userId, index) => ({
+    r.users.map(user => ({
       emoji: r.emoji,
-      userId,
-      userName: r.user_names[index] || 'משתמש לא ידוע'
+      userId: user.id,
+      userName: user.name,
+      profilePicture: user.profile_picture,
     }))
   ), [reactionDetails]);
 
@@ -80,7 +90,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
       textAlign: 'center',
     },
     tabsContainer: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse', // RTL
       backgroundColor: DesignTokens.colors.background.secondary,
       borderRadius: 30,
       padding: 4,
@@ -134,6 +144,17 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
       marginLeft: 12,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    userAvatarImage: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginLeft: 12,
+    },
+    userAvatarText: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: DesignTokens.colors.primary.main,
     },
     userName: {
       color: DesignTokens.colors.text.primary,
@@ -233,9 +254,18 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
             <ScrollView showsVerticalScrollIndicator={false}>
               {filteredReactions.map((item, index) => (
                 <View key={`${item.userId}-${item.emoji}-${index}`} style={styles.userRow}>
-                  <View style={styles.userAvatar}>
-                    <User size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-                  </View>
+                  {item.profilePicture ? (
+                    <Image 
+                      source={{ uri: item.profilePicture }} 
+                      style={styles.userAvatarImage}
+                    />
+                  ) : (
+                    <View style={styles.userAvatar}>
+                      <Text style={styles.userAvatarText}>
+                        {item.userName.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
                   <Text style={styles.userName}>{item.userName}</Text>
                   <Text style={styles.userEmoji}>{item.emoji}</Text>
                 </View>

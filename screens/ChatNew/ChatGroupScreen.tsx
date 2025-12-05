@@ -26,6 +26,7 @@ import ChatMessage from '../../components/chat/ChatMessage';
 import ChatInput from '../../components/chat/ChatInput';
 import ChatTypingIndicator from '../../components/chat/ChatTypingIndicator';
 import ReactionPicker from '../../components/chat/ReactionPicker';
+import ReactionDetailsModal from '../../components/chat/ReactionDetailsModal';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
@@ -77,6 +78,8 @@ export default function ChatGroupScreen() {
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
   const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
   const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<ChatMessageType | null>(null);
+  const [reactionDetailsModalVisible, setReactionDetailsModalVisible] = useState(false);
+  const [selectedMessageForDetails, setSelectedMessageForDetails] = useState<ChatMessageType | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -191,7 +194,7 @@ export default function ChatGroupScreen() {
         { text: 'ביטול', style: 'cancel' },
         {
           text: 'שמור',
-          onPress: async (newContent) => {
+          onPress: async (newContent?: string) => {
             if (newContent && newContent.trim()) {
               await editMessage(message.id, newContent.trim());
             }
@@ -235,12 +238,17 @@ export default function ChatGroupScreen() {
     }
   };
 
+  const handleReactionDetailsPress = (message: ChatMessageType) => {
+    setSelectedMessageForDetails(message);
+    setReactionDetailsModalVisible(true);
+  };
+
   const handleBack = () => {
     navigation.goBack();
   };
 
   const handleGroupInfoPress = () => {
-    navigation.navigate('ChatGroupInfo' as never, { groupId } as never);
+    (navigation as any).navigate('ChatGroupInfo', { groupId });
   };
 
   // ============================================
@@ -333,6 +341,7 @@ export default function ChatGroupScreen() {
           onLongPress={() => handleMessageLongPress(item)}
           onReply={() => handleReply(item)}
           onReactionPress={(emoji) => handleReactionPress(item, emoji)}
+          onReactionDetailsPress={() => handleReactionDetailsPress(item)}
         />
       </View>
     );
@@ -483,6 +492,16 @@ export default function ChatGroupScreen() {
           setSelectedMessageForReaction(null);
         }}
         onReaction={handleReactionSelected}
+      />
+
+      {/* Reaction Details Modal */}
+      <ReactionDetailsModal
+        visible={reactionDetailsModalVisible}
+        onClose={() => {
+          setReactionDetailsModalVisible(false);
+          setSelectedMessageForDetails(null);
+        }}
+        message={selectedMessageForDetails}
       />
     </SafeAreaView>
   );

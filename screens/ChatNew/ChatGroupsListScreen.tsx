@@ -76,23 +76,56 @@ export default function ChatGroupsListScreen() {
       // טעינת ההודעה האחרונה לכל קבוצה
       const groupsWithLastMessage = await Promise.all(
         groups.map(async (g) => {
-          const { data: lastMessage } = await supabase
+          // טעינת ההודעה האחרונה עם join ל-users
+          const { data: messages, error: lastMessageError } = await supabase
             .from('chat_messages')
             .select(`
               content,
               message_type,
               created_at,
-              sender:users!chat_messages_sender_id_fkey(display_name)
+              sender_id,
+              users!chat_messages_sender_id_fkey(
+                id,
+                display_name,
+                full_name
+              )
             `)
             .eq('group_id', g.id)
             .eq('is_deleted', false)
             .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+            .limit(1);
+          
+          const lastMessage = messages && messages.length > 0 ? messages[0] : null;
+          
+          if (lastMessageError) {
+            console.error('❌ Error loading last message for group', g.id, lastMessageError);
+          }
 
           // טיפול בתוכן ההודעה לפי סוג
           let messageContent = '';
+          let senderName = 'משתמש';
+          
           if (lastMessage) {
+            // טיפול בשם השולח
+            // Supabase מחזיר את ה-users כ-array או object
+            const users = (lastMessage as any).users;
+            if (users) {
+              const user = Array.isArray(users) ? users[0] : users;
+              senderName = user?.display_name || user?.full_name || 'משתמש';
+            } else if (lastMessage.sender_id) {
+              // אם אין users אבל יש sender_id, ננסה לטעון את המשתמש ישירות
+              const { data: userData } = await supabase
+                .from('users')
+                .select('display_name, full_name')
+                .eq('id', lastMessage.sender_id)
+                .maybeSingle();
+              
+              if (userData) {
+                senderName = userData.display_name || userData.full_name || 'משתמש';
+              }
+            }
+            
+            // טיפול בתוכן
             if (lastMessage.content) {
               messageContent = lastMessage.content;
             } else {
@@ -123,7 +156,7 @@ export default function ChatGroupsListScreen() {
             last_message: lastMessage
               ? {
                   content: messageContent,
-                  sender_name: (lastMessage.sender as any)?.display_name || 'משתמש',
+                  sender_name: senderName,
                   created_at: lastMessage.created_at,
                 }
               : null,

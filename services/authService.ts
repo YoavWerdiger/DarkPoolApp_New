@@ -360,9 +360,16 @@ export class AuthService {
   // Sign out
   static async signOut(): Promise<{ error: string | null }> {
     try {
+      console.log('🔄 AuthService: Calling supabase.auth.signOut()...');
       const { error } = await supabase.auth.signOut();
-      return { error: error?.message || null };
+      if (error) {
+        console.error('❌ AuthService: Error signing out:', error);
+        return { error: error.message || null };
+      }
+      console.log('✅ AuthService: Sign out successful');
+      return { error: null };
     } catch (error: any) {
+      console.error('❌ AuthService: Exception signing out:', error);
       return { error: error.message };
     }
   }
@@ -411,10 +418,18 @@ export class AuthService {
 
   // Listen to auth state changes
   static onAuthStateChange(callback: (user: AuthUser | null) => void) {
-    return supabase.auth.onAuthStateChange((event, session) => {
+    return supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔄 AuthService: Auth state change event:', event, 'hasSession:', !!session);
       if (session?.user) {
-        this.getUserProfile(session.user.id).then(callback);
+        try {
+          const user = await this.getUserProfile(session.user.id);
+          callback(user);
+        } catch (error) {
+          console.error('❌ AuthService: Error getting user profile:', error);
+          callback(null);
+        }
       } else {
+        console.log('🔄 AuthService: No session, calling callback with null');
         callback(null);
       }
     });

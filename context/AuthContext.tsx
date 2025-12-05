@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔄 AuthContext: Initializing...');
     initializeAuth();
     const { data: { subscription } } = AuthService.onAuthStateChange(async (user) => {
-      console.log('🔄 AuthContext: Auth state changed, user:', user?.id);
+      console.log('🔄 AuthContext: Auth state changed, user:', user?.id || 'null');
       setUser(user);
       setIsLoading(false);
       
@@ -49,9 +49,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const result = await NotificationService.registerDeviceToken();
           console.log('📱 AuthContext: registerDeviceToken result:', result);
         }, 2000);
+      } else {
+        console.log('🔄 AuthContext: User signed out, state updated to null');
       }
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('🧹 AuthContext: Cleaning up auth state listener');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const initializeAuth = async () => {
@@ -198,12 +203,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // לא נכשל אם זה לא עובד - זה לא קריטי
       }
       
-      const { error } = await AuthService.signOut();
-      if (error) {
-        console.error('❌ AuthContext: Error signing out:', error);
-        return { error };
-      }
-      
       // מחיקת נתוני התחברות שמורים בהתנתקות (אלא אם כן המשתמש בחר לשמור)
       if (!keepCredentials) {
         try {
@@ -218,11 +217,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('✅ AuthContext: Keeping saved credentials as requested');
       }
       
+      const { error } = await AuthService.signOut();
+      if (error) {
+        console.error('❌ AuthContext: Error signing out:', error);
+        return { error };
+      }
+      
+      // עדכון ה-user state - ה-onAuthStateChange אמור לטפל בזה, אבל נוסיף fallback
       setUser(null);
+      
+      // נמתין קצת כדי לוודא שה-onAuthStateChange event נקרא
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       console.log('✅ AuthContext: Sign out completed successfully');
       return { error: null };
     } catch (error: any) {
       console.error('❌ AuthContext: Exception in sign out:', error);
+      // גם במקרה של שגיאה, ננסה להתנתק
+      setUser(null);
       return { error: error.message };
     } finally {
       setIsLoading(false);

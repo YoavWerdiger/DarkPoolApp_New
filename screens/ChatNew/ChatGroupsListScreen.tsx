@@ -282,7 +282,7 @@ export default function ChatGroupsListScreen() {
     if (isLoading && allGroups.length === 0) {
       return (
         <View style={styles.emptyContainer}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.accent.primary} />
+          <ActivityIndicator size="large" color={DesignTokens.colors.accent.main} />
           <Text style={styles.emptyText}>טוען...</Text>
         </View>
       );
@@ -340,7 +340,7 @@ export default function ChatGroupsListScreen() {
             <RefreshControl
               refreshing={isLoading}
               onRefresh={loadGroups}
-              tintColor={DesignTokens.colors.accent.primary}
+              tintColor={DesignTokens.colors.accent.main}
             />
           }
           showsVerticalScrollIndicator={false}
@@ -381,7 +381,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   headerTitleBrand: {
     fontSize: 32,
     fontWeight: '600',
-    color: tokens.colors.accent.primary,
+    color: tokens.colors.accent.main,
     letterSpacing: 0.5,
   },
   headerSubtitle: {
@@ -482,7 +482,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   memberBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: tokens.colors.accent.primary + '15',
+    backgroundColor: tokens.colors.accent.main + '15',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -491,7 +491,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   memberBadgeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: tokens.colors.accent.primary,
+    color: tokens.colors.accent.main,
   },
   
   emptyContainer: {

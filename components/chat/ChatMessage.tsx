@@ -327,7 +327,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderRadius: 16,
   },
   avatarPlaceholder: {
-    backgroundColor: tokens.colors.accent.primary,
+    backgroundColor: tokens.colors.accent.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -360,14 +360,14 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   replyBar: {
     width: 3,
-    backgroundColor: tokens.colors.accent.primary,
+    backgroundColor: tokens.colors.accent.main,
     borderRadius: 2,
     marginRight: 8,
   },
   replyName: {
     fontSize: 12,
     fontWeight: '600',
-    color: tokens.colors.accent.primary,
+    color: tokens.colors.accent.main,
     marginBottom: 2,
   },
   replyText: {
@@ -508,9 +508,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     gap: 4,
   },
   myReaction: {
-    backgroundColor: tokens.colors.accent.secondary,
+    backgroundColor: tokens.colors.accent.main + '20',
     borderWidth: 1,
-    borderColor: tokens.colors.accent.primary,
+    borderColor: tokens.colors.accent.main,
   },
   reactionEmoji: {
     fontSize: 14,

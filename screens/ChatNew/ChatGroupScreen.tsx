@@ -330,7 +330,7 @@ export default function ChatGroupScreen() {
   if (!currentGroup) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.accent.primary} />
+        <ActivityIndicator size="large" color={DesignTokens.colors.accent.main} />
         <Text style={styles.loadingText}>טוען...</Text>
       </View>
     );
@@ -373,14 +373,21 @@ export default function ChatGroupScreen() {
         )}
 
         <View style={styles.inputContainer}>
-          <ChatInput
-            groupId={groupId}
-            onSendMessage={handleSendMessage}
-            onTyping={handleTyping}
-            replyTo={replyTo}
-            onCancelReply={() => setReplyTo(undefined)}
-            disabled={isSendingMessage}
-          />
+          {currentGroup?.settings?.onlyAdminsCanSend && !currentGroup?.is_admin ? (
+            <View style={styles.restrictedInputMessage}>
+              <Text style={styles.restrictedInputText}>רק מנהלי הקהילה יכולים לכתוב בקבוצה זו</Text>
+              <Ionicons name="lock-closed-outline" size={20} color={DesignTokens.colors.text.secondary} />
+            </View>
+          ) : (
+            <ChatInput
+              groupId={groupId}
+              onSendMessage={handleSendMessage}
+              onTyping={handleTyping}
+              replyTo={replyTo}
+              onCancelReply={() => setReplyTo(undefined)}
+              disabled={isSendingMessage}
+            />
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -538,6 +545,20 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.primary,
     borderTopWidth: 1,
     borderTopColor: tokens.colors.background.secondary,
+  },
+
+  restrictedInputMessage: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  restrictedInputText: {
+    fontSize: 14,
+    color: tokens.colors.text.secondary,
+    textAlign: 'center',
   },
 
   loadingContainer: {

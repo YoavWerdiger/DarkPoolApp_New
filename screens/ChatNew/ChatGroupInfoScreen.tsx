@@ -216,7 +216,7 @@ export default function ChatGroupInfoScreen() {
             
             {isAdmin && (
               <TouchableOpacity onPress={handleEditGroup} style={styles.editButton}>
-                <Ionicons name="pencil-outline" size={16} color={tokens.colors.text.primary} />
+                <Ionicons name="pencil-outline" size={16} color={DesignTokens.colors.text.primary} />
                 <Text style={styles.editButtonText}>ערוך קבוצה</Text>
               </TouchableOpacity>
             )}
@@ -315,7 +315,7 @@ export default function ChatGroupInfoScreen() {
           {/* Danger Zone */}
           <View style={styles.section}>
             <TouchableOpacity onPress={handleLeaveGroup} style={styles.dangerButton}>
-                <Ionicons name="exit-outline" size={20} color={tokens.colors.text.primary} />
+                <Ionicons name="exit-outline" size={20} color={DesignTokens.colors.text.primary} />
               <Text style={styles.dangerButtonText}>עזוב קבוצה</Text>
             </TouchableOpacity>
           </View>

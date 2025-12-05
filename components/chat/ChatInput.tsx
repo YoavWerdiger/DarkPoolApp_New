@@ -311,7 +311,7 @@ export default function ChatInput({
                 <Ionicons name="close-circle" size={32} color="#FF3B30" />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => stopRecording(true)} style={styles.stopButton}>
-                <Ionicons name="stop-circle" size={32} color={DesignTokens.colors.accent.primary} />
+                <Ionicons name="stop-circle" size={32} color={DesignTokens.colors.accent.main} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -353,7 +353,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     padding: 12,
     backgroundColor: tokens.colors.background.secondary,
     borderLeftWidth: 3,
-    borderLeftColor: tokens.colors.accent.primary,
+    borderLeftColor: tokens.colors.accent.main,
   },
   replyContent: {
     flex: 1,
@@ -361,7 +361,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   replyLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: tokens.colors.accent.primary,
+    color: tokens.colors.accent.main,
     marginBottom: 4,
   },
   replyText: {
@@ -438,7 +438,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: tokens.colors.accent.primary,
+    backgroundColor: tokens.colors.accent.main,
     justifyContent: 'center',
     alignItems: 'center',
   },

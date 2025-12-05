@@ -96,7 +96,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   bar: {
     width: 3,
-    backgroundColor: tokens.colors.accent.primary,
+    backgroundColor: tokens.colors.accent.main,
     borderRadius: 2,
     minHeight: 4,
   },

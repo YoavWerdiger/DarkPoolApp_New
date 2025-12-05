@@ -267,7 +267,7 @@ export default function ChatGroupsListScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            קהילת <Text style={styles.headerTitleBold}>D</Text>ARK <Text style={styles.headerTitleBold}>P</Text>OOL
+            קהילת <Text style={styles.headerTitleBold}>D</Text>ark<Text style={styles.headerTitleBold}>P</Text>ool
           </Text>
           <Text style={styles.headerSubtitle}>
             {totalMembers} חברים בקהילה

@@ -426,6 +426,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
 
   messagesContainer: {
     flex: 1,
+    minHeight: 0, // חשוב: מאפשר ל-FlatList להתכווץ נכון
     position: 'relative',
   },
 
@@ -452,6 +453,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.primary,
     borderBottomWidth: 1,
     borderBottomColor: tokens.colors.background.secondary,
+    flexShrink: 0, // לא יתפוס מקום מה-messagesContainer
   },
 
   backButton: {
@@ -564,12 +566,14 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: tokens.colors.background.primary,
+    flexShrink: 0, // לא יתפוס מקום מה-messagesContainer
   },
 
   inputContainer: {
     backgroundColor: tokens.colors.background.primary,
     borderTopWidth: 1,
     borderTopColor: tokens.colors.background.secondary,
+    flexShrink: 0, // לא יתפוס מקום מה-messagesContainer
   },
 
   restrictedInputMessage: {

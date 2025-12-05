@@ -216,7 +216,7 @@ export default function ChatGroupInfoScreen() {
             
             {isAdmin && (
               <TouchableOpacity onPress={handleEditGroup} style={styles.editButton}>
-                <Ionicons name="pencil-outline" size={16} color="#FFFFFF" />
+                <Ionicons name="pencil-outline" size={16} color={tokens.colors.text.primary} />
                 <Text style={styles.editButtonText}>ערוך קבוצה</Text>
               </TouchableOpacity>
             )}
@@ -315,7 +315,7 @@ export default function ChatGroupInfoScreen() {
           {/* Danger Zone */}
           <View style={styles.section}>
             <TouchableOpacity onPress={handleLeaveGroup} style={styles.dangerButton}>
-              <Ionicons name="exit-outline" size={20} color="#FFFFFF" />
+                <Ionicons name="exit-outline" size={20} color={tokens.colors.text.primary} />
               <Text style={styles.dangerButtonText}>עזוב קבוצה</Text>
             </TouchableOpacity>
           </View>
@@ -416,7 +416,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   editButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
   },
 
   section: {
@@ -495,7 +495,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   memberAvatarText: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
   },
   memberInfo: {
     flex: 1,
@@ -522,11 +522,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#34C759',
+    backgroundColor: tokens.colors.success.main,
   },
   memberOnline: {
     fontSize: 13,
-    color: '#34C759',
+    color: tokens.colors.success.main,
     textAlign: 'right',
   },
   memberOffline: {
@@ -556,7 +556,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   dangerButton: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: '#FF3B30',
+    backgroundColor: tokens.colors.danger.main,
     padding: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -566,7 +566,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   dangerButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
   },
 
   errorText: {

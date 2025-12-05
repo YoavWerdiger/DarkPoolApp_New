@@ -235,7 +235,7 @@ export default function ChatGroupsListScreen() {
             // הודעה אחרונה אם המשתמש חבר
             item.last_message ? (
               <Text style={styles.lastMessage} numberOfLines={1}>
-                {item.last_message.sender_name}: "{item.last_message.content}"
+                {item.last_message.sender_name}: {item.last_message.content}
               </Text>
             ) : (
               <Text style={styles.lastMessage}>אין הודעות</Text>

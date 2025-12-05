@@ -158,10 +158,10 @@ export default function ChatMessage({
 
           {/* Metadata */}
           <View style={styles.metadata}>
-            {message.is_edited && (
-              <Text style={[styles.timeText, styles.editedText]}>נערך · </Text>
-            )}
             <Text style={styles.timeText}>{timeText}</Text>
+            {message.is_edited && (
+              <Text style={[styles.timeText, styles.editedText]}> · נערך</Text>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -477,10 +477,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   
   metadata: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     marginTop: 4,
     gap: 4,
+    justifyContent: 'flex-start',
   },
   editedText: {
     fontStyle: 'italic',

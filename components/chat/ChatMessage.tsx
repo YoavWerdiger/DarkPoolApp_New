@@ -62,9 +62,11 @@ export default function ChatMessage({
   if (message.is_system_message) {
     return (
       <View style={styles.systemMessageContainer}>
+        <View style={styles.systemMessageLine} />
         <Text style={styles.systemMessageText}>
           {getSystemMessageText(message)}
         </Text>
+        <View style={styles.systemMessageLine} />
       </View>
     );
   }
@@ -254,27 +256,27 @@ function getSystemMessageText(message: ChatMessageType): string {
   
   switch (message.system_message_type) {
     case 'group_created':
-      return '🎉 הקבוצה נוצרה';
+      return 'הקבוצה נוצרה';
     case 'user_joined':
-      return `👋 ${data.user_name || 'משתמש'} הצטרף לקבוצה`;
+      return `${data.user_name || 'משתמש'} הצטרף לקבוצה`;
     case 'user_left':
-      return `👋 ${data.user_name || 'משתמש'} עזב את הקבוצה`;
+      return `${data.user_name || 'משתמש'} עזב את הקבוצה`;
     case 'member_added':
-      return `➕ ${data.user_name || 'משתמש'} נוסף לקבוצה`;
+      return `${data.user_name || 'משתמש'} נוסף לקבוצה`;
     case 'member_removed':
-      return `➖ ${data.user_name || 'משתמש'} הוסר מהקבוצה`;
+      return `${data.user_name || 'משתמש'} הוסר מהקבוצה`;
     case 'member_promoted':
-      return `⭐ ${data.user_name || 'משתמש'} הועלה לאדמין`;
+      return `${data.user_name || 'משתמש'} הועלה לאדמין`;
     case 'member_demoted':
-      return `📉 ${data.user_name || 'משתמש'} הורד מאדמין`;
+      return `${data.user_name || 'משתמש'} הורד מאדמין`;
     case 'group_name_changed':
-      return `📝 שם הקבוצה שונה ל-"${data.new_value}"`;
+      return `שם הקבוצה שונה ל-"${data.new_value}"`;
     case 'group_avatar_changed':
-      return '🖼️ תמונת הקבוצה שונתה';
+      return 'תמונת הקבוצה שונתה';
     case 'group_description_changed':
-      return '📝 תיאור הקבוצה שונה';
+      return 'תיאור הקבוצה שונה';
     default:
-      return '📌 פעולה בקבוצה';
+      return 'פעולה בקבוצה';
   }
 }
 
@@ -522,16 +524,27 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   
   systemMessageContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 12,
+    marginVertical: 16,
+    paddingHorizontal: 16,
+  },
+  systemMessageLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: tokens.colors.text.secondary,
+    opacity: 0.3,
   },
   systemMessageText: {
     fontSize: 13,
-    color: tokens.colors.text.secondary,
-    backgroundColor: tokens.colors.background.secondary,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    fontWeight: '700',
+    color: tokens.colors.text.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    textAlign: 'center',
+    backgroundColor: tokens.colors.background.primary + 'CC', // חצי שקוף
     borderRadius: 12,
+    overflow: 'hidden',
   },
 });
 

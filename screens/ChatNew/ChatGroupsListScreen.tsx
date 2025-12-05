@@ -19,6 +19,11 @@ I18nManager.forceRTL(true);
 interface GroupWithMembership extends ChatGroup {
   is_member: boolean;
   my_membership_id?: string;
+  last_message?: {
+    content: string;
+    sender_name: string;
+    created_at: string;
+  } | null;
 }
 
 // מיפוי אייקונים
@@ -68,13 +73,65 @@ export default function ChatGroupsListScreen() {
       const myGroupIds = new Set(memberships?.map(m => m.group_id) || []);
       const membershipMap = new Map(memberships?.map(m => [m.group_id, m.id]) || []);
 
-      const groupsWithMembership: GroupWithMembership[] = groups.map(g => ({
-        ...g,
-        is_member: myGroupIds.has(g.id),
-        my_membership_id: membershipMap.get(g.id),
-      }));
+      // טעינת ההודעה האחרונה לכל קבוצה
+      const groupsWithLastMessage = await Promise.all(
+        groups.map(async (g) => {
+          const { data: lastMessage } = await supabase
+            .from('chat_messages')
+            .select(`
+              content,
+              message_type,
+              created_at,
+              sender:users!chat_messages_sender_id_fkey(display_name)
+            `)
+            .eq('group_id', g.id)
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
-      setAllGroups(groupsWithMembership);
+          // טיפול בתוכן ההודעה לפי סוג
+          let messageContent = '';
+          if (lastMessage) {
+            if (lastMessage.content) {
+              messageContent = lastMessage.content;
+            } else {
+              // הודעת מדיה
+              switch (lastMessage.message_type) {
+                case 'image':
+                  messageContent = 'תמונה';
+                  break;
+                case 'video':
+                  messageContent = 'וידאו';
+                  break;
+                case 'audio':
+                  messageContent = 'הודעת קול';
+                  break;
+                case 'document':
+                  messageContent = 'מסמך';
+                  break;
+                default:
+                  messageContent = 'הודעה';
+              }
+            }
+          }
+
+          return {
+            ...g,
+            is_member: myGroupIds.has(g.id),
+            my_membership_id: membershipMap.get(g.id),
+            last_message: lastMessage
+              ? {
+                  content: messageContent,
+                  sender_name: (lastMessage.sender as any)?.display_name || 'משתמש',
+                  created_at: lastMessage.created_at,
+                }
+              : null,
+          };
+        })
+      );
+
+      setAllGroups(groupsWithLastMessage);
 
       // חישוב סך החברים הייחודיים בקהילה
       const { data: allMembers, error: membersError } = await supabase
@@ -174,24 +231,25 @@ export default function ChatGroupsListScreen() {
         {/* מידע */}
         <View style={styles.groupInfo}>
           <Text style={styles.groupName}>{item.name}</Text>
-          <Text style={styles.memberCount}>
-            {item.members_count || 0} חברים
-          </Text>
+          {item.is_member ? (
+            // הודעה אחרונה אם המשתמש חבר
+            item.last_message ? (
+              <Text style={styles.lastMessage} numberOfLines={1}>
+                {item.last_message.sender_name}: "{item.last_message.content}"
+              </Text>
+            ) : (
+              <Text style={styles.lastMessage}>אין הודעות</Text>
+            )
+          ) : (
+            // מספר חברים אם המשתמש לא חבר
+            <Text style={styles.memberCount}>
+              {item.members_count || 0} חברים
+            </Text>
+          )}
         </View>
 
-        {/* כפתור/סטטוס */}
-        {item.is_member ? (
-          <TouchableOpacity
-            style={styles.memberBadge}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleLeaveGroup(item);
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={20} color={DesignTokens.colors.accent.primary} />
-            <Text style={styles.memberBadgeText}>חבר</Text>
-          </TouchableOpacity>
-        ) : (
+        {/* כפתור הצטרפות (רק אם לא חבר) */}
+        {!item.is_member && (
           <TouchableOpacity
             style={styles.joinButton}
             onPress={(e) => {
@@ -398,6 +456,12 @@ const createStyles = (tokens: any) => StyleSheet.create({
     fontSize: 14,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
+  },
+  lastMessage: {
+    fontSize: 14,
+    color: tokens.colors.text.secondary,
+    textAlign: 'right',
+    marginTop: 2,
   },
   
   joinButton: {

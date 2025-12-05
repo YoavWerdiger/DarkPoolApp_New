@@ -352,32 +352,34 @@ export default function ChatGroupScreen() {
       >
         {renderHeader()}
 
-        <ImageBackground
-          source={{ uri: backgroundImage }}
-          style={styles.backgroundImage}
-          resizeMode="cover"
-        >
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={item => item.id}
-            inverted={false}
-            onEndReached={loadMoreMessages}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={renderFooter}
-            ListEmptyComponent={renderEmpty}
-            contentContainerStyle={messages.length === 0 ? styles.emptyList : styles.messagesList}
-            showsVerticalScrollIndicator={false}
-            style={styles.flatListTransparent}
-            onContentSizeChange={() => {
-              // גלילה אוטומטית למטה כשה-content משתנה
-              setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-              }, 100);
-            }}
-          />
-        </ImageBackground>
+        <View style={styles.messagesContainer}>
+          <ImageBackground
+            source={{ uri: backgroundImage }}
+            style={styles.backgroundImage}
+            resizeMode="cover"
+          >
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={item => item.id}
+              inverted={false}
+              onEndReached={loadMoreMessages}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={renderFooter}
+              ListEmptyComponent={renderEmpty}
+              contentContainerStyle={messages.length === 0 ? styles.emptyList : styles.messagesList}
+              showsVerticalScrollIndicator={false}
+              style={styles.flatListTransparent}
+              onContentSizeChange={() => {
+                // גלילה אוטומטית למטה כשה-content משתנה
+                setTimeout(() => {
+                  flatListRef.current?.scrollToEnd({ animated: true });
+                }, 100);
+              }}
+            />
+          </ImageBackground>
+        </View>
 
         {typingUsers.length > 0 && (
           <View style={styles.typingContainer}>
@@ -422,14 +424,24 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.primary,
   },
 
-  backgroundImage: {
+  messagesContainer: {
     flex: 1,
+    position: 'relative',
+  },
+
+  backgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
   },
 
   flatListTransparent: {
     backgroundColor: 'transparent',
+    flex: 1,
   },
 
   header: {
@@ -498,7 +510,6 @@ const createStyles = (tokens: any) => StyleSheet.create({
   messagesList: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingBottom: 100, // מקום מעל ה-input area
   },
 
   dateDivider: {

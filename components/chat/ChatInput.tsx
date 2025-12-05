@@ -290,6 +290,7 @@ export default function ChatInput({
               value={text}
               onChangeText={handleTextChange}
               multiline
+              numberOfLines={2}
               maxLength={4000}
               editable={!disabled && !isUploading}
             />
@@ -392,12 +393,13 @@ const createStyles = (tokens: any) => StyleSheet.create({
   textInput: {
     flex: 1,
     minHeight: 40,
-    maxHeight: 120,
+    maxHeight: 70, // 2 שורות: 22px * 2 + 20px padding + 6px margin
     backgroundColor: tokens.colors.background.secondary,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 16,
+    lineHeight: 22,
     color: tokens.colors.text.primary,
     textAlignVertical: 'center',
     textAlign: 'right',

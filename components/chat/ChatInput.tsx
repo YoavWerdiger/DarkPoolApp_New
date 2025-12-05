@@ -97,32 +97,132 @@ export default function ChatInput({
   };
 
   // ============================================
-  // Pick Image (זמנית מושבת - דורש Development Build)
+  // Pick Image
   // ============================================
 
   const handlePickImage = async () => {
-    Alert.alert(
-      'שליחת מדיה',
-      'העלאת תמונות וסרטונים דורשת Development Build.\nבגרסת Expo Go נתמוך רק בהודעות טקסט.',
-      [{ text: 'הבנתי' }]
-    );
-    // TODO: להוסיף חזרה כשעושים Development Build
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setIsUploading(true);
+        const asset = result.assets[0];
+        
+        const uploadResult = await chatMediaService.uploadImage(
+          asset.uri,
+          groupId,
+          (progress) => {
+            console.log('📤 Image upload progress:', progress.progress);
+          }
+        );
+
+        if (uploadResult.error) {
+          Alert.alert('שגיאה', uploadResult.error.message);
+        } else if (uploadResult.url) {
+          await onSendMessage('', uploadResult.url, ChatMessageType.IMAGE);
+        }
+        
+        setIsUploading(false);
+      }
+    } catch (error) {
+      console.error('❌ Error picking image:', error);
+      Alert.alert('שגיאה', 'לא הצלחנו לבחור תמונה');
+      setIsUploading(false);
+    }
   };
 
   // ============================================
-  // Take Photo (זמנית מושבת)
+  // Take Photo
   // ============================================
 
   const handleTakePhoto = async () => {
-    Alert.alert('שליחת מדיה', 'זמנית מושבת ב-Expo Go');
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה למצלמה');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setIsUploading(true);
+        const asset = result.assets[0];
+        
+        const uploadResult = await chatMediaService.uploadImage(
+          asset.uri,
+          groupId,
+          (progress) => {
+            console.log('📤 Image upload progress:', progress.progress);
+          }
+        );
+
+        if (uploadResult.error) {
+          Alert.alert('שגיאה', uploadResult.error.message);
+        } else if (uploadResult.url) {
+          await onSendMessage('', uploadResult.url, ChatMessageType.IMAGE);
+        }
+        
+        setIsUploading(false);
+      }
+    } catch (error) {
+      console.error('❌ Error taking photo:', error);
+      Alert.alert('שגיאה', 'לא הצלחנו לצלם תמונה');
+      setIsUploading(false);
+    }
   };
 
   // ============================================
-  // Pick Document (זמנית מושבת)
+  // Pick Document
   // ============================================
 
   const handlePickDocument = async () => {
-    Alert.alert('שליחת מדיה', 'זמנית מושבת ב-Expo Go');
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setIsUploading(true);
+        const asset = result.assets[0];
+        
+        const uploadResult = await chatMediaService.uploadDocument(
+          asset.uri,
+          asset.name || 'document',
+          groupId,
+          (progress) => {
+            console.log('📤 Document upload progress:', progress.progress);
+          }
+        );
+
+        if (uploadResult.error) {
+          Alert.alert('שגיאה', uploadResult.error.message);
+        } else if (uploadResult.url) {
+          await onSendMessage('', uploadResult.url, ChatMessageType.DOCUMENT);
+        }
+        
+        setIsUploading(false);
+      }
+    } catch (error) {
+      console.error('❌ Error picking document:', error);
+      Alert.alert('שגיאה', 'לא הצלחנו לבחור מסמך');
+      setIsUploading(false);
+    }
   };
 
   // ============================================
@@ -171,14 +271,39 @@ export default function ChatInput({
         recordingTimerRef.current = null;
       }
 
+      const status = await recordingRef.current.getStatusAsync();
+      const uri = recordingRef.current.getURI();
       await recordingRef.current.stopAndUnloadAsync();
       recordingRef.current = null;
       setIsRecording(false);
+      
+      const duration = status.durationMillis ? Math.floor(status.durationMillis / 1000) : recordingDuration;
       setRecordingDuration(0);
 
-      // TODO: העלאת אודיו דורשת Development Build
-      if (shouldSend) {
-        Alert.alert('שליחת אודיו', 'זמנית מושבת ב-Expo Go');
+      // העלאת אודיו
+      if (shouldSend && uri) {
+        setIsUploading(true);
+        try {
+          const uploadResult = await chatMediaService.uploadAudio(
+            uri,
+            groupId,
+            duration,
+            (progress) => {
+              console.log('📤 Audio upload progress:', progress.progress);
+            }
+          );
+
+          if (uploadResult.error) {
+            Alert.alert('שגיאה', uploadResult.error.message);
+          } else if (uploadResult.url) {
+            await onSendMessage('', uploadResult.url, ChatMessageType.AUDIO);
+          }
+        } catch (error) {
+          console.error('❌ Error uploading audio:', error);
+          Alert.alert('שגיאה', 'לא הצלחנו להעלות את ההקלטה');
+        } finally {
+          setIsUploading(false);
+        }
       }
     } catch (error) {
       console.error('❌ Error stopping recording:', error);
@@ -195,13 +320,55 @@ export default function ChatInput({
   // Show Attachment Options
   // ============================================
 
+  const handlePickVideo = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setIsUploading(true);
+        const asset = result.assets[0];
+        
+        const uploadResult = await chatMediaService.uploadVideo(
+          asset.uri,
+          groupId,
+          (progress) => {
+            console.log('📤 Video upload progress:', progress.progress);
+          }
+        );
+
+        if (uploadResult.error) {
+          Alert.alert('שגיאה', uploadResult.error.message);
+        } else if (uploadResult.url) {
+          await onSendMessage('', uploadResult.url, ChatMessageType.VIDEO);
+        }
+        
+        setIsUploading(false);
+      }
+    } catch (error) {
+      console.error('❌ Error picking video:', error);
+      Alert.alert('שגיאה', 'לא הצלחנו לבחור סרטון');
+      setIsUploading(false);
+    }
+  };
+
   const showAttachmentOptions = () => {
     Alert.alert(
       'בחר סוג קובץ',
       '',
       [
         { text: '📷 מצלמה', onPress: handleTakePhoto },
-        { text: '🖼️ גלריה', onPress: handlePickImage },
+        { text: '🖼️ תמונה מגלריה', onPress: handlePickImage },
+        { text: '🎥 סרטון', onPress: handlePickVideo },
         { text: '📎 מסמך', onPress: handlePickDocument },
         { text: 'ביטול', style: 'cancel' },
       ]

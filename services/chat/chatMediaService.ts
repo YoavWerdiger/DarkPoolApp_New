@@ -62,27 +62,43 @@ export async function uploadImage(
       encoding: 'base64',
     });
 
-    // קבלת מידות התמונה המקורית
-    const imageInfo = await ImageManipulator.manipulateAsync(uri, [], { base64: true });
-    const originalWidth = imageInfo.width;
-    const originalHeight = imageInfo.height;
+    // קבלת מידות התמונה המקורית ויצירת preview/thumbnail
+    let imageInfo: any;
+    let thumbnail: any;
+    let previewImage: any;
+    let originalWidth = 0;
+    let originalHeight = 0;
 
-    // יצירת thumbnail
-    const thumbnail = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: THUMBNAIL_SIZE } }],
-      { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-    );
+    try {
+      // ניסיון להשתמש ב-ImageManipulator (עובד ב-Expo Go)
+      imageInfo = await ImageManipulator.manipulateAsync(uri, [], { base64: true });
+      originalWidth = imageInfo.width;
+      originalHeight = imageInfo.height;
 
-    // יצירת preview (גרסה מוקטנת לשליחה)
-    let previewImage = imageInfo;
-    if (originalWidth > PREVIEW_SIZE || originalHeight > PREVIEW_SIZE) {
-      const scale = Math.min(PREVIEW_SIZE / originalWidth, PREVIEW_SIZE / originalHeight);
-      previewImage = await ImageManipulator.manipulateAsync(
+      // יצירת thumbnail
+      thumbnail = await ImageManipulator.manipulateAsync(
         uri,
-        [{ resize: { width: Math.round(originalWidth * scale) } }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        [{ resize: { width: THUMBNAIL_SIZE } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
+
+      // יצירת preview (גרסה מוקטנת לשליחה)
+      previewImage = imageInfo;
+      if (originalWidth > PREVIEW_SIZE || originalHeight > PREVIEW_SIZE) {
+        const scale = Math.min(PREVIEW_SIZE / originalWidth, PREVIEW_SIZE / originalHeight);
+        previewImage = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: Math.round(originalWidth * scale) } }],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+      }
+    } catch (manipulatorError) {
+      // Fallback: אם ImageManipulator לא עובד, נשתמש בתמונה המקורית
+      console.log('⚠️ ImageManipulator not available, using original image');
+      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+      imageInfo = { base64, width: 0, height: 0 };
+      thumbnail = { base64, width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE };
+      previewImage = { base64, width: 0, height: 0 };
     }
 
     // שמות קבצים ייחודיים
@@ -208,15 +224,28 @@ export async function uploadVideo(
     // יצירת thumbnail מהסרטון
     let thumbnailUrl: string | null = null;
     try {
-      const { VideoThumbnails } = require('expo-video-thumbnails');
-      const { uri: thumbnailUri } = await VideoThumbnails.getThumbnailAsync(uri, {
-        time: 1000,
-      });
+      // ניסיון להשתמש ב-expo-video-thumbnails (לא עובד ב-Expo Go)
+      let thumbnailUri: string | null = null;
+      
+      try {
+        const { VideoThumbnails } = require('expo-video-thumbnails');
+        const result = await VideoThumbnails.getThumbnailAsync(uri, {
+          time: 1000,
+        });
+        thumbnailUri = result.uri;
+      } catch (thumbnailError) {
+        // Fallback: ניצור תמונה ראשונה מהסרטון באמצעות ImageManipulator
+        // או נשאיר null (הסרטון יוצג בלי thumbnail)
+        console.log('⚠️ Video thumbnails not available in Expo Go, skipping thumbnail');
+      }
 
-      const thumbnailResult = await uploadImage(thumbnailUri, groupId);
-      thumbnailUrl = thumbnailResult.thumbnail_url;
+      if (thumbnailUri) {
+        const thumbnailResult = await uploadImage(thumbnailUri, groupId);
+        thumbnailUrl = thumbnailResult.thumbnail_url;
+      }
     } catch (error) {
       console.error('⚠️ Warning: Could not generate video thumbnail:', error);
+      // לא נכשיל את העלאת הסרטון בגלל thumbnail
     }
 
     // שם קובץ ייחודי

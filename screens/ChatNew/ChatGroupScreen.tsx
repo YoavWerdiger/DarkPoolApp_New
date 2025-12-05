@@ -13,9 +13,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { useTheme } from '../../context/ThemeContext';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -30,11 +32,17 @@ import { he } from 'date-fns/locale';
 export default function ChatGroupScreen() {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const { isDarkMode } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
 
   const { groupId } = route.params as { groupId: string };
+
+  // תמונות רקע לפי theme
+  const backgroundImage = isDarkMode
+    ? 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/1.png'
+    : 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/2.png';
 
   const {
     currentGroup,
@@ -324,19 +332,26 @@ export default function ChatGroupScreen() {
       >
         {renderHeader()}
 
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={item => item.id}
-          inverted={false}
-          onEndReached={loadMoreMessages}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={renderEmpty}
-          contentContainerStyle={messages.length === 0 ? styles.emptyList : styles.messagesList}
-          showsVerticalScrollIndicator={false}
-        />
+        <ImageBackground
+          source={{ uri: backgroundImage }}
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        >
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={item => item.id}
+            inverted={false}
+            onEndReached={loadMoreMessages}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={renderFooter}
+            ListEmptyComponent={renderEmpty}
+            contentContainerStyle={messages.length === 0 ? styles.emptyList : styles.messagesList}
+            showsVerticalScrollIndicator={false}
+            style={styles.flatListTransparent}
+          />
+        </ImageBackground>
 
         {typingUsers.length > 0 && (
           <View style={styles.typingContainer}>
@@ -372,6 +387,16 @@ const createStyles = (tokens: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: tokens.colors.background.primary,
+  },
+
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+
+  flatListTransparent: {
+    backgroundColor: 'transparent',
   },
 
   header: {

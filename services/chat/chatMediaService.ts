@@ -5,7 +5,7 @@
 // ============================================
 
 import { supabase } from '../../lib/supabase';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import {
@@ -175,8 +175,8 @@ export async function uploadImage(
     return {
       url: urlData.publicUrl,
       thumbnail_url: thumbnailData ? thumbnailUrlData.publicUrl : null,
-      width: previewImage.width,
-      height: previewImage.height,
+      width: previewImage.width || originalWidth || 0,
+      height: previewImage.height || originalHeight || 0,
       size: fileInfo.size || 0,
       error: null,
     };

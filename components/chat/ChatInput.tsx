@@ -109,7 +109,7 @@ export default function ChatInput({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: false,
         quality: 0.8,
       });
@@ -154,7 +154,7 @@ export default function ChatInput({
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: false,
         quality: 0.8,
       });
@@ -329,7 +329,7 @@ export default function ChatInput({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ImagePicker.MediaType.Videos,
         allowsEditing: false,
         quality: 0.8,
       });

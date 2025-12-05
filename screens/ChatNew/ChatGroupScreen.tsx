@@ -25,6 +25,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import ChatMessage from '../../components/chat/ChatMessage';
 import ChatInput from '../../components/chat/ChatInput';
 import ChatTypingIndicator from '../../components/chat/ChatTypingIndicator';
+import ReactionPicker from '../../components/chat/ReactionPicker';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
@@ -74,6 +75,8 @@ export default function ChatGroupScreen() {
   const [typingAreaHeight, setTypingAreaHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
+  const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
+  const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<ChatMessageType | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -133,6 +136,7 @@ export default function ChatGroupScreen() {
     const options: any[] = [];
 
     options.push({ text: 'השב', onPress: () => handleReply(message) });
+    options.push({ text: 'ריאקציה', onPress: () => handleOpenReactionPicker(message) });
     options.push({ text: message.is_starred_by_me ? 'הסר מועדפים' : 'הוסף למועדפים', onPress: () => handleStar(message) });
     options.push({ text: 'העתק', onPress: () => handleCopy(message) });
 
@@ -145,6 +149,18 @@ export default function ChatGroupScreen() {
     options.push({ text: 'ביטול', style: 'cancel' });
 
     Alert.alert('פעולות הודעה', '', options);
+  };
+
+  const handleOpenReactionPicker = (message: ChatMessageType) => {
+    setSelectedMessageForReaction(message);
+    setReactionPickerVisible(true);
+  };
+
+  const handleReactionSelected = async (emoji: string) => {
+    if (selectedMessageForReaction) {
+      await handleReactionPress(selectedMessageForReaction, emoji);
+      setSelectedMessageForReaction(null);
+    }
   };
 
   const handleReply = (message: ChatMessageType) => {
@@ -458,6 +474,16 @@ export default function ChatGroupScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
+
+      {/* Reaction Picker */}
+      <ReactionPicker
+        visible={reactionPickerVisible}
+        onClose={() => {
+          setReactionPickerVisible(false);
+          setSelectedMessageForReaction(null);
+        }}
+        onReaction={handleReactionSelected}
+      />
     </SafeAreaView>
   );
 }

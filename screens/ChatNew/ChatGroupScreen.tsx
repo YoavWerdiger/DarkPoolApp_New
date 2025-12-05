@@ -14,6 +14,7 @@ import {
   Platform,
   Alert,
   ImageBackground,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -26,7 +27,7 @@ import ChatInput from '../../components/chat/ChatInput';
 import ChatTypingIndicator from '../../components/chat/ChatTypingIndicator';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
-import { format, isToday, isYesterday, isSameDay, differenceInMinutes } from 'date-fns';
+import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 export default function ChatGroupScreen() {
@@ -217,9 +218,21 @@ export default function ChatGroupScreen() {
 
     return (
       <View style={styles.header}>
-        <TouchableOpacity style={styles.infoButton} onPress={handleGroupInfoPress}>
-          <Ionicons name="information-circle-outline" size={26} color={DesignTokens.colors.text.secondary} />
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Ionicons name="arrow-forward" size={24} color={DesignTokens.colors.text.primary} />
         </TouchableOpacity>
+
+        {/* תמונת קבוצה */}
+        {currentGroup.avatar_url ? (
+          <Image
+            source={{ uri: currentGroup.avatar_url }}
+            style={styles.groupImage}
+          />
+        ) : (
+          <View style={styles.groupImagePlaceholder}>
+            <Ionicons name="people" size={20} color={DesignTokens.colors.text.secondary} />
+          </View>
+        )}
 
         <TouchableOpacity style={styles.headerInfo} onPress={handleGroupInfoPress}>
           <Text style={styles.headerTitle} numberOfLines={1}>
@@ -230,8 +243,8 @@ export default function ChatGroupScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={24} color={DesignTokens.colors.text.primary} />
+        <TouchableOpacity style={styles.infoButton} onPress={handleGroupInfoPress}>
+          <Ionicons name="information-circle-outline" size={26} color={DesignTokens.colors.text.secondary} />
         </TouchableOpacity>
       </View>
     );
@@ -245,21 +258,6 @@ export default function ChatGroupScreen() {
     const prevDate = new Date(prevMessage.created_at);
     
     return !isSameDay(currentDate, prevDate);
-  };
-
-  // פונקציה לבדיקה אם הודעות קרובות בזמן (פחות מ-3 דקות)
-  const areMessagesCloseInTime = (currentMessage: ChatMessageType, prevMessage: ChatMessageType | null): boolean => {
-    if (!prevMessage) return false;
-    
-    // רק אם אותו שולח
-    if (currentMessage.sender_id !== prevMessage.sender_id) return false;
-    
-    const currentDate = new Date(currentMessage.created_at);
-    const prevDate = new Date(prevMessage.created_at);
-    
-    const minutesDiff = differenceInMinutes(currentDate, prevDate);
-    
-    return minutesDiff < 3; // פחות מ-3 דקות
   };
 
   // פונקציה לניסוח תאריך
@@ -289,7 +287,6 @@ export default function ChatGroupScreen() {
     const showAvatar = !prevMessage || prevMessage.sender_id !== item.sender_id;
     const showSenderName = !isMe && showAvatar;
     const showDivider = shouldShowDateDivider(item, prevMessage);
-    const isCloseToPrevious = areMessagesCloseInTime(item, prevMessage);
 
     return (
       <View>
@@ -299,7 +296,6 @@ export default function ChatGroupScreen() {
           isMe={isMe}
           showAvatar={showAvatar}
           showSenderName={showSenderName}
-          compactSpacing={isCloseToPrevious}
           onLongPress={() => handleMessageLongPress(item)}
           onReply={() => handleReply(item)}
           onReactionPress={(emoji) => handleReactionPress(item, emoji)}
@@ -312,7 +308,7 @@ export default function ChatGroupScreen() {
     if (isLoadingMessages) {
       return (
         <View style={styles.loadingFooter}>
-          <ActivityIndicator color={DesignTokens.colors.accent.primary} />
+          <ActivityIndicator color={DesignTokens.colors.accent.main} />
         </View>
       );
     }
@@ -431,7 +427,24 @@ const createStyles = (tokens: any) => StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: -8,
+    marginLeft: -8,
+  },
+
+  groupImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+
+  groupImagePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: tokens.colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
 
   headerInfo: {

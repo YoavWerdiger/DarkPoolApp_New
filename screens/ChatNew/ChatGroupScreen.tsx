@@ -70,6 +70,8 @@ export default function ChatGroupScreen() {
     content: string;
   } | undefined>();
 
+  const [inputAreaHeight, setInputAreaHeight] = useState(0);
+  const [typingAreaHeight, setTypingAreaHeight] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
@@ -87,6 +89,13 @@ export default function ChatGroupScreen() {
       }, 200);
     }
   }, [messages.length, messages[messages.length - 1]?.id]);
+
+  // איפוס typingAreaHeight כשאין typing users
+  useEffect(() => {
+    if (typingUsers.length === 0) {
+      setTypingAreaHeight(0);
+    }
+  }, [typingUsers.length]);
 
   // ============================================
   // Handlers
@@ -368,7 +377,10 @@ export default function ChatGroupScreen() {
               onEndReachedThreshold={0.5}
               ListFooterComponent={renderFooter}
               ListEmptyComponent={renderEmpty}
-              contentContainerStyle={messages.length === 0 ? styles.emptyList : styles.messagesList}
+              contentContainerStyle={[
+                messages.length === 0 ? styles.emptyList : styles.messagesList,
+                { paddingBottom: inputAreaHeight + typingAreaHeight + 20 }
+              ]}
               showsVerticalScrollIndicator={false}
               style={styles.flatListTransparent}
               onContentSizeChange={() => {
@@ -382,12 +394,28 @@ export default function ChatGroupScreen() {
         </View>
 
         {typingUsers.length > 0 && (
-          <View style={styles.typingContainer}>
+          <View 
+            style={styles.typingContainer}
+            onLayout={(e) => {
+              const height = e.nativeEvent.layout.height;
+              if (height !== typingAreaHeight) {
+                setTypingAreaHeight(height);
+              }
+            }}
+          >
             <ChatTypingIndicator typingUsers={typingUsers} />
           </View>
         )}
 
-        <View style={styles.inputContainer}>
+        <View 
+          style={styles.inputContainer}
+          onLayout={(e) => {
+            const height = e.nativeEvent.layout.height;
+            if (height !== inputAreaHeight) {
+              setInputAreaHeight(height);
+            }
+          }}
+        >
           {currentGroup?.settings?.onlyAdminsCanSend && !currentGroup?.is_admin ? (
             <View style={styles.restrictedInputMessage}>
               <Text style={styles.restrictedInputText}>רק מנהלי הקהילה יכולים לכתוב בקבוצה זו</Text>

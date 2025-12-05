@@ -26,7 +26,7 @@ import ChatInput from '../../components/chat/ChatInput';
 import ChatTypingIndicator from '../../components/chat/ChatTypingIndicator';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
-import { format, isToday, isYesterday, isSameDay } from 'date-fns';
+import { format, isToday, isYesterday, isSameDay, differenceInMinutes } from 'date-fns';
 import { he } from 'date-fns/locale';
 
 export default function ChatGroupScreen() {
@@ -247,6 +247,21 @@ export default function ChatGroupScreen() {
     return !isSameDay(currentDate, prevDate);
   };
 
+  // פונקציה לבדיקה אם הודעות קרובות בזמן (פחות מ-3 דקות)
+  const areMessagesCloseInTime = (currentMessage: ChatMessageType, prevMessage: ChatMessageType | null): boolean => {
+    if (!prevMessage) return false;
+    
+    // רק אם אותו שולח
+    if (currentMessage.sender_id !== prevMessage.sender_id) return false;
+    
+    const currentDate = new Date(currentMessage.created_at);
+    const prevDate = new Date(prevMessage.created_at);
+    
+    const minutesDiff = differenceInMinutes(currentDate, prevDate);
+    
+    return minutesDiff < 3; // פחות מ-3 דקות
+  };
+
   // פונקציה לניסוח תאריך
   const formatDateDivider = (date: Date): string => {
     if (isToday(date)) {
@@ -274,6 +289,7 @@ export default function ChatGroupScreen() {
     const showAvatar = !prevMessage || prevMessage.sender_id !== item.sender_id;
     const showSenderName = !isMe && showAvatar;
     const showDivider = shouldShowDateDivider(item, prevMessage);
+    const isCloseToPrevious = areMessagesCloseInTime(item, prevMessage);
 
     return (
       <View>
@@ -283,6 +299,7 @@ export default function ChatGroupScreen() {
           isMe={isMe}
           showAvatar={showAvatar}
           showSenderName={showSenderName}
+          compactSpacing={isCloseToPrevious}
           onLongPress={() => handleMessageLongPress(item)}
           onReply={() => handleReply(item)}
           onReactionPress={(emoji) => handleReactionPress(item, emoji)}

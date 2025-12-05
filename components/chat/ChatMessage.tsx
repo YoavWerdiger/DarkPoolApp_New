@@ -15,6 +15,7 @@ interface ChatMessageProps {
   isMe: boolean;
   showAvatar?: boolean;
   showSenderName?: boolean;
+  compactSpacing?: boolean; // מרווח קטן יותר (הודעות קרובות בזמן)
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
@@ -49,6 +50,7 @@ export default function ChatMessage({
   isMe,
   showAvatar = true,
   showSenderName = true,
+  compactSpacing = false,
   onLongPress,
   onPress,
   onReply,
@@ -56,7 +58,7 @@ export default function ChatMessage({
   onAvatarPress,
 }: ChatMessageProps) {
   const DesignTokens = useDesignTokens();
-  const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const styles = useMemo(() => createStyles(DesignTokens, compactSpacing), [DesignTokens, compactSpacing]);
 
   // הודעת מערכת
   if (message.is_system_message) {
@@ -303,10 +305,10 @@ function formatDuration(seconds: number): string {
 // Styles
 // ============================================
 
-const createStyles = (tokens: any) => StyleSheet.create({
+const createStyles = (tokens: any, compactSpacing: boolean = false) => StyleSheet.create({
   messageContainer: {
     flexDirection: 'row',
-    marginVertical: 4,
+    marginVertical: compactSpacing ? 1 : 4, // מרווח קטן יותר אם הודעות קרובות
     paddingHorizontal: 12,
     alignItems: 'flex-end',
   },

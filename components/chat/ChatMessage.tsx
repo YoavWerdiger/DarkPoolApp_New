@@ -466,7 +466,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     lineHeight: 22,
   },
   myMessageText: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   theirMessageText: {
     color: tokens.colors.text.primary,

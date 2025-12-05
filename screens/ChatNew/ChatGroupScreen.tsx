@@ -217,8 +217,8 @@ export default function ChatGroupScreen() {
 
     return (
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-forward" size={24} color={DesignTokens.colors.text.primary} />
+        <TouchableOpacity style={styles.infoButton} onPress={handleGroupInfoPress}>
+          <Ionicons name="information-circle-outline" size={26} color={DesignTokens.colors.text.secondary} />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.headerInfo} onPress={handleGroupInfoPress}>
@@ -230,8 +230,8 @@ export default function ChatGroupScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.infoButton} onPress={handleGroupInfoPress}>
-          <Ionicons name="information-circle-outline" size={26} color={DesignTokens.colors.text.secondary} />
+        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+          <Ionicons name="arrow-back" size={24} color={DesignTokens.colors.text.primary} />
         </TouchableOpacity>
       </View>
     );
@@ -400,7 +400,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
 
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -414,12 +414,13 @@ const createStyles = (tokens: any) => StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: -8,
+    marginRight: -8,
   },
 
   headerInfo: {
     flex: 1,
     marginHorizontal: 12,
+    alignItems: 'flex-end',
   },
 
   headerTitle: {
@@ -427,12 +428,14 @@ const createStyles = (tokens: any) => StyleSheet.create({
     fontWeight: '700',
     color: tokens.colors.text.primary,
     marginBottom: 2,
+    textAlign: 'right',
   },
 
   headerSubtitle: {
     fontSize: 13,
     color: tokens.colors.text.secondary,
     fontWeight: '500',
+    textAlign: 'right',
   },
 
   infoButton: {
@@ -456,14 +459,19 @@ const createStyles = (tokens: any) => StyleSheet.create({
   dateDividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: tokens.colors.background.secondary,
+    backgroundColor: tokens.colors.text.secondary,
+    opacity: 0.3,
   },
   dateDividerText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: tokens.colors.text.secondary,
+    fontWeight: '700',
+    color: tokens.colors.text.primary,
     paddingHorizontal: 12,
+    paddingVertical: 4,
     textAlign: 'center',
+    backgroundColor: tokens.colors.background.primary + 'CC', // חצי שקוף
+    borderRadius: 12,
+    overflow: 'hidden',
   },
 
   emptyList: {

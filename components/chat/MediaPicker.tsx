@@ -58,7 +58,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: false,
         quality: 0.8,
       });
@@ -89,7 +89,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: false,
         quality: 0.8,
       });
@@ -119,7 +119,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ImagePicker.MediaType.Videos,
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,

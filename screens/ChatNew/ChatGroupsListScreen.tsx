@@ -267,7 +267,7 @@ export default function ChatGroupsListScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>
-            קהילת <Text style={styles.headerTitleBold}>D</Text>ark<Text style={styles.headerTitleBold}>P</Text>ool
+            קהילת - <Text style={styles.headerTitleBrand}>DarkPool</Text>
           </Text>
           <Text style={styles.headerSubtitle}>
             {totalMembers} חברים בקהילה
@@ -320,9 +320,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     textAlign: 'right',
     letterSpacing: 0.5,
   },
-  headerTitleBold: {
+  headerTitleBrand: {
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: '600',
     color: tokens.colors.accent.primary,
     letterSpacing: 0.5,
   },

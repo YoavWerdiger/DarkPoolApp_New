@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { learningProgressService } from '../../services/learningProgressService';
 import { useAuth } from '../../context/AuthContext';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { ArrowRight, FileText, Copy } from 'lucide-react-native';
 import UICard from '../../components/ui/UICard';
 import * as Clipboard from 'expo-clipboard';
@@ -37,6 +38,7 @@ export const MyNotesScreen: React.FC = () => {
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const mainTabsHeight = useMainTabsHeight();
   
   const [notes, setNotes] = useState<NoteWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -178,11 +180,12 @@ export const MyNotesScreen: React.FC = () => {
       </SafeAreaView>
 
       {/* Notes List */}
-      <FlatList
-        data={notes}
-        renderItem={renderNote}
-        keyExtractor={(item, index) => item.id || `note-${index}`}
-        contentContainerStyle={styles.listContainer}
+      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <FlatList
+          data={notes}
+          renderItem={renderNote}
+          keyExtractor={(item, index) => item.id || `note-${index}`}
+          contentContainerStyle={styles.listContainer}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
           <RefreshControl
@@ -192,7 +195,8 @@ export const MyNotesScreen: React.FC = () => {
           />
         }
         showsVerticalScrollIndicator={false}
-      />
+        />
+      </View>
     </View>
   );
 };

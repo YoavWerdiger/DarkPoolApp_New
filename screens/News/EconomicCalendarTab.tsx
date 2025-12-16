@@ -9,6 +9,7 @@ import { supabase } from '../../lib/supabase';
 import { getIndicatorExplanation } from '../../utils/economicIndicatorExplanations';
 import { translateEconomicEventNameSmart } from '../../utils/economicEventTranslations';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent) => void }> = ({ 
   event, 
@@ -195,6 +196,7 @@ const CRITICAL_EVENTS = [
 
 export default function EconomicCalendarTab() {
   const DesignTokens = useDesignTokens();
+  const mainTabsHeight = useMainTabsHeight();
   const [events, setEvents] = useState<EconEvent[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<EconEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -893,13 +895,14 @@ export default function EconomicCalendarTab() {
       {/* כפתור טעינת נתונים היסטוריים – בוטל לפי דרישה */}
 
       {/* אירועים יומיים - FlatList לגלילה יעילה עם ref */}
-      <FlatList
-        ref={dailyEventsListRef}
-        data={dailyEvents}
-        keyExtractor={(item, index) => `${item.id}-${item.time}-${index}`}
-        renderItem={renderEvent}
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 24, paddingTop: 4, flexGrow: 1 }}
+      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <FlatList
+          ref={dailyEventsListRef}
+          data={dailyEvents}
+          keyExtractor={(item, index) => `${item.id}-${item.time}-${index}`}
+          renderItem={renderEvent}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingTop: 4, flexGrow: 1 }}
         showsVerticalScrollIndicator={true}
         // אופטימיזציות ביצועים
         initialNumToRender={10}
@@ -930,7 +933,8 @@ export default function EconomicCalendarTab() {
             }
           }, 100);
         }}
-      />
+        />
+      </View>
     </View>
   );
 }

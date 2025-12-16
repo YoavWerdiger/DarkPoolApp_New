@@ -32,6 +32,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 interface SettingItem {
@@ -50,6 +51,7 @@ export default function SettingsScreen({ navigation }: any) {
   const { user } = useAuth();
   const { theme, isDarkMode, toggleTheme } = useTheme();
   const DesignTokens = useDesignTokens();
+  const mainTabsHeight = useMainTabsHeight();
   const [settings, setSettings] = useState({
     darkMode: true,
     autoUpdate: true,
@@ -322,11 +324,11 @@ export default function SettingsScreen({ navigation }: any) {
           </UICard>
         </View>
 
-        <ScrollView 
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
-        >
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <ScrollView 
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+          >
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
             {settingSections.map((section, sectionIndex) => (
               <View key={sectionIndex} style={{ marginBottom: DesignTokens.spacing.lg }}>
@@ -439,7 +441,8 @@ export default function SettingsScreen({ navigation }: any) {
               </Text>
             </View>
           </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </RNSafeAreaView>
     </View>
   );

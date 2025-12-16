@@ -18,6 +18,7 @@ import { LessonWithProgress } from '../../types/learning';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ArrowRight } from 'lucide-react-native';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 export const CourseDetailScreen: React.FC = () => {
   const route = useRoute();
@@ -26,6 +27,7 @@ export const CourseDetailScreen: React.FC = () => {
   
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const mainTabsHeight = useMainTabsHeight();
   
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   
@@ -153,11 +155,12 @@ export const CourseDetailScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView 
-          style={styles.container} 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <ScrollView 
+            style={styles.container} 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
         {/* Header עם back button */}
         <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
           <TouchableOpacity
@@ -348,7 +351,8 @@ export const CourseDetailScreen: React.FC = () => {
           </View>
         )}
         </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </RNSafeAreaView>
     </View>
   );

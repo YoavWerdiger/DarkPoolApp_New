@@ -24,6 +24,7 @@ import {
   Gift
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
@@ -32,6 +33,7 @@ import AnimatedToggle from '../../components/ui/AnimatedToggle';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = Math.round(screenWidth * 0.78);
@@ -80,6 +82,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const mainTabsHeight = useMainTabsHeight();
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [scrollX] = useState(new Animated.Value(0));
@@ -301,7 +304,6 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           scaleValue={0.98}
           style={{
             width: CARD_WIDTH,
-            backgroundColor: cardBackground,
             borderRadius: DesignTokens.borderRadius['2xl'],
             padding: DesignTokens.spacing.lg,
             paddingBottom: DesignTokens.spacing['2xl'],
@@ -313,8 +315,31 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             shadowRadius: isSelected ? 24 : 16,
             elevation: isSelected ? 16 : 8,
             position: 'relative',
+            overflow: 'hidden',
           }}
         >
+          {/* Glass effect background - works on both iOS and Android */}
+          {Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={40}
+              tint="dark"
+              style={StyleSheet.absoluteFill}
+            />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20, 20, 20, 0.85)' }]} />
+          )}
+          {/* Glass border overlay */}
+          <View style={[
+            StyleSheet.absoluteFill,
+            {
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: DesignTokens.borderRadius['2xl'],
+            }
+          ]} />
+          
+          {/* Content */}
+          <View style={{ position: 'relative', zIndex: 1 }}>
 
           {/* Plan Header */}
           <View style={{ alignItems: 'center', marginBottom: 24, marginTop: plan.popular ? 12 : 0 }}>
@@ -524,6 +549,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
               </Text>
             </TouchableOpacity>
           </View>
+          </View>
         </AnimatedCard>
       </Animated.View>
     );
@@ -581,16 +607,16 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           </UICard>
         </View>
 
-      <Animated.ScrollView 
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={16}
-      >
+      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <Animated.ScrollView 
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false }
+          )}
+          scrollEventThrottle={16}
+        >
         {/* Title */}
         <Animated.View style={{ 
           paddingHorizontal: DesignTokens.spacing.lg, 
@@ -634,53 +660,45 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           </View>
         </Animated.View>
 
-        {/* Billing Period Toggle */}
+        {/* Billing Period Toggle - Like Reaction Tabs */}
         <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
-          <UICard
-            variant="blur"
-            padding="xs"
-            style={{
-              alignSelf: 'center',
-              width: '100%',
-              maxWidth: 400
-            }}
-          >
-            <View style={{
-              flexDirection: 'row',
-              borderRadius: DesignTokens.borderRadius.full,
-              padding: 4,
-            }}>
+          <View style={{
+            flexDirection: 'row-reverse',
+            backgroundColor: 'rgba(6, 18, 12, 0.8)',
+            paddingHorizontal: DesignTokens.spacing.md,
+            paddingVertical: DesignTokens.spacing.sm,
+            borderRadius: 50,
+            alignItems: 'center',
+            gap: DesignTokens.spacing.xs,
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 3,
+            alignSelf: 'center',
+            width: '100%',
+            maxWidth: 400,
+          }}>
             {BILLING_TABS.map((period) => {
               const isSelected = billingPeriod === period;
               return (
                 <TouchableOpacity
                   key={period}
                   onPress={() => setBillingPeriod(period)}
-                  activeOpacity={1}
+                  activeOpacity={0.7}
                   style={{
                     flex: 1,
                     height: 44,
-                    borderRadius: 26,
-                    backgroundColor: 'transparent',
+                    borderRadius: 22,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    overflow: 'hidden',
+                    backgroundColor: isSelected ? 'rgba(5, 209, 87, 0.25)' : 'transparent',
+                    transform: isSelected ? [{ scale: 1.05 }] : [{ scale: 1 }],
                   }}
                 >
-                  {isSelected && (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        borderRadius: 26,
-                        backgroundColor: `${DesignTokens.colors.primary.main}14`,
-                      }}
-                    />
-                  )}
-                  <View style={{ alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                  <View style={{ alignItems: 'center' }}>
                     <Text style={{
                       fontSize: 14,
                       fontWeight: isSelected ? '700' : '600',
@@ -688,7 +706,6 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                         ? DesignTokens.colors.primary.main
                         : DesignTokens.colors.text.secondary,
                       textAlign: 'center',
-                      writingDirection: 'rtl'
                     }}>
                       {getPeriodText(period)}
                     </Text>
@@ -708,8 +725,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                 </TouchableOpacity>
               );
             })}
-            </View>
-          </UICard>
+          </View>
         </View>
 
         {/* Plans 3D Carousel (מרכזי) */}
@@ -1032,7 +1048,8 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             </View>
           </UICard>
         </View>
-      </Animated.ScrollView>
+        </Animated.ScrollView>
+      </View>
       </RNSafeAreaView>
     </View>
   );

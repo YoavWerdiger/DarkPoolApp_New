@@ -11,14 +11,55 @@ import { MessageCircle, ChevronLeft, AlertTriangle, Bitcoin, Users, Newspaper, T
 import UnreadCounter from '../../components/chat/UnreadCounter';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+
+// מיפוי תמונות לקבוצות - עם ובלי אימוג'ים
+const GROUP_IMAGES: Record<string, string> = {
+  'הכרזות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/111.png',
+  '🔔 הכרזות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/111.png',
+  'דיונים - כללי': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/777.PNG',
+  '💬 דיונים - כללי': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/777.PNG',
+  'נטו ניתוחים!': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/666.PNG',
+  '📊 נטו ניתוחים!': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/666.PNG',
+  'דיוני - פניסטוקס': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/999.PNG',
+  '💰 דיוני - פניסטוקס': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/999.PNG',
+  'שאלות ותשובות בשוק': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/888.PNG',
+  '❓ שאלות ותשובות בשוק': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/888.PNG',
+  'עסקאות מסחר יומי': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/111%20(1).PNG',
+  '📈 עסקאות מסחר יומי': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/111%20(1).PNG',
+  'רווחים והצלחות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/333.PNG',
+  '🎯 רווחים והצלחות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/333.PNG',
+  'חדשות מתפרצות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/777.png', // לשמירת תאימות
+  '⚡ חדשות מתפרצות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/777.png', // לשמירת תאימות
+  'סווינגים וסטאפים': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/555.PNG',
+  '🔄 סווינגים וסטאפים': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/555.PNG',
+  'מסחר פניסטוקס - סיכון גבוה': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/222.PNG',
+  '⚠️ מסחר פניסטוקס - סיכון גבוה': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/222.PNG',
+};
+
+// פונקציה שמסירה אימוג'ים משם הקבוצה לבדיקה
+const getImageByGroupName = (groupName: string): string | null => {
+  // נבדוק תחילה עם השם המלא
+  if (GROUP_IMAGES[groupName]) {
+    return GROUP_IMAGES[groupName];
+  }
+  
+  // אם לא מצאנו, נסיר אימוג'ים ונבדוק שוב
+  const nameWithoutEmoji = groupName.replace(/^[\u{1F300}-\u{1F9FF}]+\s*/u, '').trim();
+  if (GROUP_IMAGES[nameWithoutEmoji]) {
+    return GROUP_IMAGES[nameWithoutEmoji];
+  }
+  
+  return null;
+};
 
 const groupIcons: Record<string, string> = {
   'דיונים - כללי': 'home',
   'פינטוקס (סיכון גבוה)': 'warning',
   'קריפטו': 'star',
   'שאלות תשובות בשוק': 'people',
-  'חדשות מתפרצות': 'newspaper',
-  'רווחים והצלחות!': 'trophy',
+  'רווחים והצלחות': 'trophy',
+  'חדשות מתפרצות': 'newspaper', // לשמירת תאימות
   'איתותים וסטאפים': 'notifications',
   'השקעות וכלים פיננסיים': 'briefcase',
 };
@@ -27,6 +68,7 @@ export default function ChatsListScreen() {
   const DesignTokens = useDesignTokens();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const mainTabsHeight = useMainTabsHeight();
   const [chats, setChats] = useState<ChatListItem[]>([]);
   const [search, setSearch] = useState('');
   const [filtered, setFiltered] = useState<ChatListItem[]>([]);
@@ -308,6 +350,7 @@ export default function ChatsListScreen() {
 
   const renderItem = ({ item }: { item: ChatListItem }) => {
     const iconName = groupIcons[item.name] || 'home';
+    const hasUnread = (item.unread_count || 0) > 0;
     let lastMsgPrefix = '';
     if (item.last_message) {
       if (item.last_message.sender_id === user?.id) {
@@ -316,107 +359,117 @@ export default function ChatsListScreen() {
         lastMsgPrefix = item.last_message.sender_name + ': ';
       }
     }
+    
+    // השתמש בתמונה מ-GROUP_IMAGES אם אין avatar_url
+    const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
+    
     return (
       <TouchableOpacity
+        activeOpacity={0.7}
         style={{
           flexDirection: 'row-reverse',
           alignItems: 'center',
           paddingHorizontal: 20,
           paddingVertical: 15,
           backgroundColor: 'transparent',
-          borderBottomWidth: 1,
-          borderBottomColor: DesignTokens.colors.border.primary
+          borderBottomWidth: 3,
+          borderBottomColor: DesignTokens.colors.border?.primary || 'rgba(180, 180, 180, 0.9)'
         }}
         onPress={() => navigation.navigate('ChatRoom', { chatId: item.id, isGroup: item.is_group })}
       >
-        {item.avatar_url ? (
-          <Image 
-            source={{ uri: item.avatar_url }} 
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 24,
-              marginRight: 12,
-              borderWidth: 2,
-              borderColor: DesignTokens.colors.primary.main,
-              shadowColor: DesignTokens.colors.primary.main,
-              shadowOpacity: 0.3,
-              shadowRadius: 6,
-              shadowOffset: { width: 0, height: 2 }
-            }}
-          />
+        {imageUrl ? (
+          <View style={{
+            width: 50,
+            height: 50,
+            borderRadius: 25,
+            marginRight: 12,
+            overflow: 'hidden',
+            backgroundColor: DesignTokens.colors.background.primary,
+            borderWidth: 3,
+            borderColor: '#2d5016',
+          }}>
+            <Image 
+              source={{ uri: imageUrl }} 
+              style={{
+                width: '100%',
+                height: '100%',
+              }}
+              resizeMode="cover"
+              onError={(e) => {
+                console.log('❌ Image load error for chat:', item.name, 'URL:', imageUrl);
+              }}
+              onLoad={() => {
+                console.log('✅ Image loaded successfully for chat:', item.name);
+              }}
+            />
+          </View>
         ) : (
           <View style={{
-            width: 48,
-            height: 48,
-            borderRadius: 24,
+            width: 50,
+            height: 50,
+            borderRadius: 25,
             backgroundColor: DesignTokens.colors.background.secondary,
             alignItems: 'center',
             justifyContent: 'center',
-            marginRight: 16,
-            borderWidth: 1,
-            borderColor: DesignTokens.colors.border.main,
-            shadowColor: '#000',
-            shadowOpacity: 0.3,
-            shadowRadius: 6,
-            shadowOffset: { width: 0, height: 2 }
+            marginRight: 12,
           }}>
-            <Text style={{ color: DesignTokens.colors.primary.main, fontSize: 16, fontWeight: 'bold' }}>
-              {item.name.charAt(0)}
-            </Text>
+            <Ionicons 
+              name={iconName as any} 
+              size={24} 
+              color={DesignTokens.colors.text.secondary} 
+            />
           </View>
         )}
+        
         <View style={{ flex: 1 }}>
           <View style={{
             flexDirection: 'row-reverse',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
+            marginBottom: 2
           }}>
             <Text style={{
               color: DesignTokens.colors.text.primary,
-              fontWeight: '600',
-              fontSize: 15,
+              fontWeight: hasUnread ? '700' : '600',
+              fontSize: 16,
               textAlign: 'right',
-              marginRight: 12,
               flex: 1
-            }}>{item.name}</Text>
-            <Text style={{
-              color: DesignTokens.colors.text.tertiary,
-              fontSize: 11,
-              marginRight: 22,
-              textAlign: 'right'
-            }}>{formatTime(item.last_message?.timestamp)}</Text>
+            }} numberOfLines={1}>{item.name}</Text>
+            {item.last_message && (
+              <Text style={{
+                color: DesignTokens.colors.text.tertiary,
+                fontSize: 12,
+                marginRight: 12,
+                textAlign: 'right'
+              }}>{formatTime(item.last_message.timestamp)}</Text>
+            )}
           </View>
           <View style={{
             flexDirection: 'row-reverse',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginTop: 4
           }}>
-            <View style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'center',
-              flex: 1
-            }}>
+            <Text style={{
+              color: hasUnread ? DesignTokens.colors.text.primary : DesignTokens.colors.text.secondary,
+              fontSize: 14,
+              textAlign: 'right',
+              flex: 1,
+              fontWeight: hasUnread ? '500' : '400',
+              marginRight: 12,
+            }} numberOfLines={1}>
+              {item.last_message ? lastMsgPrefix + item.last_message.content : 'התחל שיחה חדשה'}
+            </Text>
+            {item.has_unread_mentions && (
               <Text style={{
-                color: DesignTokens.colors.text.tertiary,
-                fontSize: 13,
-                textAlign: 'right',
-                marginRight: 12,
-                flex: 1
-              }} numberOfLines={1}>
-                {item.last_message ? lastMsgPrefix + item.last_message.content : 'התחל שיחה חדשה'}
-              </Text>
-              {item.has_unread_mentions && (
-                <Text style={{
-                  color: DesignTokens.colors.primary.main,
-                  fontWeight: 'bold',
-                  fontSize: 14,
-                  marginLeft: 12
-                }}>@</Text>
-              )}
-            </View>
-            <UnreadCounter count={item.unread_count || 0} size="medium" />
+                color: DesignTokens.colors.primary.main,
+                fontWeight: 'bold',
+                fontSize: 14,
+                marginLeft: 8
+              }}>@</Text>
+            )}
+            {hasUnread && (
+              <UnreadCounter count={item.unread_count || 0} size="medium" />
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -425,53 +478,31 @@ export default function ChatsListScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-      {/* Background Gradient removed - SwiftUI style: clean backgrounds */}
       {/* Community Header */}
-        <View style={{
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 24,
-          paddingTop: 50,
-          paddingBottom: 20,
-          borderBottomWidth: 1,
-          borderBottomColor: DesignTokens.colors.border.primary,
-          position: 'relative',
-          minHeight: 100
-        }}>
-        <LinearGradient
-          colors={[`${DesignTokens.colors.success.main}14`, `${DesignTokens.colors.success.main}08`, `${DesignTokens.colors.success.main}0D`]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-        <ImageBackground
-          source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
-          style={{
-            position: 'absolute',
-            top: 20,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            opacity: 0.3
-          }}
-          resizeMode="cover"
-        />
+      <View style={{
+        paddingHorizontal: 24,
+        paddingTop: 50,
+        paddingBottom: 20,
+        backgroundColor: DesignTokens.colors.background.primary,
+        borderBottomWidth: 1,
+        borderBottomColor: DesignTokens.colors.border.primary,
+      }}>
         <Text style={{
           color: DesignTokens.colors.text.primary,
           fontWeight: '700',
           fontSize: 24,
           textAlign: 'center',
-          position: 'relative',
-          zIndex: 10
-        }}>קהילת DarkPool</Text>
+          marginBottom: 6
+        }}>
+          קהילת DarkPool
+        </Text>
         <Text style={{
           color: DesignTokens.colors.text.secondary,
           fontSize: 15,
-          marginTop: 6,
           textAlign: 'center',
-          position: 'relative',
-          zIndex: 10
-        }}>{communityMembersCount} חברים בקהילה</Text>
+        }}>
+          {communityMembersCount} חברים בקהילה
+        </Text>
       </View>
       
       
@@ -479,13 +510,46 @@ export default function ChatsListScreen() {
         data={filtered}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        contentContainerStyle={{ paddingBottom: 340 }}
+        contentContainerStyle={{ 
+          paddingTop: 16,
+          paddingBottom: mainTabsHeight 
+        }}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={<Text className="text-center text-gray-500 mt-8">אין שיחות פעילות</Text>}
+        ListEmptyComponent={
+          <View style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 80,
+            paddingHorizontal: 40
+          }}>
+            <Ionicons 
+              name="chatbubbles-outline" 
+              size={64} 
+              color={DesignTokens.colors.text.secondary} 
+            />
+            <Text style={{
+              color: DesignTokens.colors.text.secondary,
+              fontSize: 18,
+              fontWeight: '600',
+              marginTop: 16,
+              textAlign: 'center'
+            }}>
+              אין שיחות פעילות
+            </Text>
+            <Text style={{
+              color: DesignTokens.colors.text.tertiary,
+              fontSize: 14,
+              marginTop: 8,
+              textAlign: 'center'
+            }}>
+              הצטרף לקבוצות כדי להתחיל
+            </Text>
+          </View>
+        }
         ListFooterComponent={() => (
           availableGroups.length > 0 ? (
             <View style={{ marginHorizontal: 0, marginBottom: 16 }}>
-              {/* Divider with Title */}
+              {/* Section Header */}
               <View style={{
                 flexDirection: 'row-reverse',
                 alignItems: 'center',
@@ -493,10 +557,10 @@ export default function ChatsListScreen() {
                 paddingVertical: 16,
                 backgroundColor: DesignTokens.colors.background.secondary,
                 borderBottomWidth: 1,
-                borderBottomColor: `${DesignTokens.colors.success.main}33`
+                borderBottomColor: DesignTokens.colors.border.primary
               }}>
                 <Text style={{
-                  color: DesignTokens.colors.primary.main,
+                  color: DesignTokens.colors.text.primary,
                   fontSize: 16,
                   fontWeight: '700',
                   textAlign: 'right',
@@ -507,11 +571,11 @@ export default function ChatsListScreen() {
                 <View style={{
                   flex: 1,
                   height: 1,
-                  backgroundColor: `${DesignTokens.colors.success.main}4D`,
+                  backgroundColor: DesignTokens.colors.border.primary,
                   marginRight: 12
                 }} />
                 <Text style={{
-                  color: DesignTokens.colors.primary.main,
+                  color: DesignTokens.colors.text.secondary,
                   fontSize: 14,
                   fontWeight: '500',
                   marginRight: 12
@@ -521,76 +585,86 @@ export default function ChatsListScreen() {
               </View>
 
               {/* Groups List */}
-              {availableGroups.map((group, index) => (
-                <TouchableOpacity 
-                  key={group.id} 
-                  onPress={() => openGroupModal(group)}
-                  style={{
-                    flexDirection: 'row-reverse',
-                    alignItems: 'center',
-                    paddingHorizontal: 20,
-                    paddingVertical: 16,
-                    backgroundColor: 'transparent',
-                    borderBottomWidth: index < availableGroups.length - 1 ? 1 : 0,
-                    borderBottomColor: DesignTokens.colors.border.primary
-                  }}
-                >
-                  {group.image_url ? (
-                    <Image 
-                      source={{ uri: group.image_url }} 
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 24,
-                        marginRight: 1,
-                        borderWidth: 2,
-                        borderColor: DesignTokens.colors.primary.main,
-                        shadowColor: DesignTokens.colors.primary.main,
-                        shadowOpacity: 0.3,
-                        shadowRadius: 6,
-                        shadowOffset: { width: 0, height: 2 }
-                      }}
-                    />
-                  ) : (
-                    <View style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 24,
-                      backgroundColor: DesignTokens.colors.primary.main,
+              {availableGroups.map((group, index) => {
+                const iconName = groupIcons[group.name] || 'home';
+                const imageUrl = group.image_url || getImageByGroupName(group.name) || null;
+                return (
+                  <TouchableOpacity 
+                    key={group.id} 
+                    activeOpacity={0.7}
+                    onPress={() => openGroupModal(group)}
+                    style={{
+                      flexDirection: 'row-reverse',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: 16,
-                      shadowColor: DesignTokens.colors.primary.main,
-                      shadowOpacity: 0.3,
-                      shadowRadius: 6,
-                      shadowOffset: { width: 0, height: 2 }
-                    }}>
-                      <MessageCircle size={24} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                      paddingHorizontal: 20,
+                      paddingVertical: 16,
+                      backgroundColor: 'transparent',
+                        borderBottomWidth: index < availableGroups.length - 1 ? 2 : 0,
+                        borderBottomColor: DesignTokens.colors.border?.primary || 'rgba(150, 150, 150, 0.8)'
+                    }}
+                  >
+                    {imageUrl ? (
+                      <View style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 25,
+                        marginRight: 12,
+                        overflow: 'hidden',
+                        backgroundColor: DesignTokens.colors.background.primary,
+                        borderWidth: 2,
+                        borderColor: DesignTokens.colors.border?.primary || 'rgba(150, 150, 150, 0.6)',
+                      }}>
+                        <Image 
+                          source={{ uri: imageUrl }} 
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                          }}
+                          resizeMode="cover"
+                        />
+                      </View>
+                    ) : (
+                      <View style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 25,
+                        backgroundColor: DesignTokens.colors.background.secondary,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 12,
+                      }}>
+                        <Ionicons 
+                          name={iconName as any} 
+                          size={24} 
+                          color={DesignTokens.colors.text.secondary} 
+                        />
+                      </View>
+                    )}
+                    
+                    <View style={{ flex: 1 }}>
+                      <Text style={{
+                        color: DesignTokens.colors.text.primary,
+                        fontSize: 15,
+                        fontWeight: '600',
+                        textAlign: 'right',
+                        marginRight: 12,
+                        marginBottom: 2
+                      }} numberOfLines={1}>
+                        {group.name}
+                      </Text>
+                      <Text style={{
+                        color: DesignTokens.colors.text.tertiary,
+                        fontSize: 13,
+                        textAlign: 'right',
+                        marginRight: 12,
+                      }}>
+                        {group.member_count || 0} חברים
+                      </Text>
                     </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={{
-                      color: DesignTokens.colors.text.primary,
-                      fontSize: 15,
-                      fontWeight: '600',
-                      textAlign: 'right',
-                      marginRight: 12,
-                      marginBottom: 4
-                    }}>
-                      {group.name}
-                    </Text>
-                    <Text style={{
-                      color: DesignTokens.colors.text.tertiary,
-                      fontSize: 13,
-                      textAlign: 'right',
-                      marginRight: 12,
-                    }}>
-                      {group.member_count} חברים
-                    </Text>
-                  </View>
-                  <ChevronLeft size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                </TouchableOpacity>
-              ))}
+                    <ChevronLeft size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ) : null
         )}
@@ -719,10 +793,10 @@ export default function ChatsListScreen() {
                 }}
               >
                 {joining === selectedGroup.id ? (
-                  <ActivityIndicator color="#000" size="small" />
+                  <ActivityIndicator color={DesignTokens.colors.text.primary} size="small" />
                 ) : (
                   <Text style={{
-                    color: '#000',
+                    color: DesignTokens.colors.text.primary,
                     fontSize: 16,
                     fontWeight: '700',
                     letterSpacing: 0.3

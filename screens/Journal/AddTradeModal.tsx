@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, Modal, TouchableOpacity, TextInput, Alert, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, Alert, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
+import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 
 interface AddTradeModalProps {
   visible: boolean;
@@ -159,23 +160,23 @@ export default function AddTradeModal({ visible, onClose, onSuccess }: AddTradeM
   }, [visible]);
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={onClose}
+    <BottomSheet
+      isOpen={visible}
+      onClose={onClose}
+      snapPoints={[0.9]}
+      showHandle={true}
+      enablePanDownToClose={true}
+      backdropOpacity={0.5}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          {/* Header */}
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>הוסף טרייד חדש</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={DesignTokens.colors.text.primary} />
-            </TouchableOpacity>
-          </View>
+      {/* Header */}
+      <View style={styles.modalHeader}>
+        <Text style={styles.modalTitle}>הוסף טרייד חדש</Text>
+        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <Ionicons name="close" size={24} color={DesignTokens.colors.text.primary} />
+        </TouchableOpacity>
+      </View>
 
-          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
             {/* Symbol */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>סמל *</Text>
@@ -319,40 +320,27 @@ export default function AddTradeModal({ visible, onClose, onSuccess }: AddTradeM
               />
             </View>
 
-          </ScrollView>
+      </ScrollView>
 
-          {/* Footer */}
-          <View style={styles.modalFooter}>
-            <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? (
-                <Text style={styles.submitButtonText}>מוסיף...</Text>
-              ) : (
-                <Text style={styles.submitButtonText}>הוסף טרייד</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
+      {/* Footer */}
+      <View style={styles.modalFooter}>
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <Text style={styles.submitButtonText}>מוסיף...</Text>
+          ) : (
+            <Text style={styles.submitButtonText}>הוסף טרייד</Text>
+          )}
+        </TouchableOpacity>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderTopLeftRadius: tokens.borderRadius.xl,
-    borderTopRightRadius: tokens.borderRadius.xl,
-    maxHeight: '90%',
-  },
   modalHeader: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
@@ -372,7 +360,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   modalBody: {
     padding: tokens.spacing.lg,
-    maxHeight: 500,
   },
   inputGroup: {
     marginBottom: tokens.spacing.md,

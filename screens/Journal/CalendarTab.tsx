@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Dimensions, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
+import UICard from '../../components/ui/UICard';
 import { Trade } from './TradesListTab';
+import StatisticsCarousel, { StatisticItem } from '../../components/Journal/StatisticsCarousel';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 interface DailyPnl {
   date: string;
@@ -14,7 +17,8 @@ interface DailyPnl {
 export default function CalendarTab() {
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
-  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const mainTabsHeight = useMainTabsHeight();
+  const styles = React.useMemo(() => createStyles(DesignTokens, mainTabsHeight), [DesignTokens, mainTabsHeight]);
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dailyPnl, setDailyPnl] = useState<DailyPnl[]>([]);
@@ -191,39 +195,48 @@ export default function CalendarTab() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
       {/* Month Header */}
-      <View style={styles.monthHeader}>
-        <TouchableOpacity
-          onPress={() => navigateMonth('prev')}
-          style={styles.navButton}
-        >
-          <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
-        </TouchableOpacity>
+      <View style={styles.monthHeaderContainer}>
+        <UICard variant="blur" padding="md">
+          <View style={styles.monthHeader}>
+            <TouchableOpacity
+              onPress={() => navigateMonth('prev')}
+              style={styles.navButton}
+            >
+              <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
+            </TouchableOpacity>
 
-        <View style={styles.monthInfo}>
-          <Text style={styles.monthName}>{getMonthName(currentDate)}</Text>
-          <View style={styles.monthTotal}>
-            <Text style={styles.monthTotalLabel}>סה"כ חודש:</Text>
-            <Text style={[
-              styles.monthTotalValue,
-              isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
-            ]}>
-              <Text style={[
-                styles.monthTotalValue,
-                isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
-              ]}>$</Text>
-              {formatCurrencyWithColor(monthTotal)}
-            </Text>
+            <View style={styles.monthInfo}>
+              <Text style={styles.monthName}>{getMonthName(currentDate)}</Text>
+              <View style={styles.monthTotal}>
+                <Text style={styles.monthTotalLabel}>סה"כ חודש:</Text>
+                <Text style={[
+                  styles.monthTotalValue,
+                  isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
+                ]}>
+                  <Text style={[
+                    styles.monthTotalValue,
+                    isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
+                  ]}>$</Text>
+                  {formatCurrencyWithColor(monthTotal)}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => navigateMonth('next')}
+              style={styles.navButton}
+            >
+              <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <TouchableOpacity
-          onPress={() => navigateMonth('next')}
-          style={styles.navButton}
-        >
-          <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
-        </TouchableOpacity>
+        </UICard>
       </View>
 
       {/* Calendar Grid */}
@@ -259,54 +272,45 @@ export default function CalendarTab() {
         </View>
       </View>
 
-      {/* Statistics Cards */}
-      {trades.length > 0 && (
-        <View style={styles.statsContainer}>
-          {/* כמות עסקאות */}
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="list" size={24} color={DesignTokens.colors.primary.main} />
-            </View>
-            <Text style={styles.statValue}>{trades.length}</Text>
-            <Text style={styles.statLabel}>כמות עסקאות</Text>
-          </View>
-
-          {/* רווח/הפסד ממוצע */}
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons 
-                name={calculateAveragePnl() >= 0 ? 'trending-up' : 'trending-down'} 
-                size={24} 
-                color={DesignTokens.colors.primary.main} 
-              />
-            </View>
-            <Text style={[
-              styles.statValue,
-              calculateAveragePnl() >= 0 ? styles.statValueProfit : styles.statValueLoss
-            ]}>
-              <Text style={[
-                styles.statValue,
-                calculateAveragePnl() >= 0 ? styles.statValueProfit : styles.statValueLoss
-              ]}>$</Text>
-              {formatCurrencyWithColor(calculateAveragePnl())}
-            </Text>
-            <Text style={styles.statLabel}>
-              {calculateAveragePnl() >= 0 ? 'רווח ממוצע' : 'הפסד ממוצע'}
-            </Text>
-          </View>
-
-          {/* Win Rate */}
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="trophy" size={24} color={DesignTokens.colors.primary.main} />
-            </View>
-            <Text style={[styles.statValue, styles.statValueWinRate]}>
-              {calculateWinRate()}%
-            </Text>
-            <Text style={styles.statLabel}>Win Rate</Text>
-          </View>
-        </View>
-      )}
+      {/* Statistics Carousel */}
+      {(() => {
+        const statistics: StatisticItem[] = trades.length > 0 ? [
+          {
+            id: 'total-trades',
+            title: 'כמות עסקאות',
+            value: trades.length,
+            icon: 'list',
+            color: DesignTokens.colors.primary.main,
+            subtitle: `בחודש ${getMonthName(currentDate)}`,
+          },
+          {
+            id: 'month-pnl',
+            title: 'סה"כ חודש',
+            value: `$${formatCurrencyWithColor(monthTotal)}`,
+            icon: isMonthProfit ? 'trending-up' : 'trending-down',
+            color: isMonthProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
+            subtitle: isMonthProfit ? 'רווח חודשי' : 'הפסד חודשי',
+          },
+          {
+            id: 'average-pnl',
+            title: calculateAveragePnl() >= 0 ? 'רווח ממוצע' : 'הפסד ממוצע',
+            value: `$${formatCurrencyWithColor(calculateAveragePnl())}`,
+            icon: calculateAveragePnl() >= 0 ? 'trending-up' : 'trending-down',
+            color: calculateAveragePnl() >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
+            subtitle: 'לעסקה',
+          },
+          {
+            id: 'win-rate',
+            title: 'Win Rate',
+            value: `${calculateWinRate()}%`,
+            icon: 'trophy',
+            color: DesignTokens.colors.primary.main,
+            subtitle: `${trades.filter(t => t.pnl > 0).length} מתוך ${trades.length}`,
+          },
+        ] : [];
+        return statistics.length > 0 ? <StatisticsCarousel statistics={statistics} /> : null;
+      })()}
+      </ScrollView>
     </View>
   );
 }
@@ -314,10 +318,16 @@ export default function CalendarTab() {
 const { width } = Dimensions.get('window');
 const dayWidth = (width - 48) / 7; // 7 columns with padding
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight: number) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
+  },
+  scrollContent: {
+  },
+  monthHeaderContainer: {
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.md,
+    marginBottom: tokens.spacing.md,
   },
   loadingContainer: {
     flex: 1,
@@ -333,13 +343,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: tokens.spacing.lg,
-    paddingVertical: tokens.spacing.md,
-    backgroundColor: tokens.colors.background.secondary,
-    marginHorizontal: tokens.spacing.lg,
-    marginTop: tokens.spacing.md,
-    marginBottom: tokens.spacing.sm,
-    borderRadius: tokens.borderRadius.md,
   },
   navButton: {
     padding: tokens.spacing.sm,
@@ -350,7 +353,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   monthName: {
     fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
   },
@@ -366,7 +369,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   monthTotalValue: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     textAlign: 'right',
   },
   monthTotalProfit: {
@@ -388,7 +391,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
   dayName: {
     fontSize: tokens.typography.fontSize.xs,
@@ -397,7 +401,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   dayNumber: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     marginBottom: 2,
   },
@@ -406,7 +410,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   pnlText: {
     fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     textAlign: 'right',
   },
   pnlTextProfit: {
@@ -424,7 +428,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   emptyText: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'center',
   },
@@ -448,57 +452,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     height: 16,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   legendText: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
-  },
-  statsContainer: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    paddingHorizontal: tokens.spacing.lg,
-    paddingVertical: tokens.spacing.md,
-    gap: tokens.spacing.md,
-    marginTop: tokens.spacing.sm,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: tokens.colors.background.secondary,
-    borderRadius: tokens.borderRadius.md,
-    padding: tokens.spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: tokens.spacing.xs,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: `${tokens.colors.primary.main}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: tokens.spacing.xs,
-  },
-  statValue: {
-    fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.text.primary,
-    textAlign: 'center',
-  },
-  statValueProfit: {
-    color: tokens.colors.primary.main,
-  },
-  statValueLoss: {
-    color: tokens.colors.text.danger,
-  },
-  statValueWinRate: {
-    color: tokens.colors.primary.main,
-  },
-  statLabel: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    textAlign: 'center',
   },
 });
 

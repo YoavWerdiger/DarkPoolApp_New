@@ -23,6 +23,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { 
   newsService, 
   NewsArticle, 
@@ -32,7 +33,7 @@ import {
   getNewsCategoryIcon
 } from '../../services/newsService';
 import { LikedArticlesService } from '../../services/likedArticlesService';
-import FearAndGreedCard from '../../components/News/FearAndGreedCard';
+// Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
 
 interface NewsCardProps {
   article: NewsArticle;
@@ -1033,6 +1034,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
 export default function BreakingNewsTab() {
   console.log('📰 BreakingNewsTab: Component rendering...');
   const DesignTokens = useDesignTokens();
+  const mainTabsHeight = useMainTabsHeight();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -1495,7 +1497,7 @@ export default function BreakingNewsTab() {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center py-16">
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 32 }}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
         <Text 
           className="mt-4 text-base"
@@ -1509,7 +1511,7 @@ export default function BreakingNewsTab() {
 
   if (articles.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center px-8 py-16">
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, paddingVertical: 32 }}>
         <Ionicons 
           name="newspaper-outline" 
           size={48} 
@@ -1545,28 +1547,24 @@ export default function BreakingNewsTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      <FlatList
-        data={articles}
-        keyExtractor={(item) => item.id}
-        renderItem={renderArticle}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={DesignTokens.colors.primary.main}
-            colors={[DesignTokens.colors.primary.main]}
-          />
-        }
-        ListHeaderComponent={() => (
-          <View style={{ paddingTop: 12 }}>
-            <FearAndGreedCard />
-          </View>
-        )}
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-      />
+      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <FlatList
+          data={articles}
+          keyExtractor={(item) => item.id}
+          renderItem={renderArticle}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={DesignTokens.colors.primary.main}
+              colors={[DesignTokens.colors.primary.main]}
+            />
+          }
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        />
+      </View>
       
       {/* מודל מפורט לחדשות */}
       {detailModalVisible && selectedArticle && (

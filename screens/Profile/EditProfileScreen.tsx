@@ -31,12 +31,14 @@ import { mediaService } from '../../services/mediaService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, updateProfile } = useAuth();
   const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const mainTabsHeight = useMainTabsHeight();
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
@@ -226,259 +228,278 @@ export default function EditProfileScreen({ navigation }: any) {
         <KeyboardAvoidingView 
           style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <ScrollView
-            style={{ flex: 1 }}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 40 }}
-          >
-            {/* Main Card עם blur */}
-            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
+          <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+            <ScrollView
+              style={{ flex: 1 }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ 
+                paddingTop: DesignTokens.spacing.md
+              }}
+            >
+            {/* Avatar Card - נפרד */}
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
               <UICard 
                 variant="blur"
                 padding="lg"
               >
-              {/* Avatar Section */}
-              <View style={{
-                alignItems: 'center',
-                paddingVertical: DesignTokens.spacing.lg,
-                marginBottom: DesignTokens.spacing.lg
-              }}>
-                <TouchableOpacity 
-                  onPress={handleImagePicker}
-                  style={{ position: 'relative' }}
-                >
-                  <View style={{
-                    width: 120,
-                    height: 120,
-                    borderRadius: 60,
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    borderWidth: 3,
-                    borderColor: DesignTokens.colors.primary.main
-                  }}>
-                    {profileImage ? (
-                      <Image 
-                        source={{ uri: profileImage }} 
-                        style={{ width: '100%', height: '100%' }}
-                      />
-                    ) : (
-                      <User size={60} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
-                    )}
-                  </View>
-                  
-                  <View style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    right: 0,
-                    width: 40,
-                    height: 40,
-                    borderRadius: 20,
-                    backgroundColor: DesignTokens.colors.primary.main,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: 4,
-                    borderColor: DesignTokens.colors.background.secondary
-                  }}>
-                    <Camera size={20} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
-                  </View>
-                </TouchableOpacity>
-
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.sm,
-                  color: DesignTokens.colors.text.tertiary,
-                  marginTop: DesignTokens.spacing.md,
-                  textAlign: 'center'
-                }}>
-                  לחץ לשינוי תמונת פרופיל
-                </Text>
-              </View>
-
-              {/* Divider */}
-              <View style={{
-                height: 1,
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                marginVertical: DesignTokens.spacing.lg
-              }} />
-
-              {/* Display Name */}
-              <View>
-            <Text style={{ 
-                  fontSize: 14,
-              fontWeight: '600', 
-                  color: theme.textPrimary,
-                  marginBottom: 8,
-                  textAlign: 'right'
-            }}>
-                  שם תצוגה
-            </Text>
-                <TextInput
-                  value={displayName}
-                  onChangeText={setDisplayName}
-                  placeholder="הזן שם תצוגה"
-                  placeholderTextColor={theme.textTertiary}
-              style={{
-                    backgroundColor: theme.background,
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 16,
-                    fontSize: 16,
-                    color: theme.textPrimary,
-                    textAlign: 'right',
-                borderWidth: 1,
-                    borderColor: theme.border
-                  }}
-                />
-              </View>
-
-              {/* Phone */}
-              <View>
-                <Text style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: theme.textPrimary,
-                  marginBottom: 8,
-                  textAlign: 'right'
-                }}>
-                  טלפון
-                </Text>
-              <TextInput
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="הזן מספר טלפון"
-                  placeholderTextColor={theme.textTertiary}
-                  keyboardType="phone-pad"
-                style={{
-                    backgroundColor: theme.background,
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 16,
-                  fontSize: 16,
-                    color: theme.textPrimary,
-                    textAlign: 'right',
-                    borderWidth: 1,
-                    borderColor: theme.border
-                  }}
-                />
-              </View>
-
-              {/* Gender */}
-              <View>
-                <Text style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: theme.textPrimary,
-                  marginBottom: 8,
-                  textAlign: 'right'
-                }}>
-                  מין
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setShowGenderPicker(true)}
-                  style={{
-                    backgroundColor: theme.background,
-                    borderRadius: 12,
-                    paddingHorizontal: 16,
-                    paddingVertical: 16,
-                    borderWidth: 1,
-                    borderColor: theme.border,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}
-                >
-                  <ChevronDown size={20} color={theme.textTertiary} strokeWidth={2} />
-                  <Text style={{
-                    fontSize: 16,
-                    color: gender ? theme.textPrimary : theme.textTertiary,
-                    textAlign: 'right',
-                    flex: 1
-                  }}>
-                    {gender === 'male' ? 'זכר' : gender === 'female' ? 'נקבה' : 'בחר מין'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Email (Read Only) */}
-              <View style={{ marginBottom: DesignTokens.spacing.lg }}>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.sm,
-                  fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                  color: DesignTokens.colors.text.primary,
-                  marginBottom: DesignTokens.spacing.sm,
-                  textAlign: 'right'
-                }}>
-                  אימייל
-                </Text>
+                {/* Avatar Section */}
                 <View style={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: DesignTokens.borderRadius.lg,
-                  paddingHorizontal: DesignTokens.spacing.md,
-                  paddingVertical: DesignTokens.spacing.md,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.08)',
-                  opacity: 0.7,
-                  minHeight: 48,
-                  justifyContent: 'center'
+                  alignItems: 'center',
+                  paddingVertical: DesignTokens.spacing.md
                 }}>
+                  <TouchableOpacity 
+                    onPress={handleImagePicker}
+                    style={{ position: 'relative' }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: 50,
+                      backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden',
+                      borderWidth: 2,
+                      borderColor: `${DesignTokens.colors.primary.main}60`,
+                      ...DesignTokens.shadows.greenGlow
+                    }}>
+                      {profileImage ? (
+                        <Image 
+                          source={{ uri: profileImage }} 
+                          style={{ width: '100%', height: '100%' }}
+                        />
+                      ) : (
+                        <User size={50} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                      )}
+                    </View>
+                    
+                    <View style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      right: 0,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: DesignTokens.colors.primary.main,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 3,
+                      borderColor: 'rgba(0, 0, 0, 0.3)',
+                      ...DesignTokens.shadows.md
+                    }}>
+                      <Camera size={18} color="#000000" strokeWidth={2.5} />
+                    </View>
+                  </TouchableOpacity>
+
                   <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontSize: DesignTokens.typography.fontSize.xs,
                     color: DesignTokens.colors.text.tertiary,
-                    textAlign: 'right'
+                    marginTop: DesignTokens.spacing.sm,
+                    textAlign: 'center'
                   }}>
-                    {user?.email || ''}
+                    לחץ לשינוי תמונת פרופיל
                   </Text>
                 </View>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.xs,
-                  color: DesignTokens.colors.text.tertiary,
-                  marginTop: DesignTokens.spacing.xs,
-                  textAlign: 'right'
-                }}>
-                  לא ניתן לשנות את כתובת האימייל
-                </Text>
-              </View>
+              </UICard>
+            </View>
 
-              {/* Divider */}
-              <View style={{
-                height: 1,
-                backgroundColor: 'rgba(255,255,255,0.1)',
-                marginVertical: DesignTokens.spacing.lg
-              }} />
+            {/* Form Fields Card - נפרד */}
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
+              <UICard 
+                variant="blur"
+                padding="lg"
+              >
 
-              {/* Save Button */}
+                {/* Display Name */}
+                <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+                  <Text style={{ 
+                    fontSize: DesignTokens.typography.fontSize.sm,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any, 
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: DesignTokens.spacing.sm,
+                    textAlign: 'right'
+                  }}>
+                    שם תצוגה
+                  </Text>
+                  <TextInput
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    placeholder="הזן שם תצוגה"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                      borderRadius: DesignTokens.borderRadius.md,
+                      paddingHorizontal: DesignTokens.spacing.md,
+                      paddingVertical: DesignTokens.spacing.sm + 4,
+                      fontSize: DesignTokens.typography.fontSize.base,
+                      color: DesignTokens.colors.text.primary,
+                      textAlign: 'right',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255, 255, 255, 0.12)',
+                      minHeight: 48
+                    }}
+                  />
+                </View>
+
+                {/* Phone */}
+                <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+                  <Text style={{
+                    fontSize: DesignTokens.typography.fontSize.sm,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: DesignTokens.spacing.sm,
+                    textAlign: 'right'
+                  }}>
+                    טלפון
+                  </Text>
+                  <TextInput
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="הזן מספר טלפון"
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
+                    keyboardType="phone-pad"
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                      borderRadius: DesignTokens.borderRadius.md,
+                      paddingHorizontal: DesignTokens.spacing.md,
+                      paddingVertical: DesignTokens.spacing.sm + 4,
+                      fontSize: DesignTokens.typography.fontSize.base,
+                      color: DesignTokens.colors.text.primary,
+                      textAlign: 'right',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255, 255, 255, 0.12)',
+                      minHeight: 48
+                    }}
+                  />
+                </View>
+
+                {/* Gender */}
+                <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+                  <Text style={{
+                    fontSize: DesignTokens.typography.fontSize.sm,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: DesignTokens.spacing.sm,
+                    textAlign: 'right'
+                  }}>
+                    מין
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowGenderPicker(true)}
+                    activeOpacity={0.7}
+                    style={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                      borderRadius: DesignTokens.borderRadius.md,
+                      paddingHorizontal: DesignTokens.spacing.md,
+                      paddingVertical: DesignTokens.spacing.sm + 4,
+                      borderWidth: 1,
+                      borderColor: 'rgba(255, 255, 255, 0.12)',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      minHeight: 48
+                    }}
+                  >
+                    <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                    <Text style={{
+                      fontSize: DesignTokens.typography.fontSize.base,
+                      color: gender ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary,
+                      textAlign: 'right',
+                      flex: 1
+                    }}>
+                      {gender === 'male' ? 'זכר' : gender === 'female' ? 'נקבה' : 'בחר מין'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Email (Read Only) */}
+                <View>
+                  <Text style={{
+                    fontSize: DesignTokens.typography.fontSize.sm,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: DesignTokens.spacing.sm,
+                    textAlign: 'right'
+                  }}>
+                    אימייל
+                  </Text>
+                  <View style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                    borderRadius: DesignTokens.borderRadius.md,
+                    paddingHorizontal: DesignTokens.spacing.md,
+                    paddingVertical: DesignTokens.spacing.sm + 4,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    minHeight: 48,
+                    justifyContent: 'center',
+                    opacity: 0.8
+                  }}>
+                    <Text style={{
+                      fontSize: DesignTokens.typography.fontSize.base,
+                      color: DesignTokens.colors.text.tertiary,
+                      textAlign: 'right'
+                    }}>
+                      {user?.email || ''}
+                    </Text>
+                  </View>
+                  <Text style={{
+                    fontSize: DesignTokens.typography.fontSize.xs,
+                    color: DesignTokens.colors.text.tertiary,
+                    marginTop: DesignTokens.spacing.xs,
+                    textAlign: 'right'
+                  }}>
+                    לא ניתן לשנות את כתובת האימייל
+                  </Text>
+                </View>
+              </UICard>
+            </View>
+
+            {/* Save Button - נפרד וצמוד למטה */}
+            <View style={{ 
+              paddingHorizontal: DesignTokens.spacing.lg, 
+              marginTop: DesignTokens.spacing.md,
+              marginBottom: DesignTokens.spacing.lg
+            }}>
               <TouchableOpacity
                 onPress={handleSave}
                 disabled={isSaving}
+                activeOpacity={0.8}
                 style={{
                   backgroundColor: DesignTokens.colors.primary.main,
-                  paddingVertical: DesignTokens.spacing.md,
+                  paddingVertical: DesignTokens.spacing.md + 4,
                   paddingHorizontal: DesignTokens.spacing.lg,
                   borderRadius: DesignTokens.borderRadius.lg,
                   alignItems: 'center',
                   justifyContent: 'center',
                   opacity: isSaving ? 0.6 : 1,
-                  minHeight: 52,
-                  ...DesignTokens.shadows.md
+                  minHeight: 56,
+                  ...DesignTokens.shadows.greenGlow,
+                  shadowColor: DesignTokens.colors.primary.main,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
+                  elevation: 8
                 }}
               >
                 {isSaving ? (
-                  <ActivityIndicator size="small" color={DesignTokens.colors.text.primary} />
+                  <ActivityIndicator size="small" color="#000000" />
                 ) : (
                   <Text style={{ 
-                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontSize: DesignTokens.typography.fontSize.base + 1,
                     fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                    color: DesignTokens.colors.text.primary
+                    color: '#000000',
+                    letterSpacing: DesignTokens.typography.letterSpacing.tight
                   }}>
                     שמור שינויים
                   </Text>
                 )}
               </TouchableOpacity>
-              </UICard>
             </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
 
         {/* Gender Picker Modal */}

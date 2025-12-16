@@ -21,12 +21,14 @@ import { learningProgressService } from '../../services/learningProgressService'
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 export const CoursesScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const mainTabsHeight = useMainTabsHeight();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalCourses: 0,
@@ -252,11 +254,12 @@ export const CoursesScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <FlatList
-          data={coursesData?.courses || []}
-          renderItem={renderCourse}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <FlatList
+            data={coursesData?.courses || []}
+            renderItem={renderCourse}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -267,7 +270,8 @@ export const CoursesScreen: React.FC = () => {
           ListEmptyComponent={!isLoading ? renderEmptyState : null}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={renderHero}
-        />
+          />
+        </View>
       </RNSafeAreaView>
     </View>
   );

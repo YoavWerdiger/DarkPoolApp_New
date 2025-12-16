@@ -15,11 +15,13 @@ import { useMyEnrollments } from '../../hooks/useLearning';
 import { CourseCard } from '../../components/learning';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { CourseWithProgress } from '../../types/learning';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 export const MyLearningScreen: React.FC = () => {
   const navigation = useNavigation();
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const mainTabsHeight = useMainTabsHeight();
   const { data: enrollments, isLoading, error, refetch } = useMyEnrollments();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -163,11 +165,12 @@ export const MyLearningScreen: React.FC = () => {
         {renderStats()}
 
         {/* Courses List */}
-        <FlatList
-          data={enrollments || []}
-          renderItem={renderCourse}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <FlatList
+            data={enrollments || []}
+            renderItem={renderCourse}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -177,7 +180,8 @@ export const MyLearningScreen: React.FC = () => {
           }
           ListEmptyComponent={!isLoading ? renderEmptyState : null}
           showsVerticalScrollIndicator={false}
-        />
+          />
+        </View>
       </RNSafeAreaView>
     </LinearGradient>
   );

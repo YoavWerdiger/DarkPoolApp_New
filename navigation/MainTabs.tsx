@@ -63,9 +63,10 @@ const TabBarBackground = () => {
 export default function MainTabs() {
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const safeBottom = insets.bottom || 0;
   
   return (
-    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <Tab.Navigator
         initialRouteName="Chat"
         screenOptions={({ route }) => ({
@@ -76,12 +77,13 @@ export default function MainTabs() {
           tabBarStyle: { 
             backgroundColor: 'transparent',
             borderTopWidth: 0,
-            height: 45 + (insets.bottom || 0),
-            paddingBottom: (insets.bottom || 0) > 0 ? insets.bottom : 8,
+            // גובה קבוע + padding bottom שמתחשב ב-safe area
+            height: 60 + safeBottom,
+            paddingBottom: safeBottom > 0 ? safeBottom + 8 : 8,
             paddingTop: 10,
             paddingHorizontal: DesignTokens.spacing.md, // padding פנימי לתוכן בלבד
             marginHorizontal: 0, // מצד לצד
-            marginBottom: 0, // מוצמד למטה עד ל-safe area
+            marginBottom: 0,
             marginTop: 0,
             borderTopLeftRadius: DesignTokens.borderRadius['2xl'], // פינה מעוגלת למעלה משמאל
             borderTopRightRadius: DesignTokens.borderRadius['2xl'], // פינה מעוגלת למעלה מימין
@@ -91,7 +93,8 @@ export default function MainTabs() {
             position: 'absolute',
             left: 0,
             right: 0,
-            bottom: 0, // מתחיל מהקצה התחתון, ה-safe area מטופל דרך paddingBottom
+            // מוצמד למטה, ה-safe area מטופל דרך paddingBottom
+            bottom: 0,
             width: '100%', // מצד לצד
             borderWidth: 1,
             borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -155,15 +158,16 @@ export default function MainTabs() {
             }
             
             // הצג טאבים ברשימת הקבוצות - מצד לצד עם פינות מעוגלות למעלה
+            // ה-safe area מטופל דרך paddingBottom
             return {
-              height: 45 + (insets.bottom || 0),
-              paddingBottom: (insets.bottom || 0) > 0 ? insets.bottom : 8,
+              height: 60 + safeBottom,
+              paddingBottom: safeBottom > 0 ? safeBottom + 8 : 8,
               paddingTop: 10,
               backgroundColor: 'transparent',
               borderTopWidth: 0,
               paddingHorizontal: DesignTokens.spacing.md, // padding פנימי לתוכן בלבד
               marginHorizontal: 0, // מצד לצד
-              marginBottom: 0, // מוצמד למטה עד ל-safe area
+              marginBottom: 0,
               marginTop: 0,
               borderTopLeftRadius: DesignTokens.borderRadius['2xl'],
               borderTopRightRadius: DesignTokens.borderRadius['2xl'],

@@ -18,6 +18,7 @@ import { LessonWithProgress, BlockType } from '../../types/learning';
 import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3 } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -26,6 +27,7 @@ export const LessonPlayerScreen: React.FC = () => {
   const navigation = useNavigation();
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const mainTabsHeight = useMainTabsHeight();
   const { lessonId, initialBlockIndex = 0 } = route.params as { 
     lessonId: string; 
     initialBlockIndex?: number;
@@ -306,11 +308,12 @@ export const LessonPlayerScreen: React.FC = () => {
           </View>
         </View>
 
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          style={{ flex: 1 }}
-        >
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            style={{ flex: 1 }}
+          >
           {/* Lesson Info Card */}
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md, marginBottom: DesignTokens.spacing.lg }}>
             <UICard variant="blur" padding="lg">
@@ -437,7 +440,8 @@ export const LessonPlayerScreen: React.FC = () => {
               </View>
             </UICard>
           </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </RNSafeAreaView>
     </LinearGradient>
   );
@@ -504,14 +508,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
   },
   videoContainer: {
-    backgroundColor: '#000',
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   video: {
     width: '100%',
     height: (screenWidth * 9) / 16, // 16:9 aspect ratio
-    backgroundColor: '#000',
+    backgroundColor: 'transparent',
   },
   textContainer: {
     padding: tokens.spacing.lg,
@@ -629,7 +635,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   navButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(5, 209, 87, 0.08)',
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.md,
     borderRadius: tokens.borderRadius.lg,

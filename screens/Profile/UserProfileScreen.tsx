@@ -31,6 +31,7 @@ import { BlurView } from 'expo-blur';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 
@@ -46,6 +47,7 @@ export default function UserProfileScreen({ navigation }: any) {
   const { user, isLoading, signOut } = useAuth();
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const mainTabsHeight = useMainTabsHeight();
   const [profileData, setProfileData] = useState<any>(null);
 
   useEffect(() => {
@@ -224,11 +226,11 @@ export default function UserProfileScreen({ navigation }: any) {
         style={StyleSheet.absoluteFill}
       />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView 
-          style={{ flex: 1 }} 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: DesignTokens.spacing['5xl'] }}
-        >
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <ScrollView 
+            style={{ flex: 1 }} 
+            showsVerticalScrollIndicator={false}
+          >
           {/* Profile Header Card - עם blur כמו MainTabs, צמוד למעלה, פינות תחתונות מעוגלות */}
           <UICard 
             variant="blur"
@@ -547,7 +549,8 @@ export default function UserProfileScreen({ navigation }: any) {
           </UICard>
         </TouchableOpacity>
       </View>
-      </ScrollView>
+          </ScrollView>
+        </View>
       </RNSafeAreaView>
     </View>
   );

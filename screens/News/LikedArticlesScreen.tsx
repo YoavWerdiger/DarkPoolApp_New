@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LikedArticlesService, LikedArticle } from '../../services/likedArticlesService';
 import { formatNewsDate } from '../../services/newsService';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 interface LikedArticleCardProps {
   article: LikedArticle;
@@ -124,6 +125,8 @@ const LikedArticleCard: React.FC<LikedArticleCardProps> = ({ article, onPress, o
 };
 
 export default function LikedArticlesScreen({ navigation }: any) {
+  const DesignTokens = useDesignTokens();
+  const mainTabsHeight = useMainTabsHeight();
   const [likedArticles, setLikedArticles] = useState<LikedArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -360,10 +363,11 @@ export default function LikedArticlesScreen({ navigation }: any) {
         </View>
 
         {/* רשימת חדשות */}
-        <FlatList
-          data={likedArticles}
-          keyExtractor={(item) => item.id}
-          renderItem={renderArticle}
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <FlatList
+            data={likedArticles}
+            keyExtractor={(item) => item.id}
+            renderItem={renderArticle}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -375,10 +379,10 @@ export default function LikedArticlesScreen({ navigation }: any) {
           ListEmptyComponent={renderEmptyState}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ 
-            paddingBottom: 100,
             ...(likedArticles.length === 0 && { flex: 1 })
           }}
-        />
+          />
+        </View>
       </SafeAreaView>
     </View>
   );

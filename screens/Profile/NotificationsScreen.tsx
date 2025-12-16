@@ -29,6 +29,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { supabase } from '../../lib/supabase';
 import { NotificationService } from '../../services/notificationService';
 import { Linking, Platform } from 'react-native';
@@ -67,6 +68,7 @@ export default function NotificationsScreen({ navigation }: any) {
   const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const mainTabsHeight = useMainTabsHeight();
   const [settings, setSettings] = useState<NotificationSettings>({
     notifications: true,
     sound: true,
@@ -494,11 +496,11 @@ export default function NotificationsScreen({ navigation }: any) {
           </UICard>
         </View>
 
-        <ScrollView 
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
-        >
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <ScrollView 
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+          >
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
             {/* System Notifications Section */}
             <Text style={{
@@ -899,7 +901,8 @@ export default function NotificationsScreen({ navigation }: any) {
             )}
             </UICard>
           </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </RNSafeAreaView>
     </View>
   );

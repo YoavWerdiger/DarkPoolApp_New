@@ -26,6 +26,7 @@ import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentServic
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 interface SubscriptionPlan {
   id: string;
@@ -43,6 +44,7 @@ export default function SubscriptionScreen({ navigation }: any) {
   const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const mainTabsHeight = useMainTabsHeight();
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,11 +173,11 @@ export default function SubscriptionScreen({ navigation }: any) {
           </UICard>
         </View>
 
-        <ScrollView 
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
-        >
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <ScrollView 
+            style={{ flex: 1 }} 
+            showsVerticalScrollIndicator={false}
+          >
           {/* Current Plan */}
           {currentPlan && (
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing['2xl'] }}>
@@ -455,7 +457,8 @@ export default function SubscriptionScreen({ navigation }: any) {
               </Text>
             </UICard>
           </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </RNSafeAreaView>
     </View>
   );

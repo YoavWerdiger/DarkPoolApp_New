@@ -21,6 +21,7 @@ import EarningsService, { EarningsReport } from '../../services/earningsService'
 import { supabase } from '../../lib/supabase';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 const EarningsReportCard: React.FC<{ 
   report: EarningsReport; 
@@ -355,6 +356,7 @@ const EarningsReportCard: React.FC<{
 
 export default function EarningsReportsTab() {
   const DesignTokens = useDesignTokens();
+  const mainTabsHeight = useMainTabsHeight();
   const [reports, setReports] = useState<EarningsReport[]>([]);
   const [filteredReports, setFilteredReports] = useState<EarningsReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -922,12 +924,13 @@ export default function EarningsReportsTab() {
       </View>
 
       {/* רשימת דיווחים */}
-      <FlatList
-        ref={flatListRef}
-        data={filteredReports}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        renderItem={({ item, index }) => renderReport({ item, index })}
-        style={{ flex: 1 }}
+      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <FlatList
+          ref={flatListRef}
+          data={filteredReports}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
+          renderItem={({ item, index }) => renderReport({ item, index })}
+          style={{ flex: 1 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -938,7 +941,7 @@ export default function EarningsReportsTab() {
         }
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1 }}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         // אופטימיזציות ביצועים
@@ -946,7 +949,8 @@ export default function EarningsReportsTab() {
         maxToRenderPerBatch={8}
         windowSize={10}
         removeClippedSubviews={false}
-      />
+        />
+      </View>
       
       {/* כפתור גלילה לראש */}
       {showScrollToTop && (

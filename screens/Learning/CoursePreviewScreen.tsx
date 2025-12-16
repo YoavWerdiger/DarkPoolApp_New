@@ -16,6 +16,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { courseService } from '../../services/courseService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { ArrowRight } from 'lucide-react-native';
 
 export const CoursePreviewScreen: React.FC = () => {
@@ -23,6 +24,7 @@ export const CoursePreviewScreen: React.FC = () => {
   const route = useRoute();
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const mainTabsHeight = useMainTabsHeight();
   
   // קבלת קישורי יוטיוב מה-route params אם קיימים
   const routeParams = route.params as { youtubeLinks?: string[] } | undefined;
@@ -105,7 +107,12 @@ export const CoursePreviewScreen: React.FC = () => {
       style={styles.gradientContainer}
     >
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <ScrollView 
+            style={styles.scrollView} 
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -213,7 +220,8 @@ export const CoursePreviewScreen: React.FC = () => {
               {youtubeLinks.length === 0 && ' ניתן להוסיף קישורי יוטיוב מאוחר יותר.'}
             </Text>
           </UICard>
-        </ScrollView>
+          </ScrollView>
+        </View>
       </RNSafeAreaView>
 
       {/* Modal לעריכת קישור */}

@@ -4,8 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
+import UICard from '../../components/ui/UICard';
 import AddTradeModal from './AddTradeModal';
 import ShareTradeModal from './ShareTradeModal';
+import StatisticsCarousel, { StatisticItem } from '../../components/Journal/StatisticsCarousel';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 export interface Trade {
   id: string;
@@ -28,6 +31,7 @@ export interface Trade {
 export default function TradesListTab() {
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
+  const mainTabsHeight = useMainTabsHeight();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -36,7 +40,7 @@ export default function TradesListTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDirection, setFilterDirection] = useState<'all' | 'long' | 'short'>('all');
   const [filterPnl, setFilterPnl] = useState<'all' | 'profit' | 'loss'>('all');
-  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const styles = React.useMemo(() => createStyles(DesignTokens, mainTabsHeight), [DesignTokens, mainTabsHeight]);
 
   useEffect(() => {
     if (user) {
@@ -146,7 +150,7 @@ export default function TradesListTab() {
     const returnPercentage = calculateReturnPercentage();
 
     return (
-      <View style={styles.tradeCard}>
+      <UICard variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.md }}>
         <View style={styles.tradeHeader}>
           <View style={styles.tradeSymbolContainer}>
             <Text style={styles.tradeSymbol}>{item.symbol}</Text>
@@ -225,8 +229,7 @@ export default function TradesListTab() {
             </Text>
           </View>
         </View>
-
-      </View>
+      </UICard>
     );
   };
 
@@ -275,95 +278,67 @@ export default function TradesListTab() {
     return Math.round((winningTrades / filteredTrades.length) * 100);
   };
 
+  // הכנת נתונים לקרוסלה
+  const statistics: StatisticItem[] = trades.length > 0 ? [
+    {
+      id: 'total-trades',
+      title: 'סה"כ טריידים',
+      value: filteredTrades.length,
+      icon: 'list',
+      color: DesignTokens.colors.primary.main,
+      subtitle: `${filteredTrades.length} עסקאות`,
+    },
+    {
+      id: 'total-pnl',
+      title: 'P&L כולל',
+      value: `$${formatCurrencyWithColor(totalPnl)}`,
+      icon: isTotalProfit ? 'trending-up' : 'trending-down',
+      color: isTotalProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
+      subtitle: isTotalProfit ? 'רווח כולל' : 'הפסד כולל',
+    },
+    {
+      id: 'average-pnl',
+      title: calculateAveragePnl() >= 0 ? 'רווח ממוצע' : 'הפסד ממוצע',
+      value: `$${formatCurrencyWithColor(calculateAveragePnl())}`,
+      icon: calculateAveragePnl() >= 0 ? 'trending-up' : 'trending-down',
+      color: calculateAveragePnl() >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
+      subtitle: 'לעסקה',
+    },
+    {
+      id: 'win-rate',
+      title: 'Win Rate',
+      value: `${calculateWinRate()}%`,
+      icon: 'trophy',
+      color: DesignTokens.colors.primary.main,
+      subtitle: `${filteredTrades.filter(t => t.pnl > 0).length} מתוך ${filteredTrades.length}`,
+    },
+  ] : [];
+
   return (
     <View style={styles.container}>
-      {/* Statistics Cards - Moved to top */}
-      {trades.length > 0 && (
-        <View style={styles.statsContainer}>
-          {/* סה"כ טריידים */}
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="list" size={18} color={DesignTokens.colors.primary.main} />
-            </View>
-            <Text style={styles.statValue}>{filteredTrades.length}</Text>
-            <Text style={styles.statLabel}>סה"כ טריידים</Text>
-          </View>
-
-          {/* P&L כולל */}
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons 
-                name={isTotalProfit ? 'trending-up' : 'trending-down'} 
-                size={18} 
-                color={isTotalProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger} 
-              />
-            </View>
-            <Text style={[
-              styles.statValue,
-              isTotalProfit ? styles.statValueProfit : styles.statValueLoss
-            ]}>
-              <Text style={[
-                styles.statValue,
-                isTotalProfit ? styles.statValueProfit : styles.statValueLoss
-              ]}>$</Text>
-              {formatCurrencyWithColor(totalPnl)}
-            </Text>
-            <Text style={styles.statLabel}>P&L כולל</Text>
-          </View>
-
-          {/* רווח/הפסד ממוצע */}
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons 
-                name={calculateAveragePnl() >= 0 ? 'trending-up' : 'trending-down'} 
-                size={18} 
-                color={DesignTokens.colors.primary.main} 
-              />
-            </View>
-            <Text style={[
-              styles.statValue,
-              calculateAveragePnl() >= 0 ? styles.statValueProfit : styles.statValueLoss
-            ]}>
-              <Text style={[
-                styles.statValue,
-                calculateAveragePnl() >= 0 ? styles.statValueProfit : styles.statValueLoss
-              ]}>$</Text>
-              {formatCurrencyWithColor(calculateAveragePnl())}
-            </Text>
-            <Text style={styles.statLabel}>
-              {calculateAveragePnl() >= 0 ? 'רווח ממוצע' : 'הפסד ממוצע'}
-            </Text>
-          </View>
-
-          {/* Win Rate */}
-          <View style={styles.statCard}>
-            <View style={styles.statIconContainer}>
-              <Ionicons name="trophy" size={18} color={DesignTokens.colors.primary.main} />
-            </View>
-            <Text style={[styles.statValue, styles.statValueWinRate]}>
-              {calculateWinRate()}%
-            </Text>
-            <Text style={styles.statLabel}>Win Rate</Text>
-          </View>
-        </View>
-      )}
+      {/* Statistics Carousel */}
+      {statistics.length > 0 && <StatisticsCarousel statistics={statistics} />}
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={DesignTokens.colors.text.secondary} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="חפש לפי ticker..."
-          placeholderTextColor={DesignTokens.colors.text.tertiary}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          textAlign="right"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={20} color={DesignTokens.colors.text.secondary} />
-          </TouchableOpacity>
-        )}
+      <View style={styles.searchCard}>
+        <UICard variant="blur" padding="sm" style={styles.searchCardInner}>
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={18} color={DesignTokens.colors.text.secondary} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="חפש לפי ticker..."
+              placeholderTextColor={DesignTokens.colors.text.tertiary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              textAlign="right"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={18} color={DesignTokens.colors.text.secondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </UICard>
       </View>
 
       {/* Filter Buttons - Compact */}
@@ -429,14 +404,16 @@ export default function TradesListTab() {
           <Text style={styles.emptySubtext}>הוסף טרייד ראשון כדי להתחיל</Text>
         </View>
       ) : (
-        <FlatList
-          data={filteredTrades}
-          renderItem={renderTrade}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={true}
-          scrollEnabled={true}
-        />
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <FlatList
+            data={filteredTrades}
+            renderItem={renderTrade}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={true}
+            scrollEnabled={true}
+          />
+        </View>
       )}
 
       {/* Add Button */}
@@ -471,10 +448,9 @@ export default function TradesListTab() {
   );
 }
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight: number) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -486,28 +462,30 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
   },
-  searchContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    backgroundColor: tokens.colors.background.secondary,
+  searchCard: {
     marginHorizontal: tokens.spacing.lg,
     marginTop: tokens.spacing.md,
     marginBottom: tokens.spacing.sm,
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.md,
-    borderRadius: tokens.borderRadius.lg,
-    gap: tokens.spacing.sm,
-    borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
+  },
+  searchCardInner: {
+    borderRadius: tokens.borderRadius.xl,
+    minHeight: 44,
+  },
+  searchContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: tokens.spacing.xs,
+    paddingVertical: tokens.spacing.xs,
   },
   searchIcon: {
     marginLeft: tokens.spacing.xs,
   },
   searchInput: {
     flex: 1,
-    fontSize: tokens.typography.fontSize.base,
+    fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.primary,
     textAlign: 'right',
+    paddingVertical: 0,
   },
   clearButton: {
     padding: tokens.spacing.xs,
@@ -526,19 +504,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingHorizontal: tokens.spacing.sm,
     paddingVertical: 6,
     borderRadius: tokens.borderRadius.lg,
-    backgroundColor: tokens.colors.background.tertiary,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     minWidth: 50,
   },
   filterDivider: {
     width: 1,
     height: 20,
-    backgroundColor: tokens.colors.border.primary,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     marginHorizontal: tokens.spacing.xs,
   },
   filterButtonActive: {
-    backgroundColor: `${tokens.colors.primary.main}20`,
+    backgroundColor: `${tokens.colors.primary.main}14`,
     borderColor: tokens.colors.primary.main,
   },
   filterButtonText: {
@@ -548,7 +526,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   filterButtonTextActive: {
     color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
   },
   summaryContainer: {
     backgroundColor: tokens.colors.background.secondary,
@@ -571,13 +549,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   summaryCount: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.primary.main,
     textAlign: 'right',
   },
   summaryPnl: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     textAlign: 'right',
   },
   summaryProfit: {
@@ -588,14 +566,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   listContent: {
     paddingHorizontal: tokens.spacing.lg,
-    paddingBottom: 120,
+    paddingBottom: 56 + 24 + 16, // כפתור (56) + מרחק מהתחתית (24) + padding נוסף (16)
     paddingTop: tokens.spacing.sm,
-  },
-  tradeCard: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderRadius: tokens.borderRadius.md,
-    padding: tokens.spacing.md,
-    marginBottom: tokens.spacing.md,
   },
   tradeHeader: {
     flexDirection: 'row-reverse',
@@ -610,7 +582,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   tradeSymbol: {
     fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
   },
@@ -621,7 +593,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   directionText: {
     fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
   },
   headerActions: {
     flexDirection: 'row-reverse',
@@ -651,20 +623,20 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   tradePrice: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
     textAlign: 'right',
   },
   tradeValue: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.primary,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
     textAlign: 'right',
   },
   tradeFooter: {
     marginTop: tokens.spacing.sm,
     paddingTop: tokens.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: tokens.colors.border.primary,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   footerRow: {
     flexDirection: 'row-reverse',
@@ -695,7 +667,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   pnlText: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     textAlign: 'right',
   },
   pnlTextProfit: {
@@ -706,7 +678,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   returnText: {
     fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     textAlign: 'right',
   },
   returnTextProfit: {
@@ -736,7 +708,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   emptyText: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'center',
   },
@@ -747,7 +719,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   addButton: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 10, // מעל ה-MainTabs (ה-View כבר מגביל את הגובה)
     right: 24,
     width: 56,
     height: 56,
@@ -760,54 +732,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  statsContainer: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
-    paddingHorizontal: tokens.spacing.lg,
-    paddingTop: tokens.spacing.sm,
-    paddingBottom: tokens.spacing.sm,
-    gap: tokens.spacing.xs,
-    marginBottom: tokens.spacing.sm,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: tokens.colors.background.secondary,
-    borderRadius: tokens.borderRadius.md,
-    padding: tokens.spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  statIconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: `${tokens.colors.primary.main}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.text.primary,
-    textAlign: 'center',
-  },
-  statValueProfit: {
-    color: tokens.colors.primary.main,
-  },
-  statValueLoss: {
-    color: tokens.colors.text.danger,
-  },
-  statValueWinRate: {
-    color: tokens.colors.primary.main,
-  },
-  statLabel: {
-    fontSize: tokens.typography.fontSize.xs,
-    color: tokens.colors.text.secondary,
-    textAlign: 'center',
-    marginTop: 2,
   },
 });
 

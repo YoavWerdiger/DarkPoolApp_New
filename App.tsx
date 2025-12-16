@@ -6,7 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ChatProvider } from './context/ChatContext';
 import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
-import { View, ActivityIndicator, Text, ImageBackground, StatusBar, Platform } from 'react-native';
+import { View, ActivityIndicator, Text, ImageBackground, StatusBar, Platform, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -15,6 +15,7 @@ import { RegistrationProvider } from './context/RegistrationContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NotificationService } from './services/notificationService';
 import { useDesignTokens } from './components/ui/DesignTokens';
+import { SafeAreaProvider, useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 
 const Stack = createNativeStackNavigator();
 
@@ -38,6 +39,8 @@ function AppContent() {
   const { user, isLoading } = useAuth();
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
+  const safeBottom = insets.bottom || 0;
 
   console.log('🎓 AppContent: Auth state:', { user: user?.id, isLoading });
 
@@ -136,11 +139,33 @@ function AppContent() {
   }
 
   return (
-    <View style={{ flex: 1, direction: 'ltr', backgroundColor: DesignTokens.colors.background.primary }}>
+    <View style={{ flex: 1, direction: 'ltr', backgroundColor: 'transparent' }}>
+      {/* גרדיאנט גלובלי שרץ מתחת לכל המסכים, כולל ה-safe area התחתון וה-MainTabs */}
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      {/* כיסוי נוסף ל-safe area התחתון ב-Android */}
+      {Platform.OS === 'android' && safeBottom > 0 && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: safeBottom,
+            backgroundColor: '#000000', // צבע הגרדיאנט בתחתית
+            zIndex: -1,
+          }}
+        />
+      )}
       <StatusBar 
         barStyle="light-content" 
-        backgroundColor={DesignTokens.colors.background.primary}
-        translucent={false}
+        backgroundColor="transparent"
+        translucent={true}
       />
       <NavigationContainer 
         ref={navigationRef}
@@ -148,8 +173,8 @@ function AppContent() {
           dark: true,
           colors: {
             primary: DesignTokens.colors.primary.main,
-            background: DesignTokens.colors.background.primary,
-            card: DesignTokens.colors.background.primary,
+            background: 'transparent',
+            card: 'transparent',
             text: DesignTokens.colors.text.primary,
             border: DesignTokens.colors.border.main,
             notification: DesignTokens.colors.primary.main,
@@ -186,7 +211,7 @@ function AppContent() {
           screenOptions={{ 
             headerShown: false,
             contentStyle: {
-              backgroundColor: DesignTokens.colors.background.primary,
+              backgroundColor: 'transparent',
             },
           }}
         >
@@ -206,16 +231,18 @@ function AppContent() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <ChatProvider>
-              <AppContent />
-            </ChatProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </QueryClientProvider>
-    </GestureHandlerRootView>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <AuthProvider>
+              <ChatProvider>
+                <AppContent />
+              </ChatProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }

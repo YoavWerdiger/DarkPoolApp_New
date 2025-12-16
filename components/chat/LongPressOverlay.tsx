@@ -1,12 +1,13 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, Modal, Dimensions, Animated, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+import React, { useEffect, useMemo } from 'react';
+import { View, StyleSheet, Platform, Text, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import ReactionBar from './ReactionBar';
-import { DesignTokens } from '../ui/DesignTokens';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
+import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { format } from 'date-fns';
 
 // רטט קצר ועדין בעת פתיחת התצוגה (עם fallback אם אין expo-haptics)
 let Haptics: any = { selectionAsync: async () => {}, impactAsync: async () => {}, ImpactFeedbackStyle: { Light: 'Light' } };
@@ -19,8 +20,6 @@ interface LongPressOverlayProps {
   onAction: (actionName: string, payload?: any) => void;
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 
 export default function LongPressOverlay({
   visible,
@@ -30,7 +29,20 @@ export default function LongPressOverlay({
 }: LongPressOverlayProps) {
   const insets = useSafeAreaInsets();
   const [isAdmin, setIsAdmin] = React.useState(false);
-  const [shouldRender, setShouldRender] = React.useState(false);
+  const DesignTokens = useDesignTokens();
+  const messagePreviewStyles = useMemo(() => createMessagePreviewStyles(DesignTokens), [DesignTokens]);
+
+  // מצא את הריאקציה הנוכחית של המשתמש (רק אחת!)
+  const currentUserReaction = React.useMemo(() => {
+    if (!message?.reactions || !Array.isArray(message.reactions)) return null;
+    // חיפוש הריאקציה שבה המשתמש הגיב (reacted_by_me === true)
+    // אמור להיות רק ריאקציה אחת של המשתמש
+    const myReaction = message.reactions.find((r: any) => 
+      r.reacted_by_me === true
+    );
+    // מחזיר את האימוג'י של הריאקציה שמצאנו, או null אם אין
+    return myReaction?.emoji || null;
+  }, [message?.reactions]);
 
   React.useEffect(() => {
     const fetchRole = async () => {
@@ -52,98 +64,19 @@ export default function LongPressOverlay({
         }
       } catch {}
     };
-    fetchRole();
+    if (message) {
+      fetchRole();
+    }
   }, [message]);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const menuSlideAnim = useRef(new Animated.Value(300)).current;
-  const menuOpacityAnim = useRef(new Animated.Value(0)).current;
 
-  // עדכן shouldRender מיד כש-visible משתנה ל-true
   useEffect(() => {
     if (visible && message) {
-      console.log('🎯 LongPressOverlay: Setting shouldRender to true immediately, message:', message.id);
-      setShouldRender(true);
-    } else if (!visible && shouldRender) {
-      // נשאיר shouldRender עד שהאנימציה מסתיימת (נסגור ב-animation callback)
+      // רטט קצר מאוד בעת פתיחה (אסתטי ועדין)
+      try { Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Light); } catch {}
     }
   }, [visible, message]);
 
-  useEffect(() => {
-    if (visible && message) {
-      console.log('🎯 LongPressOverlay: Opening overlay, message:', message.id);
-      // רטט קצר מאוד בעת פתיחה (אסתטי ועדין)
-      try { Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Light); } catch {}
-
-      // איפוס ערכים לפני אנימציה - נתחיל מ-1 כדי שהתוכן יהיה נראה מיד
-      fadeAnim.setValue(1);
-      slideAnim.setValue(0);
-      menuOpacityAnim.setValue(1);
-      menuSlideAnim.setValue(0);
-      console.log('🎯 LongPressOverlay: Animation values set to visible, starting animations');
-
-      // פתיחה: נעשה אנימציה עדינה מהמצב הנוכחי
-      // קודם נציג את התוכן מיד ואז נעשה אנימציה עדינה
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.parallel([
-          Animated.timing(menuOpacityAnim, {
-            toValue: 1,
-            duration: 250,
-            delay: 50,
-            useNativeDriver: true,
-          }),
-          Animated.spring(menuSlideAnim, {
-            toValue: 0,
-            tension: 80,
-            friction: 8,
-            delay: 50,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
-    } else if (!visible && shouldRender) {
-      // סגירה - האנימציה רצה ואז נסגר המודל
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 50,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(menuOpacityAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(menuSlideAnim, {
-          toValue: 300,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // סגור את המודל רק אחרי שהאנימציה מסתיימת
-        console.log('🎯 LongPressOverlay: Closing animation finished, setting shouldRender to false');
-        setShouldRender(false);
-      });
-    }
-  }, [visible, message, shouldRender]);
-
-  // אם אין message או visible הוא false, לא נרנדר (אלא אם כן אנחנו באמצע אנימציית סגירה)
-  if (!message || (!visible && !shouldRender)) {
+  if (!message) {
     return null;
   }
 
@@ -155,101 +88,180 @@ export default function LongPressOverlay({
     onAction(option, message);
   };
 
-  return (
-    <Modal 
-      visible={shouldRender} 
-      transparent 
-      animationType="none" 
-      onRequestClose={onClose}
-      statusBarTranslucent={true}
-    >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={60}
-              tint="dark"
-              style={StyleSheet.absoluteFill}
+  const renderMessagePreview = () => {
+    if (!message) return null;
+
+    const timeText = message.timestamp 
+      ? format(new Date(message.timestamp), 'HH:mm')
+      : message.createdAt 
+      ? format(new Date(message.createdAt), 'HH:mm')
+      : '';
+
+    return (
+      <View style={messagePreviewStyles.previewContainer}>
+        <View 
+          style={[
+            messagePreviewStyles.bubble,
+            message.isMe ? messagePreviewStyles.myBubble : messagePreviewStyles.theirBubble
+          ]}
+        >
+          {/* Avatar */}
+          {!message.isMe && message.senderAvatar && (
+            <Image 
+              source={{ uri: message.senderAvatar }} 
+              style={messagePreviewStyles.avatar} 
             />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.85)' }]} />
           )}
+
+          {/* Content */}
+          <View style={messagePreviewStyles.messageContent}>
+            {/* Sender Name */}
+            {!message.isMe && message.senderName && (
+              <Text style={messagePreviewStyles.senderName}>
+                {message.senderName}
+              </Text>
+            )}
+
+            {/* Media or Text */}
+            {message.mediaUrl && (message.type === 'image' || message.type === 'video') ? (
+              <Image 
+                source={{ uri: message.mediaUrl }} 
+                style={messagePreviewStyles.mediaImage}
+                resizeMode="cover"
+              />
+            ) : message.content ? (
+              <Text style={messagePreviewStyles.messageText} numberOfLines={4}>
+                {message.content}
+              </Text>
+            ) : null}
+
+            {/* Timestamp */}
+            {timeText && (
+              <Text style={messagePreviewStyles.timeText}>
+                {timeText}
+              </Text>
+            )}
+          </View>
         </View>
-      </TouchableWithoutFeedback>
-
-      <View style={styles.container} pointerEvents="box-none">
-        {/* Reaction Bar */}
-        <Animated.View
-          style={[
-            styles.reactionWrapper,
-            {
-              opacity: fadeAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 1],
-                extrapolate: 'clamp'
-              }),
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-          pointerEvents="auto"
-        >
-          <View pointerEvents="auto">
-            <ReactionBar onReaction={handleReaction} />
-          </View>
-        </Animated.View>
-
-        {/* Bottom Action Sheet */}
-        <Animated.View
-          style={[
-            styles.actionSheet,
-            {
-              opacity: menuOpacityAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 1],
-                extrapolate: 'clamp'
-              }),
-              transform: [{ translateY: menuSlideAnim }],
-            }
-          ]}
-          pointerEvents="auto"
-        >
-          <View style={{ paddingBottom: Math.max(insets.bottom, 20) }} pointerEvents="auto">
-            {console.log('🎯 LongPressOverlay: Rendering ContextMenu, isAdmin:', isAdmin)}
-            <ContextMenu onSelect={handleOptionSelect} isAdmin={isAdmin} />
-          </View>
-        </Animated.View>
       </View>
-    </Modal>
+    );
+  };
+
+  return (
+    <BottomSheet
+      isOpen={visible}
+      onClose={onClose}
+      snapPoints={[0.75]} // הגדלתי ל-75% כדי שיהיה יותר מקום
+      showHandle={true}
+      enablePanDownToClose={true}
+      backdropOpacity={0.4}
+      useModal={true}
+    >
+      <View style={styles.content}>
+        {/* Message Preview */}
+        {renderMessagePreview()}
+
+        {/* Reaction Bar */}
+        <View style={styles.reactionWrapper}>
+          <ReactionBar onReaction={handleReaction} currentReaction={currentUserReaction} />
+        </View>
+
+        {/* Context Menu */}
+        <View style={styles.contextMenuWrapper}>
+          <ContextMenu 
+            onSelect={handleOptionSelect} 
+            isAdmin={isAdmin}
+            isMe={message.isMe}
+          />
+        </View>
+      </View>
+    </BottomSheet>
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: Platform.OS === 'ios' ? 'transparent' : 'rgba(0,0,0,0.4)',
-  },
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
+  previewContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 100,
+  },
+  bubble: {
+    maxWidth: '85%',
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  myBubble: {
+    backgroundColor: 'rgba(15, 185, 110, 0.25)',
+    borderBottomRightRadius: 4,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(15, 185, 110, 0.4)',
+    alignSelf: 'flex-end',
+  },
+  theirBubble: {
+    backgroundColor: 'rgba(6, 18, 12, 0.8)',
+    borderBottomLeftRadius: 4,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignSelf: 'flex-start',
+  },
+  avatar: {
+    width: 32,
+    height: 30,
+    borderRadius: 16,
+  },
+  messageContent: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  senderName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: tokens.colors.text.primary,
+    marginBottom: 4,
+  },
+  messageText: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#FFFFFF',
+    textAlign: 'right',
+  },
+  mediaImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  timeText: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 4,
+    textAlign: 'right',
+  },
+});
+
+const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+    paddingHorizontal: 0,
+    paddingBottom: 8,
   },
   reactionWrapper: {
-    zIndex: 20,
-    elevation: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 8,
   },
-  actionSheet: {
-    width: '100%',
-    zIndex: 10,
-    elevation: 10,
-    backgroundColor: 'transparent',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  contextMenuWrapper: {
+    flex: 1,
   },
 });

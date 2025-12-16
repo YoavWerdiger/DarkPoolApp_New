@@ -7,11 +7,12 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  StyleSheet
 } from 'react-native';
 import { 
   Moon, 
-  ArrowLeft,
+  ArrowRight,
   Smartphone,
   Lock,
   Database,
@@ -23,11 +24,14 @@ import {
   Fingerprint,
   Shield
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
 import * as LocalAuthentication from 'expo-local-authentication';
 
 interface SettingItem {
@@ -45,6 +49,7 @@ interface SettingItem {
 export default function SettingsScreen({ navigation }: any) {
   const { user } = useAuth();
   const { theme, isDarkMode, toggleTheme } = useTheme();
+  const DesignTokens = useDesignTokens();
   const [settings, setSettings] = useState({
     darkMode: true,
     autoUpdate: true,
@@ -247,83 +252,103 @@ export default function SettingsScreen({ navigation }: any) {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={{ flex: 1 }}>
+        <LinearGradient
+          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+            <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
+          </View>
+        </RNSafeAreaView>
+      </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
-        {/* Header */}
-        <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: theme.cardBackground,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.border
-      }}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 36,
-            height: 36,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: 18,
-            backgroundColor: theme.isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
-          }}
-        >
-          <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
-        </TouchableOpacity>
-        
-        <Text style={{
-          flex: 1,
-          textAlign: 'center',
-          fontSize: 20,
-          fontWeight: '700',
-          color: theme.textPrimary,
-          marginRight: 36
-        }}>
-          הגדרות
-        </Text>
-        </View>
-      </SafeAreaView>
-
-      <ScrollView 
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          {settingSections.map((section, sectionIndex) => (
-            <View key={sectionIndex} style={{ marginBottom: 24 }}>
-              {/* Section Title */}
+    <View style={{ flex: 1 }}>
+      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header עם blur */}
+        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <UICard 
+            variant="blur"
+            padding="sm"
+          >
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: DesignTokens.spacing.md,
+              minHeight: 44,
+            }}>
               <Text style={{
-                fontSize: 13,
-                fontWeight: '700',
-                color: theme.textTertiary,
-                marginBottom: 12,
-                marginRight: 4,
-                textAlign: 'right',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5
+                flex: 1,
+                textAlign: 'center',
+                fontSize: DesignTokens.typography.fontSize.lg,
+                fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                color: DesignTokens.colors.text.primary,
+                marginLeft: 36
               }}>
-                {section.title}
+                הגדרות
               </Text>
 
-              {/* Section Items */}
-              <View style={{
-                backgroundColor: theme.cardBackground,
-                borderRadius: 16,
-                overflow: 'hidden'
-              }}>
+              <TouchableOpacity 
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.7}
+                style={{
+                  width: 36,
+                  height: 36,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderRadius: 18,
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                }}
+              >
+                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          </UICard>
+        </View>
+
+        <ScrollView 
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
+            {settingSections.map((section, sectionIndex) => (
+              <View key={sectionIndex} style={{ marginBottom: DesignTokens.spacing.lg }}>
+                {/* Section Title */}
+                <Text style={{
+                  fontSize: DesignTokens.typography.fontSize.xs,
+                  fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                  color: DesignTokens.colors.text.tertiary,
+                  marginBottom: DesignTokens.spacing.sm,
+                  marginRight: 4,
+                  textAlign: 'right',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5
+                }}>
+                  {section.title}
+                </Text>
+
+                {/* Section Items עם blur */}
+                <UICard 
+                  variant="blur"
+                  padding="none"
+                >
                 {section.items.map((item, itemIndex) => (
                   <View key={item.id}>
                     <TouchableOpacity
@@ -396,25 +421,26 @@ export default function SettingsScreen({ navigation }: any) {
                   )}
                 </View>
                 ))}
+                </UICard>
               </View>
-            </View>
-          ))}
+            ))}
 
-          {/* App Version */}
-          <View style={{ 
-            alignItems: 'center', 
-            marginTop: 16,
-            marginBottom: 20
-          }}>
-            <Text style={{ 
-              color: theme.textTertiary, 
-              fontSize: 13
+            {/* App Version */}
+            <View style={{ 
+              alignItems: 'center', 
+              marginTop: DesignTokens.spacing.md,
+              marginBottom: DesignTokens.spacing.lg
             }}>
-              DarkPool App · גרסה 1.0.0
-            </Text>
+              <Text style={{ 
+                color: DesignTokens.colors.text.tertiary, 
+                fontSize: DesignTokens.typography.fontSize.sm
+              }}>
+                DarkPool App · גרסה 1.0.0
+              </Text>
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </RNSafeAreaView>
     </View>
   );
 }

@@ -4,6 +4,7 @@ import { CourseWithProgress, AccessLevel } from '../../types/learning';
 import { ProgressRing } from './ProgressRing';
 import { AccessBadge } from './AccessBadge';
 import { useDesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
 
 interface CourseCardProps {
   course: CourseWithProgress;
@@ -40,130 +41,127 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={styles.container}
       onPress={() => onPress(course)}
       activeOpacity={0.7}
+      style={{ marginBottom: DesignTokens.spacing.lg }}
     >
-      {/* Cover Image - Full Width */}
-      <View style={styles.coverContainer}>
-        {course.cover_url ? (
-          <Image
-            source={{ uri: course.cover_url }}
-            style={styles.coverImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.coverPlaceholder}>
-            <Text style={styles.coverPlaceholderText}>📚</Text>
-          </View>
-        )}
-        
-        {/* Price Badge - Top Right */}
-        {coursePrice > 0 && (
-          <View style={styles.priceBadge}>
-            {hasDiscount && (
-              <Text style={styles.originalPriceBadge}>
-                ₪{originalPrice.toFixed(0)}
-              </Text>
-            )}
-            <Text style={styles.currentPriceBadge}>
-              ₪{coursePrice.toFixed(0)}
-            </Text>
-          </View>
-        )}
-
-        {/* Free Badge */}
-        {!hideBadges && coursePrice === 0 && (
-          <View style={styles.freeBadgeOverlay}>
-            <Text style={styles.freeBadgeOverlayText}>חינם</Text>
-          </View>
-        )}
-
-        {/* Progress Ring for enrolled courses */}
-        {isEnrolled && (
-          <View style={styles.progressContainer}>
-            <ProgressRing
-              progress={progressPercentage}
-              size={40}
-              strokeWidth={3}
-              color={DesignTokens.colors.primary.main}
+      <UICard variant="blur" padding="none" style={styles.container}>
+        {/* Cover Image - Full Width */}
+        <View style={styles.coverContainer}>
+          {course.cover_url ? (
+            <Image
+              source={{ uri: course.cover_url }}
+              style={styles.coverImage}
+              resizeMode="cover"
             />
-          </View>
-        )}
-
-        {/* Access Badge */}
-        {!hideBadges && (
-          <View style={styles.badgeContainer}>
-            <AccessBadge access={course.access} />
-          </View>
-        )}
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
-          {course.title}
-        </Text>
-        
-        {course.subtitle && (
-          <Text style={styles.subtitle} numberOfLines={2}>
-            {course.subtitle}
-          </Text>
-        )}
-
-        {/* Description */}
-        {course.description && (
-          <Text style={styles.description} numberOfLines={2}>
-            {course.description}
-          </Text>
-        )}
-
-        {/* Progress Info */}
-        {totalLessons > 0 && (
-          <View style={styles.progressInfo}>
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${progressPercentage}%`,
-                  },
-                ]}
-              />
-              <Text style={styles.progressPercentLabel}>
-                {Math.round(progressPercentage)}%
+          ) : (
+            <View style={styles.coverPlaceholder}>
+              <Text style={styles.coverPlaceholderText}>📚</Text>
+            </View>
+          )}
+          
+          {/* Price Badge - Top Right */}
+          {coursePrice > 0 && (
+            <View style={styles.priceBadge}>
+              {hasDiscount && (
+                <Text style={styles.originalPriceBadge}>
+                  ₪{originalPrice.toFixed(0)}
+                </Text>
+              )}
+              <Text style={styles.currentPriceBadge}>
+                ₪{coursePrice.toFixed(0)}
               </Text>
             </View>
-            <Text style={styles.progressText}>
-              {completedLessons} מתוך {totalLessons} שיעורים הושלמו
+          )}
+
+          {/* Free Badge */}
+          {!hideBadges && coursePrice === 0 && (
+            <View style={styles.freeBadgeOverlay}>
+              <Text style={styles.freeBadgeOverlayText}>חינם</Text>
+            </View>
+          )}
+
+          {/* Progress Ring for enrolled courses */}
+          {isEnrolled && (
+            <View style={styles.progressContainer}>
+              <ProgressRing
+                progress={progressPercentage}
+                size={40}
+                strokeWidth={3}
+                color={DesignTokens.colors.primary.main}
+              />
+            </View>
+          )}
+
+          {/* Access Badge */}
+          {!hideBadges && (
+            <View style={styles.badgeContainer}>
+              <AccessBadge access={course.access} />
+            </View>
+          )}
+        </View>
+
+        {/* Content */}
+        <View style={styles.content}>
+          <Text style={styles.title} numberOfLines={2}>
+            {course.title}
+          </Text>
+          
+          {course.subtitle && (
+            <Text style={styles.subtitle} numberOfLines={2}>
+              {course.subtitle}
             </Text>
-          </View>
-        )}
+          )}
 
-        {/* Tags */}
-        {course.tags && course.tags.length > 0 && (
-          <View style={styles.tagsContainer}>
-            {course.tags.slice(0, 3).map((tag, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
+          {/* Description */}
+          {course.description && (
+            <Text style={styles.description} numberOfLines={2}>
+              {course.description}
+            </Text>
+          )}
+
+          {/* Progress Info */}
+          {totalLessons > 0 && (
+            <View style={styles.progressInfo}>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${progressPercentage}%`,
+                    },
+                  ]}
+                />
+                <Text style={styles.progressPercentLabel}>
+                  {Math.round(progressPercentage)}%
+                </Text>
               </View>
-            ))}
-          </View>
-        )}
+              <Text style={styles.progressText}>
+                {completedLessons} מתוך {totalLessons} שיעורים הושלמו
+              </Text>
+            </View>
+          )}
 
-      </View>
+          {/* Tags */}
+          {course.tags && course.tags.length > 0 && (
+            <View style={styles.tagsContainer}>
+              {course.tags.slice(0, 3).map((tag, index) => (
+                <View key={index} style={styles.tag}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+        </View>
+      </UICard>
     </TouchableOpacity>
   );
 };
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderRadius: tokens.borderRadius.lg,
-    marginBottom: tokens.spacing.md,
     overflow: 'hidden',
-    borderWidth: tokens.layout?.borderWidth?.thin || 0.5,
-    borderColor: tokens.colors.border.primary,
   },
   coverContainer: {
     position: 'relative',
@@ -173,11 +171,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   coverImage: {
     width: '100%',
     height: '100%',
-  },
+  } as any,
   coverPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -216,7 +214,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   currentPriceBadge: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.success.main || tokens.colors.primary.main,
   },
   freeBadgeOverlay: {
@@ -230,24 +228,25 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   freeBadgeOverlayText: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
   },
   content: {
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: tokens.spacing.lg,
     gap: tokens.spacing.sm,
   },
   title: {
     fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     lineHeight: 28,
   },
   subtitle: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
@@ -270,7 +269,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   instructorName: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   progressInfo: {
     marginBottom: tokens.spacing.sm,
@@ -279,14 +278,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   progressText: {
     fontSize: tokens.typography.fontSize.xs,
     color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
     textAlign: 'right',
   },
   progressTrack: {
     width: '100%',
     height: 18,
     borderRadius: tokens.borderRadius.full,
-    backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     marginBottom: tokens.spacing.xs,
     overflow: 'hidden',
     justifyContent: 'center',
@@ -296,7 +295,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     position: 'absolute',
     color: tokens.colors.text.primary,
     fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
   },
   progressFill: {
     position: 'absolute',
@@ -312,7 +311,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: tokens.spacing.xs,
   },
   tag: {
-    backgroundColor: tokens.colors.background.tertiary || tokens.colors.background.primary,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     paddingHorizontal: tokens.spacing.sm,
     paddingVertical: tokens.spacing.xs,
     borderRadius: tokens.borderRadius.sm,
@@ -342,7 +341,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   currentPrice: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.primary.main,
   },
   freeBadge: {
@@ -353,19 +352,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   freeBadgeText: {
     fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.primary.main,
   },
   premiumBadge: {
-    backgroundColor: tokens.colors.error + '20',
+    backgroundColor: tokens.colors.danger.main + '20',
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.xs,
     borderRadius: tokens.borderRadius.md,
   },
   premiumBadgeText: {
     fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.error,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.danger.main,
   },
 });
 

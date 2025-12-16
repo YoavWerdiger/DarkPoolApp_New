@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { useDesignTokens } from '../DesignTokens';
 import { BottomSheetProps } from './BottomSheet.types';
 import { createStyles } from './BottomSheet.styles';
@@ -239,23 +240,50 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           style={[
             styles.container, 
             sheetStyle,
-            { 
-              paddingBottom: Platform.OS === 'ios' 
-                ? Math.max(insets.bottom, 20) + 20 
-                : insets.bottom + 20 
-            }
           ]}
         >
-          {showHandle && (
+          {/* Blur Background - כמו ב-MainTabs */}
+          {Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={40}
+              tint="dark"
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: 'rgba(15, 15, 15, 0.5)',
+                }
+              ]}
+            />
+          ) : (
             <View
               style={[
-                styles.handle,
-                { backgroundColor: tokens.colors.border.active }
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: 'rgba(20, 20, 20, 0.7)',
+                },
               ]}
             />
           )}
 
-          <View style={styles.content}>
+          <View 
+            style={[
+              styles.content,
+              { 
+                paddingBottom: Platform.OS === 'ios' 
+                  ? Math.max(insets.bottom, 20) + 20 
+                  : insets.bottom + 20 
+              }
+            ]}
+          >
+            {showHandle && (
+              <View
+                style={[
+                  styles.handle,
+                  { backgroundColor: tokens.colors.border.active }
+                ]}
+              />
+            )}
+
             {children}
           </View>
         </Animated.View>

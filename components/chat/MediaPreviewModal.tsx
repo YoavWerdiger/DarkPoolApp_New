@@ -1,515 +1,400 @@
-import React, { useState, useRef, useEffect } from 'react';
+// ============================================
+// Media Preview Modal Component
+// ============================================
+// מסך ביניים להצגת preview של מדיה והוספת כיתוב
+// ============================================
+
+import React, { useState, useMemo } from 'react';
 import { 
   View, 
   Text, 
-  Modal, 
-  Pressable, 
-  TextInput, 
-  ScrollView, 
-  Dimensions,
   Image,
-  Alert,
-  Animated
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Modal,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { ImageIcon, Video as VideoIcon, FileText, File, X, Trash2, ArrowRight } from 'lucide-react-native';
-import { Video, ResizeMode } from 'expo-av';
-import { Audio } from 'expo-av';
-import { MediaMetadata, MediaFile } from '../../services/mediaService';
+import { BlurView } from 'expo-blur';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { Ionicons } from '@expo/vector-icons';
+import { Video, ResizeMode } from 'expo-av';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface MediaPreviewModalProps {
   visible: boolean;
-  onClose: () => void;
-  onSend: (mediaFiles: MediaFile[], captions: Record<string, string>) => void;
-  mediaFiles: MediaFile[];
+  mediaUri: string;
+  mediaType: 'image' | 'video';
+  onSend: (caption: string) => Promise<void>;
+  onCancel: () => void;
+  isUploading?: boolean;
 }
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function MediaPreviewModal({ 
   visible, 
-  onClose, 
+  mediaUri,
+  mediaType,
   onSend, 
-  mediaFiles 
+  onCancel,
+  isUploading = false,
 }: MediaPreviewModalProps) {
-  console.log('📱 MediaPreviewModal: Rendering with:', { 
-    visible, 
-    mediaFilesCount: mediaFiles.length,
-    mediaFiles: mediaFiles.map(f => ({ id: f.id, type: f.type, uri: f.uri?.substring(0, 50) }))
-  });
-  
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [captions, setCaptions] = useState<Record<string, string>>({});
-  const [audioStatus, setAudioStatus] = useState<Record<string, boolean>>({});
-  const [isPlaying, setIsPlaying] = useState<Record<string, boolean>>({});
-  const audioRefs = useRef<Record<string, Audio.Sound>>({});
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [caption, setCaption] = useState('');
 
-  const currentMedia = mediaFiles[currentIndex];
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: '#000000',
+        },
+        header: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: DesignTokens.spacing.md,
+          paddingVertical: DesignTokens.spacing.md,
+          backgroundColor: 'transparent',
+        },
+        headerTitle: {
+          color: '#FFFFFF',
+          fontSize: 17,
+          fontWeight: '600',
+        },
+        cancelButton: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10,
+        },
+        sendButton: {
+          paddingVertical: DesignTokens.spacing.xs,
+          paddingHorizontal: DesignTokens.spacing.md,
+          backgroundColor: DesignTokens.colors.primary.main,
+          borderRadius: 20,
+          minWidth: 70,
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
+          shadowColor: DesignTokens.colors.primary.main,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+        },
+        sendButtonDisabled: {
+          opacity: 0.5,
+        },
+        sendButtonText: {
+          color: '#FFFFFF',
+          fontSize: 15,
+          fontWeight: '600',
+        },
+        previewContainer: {
+          flex: 1,
+          backgroundColor: '#000000',
+          justifyContent: 'center',
+          alignItems: 'center',
+          position: 'relative',
+        },
+        headerOverlay: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'transparent',
+          zIndex: 10,
+          overflow: 'hidden',
+          borderBottomLeftRadius: DesignTokens.borderRadius['2xl'],
+          borderBottomRightRadius: DesignTokens.borderRadius['2xl'],
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.08)',
+          borderTopWidth: 0,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
+          elevation: Platform.OS === 'android' ? 10 : 0,
+        },
+        captionOverlay: {
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'transparent',
+          zIndex: 10,
+          overflow: 'hidden',
+          borderTopLeftRadius: DesignTokens.borderRadius['2xl'],
+          borderTopRightRadius: DesignTokens.borderRadius['2xl'],
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.08)',
+          borderBottomWidth: 0,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 12,
+          elevation: Platform.OS === 'android' ? 10 : 0,
+        },
+        imagePreview: {
+          width: '100%',
+          height: '100%',
+          resizeMode: 'contain',
+          backgroundColor: 'transparent',
+        },
+        videoPreview: {
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'transparent',
+        },
+        videoContainer: {
+          flex: 1,
+          width: '100%',
+          backgroundColor: '#000000',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        captionContainer: {
+          flexDirection: 'row-reverse',
+          alignItems: 'flex-end',
+          paddingHorizontal: DesignTokens.spacing.md,
+          paddingTop: DesignTokens.spacing.md,
+          paddingBottom: DesignTokens.spacing.md,
+          backgroundColor: 'transparent',
+          gap: DesignTokens.spacing.sm,
+          position: 'relative',
+          zIndex: 10,
+        },
+        captionInputContainer: {
+          flex: 1,
+        },
+        captionInput: {
+          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+          borderRadius: 24,
+          paddingHorizontal: DesignTokens.spacing.md,
+          paddingVertical: DesignTokens.spacing.sm + 2,
+          paddingRight: DesignTokens.spacing.md + 4,
+          color: '#FFFFFF',
+          fontSize: 16,
+          textAlign: 'right',
+          minHeight: 48,
+          maxHeight: 100,
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.08)',
+        },
+        captionSendButton: {
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: DesignTokens.colors.primary.main,
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: 0,
+          shadowColor: DesignTokens.colors.primary.main,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.4,
+          shadowRadius: 6,
+          elevation: 4,
+        },
+        captionSendButtonDisabled: {
+          opacity: 0.5,
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          shadowOpacity: 0,
+        },
+        placeholder: {
+          color: DesignTokens.colors.text.secondary,
+        },
+        loadingOverlay: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        loadingText: {
+          color: DesignTokens.colors.text.primary,
+          marginTop: DesignTokens.spacing.sm,
+          fontSize: 16,
+        },
+      }),
+    [DesignTokens]
+  );
 
-  // אנימציה כניסה
-  useEffect(() => {
-    console.log('📱 MediaPreviewModal: visible changed to:', visible);
-    if (visible) {
-      console.log('📱 MediaPreviewModal: Starting fade-in animation');
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      fadeAnim.setValue(0);
-    }
-  }, [visible]);
-
-  // פורמט גודל קובץ
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  // פורמט משך זמן
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // נגינת/עצירת אודיו
-  const toggleAudio = async (fileId: string) => {
-    try {
-      if (isPlaying[fileId]) {
-        // עצור אודיו
-        if (audioRefs.current[fileId]) {
-          await audioRefs.current[fileId].stopAsync();
-          await audioRefs.current[fileId].unloadAsync();
-        }
-        setIsPlaying(prev => ({ ...prev, [fileId]: false }));
-      } else {
-        // התחל אודיו
-        const mediaFile = mediaFiles.find(f => f.id === fileId);
-        if (mediaFile && mediaFile.type === 'audio') {
-          const { sound } = await Audio.Sound.createAsync({ uri: mediaFile.uri });
-          audioRefs.current[fileId] = sound;
-          await sound.playAsync();
-          setIsPlaying(prev => ({ ...prev, [fileId]: true }));
-          
-          // עצור אוטומטית בסיום
-          sound.setOnPlaybackStatusUpdate((status) => {
-            if (status.didJustFinish) {
-              setIsPlaying(prev => ({ ...prev, [fileId]: false }));
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error toggling audio:', error);
-    }
-  };
-
-  // הסרת מדיה
-  const removeMedia = (fileId: string) => {
-    if (mediaFiles.length === 1) {
-      onClose();
-      return;
-    }
-    
-    const newMediaFiles = mediaFiles.filter(f => f.id !== fileId);
-    const newCaptions = { ...captions };
-    delete newCaptions[fileId];
-    
-    if (currentIndex >= newMediaFiles.length) {
-      setCurrentIndex(Math.max(0, newMediaFiles.length - 1));
-    }
-    
-    // עדכן את המערך המקורי
-    mediaFiles.splice(mediaFiles.findIndex(f => f.id === fileId), 1);
-    setCaptions(newCaptions);
-  };
-
-  // שליחה
-  const handleSend = () => {
-    if (mediaFiles.length === 0) return;
-    
-    // בדוק שכל הקבצים עדיין קיימים
-    const validMediaFiles = mediaFiles.filter(f => f.uri);
-    
-    if (validMediaFiles.length === 0) {
-      Alert.alert('שגיאה', 'אין קבצים לשליחה');
-      return;
-    }
-    
-    onSend(validMediaFiles, captions);
-    onClose();
-  };
-
-  // ניקוי אודיו בעת סגירה
-  useEffect(() => {
-    return () => {
-      Object.values(audioRefs.current).forEach(sound => {
-        sound?.unloadAsync();
-      });
-    };
-  }, []);
-
-  if (!visible || !currentMedia) {
-    console.log('📱 MediaPreviewModal: NOT rendering - visible:', visible, 'currentMedia:', currentMedia);
-    return null;
-  }
-  
-  console.log('📱 MediaPreviewModal: RENDERING with currentMedia:', { id: currentMedia.id, type: currentMedia.type });
-
-  const renderMediaContent = () => {
-    switch (currentMedia.type) {
-      case 'image':
-        return (
-          <ScrollView 
-            contentContainerStyle={{ 
-              flexGrow: 1, 
-              justifyContent: 'center', 
-              alignItems: 'center'
-            }}
-            maximumZoomScale={3}
-            minimumZoomScale={1}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          >
-            {currentMedia.uri && currentMedia.uri.trim() !== '' ? (
-              <Image
-                source={{ uri: currentMedia.uri }}
-                style={{
-                  width: screenWidth,
-                  height: '100%'
-                }}
-                resizeMode="contain"
-                onError={(error) => {
-                  console.error('Image load error in MediaPreviewModal:', error);
-                }}
-              />
-            ) : (
-              <View style={{
-                width: screenWidth,
-                height: screenHeight * 0.6,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: DesignTokens.colors.background.primary
-              }}>
-                <ImageIcon size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
-              </View>
-            )}
-          </ScrollView>
-        );
-
-      case 'video':
-        return (
-          <View style={{ 
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            {currentMedia.uri && currentMedia.uri.trim() !== '' && (currentMedia.uri.startsWith('http') || currentMedia.uri.startsWith('file://') || currentMedia.uri.startsWith('content://')) ? (
-              <Video
-                source={{ uri: currentMedia.uri }}
-                style={{
-                  width: screenWidth,
-                  height: '100%'
-                }}
-                resizeMode={ResizeMode.CONTAIN}
-                useNativeControls
-                shouldPlay={false}
-                onLoadStart={() => {
-                  console.log('Video loading started in MediaPreviewModal:', currentMedia.uri);
-                }}
-                onLoad={(status) => {
-                  console.log('Video loaded successfully in MediaPreviewModal:', status);
-                }}
-                onError={(error) => {
-                  console.error('Video load error in MediaPreviewModal:', error);
-                  console.error('Video URL:', currentMedia.uri);
-                }}
-                onPlaybackStatusUpdate={(status) => {
-                  if ('error' in status && status.error) {
-                    console.error('Video playback error in MediaPreviewModal:', status.error);
-                  }
-                }}
-              />
-            ) : (
-              <View style={{
-                width: screenWidth,
-                height: screenHeight * 0.6,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: DesignTokens.colors.background.primary
-              }}>
-                <VideoIcon size={64} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
-              </View>
-            )}
-          </View>
-        );
-
-      case 'audio':
-        return (
-          <View style={{ 
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <View style={{
-              width: 140,
-              height: 140,
-              borderRadius: 70,
-              backgroundColor: `${DesignTokens.colors.success.main}1F`,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 24
-            }}>
-              <Pressable
-                onPress={() => toggleAudio(currentMedia.id)}
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: DesignTokens.colors.success.main,
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}
-              >
-                <Ionicons
-                  name={isPlaying[currentMedia.id] ? 'pause' : 'play'}
-                  size={40}
-                  color={DesignTokens.colors.text.primary}
-                />
-              </Pressable>
-            </View>
-            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, fontWeight: '700', marginBottom: 8 }}>
-              {currentMedia.name || 'הקלטת קול'}
-            </Text>
-            <Text style={{ color: DesignTokens.colors.text.tertiary, fontSize: 16 }}>
-              {currentMedia.duration ? formatDuration(currentMedia.duration) : '0:00'}
-            </Text>
-          </View>
-        );
-
-      case 'document':
-        return (
-          <View style={{ 
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <View style={{
-              width: 140,
-              height: 140,
-              borderRadius: 70,
-              backgroundColor: DesignTokens.colors.background.secondary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 24
-            }}>
-              <FileText size={70} color={DesignTokens.colors.text.primary} strokeWidth={1.5} />
-            </View>
-            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, fontWeight: '700', marginBottom: 8, textAlign: 'center' }}>
-              {currentMedia.name || 'מסמך'}
-            </Text>
-            {currentMedia.size && (
-              <Text style={{ color: DesignTokens.colors.text.tertiary, fontSize: 16 }}>
-                {formatFileSize(currentMedia.size)}
-              </Text>
-            )}
-          </View>
-        );
-
-      default:
-        return (
-          <View style={{ 
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <View style={{
-              width: 160,
-              height: 160,
-              borderRadius: 80,
-              backgroundColor: DesignTokens.colors.background.secondary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 32
-            }}>
-              <File size={80} color={DesignTokens.colors.text.primary} strokeWidth={1.5} />
-            </View>
-            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 20, fontWeight: '600' }}>סוג מדיה לא נתמך</Text>
-          </View>
-        );
-    }
+  const handleSend = async () => {
+    await onSend(caption);
+    setCaption(''); // נקה את הכיתוב אחרי שליחה
   };
 
   return (
     <Modal
       visible={visible}
-      transparent={false}
-      animationType="fade"
+      animationType="slide"
       presentationStyle="fullScreen"
-      onRequestClose={onClose}
-      statusBarTranslucent={false}
+      onRequestClose={onCancel}
     >
-      <View 
-        style={{ 
-          flex: 1, 
-          backgroundColor: DesignTokens.colors.background.primary
-        }}
-      >
-          {/* Header */}
-          <View 
-            style={{
-              flexDirection: 'row-reverse',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingHorizontal: 20,
-              paddingVertical: 12,
-              backgroundColor: DesignTokens.colors.background.primary,
-              paddingTop: insets.top + 12,
-              borderBottomWidth: 1,
-              borderBottomColor: DesignTokens.colors.border.primary
-            }}
-          >
-            {/* כפתור סגירה - ימין */}
-            <Pressable 
-              onPress={onClose} 
-              style={{ 
-                padding: 8,
-                marginRight: -8
-              }}
-            >
-              <X size={24} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
-            </Pressable>
-            
-            {/* כותרת ממורכזת */}
-            <Text style={{ 
-              color: DesignTokens.colors.text.primary, 
-              fontSize: 17, 
-              fontWeight: '700',
-              flex: 1,
-              textAlign: 'center'
-            }}>
-              {mediaFiles.length > 1 ? `${currentIndex + 1} מתוך ${mediaFiles.length}` : 'תצוגה מקדימה'}
-            </Text>
-            
-            {/* רווח מימין לאיזון */}
-            <View style={{ width: 40 }} />
-          </View>
-
-          {/* Media Content */}
-          <View style={{ 
-            flex: 1, 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            backgroundColor: DesignTokens.colors.background.primary
-          }}>
-            {renderMediaContent()}
-          </View>
-
-          {/* Caption Input */}
-          <View style={{ 
-            paddingHorizontal: 20,
-            paddingVertical: 12,
-            backgroundColor: DesignTokens.colors.background.primary,
-            borderTopWidth: 1,
-            borderTopColor: DesignTokens.colors.border.primary
-          }}>
-            <TextInput
-              placeholder="הוסף כיתוב..."
-              placeholderTextColor={DesignTokens.colors.text.tertiary}
-              value={captions[currentMedia.id] || ''}
-              onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
-              style={{ 
-                color: DesignTokens.colors.text.primary, 
-                textAlign: 'right', 
-                fontSize: 15,
-                backgroundColor: DesignTokens.colors.background.secondary,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderRadius: 12,
-                minHeight: 44,
-                borderWidth: 1,
-                borderColor: DesignTokens.colors.border.primary
-              }}
-              multiline
-              maxLength={200}
+      <View style={styles.container}>
+        {/* Preview - Full Screen */}
+        <View style={styles.previewContainer}>
+          {mediaType === 'image' ? (
+            <Image 
+              source={{ uri: mediaUri }} 
+              style={styles.imagePreview}
+              resizeMode="contain"
             />
-          </View>
+          ) : (
+            <View style={styles.videoContainer}>
+              <Video
+                source={{ uri: mediaUri }}
+                style={styles.videoPreview}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay={false}
+                isLooping={false}
+              />
+            </View>
+          )}
 
+          {isUploading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator
+                size="large"
+                color={DesignTokens.colors.primary.main}
+              />
+              <Text style={styles.loadingText}>מעלה...</Text>
+            </View>
+          )}
+        </View>
 
-          {/* Action Buttons */}
-          <View style={{ 
-            paddingHorizontal: 20,
-            paddingVertical: 20,
-            paddingBottom: insets.bottom + 20,
-            backgroundColor: DesignTokens.colors.background.primary,
-            borderTopWidth: 1,
-            borderTopColor: DesignTokens.colors.border.primary
-          }}>
-            {/* כפתור שלח */}
-            <Pressable
-              onPress={handleSend}
-              style={({ pressed }) => ({
-                backgroundColor: DesignTokens.colors.success.main,
-                paddingVertical: 16,
-                borderRadius: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: mediaFiles.length > 1 ? 12 : 0,
-                opacity: pressed ? 0.8 : 1,
-                transform: [{ scale: pressed ? 0.98 : 1 }]
-              })}
+        {/* Header Overlay with Blur */}
+        <View 
+          style={[
+            styles.headerOverlay, 
+            { 
+              top: 0,
+              paddingTop: insets.top,
+            }
+          ]}
+        >
+          {Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={40}
+              tint="dark"
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: 'rgba(15, 15, 15, 0.5)',
+                }
+              ]}
+            />
+          ) : (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: 'rgba(20, 20, 20, 0.7)',
+                },
+              ]}
+            />
+          )}
+          
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={onCancel}
+              disabled={isUploading}
             >
-              <Text style={{ 
-                color: '#FFFFFF', 
-                fontWeight: '700', 
-                fontSize: 17,
-                textAlign: 'center'
-              }}>
-                שלח
-              </Text>
-            </Pressable>
+              <Ionicons
+                name="close"
+                size={24}
+                color="#FFFFFF"
+              />
+            </TouchableOpacity>
 
-            {/* כפתור הבא (רק אם יש מספר קבצים) */}
-            {mediaFiles.length > 1 && (
-              <Pressable
-                onPress={() => {
-                  const newIndex = (currentIndex + 1) % mediaFiles.length;
-                  setCurrentIndex(newIndex);
-                }}
-                style={({ pressed }) => ({
-                  backgroundColor: DesignTokens.colors.background.secondary,
-                  paddingVertical: 14,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                  flexDirection: 'row-reverse',
-                  justifyContent: 'center',
-                  opacity: pressed ? 0.8 : 1,
-                  transform: [{ scale: pressed ? 0.98 : 1 }]
-                })}
-              >
-                <Text style={{ 
-                  color: DesignTokens.colors.text.primary, 
-                  fontSize: 16, 
-                  fontWeight: '600', 
-                  marginLeft: 8 
-                }}>
-                  הבא
-                </Text>
-                <ArrowRight size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </Pressable>
-            )}
+            <Text style={styles.headerTitle}>
+              {mediaType === 'image' ? 'תמונה' : 'סרטון'}
+            </Text>
+
+            {/* Placeholder for symmetry */}
+            <View style={{ width: 36 }} />
           </View>
         </View>
-      </Modal>
+
+        {/* Caption Input Overlay with Blur */}
+        <SafeAreaView 
+          style={styles.captionOverlay} 
+          edges={['bottom']}
+        >
+          {Platform.OS === 'ios' ? (
+            <BlurView
+              intensity={40}
+              tint="dark"
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: 'rgba(15, 15, 15, 0.5)',
+                }
+              ]}
+            />
+          ) : (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: 'rgba(20, 20, 20, 0.7)',
+                },
+              ]}
+            />
+          )}
+          
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={0}
+          >
+            <View style={styles.captionContainer}>
+              <TouchableOpacity
+                style={[styles.captionSendButton, isUploading && styles.captionSendButtonDisabled]}
+                onPress={handleSend}
+                disabled={isUploading}
+                activeOpacity={0.7}
+              >
+                {isUploading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color="#FFFFFF"
+                  />
+                ) : (
+                  <Ionicons
+                    name="send"
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                )}
+              </TouchableOpacity>
+              
+              <View style={styles.captionInputContainer}>
+                <TextInput
+                  style={styles.captionInput}
+                  placeholder="הוסף כיתוב..."
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  value={caption}
+                  onChangeText={setCaption}
+                  multiline
+                  maxLength={500}
+                  textAlign="right"
+                  editable={!isUploading}
+                />
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </View>
+    </Modal>
   );
 }

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
+import UICard from '../../components/ui/UICard';
 import TradesListTab from './TradesListTab';
 import CalendarTab from './CalendarTab';
 
@@ -29,13 +31,17 @@ export default function TradingScreen() {
   ];
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" backgroundColor={DesignTokens.colors.background.primary} />
-      
-      <SafeAreaView style={styles.content} edges={['top']}>
+    <LinearGradient
+      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+      style={styles.gradientContainer}
+    >
+      <StatusBar style="light" />
+      <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         {/* Tabs */}
         <View style={styles.tabsContainer}>
-          <View style={styles.tabs}>
+          <UICard variant="blur" padding="none" style={styles.tabsCard}>
+            <View style={styles.tabs}>
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -60,7 +66,8 @@ export default function TradingScreen() {
                 </TouchableOpacity>
               );
             })}
-          </View>
+            </View>
+          </UICard>
         </View>
 
         {/* Content */}
@@ -68,57 +75,33 @@ export default function TradingScreen() {
           {activeTab === 'trades' && <TradesListTab />}
           {activeTab === 'calendar' && <CalendarTab />}
         </View>
-      </SafeAreaView>
-    </View>
+      </RNSafeAreaView>
+    </LinearGradient>
   );
 }
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  container: {
+  gradientContainer: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
   },
-  header: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderBottomLeftRadius: tokens.borderRadius.lg,
-    borderBottomRightRadius: tokens.borderRadius.lg,
-    overflow: 'hidden',
-  },
-  headerContent: {
-    paddingHorizontal: tokens.spacing.lg,
-    paddingTop: tokens.spacing.md,
-    paddingBottom: tokens.spacing.md,
-  },
-  headerTitle: {
-    fontSize: tokens.typography.fontSize['2xl'],
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-  },
-  headerSubtitle: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.normal,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-    marginTop: tokens.spacing.xs,
-  },
-  content: {
+  safeAreaContainer: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
   },
   tabsContainer: {
     paddingHorizontal: tokens.spacing.lg,
     paddingTop: tokens.spacing.md,
     marginBottom: tokens.spacing.md,
   },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: tokens.colors.background.secondary,
+  tabsCard: {
     borderRadius: 30,
-    padding: 4,
+    overflow: 'hidden',
     alignSelf: 'center',
     width: '100%',
     maxWidth: 400,
+  },
+  tabs: {
+    flexDirection: 'row',
+    padding: 4,
   },
   tab: {
     flex: 1,
@@ -143,12 +126,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   tabText: {
     fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
     color: tokens.colors.text.secondary,
   },
   tabTextActive: {
     color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
   },
   tabContent: {
     flex: 1,

@@ -18,7 +18,9 @@ import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { GraduationCap, FileText, BookCheck } from 'lucide-react-native';
 import { learningProgressService } from '../../services/learningProgressService';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import UICard from '../../components/ui/UICard';
 
 export const CoursesScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -36,18 +38,27 @@ export const CoursesScreen: React.FC = () => {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  // טעינת סטטיסטיקות
+  const { data: coursesData, isLoading, error, refetch } = useCourses();
+
+  // טעינת נתונים סטטיסטיים
   useEffect(() => {
     const loadStats = async () => {
-      if (!user?.id) {
+      if (!user) {
         setIsLoadingStats(false);
         return;
       }
 
       try {
         setIsLoadingStats(true);
-        const userStats = await learningProgressService.getUserLearningStats(user.id);
-        setStats(userStats);
+        const statsData = await learningProgressService.getUserLearningStats(user.id);
+        
+        // עדכון מספר הקורסים שנרשמת אליהם מהקורסים עצמם
+        const enrolledCount = coursesData?.courses?.filter(course => course.enrollment).length || 0;
+        
+        setStats({
+          ...statsData,
+          enrolledCourses: enrolledCount,
+        });
       } catch (error) {
         console.error('Error loading stats:', error);
       } finally {
@@ -56,7 +67,7 @@ export const CoursesScreen: React.FC = () => {
     };
 
     loadStats();
-  }, [user?.id, coursesData]);
+  }, [user, coursesData]); // נטען שוב כשמשתנים הקורסים
 
   // וידוא שהקורסים נוצרו כשהמסך נטען (רק פעם אחת)
   useEffect(() => {
@@ -93,9 +104,7 @@ export const CoursesScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []); // רק פעם אחת, לא תלוי ב-refetch
-
-  const { data: coursesData, isLoading, error, refetch } = useCourses();
+  }, [refetch]); // רק פעם אחת, לא תלוי ב-refetch
 
   const enrollMutation = useEnrollInCourse();
 
@@ -109,10 +118,10 @@ export const CoursesScreen: React.FC = () => {
     // אם זה קורס הלוויתנים או קורס דוד איראל, נוביל ל-LearningScreen
     if (course.slug === 'whales-course' || course.id === 'whales-course-1' || course.title === 'קורס הלוויתנים' ||
         course.id === 'david-training-course' || course.title === 'הכשרה של דוד אריאל') {
-      navigation.navigate('LearningScreen' as never, { courseId: course.id } as never);
+      (navigation as any).navigate('LearningScreen', { courseId: course.id });
     } else {
       // אחרת, נוביל ל-CourseDetailScreen
-    navigation.navigate('CourseDetailScreen' as never, { courseId: course.id } as never);
+      (navigation as any).navigate('CourseDetailScreen', { courseId: course.id });
     }
   }, [navigation]);
 
@@ -162,43 +171,58 @@ export const CoursesScreen: React.FC = () => {
   );
 
   const renderHero = useCallback(() => (
-    <View style={styles.heroContainer}>
-      <View style={styles.heroContent}>
-        <Text style={styles.heroTitle}>האקדמיה של DarkPool</Text>
-        <Text style={styles.heroSubtitle}>
-          מקום אחד לכל מה שצריך לדעת על מסחר והשקעות
-        </Text>
-        
-        <View style={styles.heroStats}>
-          <View style={styles.statCard}>
-            <GraduationCap size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-            <Text style={styles.statValue}>
-              {isLoadingStats ? '...' : stats.enrolledCourses}
-            </Text>
-            <Text style={styles.statLabel}>קורסים שלי</Text>
-          </View>
+    // ה-FlatList כבר נותן paddingHorizontal דרך listContainer,
+    // לכן כאן נותנים רק paddingTop כדי שהכרטיס יהיה בדיוק ברוחב כרטיסי הקורסים
+    <View style={{ paddingTop: DesignTokens.spacing.lg }}>
+      <UICard
+        variant="blur"
+        padding="lg"
+        style={{ marginBottom: DesignTokens.spacing.lg, width: '100%' }}
+      >
+        <View style={{ gap: DesignTokens.spacing.md }}>
+          <Text style={styles.heroTitle}>האקדמיה של DarkPool</Text>
+          <Text style={styles.heroSubtitle}>
+            מקום אחד לכל מה שצריך לדעת על מסחר והשקעות
+          </Text>
           
-          <View style={styles.statCard}>
-            <BookCheck size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-            <Text style={styles.statValue}>
-              {isLoadingStats ? '...' : stats.completedLessons}
-            </Text>
-            <Text style={styles.statLabel}>שיעורים הושלמו</Text>
+          <View style={styles.heroStats}>
+            <UICard variant="blur" padding="md" style={{ flex: 1 }}>
+              <View style={styles.statCard}>
+                <GraduationCap size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                <Text style={styles.statValue}>
+                  {isLoadingStats ? '...' : stats.enrolledCourses}
+                </Text>
+                <Text style={styles.statLabel}>קורסים שלי</Text>
+              </View>
+            </UICard>
+            
+            <UICard variant="blur" padding="md" style={{ flex: 1 }}>
+              <View style={styles.statCard}>
+                <BookCheck size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                <Text style={styles.statValue}>
+                  {isLoadingStats ? '...' : stats.completedLessons}
+                </Text>
+                <Text style={styles.statLabel}>שיעורים הושלמו</Text>
+              </View>
+            </UICard>
+            
+            <TouchableOpacity 
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('MyNotesScreen' as never)}
+            >
+              <UICard variant="blur" padding="md" style={{ flex: 1 }}>
+                <View style={styles.statCard}>
+                  <FileText size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                  <Text style={styles.statValue}>
+                    {isLoadingStats ? '...' : stats.totalNotes}
+                  </Text>
+                  <Text style={styles.statLabel}>הערות שלי</Text>
+                </View>
+              </UICard>
+            </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.statCard}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('MyNotesScreen' as never)}
-          >
-            <FileText size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-            <Text style={styles.statValue}>
-              {isLoadingStats ? '...' : stats.totalNotes}
-            </Text>
-            <Text style={styles.statLabel}>הערות שלי</Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      </UICard>
     </View>
   ), [stats, isLoadingStats, DesignTokens, styles, navigation]);
 
@@ -218,64 +242,45 @@ export const CoursesScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <View style={styles.safeAreaContent}>
-          {renderHero()}
-        </View>
-      </SafeAreaView>
-      <FlatList
-        data={coursesData?.courses || []}
-        renderItem={renderCourse}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={DesignTokens.colors.primary.main}
-          />
-        }
-        ListEmptyComponent={!isLoading ? renderEmptyState : null}
-        showsVerticalScrollIndicator={false}
+    <View style={{ flex: 1 }}>
+      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
       />
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <FlatList
+          data={coursesData?.courses || []}
+          renderItem={renderCourse}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={DesignTokens.colors.primary.main}
+            />
+          }
+          ListEmptyComponent={!isLoading ? renderEmptyState : null}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={renderHero}
+        />
+      </RNSafeAreaView>
     </View>
   );
 };
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: tokens.colors.background.primary,
-  },
-  safeArea: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderBottomLeftRadius: tokens.borderRadius.lg,
-    borderBottomRightRadius: tokens.borderRadius.lg,
-    overflow: 'hidden',
-  },
-  safeAreaContent: {
-    paddingHorizontal: tokens.spacing.md,
-  },
   listContainer: {
-    paddingHorizontal: tokens.spacing.md,
-    paddingTop: tokens.spacing.md,
-    paddingBottom: tokens.spacing['3xl'],
-  },
-  heroContainer: {
-    paddingTop: tokens.spacing.lg,
-    paddingBottom: tokens.spacing.lg,
     paddingHorizontal: tokens.spacing.lg,
-    backgroundColor: tokens.colors.background.secondary,
-    marginBottom: tokens.spacing.md,
-    marginHorizontal: -tokens.spacing.md,
-  },
-  heroContent: {
-    gap: tokens.spacing.md,
+    paddingBottom: tokens.spacing['3xl'],
   },
   heroTitle: {
     fontSize: tokens.typography.fontSize['3xl'],
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     letterSpacing: -0.5,
@@ -294,13 +299,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginTop: tokens.spacing.sm,
   },
   statCard: {
-    flex: 1,
     alignItems: 'center',
     gap: tokens.spacing.xs / 2,
   },
   statValue: {
     fontSize: tokens.typography.fontSize['2xl'],
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     marginTop: tokens.spacing.xs / 2,
   },
@@ -308,7 +312,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.xs,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   emptyState: {
     alignItems: 'center',
@@ -320,7 +324,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   emptyStateTitle: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.sm,
     textAlign: 'center',
@@ -342,7 +346,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   errorTitle: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.sm,
     textAlign: 'center',
@@ -361,7 +365,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   retryButtonText: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
   },
 });

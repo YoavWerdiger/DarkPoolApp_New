@@ -17,14 +17,17 @@ export const createStyles = (backgroundColor: string, backdropColor: string) => 
     height: SCREEN_HEIGHT, // גובה מלא
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    backgroundColor: backgroundColor,
+    backgroundColor: 'transparent', // שקוף - ה-BlurView מספק את הרקע
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
     zIndex: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomWidth: 0,
   },
   handle: {
     width: 40,
@@ -36,6 +39,8 @@ export const createStyles = (backgroundColor: string, backdropColor: string) => 
   },
   content: {
     flex: 1,
+    position: 'relative', // כדי להיות מעל ה-BlurView
+    zIndex: 1,
   },
 });
 

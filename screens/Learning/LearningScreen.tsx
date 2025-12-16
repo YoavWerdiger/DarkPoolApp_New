@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, 
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
 
 // עבור תאימות עם Expo Go - שימוש ב-MediaTypeOptions עדיין
 const MediaType = ImagePicker.MediaType || ImagePicker.MediaTypeOptions;
@@ -1235,74 +1237,74 @@ function LearningScreen() {
     // משתמשים ב-duration ב-key כדי ש-React יעדכן את הקומפוננטה כשהערך משתנה
     const lessonKey = `${lesson.id}_${lesson.duration || '00:00'}`;
     return (
-    <Animated.View
-      key={lessonKey}
-      style={[
-        styles.lessonCard,
-        { transform: [{ scale: animatedValue }] }
-      ]}
-    >
-      <TouchableOpacity
-        style={styles.lessonTouchable}
-        onPress={() => handleLessonPress(lesson, index)}
-        activeOpacity={0.8}
+      <Animated.View
+        key={lessonKey}
+        style={[
+          { marginBottom: DesignTokens.spacing.md, transform: [{ scale: animatedValue }] }
+        ]}
       >
-        <View style={styles.lessonThumbnail}>
-          {lesson.thumbnail ? (
-          <Image 
-            source={{ uri: lesson.thumbnail }} 
-            style={styles.thumbnailImage}
-            resizeMode="cover"
-              onError={(error) => {
-              // אם התמונה לא נטענת, נשתמש בצבע רקע
-                console.log('Thumbnail failed to load for lesson:', lesson.title, 'URL:', lesson.thumbnail, 'Error:', error);
-              }}
-              onLoad={() => {
-                console.log('Thumbnail loaded successfully for lesson:', lesson.title, 'URL:', lesson.thumbnail);
-            }}
-          />
-          ) : (
-            <View style={[styles.thumbnailImage, { backgroundColor: DesignTokens.colors.background.secondary, justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 24 }}>🎥</Text>
+        <TouchableOpacity
+          onPress={() => handleLessonPress(lesson, index)}
+          activeOpacity={0.8}
+        >
+          <UICard variant="blur" padding="none">
+            <View style={styles.lessonThumbnail}>
+              {lesson.thumbnail ? (
+                <Image 
+                  source={{ uri: lesson.thumbnail }} 
+                  style={styles.thumbnailImage}
+                  resizeMode="cover"
+                  onError={(error) => {
+                    // אם התמונה לא נטענת, נשתמש בצבע רקע
+                    console.log('Thumbnail failed to load for lesson:', lesson.title, 'URL:', lesson.thumbnail, 'Error:', error);
+                  }}
+                  onLoad={() => {
+                    console.log('Thumbnail loaded successfully for lesson:', lesson.title, 'URL:', lesson.thumbnail);
+                  }}
+                />
+              ) : (
+                <View style={[styles.thumbnailImage, { backgroundColor: 'rgba(255, 255, 255, 0.05)', justifyContent: 'center', alignItems: 'center' }]}>
+                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 24 }}>🎥</Text>
+                </View>
+              )}
+              <View style={[
+                styles.durationBadge,
+                {
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                }
+              ]}>
+                <Text style={[
+                  styles.durationText,
+                  {
+                    color: '#FFFFFF',
+                  }
+                ]}>{lesson.duration || '00:00'}</Text>
+              </View>
+              {lesson.completed && (
+                <View style={[
+                  styles.completedBadge,
+                  {
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  }
+                ]}>
+                  <CheckCircle2 size={24} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                </View>
+              )}
             </View>
-          )}
-          <View style={[
-            styles.durationBadge,
-            {
-              backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : '#FFFFFF',
-            }
-          ]}>
-            <Text style={[
-              styles.durationText,
-              {
-                color: isDarkMode ? '#FFFFFF' : '#000000',
-              }
-            ]}>{lesson.duration || '00:00'}</Text>
-          </View>
-          {lesson.completed && (
-            <View style={[
-              styles.completedBadge,
-              {
-                backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : '#FFFFFF',
-              }
-            ]}>
-              <CheckCircle2 size={24} color="#05d157" strokeWidth={2} />
+            
+            <View style={styles.lessonContent}>
+              <View style={styles.lessonCardHeader}>
+                <Text style={styles.lessonCardTitle}>{lesson.title}</Text>
+                <View style={styles.lessonNumber}>
+                  <Text style={styles.lessonNumberText}>{index + 1}</Text>
+                </View>
+              </View>
+              <Text style={styles.lessonDescription}>{lesson.description}</Text>
             </View>
-          )}
-        </View>
-        
-        <View style={styles.lessonContent}>
-          <View style={styles.lessonCardHeader}>
-              <Text style={styles.lessonCardTitle}>{lesson.title}</Text>
-            <View style={styles.lessonNumber}>
-              <Text style={styles.lessonNumberText}>{index + 1}</Text>
-            </View>
-          </View>
-          <Text style={styles.lessonDescription}>{lesson.description}</Text>
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
+          </UICard>
+        </TouchableOpacity>
+      </Animated.View>
+    );
   };
 
   // פונקציה לחילוץ YouTube ID מקישור
@@ -2065,116 +2067,132 @@ function LearningScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* כותרת הקורס */}
-      <View style={styles.courseHeader}>
-        <View style={styles.courseImageContainer}>
-          {displayCoverUrl ? (
-            <Image source={{ uri: displayCoverUrl }} style={styles.courseImage} />
-          ) : (
-            <View style={[styles.courseImage, { backgroundColor: DesignTokens.colors.background.secondary, justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ fontSize: 48 }}>📚</Text>
-            </View>
-          )}
-        </View>
-        
-        <View style={styles.courseInfo}>
-        <Text style={styles.courseTitle}>{displayTitle}</Text>
-        {courseData?.subtitle && (
-          <Text style={styles.courseSubtitle}>{courseData.subtitle}</Text>
-        )}
-        <Text style={styles.courseDescription}>{displayDescription}</Text>
-          
-          
-          {/* מרצה */}
-          <View style={styles.instructorContainer}>
-            {displayInstructorAvatar ? (
-              <Image source={{ uri: displayInstructorAvatar }} style={styles.instructorAvatar} />
-            ) : (
-              <View style={[styles.instructorAvatar, { backgroundColor: DesignTokens.colors.background.secondary, justifyContent: 'center', alignItems: 'center' }]}>
-                <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 20, fontWeight: '600' }}>
-                  {displayInstructorName.charAt(0)}
-                </Text>
-              </View>
-            )}
-            <View style={styles.instructorInfo}>
-              <Text style={styles.instructorName}>{displayInstructorName}</Text>
-              <Text style={styles.instructorRole}>
-                {courseData?.owner?.bio || 'מנהל הקהילה'}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* רשימת השיעורים */}
-      <View style={styles.lessonsSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>שיעורי הקורס</Text>
-          <View style={styles.progressContainer}>
-            {(() => {
-              const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-              const completedLessons = lessonsToRender.filter(lesson => lesson.completed).length;
-              const totalLessons = lessonsToRender.length;
-              const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
-              
-              return (
-                <>
-                  <Text style={styles.progressText}>{completedLessons}/{totalLessons} הושלמו</Text>
-                  <View style={[styles.progressBar, { width: 120, height: 6 }]}>
-                    <View style={[styles.progressFill, { 
-                      width: `${progressPercentage}%`,
-                      backgroundColor: DesignTokens.colors.primary.main,
-                      borderRadius: 3
-                    }]} />
+    <View style={{ flex: 1 }}>
+      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: DesignTokens.spacing['5xl'] }}>
+          {/* כותרת הקורס */}
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
+            <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <View style={styles.courseImageContainer}>
+                {displayCoverUrl ? (
+                  <Image source={{ uri: displayCoverUrl }} style={styles.courseImage} />
+                ) : (
+                  <View style={[styles.courseImage, { backgroundColor: 'rgba(255, 255, 255, 0.05)', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ fontSize: 48 }}>📚</Text>
                   </View>
-                </>
-              );
-            })()}
+                )}
+              </View>
+              
+              <View style={styles.courseInfo}>
+                <Text style={styles.courseTitle}>{displayTitle}</Text>
+                {courseData?.subtitle && (
+                  <Text style={styles.courseSubtitle}>{courseData.subtitle}</Text>
+                )}
+                <Text style={styles.courseDescription}>{displayDescription}</Text>
+                
+                {/* מרצה */}
+                <View style={styles.instructorContainer}>
+                  {displayInstructorAvatar ? (
+                    <Image source={{ uri: displayInstructorAvatar }} style={styles.instructorAvatar} />
+                  ) : (
+                    <View style={[styles.instructorAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.05)', justifyContent: 'center', alignItems: 'center' }]}>
+                      <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 20, fontWeight: '600' }}>
+                        {displayInstructorName.charAt(0)}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.instructorInfo}>
+                    <Text style={styles.instructorName}>{displayInstructorName}</Text>
+                    <Text style={styles.instructorRole}>
+                      {courseData?.owner?.bio || 'מנהל הקהילה'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </UICard>
           </View>
-        </View>
-        
-        {/* פרק 1 - כמה דברים לפני שמתחילים */}
-        <View style={styles.chapterSection}>
-          <View style={styles.chapterHeader}>
-            <Text style={styles.chapterTitle}>פרק 1 - כמה דברים לפני שמתחילים</Text>
-          </View>
-          <View style={styles.chapterDivider} />
-          {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-            const chapter1Lessons = lessonsToRender.slice(0, 1); // שיעור ראשון
-            return chapter1Lessons.map((lesson, index) => renderLessonCard(lesson, index));
-          })()}
-        </View>
 
-        {/* פרק 2 - קונספטים ואסטרטגיה */}
-        <View style={styles.chapterSection}>
-          <View style={styles.chapterHeader}>
-            <Text style={styles.chapterTitle}>פרק 2 - קונספטים ואסטרטגיה</Text>
-          </View>
-          <View style={styles.chapterDivider} />
-          {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-            const chapter2Lessons = lessonsToRender.slice(1, 8); // שיעורים 2-8
-            return chapter2Lessons.map((lesson, index) => renderLessonCard(lesson, index + 1));
-          })()}
-        </View>
+          {/* רשימת השיעורים */}
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg }}>
+            <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>שיעורי הקורס</Text>
+                <View style={styles.progressContainer}>
+                  {(() => {
+                    const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                    const completedLessons = lessonsToRender.filter(lesson => lesson.completed).length;
+                    const totalLessons = lessonsToRender.length;
+                    const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
+                    
+                    return (
+                      <>
+                        <Text style={styles.progressText}>{completedLessons}/{totalLessons} הושלמו</Text>
+                        <View style={[styles.progressBar, { width: 120, height: 6 }]}>
+                          <View style={[styles.progressFill, { 
+                            width: `${progressPercentage}%`,
+                            backgroundColor: DesignTokens.colors.primary.main,
+                            borderRadius: 3
+                          }]} />
+                        </View>
+                      </>
+                    );
+                  })()}
+                </View>
+              </View>
+            </UICard>
+            
+            {/* פרק 1 - כמה דברים לפני שמתחילים */}
+            <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <UICard variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.md }}>
+                <View style={styles.chapterHeader}>
+                  <Text style={styles.chapterTitle}>פרק 1 - כמה דברים לפני שמתחילים</Text>
+                </View>
+              </UICard>
+              {(() => {
+                const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                const chapter1Lessons = lessonsToRender.slice(0, 1); // שיעור ראשון
+                return chapter1Lessons.map((lesson, index) => renderLessonCard(lesson, index));
+              })()}
+            </View>
 
-        {/* פרק 3 - כמה דברים לקראת סיום */}
-        <View style={styles.chapterSection}>
-          <View style={styles.chapterHeader}>
-            <Text style={styles.chapterTitle}>פרק 3 - כמה דברים לקראת סיום</Text>
+            {/* פרק 2 - קונספטים ואסטרטגיה */}
+            <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <UICard variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.md }}>
+                <View style={styles.chapterHeader}>
+                  <Text style={styles.chapterTitle}>פרק 2 - קונספטים ואסטרטגיה</Text>
+                </View>
+              </UICard>
+              {(() => {
+                const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                const chapter2Lessons = lessonsToRender.slice(1, 8); // שיעורים 2-8
+                return chapter2Lessons.map((lesson, index) => renderLessonCard(lesson, index + 1));
+              })()}
+            </View>
+
+            {/* פרק 3 - כמה דברים לקראת סיום */}
+            <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <UICard variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.md }}>
+                <View style={styles.chapterHeader}>
+                  <Text style={styles.chapterTitle}>פרק 3 - כמה דברים לקראת סיום</Text>
+                </View>
+              </UICard>
+              {(() => {
+                const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                const chapter3Lessons = lessonsToRender.slice(8); // שיעור אחרון
+                return chapter3Lessons.map((lesson, index) => renderLessonCard(lesson, index + 8));
+              })()}
+            </View>
           </View>
-          <View style={styles.chapterDivider} />
-          {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-            const chapter3Lessons = lessonsToRender.slice(8); // שיעור אחרון
-            return chapter3Lessons.map((lesson, index) => renderLessonCard(lesson, index + 8));
-          })()}
-        </View>
-      </View>
-      </ScrollView>
+        </ScrollView>
+      </RNSafeAreaView>
     </View>
   );
 }
@@ -2182,7 +2200,6 @@ function LearningScreen() {
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
   },
   
   // Background Gradient
@@ -2242,12 +2259,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'right',
   },
   lessonCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     flex: 1,
-    marginRight: 12,
+    marginRight: tokens.spacing.sm,
   },
   lessonDuration: {
     fontSize: 14,
@@ -3114,19 +3131,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   
   // Course Header
-  courseHeader: {
-    padding: 0,
-    backgroundColor: tokens.colors.background.secondary,
-  },
   courseImageContainer: {
     position: 'relative',
-    marginBottom: 0,
+    marginBottom: tokens.spacing.lg,
+    borderRadius: tokens.borderRadius['2xl'],
+    overflow: 'hidden',
   },
   courseImage: {
     width: '100%',
     height: 220,
-    borderRadius: 0,
-  },
+  } as any,
   courseGradient: {
     position: 'absolute',
     bottom: 0,
@@ -3159,25 +3173,24 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   
   courseInfo: {
-    gap: 12,
-    padding: 20,
+    gap: tokens.spacing.md,
   },
   courseTitle: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: tokens.typography.fontSize['3xl'],
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     lineHeight: 34,
     textAlign: 'right',
   },
   courseSubtitle: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.medium as any,
     color: tokens.colors.text.secondary,
     marginBottom: 0,
     textAlign: 'right',
   },
   courseDescription: {
-    fontSize: 16,
+    fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.tertiary,
     lineHeight: 24,
     textAlign: 'right',
@@ -3213,18 +3226,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 50,
     height: 50,
     borderRadius: 25,
-  },
+  } as any,
   instructorInfo: {
     flex: 1,
   },
   instructorName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
   },
   instructorRole: {
-    fontSize: 14,
+    fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
     marginTop: 4,
@@ -3271,40 +3284,24 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'right',
   },
   
-  // Lessons Section
-  lessonsSection: {
-    padding: 20,
-    position: 'relative',
-  },
-  
-  // Chapter Sections
-  chapterSection: {
-    marginBottom: 32,
-  },
   chapterHeader: {
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: 0,
   },
   chapterTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.primary.main,
     textAlign: 'right',
-  },
-  chapterDivider: {
-    height: 1,
-    backgroundColor: tokens.colors.primary.main,
-    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 0,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: tokens.typography.fontSize['2xl'],
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
   },
@@ -3312,7 +3309,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'flex-start',
   },
   progressText: {
-    fontSize: 14,
+    fontSize: tokens.typography.fontSize.sm,
     textAlign: 'right',
     color: tokens.colors.text.secondary,
     marginBottom: 4,
@@ -3320,7 +3317,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   progressBar: {
     width: 120,
     height: 6,
-    backgroundColor: tokens.colors.background.tertiary,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 3,
     overflow: 'hidden',
     marginTop: 4,
@@ -3332,26 +3329,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   
   // Lesson Cards
-  lessonCard: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderRadius: tokens.borderRadius.lg,
-    marginBottom: 16,
-    overflow: 'hidden',
-  },
-  lessonTouchable: {
-    flex: 1,
-  },
   lessonThumbnail: {
     position: 'relative',
     height: 120,
     backgroundColor: '#000000',
     overflow: 'hidden',
+    borderTopLeftRadius: tokens.borderRadius['2xl'],
+    borderTopRightRadius: tokens.borderRadius['2xl'],
   },
   thumbnailImage: {
     width: '100%',
     height: '100%',
     backgroundColor: '#000000',
-  },
+  } as any,
   thumbnailGradient: {
     position: 'absolute',
     top: 0,
@@ -3362,8 +3352,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   durationBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
+    bottom: tokens.spacing.xs,
+    right: tokens.spacing.xs,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: tokens.borderRadius.sm,
@@ -3379,8 +3369,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   completedBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: tokens.spacing.xs,
+    right: tokens.spacing.xs,
     borderRadius: 12,
     padding: 4,
     shadowColor: '#000',
@@ -3392,13 +3382,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   
   lessonContent: {
     flex: 1,
-    padding: 16,
+    padding: tokens.spacing.md,
   },
   lessonCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: tokens.spacing.sm,
   },
   lessonNumber: {
     width: 28,
@@ -3409,15 +3399,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     justifyContent: 'center',
   },
   lessonNumberText: {
-    color: tokens.colors.background.primary,
-    fontWeight: '600',
-    fontSize: 14,
+    color: tokens.colors.text.primary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    fontSize: tokens.typography.fontSize.sm,
   },
   lessonInfo: {
     flex: 1,
   },
   lessonDescription: {
-    fontSize: 16,
+    fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.tertiary,
     lineHeight: 24,
     textAlign: 'right',

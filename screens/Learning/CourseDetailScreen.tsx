@@ -15,6 +15,9 @@ import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/use
 import { ModuleSection, LessonRow } from '../../components/learning';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress } from '../../types/learning';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
+import { ArrowRight } from 'lucide-react-native';
 
 export const CourseDetailScreen: React.FC = () => {
   const route = useRoute();
@@ -53,9 +56,9 @@ export const CourseDetailScreen: React.FC = () => {
   }, []);
 
   const handleLessonPress = useCallback((lesson: LessonWithProgress) => {
-    navigation.navigate('LessonPlayerScreen' as never, { 
+    (navigation as any).navigate('LessonPlayerScreen', { 
       lessonId: lesson.id 
-    } as never);
+    });
   }, [navigation]);
 
   const handleEnroll = useCallback(async () => {
@@ -88,29 +91,51 @@ export const CourseDetailScreen: React.FC = () => {
 
   const handleContinueLearning = useCallback(() => {
     if (lastLessonId) {
-      navigation.navigate('LessonPlayerScreen' as never, { 
+      (navigation as any).navigate('LessonPlayerScreen', { 
         lessonId: lastLessonId 
-      } as never);
+      });
     }
   }, [lastLessonId, navigation]);
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary} />
-        <Text style={styles.loadingText}>טוען קורס...</Text>
+      <View style={{ flex: 1 }}>
+        <LinearGradient
+          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+            <Text style={styles.loadingText}>טוען קורס...</Text>
+          </View>
+        </RNSafeAreaView>
       </View>
     );
   }
 
   if (error || !course) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>שגיאה בטעינת הקורס</Text>
-        <Text style={styles.errorMessage}>
-          {error?.message || 'הקורס לא נמצא'}
-        </Text>
+      <View style={{ flex: 1 }}>
+        <LinearGradient
+          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>שגיאה בטעינת הקורס</Text>
+            <Text style={styles.errorMessage}>
+              {error?.message || 'הקורס לא נמצא'}
+            </Text>
+          </View>
+        </RNSafeAreaView>
       </View>
     );
   }
@@ -119,150 +144,169 @@ export const CourseDetailScreen: React.FC = () => {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
       <LinearGradient
-        colors={['rgba(0, 230, 84, 0.25)', 'transparent', 'rgba(0, 230, 84, 0.15)']}
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        pointerEvents="none"
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
       />
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Cover Image */}
-      <View style={styles.coverContainer}>
-        {course.cover_url ? (
-          <Image
-            source={{ uri: course.cover_url }}
-            style={styles.coverImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.coverPlaceholder}>
-            <Text style={styles.coverPlaceholderText}>📚</Text>
-          </View>
-        )}
-        
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView 
+          style={styles.container} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Course Info */}
-        <View style={styles.courseInfo}>
-          <Text style={styles.title}>{course.title}</Text>
-          
-          {course.subtitle && (
-            <Text style={styles.subtitle}>{course.subtitle}</Text>
-          )}
-
-          {/* Instructor */}
-          {course.owner && (
-            <View style={styles.instructorContainer}>
-              <View style={styles.instructorAvatar}>
-                {course.owner.avatar_url ? (
-                  <Image
-                    source={{ uri: course.owner.avatar_url }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <Text style={styles.avatarPlaceholder}>
-                    {course.owner.display_name.charAt(0)}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.instructorInfo}>
-                <Text style={styles.instructorName}>{course.owner.display_name}</Text>
-                {course.owner.bio && (
-                  <Text style={styles.instructorBio} numberOfLines={2}>
-                    {course.owner.bio}
-                  </Text>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Progress (if enrolled) */}
-          {isEnrolled && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressHeader}>
-                <Text style={styles.progressTitle}>התקדמות</Text>
-                <Text style={styles.progressPercentage}>
-                  {Math.round(progressPercentage)}%
-                </Text>
-              </View>
-              <View style={styles.progressBar}>
-                <View 
-                  style={[
-                    styles.progressFill, 
-                    { width: `${progressPercentage}%` }
-                  ]} 
-                />
-              </View>
-            </View>
-          )}
-
-          {/* Description */}
-          {course.description && (
-            <View style={styles.descriptionContainer}>
-              <Text style={styles.descriptionTitle}>תיאור הקורס</Text>
-              <Text style={styles.description}>{course.description}</Text>
-            </View>
-          )}
-
-          {/* Tags */}
-          {course.tags && course.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              <Text style={styles.tagsTitle}>תגיות</Text>
-              <View style={styles.tagsRow}>
-                {course.tags.map((tag, index) => (
-                  <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
+        {/* Header עם back button */}
+        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+            style={{
+              width: 36,
+              height: 36,
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: 18,
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              alignSelf: 'flex-end',
+            }}
+          >
+            <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+          </TouchableOpacity>
         </View>
 
-        {/* Action Button */}
-        <View style={styles.actionContainer}>
-          {isEnrolled ? (
-            <TouchableOpacity
-              style={styles.continueButton}
-              onPress={handleContinueLearning}
-            >
-              <Text style={styles.continueButtonText}>
-                {lastLessonId ? 'המשך למידה' : 'התחל למידה'}
-              </Text>
-            </TouchableOpacity>
+        {/* Cover Image */}
+        <View style={styles.coverContainer}>
+          {course.cover_url ? (
+            <Image
+              source={{ uri: course.cover_url }}
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
           ) : (
-            <TouchableOpacity
-              style={styles.enrollButton}
-              onPress={handleEnroll}
-              disabled={enrollMutation.isPending}
-            >
-              {enrollMutation.isPending ? (
-                <ActivityIndicator color={DesignTokens.colors.text.primary} size="small" />
-              ) : (
-                <Text style={styles.enrollButtonText}>
-                  {course.access === 'free' ? 'הירשם בחינם' : 
-                   course.access === 'registration' ? 'הירשם לקורס' : 
-                   'קנה קורס'}
-                </Text>
-              )}
-            </TouchableOpacity>
+            <View style={styles.coverPlaceholder}>
+              <Text style={styles.coverPlaceholderText}>📚</Text>
+            </View>
           )}
         </View>
 
-        {/* Modules */}
-        {course.modules && course.modules.length > 0 && courseId !== 'david-training-course' && (
-          <View style={styles.modulesContainer}>
-            <Text style={styles.modulesTitle}>תוכן הקורס</Text>
+        {/* Content */}
+        <View style={{ paddingHorizontal: DesignTokens.spacing.lg }}>
+          {/* Course Info Card */}
+          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+            <Text style={styles.title}>{course.title}</Text>
+            
+            {course.subtitle && (
+              <Text style={styles.subtitle}>{course.subtitle}</Text>
+            )}
+
+            {/* Instructor */}
+            {course.owner && (
+              <View style={styles.instructorContainer}>
+                <View style={styles.instructorAvatar}>
+                  {course.owner.avatar_url ? (
+                    <Image
+                      source={{ uri: course.owner.avatar_url }}
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.avatarPlaceholder}>
+                      {course.owner.display_name.charAt(0)}
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.instructorInfo}>
+                  <Text style={styles.instructorName}>{course.owner.display_name}</Text>
+                  {course.owner.bio && (
+                    <Text style={styles.instructorBio} numberOfLines={2}>
+                      {course.owner.bio}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Progress (if enrolled) */}
+            {isEnrolled && (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressTitle}>התקדמות</Text>
+                  <Text style={styles.progressPercentage}>
+                    {Math.round(progressPercentage)}%
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: `${progressPercentage}%` }
+                    ]} 
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Description */}
+            {course.description && (
+              <View style={styles.descriptionContainer}>
+                <Text style={styles.descriptionTitle}>תיאור הקורס</Text>
+                <Text style={styles.description}>{course.description}</Text>
+              </View>
+            )}
+
+            {/* Tags */}
+            {course.tags && course.tags.length > 0 && (
+              <View style={styles.tagsContainer}>
+                <Text style={styles.tagsTitle}>תגיות</Text>
+                <View style={styles.tagsRow}>
+                  {course.tags.map((tag, index) => (
+                    <View key={index} style={styles.tag}>
+                      <Text style={styles.tagText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </UICard>
+
+          {/* Action Button */}
+          <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+            {isEnrolled ? (
+              <TouchableOpacity
+                style={styles.continueButton}
+                onPress={handleContinueLearning}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.continueButtonText}>
+                  {lastLessonId ? 'המשך למידה' : 'התחל למידה'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.enrollButton}
+                onPress={handleEnroll}
+                disabled={enrollMutation.isPending}
+                activeOpacity={0.8}
+              >
+                {enrollMutation.isPending ? (
+                  <ActivityIndicator color={DesignTokens.colors.text.primary} size="small" />
+                ) : (
+                  <Text style={styles.enrollButtonText}>
+                    {course.access === 'free' ? 'הירשם בחינם' : 
+                     course.access === 'registration' ? 'הירשם לקורס' : 
+                     'קנה קורס'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Modules */}
+          {course.modules && course.modules.length > 0 && courseId !== 'david-training-course' && (
+            <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <Text style={styles.modulesTitle}>תוכן הקורס</Text>
             {course.modules.map((module, moduleIndex) => {
               // חישוב האינדקס ההתחלתי של השיעורים במודול זה
               let lessonStartIndex = 0;
@@ -286,10 +330,10 @@ export const CourseDetailScreen: React.FC = () => {
           </View>
         )}
         
-        {/* Lessons directly (for courses without modules like david-training-course) */}
-        {course.lessons && course.lessons.length > 0 && (courseId === 'david-training-course' || !course.modules || course.modules.length === 0) && (
-          <View style={styles.modulesContainer}>
-            <Text style={styles.modulesTitle}>תוכן הקורס</Text>
+          {/* Lessons directly (for courses without modules like david-training-course) */}
+          {course.lessons && course.lessons.length > 0 && (courseId === 'david-training-course' || !course.modules || course.modules.length === 0) && (
+            <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <Text style={styles.modulesTitle}>תוכן הקורס</Text>
             {course.lessons.map((lesson, index) => (
               <LessonRow
                 key={lesson.id}
@@ -303,8 +347,9 @@ export const CourseDetailScreen: React.FC = () => {
             ))}
           </View>
         )}
-      </View>
-      </ScrollView>
+        </View>
+        </ScrollView>
+      </RNSafeAreaView>
     </View>
   );
 };
@@ -312,25 +357,25 @@ export const CourseDetailScreen: React.FC = () => {
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: tokens.colors.background,
+  },
+  scrollContent: {
+    paddingBottom: tokens.spacing['5xl'],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: tokens.colors.background,
   },
   loadingText: {
     marginTop: tokens.spacing.md,
     fontSize: tokens.typography.fontSize.base,
-    color: tokens.colors.textSecondary,
+    color: tokens.colors.text.secondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: tokens.spacing.lg,
-    backgroundColor: tokens.colors.background,
   },
   errorIcon: {
     fontSize: 48,
@@ -338,66 +383,47 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   errorTitle: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.sm,
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.textSecondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   coverContainer: {
-    position: 'relative',
     height: 200,
+    marginHorizontal: tokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
+    borderRadius: tokens.borderRadius['2xl'],
+    overflow: 'hidden',
   },
   coverImage: {
     width: '100%',
     height: '100%',
-  },
+  } as any,
   coverPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: tokens.colors.elevated,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   coverPlaceholderText: {
     fontSize: 48,
   },
-  backButton: {
-    position: 'absolute',
-    top: tokens.spacing.lg,
-    right: tokens.spacing.lg,
-    width: 40,
-    height: 40,
-    borderRadius: tokens.borderRadius.full,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: tokens.typography.fontSize.lg,
-    color: tokens.colors.text.primary,
-    fontWeight: tokens.typography.fontWeight.bold,
-  },
-  content: {
-    padding: tokens.spacing.lg,
-  },
-  courseInfo: {
-    marginBottom: tokens.spacing.lg,
-  },
   title: {
     fontSize: tokens.typography.fontSize['2xl'],
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.sm,
     textAlign: 'right',
   },
   subtitle: {
     fontSize: tokens.typography.fontSize.base,
-    color: tokens.colors.textSecondary,
+    color: tokens.colors.text.secondary,
     marginBottom: tokens.spacing.lg,
     textAlign: 'right',
   },
@@ -410,7 +436,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 50,
     height: 50,
     borderRadius: tokens.borderRadius.full,
-    backgroundColor: tokens.colors.elevated,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: tokens.spacing.md,
@@ -419,47 +445,26 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: '100%',
     height: '100%',
     borderRadius: tokens.borderRadius.full,
-  },
+  } as any,
   avatarPlaceholder: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.text.primary,
   },
   instructorInfo: {
     flex: 1,
   },
   instructorName: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.xs,
     textAlign: 'right',
   },
   instructorBio: {
     fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.textSecondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: tokens.spacing.lg,
-    paddingVertical: tokens.spacing.md,
-    backgroundColor: tokens.colors.surface,
-    borderRadius: tokens.borderRadius.lg,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.primary,
-    marginBottom: tokens.spacing.xs,
-  },
-  statLabel: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.textSecondary,
   },
   progressContainer: {
     marginBottom: tokens.spacing.lg,
@@ -472,23 +477,23 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   progressTitle: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
   },
   progressPercentage: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.primary,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.primary.main,
   },
   progressBar: {
     height: 8,
-    backgroundColor: tokens.colors.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: tokens.borderRadius.sm,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: tokens.colors.primary,
+    backgroundColor: tokens.colors.primary.main,
     borderRadius: tokens.borderRadius.sm,
   },
   descriptionContainer: {
@@ -496,14 +501,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   descriptionTitle: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.sm,
     textAlign: 'right',
   },
   description: {
     fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.textSecondary,
+    color: tokens.colors.text.secondary,
     lineHeight: tokens.typography.lineHeight.relaxed * tokens.typography.fontSize.sm,
     textAlign: 'right',
   },
@@ -512,8 +517,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   tagsTitle: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.sm,
     textAlign: 'right',
   },
@@ -523,48 +528,49 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: tokens.spacing.sm,
   },
   tag: {
-    backgroundColor: tokens.colors.elevated,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.sm,
     borderRadius: tokens.borderRadius.lg,
   },
   tagText: {
     fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.textSecondary,
-  },
-  actionContainer: {
-    marginBottom: tokens.spacing.lg,
+    color: tokens.colors.text.secondary,
   },
   enrollButton: {
-    backgroundColor: tokens.colors.primary,
-    paddingVertical: tokens.spacing.lg,
+    backgroundColor: tokens.colors.primary.main,
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
     borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
-    ...tokens.shadows.green,
+    justifyContent: 'center',
+    minHeight: 50,
+    ...tokens.shadows.md,
   },
   enrollButtonText: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
   },
   continueButton: {
-    backgroundColor: tokens.colors.success,
-    paddingVertical: tokens.spacing.lg,
+    backgroundColor: tokens.colors.primary.main,
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
     borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+    ...tokens.shadows.md,
   },
   continueButtonText: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
-  },
-  modulesContainer: {
-    marginBottom: tokens.spacing['4xl'],
   },
   modulesTitle: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.lg,
     textAlign: 'right',
   },

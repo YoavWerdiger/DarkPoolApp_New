@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { DesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 type OptionDef = { key: string; label: string; icon: any; danger: boolean };
 
@@ -14,50 +14,24 @@ interface OptionItemProps {
 }
 
 function OptionItem({ option, index, isLast, onSelect }: OptionItemProps) {
-  const [scaleValue] = useState(new Animated.Value(1));
-
-  const [pressed, setPressed] = useState(false);
-
-  const handlePressIn = () => {
-    setPressed(true);
-    Animated.spring(scaleValue, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    setPressed(false);
-    Animated.spring(scaleValue, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
   const handlePress = () => {
     HapticFeedback.selection();
     onSelect(option.key);
   };
 
   return (
-    <Animated.View
+    <View
       style={[
         styles.option,
         isLast && styles.lastOption,
-        { transform: [{ scale: scaleValue }] }
       ]}
     >
       <TouchableOpacity
-        style={[
-          styles.optionTouchable,
-          pressed && styles.optionPressed
-        ]}
+        style={styles.optionTouchable}
         onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
         accessibilityLabel={option.label}
         accessibilityHint={option.label}
-        activeOpacity={1}
+        activeOpacity={0.7}
       >
         <Text style={[
           styles.optionLabel, 
@@ -67,52 +41,36 @@ function OptionItem({ option, index, isLast, onSelect }: OptionItemProps) {
         </Text>
         <Ionicons 
           name={option.icon as any} 
-          size={22} 
+          size={20} 
           color={option.danger ? '#FF3B30' : '#FFFFFF'}
           style={styles.optionIcon}
         />
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }
 
-export default function ContextMenu({ onSelect, isAdmin = false }: { onSelect: (key: string) => void; isAdmin?: boolean }) {
-  const [dialogScale] = useState(new Animated.Value(1));
-
-  console.log('🎯 ContextMenu: Rendering with isAdmin:', isAdmin);
-
+export default function ContextMenu({ onSelect, isAdmin = false, isMe = false }: { onSelect: (key: string) => void; isAdmin?: boolean; isMe?: boolean }) {
+  const DesignTokens = useDesignTokens();
   const options: OptionDef[] = useMemo(() => {
     const base: OptionDef[] = [
-      { key: 'reply', label: 'השב', icon: 'arrow-undo', danger: false },
-      { key: 'forward', label: 'העבר', icon: 'arrow-redo', danger: false },
-      { key: 'copy', label: 'העתק', icon: 'copy', danger: false },
-      // הצג "מידע" רק למנהלים
-      ...(isAdmin ? [{ key: 'info', label: 'מידע', icon: 'information-circle', danger: false } as OptionDef] : []),
-      { key: 'star', label: 'סמן בכוכב', icon: 'star', danger: false },
-      { key: 'pin', label: 'הצמד', icon: 'pin', danger: false },
-      { key: 'delete', label: 'מחק', icon: 'trash', danger: true },
+      { key: 'reply', label: 'השב', icon: 'arrow-undo-outline', danger: false },
+      { key: 'forward', label: 'העבר', icon: 'arrow-redo-outline', danger: false },
+      { key: 'copy', label: 'העתק', icon: 'copy-outline', danger: false },
+      // הצג "ערוך" רק אם זו ההודעה של המשתמש
+      ...(isMe ? [{ key: 'edit', label: 'ערוך', icon: 'create-outline', danger: false } as OptionDef] : []),
+      { key: 'star', label: 'סמן בכוכב', icon: 'star-outline', danger: false },
+      // הצג "הצמד" רק למנהלים
+      ...(isAdmin ? [{ key: 'pin', label: 'הצמד', icon: 'pin-outline', danger: false } as OptionDef] : []),
+      { key: 'delete', label: 'מחק', icon: 'trash-outline', danger: true },
     ];
     return base;
-  }, [isAdmin]);
-
-  const handleDialogPressIn = () => {
-    Animated.spring(dialogScale, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleDialogPressOut = () => {
-    Animated.spring(dialogScale, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
+  }, [isAdmin, isMe]);
 
   return (
     <View style={styles.dialog}>
       {/* Handle Bar */}
-      <View style={styles.handleBar} />
+      <View style={[styles.handleBar, { backgroundColor: DesignTokens.colors.primary.main }]} />
       
       {/* Options */}
       <View style={styles.optionsContainer}>
@@ -132,51 +90,39 @@ export default function ContextMenu({ onSelect, isAdmin = false }: { onSelect: (
 
 const styles = StyleSheet.create({
   dialog: {
-    backgroundColor: 'rgba(28, 28, 30, 0.98)',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: 'hidden',
+    backgroundColor: 'transparent',
     width: '100%',
-    paddingBottom: 34
-  },
-  handleBar: {
-    width: 36,
-    height: 5,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 2.5,
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 8,
   },
   optionsContainer: {
     backgroundColor: 'transparent',
-    paddingHorizontal: 0
+    paddingHorizontal: 0,
+    paddingBottom: 0,
+    position: 'relative',
+    zIndex: 1,
   },
   option: {
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
   optionTouchable: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    minHeight: 54,
+    paddingVertical: 16,
+    minHeight: 56,
     backgroundColor: 'transparent',
-  },
-  optionPressed: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   lastOption: {
     borderBottomWidth: 0,
+    marginBottom: 0,
   },
   optionIcon: {
-    marginLeft: 16,
-    width: 22,
+    marginLeft: 12,
+    width: 20,
   },
   optionLabel: {
     fontSize: 17,
-    fontWeight: '400',
+    fontWeight: '500',
     color: '#FFFFFF',
     flex: 1,
     textAlign: 'right'

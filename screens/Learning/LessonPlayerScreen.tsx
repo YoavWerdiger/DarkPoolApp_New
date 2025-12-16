@@ -8,14 +8,16 @@ import {
   Alert,
   ActivityIndicator,
   Dimensions,
-  SafeAreaView,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useLesson, useSaveProgress, useGetSignedUrl } from '../../hooks/useLearning';
 import { LessonWithProgress, BlockType } from '../../types/learning';
-import { ArrowLeft, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
+import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3 } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -34,6 +36,11 @@ export const LessonPlayerScreen: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [lessonProgress, setLessonProgress] = useState(0);
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  const [notes, setNotes] = useState('');
 
   const { data: lesson, isLoading, error } = useLesson(lessonId);
   const saveProgressMutation = useSaveProgress();
@@ -69,6 +76,13 @@ export const LessonPlayerScreen: React.FC = () => {
 
   const handleVideoProgress = useCallback((position: number) => {
     setVideoPosition(position);
+    setProgress(position);
+    
+    // Calculate progress percentage
+    if (duration > 0) {
+      const progressPercentage = Math.round((position / duration) * 100);
+      setLessonProgress(Math.min(Math.max(progressPercentage, 0), 100));
+    }
     
     // Save progress every 5 seconds
     if (Math.floor(position) % 5 === 0) {
@@ -78,7 +92,7 @@ export const LessonPlayerScreen: React.FC = () => {
         last_position_seconds: Math.floor(position)
       });
     }
-  }, [lessonId, saveProgressMutation]);
+  }, [lessonId, saveProgressMutation, duration]);
 
   const handleVideoComplete = useCallback(() => {
     // Mark lesson as completed
@@ -135,7 +149,14 @@ export const LessonPlayerScreen: React.FC = () => {
           shouldPlay={isPlaying}
           onPlaybackStatusUpdate={(status) => {
             if (status.isLoaded) {
-              handleVideoProgress(status.positionMillis / 1000);
+              const currentPosition = status.positionMillis / 1000;
+              const totalDuration = status.durationMillis ? status.durationMillis / 1000 : duration;
+              
+              if (totalDuration > 0 && totalDuration !== duration) {
+                setDuration(totalDuration);
+              }
+              
+              handleVideoProgress(currentPosition);
               if (status.didJustFinish) {
                 handleVideoComplete();
               }
@@ -230,214 +251,259 @@ export const LessonPlayerScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={styles.loadingText}>טוען שיעור...</Text>
-      </View>
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        style={styles.gradientContainer}
+      >
+        <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+            <Text style={styles.loadingText}>טוען שיעור...</Text>
+          </View>
+        </RNSafeAreaView>
+      </LinearGradient>
     );
   }
 
   if (error || !lesson) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>שגיאה בטעינת השיעור</Text>
-        <Text style={styles.errorMessage}>
-          {error?.message || 'השיעור לא נמצא'}
-        </Text>
-      </View>
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        style={styles.gradientContainer}
+      >
+        <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>שגיאה בטעינת השיעור</Text>
+            <Text style={styles.errorMessage}>
+              {error?.message || 'השיעור לא נמצא'}
+            </Text>
+          </View>
+        </RNSafeAreaView>
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header - SwiftUI Style */}
-      <SafeAreaView style={styles.headerSafeArea}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <ArrowLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </TouchableOpacity>
-          
-          <View style={styles.headerContent}>
-            <Text style={styles.lessonTitle} numberOfLines={2}>
-              {lesson.title}
-            </Text>
-            <Text style={styles.blockInfo}>
-              {currentBlockIndex + 1} מתוך {lesson.blocks?.length || 0}
-            </Text>
-          </View>
-        </View>
-      </SafeAreaView>
-
-      {/* Content */}
-      <View style={styles.content}>
-        <View style={styles.contentCard}>
-          {renderCurrentBlock()}
-        </View>
-      </View>
-
-      {/* Video Controls - SwiftUI Style */}
-      {currentBlock?.type === 'video' && (
-        <View style={styles.videoControlsContainer}>
-          <View style={styles.videoControls}>
+    <LinearGradient
+      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+      style={styles.gradientContainer}
+    >
+      <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+        {/* Header */}
+        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.md }}>
+          <View style={styles.header}>
             <TouchableOpacity
-              style={styles.playButton}
-              onPress={() => setIsPlaying(!isPlaying)}
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
             >
-              {isPlaying ? (
-                <Pause size={24} color={DesignTokens.colors.background.primary} strokeWidth={2} />
-              ) : (
-                <Play size={24} color={DesignTokens.colors.background.primary} strokeWidth={2} />
-              )}
+              <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
             </TouchableOpacity>
           </View>
         </View>
-      )}
 
-      {/* Navigation - SwiftUI Style */}
-      <View style={styles.navigationContainer}>
-        <View style={styles.navigation}>
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            currentBlockIndex === 0 && styles.navButtonDisabled
-          ]}
-          onPress={goToPreviousBlock}
-          disabled={currentBlockIndex === 0}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
         >
-          <ChevronLeft size={20} color={currentBlockIndex === 0 ? DesignTokens.colors.text.tertiary : DesignTokens.colors.primary.main} strokeWidth={2} />
-          <Text style={[
-            styles.navButtonText,
-            currentBlockIndex === 0 && styles.navButtonTextDisabled
-          ]}>
-            הקודם
-          </Text>
-        </TouchableOpacity>
+          {/* Lesson Info Card */}
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md, marginBottom: DesignTokens.spacing.lg }}>
+            <UICard variant="blur" padding="lg">
+              <Text style={styles.lessonInfoTitle}>{lesson.title}</Text>
+              <Text style={styles.lessonInfoSubtitle}>שיעור {currentBlockIndex + 1} בקורס הכשרה של דוד אריאל</Text>
+              
+              {/* Progress Info */}
+              {currentBlock?.type === 'video' && duration > 0 && (
+                <View style={styles.lessonProgressInfo}>
+                  <View style={styles.progressTimeRow}>
+                    <Text style={styles.progressTimeText}>
+                      {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')} / {Math.floor(duration / 60)}:{(Math.floor(duration % 60)).toString().padStart(2, '0')}
+                    </Text>
+                    <Text style={styles.progressPercentageText}>{lessonProgress}%</Text>
+                  </View>
+                  <View style={styles.progressBarContainer}>
+                    <View style={[styles.progressBarFill, { width: `${Math.min(Math.max(lessonProgress, 0), 100)}%` }]} />
+                  </View>
+                </View>
+              )}
+            </UICard>
+          </View>
 
-        <TouchableOpacity
-          style={[
-            styles.navButton,
-            (!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) && styles.navButtonDisabled
-          ]}
-          onPress={goToNextBlock}
-          disabled={!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1}
-        >
-          <Text style={[
-            styles.navButtonText,
-            (!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) && styles.navButtonTextDisabled
-          ]}>
-            הבא
-          </Text>
-          <ChevronRight size={20} color={(!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) ? DesignTokens.colors.text.tertiary : DesignTokens.colors.primary.main} strokeWidth={2} />
-        </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+          {/* Content */}
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
+            <UICard variant="blur" padding="none">
+              {renderCurrentBlock()}
+            </UICard>
+          </View>
+
+          {/* Video Controls */}
+          {currentBlock?.type === 'video' && (
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
+              <UICard variant="blur" padding="lg">
+                <View style={styles.videoControls}>
+                  <TouchableOpacity
+                    style={styles.playButton}
+                    onPress={() => setIsPlaying(!isPlaying)}
+                  >
+                    {isPlaying ? (
+                      <Pause size={24} color={DesignTokens.colors.background.primary} strokeWidth={2} />
+                    ) : (
+                      <Play size={24} color={DesignTokens.colors.background.primary} strokeWidth={2} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </UICard>
+            </View>
+          )}
+
+          {/* Personal Notes Card */}
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
+            <UICard variant="blur" padding="md">
+              <TouchableOpacity
+                style={styles.notesHeader}
+                onPress={() => setNotesExpanded(!notesExpanded)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.notesTitle}>הערות אישיות על השיעור</Text>
+                <View style={styles.notesHeaderIcons}>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      // TODO: Open notes editor
+                    }}
+                    style={styles.notesEditButton}
+                  >
+                    <Edit3 size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                  </TouchableOpacity>
+                  <ChevronDown 
+                    size={20} 
+                    color={DesignTokens.colors.text.tertiary} 
+                    strokeWidth={2}
+                    style={{ transform: [{ rotate: notesExpanded ? '180deg' : '0deg' }] }}
+                  />
+                </View>
+              </TouchableOpacity>
+              
+              {notesExpanded && (
+                <View style={styles.notesContent}>
+                  <Text style={styles.notesPlaceholder}>לחץ לכתיבת הערות...</Text>
+                </View>
+              )}
+            </UICard>
+          </View>
+
+          {/* Navigation */}
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingBottom: DesignTokens.spacing.lg }}>
+            <UICard variant="blur" padding="md">
+              <View style={styles.navigation}>
+                <TouchableOpacity
+                  style={[
+                    styles.navButton,
+                    (!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) && styles.navButtonDisabled
+                  ]}
+                  onPress={goToNextBlock}
+                  disabled={!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1}
+                >
+                  <ChevronRight size={20} color={(!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) ? DesignTokens.colors.text.tertiary : DesignTokens.colors.primary.main} strokeWidth={2} />
+                  <Text style={[
+                    styles.navButtonText,
+                    (!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) && styles.navButtonTextDisabled
+                  ]}>
+                    הבא
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.navButton,
+                    currentBlockIndex === 0 && styles.navButtonDisabled
+                  ]}
+                  onPress={goToPreviousBlock}
+                  disabled={currentBlockIndex === 0}
+                >
+                  <Text style={[
+                    styles.navButtonText,
+                    currentBlockIndex === 0 && styles.navButtonTextDisabled
+                  ]}>
+                    הקודם
+                  </Text>
+                  <ChevronLeft size={20} color={currentBlockIndex === 0 ? DesignTokens.colors.text.tertiary : DesignTokens.colors.primary.main} strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+            </UICard>
+          </View>
+        </ScrollView>
+      </RNSafeAreaView>
+    </LinearGradient>
   );
 };
 
-const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create({
-  container: {
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
+  gradientContainer: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
   },
-  headerSafeArea: {
-    backgroundColor: tokens.colors.background.secondary,
+  safeAreaContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: tokens.spacing['5xl'],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: tokens.colors.background.primary,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: tokens.spacing.md,
+    fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: tokens.spacing.lg,
   },
   errorIcon: {
     fontSize: 48,
-    marginBottom: 24,
+    marginBottom: tokens.spacing.lg,
   },
   errorTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
-    marginBottom: 8,
+    marginBottom: tokens.spacing.xs,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: 14,
+    fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   errorText: {
-    fontSize: 16,
+    fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: tokens.colors.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'flex-end',
   },
   backButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  lessonTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-  },
-  blockInfo: {
-    fontSize: 14,
-    color: tokens.colors.text.secondary,
-    marginTop: 4,
-    textAlign: 'right',
-  },
-  content: {
-    flex: 1,
-    backgroundColor: tokens.colors.background.primary,
-    padding: 20,
-  },
-  contentCard: {
-    flex: 1,
-    backgroundColor: tokens.colors.background.secondary,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
   videoContainer: {
-    flex: 1,
     backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
@@ -448,29 +514,29 @@ const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create
     backgroundColor: '#000',
   },
   textContainer: {
-    flex: 1,
-    padding: 20,
+    padding: tokens.spacing.lg,
+    minHeight: 200,
   },
   textContent: {
-    fontSize: 16,
+    fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.primary,
     lineHeight: 24,
     textAlign: 'right',
   },
   pdfContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: tokens.spacing.lg,
+    minHeight: 200,
   },
   blockErrorContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: tokens.spacing.lg,
+    minHeight: 200,
   },
   blockErrorText: {
-    fontSize: 16,
+    fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
@@ -478,83 +544,69 @@ const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: tokens.spacing.lg,
   },
   blockLoadingText: {
-    marginTop: 16,
-    fontSize: 16,
+    marginTop: tokens.spacing.md,
+    fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
   },
   pdfText: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
-    marginBottom: 8,
+    marginBottom: tokens.spacing.xs,
   },
   pdfSubtext: {
-    fontSize: 14,
+    fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: tokens.spacing.lg,
   },
   downloadButton: {
     backgroundColor: tokens.colors.primary.main,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.lg,
   },
   downloadButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: '#000000',
   },
   quizContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: tokens.spacing.lg,
+    minHeight: 200,
   },
   quizText: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
-    marginBottom: 8,
+    marginBottom: tokens.spacing.xs,
   },
   quizSubtext: {
-    fontSize: 14,
+    fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: tokens.spacing.lg,
   },
   quizButton: {
     backgroundColor: tokens.colors.primary.main,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.lg,
   },
   quizButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: '#000000',
-  },
-  videoControlsContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
   },
   videoControls: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 20,
-    backgroundColor: tokens.colors.background.secondary,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
   },
   playButton: {
     width: 60,
@@ -569,39 +621,102 @@ const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create
     shadowRadius: 8,
     elevation: 4,
   },
-  navigationContainer: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-  },
   navigation: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    gap: tokens.spacing.md,
   },
   navButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.lg,
+    gap: tokens.spacing.xs,
   },
   navButtonDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     opacity: 0.5,
   },
   navButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
   },
   navButtonTextDisabled: {
     color: tokens.colors.text.tertiary,
+  },
+  lessonInfoTitle: {
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
+    marginBottom: tokens.spacing.xs,
+  },
+  lessonInfoSubtitle: {
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
+    textAlign: 'right',
+    marginBottom: tokens.spacing.md,
+  },
+  lessonProgressInfo: {
+    marginTop: tokens.spacing.md,
+  },
+  progressTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: tokens.spacing.xs,
+  },
+  progressTimeText: {
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
+  },
+  progressPercentageText: {
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+  },
+  progressBarContainer: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: 3,
+  },
+  notesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  notesTitle: {
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.danger.main,
+  },
+  notesHeaderIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+  },
+  notesEditButton: {
+    padding: tokens.spacing.xs,
+  },
+  notesContent: {
+    marginTop: tokens.spacing.md,
+    paddingTop: tokens.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  notesPlaceholder: {
+    fontSize: tokens.typography.fontSize.base,
+    color: tokens.colors.text.tertiary,
+    textAlign: 'right',
   },
 });
 

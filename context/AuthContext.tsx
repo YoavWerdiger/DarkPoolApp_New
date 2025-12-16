@@ -31,27 +31,38 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const deviceTokenRegisteredRef = React.useRef(false);
+
+  // פונקציה לרישום device token - תקרא רק פעם אחת
+  const registerDeviceTokenOnce = async (userId: string) => {
+    if (deviceTokenRegisteredRef.current) {
+      console.log('📱 AuthContext: Device token already registered, skipping');
+      return;
+    }
+    deviceTokenRegisteredRef.current = true;
+    console.log('📱 AuthContext: Registering device token for user:', userId);
+    try {
+      const result = await NotificationService.registerDeviceToken();
+      console.log('📱 AuthContext: registerDeviceToken result:', result);
+    } catch (error) {
+      console.error('📱 AuthContext: registerDeviceToken error:', error);
+      deviceTokenRegisteredRef.current = false; // אפשר לנסות שוב
+    }
+  };
 
   useEffect(() => {
     console.log('🔄 AuthContext: Initializing...');
     initializeAuth();
-    const { data: { subscription } } = AuthService.onAuthStateChange(async (user) => {
-      console.log('🔄 AuthContext: Auth state changed, user:', user?.id || 'null');
-      setUser(user);
-      setIsLoading(false);
+    const { data: { subscription } } = AuthService.onAuthStateChange(async (authUser) => {
+      console.log('🔄 AuthContext: Auth state changed, user:', authUser?.id || 'null');
+      setUser(authUser);
       
-      // רישום device token כשהמשתמש נכנס
-      if (user) {
-        console.log('📱 AuthContext: Registering device token for user:', user.id);
-        // נחכה קצת כדי לוודא שהכל מוכן
-        setTimeout(async () => {
-          console.log('⏰ AuthContext: Timeout completed, calling registerDeviceToken...');
-          const result = await NotificationService.registerDeviceToken();
-          console.log('📱 AuthContext: registerDeviceToken result:', result);
-        }, 2000);
-      } else {
+      if (!authUser) {
         console.log('🔄 AuthContext: User signed out, state updated to null');
+        setIsLoading(false);
+        deviceTokenRegisteredRef.current = false; // אפס כשמתנתקים
       }
+      // לא קוראים לרישום token כאן - זה יקרא ב-initializeAuth או signIn
     });
     return () => {
       console.log('🧹 AuthContext: Cleaning up auth state listener');
@@ -60,26 +71,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const initializeAuth = async () => {
-    console.log('🔄 AuthContext: Initializing...');
-    const currentUser = await checkUser();
-    console.log('🔍 AuthContext: Current user after checkUser:', currentUser?.id);
+    let finalUser = await checkUser();
+    console.log('🔍 AuthContext: Current user after checkUser:', finalUser?.id);
     
-    // אם אין משתמש מחובר, ננסה התחברות אוטומטית
-    if (!currentUser) {
-      console.log('🔄 AuthContext: No current user, attempting auto-login...');
-      await attemptAutoLogin();
+    // אם אין משתמש מחובר, נבדוק אם המשתמש התנתק במפורש
+    if (!finalUser) {
+      // בדיקה אם המשתמש התנתק במפורש (לא רוצים auto-login אחרי sign out)
+      const wasExplicitLogout = await AsyncStorage.getItem('explicit_logout');
+      
+      if (wasExplicitLogout === 'true') {
+        console.log('🔄 AuthContext: Explicit logout detected, skipping auto-login');
+        // נמחק את הפלג הזה
+        await AsyncStorage.removeItem('explicit_logout');
+        // נמחק גם את הנתונים השמורים אם יש - וודא שהם נמחקים
+        try {
+          await AsyncStorage.removeItem('saved_email');
+          await AsyncStorage.removeItem('saved_password');
+          await AsyncStorage.removeItem('remember_me');
+          console.log('✅ AuthContext: Cleared all saved credentials after explicit logout');
+        } catch (error) {
+          console.error('❌ AuthContext: Error clearing credentials:', error);
+        }
+        setIsLoading(false);
+        return;
+      } else {
+        console.log('🔄 AuthContext: No current user, attempting auto-login...');
+        finalUser = await attemptAutoLogin();
+      }
     }
     
-    // רישום device token אם יש משתמש מחובר
-    if (currentUser) {
-      console.log('📱 AuthContext: User found in initializeAuth, registering device token...');
-      setTimeout(async () => {
-        const result = await NotificationService.registerDeviceToken();
-        console.log('📱 AuthContext: registerDeviceToken result (initializeAuth):', result);
-      }, 2000);
+    // רישום device token אם יש משתמש מחובר (ללא delay מיותר)
+    if (finalUser) {
+      registerDeviceTokenOnce(finalUser.id);
     }
     
-    console.log('✅ AuthContext: Initialization complete, user:', currentUser?.id);
+    console.log('✅ AuthContext: Initialization complete, user:', finalUser?.id);
     setIsLoading(false);
   };
 
@@ -91,12 +117,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (user) {
         console.log('✅ AuthContext: Current user loaded:', user?.id);
         setUser(user);
-        // רישום device token
-        setTimeout(async () => {
-          console.log('⏰ AuthContext: Timeout completed (checkUser), calling registerDeviceToken...');
-          const result = await NotificationService.registerDeviceToken();
-          console.log('📱 AuthContext: registerDeviceToken result (checkUser):', result);
-        }, 2000);
         return user;
       }
 
@@ -110,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const attemptAutoLogin = async () => {
+  const attemptAutoLogin = async (): Promise<AuthUser | null> => {
     try {
       console.log('🔄 AuthContext: Attempting auto-login...');
       const savedRememberMe = await AsyncStorage.getItem('remember_me');
@@ -119,46 +139,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (savedRememberMe === 'true' && savedEmail && savedPassword) {
         console.log('🔄 AuthContext: Found saved credentials, attempting auto-login...');
-        const { user, error } = await AuthService.signIn({ email: savedEmail, password: savedPassword });
+        const { user: autoUser, error } = await AuthService.signIn({ email: savedEmail, password: savedPassword });
         if (error) {
           console.log('❌ AuthContext: Auto-login failed:', error);
           // אם ההתחברות האוטומטית נכשלת, נמחק את הנתונים השמורים
           await AsyncStorage.removeItem('saved_email');
           await AsyncStorage.removeItem('saved_password');
           await AsyncStorage.removeItem('remember_me');
-        } else if (user) {
+          return null;
+        } else if (autoUser) {
           console.log('✅ AuthContext: Auto-login successful');
-          setUser(user);
-          // רישום device token
-          setTimeout(async () => {
-            console.log('⏰ AuthContext: Timeout completed (auto-login), calling registerDeviceToken...');
-            const result = await NotificationService.registerDeviceToken();
-            console.log('📱 AuthContext: registerDeviceToken result (auto-login):', result);
-          }, 2000);
+          setUser(autoUser);
+          return autoUser;
         }
       }
+      return null;
     } catch (error) {
       console.error('❌ AuthContext: Error during auto-login:', error);
+      return null;
     }
   };
 
   const signIn = async (credentials: LoginCredentials): Promise<{ error: string | null }> => {
     console.log('🔄 AuthContext: Signing in user with email:', credentials.email);
     setIsLoading(true);
+    deviceTokenRegisteredRef.current = false; // אפס לפני login חדש
     try {
-      const { user, error } = await AuthService.signIn(credentials);
+      const { user: signedInUser, error } = await AuthService.signIn(credentials);
       if (error) {
         console.error('❌ AuthContext: Sign in error:', error);
         return { error };
       }
-      console.log('✅ AuthContext: User signed in successfully:', user?.id);
-      setUser(user);
-      // רישום device token
-      setTimeout(async () => {
-        console.log('⏰ AuthContext: Timeout completed (signIn), calling registerDeviceToken...');
-        const result = await NotificationService.registerDeviceToken();
-        console.log('📱 AuthContext: registerDeviceToken result (signIn):', result);
-      }, 2000);
+      console.log('✅ AuthContext: User signed in successfully:', signedInUser?.id);
+      setUser(signedInUser);
+      // רישום device token - ללא delay
+      if (signedInUser) {
+        registerDeviceTokenOnce(signedInUser.id);
+      }
       return { error: null };
     } catch (error: any) {
       console.error('❌ AuthContext: Sign in exception:', error);
@@ -172,13 +189,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🔄 AuthContext: Signing up user with email:', credentials.email);
     setIsLoading(true);
     try {
-      const { user, error } = await AuthService.signUp(credentials);
+      // מחיקת כל הנתונים השמורים לפני יצירת משתמש חדש
+      // זה מבטיח שלא תהיה התחברות אוטומטית למשתמש אחר
+      try {
+        await AsyncStorage.removeItem('saved_email');
+        await AsyncStorage.removeItem('saved_password');
+        await AsyncStorage.removeItem('remember_me');
+        await AsyncStorage.setItem('explicit_logout', 'true');
+        console.log('✅ AuthContext: Cleared all saved credentials before sign up');
+      } catch (storageError) {
+        console.error('❌ AuthContext: Error clearing saved credentials:', storageError);
+      }
+      
+      // אם יש משתמש מחובר, נתנתק קודם
+      if (user) {
+        console.log('🔄 AuthContext: User already logged in, signing out first...');
+        // התנתקות ישירה דרך AuthService (לא דרך signOut כדי למנוע בעיות)
+        try {
+          setUser(null);
+          await AuthService.signOut();
+          console.log('✅ AuthContext: Signed out existing user');
+        } catch (signOutError) {
+          console.error('⚠️ AuthContext: Error signing out existing user (non-critical):', signOutError);
+          // לא נכשל אם זה לא עובד - נמשיך עם יצירת המשתמש החדש
+        }
+      }
+      
+      const { user: newUser, error } = await AuthService.signUp(credentials);
       if (error) {
         console.error('❌ AuthContext: Sign up error:', error);
         return { error };
       }
-      console.log('✅ AuthContext: User signed up successfully:', user?.id);
-      setUser(user);
+      console.log('✅ AuthContext: User signed up successfully:', newUser?.id);
+      setUser(newUser);
+      
+      // מחיקת explicit_logout כדי לאפשר התחברות אוטומטית למשתמש החדש (אם יסומן "זכור אותי")
+      try {
+        await AsyncStorage.removeItem('explicit_logout');
+        console.log('✅ AuthContext: Removed explicit_logout flag for new user');
+      } catch (error) {
+        console.error('❌ AuthContext: Error removing explicit_logout:', error);
+      }
+      
       return { error: null };
     } catch (error: any) {
       console.error('❌ AuthContext: Sign up exception:', error);
@@ -189,9 +241,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async (keepCredentials: boolean = false): Promise<{ error: string | null }> => {
-    setIsLoading(true);
     try {
       console.log('🔄 AuthContext: Starting sign out...');
+      
+      // אפס את ה-flag של רישום token
+      deviceTokenRegisteredRef.current = false;
+      
+      // עדכון ה-user state מיד כדי שהניווט יתבצע מיד
+      setUser(null);
+      setIsLoading(false);
       
       // ביטול device token לפני התנתקות
       try {
@@ -203,31 +261,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // לא נכשל אם זה לא עובד - זה לא קריטי
       }
       
-      // מחיקת נתוני התחברות שמורים בהתנתקות (אלא אם כן המשתמש בחר לשמור)
-      if (!keepCredentials) {
-        try {
-          await AsyncStorage.removeItem('saved_email');
-          await AsyncStorage.removeItem('saved_password');
-          await AsyncStorage.removeItem('remember_me');
-          console.log('✅ AuthContext: Cleared saved credentials on logout');
-        } catch (storageError) {
-          console.error('❌ AuthContext: Error clearing saved credentials:', storageError);
-        }
-      } else {
-        console.log('✅ AuthContext: Keeping saved credentials as requested');
+      // מחיקת נתוני התחברות שמורים בהתנתקות - תמיד מוחקים כדי למנוע auto-login
+      // אם המשתמש רוצה להתחבר שוב, הוא יכול לסמן "זכור אותי" מחדש
+      try {
+        await AsyncStorage.removeItem('saved_email');
+        await AsyncStorage.removeItem('saved_password');
+        await AsyncStorage.removeItem('remember_me');
+        // סימון שהמשתמש התנתק במפורש כדי למנוע auto-login בריענון
+        await AsyncStorage.setItem('explicit_logout', 'true');
+        console.log('✅ AuthContext: Cleared saved credentials on logout');
+      } catch (storageError) {
+        console.error('❌ AuthContext: Error clearing saved credentials:', storageError);
       }
       
+      // מחיקת כל ה-device preferences - הם ספציפיים למכשיר ולמשתמש
+      // כשמשתמש מתנתק, כל ההגדרות שלו במכשיר הזה נמחקות
+      try {
+        console.log('🧹 AuthContext: Clearing device preferences...');
+        await AsyncStorage.removeItem('appSettings'); // הגדרות אפליקציה (dark mode, language, etc.)
+        await AsyncStorage.removeItem('notificationSettings'); // הגדרות התראות
+        console.log('✅ AuthContext: Device preferences cleared');
+      } catch (prefsError) {
+        console.error('⚠️ AuthContext: Error clearing device preferences (non-critical):', prefsError);
+        // לא נכשל אם זה לא עובד - זה לא קריטי
+      }
+      
+      // קריאה ל-signOut ב-Supabase (זה יעדכן את ה-onAuthStateChange)
       const { error } = await AuthService.signOut();
       if (error) {
         console.error('❌ AuthContext: Error signing out:', error);
+        // גם אם יש שגיאה, המשתמש כבר הוגדר כ-null
         return { error };
       }
-      
-      // עדכון ה-user state - ה-onAuthStateChange אמור לטפל בזה, אבל נוסיף fallback
-      setUser(null);
-      
-      // נמתין קצת כדי לוודא שה-onAuthStateChange event נקרא
-      await new Promise(resolve => setTimeout(resolve, 100));
       
       console.log('✅ AuthContext: Sign out completed successfully');
       return { error: null };
@@ -235,9 +300,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('❌ AuthContext: Exception in sign out:', error);
       // גם במקרה של שגיאה, ננסה להתנתק
       setUser(null);
-      return { error: error.message };
-    } finally {
       setIsLoading(false);
+      // נמחק את הנתונים גם במקרה של שגיאה
+      try {
+        await AsyncStorage.removeItem('saved_email');
+        await AsyncStorage.removeItem('saved_password');
+        await AsyncStorage.removeItem('remember_me');
+        await AsyncStorage.setItem('explicit_logout', 'true');
+        // מחיקת device preferences גם במקרה של שגיאה
+        await AsyncStorage.removeItem('appSettings');
+        await AsyncStorage.removeItem('notificationSettings');
+      } catch (storageError) {
+        console.error('❌ AuthContext: Error clearing saved credentials in exception:', storageError);
+      }
+      return { error: error.message };
     }
   };
 

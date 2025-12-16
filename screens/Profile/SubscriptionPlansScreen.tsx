@@ -8,10 +8,11 @@ import {
   Dimensions,
   Animated,
   Platform,
-  FlatList
+  FlatList,
+  StyleSheet
 } from 'react-native';
 import { 
-  ArrowLeft,
+  ArrowRight,
   Check,
   X,
   Star,
@@ -22,12 +23,15 @@ import {
   Calendar,
   Gift
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedToggle from '../../components/ui/AnimatedToggle';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = Math.round(screenWidth * 0.78);
@@ -75,6 +79,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [scrollX] = useState(new Animated.Value(0));
@@ -228,18 +233,16 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
     const IconComponent = getPlanIcon(plan.name);
     const savings = getSavingsText(plan);
     const isSelected = selectedPlan === plan.id;
-    const cardBackground = isDarkMode ? '#2A2A2A' : '#FFFFFF';
+    const cardBackground = 'rgba(255, 255, 255, 0.05)';
     const accentColor = plan.color;
     const borderColor = isSelected
       ? plan.color
-      : isDarkMode
-        ? 'rgba(255, 255, 255, 0.1)'
-        : 'rgba(0, 0, 0, 0.1)';
-    const textColor = theme.textPrimary;
-    const secondaryTextColor = theme.textSecondary;
-    const tertiaryTextColor = theme.textTertiary;
+      : 'rgba(255, 255, 255, 0.1)';
+    const textColor = DesignTokens.colors.text.primary;
+    const secondaryTextColor = DesignTokens.colors.text.secondary;
+    const tertiaryTextColor = DesignTokens.colors.text.tertiary;
     const buttonTextColor = plan.price === 0
-      ? theme.textSecondary
+      ? DesignTokens.colors.text.secondary
       : DesignTokens.colors.text.primary;
     
     const inputRange = [
@@ -299,9 +302,9 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           style={{
             width: CARD_WIDTH,
             backgroundColor: cardBackground,
-            borderRadius: 24,
-            padding: 24,
-            paddingBottom: 28,
+            borderRadius: DesignTokens.borderRadius['2xl'],
+            padding: DesignTokens.spacing.lg,
+            paddingBottom: DesignTokens.spacing['2xl'],
             borderWidth: isSelected ? 2 : 1,
             borderColor,
             shadowColor: accentColor,
@@ -527,44 +530,56 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
-        {/* Header */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-          backgroundColor: theme.cardBackground,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.border
-        }}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={{
-              width: 36,
-              height: 36,
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: 18,
-              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
-            }}
+    <View style={{ flex: 1 }}>
+      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header עם blur */}
+        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <UICard 
+            variant="blur"
+            padding="sm"
           >
-            <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
-          </TouchableOpacity>
-          
-          <Text style={{
-            flex: 1,
-            textAlign: 'center',
-            fontSize: 20,
-            fontWeight: '700',
-            color: theme.textPrimary,
-            marginRight: 36
-          }}>
-            בחר מסלול
-          </Text>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: DesignTokens.spacing.md,
+              minHeight: 44,
+            }}>
+              <Text style={{
+                flex: 1,
+                textAlign: 'center',
+                fontSize: DesignTokens.typography.fontSize.lg,
+                fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                color: DesignTokens.colors.text.primary,
+                marginLeft: 36
+              }}>
+                בחר מסלול
+              </Text>
+
+              <TouchableOpacity 
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.7}
+                style={{
+                  width: 36,
+                  height: 36,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderRadius: 18,
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                }}
+              >
+                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          </UICard>
         </View>
-      </SafeAreaView>
 
       <Animated.ScrollView 
         style={{ flex: 1 }}
@@ -578,9 +593,9 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
       >
         {/* Title */}
         <Animated.View style={{ 
-          paddingHorizontal: 20, 
-          paddingTop: 24, 
-          marginBottom: 24,
+          paddingHorizontal: DesignTokens.spacing.lg, 
+          paddingTop: DesignTokens.spacing.lg, 
+          marginBottom: DesignTokens.spacing.lg,
           transform: [{
             translateY: scrollY.interpolate({
               inputRange: [0, 100],
@@ -589,27 +604,27 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             }),
           }],
         }}>
-          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+          <View style={{ alignItems: 'center', marginBottom: DesignTokens.spacing.md }}>
             <View style={{
               width: 60,
               height: 4,
-              backgroundColor: '#05d157',
+              backgroundColor: DesignTokens.colors.primary.main,
               borderRadius: 2,
-              marginBottom: 16
+              marginBottom: DesignTokens.spacing.md
             }} />
             <Text style={{
-              fontSize: 24,
-              fontWeight: '700',
-              color: theme.textPrimary,
+              fontSize: DesignTokens.typography.fontSize['2xl'],
+              fontWeight: DesignTokens.typography.fontWeight.bold as any,
+              color: DesignTokens.colors.text.primary,
               textAlign: 'center',
-              marginBottom: 8,
+              marginBottom: DesignTokens.spacing.xs,
               letterSpacing: -0.5
             }}>
               בחר את המסלול שלך
             </Text>
             <Text style={{
-              fontSize: 15,
-              color: theme.textSecondary,
+              fontSize: DesignTokens.typography.fontSize.base,
+              color: DesignTokens.colors.text.secondary,
               textAlign: 'center',
               lineHeight: 22,
               maxWidth: 280
@@ -620,16 +635,21 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
         </Animated.View>
 
         {/* Billing Period Toggle */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-          <View style={{
-            flexDirection: 'row',
-            backgroundColor: DesignTokens.colors.background.secondary,
-            borderRadius: 30,
-            padding: 4,
-            alignSelf: 'center',
-            width: '100%',
-            maxWidth: 400
-          }}>
+        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
+          <UICard
+            variant="blur"
+            padding="xs"
+            style={{
+              alignSelf: 'center',
+              width: '100%',
+              maxWidth: 400
+            }}
+          >
+            <View style={{
+              flexDirection: 'row',
+              borderRadius: DesignTokens.borderRadius.full,
+              padding: 4,
+            }}>
             {BILLING_TABS.map((period) => {
               const isSelected = billingPeriod === period;
               return (
@@ -645,7 +665,6 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
-                    marginHorizontal: 2
                   }}
                 >
                   {isSelected && (
@@ -689,11 +708,12 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                 </TouchableOpacity>
               );
             })}
-          </View>
+            </View>
+          </UICard>
         </View>
 
         {/* Plans 3D Carousel (מרכזי) */}
-        <View style={{ marginBottom: 20 }}>
+        <View style={{ marginBottom: DesignTokens.spacing.lg }}>
           <Animated.FlatList
             ref={flatListRef}
             data={plans}
@@ -786,48 +806,48 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
         </View>
 
         {/* Detailed Comparison Table */}
-        <View style={{ paddingHorizontal: 20, marginTop: 32 }}>
-          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing['2xl'] }}>
+          <View style={{ alignItems: 'center', marginBottom: DesignTokens.spacing.lg }}>
             <Text style={{
-              fontSize: 18,
-              fontWeight: '600',
-              color: theme.textPrimary,
+              fontSize: DesignTokens.typography.fontSize.lg,
+              fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+              color: DesignTokens.colors.text.primary,
               textAlign: 'center',
-              marginBottom: 6
+              marginBottom: DesignTokens.spacing.xs
             }}>
               מה כלול בכל מסלול?
             </Text>
             <Text style={{
-              fontSize: 13,
-              color: theme.textSecondary,
+              fontSize: DesignTokens.typography.fontSize.sm,
+              color: DesignTokens.colors.text.secondary,
               textAlign: 'center'
             }}>
               השוואה מהירה של התכונות
             </Text>
           </View>
           
-          <View style={{
-            backgroundColor: theme.cardBackground,
-            borderRadius: 16,
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: theme.border,
-          }}>
+          <UICard
+            variant="blur"
+            padding="none"
+            style={{
+              overflow: 'hidden'
+            }}
+          >
             {/* Table Header */}
             <View style={{
               flexDirection: 'row-reverse',
-              backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
-              paddingVertical: 14,
-              paddingHorizontal: 12,
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              paddingVertical: DesignTokens.spacing.md,
+              paddingHorizontal: DesignTokens.spacing.md,
               borderBottomWidth: 1,
-              borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.1)',
+              borderBottomColor: 'rgba(255, 255, 255, 0.1)',
               alignItems: 'center'
             }}>
-              <View style={{ width: '32%', paddingLeft: 8 }}>
+              <View style={{ width: '32%', paddingLeft: DesignTokens.spacing.xs }}>
                 <Text style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: theme.textPrimary,
+                  fontSize: DesignTokens.typography.fontSize.sm,
+                  fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                  color: DesignTokens.colors.text.primary,
                   textAlign: 'right'
                 }}>
                   תכונה
@@ -836,8 +856,8 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
               {comparisonPlans.map((plan) => (
                 <View key={plan.id} style={{ flex: 1, alignItems: 'center' }}>
                   <Text style={{
-                    fontSize: 12,
-                    fontWeight: '600',
+                    fontSize: DesignTokens.typography.fontSize.xs,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
                     color: plan.color,
                     textAlign: 'center'
                   }}>
@@ -853,23 +873,23 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                 key={featureIndex}
                 style={{
                   flexDirection: 'row-reverse',
-                  paddingVertical: 12,
-                  paddingHorizontal: 12,
+                  paddingVertical: DesignTokens.spacing.md,
+                  paddingHorizontal: DesignTokens.spacing.md,
                   borderBottomWidth: featureIndex === allFeatures.length - 1 ? 0 : 1,
-                  borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.08)',
+                  borderBottomColor: 'rgba(255, 255, 255, 0.08)',
                   backgroundColor: featureIndex % 2 === 0 
                     ? 'transparent' 
-                    : isDarkMode ? 'rgba(255, 255, 255, 0.01)' : 'rgba(0, 0, 0, 0.02)',
+                    : 'rgba(255, 255, 255, 0.02)',
                   alignItems: 'center'
                 }}
               >
-                <View style={{ width: '32%', paddingLeft: 8 }}>
+                <View style={{ width: '32%', paddingLeft: DesignTokens.spacing.xs }}>
                   <Text style={{
-                    fontSize: 14,
-                    color: theme.textSecondary,
+                    fontSize: DesignTokens.typography.fontSize.sm,
+                    color: DesignTokens.colors.text.secondary,
                     textAlign: 'right',
                     lineHeight: 20,
-                    fontWeight: '500'
+                    fontWeight: DesignTokens.typography.fontWeight.medium as any
                   }}>
                     {feature}
                   </Text>
@@ -905,9 +925,9 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                           width: 24,
                           height: 24,
                           borderRadius: 12,
-                          backgroundColor: hexToRgba(accentColor, isDarkMode ? 0.32 : 0.22),
+                          backgroundColor: hexToRgba(accentColor, 0.2),
                           borderWidth: 1,
-                          borderColor: hexToRgba(accentColor, 0.6),
+                          borderColor: hexToRgba(accentColor, 0.5),
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
@@ -918,7 +938,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                           width: 24,
                           height: 24,
                           borderRadius: 12,
-                          backgroundColor: hexToRgba(CROSS_COLOR, isDarkMode ? 0.28 : 0.2),
+                          backgroundColor: hexToRgba(CROSS_COLOR, 0.15),
                           borderWidth: 1,
                           borderColor: CROSS_COLOR,
                           alignItems: 'center',
@@ -932,36 +952,28 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                 })}
               </View>
             ))}
-          </View>
+          </UICard>
         </View>
 
         {/* How It Works */}
-        <View style={{ paddingHorizontal: 20, marginTop: 32 }}>
-          <View style={{
-            backgroundColor: theme.cardBackground,
-            borderRadius: 20,
-            padding: 20,
-            borderWidth: 1,
-            borderColor: theme.border,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: isDarkMode ? 0.2 : 0.08,
-            shadowRadius: 16,
-            elevation: 6
-          }}>
+        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing['2xl'] }}>
+          <UICard
+            variant="blur"
+            padding="lg"
+          >
             <Text style={{
-              fontSize: 16,
-              fontWeight: '700',
-              color: theme.textPrimary,
+              fontSize: DesignTokens.typography.fontSize.base,
+              fontWeight: DesignTokens.typography.fontWeight.bold as any,
+              color: DesignTokens.colors.text.primary,
               textAlign: 'right',
-              marginBottom: 16
+              marginBottom: DesignTokens.spacing.md
             }}>
               איך זה עובד?
             </Text>
             <View style={{
               flexDirection: 'row-reverse',
               justifyContent: 'space-between',
-              gap: 12
+              gap: DesignTokens.spacing.sm
             }}>
               {[
                 { title: 'בחר מסלול', subtitle: 'מצא את הרמה שמתאימה לך' },
@@ -973,31 +985,33 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                     width: 44,
                     height: 44,
                     borderRadius: 22,
-                    backgroundColor: 'rgba(5, 209, 87, 0.12)',
+                    backgroundColor: `${DesignTokens.colors.primary.main}20`,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    marginBottom: 12
+                    marginBottom: DesignTokens.spacing.sm,
+                    borderWidth: 1,
+                    borderColor: `${DesignTokens.colors.primary.main}40`
                   }}>
                     <Text style={{
-                      fontSize: 18,
-                      fontWeight: '700',
-                      color: '#05d157'
+                      fontSize: DesignTokens.typography.fontSize.lg,
+                      fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                      color: DesignTokens.colors.primary.main
                     }}>
                       {index + 1}
                     </Text>
                   </View>
                   <Text style={{
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: theme.textPrimary,
+                    fontSize: DesignTokens.typography.fontSize.sm,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    color: DesignTokens.colors.text.primary,
                     textAlign: 'center',
-                    marginBottom: 4
+                    marginBottom: DesignTokens.spacing.xs / 2
                   }}>
                     {step.title}
                   </Text>
                   <Text style={{
-                    fontSize: 12,
-                    color: theme.textSecondary,
+                    fontSize: DesignTokens.typography.fontSize.xs,
+                    color: DesignTokens.colors.text.secondary,
                     textAlign: 'center',
                     lineHeight: 18
                   }}>
@@ -1006,19 +1020,20 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                 </View>
               ))}
             </View>
-            <View style={{ marginTop: 20 }}>
+            <View style={{ marginTop: DesignTokens.spacing.lg }}>
               <Text style={{
-                fontSize: 13,
-                color: theme.textSecondary,
+                fontSize: DesignTokens.typography.fontSize.sm,
+                color: DesignTokens.colors.text.secondary,
                 textAlign: 'right',
                 lineHeight: 20
               }}>
                 ניתן לעבור בין המסלולים בכל רגע – שדרוג או הורדה נכנסים לתוקף מידית, החיוב מתעדכן אוטומטית ואנחנו שומרים על כל ההטבות שכבר קיבלת. הכל מנוהל בצורה מאובטחת ושקופה, כדי שתוכל למקד את הזמן בלמידה ולא בבירוקרטיה.
               </Text>
             </View>
-          </View>
+          </UICard>
         </View>
       </Animated.ScrollView>
+      </RNSafeAreaView>
     </View>
   );
 }

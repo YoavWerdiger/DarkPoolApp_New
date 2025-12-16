@@ -10,9 +10,13 @@ import {
   TextInput,
   Modal,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { courseService } from '../../services/courseService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
+import { ArrowRight } from 'lucide-react-native';
 
 export const CoursePreviewScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -95,21 +99,27 @@ export const CoursePreviewScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={styles.backButtonText}>← חזרה</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>תצוגה מקדימה</Text>
-        </View>
+    <LinearGradient
+      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+      style={styles.gradientContainer}
+    >
+      <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>תצוגה מקדימה</Text>
+          </View>
 
-        {/* Course Info */}
-        <View style={styles.courseCard}>
+          {/* Course Info */}
+          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
           <Text style={styles.courseTitle}>{preview.course.title}</Text>
           <Text style={styles.courseSubtitle}>{preview.course.subtitle}</Text>
           <Text style={styles.courseDescription}>{preview.course.description}</Text>
@@ -140,14 +150,14 @@ export const CoursePreviewScreen: React.FC = () => {
               </Text>
             </View>
           )}
-        </View>
+          </UICard>
 
-        {/* Lessons List */}
-        <View style={styles.lessonsSection}>
-          <Text style={styles.sectionTitle}>רשימת שיעורים ({preview.lessons.length})</Text>
-          
-          {preview.lessons.map((lesson, index) => (
-            <View key={lesson.id} style={styles.lessonCard}>
+          {/* Lessons List */}
+          <View style={styles.lessonsSection}>
+            <Text style={styles.sectionTitle}>רשימת שיעורים ({preview.lessons.length})</Text>
+            
+            {preview.lessons.map((lesson, index) => (
+              <UICard key={lesson.id} variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.md }}>
               <View style={styles.lessonHeader}>
                 <Text style={styles.lessonNumber}>{index + 1}</Text>
                 <View style={styles.lessonInfo}>
@@ -181,28 +191,30 @@ export const CoursePreviewScreen: React.FC = () => {
                   <Text style={styles.addLinkText}>➕ הוסף קישור יוטיוב</Text>
                 </TouchableOpacity>
               )}
-            </View>
-          ))}
-        </View>
+              </UICard>
+            ))}
+          </View>
 
-        {/* Create Button */}
-        <TouchableOpacity
-          style={[styles.createButton, isCreating && styles.createButtonDisabled]}
-          onPress={handleCreateCourse}
-          disabled={isCreating}
-        >
-          <Text style={styles.createButtonText}>
-            {isCreating ? 'יוצר קורס...' : '✅ צור קורס במסד הנתונים'}
-          </Text>
-        </TouchableOpacity>
+          {/* Create Button */}
+          <TouchableOpacity
+            style={[styles.createButton, isCreating && styles.createButtonDisabled]}
+            onPress={handleCreateCourse}
+            disabled={isCreating}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.createButtonText}>
+              {isCreating ? 'יוצר קורס...' : '✅ צור קורס במסד הנתונים'}
+            </Text>
+          </TouchableOpacity>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            לאחר לחיצה על "צור קורס", הקורס יווצר במסד הנתונים עם כל השיעורים.
-            {youtubeLinks.length === 0 && ' ניתן להוסיף קישורי יוטיוב מאוחר יותר.'}
-          </Text>
-        </View>
-      </ScrollView>
+          <UICard variant="blur" padding="md" style={{ marginTop: DesignTokens.spacing.lg }}>
+            <Text style={styles.footerText}>
+              לאחר לחיצה על "צור קורס", הקורס יווצר במסד הנתונים עם כל השיעורים.
+              {youtubeLinks.length === 0 && ' ניתן להוסיף קישורי יוטיוב מאוחר יותר.'}
+            </Text>
+          </UICard>
+        </ScrollView>
+      </RNSafeAreaView>
 
       {/* Modal לעריכת קישור */}
       <Modal
@@ -245,7 +257,7 @@ export const CoursePreviewScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </View>
+    </LinearGradient>
   );
 };
 
@@ -278,16 +290,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     headerTitle: {
       fontSize: tokens.typography.fontSize['2xl'],
-      fontWeight: tokens.typography.fontWeight.bold,
+      fontWeight: tokens.typography.fontWeight.bold as any,
       color: tokens.colors.text.primary,
-    },
-    courseCard: {
-      backgroundColor: tokens.colors.background.secondary,
-      borderRadius: tokens.borderRadius.lg,
-      padding: tokens.spacing.lg,
-      marginBottom: tokens.spacing.lg,
-      borderWidth: tokens.layout?.borderWidth?.thin || 1,
-      borderColor: tokens.colors.border.primary,
+      textAlign: 'right',
     },
     courseTitle: {
       fontSize: tokens.typography.fontSize.xl,
@@ -326,18 +331,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     metaValue: {
       fontSize: tokens.typography.fontSize.sm,
-      fontWeight: tokens.typography.fontWeight.semibold,
+      fontWeight: tokens.typography.fontWeight.semibold as any,
       color: tokens.colors.text.primary,
     },
     warningBox: {
-      backgroundColor: tokens.colors.error + '20',
+      backgroundColor: tokens.colors.danger.main + '20',
       borderRadius: tokens.borderRadius.md,
       padding: tokens.spacing.md,
       marginTop: tokens.spacing.md,
     },
     warningText: {
       fontSize: tokens.typography.fontSize.sm,
-      color: tokens.colors.error,
+      color: tokens.colors.danger.main,
       textAlign: 'right',
     },
     lessonsSection: {
@@ -345,18 +350,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     sectionTitle: {
       fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold,
+      fontWeight: tokens.typography.fontWeight.bold as any,
       color: tokens.colors.text.primary,
       marginBottom: tokens.spacing.md,
       textAlign: 'right',
-    },
-    lessonCard: {
-      backgroundColor: tokens.colors.background.secondary,
-      borderRadius: tokens.borderRadius.md,
-      padding: tokens.spacing.md,
-      marginBottom: tokens.spacing.sm,
-      borderWidth: tokens.layout?.borderWidth?.thin || 1,
-      borderColor: tokens.colors.border.primary,
     },
     lessonHeader: {
       flexDirection: 'row',
@@ -365,7 +362,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     lessonNumber: {
       fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold,
+      fontWeight: tokens.typography.fontWeight.bold as any,
       color: tokens.colors.primary.main,
       marginLeft: tokens.spacing.md,
       minWidth: 30,
@@ -376,7 +373,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     lessonTitle: {
       fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.medium,
+      fontWeight: tokens.typography.fontWeight.medium as any,
       color: tokens.colors.text.primary,
       marginBottom: tokens.spacing.xs,
       textAlign: 'right',
@@ -449,19 +446,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     createButtonText: {
       fontSize: tokens.typography.fontSize.lg,
-      fontWeight: tokens.typography.fontWeight.bold,
-      color: tokens.colors.text.primary,
-    },
-    footer: {
-      marginTop: tokens.spacing.lg,
-      padding: tokens.spacing.md,
-      backgroundColor: tokens.colors.background.secondary,
-      borderRadius: tokens.borderRadius.md,
+      fontWeight: tokens.typography.fontWeight.bold as any,
+      color: '#000000',
     },
     footerText: {
       fontSize: tokens.typography.fontSize.sm,
       color: tokens.colors.text.secondary,
-      textAlign: 'center',
+      textAlign: 'right',
       lineHeight: 18,
     },
     modalOverlay: {
@@ -509,16 +500,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
     },
     cancelButton: {
-      backgroundColor: tokens.colors.background.primary,
-      borderWidth: tokens.layout?.borderWidth?.thin || 1,
-      borderColor: tokens.colors.border.primary,
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     saveButton: {
       backgroundColor: tokens.colors.primary.main,
     },
     modalButtonText: {
       fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.semibold,
+      fontWeight: tokens.typography.fontWeight.semibold as any,
       color: tokens.colors.text.primary,
     },
   });

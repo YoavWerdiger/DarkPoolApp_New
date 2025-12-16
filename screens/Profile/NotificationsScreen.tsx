@@ -7,11 +7,12 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  StyleSheet
 } from 'react-native';
 import { 
   Bell, 
-  ArrowLeft,
+  ArrowRight,
   Volume2,
   Smartphone,
   MessageSquare,
@@ -21,10 +22,13 @@ import {
   ChevronLeft,
   Mic
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
 import { supabase } from '../../lib/supabase';
 import { NotificationService } from '../../services/notificationService';
 import { Linking, Platform } from 'react-native';
@@ -61,6 +65,8 @@ const SOUND_OPTIONS = [
 export default function NotificationsScreen({ navigation }: any) {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const [settings, setSettings] = useState<NotificationSettings>({
     notifications: true,
     sound: true,
@@ -418,89 +424,109 @@ export default function NotificationsScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען הגדרות...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={{ flex: 1 }}>
+        <LinearGradient
+          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+            <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען הגדרות...</Text>
+          </View>
+        </RNSafeAreaView>
+      </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
-        {/* Header */}
-        <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: theme.cardBackground,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.border
-      }}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 36,
-            height: 36,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: 18,
-            backgroundColor: theme.isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
-          }}
-        >
-          <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
-        </TouchableOpacity>
-        
-        <Text style={{
-          flex: 1,
-          textAlign: 'center',
-          fontSize: 20,
-          fontWeight: '700',
-          color: theme.textPrimary,
-          marginRight: 36
-        }}>
-          התראות
-        </Text>
+    <View style={{ flex: 1 }}>
+      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header עם blur */}
+        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <UICard 
+            variant="blur"
+            padding="sm"
+          >
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: DesignTokens.spacing.md,
+              minHeight: 44,
+            }}>
+              <Text style={{
+                flex: 1,
+                textAlign: 'center',
+                fontSize: DesignTokens.typography.fontSize.lg,
+                fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                color: DesignTokens.colors.text.primary,
+                marginLeft: 36
+              }}>
+                התראות
+              </Text>
+
+              <TouchableOpacity 
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.7}
+                style={{
+                  width: 36,
+                  height: 36,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderRadius: 18,
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                }}
+              >
+                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          </UICard>
         </View>
-      </SafeAreaView>
 
-      <ScrollView 
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          {/* System Notifications Section */}
-          <Text style={{
-            fontSize: 14,
-            fontWeight: '600',
-            color: theme.textSecondary,
-            marginBottom: 12,
-            textAlign: 'right',
-            textTransform: 'uppercase',
-            letterSpacing: 0.5
-          }}>
-            התראות מערכת
-          </Text>
+        <ScrollView 
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
+            {/* System Notifications Section */}
+            <Text style={{
+              fontSize: DesignTokens.typography.fontSize.xs,
+              fontWeight: DesignTokens.typography.fontWeight.bold as any,
+              color: DesignTokens.colors.text.tertiary,
+              marginBottom: DesignTokens.spacing.sm,
+              textAlign: 'right',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
+            }}>
+              התראות מערכת
+            </Text>
 
-          <View style={{
-            backgroundColor: theme.cardBackground,
-            borderRadius: 16,
-            overflow: 'hidden',
-            marginBottom: 24
-          }}>
+            <UICard 
+              variant="blur"
+              padding="none"
+              style={{ marginBottom: DesignTokens.spacing.lg }}
+            >
             {systemNotificationOptions.map((option, index) => (
               <View key={option.id}>
                 <View
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    paddingTop: 16,
-                    paddingBottom: index < systemNotificationOptions.length - 1 ? 12 : 16,
-                    paddingHorizontal: 16,
+                    paddingTop: DesignTokens.spacing.md,
+                    paddingBottom: index < systemNotificationOptions.length - 1 ? DesignTokens.spacing.sm : DesignTokens.spacing.md,
+                    paddingHorizontal: DesignTokens.spacing.md,
                   }}
                   pointerEvents="box-none"
                 >
@@ -512,27 +538,27 @@ export default function NotificationsScreen({ navigation }: any) {
                     console.log('🔵 NotificationsScreen: Switch onValueChange called:', option.key, 'value:', value);
                     handleToggle(option.key);
                   }}
-                  trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
-                  thumbColor={settings[option.key] ? DesignTokens.colors.text.primary : theme.switchThumbOff}
-                  ios_backgroundColor={theme.switchTrackOff}
+                  trackColor={{ false: 'rgba(255, 255, 255, 0.15)', true: DesignTokens.colors.primary.main }}
+                  thumbColor={settings[option.key] ? DesignTokens.colors.text.primary : 'rgba(255, 255, 255, 0.5)'}
+                  ios_backgroundColor="rgba(255, 255, 255, 0.15)"
                   style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                   disabled={false}
                 />
 
                 {/* Text */}
-                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <View style={{ flex: 1, marginLeft: DesignTokens.spacing.sm, marginRight: DesignTokens.spacing.sm }}>
                   <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: theme.textPrimary,
-                    marginBottom: 4,
+                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: DesignTokens.spacing.xs,
                     textAlign: 'right'
                   }}>
                     {option.title}
                   </Text>
                   <Text style={{
-                    fontSize: 13,
-                    color: theme.textTertiary,
+                    fontSize: DesignTokens.typography.fontSize.sm,
+                    color: DesignTokens.colors.text.tertiary,
                     textAlign: 'right'
                   }}>
                     {option.subtitle}
@@ -543,8 +569,8 @@ export default function NotificationsScreen({ navigation }: any) {
                 <View style={{
                   width: 40,
                   height: 40,
-                  borderRadius: 10,
-                  backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                  borderRadius: DesignTokens.borderRadius.md,
+                  backgroundColor: `${DesignTokens.colors.primary.main}1A`,
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
@@ -554,41 +580,41 @@ export default function NotificationsScreen({ navigation }: any) {
               {index < systemNotificationOptions.length - 1 && (
                 <View style={{
                   height: 1,
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  marginHorizontal: DesignTokens.spacing.md,
                 }} />
               )}
             </View>
             ))}
-          </View>
+            </UICard>
 
-          {/* News Notifications Section */}
-          <Text style={{
-            fontSize: 14,
-            fontWeight: '600',
-            color: theme.textSecondary,
-            marginBottom: 12,
-            textAlign: 'right',
-            textTransform: 'uppercase',
-            letterSpacing: 0.5
-          }}>
-            התראות חדשות
-          </Text>
+            {/* News Notifications Section */}
+            <Text style={{
+              fontSize: DesignTokens.typography.fontSize.xs,
+              fontWeight: DesignTokens.typography.fontWeight.bold as any,
+              color: DesignTokens.colors.text.tertiary,
+              marginBottom: DesignTokens.spacing.sm,
+              textAlign: 'right',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
+            }}>
+              התראות חדשות
+            </Text>
 
-          <View style={{
-            backgroundColor: theme.cardBackground,
-            borderRadius: 16,
-            overflow: 'hidden',
-            marginBottom: 24
-          }}>
+            <UICard 
+              variant="blur"
+              padding="none"
+              style={{ marginBottom: DesignTokens.spacing.lg }}
+            >
             {newsNotificationOptions.map((option, index) => (
               <View key={option.id}>
                 <View
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    paddingTop: 16,
-                    paddingBottom: index < newsNotificationOptions.length - 1 ? 12 : 16,
-                    paddingHorizontal: 16,
+                    paddingTop: DesignTokens.spacing.md,
+                    paddingBottom: index < newsNotificationOptions.length - 1 ? DesignTokens.spacing.sm : DesignTokens.spacing.md,
+                    paddingHorizontal: DesignTokens.spacing.md,
                   }}
                   pointerEvents="box-none"
                 >
@@ -600,27 +626,27 @@ export default function NotificationsScreen({ navigation }: any) {
                     console.log('🔵 NotificationsScreen: Switch onValueChange called:', option.key, 'value:', value);
                     handleToggle(option.key);
                   }}
-                  trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
-                  thumbColor={settings[option.key] ? DesignTokens.colors.text.primary : theme.switchThumbOff}
-                  ios_backgroundColor={theme.switchTrackOff}
+                  trackColor={{ false: 'rgba(255, 255, 255, 0.15)', true: DesignTokens.colors.primary.main }}
+                  thumbColor={settings[option.key] ? DesignTokens.colors.text.primary : 'rgba(255, 255, 255, 0.5)'}
+                  ios_backgroundColor="rgba(255, 255, 255, 0.15)"
                   style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                   disabled={false}
                 />
 
                 {/* Text */}
-                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <View style={{ flex: 1, marginLeft: DesignTokens.spacing.sm, marginRight: DesignTokens.spacing.sm }}>
                   <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: theme.textPrimary,
-                    marginBottom: 4,
+                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: DesignTokens.spacing.xs,
                     textAlign: 'right'
                   }}>
                     {option.title}
                   </Text>
                   <Text style={{
-                    fontSize: 13,
-                    color: theme.textTertiary,
+                    fontSize: DesignTokens.typography.fontSize.sm,
+                    color: DesignTokens.colors.text.tertiary,
                     textAlign: 'right'
                   }}>
                     {option.subtitle}
@@ -631,8 +657,8 @@ export default function NotificationsScreen({ navigation }: any) {
                 <View style={{
                   width: 40,
                   height: 40,
-                  borderRadius: 10,
-                  backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                  borderRadius: DesignTokens.borderRadius.md,
+                  backgroundColor: `${DesignTokens.colors.primary.main}1A`,
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
@@ -642,57 +668,57 @@ export default function NotificationsScreen({ navigation }: any) {
               {index < newsNotificationOptions.length - 1 && (
                 <View style={{
                   height: 1,
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  marginHorizontal: DesignTokens.spacing.md,
                 }} />
               )}
             </View>
             ))}
-          </View>
+            </UICard>
 
-          {/* Sounds Section */}
-          <Text style={{
-            fontSize: 14,
-            fontWeight: '600',
-            color: theme.textSecondary,
-            marginBottom: 12,
-            textAlign: 'right',
-            textTransform: 'uppercase',
-            letterSpacing: 0.5
-          }}>
-            צלילים
-          </Text>
+            {/* Sounds Section */}
+            <Text style={{
+              fontSize: DesignTokens.typography.fontSize.xs,
+              fontWeight: DesignTokens.typography.fontWeight.bold as any,
+              color: DesignTokens.colors.text.tertiary,
+              marginBottom: DesignTokens.spacing.sm,
+              textAlign: 'right',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5
+            }}>
+              צלילים
+            </Text>
 
-          <View style={{
-            backgroundColor: theme.cardBackground,
-            borderRadius: 16,
-            overflow: 'hidden',
-            marginBottom: 24
-          }}>
+            <UICard 
+              variant="blur"
+              padding="none"
+              style={{ marginBottom: DesignTokens.spacing.lg }}
+            >
             {/* צליל לחדשות */}
             <TouchableOpacity
               onPress={() => setShowNewsSoundPicker(!showNewsSoundPicker)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                paddingTop: 16,
-                paddingBottom: 12,
-                paddingHorizontal: 16,
+                paddingTop: DesignTokens.spacing.md,
+                paddingBottom: DesignTokens.spacing.sm,
+                paddingHorizontal: DesignTokens.spacing.md,
               }}
             >
-              <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
-              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+              <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+              <View style={{ flex: 1, marginLeft: DesignTokens.spacing.sm, marginRight: DesignTokens.spacing.sm }}>
                 <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: theme.textPrimary,
-                  marginBottom: 4,
+                  fontSize: DesignTokens.typography.fontSize.base,
+                  fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                  color: DesignTokens.colors.text.primary,
+                  marginBottom: DesignTokens.spacing.xs,
                   textAlign: 'right'
                 }}>
                   צליל לחדשות
                 </Text>
                 <Text style={{
-                  fontSize: 13,
-                  color: theme.textTertiary,
+                  fontSize: DesignTokens.typography.fontSize.sm,
+                  color: DesignTokens.colors.text.tertiary,
                   textAlign: 'right'
                 }}>
                   {SOUND_OPTIONS.find(opt => opt.value === settings.newsSound)?.label || 'ברירת מחדל'}
@@ -701,8 +727,8 @@ export default function NotificationsScreen({ navigation }: any) {
               <View style={{
                 width: 40,
                 height: 40,
-                borderRadius: 10,
-                backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                borderRadius: DesignTokens.borderRadius.md,
+                backgroundColor: `${DesignTokens.colors.primary.main}1A`,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
@@ -712,10 +738,10 @@ export default function NotificationsScreen({ navigation }: any) {
             
             {showNewsSoundPicker && (
               <View style={{
-                paddingHorizontal: 16,
-                paddingBottom: 12,
+                paddingHorizontal: DesignTokens.spacing.md,
+                paddingBottom: DesignTokens.spacing.sm,
                 borderTopWidth: 1,
-                borderTopColor: 'rgba(255, 255, 255, 0.2)',
+                borderTopColor: 'rgba(255, 255, 255, 0.15)',
               }}>
                 {SOUND_OPTIONS.map((option) => (
                   <TouchableOpacity
@@ -727,17 +753,19 @@ export default function NotificationsScreen({ navigation }: any) {
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      paddingVertical: 12,
-                      paddingHorizontal: 12,
-                      borderRadius: 8,
-                      backgroundColor: settings.newsSound === option.value ? 'rgba(5, 209, 87, 0.1)' : 'transparent',
+                      paddingVertical: DesignTokens.spacing.sm,
+                      paddingHorizontal: DesignTokens.spacing.sm,
+                      borderRadius: DesignTokens.borderRadius.md,
+                      backgroundColor: settings.newsSound === option.value ? `${DesignTokens.colors.primary.main}1A` : 'transparent',
                     }}
                   >
                     <Text style={{
                       flex: 1,
-                      fontSize: 15,
-                      fontWeight: settings.newsSound === option.value ? '600' : '400',
-                      color: settings.newsSound === option.value ? DesignTokens.colors.primary.main : theme.textPrimary,
+                      fontSize: DesignTokens.typography.fontSize.sm,
+                      fontWeight: settings.newsSound === option.value 
+                        ? DesignTokens.typography.fontWeight.semibold as any
+                        : DesignTokens.typography.fontWeight.normal as any,
+                      color: settings.newsSound === option.value ? DesignTokens.colors.primary.main : DesignTokens.colors.text.primary,
                       textAlign: 'right'
                     }}>
                       {option.label}
@@ -767,7 +795,8 @@ export default function NotificationsScreen({ navigation }: any) {
             
             <View style={{
               height: 1,
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              marginHorizontal: DesignTokens.spacing.md,
             }} />
             
             {/* צליל להקלטה */}
@@ -776,25 +805,25 @@ export default function NotificationsScreen({ navigation }: any) {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                paddingTop: 12,
-                paddingBottom: 16,
-                paddingHorizontal: 16,
+                paddingTop: DesignTokens.spacing.sm,
+                paddingBottom: DesignTokens.spacing.md,
+                paddingHorizontal: DesignTokens.spacing.md,
               }}
             >
-              <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
-              <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+              <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+              <View style={{ flex: 1, marginLeft: DesignTokens.spacing.sm, marginRight: DesignTokens.spacing.sm }}>
                 <Text style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  color: theme.textPrimary,
-                  marginBottom: 4,
+                  fontSize: DesignTokens.typography.fontSize.base,
+                  fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                  color: DesignTokens.colors.text.primary,
+                  marginBottom: DesignTokens.spacing.xs,
                   textAlign: 'right'
                 }}>
                   צליל להקלטה
                 </Text>
                 <Text style={{
-                  fontSize: 13,
-                  color: theme.textTertiary,
+                  fontSize: DesignTokens.typography.fontSize.sm,
+                  color: DesignTokens.colors.text.tertiary,
                   textAlign: 'right'
                 }}>
                   {SOUND_OPTIONS.find(opt => opt.value === settings.recordingSound)?.label || 'ברירת מחדל'}
@@ -803,8 +832,8 @@ export default function NotificationsScreen({ navigation }: any) {
               <View style={{
                 width: 40,
                 height: 40,
-                borderRadius: 10,
-                backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                borderRadius: DesignTokens.borderRadius.md,
+                backgroundColor: `${DesignTokens.colors.primary.main}1A`,
                 alignItems: 'center',
                 justifyContent: 'center'
               }}>
@@ -814,10 +843,10 @@ export default function NotificationsScreen({ navigation }: any) {
             
             {showRecordingSoundPicker && (
               <View style={{
-                paddingHorizontal: 16,
-                paddingBottom: 16,
+                paddingHorizontal: DesignTokens.spacing.md,
+                paddingBottom: DesignTokens.spacing.md,
                 borderTopWidth: 1,
-                borderTopColor: 'rgba(255, 255, 255, 0.2)',
+                borderTopColor: 'rgba(255, 255, 255, 0.15)',
               }}>
                 {SOUND_OPTIONS.map((option) => (
                   <TouchableOpacity
@@ -829,17 +858,19 @@ export default function NotificationsScreen({ navigation }: any) {
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      paddingVertical: 12,
-                      paddingHorizontal: 12,
-                      borderRadius: 8,
-                      backgroundColor: settings.recordingSound === option.value ? 'rgba(5, 209, 87, 0.1)' : 'transparent',
+                      paddingVertical: DesignTokens.spacing.sm,
+                      paddingHorizontal: DesignTokens.spacing.sm,
+                      borderRadius: DesignTokens.borderRadius.md,
+                      backgroundColor: settings.recordingSound === option.value ? `${DesignTokens.colors.primary.main}1A` : 'transparent',
                     }}
                   >
                     <Text style={{
                       flex: 1,
-                      fontSize: 15,
-                      fontWeight: settings.recordingSound === option.value ? '600' : '400',
-                      color: settings.recordingSound === option.value ? DesignTokens.colors.primary.main : theme.textPrimary,
+                      fontSize: DesignTokens.typography.fontSize.sm,
+                      fontWeight: settings.recordingSound === option.value 
+                        ? DesignTokens.typography.fontWeight.semibold as any
+                        : DesignTokens.typography.fontWeight.normal as any,
+                      color: settings.recordingSound === option.value ? DesignTokens.colors.primary.main : DesignTokens.colors.text.primary,
                       textAlign: 'right'
                     }}>
                       {option.label}
@@ -852,7 +883,7 @@ export default function NotificationsScreen({ navigation }: any) {
                         backgroundColor: DesignTokens.colors.primary.main,
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginLeft: 8
+                        marginLeft: DesignTokens.spacing.xs
                       }}>
                         <View style={{
                           width: 8,
@@ -866,9 +897,10 @@ export default function NotificationsScreen({ navigation }: any) {
                 ))}
               </View>
             )}
+            </UICard>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </RNSafeAreaView>
     </View>
   );
 }

@@ -1,16 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Pressable,
-  SectionList
-} from 'react-native';
+import { View, Text, RefreshControl, ActivityIndicator, Pressable, SectionList } from 'react-native';
 import { DollarSign, Calendar } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
+import UICard from '../../components/ui/UICard';
 
 interface Dividend {
   id: string
@@ -61,17 +54,14 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
   };
 
   return (
-    <Pressable
+    <UICard
+      variant="blur"
+      padding="md"
       style={{
         marginHorizontal: 16,
         marginBottom: 10,
-        borderRadius: 16,
-        paddingVertical: 12,
-        paddingHorizontal: 14,
-        backgroundColor: DesignTokens.colors.background.secondary,
-        borderColor: `${DesignTokens.colors.success.main}26`,
         flexDirection: 'row-reverse',
-        alignItems: 'center'
+        alignItems: 'center',
       }}
     >
       {/* Icon */}
@@ -122,7 +112,7 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
           {getShortDate(dividend.date)}
         </Text>
       </View>
-    </Pressable>
+    </UICard>
   );
 };
 
@@ -226,8 +216,8 @@ export default function DividendsTab() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-        <ActivityIndicator size="large" color="DesignTokens.colors.success.main" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={DesignTokens.colors.success.main} />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען דיבידנדים...
         </Text>
@@ -236,7 +226,7 @@ export default function DividendsTab() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+    <View style={{ flex: 1 }}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}

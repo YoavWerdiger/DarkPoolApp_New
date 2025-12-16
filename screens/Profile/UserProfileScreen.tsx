@@ -8,7 +8,9 @@ import {
   Alert,
   ActivityIndicator,
   TouchableOpacity,
-  SafeAreaView
+  SafeAreaView,
+  StyleSheet,
+  Platform
 } from 'react-native';
 import { 
   User, 
@@ -24,10 +26,13 @@ import {
   Info,
   MessageSquare
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
 
 interface MenuItem {
   id: string;
@@ -39,7 +44,8 @@ interface MenuItem {
 
 export default function UserProfileScreen({ navigation }: any) {
   const { user, isLoading, signOut } = useAuth();
-  const { theme } = useTheme();
+  const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const [profileData, setProfileData] = useState<any>(null);
 
   useEffect(() => {
@@ -156,27 +162,42 @@ export default function UserProfileScreen({ navigation }: any) {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען פרופיל...</Text>
+          <Text style={{ 
+            color: DesignTokens.colors.text.secondary, 
+            fontSize: DesignTokens.typography.fontSize.base, 
+            marginTop: DesignTokens.spacing.lg 
+          }}>
+            טוען פרופיל...
+          </Text>
         </View>
-      </SafeAreaView>
+      </RNSafeAreaView>
     );
   }
 
   if (!user) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ color: theme.textPrimary, fontSize: 22, fontWeight: '600', marginBottom: 8 }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: DesignTokens.spacing.xl }}>
+          <Text style={{ 
+            color: DesignTokens.colors.text.primary, 
+            fontSize: DesignTokens.typography.fontSize.xl, 
+            fontWeight: DesignTokens.typography.fontWeight.semibold as any, 
+            marginBottom: DesignTokens.spacing.sm 
+          }}>
             לא מחובר
           </Text>
-          <Text style={{ color: theme.textSecondary, fontSize: 16, textAlign: 'center' }}>
+          <Text style={{ 
+            color: DesignTokens.colors.text.secondary, 
+            fontSize: DesignTokens.typography.fontSize.base, 
+            textAlign: 'center' 
+          }}>
             יש להתחבר לאפליקציה
           </Text>
         </View>
-      </SafeAreaView>
+      </RNSafeAreaView>
     );
   }
 
@@ -193,150 +214,166 @@ export default function UserProfileScreen({ navigation }: any) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-
-      <ScrollView 
-        style={{ flex: 1 }} 
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
-        {/* Profile Header Card */}
-        <View style={{
-          backgroundColor: theme.cardBackground,
-          marginHorizontal: 20,
-          marginTop: 8,
-          borderRadius: 16,
-          borderBottomLeftRadius: 16,
-          borderBottomRightRadius: 16,
-          paddingVertical: 24,
-          paddingHorizontal: 20,
-          alignItems: 'center'
-        }}>
-          {/* Avatar */}
+    <View style={{ flex: 1 }}>
+      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי - אזור ירוק רחב יותר בגובה */}
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView 
+          style={{ flex: 1 }} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: DesignTokens.spacing['5xl'] }}
+        >
+          {/* Profile Header Card - עם blur כמו MainTabs, צמוד למעלה, פינות תחתונות מעוגלות */}
+          <UICard 
+            variant="blur"
+            padding="md"
+            style={{
+              marginHorizontal: 0,
+              marginTop: 0,
+              paddingTop: 10,
+              paddingBottom: DesignTokens.spacing.md,
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
+              borderBottomLeftRadius: DesignTokens.borderRadius['2xl'],
+              borderBottomRightRadius: DesignTokens.borderRadius['2xl'],
+            }}
+          >
+          {/* Container עם פריסה מרכזית - תמונה במרכז, טקסט מתחת */}
           <View style={{
-            width: 120,
-            height: 120,
-            borderRadius: 60,
-            backgroundColor: 'rgba(0,0,0,0.3)',
             alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 16,
-            borderWidth: 4,
-            borderColor: DesignTokens.colors.primary.main
           }}>
-            {profileData?.profile_picture ? (
-              <Image 
-                source={{ uri: profileData.profile_picture }} 
-                style={{ width: '100%', height: '100%', borderRadius: 56 }}
-              />
-            ) : (
-              <User size={60} color={DesignTokens.colors.primary.main} strokeWidth={1.5} />
-            )}
-          </View>
-
-          {/* Name */}
-          <Text style={{
-            fontSize: 28,
-            fontWeight: '800',
-            color: theme.textPrimary,
-            marginBottom: 8,
-            textAlign: 'center',
-            letterSpacing: 0.5
-          }}>
-            {displayName}
-          </Text>
-
-          {/* Email */}
-          <Text style={{
-            fontSize: 16,
-            color: theme.textSecondary,
-            textAlign: 'center',
-            marginBottom: 16,
-            fontWeight: '500'
-          }}>
-            {email}
-          </Text>
-
-          {/* Community Member Since */}
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: 16
-          }}>
-            <Text style={{
-              fontSize: 14,
-              color: DesignTokens.colors.primary.main,
-              fontWeight: '600',
-              marginRight: 8
+            {/* Avatar - במרכז */}
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: DesignTokens.colors.background.tertiary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 3,
+              borderColor: `${DesignTokens.colors.primary.main}80`,
+              ...DesignTokens.shadows.greenGlow,
+              marginBottom: DesignTokens.spacing.md,
             }}>
-              {getMemberSinceDate()}
-            </Text>
-            <Text style={{
-              fontSize: 14,
-              color: theme.textSecondary
-            }}>
-              חבר קהילה מאז
-            </Text>
-          </View>
+              {profileData?.profile_picture ? (
+                <Image 
+                  source={{ uri: profileData.profile_picture }} 
+                  style={{ width: '100%', height: '100%', borderRadius: 37 }}
+                />
+              ) : (
+                <User size={40} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+              )}
+            </View>
 
-          {/* Subscription Plan Tag */}
-          <View style={{
-            backgroundColor: 'rgba(0, 230, 84, 0.1)',
-            borderRadius: 20,
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            borderWidth: 1,
-            borderColor: 'rgba(0, 230, 84, 0.3)'
-          }}>
-            <Text style={{
-              fontSize: 14,
-              color: DesignTokens.colors.primary.main,
-              fontWeight: '600'
-            }}>
-              מנוי חודשי
-            </Text>
+            {/* Text Content - במרכז */}
+            <View style={{ alignItems: 'center' }}>
+              {/* Name */}
+              <Text style={{
+                fontSize: DesignTokens.typography.fontSize.xl,
+                fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                color: DesignTokens.colors.text.primary,
+                marginBottom: DesignTokens.spacing.xs,
+                textAlign: 'center',
+                letterSpacing: DesignTokens.typography.letterSpacing.tight,
+              }}>
+                {displayName}
+              </Text>
+
+              {/* Email */}
+              <Text style={{
+                fontSize: DesignTokens.typography.fontSize.sm,
+                color: DesignTokens.colors.text.secondary,
+                textAlign: 'center',
+                marginBottom: DesignTokens.spacing.sm,
+                fontWeight: DesignTokens.typography.fontWeight.medium as any,
+              } as any}>
+                {email}
+              </Text>
+
+              {/* Member Since & Subscription Plan */}
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: DesignTokens.spacing.md,
+                marginTop: DesignTokens.spacing.xs,
+              }}>
+                {/* Member Since */}
+                <Text style={{
+                  fontSize: DesignTokens.typography.fontSize.xs,
+                  color: DesignTokens.colors.text.tertiary,
+                  textAlign: 'center',
+                }}>
+                  חבר קהילה מאז {getMemberSinceDate()}
+                </Text>
+                
+                {/* Separator */}
+                <View style={{
+                  width: 1,
+                  height: 12,
+                  backgroundColor: DesignTokens.colors.text.tertiary,
+                  opacity: 0.3,
+                }} />
+                
+                {/* Subscription Plan */}
+                <Text style={{
+                  fontSize: DesignTokens.typography.fontSize.xs,
+                  color: DesignTokens.colors.text.tertiary,
+                  textAlign: 'center',
+                }}>
+                  מנוי חודשי
+                </Text>
+              </View>
+            </View>
           </View>
-        </View>
+        </UICard>
 
       {/* Menu Sections */}
-      <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
-        {/* Main Menu Section */}
-        <View style={{
-          backgroundColor: theme.cardBackground,
-          borderRadius: 16,
-          marginBottom: 16,
-          overflow: 'hidden'
-        }}>
+      <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.lg }}>
+        {/* Main Menu Section - עם blur כמו MainTabs */}
+        <UICard 
+          variant="blur"
+          padding="none"
+          style={{
+            marginBottom: DesignTokens.spacing.lg,
+          }}
+        >
             {mainMenuItems.map((item, index) => (
               <View key={item.id}>
                 <TouchableOpacity
                   onPress={item.onPress}
+                  activeOpacity={0.7}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    paddingTop: 16,
-                    paddingBottom: index < mainMenuItems.length - 1 ? 12 : 16,
-                    paddingHorizontal: 16,
+                    paddingTop: DesignTokens.spacing.lg,
+                    paddingBottom: index < mainMenuItems.length - 1 ? DesignTokens.spacing.md : DesignTokens.spacing.lg,
+                    paddingHorizontal: DesignTokens.spacing.lg,
                   }}
                 >
                 {/* Chevron - שמאל */}
-                <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
+                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
 
                 {/* Text Content - מרכז */}
-                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <View style={{ flex: 1, marginLeft: DesignTokens.spacing.md, marginRight: DesignTokens.spacing.md }}>
                   <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: theme.textPrimary,
-                    marginBottom: 2,
+                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: DesignTokens.spacing.xs / 2,
                     textAlign: 'right'
                   }}>
                     {item.title}
                   </Text>
                   {item.subtitle && (
                     <Text style={{
-                      fontSize: 13,
-                      color: theme.textTertiary,
+                      fontSize: DesignTokens.typography.fontSize.sm,
+                      color: DesignTokens.colors.text.tertiary,
                       textAlign: 'right'
                     }}>
                       {item.subtitle}
@@ -344,69 +381,76 @@ export default function UserProfileScreen({ navigation }: any) {
                   )}
                 </View>
 
-                {/* Icon - ימין */}
+                {/* Icon - ימין - עם Glassmorphism עדין */}
                 <View style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(5, 209, 87, 0.1)',
+                  width: 40,
+                  height: 40,
+                  borderRadius: DesignTokens.borderRadius.md,
+                  backgroundColor: `${DesignTokens.colors.primary.main}20`,
+                  borderWidth: 1,
+                  borderColor: DesignTokens.glassmorphism.primaryBorder.subtle,
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  ...DesignTokens.shadows.xs,
                 }}>
                   <item.icon 
                     size={20} 
                     color={DesignTokens.colors.primary.main} 
-                    strokeWidth={2} 
+                    strokeWidth={2.5} 
                   />
                 </View>
               </TouchableOpacity>
               {index < mainMenuItems.length - 1 && (
                 <View style={{
                   height: 1,
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  backgroundColor: DesignTokens.glassmorphism.border.dark.subtle,
+                  marginLeft: DesignTokens.spacing.lg,
+                  marginRight: DesignTokens.spacing.lg,
                 }} />
               )}
             </View>
             ))}
-        </View>
+        </UICard>
 
-        {/* Secondary Menu Section */}
-        <View style={{
-          backgroundColor: theme.cardBackground,
-          borderRadius: 16,
-          marginBottom: 16,
-          overflow: 'hidden'
-        }}>
+        {/* Secondary Menu Section - עם blur כמו MainTabs */}
+        <UICard 
+          variant="blur"
+          padding="none"
+          style={{
+            marginBottom: DesignTokens.spacing.lg,
+          }}
+        >
             {secondaryMenuItems.map((item, index) => (
               <View key={item.id}>
                 <TouchableOpacity
                   onPress={item.onPress}
+                  activeOpacity={0.7}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    paddingTop: 16,
-                    paddingBottom: index < secondaryMenuItems.length - 1 ? 12 : 16,
-                    paddingHorizontal: 16,
+                    paddingTop: DesignTokens.spacing.lg,
+                    paddingBottom: index < secondaryMenuItems.length - 1 ? DesignTokens.spacing.md : DesignTokens.spacing.lg,
+                    paddingHorizontal: DesignTokens.spacing.lg,
                   }}
                 >
                 {/* Chevron - שמאל */}
-                <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
+                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
 
                 {/* Text Content - מרכז */}
-                <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                <View style={{ flex: 1, marginLeft: DesignTokens.spacing.md, marginRight: DesignTokens.spacing.md }}>
                   <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: theme.textPrimary,
-                    marginBottom: 2,
+                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    color: DesignTokens.colors.text.primary,
+                    marginBottom: DesignTokens.spacing.xs / 2,
                     textAlign: 'right'
                   }}>
                     {item.title}
                   </Text>
                   {item.subtitle && (
                     <Text style={{
-                      fontSize: 13,
-                      color: theme.textTertiary,
+                      fontSize: DesignTokens.typography.fontSize.sm,
+                      color: DesignTokens.colors.text.tertiary,
                       textAlign: 'right'
                     }}>
                       {item.subtitle}
@@ -414,87 +458,97 @@ export default function UserProfileScreen({ navigation }: any) {
                   )}
                 </View>
 
-                {/* Icon - ימין */}
+                {/* Icon - ימין - עם Glassmorphism עדין */}
                 <View style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 8,
-                  backgroundColor: 'rgba(0, 230, 84, 0.1)',
+                  width: 40,
+                  height: 40,
+                  borderRadius: DesignTokens.borderRadius.md,
+                  backgroundColor: `${DesignTokens.colors.primary.main}20`,
+                  borderWidth: 1,
+                  borderColor: DesignTokens.glassmorphism.primaryBorder.subtle,
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  ...DesignTokens.shadows.xs,
                 }}>
                   <item.icon 
                     size={20} 
                     color={DesignTokens.colors.primary.main} 
-                    strokeWidth={2} 
+                    strokeWidth={2.5} 
                   />
                 </View>
               </TouchableOpacity>
               {index < secondaryMenuItems.length - 1 && (
                 <View style={{
                   height: 1,
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  backgroundColor: DesignTokens.glassmorphism.border.dark.subtle,
+                  marginLeft: DesignTokens.spacing.lg,
+                  marginRight: DesignTokens.spacing.lg,
                 }} />
               )}
             </View>
             ))}
-        </View>
+        </UICard>
 
-        {/* Logout Button */}
-          <TouchableOpacity 
-            onPress={() => {
-              Alert.alert(
-                'התנתקות',
-                'האם אתה בטוח שברצונך להתנתק?',
-                [
-                  { text: 'ביטול', style: 'cancel' },
-                  { 
-                    text: 'התנתק', 
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        console.log('🔄 UserProfileScreen: Signing out...');
-                        const { error } = await signOut();
-                        if (error) {
-                          console.error('❌ UserProfileScreen: Error signing out:', error);
-                          Alert.alert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
-                        } else {
-                          console.log('✅ UserProfileScreen: Signed out successfully');
-                          // הניווט יתבצע אוטומטית דרך AuthContext
-                        }
-                      } catch (error) {
-                        console.error('❌ UserProfileScreen: Exception signing out:', error);
-                        Alert.alert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
+        {/* Logout Button - כפתור נורמלי */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => {
+            Alert.alert(
+              'התנתקות',
+              'האם אתה בטוח שברצונך להתנתק?',
+              [
+                { text: 'ביטול', style: 'cancel' },
+                { 
+                  text: 'התנתק', 
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      console.log('🔄 UserProfileScreen: Signing out...');
+                      const { error } = await signOut();
+                      if (error) {
+                        console.error('❌ UserProfileScreen: Error signing out:', error);
+                        Alert.alert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
+                      } else {
+                        console.log('✅ UserProfileScreen: Signed out successfully');
+                        // הניווט יתבצע אוטומטית דרך AuthContext
                       }
+                    } catch (error) {
+                      console.error('❌ UserProfileScreen: Exception signing out:', error);
+                      Alert.alert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
                     }
                   }
-                ]
-              );
-            }}
+                }
+              ]
+            );
+          }}
+          style={{
+            marginTop: DesignTokens.spacing.lg,
+            marginBottom: DesignTokens.spacing['3xl'],
+            marginHorizontal: DesignTokens.spacing.lg,
+          }}
+        >
+          <UICard 
+            variant="blur"
+            padding="md"
             style={{
-              flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: `${DesignTokens.colors.danger.main}1A`,
-              paddingVertical: 14,
-              paddingHorizontal: 20,
-              borderRadius: 12,
               borderWidth: 1,
-              borderColor: `${DesignTokens.colors.danger.main}33`,
-              marginBottom: 32
+              borderColor: `${DesignTokens.colors.danger.main}40`,
             }}
           >
-            <LogOut size={20} color={DesignTokens.colors.danger.main} strokeWidth={2} style={{ marginRight: 8 }} />
             <Text style={{
-              fontSize: 16,
-              fontWeight: '600',
+              fontSize: DesignTokens.typography.fontSize.base,
+              fontWeight: DesignTokens.typography.fontWeight.semibold as any,
               color: DesignTokens.colors.danger.main
             }}>
               התנתקות
             </Text>
-          </TouchableOpacity>
-        </View>
+          </UICard>
+        </TouchableOpacity>
+      </View>
       </ScrollView>
-    </SafeAreaView>
+      </RNSafeAreaView>
+    </View>
   );
 }

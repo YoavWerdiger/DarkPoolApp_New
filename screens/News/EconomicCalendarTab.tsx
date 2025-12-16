@@ -1,16 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions
-} from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, Alert, Pressable, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -18,6 +7,8 @@ import { EconomicEvent } from '../../services/economicCalendarService';
 type EconEvent = EconomicEvent;
 import { supabase } from '../../lib/supabase';
 import { getIndicatorExplanation } from '../../utils/economicIndicatorExplanations';
+import { translateEconomicEventNameSmart } from '../../utils/economicEventTranslations';
+import UICard from '../../components/ui/UICard';
 
 const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent) => void }> = ({ 
   event, 
@@ -46,7 +37,9 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
   };
 
   const importanceColor = getImportanceColor(event.importance);
-  const cleanTitle = stripEmojis(event.title || '');
+  // תרגום שם האירוע לעברית
+  const translatedTitle = translateEconomicEventNameSmart(event.title || '');
+  const cleanTitle = stripEmojis(translatedTitle);
 
   const getActualColor = (): string => {
     const actual = Number(event.actual);
@@ -59,22 +52,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
   };
 
   return (
-    <Pressable
-      onPress={() => onPress(event)}
-      style={{
-        marginHorizontal: 16,
-        marginBottom: 12,
-        borderTopLeftRadius: 16,
-        borderBottomLeftRadius: 16,
-        borderTopRightRadius: 0,
-        borderBottomRightRadius: 0,
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        backgroundColor: DesignTokens.colors.background.secondary,
-        flexDirection: 'row',
-        alignItems: 'flex-start'
-      }}
-    >
+    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: 16, marginBottom: 12 }}>
+      <UICard variant="blur" padding="lg" style={{ flexDirection: 'row', alignItems: 'flex-start', overflow: 'hidden' }}>
       {/* פס חשיבות דק מיושר לימין, מעוגל בפינות - מתאים לגובה הכרטיסיה */}
       <View
         style={{
@@ -125,10 +104,11 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
         </View>
 
       {/* בלוק ערכים ויזואلي – ללא מסגרות, עם פסי הפרדה */}
-      {(event.actual || event.forecast || event.previous) ? (
+      {/* מציגים רק אם יש תוצאה/תחזית/קודם - אחרת רק שעה ושם האירוע */}
+      {(event.actual || event.forecast || event.previous) && (
         <View style={{ marginTop: 12 }}>
           {/* פס הפרדה אופקי עליון */}
-          <View style={{ height: 1, backgroundColor: DesignTokens.colors.background.tertiary, marginBottom: 12 }} />
+          <View style={{ height: 1, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginBottom: 12 }} />
           
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
             {event.actual && (
@@ -137,8 +117,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
                 <Text style={{ fontSize: 18, fontWeight: '700', color: getActualColor(), textAlign: 'center' }}>{event.actual}</Text>
               </View>
             )}
-            {event.actual && (event.forecast || event.previous) && (
-              <View style={{ width: 1, height: 40, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
+              {event.actual && (event.forecast || event.previous) && (
+              <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
             )}
             {event.forecast && (
               <View style={{ flex: 1, alignItems: 'center' }}>
@@ -147,7 +127,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
               </View>
             )}
             {event.forecast && event.previous && (
-              <View style={{ width: 1, height: 40, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
+              <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
             )}
             {event.previous && (
               <View style={{ flex: 1, alignItems: 'center' }}>
@@ -157,24 +137,9 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
             )}
           </View>
         </View>
-      ) : (
-        <View style={{ marginTop: 12 }}>
-          {/* פס הפרדה */}
-          <View style={{ height: 1, backgroundColor: DesignTokens.colors.background.tertiary, marginBottom: 12 }} />
-          
-          <View style={{ alignItems: 'center', paddingVertical: 8 }}>
-            <Text style={{ 
-              fontSize: 13, 
-              color: DesignTokens.colors.text.tertiary,
-              fontWeight: '500',
-              textAlign: 'center'
-            }}>
-              נתונים יפורסמו בעת האירוע
-            </Text>
-          </View>
-        </View>
       )}
       </View>
+      </UICard>
     </Pressable>
   );
 };
@@ -242,7 +207,6 @@ export default function EconomicCalendarTab() {
   const [dailyEvents, setDailyEvents] = useState<EconEvent[]>([]);
   
   // Ref לגלילה לאירוע הקרוב ביותר
-  const flatListRef = useRef<FlatList>(null);
   const dailyEventsListRef = useRef<FlatList>(null);
   
   // דיבאג - בדיקה מתי הref מוכן (useLayoutEffect רץ סינכרוני אחרי DOM update)
@@ -410,19 +374,12 @@ export default function EconomicCalendarTab() {
     // הצגת Alert עם מידע על האירוע הנבחר
     Alert.alert(
       `גולל לאירוע #${closestIndex + 1}`,
-      `${event?.title}\nשעה: ${event?.time}`,
+      `${translateEconomicEventNameSmart(event?.title || '')}\nשעה: ${event?.time}`,
       [
         {
           text: 'גלול',
           onPress: () => {
-            if (scrollViewRef.current) {
-              const ITEM_HEIGHT = 160;
-              const offset = closestIndex * ITEM_HEIGHT;
-              scrollViewRef.current.scrollTo({
-                y: offset,
-                animated: true
-              });
-            }
+            // כאן בעבר הייתה גלילה דרך ScrollView; עכשיו אנחנו משתמשים ב-FlatList (dailyEventsListRef)
           }
         },
         { text: 'ביטול', style: 'cancel' }
@@ -594,6 +551,7 @@ export default function EconomicCalendarTab() {
     console.log('📅 EconomicCalendarTab: Event pressed:', event.title);
     
     // קבלת הסבר מקצועי למדד
+    const translatedTitle = translateEconomicEventNameSmart(event.title);
     const explanation = getIndicatorExplanation(event.title, event.description, event.category);
     
     // הצגת נתונים אם יש
@@ -610,7 +568,7 @@ export default function EconomicCalendarTab() {
     message += explanation;
     
     Alert.alert(
-      event.title,
+      translatedTitle,
       message,
       [{ text: 'סגור', style: 'cancel' }]
     );
@@ -724,13 +682,7 @@ export default function EconomicCalendarTab() {
     <View style={{ flex: 1 }}>
       {/* ניווט תאריכים - SwiftUI style */}
       <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-        <View style={{ 
-          backgroundColor: DesignTokens.colors.background.secondary,
-          borderRadius: 20,
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          marginBottom: 12
-        }}>
+        <UICard variant="blur" padding="md" style={{ borderRadius: 20, marginBottom: 12 }}>
           {/* שורה עליונה - ניווט תאריכים */}
           <View style={{ 
             flexDirection: 'row', 
@@ -935,7 +887,7 @@ export default function EconomicCalendarTab() {
               </TouchableOpacity>
             )}
           </View>
-        </View>
+        </UICard>
       </View>
 
       {/* כפתור טעינת נתונים היסטוריים – בוטל לפי דרישה */}
@@ -947,8 +899,13 @@ export default function EconomicCalendarTab() {
         keyExtractor={(item, index) => `${item.id}-${item.time}-${index}`}
         renderItem={renderEvent}
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 24, paddingTop: 4 }}
+        contentContainerStyle={{ paddingBottom: 24, paddingTop: 4, flexGrow: 1 }}
         showsVerticalScrollIndicator={true}
+        // אופטימיזציות ביצועים
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={10}
+        removeClippedSubviews={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -960,13 +917,18 @@ export default function EconomicCalendarTab() {
         ListEmptyComponent={renderEmptyState}
         onScrollToIndexFailed={(info) => {
           console.warn('⚠️ Scroll to index failed:', info);
-          // נסה שוב אחרי שהרשימה נטענה
-          const wait = new Promise(resolve => setTimeout(resolve, 500));
-          wait.then(() => {
-            if (dailyEventsListRef.current) {
-              dailyEventsListRef.current.scrollToIndex({ index: info.index, animated: true });
+          const estimatedItemHeight = info.averageItemLength || 100;
+          const targetOffset = Math.max(0, info.index * estimatedItemHeight - 100);
+          setTimeout(() => {
+            try {
+              dailyEventsListRef.current?.scrollToOffset({
+                offset: targetOffset,
+                animated: true,
+              });
+            } catch (e) {
+              console.error('❌ scrollToOffset failed:', e);
             }
-          });
+          }, 100);
         }}
       />
     </View>

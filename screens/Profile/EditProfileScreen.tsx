@@ -11,26 +11,32 @@ import {
   Platform,
   Image,
   ActivityIndicator,
-  SafeAreaView
+  SafeAreaView,
+  StyleSheet
 } from 'react-native';
 import { 
   Camera, 
   User, 
-  ArrowLeft,
+  ArrowRight,
   Check,
   X,
   ChevronDown
 } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { mediaService } from '../../services/mediaService';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, updateProfile } = useAuth();
   const { theme } = useTheme();
+  const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
@@ -147,76 +153,96 @@ export default function EditProfileScreen({ navigation }: any) {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={{ flex: 1 }}>
+        <LinearGradient
+          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+            <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
+          </View>
+        </RNSafeAreaView>
+      </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
-        {/* Header */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-          backgroundColor: theme.cardBackground,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.border
-        }}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={{
-              width: 36,
-              height: 36,
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: 18,
-              backgroundColor: theme.isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
-            }}
+    <View style={{ flex: 1 }}>
+      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        {/* Header עם blur */}
+        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <UICard 
+            variant="blur"
+            padding="sm"
           >
-            <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
-          </TouchableOpacity>
-
-        <Text style={{ 
-            flex: 1,
-            textAlign: 'center',
-            fontSize: 20,
-            fontWeight: '700',
-            color: theme.textPrimary,
-            marginRight: 36
-          }}>
-            עריכת פרופיל
-        </Text>
-        </View>
-      </SafeAreaView>
-
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-          {/* Main Card */}
-          <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
             <View style={{
-              backgroundColor: theme.cardBackground,
-              borderRadius: 16,
-              padding: 24,
-              gap: 24
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: DesignTokens.spacing.md,
+              minHeight: 44,
             }}>
+              <Text style={{ 
+                flex: 1,
+                textAlign: 'center',
+                fontSize: DesignTokens.typography.fontSize.lg,
+                fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                color: DesignTokens.colors.text.primary,
+                marginLeft: 36
+              }}>
+                עריכת פרופיל
+              </Text>
+
+              <TouchableOpacity 
+                onPress={() => navigation.goBack()}
+                activeOpacity={0.7}
+                style={{
+                  width: 36,
+                  height: 36,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderRadius: 18,
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                }}
+              >
+                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
+          </UICard>
+        </View>
+
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 40 }}
+          >
+            {/* Main Card עם blur */}
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
+              <UICard 
+                variant="blur"
+                padding="lg"
+              >
               {/* Avatar Section */}
               <View style={{
                 alignItems: 'center',
-                paddingVertical: 8
+                paddingVertical: DesignTokens.spacing.lg,
+                marginBottom: DesignTokens.spacing.lg
               }}>
                 <TouchableOpacity 
                   onPress={handleImagePicker}
@@ -239,7 +265,7 @@ export default function EditProfileScreen({ navigation }: any) {
                         style={{ width: '100%', height: '100%' }}
                       />
                     ) : (
-                      <User size={60} color={theme.textTertiary} strokeWidth={1.5} />
+                      <User size={60} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
                     )}
                   </View>
                   
@@ -261,9 +287,9 @@ export default function EditProfileScreen({ navigation }: any) {
                 </TouchableOpacity>
 
                 <Text style={{
-                  fontSize: 14,
-                  color: theme.textTertiary,
-                  marginTop: 16,
+                  fontSize: DesignTokens.typography.fontSize.sm,
+                  color: DesignTokens.colors.text.tertiary,
+                  marginTop: DesignTokens.spacing.md,
                   textAlign: 'center'
                 }}>
                   לחץ לשינוי תמונת פרופיל
@@ -274,7 +300,7 @@ export default function EditProfileScreen({ navigation }: any) {
               <View style={{
                 height: 1,
                 backgroundColor: 'rgba(255,255,255,0.1)',
-                marginVertical: 8
+                marginVertical: DesignTokens.spacing.lg
               }} />
 
               {/* Display Name */}
@@ -376,37 +402,39 @@ export default function EditProfileScreen({ navigation }: any) {
               </View>
 
               {/* Email (Read Only) */}
-              <View>
+              <View style={{ marginBottom: DesignTokens.spacing.lg }}>
                 <Text style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: theme.textPrimary,
-                  marginBottom: 8,
+                  fontSize: DesignTokens.typography.fontSize.sm,
+                  fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                  color: DesignTokens.colors.text.primary,
+                  marginBottom: DesignTokens.spacing.sm,
                   textAlign: 'right'
                 }}>
                   אימייל
                 </Text>
                 <View style={{
-                  backgroundColor: theme.background,
-                  borderRadius: 12,
-                  paddingHorizontal: 16,
-                  paddingVertical: 16,
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  borderRadius: DesignTokens.borderRadius.lg,
+                  paddingHorizontal: DesignTokens.spacing.md,
+                  paddingVertical: DesignTokens.spacing.md,
                   borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  opacity: 0.6
+                  borderColor: 'rgba(255,255,255,0.08)',
+                  opacity: 0.7,
+                  minHeight: 48,
+                  justifyContent: 'center'
                 }}>
                   <Text style={{
-                    fontSize: 16,
-                    color: theme.textTertiary,
+                    fontSize: DesignTokens.typography.fontSize.base,
+                    color: DesignTokens.colors.text.tertiary,
                     textAlign: 'right'
                   }}>
                     {user?.email || ''}
                   </Text>
                 </View>
                 <Text style={{
-                  fontSize: 12,
-                  color: theme.textTertiary,
-                  marginTop: 8,
+                  fontSize: DesignTokens.typography.fontSize.xs,
+                  color: DesignTokens.colors.text.tertiary,
+                  marginTop: DesignTokens.spacing.xs,
                   textAlign: 'right'
                 }}>
                   לא ניתן לשנות את כתובת האימייל
@@ -417,42 +445,45 @@ export default function EditProfileScreen({ navigation }: any) {
               <View style={{
                 height: 1,
                 backgroundColor: 'rgba(255,255,255,0.1)',
-                marginVertical: 8
+                marginVertical: DesignTokens.spacing.lg
               }} />
 
               {/* Save Button */}
-            <TouchableOpacity
-              onPress={handleSave}
-              disabled={isSaving}
-              style={{
-                  backgroundColor: 'rgba(5, 209, 87, 0.7)',
-                  paddingVertical: 16,
-                  paddingHorizontal: 24,
-                  borderRadius: 12,
+              <TouchableOpacity
+                onPress={handleSave}
+                disabled={isSaving}
+                style={{
+                  backgroundColor: DesignTokens.colors.primary.main,
+                  paddingVertical: DesignTokens.spacing.md,
+                  paddingHorizontal: DesignTokens.spacing.lg,
+                  borderRadius: DesignTokens.borderRadius.lg,
                   alignItems: 'center',
+                  justifyContent: 'center',
                   opacity: isSaving ? 0.6 : 1,
+                  minHeight: 52,
+                  ...DesignTokens.shadows.md
                 }}
               >
                 {isSaving ? (
                   <ActivityIndicator size="small" color={DesignTokens.colors.text.primary} />
                 ) : (
-                    <Text style={{ 
-                    fontSize: 16,
-                    fontWeight: '700',
+                  <Text style={{ 
+                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontWeight: DesignTokens.typography.fontWeight.bold as any,
                     color: DesignTokens.colors.text.primary
-                    }}>
-                      שמור שינויים
-                    </Text>
+                  }}>
+                    שמור שינויים
+                  </Text>
                 )}
-            </TouchableOpacity>
+              </TouchableOpacity>
+              </UICard>
             </View>
-        </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
-      {/* Gender Picker Modal */}
-      {showGenderPicker && (
-        <View style={{
+        {/* Gender Picker Modal */}
+        {showGenderPicker && (
+          <View style={{
           position: 'absolute',
           top: 0,
           left: 0,
@@ -463,18 +494,19 @@ export default function EditProfileScreen({ navigation }: any) {
           alignItems: 'center',
           zIndex: 1000
         }}>
-          <View style={{
-            backgroundColor: theme.cardBackground,
-            borderRadius: 16,
-            padding: 24,
-            width: '80%',
-            maxWidth: 300
-          }}>
+          <UICard
+            variant="blur"
+            padding="lg"
+            style={{
+              width: '80%',
+              maxWidth: 300
+            }}
+          >
             <Text style={{
-              fontSize: 18,
-              fontWeight: '700',
-              color: theme.textPrimary,
-              marginBottom: 20,
+              fontSize: DesignTokens.typography.fontSize.xl,
+              fontWeight: DesignTokens.typography.fontWeight.bold as any,
+              color: DesignTokens.colors.text.primary,
+              marginBottom: DesignTokens.spacing.lg,
               textAlign: 'right'
             }}>
               בחר מין
@@ -486,19 +518,21 @@ export default function EditProfileScreen({ navigation }: any) {
                 setShowGenderPicker(false);
               }}
               style={{
-                paddingVertical: 16,
-                paddingHorizontal: 20,
-                borderRadius: 12,
-                backgroundColor: gender === 'male' ? 'rgba(5, 209, 87, 0.15)' : theme.background,
-                marginBottom: 12,
+                paddingVertical: DesignTokens.spacing.md,
+                paddingHorizontal: DesignTokens.spacing.lg,
+                borderRadius: DesignTokens.borderRadius.lg,
+                backgroundColor: gender === 'male' ? `${DesignTokens.colors.primary.main}20` : 'rgba(255, 255, 255, 0.05)',
+                marginBottom: DesignTokens.spacing.sm,
                 borderWidth: 1,
-                borderColor: gender === 'male' ? DesignTokens.colors.primary.main : theme.border
+                borderColor: gender === 'male' ? DesignTokens.colors.primary.main : 'rgba(255, 255, 255, 0.1)',
+                minHeight: 48,
+                justifyContent: 'center'
               }}
             >
               <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: theme.textPrimary,
+                fontSize: DesignTokens.typography.fontSize.base,
+                fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                color: DesignTokens.colors.text.primary,
                 textAlign: 'right'
               }}>
                 זכר
@@ -511,19 +545,21 @@ export default function EditProfileScreen({ navigation }: any) {
                 setShowGenderPicker(false);
               }}
               style={{
-                paddingVertical: 16,
-                paddingHorizontal: 20,
-                borderRadius: 12,
-                backgroundColor: gender === 'female' ? 'rgba(5, 209, 87, 0.15)' : theme.background,
-                marginBottom: 12,
+                paddingVertical: DesignTokens.spacing.md,
+                paddingHorizontal: DesignTokens.spacing.lg,
+                borderRadius: DesignTokens.borderRadius.lg,
+                backgroundColor: gender === 'female' ? `${DesignTokens.colors.primary.main}20` : 'rgba(255, 255, 255, 0.05)',
+                marginBottom: DesignTokens.spacing.sm,
                 borderWidth: 1,
-                borderColor: gender === 'female' ? DesignTokens.colors.primary.main : theme.border
+                borderColor: gender === 'female' ? DesignTokens.colors.primary.main : 'rgba(255, 255, 255, 0.1)',
+                minHeight: 48,
+                justifyContent: 'center'
               }}
             >
               <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: theme.textPrimary,
+                fontSize: DesignTokens.typography.fontSize.base,
+                fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                color: DesignTokens.colors.text.primary,
                 textAlign: 'right'
               }}>
                 נקבה
@@ -533,25 +569,28 @@ export default function EditProfileScreen({ navigation }: any) {
             <TouchableOpacity
               onPress={() => setShowGenderPicker(false)}
               style={{
-                paddingVertical: 12,
-                paddingHorizontal: 20,
-                borderRadius: 12,
-                backgroundColor: theme.background,
-                marginTop: 8
+                paddingVertical: DesignTokens.spacing.sm,
+                paddingHorizontal: DesignTokens.spacing.lg,
+                borderRadius: DesignTokens.borderRadius.lg,
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                marginTop: DesignTokens.spacing.sm,
+                minHeight: 44,
+                justifyContent: 'center'
               }}
             >
               <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: theme.textSecondary,
+                fontSize: DesignTokens.typography.fontSize.base,
+                fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                color: DesignTokens.colors.text.secondary,
                 textAlign: 'center'
               }}>
                 ביטול
               </Text>
             </TouchableOpacity>
-          </View>
+          </UICard>
         </View>
-      )}
+        )}
+      </RNSafeAreaView>
     </View>
   );
 }

@@ -9,12 +9,14 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { learningProgressService } from '../../services/learningProgressService';
 import { useAuth } from '../../context/AuthContext';
-import { ArrowLeft, FileText, Copy } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowRight, FileText, Copy } from 'lucide-react-native';
+import UICard from '../../components/ui/UICard';
 import * as Clipboard from 'expo-clipboard';
 
 interface NoteWithDetails {
@@ -91,11 +93,11 @@ export const MyNotesScreen: React.FC = () => {
 
     return (
       <TouchableOpacity
-        style={styles.noteCard}
         onPress={() => handleNotePress(item)}
         activeOpacity={0.7}
+        style={{ marginBottom: DesignTokens.spacing.md }}
       >
-        <View style={styles.noteCardContent}>
+        <UICard variant="blur" padding="md">
           <View style={styles.noteContentContainer}>
             <View style={styles.noteHeader}>
               <View style={styles.noteIconContainer}>
@@ -126,7 +128,7 @@ export const MyNotesScreen: React.FC = () => {
               </Text>
             )}
           </View>
-        </View>
+        </UICard>
       </TouchableOpacity>
     );
   }, [styles, DesignTokens, handleNotePress, handleCopyNote]);
@@ -196,24 +198,16 @@ export const MyNotesScreen: React.FC = () => {
 };
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  container: {
+  gradientContainer: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
   },
-  safeArea: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderBottomLeftRadius: tokens.borderRadius.lg,
-    borderBottomRightRadius: tokens.borderRadius.lg,
-    overflow: 'hidden',
-  },
-  safeAreaContent: {
-    paddingHorizontal: tokens.spacing.md,
+  safeAreaContainer: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: tokens.colors.background.primary,
   },
   loadingText: {
     marginTop: tokens.spacing.md,
@@ -239,7 +233,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   headerTitle: {
     fontSize: tokens.typography.fontSize['2xl'],
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 2,
@@ -252,16 +246,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   listContainer: {
     paddingHorizontal: tokens.spacing.lg,
     paddingTop: tokens.spacing.md,
-    paddingBottom: tokens.spacing['3xl'],
-  },
-  noteCard: {
-    backgroundColor: tokens.colors.background.secondary,
-    borderRadius: tokens.borderRadius.lg,
-    marginBottom: tokens.spacing.md,
-    overflow: 'hidden',
-  },
-  noteCardContent: {
-    padding: tokens.spacing.md,
+    paddingBottom: tokens.spacing['5xl'],
   },
   noteContentContainer: {
     flex: 1,
@@ -294,7 +279,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   noteCourseTitle: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 2,
@@ -329,7 +314,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   emptyTitle: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.sm,
     textAlign: 'center',

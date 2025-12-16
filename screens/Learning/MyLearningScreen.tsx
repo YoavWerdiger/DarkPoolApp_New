@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useMyEnrollments } from '../../hooks/useLearning';
 import { CourseCard } from '../../components/learning';
@@ -124,56 +126,60 @@ export const MyLearningScreen: React.FC = () => {
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>שגיאה בטעינת הקורסים</Text>
-        <Text style={styles.errorMessage}>
-          {error.message || 'אירעה שגיאה לא צפויה'}
-        </Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>נסה שוב</Text>
-        </TouchableOpacity>
-      </View>
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        style={styles.gradientContainer}
+      >
+        <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>שגיאה בטעינת הקורסים</Text>
+            <Text style={styles.errorMessage}>
+              {error.message || 'אירעה שגיאה לא צפויה'}
+            </Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+              <Text style={styles.retryButtonText}>נסה שוב</Text>
+            </TouchableOpacity>
+          </View>
+        </RNSafeAreaView>
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>הלמידה שלי</Text>
-      </View>
+    <LinearGradient
+      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+      style={styles.gradientContainer}
+    >
+      <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>הלמידה שלי</Text>
+        </View>
 
-      {/* Stats */}
-      {renderStats()}
+        {/* Stats */}
+        {renderStats()}
 
-      {/* Courses List with Gradient Background */}
-      <View style={styles.listWrapper}>
-        <LinearGradient
-          colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradientBackground}
-          pointerEvents="none"
-        />
+        {/* Courses List */}
         <FlatList
           data={enrollments || []}
           renderItem={renderCourse}
           keyExtractor={(item) => item.id}
-          style={{ backgroundColor: 'transparent' }}
           contentContainerStyle={styles.listContainer}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor={DesignTokens.colors.primary}
+              tintColor={DesignTokens.colors.primary.main}
             />
           }
           ListEmptyComponent={!isLoading ? renderEmptyState : null}
           showsVerticalScrollIndicator={false}
         />
-      </View>
-    </View>
+      </RNSafeAreaView>
+    </LinearGradient>
   );
 };
 
@@ -189,22 +195,21 @@ const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create
   },
   headerTitle: {
     fontSize: tokens.typography.fontSize['2xl'],
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
   },
   statsContainer: {
     marginHorizontal: tokens.spacing.lg,
     marginBottom: tokens.spacing.lg,
-    backgroundColor: tokens.colors.surface,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: tokens.borderRadius.lg,
     padding: tokens.spacing.lg,
-    ...tokens.shadows.md,
   },
   statsTitle: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.md,
     textAlign: 'right',
   },
@@ -217,29 +222,19 @@ const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create
   },
   statValue: {
     fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.primary,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.primary.main,
     marginBottom: tokens.spacing.xs,
   },
   statLabel: {
     fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.textSecondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
-  },
-  listWrapper: {
-    flex: 1,
-    position: 'relative',
-  },
-  gradientBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   listContainer: {
     paddingHorizontal: tokens.spacing.lg,
-    paddingBottom: tokens.spacing['4xl'],
+    paddingTop: tokens.spacing.md,
+    paddingBottom: tokens.spacing['5xl'],
   },
   courseContainer: {
     marginBottom: tokens.spacing.lg,
@@ -266,27 +261,27 @@ const createStyles = (tokens: ReturnType<typeof usetokens>) => StyleSheet.create
   },
   emptyStateTitle: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.textPrimary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     marginBottom: tokens.spacing.sm,
     textAlign: 'center',
   },
   emptyStateSubtitle: {
     fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.textSecondary,
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
     marginBottom: tokens.spacing.lg,
   },
   exploreButton: {
-    backgroundColor: tokens.colors.primary,
+    backgroundColor: tokens.colors.primary.main,
     paddingHorizontal: tokens.spacing.lg,
     paddingVertical: tokens.spacing.md,
     borderRadius: tokens.borderRadius.lg,
   },
   exploreButtonText: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.text.primary,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: '#000000',
   },
   errorContainer: {
     flex: 1,

@@ -37,27 +37,50 @@ export default function VoiceWaveform({ isRecording, audioLevel = 0 }: VoiceWave
       return;
     }
 
-    // הקלטה - אנימציות רנדומליות
+    // הקלטה - אנימציות דינמיות לפי audioLevel
+    let animationFrame: number;
+    let lastUpdate = Date.now();
+    
     const animateWaves = () => {
+      if (!isRecording) return;
+      
+      const now = Date.now();
+      const deltaTime = (now - lastUpdate) / 1000; // seconds
+      lastUpdate = now;
+      
+      const baseLevel = Math.max(0.2, Math.min(1, audioLevel || 0.2));
+      
       Animated.parallel(
         barAnimations.map((anim, index) => {
-          // גובה רנדומלי מושפע מרמת הקול
-          const randomHeight = 0.2 + Math.random() * (audioLevel || 0.5) * 0.8;
+          // כל פס מקבל גובה שונה בהתבסס על audioLevel
+          // וריאציה בין הפסים - כל פס קצת שונה עם תנועה דינמית
+          const phase = (index / BARS_COUNT) * Math.PI * 2;
+          const timePhase = now * 0.003; // מהיר יותר
+          const variation = (Math.sin(phase + timePhase) + 1) / 2; // 0-1
+          
+          // גובה בסיסי + וריאציה דינמית
+          const minHeight = 0.2;
+          const maxHeight = 0.2 + (baseLevel * 0.8);
+          const targetHeight = minHeight + (maxHeight - minHeight) * (0.4 + variation * 0.6);
           
           return Animated.timing(anim, {
-            toValue: randomHeight,
-            duration: 150 + Math.random() * 100,
+            toValue: Math.max(0.2, Math.min(1, targetHeight)),
+            duration: 50, // מהיר מאוד - מגיב מיד
             useNativeDriver: false,
           });
         })
-      ).start(() => {
-        if (isRecording) {
-          animateWaves(); // המשך אנימציה
-        }
-      });
+      ).start();
+      
+      animationFrame = requestAnimationFrame(animateWaves);
     };
 
     animateWaves();
+    
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
   }, [isRecording, audioLevel]);
 
   return (
@@ -91,14 +114,16 @@ const createStyles = (tokens: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     flex: 1,
+    minWidth: 0, // מאפשר להתכווץ
     height: 40,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
   },
   bar: {
     width: 3,
-    backgroundColor: tokens.colors.accent.main,
-    borderRadius: 2,
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: 1.5,
     minHeight: 4,
+    maxHeight: 32,
   },
 });
 

@@ -12,3 +12,10 @@ UPDATE public.chat_groups SET name = 'חדשות מתפרצות' WHERE id = '000
 UPDATE public.chat_groups SET name = 'סווינגים וסטאפים' WHERE id = '00000000-0000-0000-0000-000000000008';
 UPDATE public.chat_groups SET name = 'מסחר פניסטוקס - סיכון גבוה' WHERE id = '00000000-0000-0000-0000-000000000009';
 
+
+
+
+
+
+
+

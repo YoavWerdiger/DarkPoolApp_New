@@ -12,14 +12,30 @@ import { filterMajorIndexStocks, isMajorIndexStock } from './majorIndices';
 export interface EarningsReport {
   id: string;
   code: string;
+  ticker?: string | null;
+  company_name?: string | null;
+  asset_name?: string | null;
   report_date: string;
   date: string;
   before_after_market: string | null;
   currency: string | null;
   actual: number | null;
   estimate: number | null;
+  eps_estimate?: number | string | null;
   difference: number | null;
   percent: number | null;
+  // Revenue fields
+  revenue_actual?: number | null;
+  revenue_estimate_avg?: number | null;
+  revenue_estimate?: number | string | null;
+  revenue_surprise?: number | null;
+  revenue_surprise_percent?: number | null;
+  // Additional fields from new API
+  period?: string | null;
+  period_year?: number | null;
+  importance?: number | null;
+  earnings_date_time?: string | null; // TIMESTAMP WITH TIME ZONE
+  report_time?: string | null; // Before Market, After Market, etc.
   source: string;
   created_at?: string;
   updated_at?: string;
@@ -133,17 +149,27 @@ export class EarningsService {
       console.log('🔄 EarningsService.getAll(): Starting fetch...');
       console.log(`📊 Limit: ${limit}`);
       
-      // טווח מדויק כמו ב-Edge Function
-      const startDateStr = '2025-10-08';
-      console.log(`📅 Start date filter: ${startDateStr}`);
+      // טווח דינמי - 3 חודשים אחורה + 6 חודשים קדימה
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setMonth(startDate.getMonth() - 3); // 3 חודשים אחורה
+      const endDate = new Date(today);
+      endDate.setMonth(endDate.getMonth() + 6); // 6 חודשים קדימה
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+      
+      console.log(`📅 Date range: ${startDateStr} to ${endDateStr}`);
       
       const queryStartTime = Date.now();
       const { data, error } = await supabase
         .from('earnings_calendar')
         .select('*')
         .like('code', '%.US') // רק מניירות אמריקאיות
-        .gte('report_date', startDateStr) // מ-08/10/2025
-        .order('report_date', { ascending: false }) // מהחדש לישן - כך נקבל את התאריכים העדכניים ביותר
+        .gte('report_date', startDateStr) // מ-3 חודשים אחורה
+        .lte('report_date', endDateStr) // עד 6 חודשים קדימה
+        .gte('importance', 3) // רק דיווחים עם importance מ-3 ומעלה
+        .order('report_date', { ascending: false }) // מהחדש לישן
         .limit(limit);
 
       const queryTime = Date.now() - queryStartTime;
@@ -168,9 +194,9 @@ export class EarningsService {
         });
       }
       
-      // החזרת כל הנתונים ללא סינון (הסרת הסינון למניות מהאינדקסים הגדולים)
+      // החזרת כל הנתונים ללא סינון
       console.log(`📊 Total reports from database: ${(data || []).length} reports`);
-      console.log(`📅 Date range: from ${startDateStr}`);
+      console.log(`📅 Date range: ${startDateStr} to ${endDateStr}`);
       
       if ((data || []).length > 0) {
         const dates = (data || []).map(r => r.report_date).filter((v, i, a) => a.indexOf(v) === i).sort();
@@ -183,6 +209,9 @@ export class EarningsService {
           return `${date}: ${count} reports`;
         });
         console.log(`📊 Reports per date (first 5):`, dateCounts);
+      } else {
+        console.warn(`⚠️ No reports found in date range ${startDateStr} to ${endDateStr}`);
+        console.warn(`⚠️ This might mean the sync function hasn't run or there's a data issue`);
       }
       
       console.log('✅ EarningsService.getAll(): Completed successfully');
@@ -366,9 +395,9 @@ export class EarningsService {
       const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDczNTEsImV4cCI6MjA2Njc4MzM1MX0.YHfniy3w94LVODC54xb7Us-Daw_pRx2WWFOoR-59kGQ';
 
       console.log('🔄 EarningsService.refreshData(): Calling Edge Function...');
-      console.log('🔄 Function URL:', `${supabaseUrl}/functions/v1/daily-earnings-sync-major-indices`);
+      console.log('🔄 Function URL:', `${supabaseUrl}/functions/v1/daily-earnings-sync-v2`);
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/daily-earnings-sync-major-indices`, {
+      const response = await fetch(`${supabaseUrl}/functions/v1/daily-earnings-sync-v2`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

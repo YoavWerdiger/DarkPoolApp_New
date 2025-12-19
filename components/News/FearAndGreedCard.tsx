@@ -4,12 +4,28 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { fearAndGreedService, FearAndGreedData } from '../../services/fearAndGreedService';
+import UICard from '../ui/UICard';
 
 interface FearAndGreedCardProps {
   onPress?: () => void;
+  initialExpanded?: boolean;
+  /**
+   * כשהוא true – הכרטיס נפתח תמיד, בלי כפתור סגירה/פתיחה
+   * (משמש בטאב "עיקרי מדדים")
+   */
+  disableToggle?: boolean;
+  /**
+   * כשהוא true – ללא מרווחים מהצדדים, ברוחב מלא של הקונטיינר
+   */
+  fullWidth?: boolean;
 }
 
-export default function FearAndGreedCard({ onPress }: FearAndGreedCardProps) {
+export default function FearAndGreedCard({
+  onPress,
+  initialExpanded,
+  disableToggle,
+  fullWidth,
+}: FearAndGreedCardProps) {
   const DesignTokens = useDesignTokens();
   const [data, setData] = useState<FearAndGreedData | null>(null);
   const [historicalData, setHistoricalData] = useState<{
@@ -20,6 +36,7 @@ export default function FearAndGreedCard({ onPress }: FearAndGreedCardProps) {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(initialExpanded ?? false);
 
   // בדיקת בטיחות - אם DesignTokens לא מוגדר, נשתמש בערכים ברירת מחדל
   if (!DesignTokens || !DesignTokens.colors || !DesignTokens.colors.primary) {
@@ -34,20 +51,16 @@ export default function FearAndGreedCard({ onPress }: FearAndGreedCardProps) {
   const styles = useMemo(() => {
     return {
       container: {
-        marginHorizontal: DesignTokens.spacing.lg,
+        marginHorizontal: fullWidth ? 0 : DesignTokens.spacing.lg,
         marginTop: DesignTokens.spacing.xs,
         marginBottom: DesignTokens.spacing.md,
         borderRadius: DesignTokens.borderRadius.lg,
-        backgroundColor: DesignTokens.colors.background.secondary,
-        paddingTop: DesignTokens.spacing.sm,
-        paddingBottom: DesignTokens.spacing.md,
-        paddingHorizontal: DesignTokens.spacing.md,
         overflow: 'hidden' as const,
       },
       header: {
-        flexDirection: 'row' as const,
+        flexDirection: 'row-reverse' as const,
         alignItems: 'center' as const,
-        justifyContent: 'flex-end' as const,
+        justifyContent: 'space-between' as const,
         marginBottom: DesignTokens.spacing.xs,
       },
       title: {
@@ -215,7 +228,7 @@ export default function FearAndGreedCard({ onPress }: FearAndGreedCardProps) {
         writingDirection: 'rtl' as const,
       },
     };
-  }, [DesignTokens]);
+  }, [DesignTokens, fullWidth]);
 
   useEffect(() => {
     loadFearAndGreedIndex();
@@ -259,15 +272,57 @@ export default function FearAndGreedCard({ onPress }: FearAndGreedCardProps) {
     }
   };
 
+  const effectiveExpanded = disableToggle ? true : expanded;
+
+  const renderHeader = (subtitle?: string) => (
+    <View style={styles.header}>
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
+        <Text style={styles.title}>מדד הפחד והתאווה</Text>
+      </View>
+      {!disableToggle && (
+        <TouchableOpacity
+          onPress={() => setExpanded(!expanded)}
+          activeOpacity={0.7}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: DesignTokens.spacing.sm,
+            paddingVertical: DesignTokens.spacing.xs / 2,
+            borderRadius: 999,
+            backgroundColor: 'rgba(0,0,0,0.35)',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: DesignTokens.typography.fontSize.xs,
+              color: DesignTokens.colors.text.secondary,
+              marginRight: DesignTokens.spacing.xs / 2,
+            }}
+          >
+            {expanded ? 'סגור' : 'פתח'}
+          </Text>
+          <Ionicons
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={16}
+            color={DesignTokens.colors.text.secondary}
+          />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
-          <Text style={[styles.description, { marginTop: DesignTokens.spacing.sm }]}>
-            טוען מדד פחד ותאווה...
-          </Text>
-        </View>
+        <UICard variant="blur" padding="md">
+          {renderHeader()}
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
+            <Text style={[styles.description, { marginTop: DesignTokens.spacing.sm }]}>
+              טוען מדד הפחד והתאווה...
+            </Text>
+          </View>
+        </UICard>
       </View>
     );
   }
@@ -275,36 +330,31 @@ export default function FearAndGreedCard({ onPress }: FearAndGreedCardProps) {
   if (error || !data) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>מדד פחד ותאווה</Text>
-          <Ionicons 
-            name="trending-up-outline" 
-            size={24} 
-            color={DesignTokens.colors.text.secondary} 
-          />
-        </View>
-        <Text style={styles.errorText}>
-          {error || 'לא ניתן לטעון את המדד'}
-        </Text>
-        <TouchableOpacity
-          onPress={loadFearAndGreedIndex}
-          style={{
-            marginTop: DesignTokens.spacing.sm,
-            paddingVertical: DesignTokens.spacing.xs,
-            paddingHorizontal: DesignTokens.spacing.sm,
-            borderRadius: DesignTokens.borderRadius.md,
-            backgroundColor: DesignTokens.colors.background.tertiary,
-            alignSelf: 'flex-start',
-          }}
-        >
-          <Text style={{
-            fontSize: DesignTokens.typography.fontSize.sm,
-            color: DesignTokens.colors.primary.main,
-            fontWeight: DesignTokens.typography.fontWeight.medium as any,
-          }}>
-            נסה שוב
+        <UICard variant="blur" padding="md">
+          {renderHeader()}
+          <Text style={styles.errorText}>
+            {error || 'לא ניתן לטעון את המדד'}
           </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={loadFearAndGreedIndex}
+            style={{
+              marginTop: DesignTokens.spacing.sm,
+              paddingVertical: DesignTokens.spacing.xs,
+              paddingHorizontal: DesignTokens.spacing.sm,
+              borderRadius: DesignTokens.borderRadius.md,
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              alignSelf: 'flex-start',
+            }}
+          >
+            <Text style={{
+              fontSize: DesignTokens.typography.fontSize.sm,
+              color: DesignTokens.colors.primary.main,
+              fontWeight: DesignTokens.typography.fontWeight.medium as any,
+            }}>
+              נסה שוב
+            </Text>
+          </TouchableOpacity>
+        </UICard>
       </View>
     );
   }
@@ -372,9 +422,20 @@ export default function FearAndGreedCard({ onPress }: FearAndGreedCardProps) {
 
   const CardContent = (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>מדד פחד ותאווה</Text>
-      </View>
+      <UICard variant="blur" padding="md">
+        {renderHeader(description)}
+
+        {!effectiveExpanded ? (
+          <View style={{ marginTop: DesignTokens.spacing.sm }}>
+            <Text style={[styles.description, { textAlign: 'right', marginBottom: DesignTokens.spacing.xs }]}>
+              ערך נוכחי: <Text style={{ fontWeight: DesignTokens.typography.fontWeight.bold as any, color }}>{value}</Text>
+            </Text>
+            <Text style={[styles.description, { textAlign: 'right', color: DesignTokens.colors.text.secondary }]}>
+              לחץ כדי לראות את הגרף וההיסטוריה
+            </Text>
+          </View>
+        ) : (
+        <>
 
       {/* פריסה אופקית - שני חלקים */}
       <View style={styles.splitContainer}>
@@ -561,22 +622,25 @@ export default function FearAndGreedCard({ onPress }: FearAndGreedCardProps) {
         </View>
       </View>
 
-      {/* Timestamp */}
-      {data.timestamp && (
-        <Text style={[styles.description, { 
-          fontSize: DesignTokens.typography.fontSize.xs, 
-          marginTop: DesignTokens.spacing.sm, 
-          textAlign: 'center',
-          color: DesignTokens.colors.text.tertiary,
-        }]}>
-          עודכן: {new Date(data.timestamp * 1000).toLocaleString('he-IL', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
-      )}
+        {/* Timestamp */}
+        {data.timestamp && (
+          <Text style={[styles.description, { 
+            fontSize: DesignTokens.typography.fontSize.xs, 
+            marginTop: DesignTokens.spacing.sm, 
+            textAlign: 'center',
+            color: DesignTokens.colors.text.tertiary,
+          }]}>
+            עודכן: {new Date(data.timestamp * 1000).toLocaleString('he-IL', {
+              day: 'numeric',
+              month: 'short',
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Text>
+        )}
+        </>
+        )}
+      </UICard>
     </View>
   );
 

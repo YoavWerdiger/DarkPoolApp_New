@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DesignTokens from './DesignTokens';
+import { useDesignTokens } from './DesignTokens';
 
 export type UIButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
 export type UIButtonSize = 'sm' | 'md' | 'lg';
@@ -35,6 +35,7 @@ const UIButton: React.FC<UIButtonProps> = ({
   textStyle,
   children,
 }) => {
+  const DesignTokens = useDesignTokens();
   const { colors, typography, spacing, borderRadius, shadows } = DesignTokens;
 
   // Variant Styles
@@ -43,11 +44,11 @@ const UIButton: React.FC<UIButtonProps> = ({
       case 'primary':
         return {
           container: {
-            backgroundColor: colors.primary,
+            backgroundColor: colors.primary.main,
             ...shadows.md,
           },
           text: {
-            color: '#000000',
+            color: colors.text.inverse,
             fontWeight: typography.fontWeight.semibold,
           },
         };
@@ -55,13 +56,13 @@ const UIButton: React.FC<UIButtonProps> = ({
       case 'secondary':
         return {
           container: {
-            backgroundColor: colors.surface,
+            backgroundColor: colors.background.elevated,
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: colors.border.primary,
             ...shadows.sm,
           },
           text: {
-            color: colors.textPrimary,
+            color: colors.text.primary,
             fontWeight: typography.fontWeight.medium,
           },
         };
@@ -69,11 +70,11 @@ const UIButton: React.FC<UIButtonProps> = ({
       case 'danger':
         return {
           container: {
-            backgroundColor: colors.danger,
+            backgroundColor: colors.danger.main,
             ...shadows.md,
           },
           text: {
-            color: colors.textPrimary,
+            color: colors.text.primary,
             fontWeight: typography.fontWeight.semibold,
           },
         };
@@ -84,7 +85,7 @@ const UIButton: React.FC<UIButtonProps> = ({
             backgroundColor: 'transparent',
           },
           text: {
-            color: colors.primary,
+            color: colors.primary.main,
             fontWeight: typography.fontWeight.medium,
           },
         };
@@ -94,10 +95,10 @@ const UIButton: React.FC<UIButtonProps> = ({
           container: {
             backgroundColor: 'transparent',
             borderWidth: 1,
-            borderColor: colors.primary,
+            borderColor: colors.primary.main,
           },
           text: {
-            color: colors.primary,
+            color: colors.primary.main,
             fontWeight: typography.fontWeight.medium,
           },
         };
@@ -105,11 +106,11 @@ const UIButton: React.FC<UIButtonProps> = ({
       default:
         return {
           container: {
-            backgroundColor: colors.primary,
+            backgroundColor: colors.primary.main,
             ...shadows.md,
           },
           text: {
-            color: '#000000',
+            color: colors.text.inverse,
             fontWeight: typography.fontWeight.semibold,
           },
         };

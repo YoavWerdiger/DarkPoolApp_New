@@ -10,7 +10,7 @@ import {
   StatusBar 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DesignTokens from './DesignTokens';
+import { useDesignTokens } from './DesignTokens';
 
 export type UIAlertType = 'info' | 'success' | 'warning' | 'error';
 
@@ -39,6 +39,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
   onClose,
   showIcon = true,
 }) => {
+  const DesignTokens = useDesignTokens();
   const { colors, typography, spacing, borderRadius, shadows } = DesignTokens;
   
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -80,26 +81,26 @@ const UIAlert: React.FC<UIAlertProps> = ({
       case 'success':
         return {
           icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.success,
-          backgroundColor: colors.surface,
+          iconColor: colors.success.main,
+          backgroundColor: colors.background.elevated,
         };
       case 'warning':
         return {
           icon: 'warning' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.warning,
-          backgroundColor: colors.surface,
+          iconColor: colors.warning.main,
+          backgroundColor: colors.background.elevated,
         };
       case 'error':
         return {
           icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.danger,
-          backgroundColor: colors.surface,
+          iconColor: colors.danger.main,
+          backgroundColor: colors.background.elevated,
         };
       default: // info
         return {
           icon: 'information-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.info,
-          backgroundColor: colors.surface,
+          iconColor: colors.info.main,
+          backgroundColor: colors.background.elevated,
         };
     }
   };
@@ -131,22 +132,22 @@ const UIAlert: React.FC<UIAlertProps> = ({
     maxWidth: 320,
     ...shadows.lg,
     borderWidth: 0.5,
-    borderColor: colors.border,
+    borderColor: colors.border.primary,
   };
 
   const titleStyle: TextStyle = {
     fontSize: typography.fontSize.lg,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
+    color: colors.text.primary,
     textAlign: 'center',
     marginBottom: message ? spacing.sm : 0,
   };
 
   const messageStyle: TextStyle = {
     fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
+    color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: typography.lineHeight.normal,
+    lineHeight: typography.lineHeight.normal * typography.fontSize.base,
     marginBottom: spacing.lg,
   };
 
@@ -170,19 +171,19 @@ const UIAlert: React.FC<UIAlertProps> = ({
       case 'destructive':
         return {
           ...baseStyle,
-          backgroundColor: colors.danger,
+          backgroundColor: colors.danger.main,
         };
       case 'cancel':
         return {
           ...baseStyle,
           backgroundColor: 'transparent',
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: colors.border.primary,
         };
       default:
         return {
           ...baseStyle,
-          backgroundColor: colors.primary,
+          backgroundColor: colors.primary.main,
         };
     }
   };
@@ -191,21 +192,21 @@ const UIAlert: React.FC<UIAlertProps> = ({
     switch (button.style) {
       case 'destructive':
         return {
-          color: colors.textPrimary,
+          color: colors.text.primary,
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
         };
       case 'cancel':
         return {
-          color: colors.textSecondary,
+          color: colors.text.secondary,
           fontWeight: typography.fontWeight.medium,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
         };
-      default:
+        default:
         return {
-          color: '#000000',
+          color: colors.text.inverse,
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,

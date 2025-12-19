@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { AuthService, AuthUser, LoginCredentials, RegisterCredentials } from '../services/authService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NotificationService } from '../services/notificationService';
+import { supabase } from '../services/supabase';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -11,7 +12,7 @@ interface AuthContextType {
   signOut: (keepCredentials?: boolean) => Promise<{ error: string | null }>;
   updateProfile: (updates: Partial<AuthUser>) => Promise<{ error: string | null }>;
   setUser: (user: AuthUser | null) => void;
-  attemptAutoLogin: () => Promise<void>;
+  attemptAutoLogin: () => Promise<AuthUser | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,6 +56,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
     const { data: { subscription } } = AuthService.onAuthStateChange(async (authUser) => {
       console.log('🔄 AuthContext: Auth state changed, user:', authUser?.id || 'null');
+      
+      // אם יש explicit_logout, לא נעדכן את ה-state בחזרה למשתמש
+      if (authUser) {
+        const wasExplicitLogout = await AsyncStorage.getItem('explicit_logout');
+        if (wasExplicitLogout === 'true') {
+          console.log('🔄 AuthContext: Explicit logout detected, ignoring auth state change');
+          // נמחק את הפלג הזה כדי לאפשר התחברות חדשה
+          await AsyncStorage.removeItem('explicit_logout');
+          setUser(null);
+          setIsLoading(false);
+          deviceTokenRegisteredRef.current = false;
+          return;
+        }
+      }
+      
       setUser(authUser);
       
       if (!authUser) {
@@ -71,33 +87,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const initializeAuth = async () => {
+    // בדיקה ראשונית אם המשתמש התנתק במפורש - לפני כל בדיקה אחרת
+    const wasExplicitLogout = await AsyncStorage.getItem('explicit_logout');
+    
+    if (wasExplicitLogout === 'true') {
+      console.log('🔄 AuthContext: Explicit logout detected, forcing sign out...');
+      
+      // אם יש session פעיל, נמחק אותו
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          console.log('🔄 AuthContext: Found active session, signing out...');
+          await AuthService.signOut();
+        }
+      } catch (error) {
+        console.error('⚠️ AuthContext: Error checking/signing out session:', error);
+      }
+      
+      // נמחק את הפלג הזה
+      await AsyncStorage.removeItem('explicit_logout');
+      // נמחק גם את הנתונים השמורים אם יש - וודא שהם נמחקים
+      try {
+        await AsyncStorage.removeItem('saved_email');
+        await AsyncStorage.removeItem('saved_password');
+        await AsyncStorage.removeItem('remember_me');
+        console.log('✅ AuthContext: Cleared all saved credentials after explicit logout');
+      } catch (error) {
+        console.error('❌ AuthContext: Error clearing credentials:', error);
+      }
+      
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+    
+    // רק אחרי שבדקנו שאין explicit_logout, נבדוק אם יש משתמש מחובר
     let finalUser = await checkUser();
     console.log('🔍 AuthContext: Current user after checkUser:', finalUser?.id);
     
-    // אם אין משתמש מחובר, נבדוק אם המשתמש התנתק במפורש
+    // אם אין משתמש מחובר, ננסה auto-login
     if (!finalUser) {
-      // בדיקה אם המשתמש התנתק במפורש (לא רוצים auto-login אחרי sign out)
-      const wasExplicitLogout = await AsyncStorage.getItem('explicit_logout');
-      
-      if (wasExplicitLogout === 'true') {
-        console.log('🔄 AuthContext: Explicit logout detected, skipping auto-login');
-        // נמחק את הפלג הזה
-        await AsyncStorage.removeItem('explicit_logout');
-        // נמחק גם את הנתונים השמורים אם יש - וודא שהם נמחקים
-        try {
-          await AsyncStorage.removeItem('saved_email');
-          await AsyncStorage.removeItem('saved_password');
-          await AsyncStorage.removeItem('remember_me');
-          console.log('✅ AuthContext: Cleared all saved credentials after explicit logout');
-        } catch (error) {
-          console.error('❌ AuthContext: Error clearing credentials:', error);
-        }
-        setIsLoading(false);
-        return;
-      } else {
-        console.log('🔄 AuthContext: No current user, attempting auto-login...');
-        finalUser = await attemptAutoLogin();
-      }
+      console.log('🔄 AuthContext: No current user, attempting auto-login...');
+      finalUser = await attemptAutoLogin();
     }
     
     // רישום device token אם יש משתמש מחובר (ללא delay מיותר)
@@ -244,75 +275,97 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       console.log('🔄 AuthContext: Starting sign out...');
       
+      // שמירת userId לפני שמעדכנים את ה-state
+      const currentUserId = user?.id;
+      
       // אפס את ה-flag של רישום token
       deviceTokenRegisteredRef.current = false;
       
-      // עדכון ה-user state מיד כדי שהניווט יתבצע מיד
+      // עדכון ה-user state מיד בהתחלה - זה יגרום לניווט לדף ההתחברות
+      // חשוב לעשות את זה לפני כל פעולה אסינכרונית אחרת!
+      console.log('🔄 AuthContext: Setting user to null immediately...');
       setUser(null);
       setIsLoading(false);
       
-      // ביטול device token לפני התנתקות
+      // סימון מיידי שהמשתמש התנתק - זה הכי חשוב כדי למנוע auto-login אחרי reload
       try {
-        console.log('📱 AuthContext: Unregistering device token...');
-        await NotificationService.unregisterDeviceToken();
-        console.log('✅ AuthContext: Device token unregistered');
-      } catch (tokenError) {
-        console.error('⚠️ AuthContext: Error unregistering device token (non-critical):', tokenError);
-        // לא נכשל אם זה לא עובד - זה לא קריטי
-      }
-      
-      // מחיקת נתוני התחברות שמורים בהתנתקות - תמיד מוחקים כדי למנוע auto-login
-      // אם המשתמש רוצה להתחבר שוב, הוא יכול לסמן "זכור אותי" מחדש
-      try {
-        await AsyncStorage.removeItem('saved_email');
-        await AsyncStorage.removeItem('saved_password');
-        await AsyncStorage.removeItem('remember_me');
-        // סימון שהמשתמש התנתק במפורש כדי למנוע auto-login בריענון
+        console.log('🚫 AuthContext: Setting explicit_logout flag immediately...');
         await AsyncStorage.setItem('explicit_logout', 'true');
-        console.log('✅ AuthContext: Cleared saved credentials on logout');
-      } catch (storageError) {
-        console.error('❌ AuthContext: Error clearing saved credentials:', storageError);
+      } catch (e) {
+        console.warn('⚠️ Failed to set explicit_logout:', e);
       }
       
-      // מחיקת כל ה-device preferences - הם ספציפיים למכשיר ולמשתמש
-      // כשמשתמש מתנתק, כל ההגדרות שלו במכשיר הזה נמחקות
+      // ביטול device token ברקע - לא מחכים לתוצאה
+      if (currentUserId) {
+        NotificationService.unregisterDeviceToken(currentUserId)
+          .then(() => console.log('✅ AuthContext: Device token unregistered'))
+          .catch((err) => console.warn('⚠️ AuthContext: Error unregistering device token:', err));
+      }
+      
+      // קריאה ל-signOut ב-Supabase וניקוי storage במקביל
+      console.log('🔄 AuthContext: Calling AuthService.signOut() and clearing storage...');
+      
+      // עושים את כל הפעולות במקביל
+      await Promise.all([
+        AuthService.signOut().catch(err => console.warn('⚠️ Supabase signOut error:', err)),
+        
+        // מחיקת נתוני התחברות שמורים
+        AsyncStorage.removeItem('saved_email').catch(() => {}),
+        AsyncStorage.removeItem('saved_password').catch(() => {}),
+        AsyncStorage.removeItem('remember_me').catch(() => {}),
+        AsyncStorage.removeItem('appSettings').catch(() => {}),
+        AsyncStorage.removeItem('notificationSettings').catch(() => {}),
+      ]);
+      
+      // מחיקת ה-session של Supabase ישירות מ-AsyncStorage
       try {
-        console.log('🧹 AuthContext: Clearing device preferences...');
-        await AsyncStorage.removeItem('appSettings'); // הגדרות אפליקציה (dark mode, language, etc.)
-        await AsyncStorage.removeItem('notificationSettings'); // הגדרות התראות
-        console.log('✅ AuthContext: Device preferences cleared');
-      } catch (prefsError) {
-        console.error('⚠️ AuthContext: Error clearing device preferences (non-critical):', prefsError);
-        // לא נכשל אם זה לא עובד - זה לא קריטי
+        const allKeys = await AsyncStorage.getAllKeys();
+        const supabaseKeys = allKeys.filter(key => 
+          key.includes('supabase') || 
+          key.includes('sb-') ||
+          key.includes('auth-token')
+        );
+        if (supabaseKeys.length > 0) {
+          await AsyncStorage.multiRemove(supabaseKeys);
+          console.log('✅ AuthContext: Cleared Supabase session keys:', supabaseKeys);
+        }
+      } catch (storageError) {
+        console.warn('⚠️ AuthContext: Error clearing Supabase storage:', storageError);
       }
       
-      // קריאה ל-signOut ב-Supabase (זה יעדכן את ה-onAuthStateChange)
-      const { error } = await AuthService.signOut();
-      if (error) {
-        console.error('❌ AuthContext: Error signing out:', error);
-        // גם אם יש שגיאה, המשתמש כבר הוגדר כ-null
-        return { error };
-      }
+      console.log('✅ AuthContext: All stored data cleared');
       
       console.log('✅ AuthContext: Sign out completed successfully');
       return { error: null };
     } catch (error: any) {
       console.error('❌ AuthContext: Exception in sign out:', error);
-      // גם במקרה של שגיאה, ננסה להתנתק
+      
+      // וודא שה-UI מעודכן גם במקרה של שגיאה
       setUser(null);
       setIsLoading(false);
-      // נמחק את הנתונים גם במקרה של שגיאה
-      try {
-        await AsyncStorage.removeItem('saved_email');
-        await AsyncStorage.removeItem('saved_password');
-        await AsyncStorage.removeItem('remember_me');
-        await AsyncStorage.setItem('explicit_logout', 'true');
-        // מחיקת device preferences גם במקרה של שגיאה
-        await AsyncStorage.removeItem('appSettings');
-        await AsyncStorage.removeItem('notificationSettings');
-      } catch (storageError) {
-        console.error('❌ AuthContext: Error clearing saved credentials in exception:', storageError);
-      }
+      
+      // סימון explicit_logout במקרה של שגיאה
+      AsyncStorage.setItem('explicit_logout', 'true').catch(() => {});
+      
+      // ניקוי ברקע - לא מחכים
+      Promise.all([
+        AsyncStorage.removeItem('saved_email'),
+        AsyncStorage.removeItem('saved_password'),
+        AsyncStorage.removeItem('remember_me'),
+        AsyncStorage.removeItem('appSettings'),
+        AsyncStorage.removeItem('notificationSettings'),
+      ]).catch(() => {});
+      
+      // ניקוי Supabase session ברקע
+      AsyncStorage.getAllKeys().then(allKeys => {
+        const supabaseKeys = allKeys.filter(key => 
+          key.includes('supabase') || key.includes('sb-') || key.includes('auth-token')
+        );
+        if (supabaseKeys.length > 0) {
+          AsyncStorage.multiRemove(supabaseKeys).catch(() => {});
+        }
+      }).catch(() => {});
+      
       return { error: error.message };
     }
   };

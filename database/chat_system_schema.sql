@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
   read_by_count INTEGER DEFAULT 0,
   
   -- אינדקסים
-  CONSTRAINT valid_message_type CHECK (message_type IN ('text', 'image', 'video', 'audio', 'document', 'system'))
+  CONSTRAINT valid_message_type CHECK (message_type IN ('text', 'image', 'video', 'audio', 'document', 'system', 'poll'))
 );
 
 -- ============================================

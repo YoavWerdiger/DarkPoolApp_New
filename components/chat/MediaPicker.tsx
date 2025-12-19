@@ -8,7 +8,11 @@ import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 
 // עבור תאימות עם Expo Go - שימוש ב-MediaTypeOptions עדיין
-const MediaType = ImagePicker.MediaType || ImagePicker.MediaTypeOptions;
+const MediaType = ImagePicker.MediaType || (ImagePicker as any).MediaTypeOptions || {
+  Images: 'images',
+  Videos: 'videos',
+  All: 'all',
+};
 
 interface MediaPickerProps {
   visible: boolean;

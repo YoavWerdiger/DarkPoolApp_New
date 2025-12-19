@@ -180,3 +180,10 @@ https://supabase.com/dashboard/project/wpmrtczbfcijoocguime/logs/edge-functions
 **תאריך:** דצמבר 2025  
 **גרסה:** 1.0.0
 
+
+
+
+
+
+
+

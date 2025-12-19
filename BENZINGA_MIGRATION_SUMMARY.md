@@ -359,3 +359,10 @@ SELECT * FROM economic_cache_metadata WHERE source = 'Benzinga';
 **גרסה:** 1.0.0  
 **סטטוס:** ✅ הושלם בהצלחה
 
+
+
+
+
+
+
+

@@ -2,9 +2,10 @@ import React from 'react';
 import { View, Text, ImageBackground } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import ChannelsList from '../../components/chat/ChannelsList';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 export default function ChannelsScreen() {
+  const DesignTokens = useDesignTokens();
   return (
     <View className="flex-1 bg-black" style={{ backgroundColor: DesignTokens.colors.background.primary }}>
       {/* SwiftUI style: clean background, no gradient on body */}

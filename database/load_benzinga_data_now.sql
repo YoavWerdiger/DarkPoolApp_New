@@ -47,3 +47,10 @@ BEGIN
   RAISE NOTICE '   https://supabase.com/dashboard/project/wpmrtczbfcijoocguime/logs/edge-functions';
 END $$;
 
+
+
+
+
+
+
+

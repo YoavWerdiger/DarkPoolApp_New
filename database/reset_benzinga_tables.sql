@@ -139,3 +139,10 @@ BEGIN
   RAISE NOTICE '🎯 הכל מוכן ל-Benzinga!';
 END $$;
 
+
+
+
+
+
+
+

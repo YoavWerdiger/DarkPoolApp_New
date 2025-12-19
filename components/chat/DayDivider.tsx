@@ -1,12 +1,14 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface DayDividerProps {
   date: Date;
 }
 
 const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
+  const DesignTokens = useDesignTokens();
+  const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const getDayText = (date: Date): string => {
     console.log('🔍 DayDivider: Processing date:', date);
     console.log('🔍 DayDivider: Date type:', typeof date);
@@ -76,31 +78,25 @@ const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: any) => StyleSheet.create({
   container: {
     alignItems: 'center',
-    marginVertical: DesignTokens.spacing.md,
-    paddingHorizontal: DesignTokens.spacing.lg,
+    marginVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
   },
   divider: {
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.sm,
-    borderRadius: DesignTokens.borderRadius['2xl'],
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius['2xl'],
     minWidth: 100,
     alignItems: 'center',
-    borderWidth: 1,
-    backgroundColor: '#181818', // אפור כהה
-    borderColor: '#374151', // אפור גבול
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    borderWidth: 0, // ללא borders לפי הזיכרון
+    backgroundColor: tokens.colors.background.secondary,
   },
   text: {
-    color: '#E5E7EB',
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.medium as any,
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.medium as any,
     textAlign: 'center',
   },
 });

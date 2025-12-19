@@ -479,28 +479,51 @@ export class NotificationService {
     }
   }
 
-  // Unregister device token
-  static async unregisterDeviceToken(): Promise<boolean> {
+  // Unregister device token (with optional userId - if not provided, gets from auth)
+  static async unregisterDeviceToken(userId?: string): Promise<boolean> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return false;
+      let targetUserId = userId;
+      
+      // אם לא סופק userId, ננסה לקבל מהמשתמש המחובר
+      if (!targetUserId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.log('⚠️ NotificationService: No user found for unregistering token');
+          return false;
+        }
+        targetUserId = user.id;
       }
 
       const token = await this.getExpoPushToken();
       if (!token) {
+        console.log('⚠️ NotificationService: No token found for unregistering');
         return false;
       }
 
+      console.log('📱 NotificationService: Unregistering device token for user:', targetUserId);
+
+      // נסה למחוק את הטוקן (להגדיר is_active = false)
       const { error } = await supabase
         .from('device_tokens')
         .update({ is_active: false })
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .eq('expo_push_token', token);
 
       if (error) {
         console.error('❌ NotificationService: Error unregistering device token:', error);
-        return false;
+        // ננסה גם למחוק לחלוטין אם עדכון נכשל
+        const { error: deleteError } = await supabase
+          .from('device_tokens')
+          .delete()
+          .eq('user_id', targetUserId)
+          .eq('expo_push_token', token);
+        
+        if (deleteError) {
+          console.error('❌ NotificationService: Error deleting device token:', deleteError);
+          return false;
+        }
+        console.log('✅ NotificationService: Device token deleted (fallback)');
+        return true;
       }
 
       console.log('✅ NotificationService: Device token unregistered');

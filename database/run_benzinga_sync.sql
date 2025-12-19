@@ -31,3 +31,10 @@ BEGIN
   RAISE NOTICE 'SELECT COUNT(*) FROM economic_events_cache WHERE source = ''Benzinga'';';
 END $$;
 
+
+
+
+
+
+
+

@@ -7,10 +7,11 @@ import {
   Modal,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BarChart3, Lock, Trash2, Clock, X } from 'lucide-react-native';
+import { Lock, Trash2, Clock, X } from 'lucide-react-native';
 import { PollService, PollWithVotes, PollOption } from '../../services/pollService';
 import PollResults from './PollResults';
 import { useAuth } from '../../context/AuthContext';
@@ -184,7 +185,11 @@ export default function PollMessage({
       {/* Poll Header */}
       <View className="flex-row items-center justify-between mb-3">
         <View className="flex-row items-center">
-          <BarChart3 size={20} color="#00E654" strokeWidth={2} />
+          <Image 
+            source={require('../../assets/icons/ico-40-poll-2.png')} 
+            style={{ width: 20, height: 20, marginRight: 8 }} 
+            resizeMode="contain"
+          />
           <Text className={`${isMe ? 'text-black' : 'text-primary'} font-bold text-sm mr-2`}>סקר</Text>
           {currentPoll.multiple_choice && (
             <View className="bg-gray-600 px-2 py-1 rounded-lg mr-2">

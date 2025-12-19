@@ -107,3 +107,10 @@ BEGIN
   RAISE NOTICE '   SELECT jobname, schedule FROM cron.job;';
 END $$;
 
+
+
+
+
+
+
+

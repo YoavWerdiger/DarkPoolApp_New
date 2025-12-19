@@ -13,6 +13,7 @@ export enum ChatMessageType {
   AUDIO = 'audio',
   DOCUMENT = 'document',
   SYSTEM = 'system',
+  POLL = 'poll',
 }
 
 export enum ChatMemberRole {
@@ -308,10 +309,11 @@ export interface ChatMessageReport {
 // API Response Types
 // ============================================
 
-export interface ChatGroupWithDetails extends ChatGroup {
+export interface ChatGroupWithDetails extends Omit<ChatGroup, 'last_read_message_id'> {
   members: ChatGroupMember[];
   my_membership?: ChatGroupMember;
   is_admin: boolean;
+  last_read_message_id?: string | null;
 }
 
 export interface ChatMessagesResponse {

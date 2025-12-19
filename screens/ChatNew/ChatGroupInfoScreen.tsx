@@ -1,10 +1,8 @@
 // ============================================
-// Chat Group Info Screen - RTL + DesignTokens
-// ============================================
-// מסך פרטי קבוצה - חברים, הגדרות, עזיבה
+// Chat Group Info Screen - Modern Design
 // ============================================
 
-import React, { useMemo, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,24 +14,69 @@ import {
   Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChatGroupMember } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
+import UICard from '../../components/ui/UICard';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
+
+// ============================================
+// Design Colors (from reference design)
+// ============================================
+const COLORS = {
+  background: {
+    primary: 'transparent',
+    secondary: 'rgba(6, 18, 12, 0.85)',
+    tertiary: 'rgba(10, 24, 16, 0.9)',
+    hover: 'rgba(20, 32, 26, 0.9)',
+  },
+  border: 'rgba(255, 255, 255, 0.08)',
+  text: {
+    primary: '#FFFFFF',
+    secondary: 'rgba(209, 213, 219, 0.9)',
+    tertiary: 'rgba(148, 163, 184, 0.9)',
+  },
+  accent: '#0FB96E',
+  success: '#22C55E', // green-500
+  warning: '#EAB308', // yellow-500
+  danger: '#EF4444', // red-500
+};
 
 export default function ChatGroupInfoScreen() {
-  const DesignTokens = useDesignTokens();
-  const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
+  const DesignTokens = useDesignTokens();
 
   const { groupId } = route.params as { groupId: string };
-  const { currentGroup, leaveGroup } = useChat();
+  const { currentGroup, leaveGroup, messages } = useChat();
 
   const [isMuted, setIsMuted] = useState(currentGroup?.is_muted || false);
+  const [searchVisible, setSearchVisible] = useState(false);
+  
+  const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  
+  // Extract media from group messages
+  const groupMediaItems = useMemo(() => {
+    if (!messages || messages.length === 0) return [];
+    
+    return messages
+      .filter(msg => 
+        msg.group_id === groupId && 
+        msg.media_url && 
+        (msg.message_type === 'image' || msg.message_type === 'video')
+      )
+      .map(msg => ({
+        url: msg.media_url!,
+        thumbnail: msg.media_thumbnail_url || msg.media_url!,
+        type: msg.message_type,
+      }))
+      .slice(0, 9); // Show max 9 items in grid
+  }, [messages, groupId]);
 
   const isAdmin = currentGroup?.is_admin || false;
 
@@ -61,16 +104,15 @@ export default function ChatGroupInfoScreen() {
     ];
 
     if (member.role === 'member') {
-      options.push({ text: 'הפוך לאדמין', icon: 'star-outline', onPress: () => handlePromoteMember(member) });
+      options.push({ text: 'הפוך לאדמין', onPress: () => handlePromoteMember(member) });
     } else {
-      options.push({ text: 'הורד מאדמין', icon: 'star', onPress: () => handleDemoteMember(member) });
+      options.push({ text: 'הורד מאדמין', onPress: () => handleDemoteMember(member) });
     }
 
     if (member.user_id !== user?.id) {
       options.push({
         text: 'הסר מהקבוצה',
         style: 'destructive',
-        icon: 'trash-outline',
         onPress: () => handleRemoveMember(member),
       });
     }
@@ -86,12 +128,7 @@ export default function ChatGroupInfoScreen() {
       `האם להפוך את ${member.user?.display_name} לאדמין?`,
       [
         { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'אישור',
-          onPress: () => {
-            Alert.alert('הצלחה', 'החבר הפך לאדמין');
-          },
-        },
+        { text: 'אישור', onPress: () => Alert.alert('הצלחה', 'החבר הפך לאדמין') },
       ]
     );
   };
@@ -102,12 +139,7 @@ export default function ChatGroupInfoScreen() {
       `האם להוריד את ${member.user?.display_name} מאדמין?`,
       [
         { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'אישור',
-          onPress: () => {
-            Alert.alert('הצלחה', 'החבר הורד מאדמין');
-          },
-        },
+        { text: 'אישור', onPress: () => Alert.alert('הצלחה', 'החבר הורד מאדמין') },
       ]
     );
   };
@@ -118,19 +150,44 @@ export default function ChatGroupInfoScreen() {
       `האם להסיר את ${member.user?.display_name} מהקבוצה?`,
       [
         { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'הסר',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('הצלחה', 'החבר הוסר מהקבוצה');
-          },
-        },
+        { text: 'הסר', style: 'destructive', onPress: () => Alert.alert('הצלחה', 'החבר הוסר מהקבוצה') },
       ]
     );
   };
 
   const handleToggleMute = async (value: boolean) => {
     setIsMuted(value);
+    // TODO: Implement mute/unmute API call
+  };
+
+  const handlePinnedMessages = () => {
+    // TODO: Navigate to pinned messages screen
+    Alert.alert('הודעות מוצמדות', 'מסך הודעות מוצמדות יפותח כאן');
+  };
+
+  const handleSearchMessages = () => {
+    setSearchVisible(true);
+  };
+
+  const handleSavedMedia = () => {
+    (navigation as any).navigate('SavedMedia', { groupId });
+  };
+
+  const handleGroupSettings = () => {
+    if (!isAdmin) return;
+    // TODO: Navigate to group settings screen
+    Alert.alert('הגדרות קבוצה', 'מסך הגדרות קבוצה יפותח כאן');
+  };
+
+  const handlePrivacyAndSupport = () => {
+    (navigation as any).navigate('PrivacySupport');
+  };
+
+  const handleJumpToMessage = (messageId: string) => {
+    // Navigate back to chat and jump to message
+    navigation.goBack();
+    // The message jump will be handled by ChatGroupScreen when it receives focus
+    // TODO: Pass messageId via navigation params
   };
 
   const handleLeaveGroup = () => {
@@ -143,11 +200,20 @@ export default function ChatGroupInfoScreen() {
           text: 'עזוב',
           style: 'destructive',
           onPress: async () => {
-            const { success } = await leaveGroup(groupId);
-            if (success) {
-              navigation.goBack();
-            } else {
-              Alert.alert('שגיאה', 'לא הצלחנו לעזוב את הקבוצה');
+            try {
+              const result = await leaveGroup(groupId);
+              if (result.success) {
+                // Go back to previous screen (Chat screen), which should automatically handle navigation
+                // The ChatContext will clear the group, causing navigation to go back to groups list
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                }
+              } else {
+                Alert.alert('שגיאה', result.error || 'לא הצלחנו לעזוב את הקבוצה');
+              }
+            } catch (error) {
+              console.error('❌ Error leaving group:', error);
+              Alert.alert('שגיאה', 'אירעה שגיאה בעת עזיבת הקבוצה');
             }
           },
         },
@@ -155,9 +221,6 @@ export default function ChatGroupInfoScreen() {
     );
   };
 
-  const handleMediaGallery = () => {
-    Alert.alert('גלריה', 'מסך הגלריה יפותח כאן');
-  };
 
   // ============================================
   // Render
@@ -165,18 +228,23 @@ export default function ChatGroupInfoScreen() {
 
   if (!currentGroup) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Ionicons name="arrow-forward" size={24} color={DesignTokens.colors.text.primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>פרטי קבוצה</Text>
-            <View style={styles.headerSpacer} />
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        style={{ flex: 1 }}
+      >
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <View style={styles.container}>
+            <View style={styles.header}>
+              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                <Ionicons name="arrow-forward" size={22} color={COLORS.text.secondary} />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>פרטי קבוצה</Text>
+            </View>
+            <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
           </View>
-          <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </LinearGradient>
     );
   }
 
@@ -188,314 +256,463 @@ export default function ChatGroupInfoScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Ionicons name="arrow-forward" size={24} color={DesignTokens.colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>פרטי קבוצה</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Group Header */}
-          <View style={styles.headerSection}>
-            {currentGroup.avatar_url ? (
-              <Image source={{ uri: currentGroup.avatar_url }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="people" size={40} color={DesignTokens.colors.text.secondary} />
-              </View>
-            )}
-            <Text style={styles.groupName}>{currentGroup.name}</Text>
-            {currentGroup.description && (
-              <Text style={styles.groupDescription}>{currentGroup.description}</Text>
-            )}
-            
-            {isAdmin && (
-              <TouchableOpacity onPress={handleEditGroup} style={styles.editButton}>
-                <Ionicons name="pencil-outline" size={16} color={DesignTokens.colors.text.primary} />
-                <Text style={styles.editButtonText}>ערוך קבוצה</Text>
+    <LinearGradient
+      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+      style={{ flex: 1 }}
+    >
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <View style={styles.container}>
+          {/* Header - UICard blur, צמוד למעלה עם פינות תחתונות מעוגלות */}
+          <UICard
+            variant="blur"
+            padding="md"
+            style={{
+              marginHorizontal: 0,
+              marginTop: 0,
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
+              borderBottomLeftRadius: DesignTokens.borderRadius['2xl'],
+              borderBottomRightRadius: DesignTokens.borderRadius['2xl'],
+            }}
+          >
+            <View style={styles.header}>
+              {/* כפתור חזור (ימין) */}
+              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                <Ionicons name="chevron-forward" size={22} color={COLORS.text.secondary} />
               </TouchableOpacity>
-            )}
-          </View>
 
-          {/* Settings */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>הגדרות</Text>
-            
-            <View style={styles.settingRow}>
-              <View style={styles.settingLabelContainer}>
-                <Ionicons name="notifications-off-outline" size={20} color={DesignTokens.colors.text.primary} />
-                <Text style={styles.settingLabel}>השתק התראות</Text>
+              {/* כותרת */}
+              <Text style={styles.headerTitle}>פרטי קבוצה</Text>
+
+              {/* רווח/placeholder לשמירת יישור */}
+              <View style={{ width: 32 }} />
+            </View>
+          </UICard>
+
+          <ScrollView 
+            style={styles.scrollView} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg, paddingBottom: DesignTokens.spacing['3xl'] }}
+          >
+          {/* Profile Header - UICard blur כמו בפרופיל */}
+          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+            <View style={styles.profileHeaderContent}>
+              {/* Avatar */}
+              <View style={styles.avatarContainer}>
+                {currentGroup.avatar_url ? (
+                  <Image source={{ uri: currentGroup.avatar_url }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Ionicons name="people" size={48} color={DesignTokens.colors.text.secondary} />
+                  </View>
+                )}
+                {/* Online indicator - for groups, show if there are online members */}
+                <View style={styles.onlineIndicator} />
+              </View>
+
+              {/* Name & Status */}
+              <Text style={styles.groupName}>{currentGroup.name}</Text>
+              <Text style={styles.groupStatus}>
+                {currentGroup.members_count} חברים
+              </Text>
+            </View>
+          </UICard>
+
+          {/* תיאור הקבוצה - UICard blur */}
+          {currentGroup.description && (
+            <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <Text style={styles.sectionLabel}>תיאור הקבוצה</Text>
+              <Text style={styles.aboutText}>{currentGroup.description}</Text>
+            </UICard>
+          )}
+
+          {/* גלריית המדיה - UICard blur */}
+          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+            <Text style={styles.sectionLabel}>גלריית הקבוצה</Text>
+            {groupMediaItems.length > 0 ? (
+              <View style={styles.mediaGrid}>
+                {groupMediaItems.map((item, index) => (
+                  <TouchableOpacity key={index} style={styles.mediaItem}>
+                    <Image source={{ uri: item.thumbnail }} style={styles.mediaImage} />
+                    {item.type === 'video' && (
+                      <View style={styles.videoBadge}>
+                        <Ionicons name="play" size={12} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.emptyMediaText}>אין מדיה בקבוצה זו</Text>
+            )}
+          </UICard>
+
+          {/* הגדרות - UICard blur */}
+          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+            <TouchableOpacity style={styles.settingRow}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="notifications-outline" size={20} color={DesignTokens.colors.text.secondary} />
+                <Text style={styles.settingText}>השתק התראות</Text>
               </View>
               <Switch
                 value={isMuted}
                 onValueChange={handleToggleMute}
-                trackColor={{
-                  false: DesignTokens.colors.background.secondary,
-                  true: DesignTokens.colors.accent.main,
-                }}
+                trackColor={{ false: COLORS.background.tertiary, true: DesignTokens.colors.primary.main }}
+                thumbColor="#FFFFFF"
               />
-            </View>
-
-            <TouchableOpacity style={styles.settingRow} onPress={handleMediaGallery}>
-              <View style={styles.settingLabelContainer}>
-                <Ionicons name="images-outline" size={20} color={DesignTokens.colors.text.primary} />
-                <Text style={styles.settingLabel}>גלריה משותפת</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.secondary} />
             </TouchableOpacity>
-          </View>
+            <View style={styles.separator} />
+            <TouchableOpacity style={styles.settingRow} onPress={handlePinnedMessages}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="pin-outline" size={20} color={DesignTokens.colors.text.secondary} />
+                <Text style={styles.settingText}>הודעות מוצמדות</Text>
+              </View>
+              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+            </TouchableOpacity>
+            <View style={styles.separator} />
+            <TouchableOpacity style={styles.settingRow} onPress={handleSearchMessages}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="search-outline" size={20} color={DesignTokens.colors.text.secondary} />
+                <Text style={styles.settingText}>חפש בהודעות</Text>
+              </View>
+              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+            </TouchableOpacity>
+            <View style={styles.separator} />
+            <TouchableOpacity style={styles.settingRow} onPress={handleSavedMedia}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="folder-outline" size={20} color={DesignTokens.colors.text.secondary} />
+                <Text style={styles.settingText}>שמירת מדיה</Text>
+              </View>
+              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+            </TouchableOpacity>
+            {isAdmin && (
+              <>
+                <View style={styles.separator} />
+                <TouchableOpacity style={styles.settingRow} onPress={handleGroupSettings}>
+                  <View style={styles.settingLeft}>
+                    <Ionicons name="settings-outline" size={20} color={DesignTokens.colors.text.secondary} />
+                    <Text style={styles.settingText}>הגדרות קבוצה</Text>
+                  </View>
+                  <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+                </TouchableOpacity>
+              </>
+            )}
+            <View style={styles.separator} />
+            <TouchableOpacity style={styles.settingRow} onPress={handlePrivacyAndSupport}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="shield-outline" size={20} color={DesignTokens.colors.text.secondary} />
+                <Text style={styles.settingText}>פרטיות ותמיכה</Text>
+              </View>
+              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+            </TouchableOpacity>
+          </UICard>
 
-          {/* Members */}
-          <View style={styles.section}>
+          {/* Members - UICard blur */}
+          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
+              <Text style={styles.sectionLabel}>
                 חברים ({currentGroup.members_count || sortedMembers.length})
               </Text>
               {isAdmin && (
-                <TouchableOpacity onPress={handleAddMembers} style={styles.addMemberButton}>
-                  <Ionicons name="add-circle-outline" size={20} color={DesignTokens.colors.accent.main} />
-                  <Text style={styles.addMemberButtonText}>הוסף</Text>
+                <TouchableOpacity onPress={handleAddMembers} style={styles.addButton}>
+                  <Ionicons name="add" size={18} color={DesignTokens.colors.primary.main} />
+                  <Text style={styles.addButtonText}>הוסף</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {sortedMembers.map((member) => (
-              <TouchableOpacity
-                key={member.id}
-                style={styles.memberRow}
-                onPress={() => handleMemberPress(member)}
-                disabled={!isAdmin && member.user_id !== user?.id}
-              >
-                {member.user?.profile_picture ? (
-                  <Image
-                    source={{ uri: member.user.profile_picture }}
-                    style={styles.memberAvatar}
-                  />
-                ) : (
-                  <View style={styles.memberAvatarPlaceholder}>
-                    <Text style={styles.memberAvatarText}>
-                      {member.user?.display_name?.charAt(0) || '?'}
-                    </Text>
-                  </View>
-                )}
-                
-                <View style={styles.memberInfo}>
-                  <View style={styles.memberNameRow}>
-                    <Text style={styles.memberName}>
-                      {member.user?.display_name || 'משתמש'}
-                    </Text>
-                    {member.role === 'admin' && (
-                      <View style={styles.adminBadge}>
-                        <Ionicons name="star" size={12} color={DesignTokens.colors.accent.main} />
-                        <Text style={styles.adminBadgeText}>אדמין</Text>
-                      </View>
-                    )}
-                    {member.user_id === user?.id && (
-                      <Text style={styles.youLabel}>(אתה)</Text>
-                    )}
-                  </View>
-                  {member.user?.is_online ? (
-                    <View style={styles.onlineIndicator}>
-                      <View style={styles.onlineDot} />
-                      <Text style={styles.memberOnline}>מחובר</Text>
-                    </View>
+            {sortedMembers.map((member, index) => (
+              <React.Fragment key={member.id}>
+                <TouchableOpacity
+                  style={styles.memberRow}
+                  onPress={() => handleMemberPress(member)}
+                  disabled={!isAdmin && member.user_id !== user?.id}
+                >
+                  {member.user?.profile_picture ? (
+                    <Image
+                      source={{ uri: member.user.profile_picture }}
+                      style={styles.memberAvatar}
+                    />
                   ) : (
-                    <Text style={styles.memberOffline}>אופליין</Text>
+                    <View style={styles.memberAvatarPlaceholder}>
+                      <Text style={styles.memberAvatarText}>
+                        {member.user?.display_name?.charAt(0) || '?'}
+                      </Text>
+                    </View>
                   )}
-                </View>
-              </TouchableOpacity>
+                  
+                  <View style={styles.memberInfo}>
+                    <View style={styles.memberNameRow}>
+                      <Text style={styles.memberName}>
+                        {member.user?.display_name || 'משתמש'}
+                      </Text>
+                      {member.role === 'admin' && (
+                        <View style={styles.adminBadge}>
+                          <Ionicons name="star" size={10} color={DesignTokens.colors.warning.main} />
+                          <Text style={styles.adminBadgeText}>אדמין</Text>
+                        </View>
+                      )}
+                      {member.user_id === user?.id && (
+                        <Text style={styles.youLabel}>(אתה)</Text>
+                      )}
+                    </View>
+                    {member.user?.is_online ? (
+                      <View style={styles.onlineStatus}>
+                        <View style={styles.onlineDot} />
+                        <Text style={styles.onlineText}>מחובר</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.offlineText}>אופליין</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+                {index < sortedMembers.length - 1 && <View style={styles.separator} />}
+              </React.Fragment>
             ))}
-          </View>
+          </UICard>
 
-          {/* Danger Zone */}
-          <View style={styles.section}>
-            <TouchableOpacity onPress={handleLeaveGroup} style={styles.dangerButton}>
-                <Ionicons name="exit-outline" size={20} color={DesignTokens.colors.text.primary} />
-              <Text style={styles.dangerButtonText}>עזוב קבוצה</Text>
+          {/* עזיבת קבוצה - UICard blur, קטן וממורכז */}
+          <View style={{ alignItems: 'center', marginBottom: DesignTokens.spacing.lg }}>
+            <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveGroup}>
+              <Ionicons name="exit-outline" size={18} color={DesignTokens.colors.danger.main} />
+              <Text style={styles.leaveButtonText}>עזוב קבוצה</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+
+      {/* Chat Search Bottom Sheet */}
+      <ChatSearchBottomSheet
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        groupId={groupId}
+        onMessagePress={handleJumpToMessage}
+      />
+    </LinearGradient>
   );
 }
 
 // ============================================
-// Styles - RTL + DesignTokens
+// Styles - Exact Design from Reference
 // ============================================
 
-const createStyles = (tokens: any) => StyleSheet.create({
+const createStyles = (DesignTokens: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
 
+  // Header
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: tokens.colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.background.secondary,
+    justifyContent: 'space-between',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: -8,
+    padding: 8,
+    borderRadius: 50,
   },
   headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-  },
-  headerSpacer: {
-    width: 40,
+    fontSize: DesignTokens.typography.fontSize.base,
+    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+    color: DesignTokens.colors.text.primary,
+    textAlign: 'center',
   },
 
   scrollView: {
     flex: 1,
   },
 
-  headerSection: {
+  // Profile Header Content
+  profileHeaderContent: {
     alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.background.secondary,
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: DesignTokens.spacing.md,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 16,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: tokens.colors.background.secondary,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    backgroundColor: DesignTokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: DesignTokens.colors.success.main,
+    borderWidth: 4,
+    borderColor: DesignTokens.colors.background.secondary,
   },
   groupName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: tokens.colors.text.primary,
-    marginBottom: 8,
+    fontSize: DesignTokens.typography.fontSize['2xl'],
+    fontWeight: DesignTokens.typography.fontWeight.bold as any,
+    color: DesignTokens.colors.text.primary,
+    marginBottom: DesignTokens.spacing.xs,
     textAlign: 'center',
   },
-  groupDescription: {
-    fontSize: 16,
-    color: tokens.colors.text.secondary,
+  groupStatus: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    color: DesignTokens.colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 16,
   },
-  editButton: {
-    flexDirection: 'row',
+  infoItem: {
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: tokens.colors.accent.main,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
+    gap: DesignTokens.spacing.md,
+    paddingVertical: DesignTokens.spacing.sm,
   },
-  editButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: tokens.colors.text.primary,
+  infoContent: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  infoLabel: {
+    fontSize: DesignTokens.typography.fontSize.xs,
+    color: DesignTokens.colors.text.tertiary,
+    marginBottom: DesignTokens.spacing.xs / 2,
+  },
+  infoValue: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    fontWeight: DesignTokens.typography.fontWeight.medium as any,
+    color: DesignTokens.colors.text.primary,
+    textAlign: 'right',
+  },
+  mediaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DesignTokens.spacing.xs,
+    marginTop: DesignTokens.spacing.md,
+  },
+  mediaItem: {
+    width: '31%',
+    aspectRatio: 1,
+    borderRadius: DesignTokens.borderRadius.md,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mediaImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoBadge: {
+    position: 'absolute',
+    top: DesignTokens.spacing.xs,
+    right: DesignTokens.spacing.xs,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: DesignTokens.borderRadius.sm,
+    padding: 4,
+  },
+  emptyMediaText: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    color: DesignTokens.colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: DesignTokens.spacing.md,
+    fontStyle: 'italic',
+  },
+  leaveButton: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: DesignTokens.spacing.xs,
+    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingVertical: DesignTokens.spacing.sm,
+    borderRadius: DesignTokens.borderRadius.md,
+    borderWidth: 1,
+    borderColor: DesignTokens.colors.danger.main + '40',
+    backgroundColor: DesignTokens.colors.danger.main + '10',
+  },
+  leaveButtonText: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    fontWeight: DesignTokens.typography.fontWeight.medium as any,
+    color: DesignTokens.colors.danger.main,
   },
 
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-  },
+  // Sections
   sectionHeader: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: DesignTokens.spacing.md,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: tokens.colors.text.primary,
-    marginBottom: 12,
+  sectionLabel: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    fontWeight: DesignTokens.typography.fontWeight.medium as any,
+    color: DesignTokens.colors.text.secondary,
     textAlign: 'right',
+    marginBottom: DesignTokens.spacing.md,
   },
-  addMemberButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  addMemberButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: tokens.colors.accent.main,
+  aboutText: {
+    fontSize: DesignTokens.typography.fontSize.base,
+    color: DesignTokens.colors.text.primary,
+    textAlign: 'right',
+    lineHeight: 22,
   },
 
+  // Settings
   settingRow: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.background.secondary,
+    paddingVertical: DesignTokens.spacing.md,
   },
-  settingLabelContainer: {
+  settingLeft: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 8,
+    gap: DesignTokens.spacing.md,
   },
-  settingLabel: {
-    fontSize: 16,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
+  settingText: {
+    fontSize: DesignTokens.typography.fontSize.base,
+    color: DesignTokens.colors.text.primary,
   },
-  settingValue: {
-    fontSize: 16,
-    color: tokens.colors.text.secondary,
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginVertical: DesignTokens.spacing.xs,
   },
 
+  // Members
   memberRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.background.secondary,
+    paddingVertical: DesignTokens.spacing.md,
   },
   memberAvatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    marginLeft: 12,
+    marginLeft: DesignTokens.spacing.md,
   },
   memberAvatarPlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: tokens.colors.accent.main,
+    backgroundColor: DesignTokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
+    marginLeft: DesignTokens.spacing.md,
   },
   memberAvatarText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: tokens.colors.text.primary,
+    fontSize: DesignTokens.typography.fontSize.lg,
+    fontWeight: DesignTokens.typography.fontWeight.bold as any,
+    color: DesignTokens.colors.text.primary,
   },
   memberInfo: {
     flex: 1,
@@ -504,75 +721,78 @@ const createStyles = (tokens: any) => StyleSheet.create({
   memberNameRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
+    gap: DesignTokens.spacing.xs,
+    marginBottom: DesignTokens.spacing.xs,
   },
   memberName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
+    fontSize: DesignTokens.typography.fontSize.base,
+    fontWeight: DesignTokens.typography.fontWeight.medium as any,
+    color: DesignTokens.colors.text.primary,
   },
-  onlineIndicator: {
+  adminBadge: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: DesignTokens.colors.warning.main + '20',
+    paddingHorizontal: DesignTokens.spacing.xs,
+    paddingVertical: 2,
+    borderRadius: DesignTokens.borderRadius.md,
+    gap: DesignTokens.spacing.xs,
+  },
+  adminBadgeText: {
+    fontSize: DesignTokens.typography.fontSize.xs,
+    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+    color: DesignTokens.colors.warning.main,
+  },
+  youLabel: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    color: DesignTokens.colors.text.tertiary,
+  },
+  onlineStatus: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: DesignTokens.spacing.xs,
   },
   onlineDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: tokens.colors.success.main,
+    backgroundColor: DesignTokens.colors.success.main,
   },
-  memberOnline: {
-    fontSize: 13,
-    color: tokens.colors.success.main,
-    textAlign: 'right',
+  onlineText: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    color: DesignTokens.colors.success.main,
   },
-  memberOffline: {
-    fontSize: 13,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
+  offlineText: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    color: DesignTokens.colors.text.tertiary,
   },
-  adminBadge: {
+  addButton: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: tokens.colors.accent.main + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+    gap: DesignTokens.spacing.xs,
   },
-  adminBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: tokens.colors.accent.main,
-  },
-  youLabel: {
-    fontSize: 13,
-    color: tokens.colors.text.secondary,
+  addButtonText: {
+    fontSize: DesignTokens.typography.fontSize.sm,
+    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+    color: DesignTokens.colors.primary.main,
   },
 
-  dangerButton: {
+  // Danger Zone
+  dangerRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: tokens.colors.danger.main,
-    padding: 16,
-    borderRadius: 12,
-    justifyContent: 'center',
-    marginBottom: 24,
-    gap: 8,
+    gap: DesignTokens.spacing.md,
+    paddingVertical: DesignTokens.spacing.md,
   },
-  dangerButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: tokens.colors.text.primary,
+  dangerText: {
+    fontSize: DesignTokens.typography.fontSize.base,
+    color: DesignTokens.colors.danger.main,
   },
 
   errorText: {
-    fontSize: 16,
-    color: tokens.colors.text.secondary,
+    fontSize: DesignTokens.typography.fontSize.base,
+    color: DesignTokens.colors.text.secondary,
     textAlign: 'center',
-    marginTop: 32,
+    marginTop: DesignTokens.spacing.xl,
   },
 });

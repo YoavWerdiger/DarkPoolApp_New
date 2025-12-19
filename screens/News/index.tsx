@@ -5,14 +5,17 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { LinearGradient } from 'expo-linear-gradient';
+import UICard from '../../components/ui/UICard';
 
 // קומפוננטים פנימיים
 import BreakingNewsTab from './BreakingNewsTab';
 import EconomicCalendarTab from './EconomicCalendarTab';
 import EarningsReportsTab from './EarningsReportsTab';
+import IndicesTab from './IndicesTab';
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -50,7 +53,8 @@ class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError:
 export default function NewsScreen() {
   console.log('📰 NewsScreen: Component mounted/rendering...');
   const DesignTokens = useDesignTokens();
-  const [activeTab, setActiveTab] = useState<'breaking' | 'calendar' | 'earnings'>('breaking');
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const [activeTab, setActiveTab] = useState<'indices' | 'breaking' | 'calendar' | 'earnings'>('indices');
   const [isReady, setIsReady] = useState(false);
   
   useEffect(() => {
@@ -66,6 +70,12 @@ export default function NewsScreen() {
   }, []);
 
   const tabs = [
+    {
+      id: 'indices' as const,
+      title: 'מדדים',
+      icon: 'stats-chart',
+      component: IndicesTab
+    },
     {
       id: 'breaking' as const,
       title: 'חדשות מתפרצות',
@@ -90,138 +100,160 @@ export default function NewsScreen() {
 
   console.log('📰 NewsScreen: About to render, activeTab:', activeTab, 'isReady:', isReady);
   
-  if (!isReady) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={{ color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
-          טוען...
-        </Text>
-      </View>
-    );
-  }
-  
   return (
-    <View 
-      style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
-    >
-      <StatusBar style="light" backgroundColor={DesignTokens.colors.background.primary} />
-      
-      {/* Header */}
-      <View style={{ 
-        backgroundColor: DesignTokens.colors.background.secondary,
-        borderBottomLeftRadius: DesignTokens.borderRadius.lg,
-        borderBottomRightRadius: DesignTokens.borderRadius.lg,
-        overflow: 'hidden',
-      }}>
-        <SafeAreaView edges={['top']} style={{ backgroundColor: DesignTokens.colors.background.secondary }}>
-          <View style={{ 
-            paddingHorizontal: DesignTokens.spacing.lg,
-            paddingTop: DesignTokens.spacing.md,
-            paddingBottom: DesignTokens.spacing.md,
-          }}>
-            <Text style={{ 
-              fontSize: DesignTokens.typography.fontSize['2xl'],
-              fontWeight: DesignTokens.typography.fontWeight.bold,
-              color: DesignTokens.colors.text.primary,
-              textAlign: 'right',
-            }}>
-              חדשות פיננסיות
-            </Text>
-            <Text style={{ 
-              fontSize: DesignTokens.typography.fontSize.base,
-              fontWeight: DesignTokens.typography.fontWeight.normal,
-              color: DesignTokens.colors.text.secondary,
-              textAlign: 'right',
-              marginTop: DesignTokens.spacing.xs,
-            }}>
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        style={styles.gradientContainer}
+      />
+      <StatusBar style="light" />
+      <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+        {/* כותרת */}
+        <View style={styles.headerContainer}>
+          <UICard variant="blur" padding="lg">
+            <Text style={styles.headerTitle}>חדשות פיננסיות</Text>
+            <Text style={styles.headerSubtitle}>
               כל אירוע פיננסי שסוחר צריך - בזמן אמת
             </Text>
-          </View>
-        </SafeAreaView>
-      </View>
-
-      <SafeAreaView 
-        style={{ 
-          flex: 1,
-          backgroundColor: DesignTokens.colors.background.primary,
-        }}
-        edges={[]}
-      >
+          </UICard>
+        </View>
 
         {/* טאבים */}
-        <View style={{ 
-          paddingHorizontal: DesignTokens.spacing.lg, 
-          paddingTop: DesignTokens.spacing.md,
-          marginBottom: DesignTokens.spacing.md 
-        }}>
-          <View style={{ 
-            flexDirection: 'row',
-            backgroundColor: DesignTokens.colors.background.secondary,
-            borderRadius: 30,
-            padding: 4,
-            alignSelf: 'center',
-            width: '100%',
-            maxWidth: 400
-          }}>
-            {tabs.map((tab, index) => {
-              const isActive = activeTab === tab.id;
-              return (
-              <TouchableOpacity
-                key={`tab-${tab.id}-${index}`}
-                onPress={() => {
-                  console.log(`📰 NewsScreen: Switching to tab ${tab.id}`);
-                  setActiveTab(tab.id);
-                }}
-                activeOpacity={1}
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderRadius: 26,
-                  backgroundColor: 'transparent',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden',
-                  marginHorizontal: 2
-                }}
-              >
-                {isActive && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      borderRadius: 26,
-                      backgroundColor: `${DesignTokens.colors.primary.main}14`,
+        <View style={styles.tabsContainer}>
+          <UICard variant="blur" padding="none" style={styles.tabsCard}>
+            <View style={styles.tabs}>
+              {tabs.map((tab, index) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <TouchableOpacity
+                    key={`tab-${tab.id}-${index}`}
+                    onPress={() => {
+                      console.log(`📰 NewsScreen: Switching to tab ${tab.id}`);
+                      setActiveTab(tab.id);
                     }}
-                  />
-                )}
-                <Text style={{ 
-                  fontSize: 14,
-                  fontWeight: isActive ? '700' : '600',
-                  color: isActive ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary,
-                  textAlign: 'center',
-                  writingDirection: 'rtl',
-                  position: 'relative',
-                  zIndex: 1
-                }}>
-                  {tab.title}
-                </Text>
-              </TouchableOpacity>
-              );
-            })}
-          </View>
+                    activeOpacity={0.7}
+                    style={styles.tab}
+                  >
+                    {isActive && <View style={styles.tabActiveIndicator} />}
+                    <Text
+                      style={[
+                        styles.tabText,
+                        isActive && styles.tabTextActive,
+                      ]}
+                    >
+                      {tab.title}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </UICard>
         </View>
-        
+
         {/* תוכן הטאב הפעיל עם Error Boundary */}
-        <View style={{ flex: 1 }}>
-          <ErrorBoundary>
-            <ActiveComponent />
-          </ErrorBoundary>
+        <View style={styles.tabContent}>
+          {!isReady ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+              <Text style={styles.loadingText}>טוען...</Text>
+            </View>
+          ) : (
+            <ErrorBoundary>
+              <ActiveComponent />
+            </ErrorBoundary>
+          )}
         </View>
-      </SafeAreaView>
+      </RNSafeAreaView>
     </View>
   );
 }
+
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
+  ({
+    gradientContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    safeAreaContainer: {
+      flex: 1,
+    },
+    headerContainer: {
+      paddingHorizontal: tokens.spacing.lg,
+      paddingTop: tokens.spacing.lg,
+    },
+    headerTitle: {
+      fontSize: tokens.typography.fontSize['2xl'],
+      fontWeight: tokens.typography.fontWeight.bold as any,
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+    },
+    headerSubtitle: {
+      fontSize: tokens.typography.fontSize.base,
+      color: tokens.colors.text.secondary,
+      textAlign: 'right',
+      marginTop: tokens.spacing.xs,
+    },
+    tabsContainer: {
+      paddingHorizontal: tokens.spacing.lg,
+      paddingTop: tokens.spacing.md,
+      marginBottom: tokens.spacing.md,
+    },
+    tabsCard: {
+      borderRadius: 30,
+      overflow: 'hidden',
+      alignSelf: 'center',
+      width: '100%',
+      maxWidth: 400,
+    },
+    tabs: {
+      flexDirection: 'row',
+      padding: 4,
+    },
+    tab: {
+      flex: 1,
+      height: 44,
+      borderRadius: 26,
+      backgroundColor: 'transparent',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginHorizontal: 2,
+      position: 'relative',
+    },
+    tabActiveIndicator: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderRadius: 26,
+      backgroundColor: `${tokens.colors.primary.main}14`,
+    },
+    tabText: {
+      fontSize: 14,
+      fontWeight: tokens.typography.fontWeight.medium as any,
+      color: tokens.colors.text.secondary,
+      textAlign: 'center',
+      writingDirection: 'rtl' as any,
+    },
+    tabTextActive: {
+      color: tokens.colors.primary.main,
+      fontWeight: tokens.typography.fontWeight.bold as any,
+    },
+    tabContent: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: tokens.spacing.md,
+      fontSize: tokens.typography.fontSize.base,
+      color: tokens.colors.text.secondary,
+    },
+  } as const);

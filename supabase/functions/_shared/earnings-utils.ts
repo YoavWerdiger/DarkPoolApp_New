@@ -2,12 +2,38 @@ export interface RawEarningsEvent {
   code?: string;
   report_date?: string;
   date?: string;
+  date_confirmed?: string | null;
+  time?: string | null;
   before_after_market?: string | null;
   currency?: string | null;
+  exchange?: string | null;
+  company_name?: string | null;
+  period?: string | null;
+  period_year?: number | string | null;
+  // EPS fields
   actual?: number | string | null;
   estimate?: number | string | null;
   difference?: number | string | null;
   percent?: number | string | null;
+  eps_prior?: number | string | null;
+  eps_surprise?: number | string | null;
+  eps_surprise_percent?: number | string | null;
+  // Revenue fields
+  revenue_actual?: number | string | null;
+  revenue_estimate?: number | string | null;
+  revenue_estimate_avg?: number | string | null;
+  revenue_estimate_low?: number | string | null;
+  revenue_estimate_high?: number | string | null;
+  revenue_estimate_year_ago?: number | string | null;
+  revenue_estimate_analysts_count?: number | string | null;
+  revenue_estimate_growth?: number | string | null;
+  revenue_surprise?: number | string | null;
+  revenue_surprise_percent?: number | string | null;
+  revenue_yoy?: number | string | null;
+  // Metadata
+  importance?: number | string | null;
+  notes?: string | null;
+  benzinga_updated?: number | string | null;
 }
 
 export interface EarningsRecord {
@@ -15,12 +41,37 @@ export interface EarningsRecord {
   code: string;
   report_date: string;
   date: string;
+  date_confirmed: string | null;
+  time: string | null;
   before_after_market: string | null;
   currency: string | null;
+  exchange: string | null;
+  company_name: string | null;
+  period: string | null;
+  period_year: number | null;
+  // EPS fields
   actual: number | null;
   estimate: number | null;
   difference: number | null;
   percent: number | null;
+  eps_prior: number | null;
+  eps_surprise: number | null;
+  eps_surprise_percent: number | null;
+  // Revenue fields
+  revenue_actual: number | null;
+  revenue_estimate_avg: number | null;
+  revenue_estimate_low: number | null;
+  revenue_estimate_high: number | null;
+  revenue_estimate_year_ago: number | null;
+  revenue_estimate_analysts_count: number | null;
+  revenue_estimate_growth: number | null;
+  revenue_surprise: number | null;
+  revenue_surprise_percent: number | null;
+  revenue_yoy: number | null;
+  // Metadata
+  importance: number | null;
+  notes: string | null;
+  benzinga_updated: number | null;
   source: string;
   updated_at: string;
 }
@@ -133,12 +184,37 @@ export const prepareEarningsRecord = (
     code: raw.code,
     report_date: normalizedDate,
     date: sanitizeDateString(raw.date, normalizedDate),
+    date_confirmed: raw.date_confirmed ? sanitizeDateString(raw.date_confirmed, null) : null,
+    time: raw.time ?? null,
     before_after_market: raw.before_after_market ?? null,
     currency: raw.currency ?? 'USD',
+    exchange: raw.exchange ?? null,
+    company_name: raw.company_name ?? null,
+    period: raw.period ?? null,
+    period_year: raw.period_year ? Number(raw.period_year) : null,
+    // EPS fields
     actual: actualValue,
     estimate: numberOrNull(raw.estimate),
     difference: numberOrNull(raw.difference),
     percent: numberOrNull(raw.percent),
+    eps_prior: numberOrNull(raw.eps_prior),
+    eps_surprise: numberOrNull(raw.eps_surprise),
+    eps_surprise_percent: numberOrNull(raw.eps_surprise_percent),
+    // Revenue fields
+    revenue_actual: numberOrNull(raw.revenue_actual),
+    revenue_estimate_avg: numberOrNull(raw.revenue_estimate_avg),
+    revenue_estimate_low: numberOrNull(raw.revenue_estimate_low),
+    revenue_estimate_high: numberOrNull(raw.revenue_estimate_high),
+    revenue_estimate_year_ago: numberOrNull(raw.revenue_estimate_year_ago),
+    revenue_estimate_analysts_count: raw.revenue_estimate_analysts_count ? Number(raw.revenue_estimate_analysts_count) : null,
+    revenue_estimate_growth: numberOrNull(raw.revenue_estimate_growth),
+    revenue_surprise: numberOrNull(raw.revenue_surprise),
+    revenue_surprise_percent: numberOrNull(raw.revenue_surprise_percent),
+    revenue_yoy: numberOrNull(raw.revenue_yoy),
+    // Metadata
+    importance: raw.importance ? Number(raw.importance) : null,
+    notes: raw.notes ?? null,
+    benzinga_updated: raw.benzinga_updated ? Number(raw.benzinga_updated) : null,
     source: options.source ?? DEFAULT_SOURCE,
     updated_at: now.toISOString()
   };

@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../../services/authService';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Debug: בדיקה שה-AuthService קיים
 console.log('🔍 RegistrationSummary: AuthService imported:', !!AuthService);
@@ -22,7 +23,7 @@ const tracks: Record<string, string> = {
 
 const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   const { data } = useRegistration();
-  const { signIn, setUser } = useAuth();
+  const { signIn, setUser, signOut, user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleFinish = async () => {
@@ -30,6 +31,25 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
     
     try {
       console.log('🔄 RegistrationSummary: Starting registration with data:', data);
+      
+      // מחיקת כל הנתונים השמורים לפני יצירת משתמש חדש
+      // זה מבטיח שלא תהיה התחברות אוטומטית למשתמש אחר אחרי ריענון
+      try {
+        await AsyncStorage.removeItem('saved_email');
+        await AsyncStorage.removeItem('saved_password');
+        await AsyncStorage.removeItem('remember_me');
+        await AsyncStorage.setItem('explicit_logout', 'true'); // סימון שהמשתמש התנתק
+        console.log('✅ RegistrationSummary: Cleared all saved credentials before registration');
+      } catch (storageError) {
+        console.error('❌ RegistrationSummary: Error clearing saved credentials:', storageError);
+      }
+      
+      // אם יש משתמש מחובר, נתנתק קודם
+      if (currentUser) {
+        console.log('🔄 RegistrationSummary: User already logged in, signing out first...');
+        await signOut();
+        console.log('✅ RegistrationSummary: Signed out existing user');
+      }
       
       // וידוא שכל הנתונים הנדרשים קיימים
       const registrationData = {
@@ -81,6 +101,14 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
       // אם המשתמש נוצר בהצלחה, נעביר אותו ישירות לדף הקבוצות
       if (user) {
         console.log('✅ RegistrationSummary: User created successfully, navigating to main app');
+        
+        // מחיקת explicit_logout כדי לאפשר התחברות אוטומטית למשתמש החדש (אם יסומן "זכור אותי")
+        try {
+          await AsyncStorage.removeItem('explicit_logout');
+          console.log('✅ RegistrationSummary: Removed explicit_logout flag for new user');
+        } catch (error) {
+          console.error('❌ RegistrationSummary: Error removing explicit_logout:', error);
+        }
         
       // עדכון ה-AuthContext עם המשתמש החדש
       setUser(user);

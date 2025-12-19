@@ -2077,7 +2077,10 @@ function LearningScreen() {
         style={StyleSheet.absoluteFill}
       />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: DesignTokens.spacing['5xl'] }}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={{ paddingBottom: DesignTokens.spacing['5xl'] + 80 }}
+        >
           {/* כותרת הקורס */}
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
             <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>

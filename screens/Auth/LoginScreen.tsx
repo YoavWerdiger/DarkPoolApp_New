@@ -104,8 +104,11 @@ export default function LoginScreen({ navigation }: any) {
     const { error } = await signIn({ email: email.trim(), password });
     if (error) {
       Alert.alert('שגיאה בהתחברות', error);
+      // אם ההתחברות נכשלה, נמחק את הנתונים השמורים (אם יש)
+      await saveCredentials('', '', false);
     } else {
-      // אם ההתחברות הצליחה, נשמור את הפרטים אם "זכור אותי" מסומן
+      // אם ההתחברות הצליחה, נשמור את הפרטים רק אם "זכור אותי" מסומן
+      // אם לא מסומן, נמחק את כל הנתונים השמורים
       await saveCredentials(email.trim(), password, rememberMe);
       
       if (rememberMe) {
@@ -117,6 +120,10 @@ export default function LoginScreen({ navigation }: any) {
             [{ text: 'אישור' }]
           );
         }, 1000);
+      } else {
+        // אם המשתמש לא סימן "זכור אותי", נמחק את הנתונים השמורים
+        // זה מבטיח שלא תהיה התחברות אוטומטית
+        await saveCredentials('', '', false);
       }
     }
   };

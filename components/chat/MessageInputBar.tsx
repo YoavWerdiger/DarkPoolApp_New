@@ -98,8 +98,12 @@ export default function MessageInputBar({
   // isKeyboardVisible הוסר - גרם לריצוד מיותר
   const [textDirection, setTextDirection] = useState<'rtl' | 'ltr'>('rtl');
   const [recordedAudioUri, setRecordedAudioUri] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [previewPosition, setPreviewPosition] = useState(0);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
+  const previewPositionInterval = useRef<NodeJS.Timeout | null>(null);
   const textInputRef = useRef<TextInput>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingTimeRef = useRef<number>(0);
@@ -136,8 +140,15 @@ export default function MessageInputBar({
         }
         recordingRef.current = null;
       }
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
+      }
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
+      }
+      if (previewPositionInterval.current) {
+        clearInterval(previewPositionInterval.current);
       }
       // נקה גם את typing timeout
       if (typingTimeoutRef.current) {
@@ -653,10 +664,21 @@ export default function MessageInputBar({
     }
 
     // נקה את ההקלטה
+    if (soundRef.current) {
+      await soundRef.current.unloadAsync();
+      soundRef.current = null;
+    }
+    if (previewPositionInterval.current) {
+      clearInterval(previewPositionInterval.current);
+      previewPositionInterval.current = null;
+    }
+    
     setRecordedAudioUri(null);
     setRecordingDuration(0);
     setIsRecording(false);
     setIsPaused(false);
+    setIsPlayingPreview(false);
+    setPreviewPosition(0);
     setWaveformData(Array(30).fill(0.1));
     waveformIndex.current = 0;
     
@@ -670,13 +692,99 @@ export default function MessageInputBar({
     }
   };
 
+  // שמיעת ההקלטה (preview)
+  const playPreview = async () => {
+    if (!recordedAudioUri) return;
+    
+    try {
+      // עצור שמיעה קודמת אם יש
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+
+      // טען את ההקלטה
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: recordedAudioUri },
+        { shouldPlay: true }
+      );
+      
+      soundRef.current = sound;
+      setIsPlayingPreview(true);
+      setPreviewPosition(0);
+
+      // עדכן את המיקום בזמן אמת
+      previewPositionInterval.current = setInterval(async () => {
+        if (soundRef.current) {
+          const status = await soundRef.current.getStatusAsync();
+          if (status.isLoaded) {
+            setPreviewPosition(status.positionMillis || 0);
+            
+            // אם הסתיימה השמיעה
+            if (status.didJustFinish) {
+              setIsPlayingPreview(false);
+              setPreviewPosition(0);
+              if (previewPositionInterval.current) {
+                clearInterval(previewPositionInterval.current);
+                previewPositionInterval.current = null;
+              }
+              if (soundRef.current) {
+                await soundRef.current.unloadAsync();
+                soundRef.current = null;
+              }
+            }
+          }
+        }
+      }, 100);
+
+      // האזן לסיום
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          setIsPlayingPreview(false);
+          setPreviewPosition(0);
+          if (previewPositionInterval.current) {
+            clearInterval(previewPositionInterval.current);
+            previewPositionInterval.current = null;
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error playing preview:', error);
+      Alert.alert('שגיאה', 'לא ניתן להפעיל את ההקלטה');
+    }
+  };
+
+  // עצירת שמיעת ההקלטה
+  const pausePreview = async () => {
+    if (soundRef.current) {
+      await soundRef.current.pauseAsync();
+      setIsPlayingPreview(false);
+      if (previewPositionInterval.current) {
+        clearInterval(previewPositionInterval.current);
+        previewPositionInterval.current = null;
+      }
+    }
+  };
+
   // ביטול ההקלטה
   const cancelRecording = async () => {
     try {
+      // עצור שמיעה אם יש
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+      if (previewPositionInterval.current) {
+        clearInterval(previewPositionInterval.current);
+        previewPositionInterval.current = null;
+      }
+      
       setRecordedAudioUri(null);
       setRecordingDuration(0);
       setIsRecording(false);
       setIsPaused(false);
+      setIsPlayingPreview(false);
+      setPreviewPosition(0);
       setWaveformData(Array(30).fill(0.1)); // תיקון: מערך של 30 אלמנטים
       waveformIndex.current = 0;
       
@@ -907,49 +1015,14 @@ export default function MessageInputBar({
               </View>
             </View>
 
-            {/* שורה תחתונה - כפתורים */}
+            {/* שורה תחתונה - כפתורים (ממורכזים) */}
             <View style={{ 
               flexDirection: 'row-reverse', 
               alignItems: 'center', 
-              justifyContent: 'space-between'
+              justifyContent: 'center',
+              gap: 16
             }}>
-              {/* כפתור שליחה - שמאל */}
-              <Pressable
-                onPress={sendRecordedAudio}
-                style={({ pressed }) => ({
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  backgroundColor: DesignTokens.colors.success.main,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transform: [{ scale: pressed ? 0.95 : 1 }]
-                })}
-              >
-                <Ionicons name="send" size={20} color="#FFFFFF" />
-              </Pressable>
-
-              {/* כפתור pause/resume - מרכז */}
-              <Pressable
-                onPress={isPaused ? resumeRecording : stopAudioRecording}
-                style={({ pressed }) => ({
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: isPaused ? DesignTokens.colors.success.main : DesignTokens.colors.danger.main,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transform: [{ scale: pressed ? 0.95 : 1 }]
-                })}
-              >
-                {isPaused ? (
-                  <Entypo name="controller-play" size={24} color="#FFFFFF" />
-                ) : (
-                  <AntDesign name="pause" size={24} color="#FFFFFF" />
-                )}
-              </Pressable>
-
-              {/* כפתור פח (מחיקה) - ימין */}
+              {/* כפתור פח (מחיקה) */}
               <Pressable
                 onPress={cancelRecording}
                 style={({ pressed }) => ({
@@ -963,6 +1036,61 @@ export default function MessageInputBar({
                 })}
               >
                 <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.danger.main} />
+              </Pressable>
+
+              {/* כפתור pause/resume או play/pause preview */}
+              {isPaused ? (
+                <Pressable
+                  onPress={isPlayingPreview ? pausePreview : playPreview}
+                  style={({ pressed }) => ({
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: DesignTokens.colors.primary.main,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: [{ scale: pressed ? 0.95 : 1 }]
+                  })}
+                >
+                  {isPlayingPreview ? (
+                    <AntDesign name="pause" size={24} color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="play" size={24} color="#FFFFFF" />
+                  )}
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={stopAudioRecording}
+                  style={({ pressed }) => ({
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: DesignTokens.colors.danger.main,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: [{ scale: pressed ? 0.95 : 1 }]
+                  })}
+                >
+                  <AntDesign name="pause" size={24} color="#FFFFFF" />
+                </Pressable>
+              )}
+
+              {/* כפתור שליחה */}
+              <Pressable
+                onPress={sendRecordedAudio}
+                disabled={!isPaused || isPlayingPreview}
+                style={({ pressed }) => ({
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: (isPaused && !isPlayingPreview) ? DesignTokens.colors.success.main : DesignTokens.colors.background.tertiary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  opacity: (isPaused && !isPlayingPreview) ? 1 : 0.5
+                })}
+              >
+                <Ionicons name="send" size={20} color="#FFFFFF" />
               </Pressable>
             </View>
           </View>

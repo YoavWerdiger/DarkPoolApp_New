@@ -22,6 +22,8 @@ export default function ChatGroupCard({ group, onPress, onLongPress }: ChatGroup
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
   const hasUnread = (group.unread_count || 0) > 0;
+  // console.log(`Card for ${group.name}: unread=${group.unread_count}, hasUnread=${hasUnread}`);
+
   const hasMentions = (group.mentioned_count || 0) > 0;
 
   const timeText = group.last_message_at
@@ -47,19 +49,11 @@ export default function ChatGroupCard({ group, onPress, onLongPress }: ChatGroup
             <Text style={styles.avatarText}>{group.name.charAt(0)}</Text>
           </View>
         )}
-        {/* Unread Badge */}
-        {hasUnread && (
-          <View style={[styles.badge, hasMentions && styles.mentionBadge]}>
-            <Text style={styles.badgeText}>
-              {group.unread_count! > 99 ? '99+' : group.unread_count}
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Content */}
       <View style={styles.content}>
-        {/* Top Row */}
+        {/* Top Row: Name + Time */}
         <View style={styles.topRow}>
           <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>
             {group.is_muted && '🔇 '}
@@ -72,7 +66,7 @@ export default function ChatGroupCard({ group, onPress, onLongPress }: ChatGroup
           )}
         </View>
 
-        {/* Bottom Row */}
+        {/* Bottom Row: Message + Badge */}
         <View style={styles.bottomRow}>
           <Text
             style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]}
@@ -80,11 +74,22 @@ export default function ChatGroupCard({ group, onPress, onLongPress }: ChatGroup
           >
             {group.last_message_preview || 'אין הודעות'}
           </Text>
-          {hasMentions && (
-            <View style={styles.mentionIndicator}>
-              <Text style={styles.mentionText}>@</Text>
-            </View>
-          )}
+          
+          {/* Badge & Mentions Area */}
+          <View style={styles.badgesWrapper}>
+            {hasMentions && (
+              <View style={styles.mentionIndicator}>
+                <Text style={styles.mentionText}>@</Text>
+              </View>
+            )}
+            {hasUnread && (
+              <View style={[styles.badge, hasMentions && styles.mentionBadge]}>
+                <Text style={styles.badgeText}>
+                  {group.unread_count! > 99 ? '99+' : group.unread_count}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -102,10 +107,10 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.primary,
     borderBottomWidth: 1,
     borderBottomColor: tokens.colors.background.secondary,
+    alignItems: 'center',
   },
   
   avatarContainer: {
-    position: 'relative',
     marginRight: 12,
   },
   avatar: {
@@ -127,27 +132,6 @@ const createStyles = (tokens: any) => StyleSheet.create({
     color: '#FFFFFF',
   },
   
-  badge: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: tokens.colors.accent.main,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 6,
-  },
-  mentionBadge: {
-    backgroundColor: '#FF3B30',
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  
   content: {
     flex: 1,
     justifyContent: 'center',
@@ -164,6 +148,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     fontSize: 17,
     fontWeight: '500',
     color: tokens.colors.text.primary,
+    textAlign: 'left', // ברירת מחדל, אבל ב-RTL זה יתהפך לימין
   },
   nameUnread: {
     fontWeight: '700',
@@ -174,32 +159,58 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginLeft: 8,
   },
   timeUnread: {
-    color: tokens.colors.accent.main,
+    color: tokens.colors.primary.main,
     fontWeight: '600',
   },
   
   bottomRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between', // זה ידחוף את ה-Badge לקצה השני
     alignItems: 'center',
   },
   lastMessage: {
     flex: 1,
     fontSize: 15,
     color: tokens.colors.text.secondary,
+    marginRight: 8, // רווח מה-Badge
+    textAlign: 'left',
   },
   lastMessageUnread: {
     color: tokens.colors.text.primary,
     fontWeight: '500',
   },
   
+  badgesWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: tokens.colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  mentionBadge: {
+    backgroundColor: '#FF3B30',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  
   mentionIndicator: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: tokens.colors.accent.main,
+    backgroundColor: '#FF3B30',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
   },
   mentionText: {
     fontSize: 12,

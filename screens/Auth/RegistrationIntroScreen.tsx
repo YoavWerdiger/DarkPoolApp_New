@@ -61,9 +61,10 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
       experience,
       fullTime,
       style,
-      goals
+      goals,
+      accountType: 'free' // דילוג על שלב התשלום - הגדרה אוטומטית ל-free
     });
-    navigation.navigate('RegistrationPayment');
+    navigation.navigate('RegistrationSummary');
   };
 
   const { width, height } = Dimensions.get('window');

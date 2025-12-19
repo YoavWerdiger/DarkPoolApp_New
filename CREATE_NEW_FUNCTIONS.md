@@ -54,3 +54,10 @@ https://supabase.com/dashboard/project/wpmrtczbfcijoocguime/functions
 כל הפונקציות יעבדו עם **Benzinga API** במקום EODHD!
 
 
+
+
+
+
+
+
+

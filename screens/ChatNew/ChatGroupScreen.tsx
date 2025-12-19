@@ -16,7 +16,7 @@ import {
   Image,
   Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
@@ -68,6 +68,12 @@ export default function ChatGroupScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const safeBottom = insets.bottom || 0;
+  const bottomGap = 5; // מרווח קטן מעל ה-safe-area
+  const inputReservedHeight = 72; // מקום משוער לכדור הקלט
+  const listBottomPadding = safeBottom + bottomGap + inputReservedHeight; // מקום לשורת הקלט + safe-area
+  const scrollButtonBottom = safeBottom + bottomGap + inputReservedHeight + 8;
 
   const { groupId } = route.params as { groupId: string };
 
@@ -736,12 +742,12 @@ export default function ChatGroupScreen() {
       locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
       style={{ flex: 1 }}
     >
-      {/* מחזירים גם את ה-top safe-area כדי שהכרטיס לא יגלוש לתוך הנוץ' */}
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      {/* safe-area רק למעלה; את התחתון ננהל ידנית כדי לא להכפיל ריווחים */}
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <KeyboardAvoidingView
           style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={0}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : safeBottom}
         >
           {renderHeader()}
 
@@ -789,7 +795,7 @@ export default function ChatGroupScreen() {
               }}
               contentContainerStyle={[
                 messages.length === 0 ? styles.emptyList : styles.messagesList,
-                { paddingTop: 0, paddingBottom: 0, flexGrow: 1 }
+                { paddingTop: 0, paddingBottom: listBottomPadding, flexGrow: 1 }
               ]}
               showsVerticalScrollIndicator={true}
               style={styles.flatListTransparent}
@@ -815,7 +821,7 @@ export default function ChatGroupScreen() {
             {/* Scroll to bottom button */}
             {showScrollToBottomButton && (
               <TouchableOpacity
-                style={styles.scrollToBottomButton}
+                style={[styles.scrollToBottomButton, { bottom: scrollButtonBottom }]}
                 onPress={scrollToBottom}
                 activeOpacity={0.7}
               >
@@ -831,7 +837,7 @@ export default function ChatGroupScreen() {
         <View
           style={{
             paddingHorizontal: DesignTokens.spacing.md, // פחות מרווח בצדדים – הכדור יותר רחב
-            paddingBottom: 0,                           // לא יוצר "safe" מלאכותי מתחת לאיזור הכתיבה
+            paddingBottom: safeBottom + bottomGap, // צמוד ל-safe area עם מרווח קל
             paddingTop: DesignTokens.spacing.xs,
           }}
         >

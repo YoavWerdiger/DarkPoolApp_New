@@ -5,31 +5,59 @@
 
 DO $$
 BEGIN
-  RAISE NOTICE '🚀 מתחיל טעינה ראשונית של נתוני Benzinga...';
   RAISE NOTICE '';
-  RAISE NOTICE '📊 Earnings: שבוע אחורה + 3 חודשים קדימה';
+  RAISE NOTICE '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+  RAISE NOTICE '🚀 טעינה ראשונית של נתוני Benzinga';
+  RAISE NOTICE '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+  RAISE NOTICE '';
+  RAISE NOTICE '📊 Earnings: 3 חודשים אחורה + 6 חודשים קדימה';
   RAISE NOTICE '📅 Economics: 3 חודשים קדימה';
   RAISE NOTICE '';
-  RAISE NOTICE '⏳ זה יקח כ-60 שניות...';
+  RAISE NOTICE '⏳ זה יקח כ-60-120 שניות...';
+  RAISE NOTICE '';
 END $$;
 
 -- ============================================
 -- 1. טעינת Earnings
 -- ============================================
--- Function כבר מוגדר לשלוף: שבוע אחורה + 3 חודשים קדימה
-
-SELECT 
-  net.http_post(
-    url := 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/daily-earnings-sync-simple',
-    headers := '{"Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDczNTEsImV4cCI6MjA2Njc4MzM1MX0.YHfniy3w94LVODC54xb7Us-Daw_pRx2WWFOoR-59kGQ", "Content-Type": "application/json"}'::jsonb,
-    body := '{}'::jsonb,
-    timeout_milliseconds := 90000
-  ) as earnings_response;
+-- שליפה מורחבת: 3 חודשים אחורה + 6 חודשים קדימה
 
 DO $$
+DECLARE
+  -- תאריך היום ב-America/New_York timezone
+  today_est TIMESTAMP WITH TIME ZONE := (NOW() AT TIME ZONE 'America/New_York')::DATE;
+  from_date DATE;
+  to_date DATE;
+  from_date_str TEXT;
+  to_date_str TEXT;
 BEGIN
-  RAISE NOTICE '✅ בקשת Earnings נשלחה';
-  RAISE NOTICE '⏳ ממתין 10 שניות...';
+  -- 3 חודשים אחורה
+  from_date := (today_est - INTERVAL '3 months')::DATE;
+  -- 6 חודשים קדימה
+  to_date := (today_est + INTERVAL '6 months')::DATE;
+  
+  from_date_str := from_date::TEXT;
+  to_date_str := to_date::TEXT;
+  
+  RAISE NOTICE '📅 טווח תאריכים (EST/EDT):';
+  RAISE NOTICE '   ├─ מתאריך: %', from_date_str;
+  RAISE NOTICE '   └─ עד תאריך: %', to_date_str;
+  RAISE NOTICE '';
+  
+  PERFORM net.http_post(
+    url := 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/daily-earnings-sync-simple',
+    headers := jsonb_build_object(
+      'apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDczNTEsImV4cCI6MjA2Njc4MzM1MX0.YHfniy3w94LVODC54xb7Us-Daw_pRx2WWFOoR-59kGQ',
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDczNTEsImV4cCI6MjA2Njc4MzM1MX0.YHfniy3w94LVODC54xb7Us-Daw_pRx2WWFOoR-59kGQ',
+      'Content-Type', 'application/json'
+    ),
+    body := jsonb_build_object(
+      'date_from', from_date_str,
+      'date_to', to_date_str
+    )
+  );
+  
+  RAISE NOTICE '✅ בקשת Earnings נשלחה!';
 END $$;
 
 -- המתן 10 שניות

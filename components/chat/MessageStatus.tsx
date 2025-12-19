@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface MessageStatusProps {
   isMe: boolean;
@@ -18,6 +18,7 @@ export default function MessageStatus({
   totalRecipients, 
   onSeenByPress 
 }: MessageStatusProps) {
+  const DesignTokens = useDesignTokens();
   if (!isMe) return null;
 
   const getReadReceiptStatus = () => {
@@ -25,32 +26,32 @@ export default function MessageStatus({
     
     // בדיקה לפי status ו-read_by
     if (messageStatus === 'sent' && readByCount === 0) {
-      return { icon: '✓', color: DesignTokens.colors.textMuted }; // נשלח אבל לא נקרא על ידי אף אחד
+      return { icon: '✓', color: DesignTokens.colors.text.tertiary }; // נשלח אבל לא נקרא על ידי אף אחד
     } else if (readByCount > 0 && readByCount >= totalRecipients) {
-      return { icon: '✓✓', color: DesignTokens.colors.primary }; // נקרא על ידי כולם - ירוק
+      return { icon: '✓✓', color: DesignTokens.colors.primary.main }; // נקרא על ידי כולם - ירוק
     } else if (readByCount > 0 && readByCount < totalRecipients) {
-      return { icon: '✓✓', color: DesignTokens.colors.textMuted }; // נקרא על ידי חלק - אפור
+      return { icon: '✓✓', color: DesignTokens.colors.text.tertiary }; // נקרא על ידי חלק - אפור
     } else {
-      return { icon: '✓', color: DesignTokens.colors.textMuted }; // ברירת מחדל - נשלח
+      return { icon: '✓', color: DesignTokens.colors.text.tertiary }; // ברירת מחדל - נשלח
     }
   };
 
   const getMessageStatusIcon = () => {
     let icon = '';
-    let color = DesignTokens.colors.textMuted;
+    let color = DesignTokens.colors.text.tertiary;
     
     switch (messageStatus) {
       case 'sent':
         icon = 'checkmark';
-        color = DesignTokens.colors.textMuted;
+        color = DesignTokens.colors.text.tertiary;
         break;
       case 'delivered':
         icon = 'checkmark-done';
-        color = DesignTokens.colors.textMuted;
+        color = DesignTokens.colors.text.tertiary;
         break;
       case 'read':
         icon = 'checkmark-done';
-        color = DesignTokens.colors.primary;
+        color = DesignTokens.colors.primary.main;
         break;
     }
     
@@ -77,7 +78,7 @@ export default function MessageStatus({
         <Text 
           className="text-xs" 
           style={{ 
-            color: readReceipt?.color || DesignTokens.colors.textMuted,
+            color: readReceipt?.color || DesignTokens.colors.text.tertiary,
             fontSize: 10,
             fontWeight: '500' as const
           }}

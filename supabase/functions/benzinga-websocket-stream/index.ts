@@ -28,15 +28,35 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // פונקציה לניקוי ערכים - הסרת אפסים מיותרים
+    const cleanNumericValue = (value: string | null | undefined): number | null => {
+      if (!value || value === '' || value === '0' || value === '0.0' || value === '0.00' || value === '0.000' || value === '0.0000') {
+        return null;
+      }
+      const num = parseFloat(value);
+      if (isNaN(num)) return null;
+      if (num === 0) return null;
+      return num;
+    };
+
     // פונקציה להמרת Benzinga earnings לפורמט EODHD
     const convertBenzingaToEODHDFormat = (earning: any) => {
       let before_after_market: string | null = null;
       if (earning.time) {
-        const hour = parseInt(earning.time.split(':')[0]);
-        if (hour >= 4 && hour < 10) {
-          before_after_market = 'Before Market';
-        } else if (hour >= 16 && hour < 20) {
-          before_after_market = 'After Market';
+        const parts = earning.time.split(':');
+        if (parts.length >= 2) {
+          const hour = parseInt(parts[0]) || 0;
+          const minutes = parseInt(parts[1]) || 0;
+          const timeInMinutes = hour * 60 + minutes;
+          
+          // Before Market: 4:00-9:30 EST (240-570 דקות)
+          if (timeInMinutes >= 240 && timeInMinutes < 570) {
+            before_after_market = 'Before Market';
+          }
+          // After Market: 16:00-20:00 EST (960-1200 דקות)
+          else if (timeInMinutes >= 960 && timeInMinutes < 1200) {
+            before_after_market = 'After Market';
+          }
         }
       }
 
@@ -45,23 +65,25 @@ serve(async (req) => {
       let difference: number | null = null;
       let percent: number | null = null;
 
+      // WebSocket מחזיר את התוצאות האקטואליות (actual) כשהן מתפרסמות
+      // נשתמש ב-eps או revenue - מה שיש
       if (earning.eps && earning.eps !== '') {
-        actual = parseFloat(earning.eps);
-        if (!isNaN(actual)) {
+        actual = cleanNumericValue(earning.eps);
+        if (actual !== null) {
           if (earning.eps_est && earning.eps_est !== '') {
-            estimate = parseFloat(earning.eps_est);
-            if (!isNaN(estimate)) {
+            estimate = cleanNumericValue(earning.eps_est);
+            if (estimate !== null) {
               difference = actual - estimate;
               percent = estimate !== 0 ? (difference / Math.abs(estimate)) * 100 : 0;
             }
           }
         }
       } else if (earning.revenue && earning.revenue !== '') {
-        actual = parseFloat(earning.revenue);
-        if (!isNaN(actual)) {
+        actual = cleanNumericValue(earning.revenue);
+        if (actual !== null) {
           if (earning.revenue_est && earning.revenue_est !== '') {
-            estimate = parseFloat(earning.revenue_est);
-            if (!isNaN(estimate)) {
+            estimate = cleanNumericValue(earning.revenue_est);
+            if (estimate !== null) {
               difference = actual - estimate;
               percent = estimate !== 0 ? (difference / Math.abs(estimate)) * 100 : 0;
             }

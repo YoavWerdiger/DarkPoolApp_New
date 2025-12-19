@@ -3,7 +3,7 @@ import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Star, RefreshCw, XCircle } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 
 interface PinnedMessage {
@@ -23,6 +23,7 @@ interface PinnedMessagesHeaderProps {
 }
 
 export default function PinnedMessagesHeader({ channelId, onMessagePress }: PinnedMessagesHeaderProps) {
+  const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -173,8 +174,7 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
             key={pinnedMsg.id}
             className="rounded-xl p-3 mr-3 min-w-[200px] max-w-[250px]"
             style={{ 
-              backgroundColor: DesignTokens.colors.elevated,
-              ...DesignTokens.shadows.sm
+              backgroundColor: DesignTokens.colors.background.secondary,
             }}
           >
             {/* Message Header */}
@@ -183,12 +183,12 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
                 <Ionicons 
                   name={getMessageIcon(pinnedMsg.message_type) as any} 
                   size={16} 
-                  color={DesignTokens.colors.warning} 
+                  color={DesignTokens.colors.accent.main} 
                 />
                 <Text 
                   className="text-xs font-semibold mr-2"
                   style={{ 
-                    color: DesignTokens.colors.primary,
+                    color: DesignTokens.colors.primary.main,
                     fontSize: DesignTokens.typography.fontSize.xs,
                     fontWeight: DesignTokens.typography.fontWeight.semibold
                   }}
@@ -201,7 +201,7 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
                 onPress={() => handleUnpinMessage(pinnedMsg.message_id)}
                 className="p-1"
               >
-                <XCircle size={16} color={DesignTokens.colors.textMuted} strokeWidth={2} />
+                <XCircle size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
               </Pressable>
             </View>
 
@@ -215,7 +215,7 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
                 numberOfLines={2}
                 style={{ 
                   lineHeight: 18,
-                  color: DesignTokens.colors.textPrimary,
+                  color: DesignTokens.colors.text.primary,
                   fontSize: DesignTokens.typography.fontSize.sm
                 }}
               >

@@ -204,69 +204,213 @@ export class AuthService {
         error: error?.message 
       });
       
-      // אם יש שגיאה ב-auth.signUp, ננסה ליצור משתמש ישירות
+      // אם יש שגיאה ב-auth.signUp, ננסה ליצור משתמש דרך Admin API
       if (error || !data.user) {
-        console.log('🔄 AuthService: auth.signUp failed, trying direct user creation...');
+        console.log('🔄 AuthService: auth.signUp failed, trying admin API user creation...');
+        console.log('🔄 AuthService: Error details:', error?.message);
         
-        // יצירת UUID עבור המשתמש
-        const userId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-          const r = Math.random() * 16 | 0;
-          const v = c == 'x' ? r : (r & 0x3 | 0x8);
-          return v.toString(16);
-        });
-        console.log('🔄 AuthService: Generated user ID:', userId);
-        
-        // ניסיון ליצור משתמש ישירות בטבלת users (בלי auth.users)
-        const userData: any = {
-          id: userId,
-          email: email,
-          display_name: display_name,
-          full_name: full_name || display_name,
-          profile_picture: profile_picture || null,
-          track_id: track_id || '1',
-          intro_data: intro_data || {},
-          account_type: account_type || 'free',
-          registration_completed: true
-        };
+        try {
+          // קריאה ל-Edge Function שיוצר משתמש ב-auth.users דרך Admin API
+          console.log('🔄 AuthService: Invoking create-user-admin function...');
+          const { data: functionData, error: functionError } = await supabase.functions.invoke('create-user-admin', {
+            body: {
+              email,
+              password,
+              display_name,
+              full_name: full_name || display_name,
+              phone: phone || null,
+              track_id: track_id || '1',
+              account_type: account_type || 'free',
+              intro_data: intro_data || {}
+            }
+          });
 
-        // הוספת טלפון רק אם הוא קיים ובפורמט נכון
-        if (phone && phone.trim()) {
-          const cleanPhone = phone.replace(/[^\d]/g, '');
-          if (cleanPhone.length >= 10 && cleanPhone.length <= 15) {
-            userData.phone = cleanPhone;
+          console.log('🔄 AuthService: Function response:', { 
+            functionData, 
+            functionError,
+            hasData: !!functionData,
+            dataType: typeof functionData,
+            errorType: typeof functionError,
+            errorMessage: functionError?.message,
+            errorDetails: functionError
+          });
+
+          if (functionError) {
+            console.error('❌ AuthService: Admin API function error:', functionError);
+            
+            // ניסיון לחלץ את כל המאפיינים של השגיאה
+            const errorAny = functionError as any;
+            const allProps = Object.getOwnPropertyNames(errorAny);
+            const allKeys = Object.keys(errorAny);
+            
+            console.error('❌ AuthService: Error details:', {
+              name: errorAny?.name,
+              message: errorAny?.message,
+              stack: errorAny?.stack,
+              context: errorAny?.context,
+              status: errorAny?.status,
+              statusCode: errorAny?.statusCode,
+              code: errorAny?.code,
+              response: errorAny?.response,
+              allProps,
+              allKeys,
+              errorAnyKeys: Object.keys(errorAny),
+              errorAnyValues: allProps.reduce((acc: any, prop: string) => {
+                try {
+                  acc[prop] = errorAny[prop];
+                } catch (e) {
+                  acc[prop] = '[cannot access]';
+                }
+                return acc;
+              }, {})
+            });
+            
+            // ניסיון לחלץ מידע נוסף מהשגיאה
+            let errorMessage = 'שגיאה ביצירת המשתמש';
+            if (functionError.message) {
+              errorMessage = functionError.message;
+            } else if (typeof functionError === 'string') {
+              errorMessage = functionError;
+            } else if (functionError instanceof Error) {
+              errorMessage = functionError.message;
+            }
+            
+            // בדיקה אם יש status code בשגיאה - נבדוק בכל המקומות האפשריים
+            const statusCode = errorAny?.status || 
+                             errorAny?.statusCode || 
+                             errorAny?.code ||
+                             errorAny?.context?.status ||
+                             errorAny?.response?.status ||
+                             (errorAny?.response?.statusCode);
+            if (statusCode) {
+              console.error(`❌ AuthService: Edge Function returned status code: ${statusCode}`);
+              if (statusCode === 400) {
+                // ננסה לקבל את הפרטים מהתגובה
+                if (functionData?.code === 'USER_EXISTS' || functionData?.error?.includes('already exists')) {
+                  errorMessage = 'כתובת המייל כבר קיימת במערכת.';
+                } else if (functionData?.code === 'AUTH_CREATE_FAILED') {
+                  errorMessage = `שגיאה ביצירת המשתמש: ${functionData?.error || 'אנא נסה שוב'}`;
+                } else if (functionData?.code === 'PROFILE_CREATE_FAILED') {
+                  errorMessage = `שגיאה ביצירת הפרופיל: ${functionData?.error || 'אנא נסה שוב'}`;
+                } else {
+                  errorMessage = 'הנתונים שהוזנו לא תקינים. אנא בדוק את הפרטים ונסה שוב.';
+                }
+              } else if (statusCode === 401 || statusCode === 403) {
+                errorMessage = 'בעיית הרשאות. אנא פנה לתמיכה.';
+              } else if (statusCode === 409) {
+                errorMessage = 'כתובת המייל כבר קיימת במערכת.';
+              } else if (statusCode >= 500) {
+                if (functionData?.code === 'CONFIG_ERROR') {
+                  errorMessage = 'שגיאת הגדרות שרת. אנא פנה לתמיכה.';
+                } else {
+                  errorMessage = 'שגיאת שרת. אנא נסה שוב בעוד כמה רגעים.';
+                }
+              } else {
+                errorMessage = `שגיאה ביצירת המשתמש (קוד: ${statusCode}). אנא נסה שוב או פנה לתמיכה.`;
+              }
+            } else if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
+              errorMessage = 'בעיית חיבור. אנא בדוק את החיבור לאינטרנט ונסה שוב.';
+            } else if (errorMessage.includes('non-2xx status code')) {
+              // נסה לקבל את ה-status code מה-message
+              const statusMatch = errorMessage.match(/status code:? (\d+)/i);
+              const extractedStatus = statusMatch ? statusMatch[1] : null;
+              if (extractedStatus) {
+                const code = parseInt(extractedStatus);
+                if (code === 400) {
+                  errorMessage = 'הנתונים שהוזנו לא תקינים. אנא בדוק את הפרטים ונסה שוב.';
+                } else if (code === 409) {
+                  errorMessage = 'כתובת המייל כבר קיימת במערכת.';
+                } else if (code >= 500) {
+                  errorMessage = 'שגיאת שרת. אנא נסה שוב בעוד כמה רגעים.';
+                } else {
+                  errorMessage = `שגיאה ביצירת המשתמש (קוד: ${code}). אנא נסה שוב או פנה לתמיכה.`;
+                }
+              } else {
+                errorMessage = 'שגיאה ביצירת המשתמש. אנא נסה שוב או פנה לתמיכה.';
+              }
+            }
+            
+            return { user: null, error: errorMessage };
           }
-        }
 
-        console.log('🔄 AuthService: Attempting direct user creation:', userData);
-        
-        const { data: insertData, error: insertError } = await supabase.from('users').insert(userData).select();
-        
-        if (insertError) {
-          console.error('❌ AuthService: Direct user creation failed:', insertError);
-          return { user: null, error: `Database error: ${insertError.message}` };
+          // בדיקה אם יש שגיאה בתגובה
+          if (functionData?.error) {
+            console.error('❌ AuthService: Admin API returned error:', functionData.error);
+            const errorMsg = typeof functionData.error === 'string' 
+              ? functionData.error 
+              : functionData.error?.message || 'שגיאה ביצירת המשתמש';
+            return { user: null, error: errorMsg };
+          }
+          
+          // בדיקה אם התגובה ריקה או לא תקינה
+          if (!functionData) {
+            console.error('❌ AuthService: Function returned empty response');
+            return { user: null, error: 'השרת לא החזיר תגובה. אנא נסה שוב.' };
+          }
+
+          // בדיקה אם יש user בתגובה
+          if (functionData?.user) {
+            console.log('✅ AuthService: User created via Admin API:', functionData.user);
+            
+            // התחברות אוטומטית למשתמש שנוצר
+            console.log('🔄 AuthService: Attempting to sign in with created user...');
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+
+            if (signInError || !signInData.user) {
+              console.error('❌ AuthService: Failed to sign in after user creation:', signInError);
+              // אם ההתחברות נכשלה, נחזיר את המשתמש שנוצר אבל נציין שצריך להתחבר ידנית
+              return { 
+                user: {
+                  id: functionData.user.id,
+                  email: functionData.user.email || email,
+                  display_name: functionData.user.display_name,
+                  full_name: functionData.user.full_name,
+                  phone: functionData.user.phone,
+                  profile_picture: functionData.user.profile_picture,
+                  account_type: functionData.user.account_type,
+                  track_id: functionData.user.track_id,
+                  intro_data: functionData.user.intro_data,
+                  registration_completed: functionData.user.registration_completed
+                }, 
+                error: signInError ? `User created but sign in failed: ${signInError.message}. Please try logging in manually.` : null 
+              };
+            }
+
+            console.log('✅ AuthService: Sign in successful, fetching user profile...');
+            // קבלת פרופיל המשתמש
+            const finalUser = await this.getUserProfile(signInData.user.id);
+            if (!finalUser) {
+              console.warn('⚠️ AuthService: getUserProfile returned null, using functionData user');
+              // אם getUserProfile נכשל, נחזיר את המשתמש מה-functionData
+              return { 
+                user: {
+                  id: functionData.user.id,
+                  email: functionData.user.email || email,
+                  display_name: functionData.user.display_name,
+                  full_name: functionData.user.full_name,
+                  phone: functionData.user.phone,
+                  profile_picture: functionData.user.profile_picture,
+                  account_type: functionData.user.account_type,
+                  track_id: functionData.user.track_id,
+                  intro_data: functionData.user.intro_data,
+                  registration_completed: functionData.user.registration_completed
+                }, 
+                error: null 
+              };
+            }
+            console.log('✅ AuthService: User profile fetched successfully');
+            return { user: finalUser, error: null };
+          }
+
+          console.error('❌ AuthService: No user in function response:', functionData);
+          return { user: null, error: 'Failed to create user via Admin API - no user returned in response' };
+        } catch (adminError: any) {
+          console.error('❌ AuthService: Admin API exception:', adminError);
+          return { user: null, error: `Failed to create user: ${adminError?.message || JSON.stringify(adminError)}` };
         }
-        
-        console.log('✅ AuthService: User created directly:', insertData);
-        
-        // החזרת משתמש מותאם
-        const createdUser = insertData?.[0];
-        if (createdUser) {
-          const finalUser: AuthUser = {
-            id: createdUser.id,
-            email: createdUser.email,
-            display_name: createdUser.display_name,
-            full_name: createdUser.full_name,
-            phone: createdUser.phone,
-            profile_picture: createdUser.profile_picture,
-            account_type: createdUser.account_type,
-            track_id: createdUser.track_id,
-            intro_data: createdUser.intro_data,
-            registration_completed: createdUser.registration_completed
-          };
-          return { user: finalUser, error: null };
-        }
-        
-        return { user: null, error: 'Failed to create user profile' };
       }
       
       // יצירת משתמש בטבלת users עם כל הנתונים
@@ -291,14 +435,21 @@ export class AuthService {
         }
       }
 
-      console.log('🔄 AuthService: Attempting to insert user data:', userData);
+      console.log('🔄 AuthService: Attempting to upsert user data:', userData);
       
-      const { data: insertData, error: insertError } = await supabase.from('users').insert(userData).select();
+      // שימוש ב-upsert כי ה-trigger כבר יכול ליצור את השורה
+      const { data: insertData, error: insertError } = await supabase
+        .from('users')
+        .upsert(userData, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        })
+        .select();
       
       if (insertError) {
-        console.error('❌ AuthService: Error creating user profile:', insertError);
-        console.error('❌ AuthService: Insert data:', userData);
-        console.error('❌ AuthService: Insert result:', insertData);
+        console.error('❌ AuthService: Error upserting user profile:', insertError);
+        console.error('❌ AuthService: Upsert data:', userData);
+        console.error('❌ AuthService: Upsert result:', insertData);
         return { user: null, error: `Database error: ${insertError.message}` };
       }
       
@@ -419,18 +570,51 @@ export class AuthService {
   // Listen to auth state changes
   static onAuthStateChange(callback: (user: AuthUser | null) => void) {
     return supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 AuthService: Auth state change event:', event, 'hasSession:', !!session);
+      console.log('🔄 AuthService: Auth state change event:', event, 'hasSession:', !!session, 'hasUser:', !!session?.user);
+      
+      // אם זה SIGNED_OUT event, תמיד נקרא callback(null)
+      if (event === 'SIGNED_OUT') {
+        console.log('🔄 AuthService: SIGNED_OUT event, calling callback with null');
+        callback(null);
+        return;
+      }
+      
       if (session?.user) {
         try {
+          console.log('🔄 AuthService: Getting user profile for:', session.user.id);
           const user = await this.getUserProfile(session.user.id);
-          callback(user);
+          if (user) {
+            console.log('✅ AuthService: User profile loaded successfully:', user.id);
+            callback(user);
+          } else {
+            // אם getUserProfile מחזיר null, זה יכול להיות בעיית רשת או שהמשתמש לא קיים
+            // ב-INITIAL_SESSION, לא נקרא callback(null) כי זה יכול להיות בעיית רשת
+            if (event === 'INITIAL_SESSION') {
+              console.log('⚠️ AuthService: INITIAL_SESSION - getUserProfile returned null, might be network issue. Not calling callback.');
+            } else {
+              console.log('🔄 AuthService: getUserProfile returned null, calling callback with null');
+              callback(null);
+            }
+          }
         } catch (error) {
           console.error('❌ AuthService: Error getting user profile:', error);
-          callback(null);
+          // אם יש session אבל getUserProfile נכשל, זה יכול להיות בעיית רשת
+          // ב-INITIAL_SESSION, לא נקרא callback(null) כי זה יכול להיות בעיית רשת
+          if (event === 'INITIAL_SESSION') {
+            console.log('⚠️ AuthService: INITIAL_SESSION - Error getting user profile, might be network issue. Not calling callback.');
+          } else {
+            console.log('⚠️ AuthService: Error getting user profile, calling callback with null');
+            callback(null);
+          }
         }
       } else {
-        console.log('🔄 AuthService: No session, calling callback with null');
-        callback(null);
+        // אם אין session או אין user, נקרא callback(null) רק אם זה לא INITIAL_SESSION
+        if (event === 'INITIAL_SESSION') {
+          console.log('⚠️ AuthService: INITIAL_SESSION - No session or user, might be network issue. Not calling callback.');
+        } else {
+          console.log('🔄 AuthService: No session or user, calling callback with null');
+          callback(null);
+        }
       }
     });
   }

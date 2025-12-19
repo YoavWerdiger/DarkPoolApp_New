@@ -17,8 +17,12 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
 
   const handleNext = () => {
     if (!selectedTrack) return;
-    setData({ ...data, trackId: selectedTrack });
-    navigation.navigate('RegistrationPayment');
+    setData({ 
+      ...data, 
+      trackId: selectedTrack,
+      accountType: 'free' // דילוג על שלב התשלום - הגדרה אוטומטית ל-free
+    });
+    navigation.navigate('RegistrationSummary');
   };
 
   return (

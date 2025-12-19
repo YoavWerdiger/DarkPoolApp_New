@@ -34,6 +34,7 @@ type GroupListener = (data: any, eventType: 'UPDATE') => void;
 
 const activeChannels = new Map<string, RealtimeChannel>();
 const typingTimers = new Map<string, NodeJS.Timeout>();
+const failedChannels = new Set<string>(); // מניעת retry אינסופי
 
 // ============================================
 // הרשמה לקבוצה
@@ -49,12 +50,19 @@ export function subscribeToGroup(
     onMember?: MemberListener;
     onGroup?: GroupListener;
   }
-): RealtimeChannel {
+): RealtimeChannel | null {
   console.log(`🔌 Subscribing to group: ${groupId}`);
 
-  // אם כבר יש channel פעיל, נסגור אותו
+  // אם ה-channel כבר נכשל - לא מנסים שוב
+  if (failedChannels.has(groupId)) {
+    console.warn(`⚠️ Skipping subscription to ${groupId} - previously failed`);
+    return null;
+  }
+
+  // אם כבר יש channel פעיל, נחזיר אותו
   if (activeChannels.has(groupId)) {
-    unsubscribeFromGroup(groupId);
+    console.log(`📡 Returning existing channel for ${groupId}`);
+    return activeChannels.get(groupId)!;
   }
 
   // יצירת channel חדש
@@ -92,7 +100,8 @@ export function subscribeToGroup(
     );
   }
 
-  // מאזין לריאקציות
+  // מאזין לריאקציות - בלי פילטר מורכב כי Supabase Realtime לא תומך ב-subqueries
+  // נסנן את הריאקציות בקוד במקום
   if (listeners.onReaction) {
     channel.on(
       'postgres_changes',
@@ -100,9 +109,20 @@ export function subscribeToGroup(
         event: '*',
         schema: 'public',
         table: 'chat_message_reactions',
-        filter: `message_id=in.(select id from chat_messages where group_id='${groupId}')`,
       },
       async (payload: RealtimePostgresChangesPayload<any>) => {
+        const reactionData = payload.new || payload.old;
+        if (!reactionData?.message_id) return;
+        
+        // בדיקה האם הריאקציה שייכת להודעה בקבוצה הזו
+        const { data: messageData } = await supabase
+          .from('chat_messages')
+          .select('group_id')
+          .eq('id', reactionData.message_id)
+          .single();
+        
+        if (!messageData || messageData.group_id !== groupId) return;
+        
         console.log('👍 Reaction event:', payload.eventType);
         
         if (payload.eventType === 'INSERT') {
@@ -205,13 +225,25 @@ export function subscribeToGroup(
   }
 
   // הרשמה ל-channel
-  channel.subscribe((status) => {
+  channel.subscribe((status, err) => {
     console.log(`📡 Channel status for ${groupId}:`, status);
     
     if (status === 'SUBSCRIBED') {
       console.log(`✅ Successfully subscribed to group ${groupId}`);
+      // הצלחה - מסירים מרשימת הכשלונות אם היה שם
+      failedChannels.delete(groupId);
     } else if (status === 'CHANNEL_ERROR') {
-      console.error(`❌ Error subscribing to group ${groupId}`);
+      console.error(`❌ Error subscribing to group ${groupId}:`, err?.message || 'Unknown error');
+      // מסמנים ככושל כדי לא לנסות שוב
+      failedChannels.add(groupId);
+      // מסירים מה-active channels
+      activeChannels.delete(groupId);
+      // עוצרים את ה-retry האוטומטי של Supabase
+      try {
+        channel.unsubscribe();
+      } catch (e) {
+        // התעלם משגיאות בביטול
+      }
     }
   });
 
@@ -287,8 +319,12 @@ export async function setTypingStatus(
         });
 
       if (error) {
-        console.error('❌ Error setting typing status:', error);
-        return { error: { code: 'TYPING_ERROR', message: error.message } };
+        // נדווח רק אם זה לא בעיית RLS או constraint - שגיאות נפוצות ולא קריטיות
+        const isCommonError = error.code === '42501' || error.code === '23505' || error.message?.includes('permission');
+        if (!isCommonError) {
+          console.error('❌ Error setting typing status:', error.message || error);
+        }
+        return { error: { code: 'TYPING_ERROR', message: error.message || 'Unknown error' } };
       }
 
       // הגדרת טיימר אוטומטי להסרה אחרי 10 שניות
@@ -307,23 +343,30 @@ export async function setTypingStatus(
       // סיום הקלדה
       console.log(`⌨️ User ${userId} stopped typing in group ${input.group_id}`);
 
-      // הסרה מ-DB
-      const { error } = await supabase
-        .from('chat_typing_indicators')
-        .delete()
-        .eq('group_id', input.group_id)
-        .eq('user_id', userId);
-
-      if (error) {
-        console.error('❌ Error removing typing status:', error);
-        return { error: { code: 'TYPING_ERROR', message: error.message } };
-      }
-
-      // ניקוי טיימר
+      // ניקוי טיימר קודם (תמיד נקה, גם אם יש שגיאה ב-DB)
       const timer = typingTimers.get(`${input.group_id}-${userId}`);
       if (timer) {
         clearTimeout(timer);
         typingTimers.delete(`${input.group_id}-${userId}`);
+      }
+
+      // הסרה מ-DB - עם טיפול בשגיאות רכה
+      try {
+        const { error } = await supabase
+          .from('chat_typing_indicators')
+          .delete()
+          .eq('group_id', input.group_id)
+          .eq('user_id', userId);
+
+        if (error) {
+          // לא נדווח כעל error חמור - יכול להיות שהרשומה כבר לא קיימת או בעיית רשת זמנית
+          console.warn('⚠️ Warning: Could not remove typing status from DB (this is usually harmless):', error.message);
+          // לא נחזיר error - המשתמש כבר הפסיק להקליד מקומית
+        }
+      } catch (dbError: any) {
+        // גם כאן נטפל בשגיאות באופן רך
+        console.warn('⚠️ Warning: Exception while removing typing status (usually harmless):', dbError?.message || dbError);
+        // ממשיכים הלאה - הטיימר כבר נוקה
       }
     }
 
@@ -457,11 +500,20 @@ export function unsubscribeFromUserStatus(userId: string): void {
 // הרשמה לכל הקבוצות של המשתמש
 // ============================================
 
-export function subscribeToAllUserGroups(
+// Cache של קבוצות המשתמש לסינון ריאלטיים
+const userGroupsCache = new Map<string, Set<string>>();
+
+// Disabled temporarily - causing CHANNEL_ERROR loop
+// TODO: Re-enable when Supabase Realtime is properly configured
+export async function subscribeToAllUserGroups(
   userId: string,
   onNewMessage: (groupId: string, message: ChatMessage) => void,
   onGroupUpdate: (groupId: string, data: any) => void
-): RealtimeChannel {
+): Promise<RealtimeChannel | null> {
+  console.log(`⚠️ subscribeToAllUserGroups is disabled temporarily`);
+  return null;
+  
+  /* Original code disabled:
   console.log(`🔌 Subscribing to all groups for user: ${userId}`);
 
   const channelName = `user-groups:${userId}`;
@@ -470,45 +522,76 @@ export function subscribeToAllUserGroups(
   if (activeChannels.has(channelName)) {
     const channel = activeChannels.get(channelName);
     channel?.unsubscribe();
+    activeChannels.delete(channelName);
   }
 
+  // טעינת קבוצות המשתמש לcache
+  const { data: memberships } = await supabase
+    .from('chat_group_members')
+    .select('group_id')
+    .eq('user_id', userId);
+  
+  const userGroups = new Set<string>(memberships?.map(m => m.group_id) || []);
+  userGroupsCache.set(userId, userGroups);
+
   const channel = supabase.channel(channelName)
-    // הודעות חדשות בכל הקבוצות שלי
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'chat_messages',
-        filter: `group_id=in.(select group_id from chat_group_members where user_id='${userId}')`,
       },
       (payload: RealtimePostgresChangesPayload<any>) => {
         const message = payload.new as ChatMessage;
-        // לא להציג הודעות שלי
-        if (message.sender_id !== userId) {
+        const cachedGroups = userGroupsCache.get(userId);
+        
+        if (cachedGroups?.has(message.group_id) && message.sender_id !== userId) {
           console.log('📩 New message in group:', message.group_id);
           onNewMessage(message.group_id, message);
         }
       }
     )
-    // עדכוני קבוצות
     .on(
       'postgres_changes',
       {
         event: 'UPDATE',
         schema: 'public',
         table: 'chat_groups',
-        filter: `id=in.(select group_id from chat_group_members where user_id='${userId}')`,
       },
       (payload: RealtimePostgresChangesPayload<any>) => {
-        console.log('📝 Group updated:', payload.new.id);
-        onGroupUpdate(payload.new.id, payload.new);
+        const cachedGroups = userGroupsCache.get(userId);
+        
+        if (cachedGroups?.has(payload.new.id)) {
+          console.log('📝 Group updated:', payload.new.id);
+          onGroupUpdate(payload.new.id, payload.new);
+        }
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (status === 'CHANNEL_ERROR') {
+        console.error(`❌ Error subscribing to user groups channel:`, err);
+        activeChannels.delete(channelName);
+        try { channel.unsubscribe(); } catch (e) {}
+      } else if (status === 'SUBSCRIBED') {
+        console.log(`✅ Successfully subscribed to user groups channel`);
+      }
+    });
 
   activeChannels.set(channelName, channel);
   return channel;
+  */
+}
+
+// עדכון cache כשמצטרפים/יוצאים מקבוצה
+export function updateUserGroupsCache(userId: string, groupId: string, action: 'add' | 'remove'): void {
+  const groups = userGroupsCache.get(userId) || new Set<string>();
+  if (action === 'add') {
+    groups.add(groupId);
+  } else {
+    groups.delete(groupId);
+  }
+  userGroupsCache.set(userId, groups);
 }
 
 // ============================================
@@ -563,6 +646,18 @@ export function getConnectionStatus(): 'CONNECTED' | 'DISCONNECTED' | 'CONNECTIN
 // Export
 // ============================================
 
+// ניקוי רשימת הכשלונות - מאפשר לנסות שוב
+export function clearFailedChannels(): void {
+  failedChannels.clear();
+  console.log('🧹 Cleared failed channels list');
+}
+
+// ניקוי כשל ספציפי
+export function clearFailedChannel(groupId: string): void {
+  failedChannels.delete(groupId);
+  console.log(`🧹 Cleared failed status for ${groupId}`);
+}
+
 export const chatRealtimeService = {
   subscribeToGroup,
   unsubscribeFromGroup,
@@ -573,8 +668,11 @@ export const chatRealtimeService = {
   subscribeToUserStatus,
   unsubscribeFromUserStatus,
   subscribeToAllUserGroups,
+  updateUserGroupsCache,
   startTypingCleanup,
   stopTypingCleanup,
   getConnectionStatus,
+  clearFailedChannels,
+  clearFailedChannel,
 };
 

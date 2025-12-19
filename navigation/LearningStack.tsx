@@ -4,6 +4,7 @@ import { CoursesScreen } from '../screens/Learning/CoursesScreen';
 import { CourseDetailScreen } from '../screens/Learning/CourseDetailScreen';
 import { CoursePreviewScreen } from '../screens/Learning/CoursePreviewScreen';
 import { MyNotesScreen } from '../screens/Learning/MyNotesScreen';
+import { LessonPlayerScreen } from '../screens/Learning/LessonPlayerScreen';
 import { useDesignTokens } from '../components/ui/DesignTokens';
 
 export type LearningStackParamList = {
@@ -11,6 +12,7 @@ export type LearningStackParamList = {
   LearningScreen: { courseId?: string; lessonId?: string };
   CourseDetailScreen: { courseId: string };
   CoursePreviewScreen: { youtubeLinks?: string[] };
+  LessonPlayerScreen: { lessonId: string; initialBlockIndex?: number };
   MyNotesScreen: undefined;
 };
 
@@ -42,21 +44,26 @@ export default function LearningStack() {
         component={LearningScreen}
         options={{ title: 'קורס' }}
       />
-            <Stack.Screen
-              name="CourseDetailScreen"
-              component={CourseDetailScreen}
-              options={{ title: 'פרטי קורס' }}
-            />
-            <Stack.Screen
-              name="CoursePreviewScreen"
-              component={CoursePreviewScreen}
-              options={{ title: 'תצוגה מקדימה' }}
-            />
-            <Stack.Screen
-              name="MyNotesScreen"
-              component={MyNotesScreen}
-              options={{ title: 'ההערות שלי' }}
-            />
+      <Stack.Screen
+        name="CourseDetailScreen"
+        component={CourseDetailScreen}
+        options={{ title: 'פרטי קורס' }}
+      />
+      <Stack.Screen
+        name="CoursePreviewScreen"
+        component={CoursePreviewScreen}
+        options={{ title: 'תצוגה מקדימה' }}
+      />
+      <Stack.Screen
+        name="LessonPlayerScreen"
+        component={LessonPlayerScreen}
+        options={{ title: 'שיעור' }}
+      />
+      <Stack.Screen
+        name="MyNotesScreen"
+        component={MyNotesScreen}
+        options={{ title: 'ההערות שלי' }}
+      />
     </Stack.Navigator>
   );
 }

@@ -420,7 +420,7 @@ export default function MediaMessageRenderer({
   const renderAudioMessage = () => (
     <View
       style={{
-        width: 260,
+        width: 280, // הורחב מ-260 ל-280 כדי לתת יותר מקום ל-waveforms
         borderRadius: 18,
         overflow: 'hidden',
         marginBottom: -5,
@@ -446,7 +446,7 @@ export default function MediaMessageRenderer({
         </Text>
       )}
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 }}>
         {/* Play Button */}
         <Pressable
           style={{
@@ -456,7 +456,8 @@ export default function MediaMessageRenderer({
             backgroundColor: isMe ? '#000000' : DesignTokens.colors.success.main,
             justifyContent: 'center',
             alignItems: 'center',
-            marginRight: 10
+            marginRight: 10,
+            zIndex: 10 // ודא שהכפתור תמיד מעל ה-waveforms
           }}
           onPress={togglePlay}
         >
@@ -467,22 +468,32 @@ export default function MediaMessageRenderer({
           )}
         </Pressable>
 
-        {/* Timeline או Waveforms */}
-        <View style={{ flex: 1 }}>
-          {/* בדיקה אם יש waveforms ב-metadata */}
-          {message.metadata?.waveformData && Array.isArray(message.metadata.waveformData) ? (
-            // מציג waveforms
-            <View style={{ marginBottom: 4 }}>
-              <View style={{
-                height: 20,
+        {/* Waveforms - תמיד מציג waveforms */}
+        <View style={{ flex: 1, marginLeft: 4 }}> {/* הוספתי marginLeft כדי לתת יותר רווח מהכפתור */}
+          <View style={{ marginBottom: 4 }}>
+            <View
+              {...panResponder.panHandlers}
+              style={{
+                height: 24, // הוגדל מ-20 ל-24 כדי לתת יותר מקום ל-waveforms
                 flexDirection: 'row-reverse',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 2
-              }}>
-                {message.metadata.waveformData.map((value: number, index: number) => {
+                gap: 2,
+                minWidth: 180, // רוחב מינימלי כדי למנוע דחיסה
+                paddingRight: 4 // הוספתי padding כדי למנוע דחיסה מהכפתור
+              }}
+              onLayout={(e) => setBarWidthPx(e.nativeEvent.layout.width)}
+            >
+              {/* יצירת waveforms - אם יש waveformData, משתמשים בו, אחרת יוצרים אקראיים */}
+              {(() => {
+                const BARS_COUNT = 30;
+                const waveformData = message.metadata?.waveformData && Array.isArray(message.metadata.waveformData) 
+                  ? message.metadata.waveformData 
+                  : Array.from({ length: BARS_COUNT }, () => 0.3 + Math.random() * 0.7);
+                
+                return waveformData.map((value: number, index: number) => {
                   // חישוב גובה ה-bar בהתאם למיקום הנוכחי
-                  const barPosition = (index / message.metadata.waveformData.length) * 100;
+                  const barPosition = (index / waveformData.length) * 100;
                   const isPlayed = barPosition <= progressPct;
                   const barHeight = Math.max(4, value * 16);
                   
@@ -500,79 +511,27 @@ export default function MediaMessageRenderer({
                       }}
                     />
                   );
-                })}
-              </View>
-              {/* זמן נוכחי / סה"כ */}
-              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 4 }}>
-                <Text style={{ 
-                  color: isMe ? '#000000' : DesignTokens.colors.text.tertiary, 
-                  fontSize: 10, 
-                  fontWeight: '500' 
-                }}>
-                  {formatMs(durationMs)}
-                </Text>
-                <Text style={{ 
-                  color: isMe ? '#000000' : '#FFFFFF', 
-                  fontSize: 10, 
-                  fontWeight: '600' 
-                }}>
-                  {formatMs(positionMs)}
-                </Text>
-              </View>
+                });
+              })()}
             </View>
-          ) : (
-            // מציג timeline רגיל
-            <>
-              {/* פס התקדמות עם דוט */}
-              <View
-                {...panResponder.panHandlers}
-                style={{ height: 18, justifyContent: 'center', marginBottom: 4 }}
-                onLayout={(e) => setBarWidthPx(e.nativeEvent.layout.width)}
-              >
-                {/* רקע */}
-                <View style={{ 
-                  height: 3, 
-                  backgroundColor: isMe ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)', // שמירה על שקיפות למעקב אודיו 
-                  borderRadius: 1.5, 
-                  width: '100%' 
-                }} />
-                {/* התקדמות */}
-                <View style={{ 
-                  position: 'absolute', 
-                  height: 3, 
-                  backgroundColor: isMe ? '#000000' : DesignTokens.colors.success.main, 
-                  borderRadius: 1.5, 
-                  width: (progressPct / 100) * barWidthPx 
-                }} />
-                {/* דוט */}
-                <View style={{ 
-                  position: 'absolute', 
-                  left: (progressPct / 100) * barWidthPx - 5, 
-                  width: 10, 
-                  height: 10, 
-                  borderRadius: 5, 
-                  backgroundColor: isMe ? '#000000' : DesignTokens.colors.success.main
-                }} />
-              </View>
-              {/* זמן נוכחי / סה"כ */}
-              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
-                <Text style={{ 
-                  color: isMe ? '#000000' : DesignTokens.colors.text.tertiary, 
-                  fontSize: 10, 
-                  fontWeight: '500' 
-                }}>
-                  {formatMs(durationMs)}
-                </Text>
-                <Text style={{ 
-                  color: isMe ? '#000000' : '#FFFFFF', 
-                  fontSize: 10, 
-                  fontWeight: '600' 
-                }}>
-                  {formatMs(positionMs)}
-                </Text>
-              </View>
-            </>
-          )}
+            {/* זמן נוכחי / סה"כ */}
+            <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 4 }}>
+              <Text style={{ 
+                color: isMe ? '#000000' : DesignTokens.colors.text.tertiary, 
+                fontSize: 10, 
+                fontWeight: '500' 
+              }}>
+                {formatMs(durationMs)}
+              </Text>
+              <Text style={{ 
+                color: isMe ? '#000000' : '#FFFFFF', 
+                fontSize: 10, 
+                fontWeight: '600' 
+              }}>
+                {formatMs(positionMs)}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 

@@ -119,3 +119,10 @@ BEGIN
     RAISE NOTICE '🔧 פונקציות: cleanup_old_economic_events()';
 END $$;
 
+
+
+
+
+
+
+

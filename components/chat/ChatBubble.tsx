@@ -672,63 +672,52 @@ export default function ChatBubble({ message, isMe, onReply, onEditMessage, onDe
   const renderReactions = () => {
     if (!reactions || reactions.length === 0) return null;
 
-    const displayReactions = reactions.slice(0, 3); // רק 3 הראשונות
-    const remainingCount = reactions.length > 3 ? reactions.length - 3 : 0;
+    // חישוב סה"כ ריאקציות
+    const totalReactionsCount = reactions.reduce((sum, r) => sum + r.count, 0);
+    const displayReactions = reactions.slice(0, 3); // עד 3 אימוג'ים שונים
+    
+    // אם יש יותר מ-3 סוגי אימוג'ים, נחשב כמה ריאקציות נוספות יש
+    const additionalReactionsCount = reactions.length > 3 
+      ? reactions.slice(3).reduce((sum, r) => sum + r.count, 0)
+      : 0;
 
     return (
       <Pressable
         onPress={handleReactionDetails}
         className="absolute -bottom-1 -left-1 flex-row items-center"
       >
-        {/* בועות הריאקציה */}
-        <View className="flex-row">
+        {/* בועה אחת עם כל האימוג'ים */}
+        <View 
+          className="flex-row items-center px-2 py-1 rounded-full border"
+          style={{
+            backgroundColor: DesignTokens.colors.background.secondary,
+            borderColor: DesignTokens.colors.border.primary,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.2,
+            shadowRadius: 2,
+            elevation: 2,
+            minHeight: 24,
+            gap: 2,
+          }}
+        >
+          {/* האימוג'ים - בלי מספרים */}
           {displayReactions.map((reaction, index) => (
-            <View
-              key={index}
-              className="px-2 py-1 rounded-full border items-center justify-center"
-              style={{
-                backgroundColor: DesignTokens.colors.background.secondary,
-                borderColor: DesignTokens.colors.border.primary,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.2,
-                shadowRadius: 2,
-                elevation: 2,
-                minWidth: 28,
-                minHeight: 24,
-                marginLeft: index > 0 ? -8 : 0, // חיבור הבועות
-                zIndex: reactions.length - index // שכבות
-              }}
+            <Text 
+              key={`${message.id}-reaction-${reaction.emoji}-${index}`}
+              style={{ fontSize: 14 }}
             >
-              <Text className="text-xs">{reaction.emoji}</Text>
-              {reaction.count > 1 && (
-                <Text className="text-xs text-gray-400 ml-1 font-medium">
-                  {reaction.count}
-                </Text>
-              )}
-            </View>
-          ))}
-        </View>
-
-        {/* +X אם יש יותר מ-3 */}
-        {remainingCount > 0 && (
-          <View className="px-2 py-1 rounded-full border ml-1 items-center justify-center"
-            style={{
-              backgroundColor: DesignTokens.colors.background.secondary,
-              borderColor: DesignTokens.colors.border.primary,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.2,
-              shadowRadius: 2,
-              elevation: 2,
-              minWidth: 28,
-              minHeight: 24
-            }}>
-            <Text className="text-xs text-gray-400 font-medium">
-              +{remainingCount}
+              {reaction.emoji}
             </Text>
-          </View>
-        )}
+          ))}
+          
+          {/* +X אם יש יותר מ-3 סוגי אימוג'ים */}
+          {additionalReactionsCount > 0 && (
+            <Text className="text-xs text-gray-400 font-medium ml-1">
+              +{additionalReactionsCount}
+            </Text>
+          )}
+        </View>
       </Pressable>
     );
   };

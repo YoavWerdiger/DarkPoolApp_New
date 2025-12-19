@@ -4,9 +4,10 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { ChatService, ChatListItem } from '../../services/chatService';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 export default function ChatListScreen() {
+  const DesignTokens = useDesignTokens();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
   const [chats, setChats] = useState<ChatListItem[]>([]);

@@ -1,753 +1,307 @@
-import React, { useState, useRef, useEffect } from 'react';
+// ============================================
+// Media Viewer Component
+// ============================================
+// מסך מלא להצגת תמונות וסרטונים
+// ============================================
+
+import React, { useState } from 'react';
 import {
   View,
   Text,
   Modal,
-  Pressable,
-  Image,
+  TouchableOpacity,
+  StyleSheet,
   Dimensions,
-  ScrollView,
-  Alert,
-  Animated,
-  Share as RNShare
+  ActivityIndicator,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { AlertCircle, Video as VideoIcon, Music, FileText, MessageCircle, Forward, Share as ShareIcon, Download, X } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from 'expo-av';
-import { Audio } from 'expo-av';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
-import { Message } from '../../services/supabase';
-import { useAuth } from '../../context/AuthContext';
-import ForwardModal from './ForwardModal';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import {
+  GestureDetector,
+  Gesture,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface MediaViewerProps {
   visible: boolean;
-  onClose: () => void;
   mediaUrl: string;
-  mediaType: 'image' | 'video' | 'audio' | 'document';
+  mediaType: 'image' | 'video';
   caption?: string;
-  message?: Message;
-  onReply?: () => void;
-  onForward?: () => void;
+  onClose: () => void;
 }
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function MediaViewer({
   visible,
-  onClose,
   mediaUrl,
   mediaType,
   caption,
-  message,
-  onReply,
-  onForward
+  onClose,
 }: MediaViewerProps) {
-  console.log('🎯 MediaViewer: Rendering with:', { visible, mediaUrl, mediaType });
-
   const DesignTokens = useDesignTokens();
-  const { user } = useAuth();
   const insets = useSafeAreaInsets();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showActions, setShowActions] = useState(false);
-  const [isStarred, setIsStarred] = useState(false);
-  const [showForwardModal, setShowForwardModal] = useState(false);
-  const audioRef = useRef<Audio.Sound | null>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const scrollViewRef = useRef<ScrollView>(null);
-  const zoomTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const imageScale = useRef(new Animated.Value(1)).current;
+  const [imageLoading, setImageLoading] = useState(true);
+  const [videoLoading, setVideoLoading] = useState(true);
 
-  // לוג כשה-visible משתנה
-  useEffect(() => {
-    console.log('🎯 MediaViewer visible changed to:', visible);
+  // Animation values for zoom and pan
+  const scale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedScale = useSharedValue(1);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+
+  // Reset animation values when modal closes
+  React.useEffect(() => {
+    if (!visible) {
+      scale.value = 1;
+      translateX.value = 0;
+      translateY.value = 0;
+      savedScale.value = 1;
+      savedTranslateX.value = 0;
+      savedTranslateY.value = 0;
+    }
   }, [visible]);
 
-  // בדיקת מצב כוכב ראשוני
-  useEffect(() => {
-    const checkStarredStatus = async () => {
-      if (visible && message?.id && user?.id) {
-        try {
-          console.log('🔍 Checking if message is starred:', message.id);
-          const ChatService = await import('../../services/chatService');
-          const isMessageStarred = await ChatService.ChatService.isMessageStarred(
-            message.id,
-            user.id
-          );
-          console.log('🔍 Message starred status:', isMessageStarred);
-          setIsStarred(isMessageStarred);
-        } catch (error) {
-          console.error('❌ Error checking starred status:', error);
-          setIsStarred(false);
+  // Pinch gesture for zoom
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      scale.value = savedScale.value * event.scale;
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+      // Limit zoom between 1 and 5
+      if (scale.value < 1) {
+        scale.value = withSpring(1);
+        savedScale.value = 1;
+      } else if (scale.value > 5) {
+        scale.value = withSpring(5);
+        savedScale.value = 5;
+      }
+    });
+
+  // Pan gesture for drag (only when zoomed)
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (scale.value > 1) {
+        translateX.value = savedTranslateX.value + event.translationX;
+        translateY.value = savedTranslateY.value + event.translationY;
+      }
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+      
+      // Spring back to center if not zoomed
+      if (scale.value <= 1) {
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      } else {
+        // Constrain pan when zoomed
+        const maxTranslateX = (SCREEN_WIDTH * (scale.value - 1)) / 2;
+        const maxTranslateY = (SCREEN_HEIGHT * (scale.value - 1)) / 2;
+        
+        if (Math.abs(translateX.value) > maxTranslateX) {
+          translateX.value = withSpring(translateX.value > 0 ? maxTranslateX : -maxTranslateX);
+          savedTranslateX.value = translateX.value;
+        }
+        if (Math.abs(translateY.value) > maxTranslateY) {
+          translateY.value = withSpring(translateY.value > 0 ? maxTranslateY : -maxTranslateY);
+          savedTranslateY.value = translateY.value;
         }
       }
+    });
+
+  // Combined gesture
+  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
+
+  // Animated style for image
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
     };
+  });
 
-    checkStarredStatus();
-  }, [visible, message?.id, user?.id]);
-
-  // פונקציה להחזרת מיקום למרכז עם אנימציה חלקה
-  const resetImagePosition = () => {
-    // נקה timeout קודם אם קיים
-    if (zoomTimeoutRef.current) {
-      clearTimeout(zoomTimeoutRef.current);
-    }
-
-    zoomTimeoutRef.current = setTimeout(() => {
-      // החזר את ה-ScrollView למרכז עם אנימציה
-      scrollViewRef.current?.scrollTo({ x: 0, y: 0, animated: true });
-
-      // החזר את גודל התמונה למקור עם אנימציה חלקה וטבעית
-      Animated.spring(imageScale, {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 50,
-        friction: 9,
-        velocity: 0,
-      }).start();
-    }, 100);
-  };
-
-  // אנימציה כניסה וניקוי state
-  useEffect(() => {
-    console.log('🎯 MediaViewer visible changed to:', visible);
-    if (visible) {
-      console.log('🎯 MediaViewer opening - resetting states');
-      setShowActions(false);
-      imageScale.setValue(1);
-
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        })
-      ]).start();
-    } else {
-      setShowActions(false);
-      setIsStarred(false);
-      setIsPlaying(false);
-
-      if (audioRef.current) {
-        audioRef.current.unloadAsync();
-        audioRef.current = null;
-      }
-
-      if (zoomTimeoutRef.current) {
-        clearTimeout(zoomTimeoutRef.current);
-        zoomTimeoutRef.current = null;
-      }
-
-      fadeAnim.setValue(0);
-      slideAnim.setValue(50);
-      imageScale.setValue(1);
-    }
-  }, [visible]);
-
-  const downloadFile = async () => {
-    try {
-      console.log('📥 Download button pressed - mediaUrl:', mediaUrl);
-
-      if (!mediaUrl || mediaUrl.trim() === '') {
-        console.log('❌ Invalid mediaUrl:', mediaUrl);
-        Alert.alert('שגיאה', 'URL לא תקין');
-        return;
-      }
-
-      // בדוק אם זה קובץ מקומי או URL מהאינטרנט
-      if (mediaUrl.startsWith('file://')) {
-        console.log('📥 Local file detected - sharing directly');
-        // זה קובץ מקומי, נשתף אותו ישירות
-        if (await Sharing.isAvailableAsync()) {
-          console.log('📥 Sharing local file:', mediaUrl);
-          await Sharing.shareAsync(mediaUrl);
-        } else {
-          Alert.alert('שיתוף', 'הקובץ קיים במכשיר');
-        }
-        return;
-      }
-
-      // אם זה URL מהאינטרנט, נוריד אותו
-      const fileExtension = mediaType === 'image' ? 'jpg' :
-        mediaType === 'video' ? 'mp4' :
-          mediaType === 'audio' ? 'mp3' : 'file';
-
-      const fileName = `media_${Date.now()}.${fileExtension}`;
-      const fileUri = FileSystem.documentDirectory + fileName;
-
-      console.log('📥 Starting download from URL:', { mediaUrl, fileUri });
-
-      const downloadResult = await FileSystem.downloadAsync(mediaUrl, fileUri);
-
-      console.log('📥 Download result:', downloadResult);
-
-      if (downloadResult && downloadResult.uri) {
-        if (await Sharing.isAvailableAsync()) {
-          console.log('📥 Sharing downloaded file:', downloadResult.uri);
-          await Sharing.shareAsync(downloadResult.uri);
-        } else {
-          Alert.alert('הורדה הושלמה', 'הקובץ נשמר במכשיר');
-        }
-      } else {
-        console.log('❌ Download failed - no URI returned');
-        Alert.alert('שגיאה', 'לא ניתן להוריד את הקובץ');
-      }
-    } catch (error) {
-      console.error('Error downloading file:', error);
-      Alert.alert('שגיאה', 'לא ניתן להוריד את הקובץ: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  };
-
-  const shareMedia = async () => {
-    try {
-      console.log('📤 Share button pressed - mediaUrl:', mediaUrl);
-
-      if (!mediaUrl || mediaUrl.trim() === '') {
-        console.log('❌ Invalid mediaUrl for sharing:', mediaUrl);
-        Alert.alert('שגיאה', 'URL לא תקין');
-        return;
-      }
-
-      // אם זה קובץ מקומי, נשתמש ב-Sharing במקום Share
-      if (mediaUrl.startsWith('file://')) {
-        console.log('📤 Local file detected - using Sharing.shareAsync');
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(mediaUrl);
-        } else {
-          Alert.alert('שיתוף', 'הקובץ קיים במכשיר');
-        }
-        return;
-      }
-
-      // אם זה URL מהאינטרנט, נשתמש ב-Share
-      if (RNShare.share) {
-        console.log('📤 Sharing URL:', mediaUrl);
-        await RNShare.share({
-          url: mediaUrl,
-          message: caption || `מדיה מ-${message?.sender?.full_name || 'משתמש'}`,
-        });
-      } else {
-        Alert.alert('שיתוף', 'הקישור הועתק ללוח');
-      }
-    } catch (error) {
-      console.error('Error sharing media:', error);
-      Alert.alert('שיתוף', 'שגיאה בשיתוף: ' + (error instanceof Error ? error.message : String(error)));
-    }
-  };
-
-  // Star/Favorite functionality
-  const handleStarMessage = async () => {
-    try {
-      if (!user?.id) return;
-
-      console.log('⭐ MediaViewer: Attempting to star message:', {
-        messageId: message?.id,
-        userId: user.id
-      });
-
-      const ChatService = await import('../../services/chatService');
-      const success = await ChatService.ChatService.starMessage(
-        message?.id || '',
-        user.id
-      );
-
-      console.log('⭐ MediaViewer: Star message result:', success);
-
-      if (success) {
-        setIsStarred(true);
-        Alert.alert('הצלחה', 'ההודעה סומנה בכוכב');
-      } else {
-        console.log('⭐ Star failed, checking current status...');
-        const currentStatus = await ChatService.ChatService.isMessageStarred(
-          message?.id || '',
-          user.id
-        );
-        setIsStarred(currentStatus);
-
-        if (currentStatus) {
-          Alert.alert('מידע', 'ההודעה כבר מסומנת בכוכב');
-        } else {
-          Alert.alert('שגיאה', 'לא ניתן לסמן את ההודעה בכוכב');
-        }
-      }
-    } catch (error) {
-      console.error('❌ Error starring message:', error);
-      Alert.alert('שגיאה', 'שגיאה בסימון ההודעה בכוכב');
-    }
-  };
-
-  const handleUnstarMessage = async () => {
-    try {
-      if (!user?.id) return;
-
-      console.log('⭐ MediaViewer: Attempting to unstar message:', {
-        messageId: message?.id,
-        userId: user.id
-      });
-
-      const ChatService = await import('../../services/chatService');
-      const success = await ChatService.ChatService.unstarMessage(
-        message?.id || '',
-        user.id
-      );
-
-      console.log('⭐ MediaViewer: Unstar message result:', success);
-
-      if (success) {
-        setIsStarred(false);
-        Alert.alert('הצלחה', 'הכוכב הוסר מההודעה');
-      } else {
-        Alert.alert('שגיאה', 'לא ניתן להסיר את הכוכב');
-      }
-    } catch (error) {
-      console.error('❌ Error unstarring message:', error);
-      Alert.alert('שגיאה', 'שגיאה בהסרת הכוכב');
-    }
-  };
-
-  const toggleStar = async () => {
-    console.log('⭐ Toggle star called - current state:', isStarred);
-    if (isStarred) {
-      await handleUnstarMessage();
-    } else {
-      await handleStarMessage();
-    }
-  };
-
-  // Forward functionality - פתח ForwardModal בתוך MediaViewer
-  const handleForward = () => {
-    console.log('📤 Forward button pressed in MediaViewer!');
-    console.log('📤 Opening internal ForwardModal');
-    setShowForwardModal(true);
-  };
-
-  const renderMediaContent = () => {
-    console.log('🎯 MediaViewer renderMediaContent - mediaUrl:', mediaUrl, 'mediaType:', mediaType);
-
-    if (!mediaUrl || mediaUrl.trim() === '') {
-      console.log('❌ MediaViewer: No mediaUrl provided');
-      return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <AlertCircle size={64} color="white" strokeWidth={1.5} />
-          <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, marginTop: 16, textAlign: 'center' }}>
-            לא ניתן לטעון את המדיה
-          </Text>
-        </View>
-      );
-    }
-
-    switch (mediaType) {
-      case 'image':
-        return (
-          <ScrollView
-            ref={scrollViewRef}
-            style={{ flex: 1 }}
-            contentContainerStyle={{
-              minHeight: screenHeight,
-              minWidth: screenWidth,
+  const styles = StyleSheet.create({
+    modal: {
+      flex: 1,
+      backgroundColor: '#000000',
+    },
+    mediaContainer: {
+      flex: 1,
               justifyContent: 'center',
               alignItems: 'center',
-            }}
-            maximumZoomScale={3}
-            minimumZoomScale={1}
-            bouncesZoom={true}
-            centerContent={true}
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            scrollEventThrottle={16}
-            decelerationRate="fast"
-            onScrollBeginDrag={() => {
-              // נקה טיימרים קודמים כשמתחילים גלילה חדשה
-              if (zoomTimeoutRef.current) {
-                clearTimeout(zoomTimeoutRef.current);
-                zoomTimeoutRef.current = null;
-              }
-            }}
-            onScrollEndDrag={() => {
-              resetImagePosition();
-            }}
-            onMomentumScrollEnd={() => {
-              resetImagePosition();
-            }}
-          >
-            <Animated.Image
-              source={{ uri: mediaUrl }}
-              style={{
-                width: screenWidth * 1.15,
-                height: screenHeight * 1.05,
-                transform: [{ scale: imageScale }],
-              }}
-              resizeMode="cover"
-              onLoad={() => {
-                console.log('✅ Image loaded successfully:', mediaUrl);
-              }}
-              onError={(error) => {
-                console.error('❌ Image load error:', error);
-                console.error('❌ Failed URL:', mediaUrl);
-              }}
-            />
-          </ScrollView>
-        );
-
-      case 'video':
-        return (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            {mediaUrl && mediaUrl.trim() !== '' && (mediaUrl.startsWith('http') || mediaUrl.startsWith('file://') || mediaUrl.startsWith('content://')) ? (
-              <Video
-                source={{ uri: mediaUrl }}
-                style={{
-                  width: screenWidth,
-                  height: screenHeight * 0.8,
-                }}
-                resizeMode={ResizeMode.CONTAIN}
-                useNativeControls
-                shouldPlay={false}
-                onLoadStart={() => {
-                  console.log('Video loading started:', mediaUrl);
-                }}
-                onLoad={(status) => {
-                  console.log('Video loaded successfully:', status);
-                }}
-                onError={(error) => {
-                  console.error('Video load error:', error);
-                  console.error('Video URL:', mediaUrl);
-                }}
-                onPlaybackStatusUpdate={(status) => {
-                  if ('error' in status && status.error) {
-                    console.error('Video playback error:', status.error);
-                  }
-                }}
-              />
-            ) : (
-              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                <VideoIcon size={64} color="white" strokeWidth={1.5} />
-                <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, marginTop: 16, textAlign: 'center' }}>
-                  לא ניתן לטעון את הווידאו
-                </Text>
-              </View>
-            )}
-          </View>
-        );
-
-      case 'audio':
-        return (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{
-              width: 160,
-              height: 160,
-              backgroundColor: DesignTokens.colors.success.main,
-              borderRadius: 80,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 32
-            }}>
-              <Music size={64} color={DesignTokens.colors.text.primary} strokeWidth={1.5} />
-            </View>
-            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 20, marginBottom: 16 }}>קובץ אודיו</Text>
-          </View>
-        );
-
-      default:
-        return (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <FileText size={64} color="white" strokeWidth={1.5} />
-            <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 18, marginTop: 16 }}>מסמך</Text>
-          </View>
-        );
-    }
-  };
-
-  const renderActionBar = () => {
-    return (
-      <View
-        style={{
-          backgroundColor: DesignTokens.colors.background.secondary,
-          paddingBottom: insets.bottom + 16,
-          borderTopWidth: 1,
-          borderTopColor: DesignTokens.colors.border.primary
-        }}
-      >
-        {/* סרגל פעולות */}
-        <View style={{
-          flexDirection: 'row',
-          justifyContent: 'space-around',
-          alignItems: 'center',
+    },
+    headerOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+    },
+    header: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    captionOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+    },
+    closeButton: {
+      padding: 8,
+    },
+    captionContainer: {
+      paddingHorizontal: 20,
           paddingVertical: 16,
-          paddingHorizontal: 24
-        }}>
-          <Pressable
-            onPress={() => {
-              console.log('💬 Reply button pressed!');
-              onReply && onReply();
-            }}
-            style={{
-              alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      borderRadius: 20,
+      marginHorizontal: 20,
+      marginBottom: 20,
+      alignSelf: 'center',
+      maxWidth: SCREEN_WIDTH - 80,
+    },
+    captionContainerFullWidth: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      marginHorizontal: 0,
+      borderRadius: 0,
+      maxWidth: '100%',
+    },
+    captionText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    image: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'contain',
+    },
+    videoContainer: {
+      flex: 1,
+      width: '100%',
+    },
+    video: {
+      width: '100%',
+      height: '100%',
+    },
+    loadingContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
               justifyContent: 'center',
-              padding: 12,
-              borderRadius: 24,
-              backgroundColor: DesignTokens.colors.background.tertiary
-            }}
-          >
-            <MessageCircle size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </Pressable>
+              alignItems: 'center',
+    },
+  });
 
-          <Pressable
-            onPress={handleForward}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 12,
-              borderRadius: 24,
-              backgroundColor: DesignTokens.colors.background.tertiary
-            }}
-          >
-            <Forward size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </Pressable>
-
-          <Pressable
-            onPress={shareMedia}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 12,
-              borderRadius: 24,
-              backgroundColor: DesignTokens.colors.background.tertiary
-            }}
-          >
-            <ShareIcon size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              console.log('⭐ Star button pressed!');
-              toggleStar();
-            }}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 12,
-              borderRadius: 24,
-              backgroundColor: isStarred ? 'rgba(255, 193, 7, 0.15)' : DesignTokens.colors.background.tertiary
-            }}
-          >
-            <Ionicons
-              name={isStarred ? "star" : "star-outline"}
-              size={22}
-              color={isStarred ? DesignTokens.colors.warning.main : DesignTokens.colors.text.primary}
-            />
-          </Pressable>
-
-          <Pressable
-            onPress={downloadFile}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 12,
-              borderRadius: 24,
-              backgroundColor: DesignTokens.colors.background.tertiary
-            }}
-          >
-            <Download size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </Pressable>
-        </View>
-      </View>
-    );
-  };
+  if (!visible) return null;
 
   return (
     <Modal
       visible={visible}
       transparent={false}
       animationType="fade"
-      presentationStyle="fullScreen"
       onRequestClose={onClose}
-      statusBarTranslucent={false}
     >
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: DesignTokens.colors.background.primary
-        }}
-      >
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            backgroundColor: DesignTokens.colors.background.secondary,
-            paddingTop: insets.top + 14,
-            borderBottomWidth: 1,
-            borderBottomColor: DesignTokens.colors.border.primary
-          }}
-        >
-          <View style={{ width: 40 }} />
+      <GestureHandlerRootView style={styles.modal}>
+        {/* Media - Full Screen with Safe Area */}
+        <SafeAreaView style={styles.mediaContainer} edges={['top', 'bottom']}>
+          {mediaType === 'image' ? (
+            <>
+              {imageLoading && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                </View>
+              )}
+              <GestureDetector gesture={composedGesture}>
+                <Animated.Image
+                  source={{ uri: mediaUrl }}
+                  style={[styles.image, imageAnimatedStyle]}
+                  resizeMode="contain"
+                  onLoadStart={() => setImageLoading(true)}
+                  onLoadEnd={() => setImageLoading(false)}
+                  onError={() => setImageLoading(false)}
+                />
+              </GestureDetector>
+            </>
+          ) : (
+            <>
+              {videoLoading && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                </View>
+              )}
+              <View style={styles.videoContainer}>
+                <Video
+                  source={{ uri: mediaUrl }}
+                  style={styles.video}
+                  useNativeControls
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay={false}
+                  onLoadStart={() => setVideoLoading(true)}
+                  onLoad={() => setVideoLoading(false)}
+                  onError={() => setVideoLoading(false)}
+                />
+              </View>
+            </>
+          )}
+        </SafeAreaView>
 
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text
-              style={{
-                color: DesignTokens.colors.text.primary,
-                fontWeight: '700',
-                fontSize: 17
-              }}
-            >
-              {message?.sender?.full_name || 'שם לא ידוע'}
-            </Text>
-            <Text
-              style={{
-                color: DesignTokens.colors.text.secondary,
-                fontSize: 13,
-                marginTop: 2
-              }}
-            >
-              {formatMessageTime(message?.created_at || new Date().toISOString())}
-            </Text>
-          </View>
-
-          <Pressable
-            onPress={onClose}
-            style={{
-              padding: 8,
-              borderRadius: 20,
-              backgroundColor: DesignTokens.colors.background.tertiary
-            }}
-          >
-            <X size={20} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
-          </Pressable>
-        </View>
-
-        {/* Media Content */}
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-          {renderMediaContent()}
-        </View>
-
-        {/* Caption */}
-        {caption && (
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 80,
-              left: 16,
-              right: 16,
-              alignItems: 'center'
-            }}
-          >
-            <View style={{
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              borderRadius: 20,
-              paddingHorizontal: 16,
-              paddingVertical: 10,
-              maxWidth: '90%'
-            }}>
-              <Text
-                style={{
-                  color: '#FFFFFF',
-                  textAlign: 'center',
-                  fontSize: 15,
-                  lineHeight: 20,
-                  fontWeight: '500'
-                }}
-              >
-                {caption}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Action Bar */}
-        {renderActionBar()}
-
-        {/* Forward Modal - בתוך MediaViewer */}
-        <ForwardModal
-          visible={showForwardModal}
-          onClose={() => {
-            console.log('📤 Internal ForwardModal onClose called');
-            setShowForwardModal(false);
-          }}
-          messageId={message?.id || ''}
-          onForward={async (channelId, channelName) => {
-            console.log('🚀 Internal onForward called:', { channelId, channelName, userId: user?.id });
-            try {
-              if (!user?.id) {
-                Alert.alert('שגיאה', 'משתמש לא מחובר');
-                return;
-              }
-
-              console.log('📤 Sending message to channel:', channelId);
-              const ChatService = await import('../../services/chatService');
-
-              // אם זה מדיה, נעביר את ה-mediaUrl
-              let content = message?.content || 'מדיה מועברת';
-              if (mediaUrl) {
-                content = mediaType === 'image' ? '[תמונה]' :
-                  mediaType === 'video' ? '[וידאו]' :
-                    mediaType === 'audio' ? '[אודיו]' : '[מסמך]';
-                content += `\n${mediaUrl}`;
-                if (caption) {
-                  content += `\n${caption}`;
-                }
-              }
-
-              const result = await ChatService.ChatService.sendMessage({
-                channelId: channelId,
-                content: content,
-                senderId: user.id,
-                type: 'channel'
-              });
-
-              console.log('✅ Media forwarded successfully:', { channelName, result });
-              setShowForwardModal(false); // סגור את ForwardModal אחרי הצלחה
-            } catch (error) {
-              console.error('❌ Error forwarding media:', error);
-              Alert.alert('שגיאה', 'לא ניתן להעביר את המדיה: ' + (error instanceof Error ? error.message : String(error)));
+        {/* Header Overlay */}
+        <View 
+          style={[
+            styles.headerOverlay, 
+            { 
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              top: insets.top,
             }
-          }}
-        />
-      </View>
+          ]}
+        >
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Caption Overlay - במרכז או עד למטה */}
+        {caption && typeof caption === 'string' && caption.trim().length > 0 && (
+          <SafeAreaView 
+            style={[styles.captionOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]} 
+            edges={['bottom']}
+          >
+            <View style={[
+              styles.captionContainer,
+              caption.length > 50 ? styles.captionContainerFullWidth : undefined
+            ]}>
+              <Text style={styles.captionText}>{String(caption)}</Text>
+            </View>
+          </SafeAreaView>
+        )}
+      </GestureHandlerRootView>
     </Modal>
   );
 }
-
-// פונקציה לעיצוב זמן ההודעה
-const formatMessageTime = (timestamp: string) => {
-  const date = new Date(timestamp);
-  const now = new Date();
-
-  const diffInMs = now.getTime() - date.getTime();
-  const diffInHours = diffInMs / (1000 * 60 * 60);
-
-  if (diffInHours < 24) {
-    // אותו יום - הצג רק שעה
-    return date.toLocaleTimeString('he-IL', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } else if (diffInHours < 24 * 7) {
-    // שבוע אחרון - הצג יום ושעה
-    return date.toLocaleDateString('he-IL', {
-      weekday: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } else {
-    // יותר משבוע - הצג תאריך מלא
-    return date.toLocaleDateString('he-IL', {
-      day: '2-digit',
-      month: '2-digit',
-      year: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-};

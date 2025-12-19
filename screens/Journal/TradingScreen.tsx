@@ -31,11 +31,12 @@ export default function TradingScreen() {
   ];
 
   return (
-    <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-      style={styles.gradientContainer}
-    >
+    <View style={{ flex: 1 }}>
+      <LinearGradient
+        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+        style={styles.gradientContainer}
+      />
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         {/* Tabs */}
@@ -76,13 +77,17 @@ export default function TradingScreen() {
           {activeTab === 'calendar' && <CalendarTab />}
         </View>
       </RNSafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   gradientContainer: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   safeAreaContainer: {
     flex: 1,

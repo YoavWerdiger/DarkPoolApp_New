@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ModuleWithLessons, Enrollment } from '../../types/learning';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { LessonRow } from './LessonRow';
 
 interface ModuleSectionProps {
@@ -24,11 +24,100 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
   courseId,
   lessonStartIndex = 0
 }) => {
+  const DesignTokens = useDesignTokens();
   const isEnrolled = !!enrollment;
   const totalLessons = module.lessons?.length || 0;
   const completedLessons = module.lessons?.filter(lesson => 
     lesson.progress?.status === 'completed'
   ).length || 0;
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      backgroundColor: DesignTokens.colors.background.elevated,
+      borderRadius: DesignTokens.borderRadius.lg,
+      marginBottom: DesignTokens.spacing.md,
+      overflow: 'hidden',
+      borderWidth: DesignTokens.layout.borderWidth.normal,
+      borderColor: DesignTokens.colors.border.primary,
+    },
+    header: {
+      padding: DesignTokens.spacing.lg,
+    },
+    headerContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    headerLeft: {
+      flex: 1,
+      marginRight: DesignTokens.spacing.md,
+    },
+    headerRight: {
+      alignItems: 'center',
+      minWidth: 60,
+    },
+    title: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: DesignTokens.colors.text.primary,
+      marginBottom: DesignTokens.spacing.xs,
+      textAlign: 'right',
+      letterSpacing: 0.3,
+    },
+    description: {
+      fontSize: DesignTokens.typography.fontSize.sm,
+      color: DesignTokens.colors.text.secondary,
+      marginBottom: DesignTokens.spacing.sm,
+      textAlign: 'right',
+      lineHeight: DesignTokens.typography.lineHeight.normal * DesignTokens.typography.fontSize.sm,
+    },
+    lessonCount: {
+      fontSize: DesignTokens.typography.fontSize.xs,
+      color: DesignTokens.colors.text.tertiary,
+      textAlign: 'right',
+    },
+    progressContainer: {
+      alignItems: 'center',
+      marginBottom: DesignTokens.spacing.sm,
+    },
+    progressBar: {
+      width: 40,
+      height: 4,
+      backgroundColor: DesignTokens.colors.border.primary,
+      borderRadius: DesignTokens.borderRadius.sm,
+      overflow: 'hidden',
+      marginBottom: DesignTokens.spacing.xs,
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: DesignTokens.colors.primary.main,
+      borderRadius: DesignTokens.borderRadius.sm,
+    },
+    progressText: {
+      fontSize: DesignTokens.typography.fontSize.xs,
+      color: DesignTokens.colors.primary.main,
+      fontWeight: DesignTokens.typography.fontWeight.medium as any,
+    },
+    expandIcon: {
+      fontSize: DesignTokens.typography.fontSize.sm,
+      color: DesignTokens.colors.text.secondary,
+      transform: [{ rotate: '0deg' }],
+    },
+    expandIconRotated: {
+      transform: [{ rotate: '180deg' }],
+    },
+    lessonsContainer: {
+      borderTopWidth: DesignTokens.layout.borderWidth.normal,
+      borderTopColor: DesignTokens.colors.border.primary,
+      position: 'relative',
+    },
+    gradientBackground: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+  }), [DesignTokens]);
 
   return (
     <View style={styles.container}>
@@ -103,92 +192,4 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: DesignTokens.colors.surface,
-    borderRadius: DesignTokens.borderRadius.lg,
-    marginBottom: DesignTokens.spacing.md,
-    overflow: 'hidden',
-    borderWidth: DesignTokens.layout.borderWidth.normal,
-    borderColor: DesignTokens.colors.border,
-  },
-  header: {
-    padding: DesignTokens.spacing.lg,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerLeft: {
-    flex: 1,
-    marginRight: DesignTokens.spacing.md,
-  },
-  headerRight: {
-    alignItems: 'center',
-    minWidth: 60,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
-    marginBottom: DesignTokens.spacing.xs,
-    textAlign: 'right',
-    letterSpacing: 0.3,
-  },
-  description: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.secondary,
-    marginBottom: DesignTokens.spacing.sm,
-    textAlign: 'right',
-    lineHeight: DesignTokens.typography.lineHeight.normal * DesignTokens.typography.fontSize.sm,
-  },
-  lessonCount: {
-    fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.text.tertiary,
-    textAlign: 'right',
-  },
-  progressContainer: {
-    alignItems: 'center',
-    marginBottom: DesignTokens.spacing.sm,
-  },
-  progressBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: DesignTokens.colors.border,
-    borderRadius: DesignTokens.borderRadius.sm,
-    overflow: 'hidden',
-    marginBottom: DesignTokens.spacing.xs,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: DesignTokens.colors.primary,
-    borderRadius: DesignTokens.borderRadius.sm,
-  },
-  progressText: {
-    fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.primary,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
-  },
-  expandIcon: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.secondary,
-    transform: [{ rotate: '0deg' }],
-  },
-  expandIconRotated: {
-    transform: [{ rotate: '180deg' }],
-  },
-  lessonsContainer: {
-    borderTopWidth: DesignTokens.layout.borderWidth.normal,
-    borderTopColor: DesignTokens.colors.border,
-    position: 'relative',
-  },
-  gradientBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-});
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, I18nManager } from 'react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { extractTextSegments } from '../../utils/textRanges';
 
 interface MessageContentProps {
@@ -16,6 +16,7 @@ export default function MessageContent({
   isMe,
   textDirection
 }: MessageContentProps) {
+  const DesignTokens = useDesignTokens();
 
   // Render text with mentions
   const renderTextWithMentions = (text: string, mentions?: any[]) => {
@@ -31,7 +32,6 @@ export default function MessageContent({
             flexWrap: 'wrap',
             flexShrink: 1
           }}
-          textAlign={isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right'}
         >
           {text}
         </Text>
@@ -55,15 +55,18 @@ export default function MessageContent({
           flexWrap: 'wrap',
           flexShrink: 1
         }}
-        textAlign={isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right'}
       >
         {segments.map((segment, index) => {
+          // יצירת key ייחודי על בסיס התוכן, המיקום, והאורך של הטקסט המלא
+          // זה מבטיח שגם אם יש שני segments עם אותו טקסט, ה-key יהיה ייחודי
+          const uniqueKey = `segment-${index}-${segment.text.substring(0, 10)}-${segment.range?.type || 'text'}-${text.length}-${segments.length}`;
+          
           if (segment.range && segment.range.type === 'mention') {
             const mention = segment.range.data;
 
             return (
               <Text
-                key={index}
+                key={uniqueKey}
                 style={{
                   fontWeight: 'bold' as const,
                   color: DesignTokens.colors.primary.main,
@@ -77,7 +80,7 @@ export default function MessageContent({
 
           return (
             <Text
-              key={index}
+              key={uniqueKey}
               style={{
                 color: isMe ? '#000000' : '#FFFFFF',
                 fontSize: DesignTokens.typography.fontSize.base

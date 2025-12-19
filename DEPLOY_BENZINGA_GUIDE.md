@@ -184,3 +184,10 @@ npx supabase secrets set BENZINGA_API_KEY=bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC --
 🎉 **מעבר מוצלח מ-EODHD ל-Benziga!**
 
 
+
+
+
+
+
+
+

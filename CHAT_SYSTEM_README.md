@@ -397,3 +397,10 @@ chatRealtimeService.startTypingCleanup();
 
 **🎉 מערכת הצ'אט מוכנה לשימוש! בהצלחה! 💪**
 
+
+
+
+
+
+
+

@@ -27,3 +27,10 @@ https://supabase.com/dashboard/project/wpmrtczbfcijoocguime/functions
 **כל הקבצים מוכנים!** רק צריך להעתיק ל-Dashboard.
 
 
+
+
+
+
+
+
+

@@ -1134,7 +1134,7 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       return backgroundColor;
     };
     
-    const bgRgba = hexToRgba(backgroundColor, 1);
+    const bgRgba = hexToRgba(backgroundColor, 0);
     const gridColor = hexToRgba(backgroundColor, 0);
     
     return `
@@ -1143,10 +1143,10 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
-    body {
+    html, body {
       margin: 0;
       padding: 0;
-      background-color: ${backgroundColor};
+      background-color: transparent;
       overflow: hidden;
     }
     .tradingview-widget-container {
@@ -1181,18 +1181,23 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       "allow_symbol_change": true,
       "calendar": false,
       "details": false,
+      "enabled_features": ["pre_post_market_sessions"],
       "hide_side_toolbar": true,
       "hide_top_toolbar": true,
       "hide_legend": true,
       "hide_volume": true,
       "hotlist": false,
-      "interval": "3",
+      "interval": "5",
       "locale": "he_IL",
+      "overrides": {
+        "mainSeriesProperties.sessionId": "extended"
+      },
       "save_image": false,
-      "style": "2",
+      "style": "1",
       "symbol": "${symbolForChart}",
       "theme": "dark",
       "timezone": "Asia/Jerusalem",
+      "isTransparent": true,
       "backgroundColor": "${bgRgba}",
       "gridColor": "${gridColor}",
       "watchlist": [],
@@ -1314,7 +1319,7 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
                 source={{ html: getTradingViewChartHTML(report.code, DesignTokens.colors.background.secondary, report.earnings_date_time, report.before_after_market, (report as any).exchange) }}
                 style={{ 
                   flex: 1,
-                  backgroundColor: DesignTokens.colors.background.secondary,
+                  backgroundColor: 'transparent',
                   borderRadius: 8,
                   height: 392
                 }}

@@ -8,7 +8,7 @@ import {
   ViewStyle,
   StatusBar 
 } from 'react-native';
-import DesignTokens from './DesignTokens';
+import { useDesignTokens } from './DesignTokens';
 
 export interface UIModalProps {
   visible: boolean;
@@ -35,6 +35,7 @@ const UIModal: React.FC<UIModalProps> = ({
   closeOnBackdropPress = true,
   statusBarTranslucent = true,
 }) => {
+  const DesignTokens = useDesignTokens();
   const { colors, shadows, animation } = DesignTokens;
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -98,14 +99,14 @@ const UIModal: React.FC<UIModalProps> = ({
   };
 
   const defaultContentStyle: ViewStyle = {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.background.elevated,
     borderRadius: 20,
     padding: 24,
     maxWidth: '90%',
     maxHeight: '80%',
     ...shadows.lg,
     borderWidth: 0.5,
-    borderColor: colors.border,
+    borderColor: colors.border.primary,
   };
 
   const combinedContentStyle: ViewStyle = {

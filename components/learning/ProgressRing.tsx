@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface ProgressRingProps {
   progress: number; // 0-100
@@ -15,9 +15,11 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   progress,
   size = 60,
   strokeWidth = 4,
-  color = DesignTokens.colors.primary,
+  color,
   backgroundColor = 'rgba(255,255,255,0.1)'
 }) => {
+  const DesignTokens = useDesignTokens();
+  const defaultColor = color || DesignTokens.colors.primary.main;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDasharray = circumference;
@@ -40,7 +42,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={color}
+          stroke={defaultColor}
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={strokeDasharray}

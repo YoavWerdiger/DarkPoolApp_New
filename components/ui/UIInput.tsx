@@ -9,7 +9,7 @@ import {
   TextInputProps 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DesignTokens from './DesignTokens';
+import { useDesignTokens } from './DesignTokens';
 
 export interface UIInputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -37,6 +37,7 @@ const UIInput: React.FC<UIInputProps> = ({
   inputStyle,
   ...textInputProps
 }) => {
+  const DesignTokens = useDesignTokens();
   const { colors, typography, spacing, borderRadius } = DesignTokens;
   const [isFocused, setIsFocused] = useState(false);
 
@@ -72,8 +73,8 @@ const UIInput: React.FC<UIInputProps> = ({
     if (variant === 'filled') {
       return {
         ...baseStyle,
-        backgroundColor: colors.elevated,
-        borderColor: isFocused ? colors.primary : 'transparent',
+        backgroundColor: colors.background.elevated,
+        borderColor: isFocused ? colors.primary.main : 'transparent',
       };
     }
 
@@ -81,10 +82,10 @@ const UIInput: React.FC<UIInputProps> = ({
       ...baseStyle,
       backgroundColor: 'transparent',
       borderColor: error 
-        ? colors.danger
+        ? colors.danger.main
         : isFocused 
-          ? colors.primary 
-          : colors.border,
+          ? colors.primary.main 
+          : colors.border.primary,
     };
   };
 
@@ -101,7 +102,7 @@ const UIInput: React.FC<UIInputProps> = ({
 
   const inputStyles: ViewStyle = {
     flex: 1,
-    color: colors.textPrimary,
+    color: colors.text.primary,
     fontSize: sizeStyles.text.fontSize,
     fontFamily: typography.fontFamily.system[0],
     paddingVertical: 0, // Remove default padding
@@ -111,21 +112,21 @@ const UIInput: React.FC<UIInputProps> = ({
   const labelStyle: TextStyle = {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.textSecondary,
+    color: colors.text.secondary,
     marginBottom: spacing.xs,
   };
 
   const helperTextStyle: TextStyle = {
     fontSize: typography.fontSize.xs,
-    color: error ? colors.danger : colors.textMuted,
+    color: error ? colors.danger.main : colors.text.tertiary,
     marginTop: spacing.xs,
   };
 
   const iconColor = error 
-    ? colors.danger 
+    ? colors.danger.main 
     : isFocused 
-      ? colors.primary 
-      : colors.textSecondary;
+      ? colors.primary.main 
+      : colors.text.secondary;
 
   return (
     <View>
@@ -147,7 +148,7 @@ const UIInput: React.FC<UIInputProps> = ({
         {/* Text Input */}
         <TextInput
           style={inputStyles}
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={colors.text.tertiary}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           {...textInputProps}

@@ -116,3 +116,10 @@ supabase functions logs benzinga-economics-sync
 
 **תאריך:** דצמבר 2025
 
+
+
+
+
+
+
+

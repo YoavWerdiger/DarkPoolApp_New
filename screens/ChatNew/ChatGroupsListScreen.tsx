@@ -277,6 +277,27 @@ export default function ChatGroupsListScreen() {
     loadGroups();
   }, [user]);
 
+  // Realtime subscription disabled temporarily - causing CHANNEL_ERROR loop
+  // TODO: Re-enable when Supabase Realtime is properly configured
+  // The app will still work with pull-to-refresh
+  /*
+  useEffect(() => {
+    if (!user) return;
+    // ... subscription code disabled ...
+  }, [user?.id]);
+  */
+
+  // Helper function for message type text
+  const getMessageTypeText = (messageType: string): string => {
+    switch (messageType) {
+      case 'image': return '📷 תמונה';
+      case 'video': return '🎬 וידאו';
+      case 'audio': return '🎤 הודעת קול';
+      case 'document': return '📄 מסמך';
+      default: return 'הודעה';
+    }
+  };
+
   // Filter groups
   const filteredGroups = useMemo(() => {
     let filtered = allGroups;
@@ -836,9 +857,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text.tertiary,
   },
-  // Badge - bg-blue-500 text-white text-xs rounded-full px-2 py-0.5
+  // Badge - bg-green-500 text-white text-xs rounded-full px-2 py-0.5
   unreadBadge: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.success,
     borderRadius: 50,
     minWidth: 22,
     height: 22,

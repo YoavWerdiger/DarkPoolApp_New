@@ -151,8 +151,8 @@ export async function getChatGroups(
     // המרת הנתונים לפורמט הנכון
     const groups: ChatGroup[] = data.map((item: any) => ({
       ...item.chat_groups,
-      unread_count: item.unread_count,
-      mentioned_count: item.mentioned_count,
+      unread_count: item.unread_count || 0,
+      mentioned_count: item.mentioned_count || 0,
       is_muted: item.muted,
       my_role: item.role,
       last_read_message_id: item.last_read_message_id,
@@ -165,7 +165,11 @@ export async function getChatGroups(
       return timeB - timeA;
     });
 
+    // לוג לדיבוג unread counts
     console.log(`✅ Fetched ${groups.length} groups for user ${userId}`);
+    groups.forEach(g => {
+      console.log(`📊 Group "${g.name}": unread=${g.unread_count}, mentioned=${g.mentioned_count}, last_read=${g.last_read_message_id?.slice(0,8) || 'none'}`);
+    });
     return { data: groups, error: null };
   } catch (error: any) {
     console.error('❌ Unexpected error fetching groups:', error);
@@ -231,9 +235,10 @@ export async function getChatGroupDetails(
       mentioned_count: myMembership?.mentioned_count || 0,
       is_muted: myMembership?.muted || false,
       my_role: myMembership?.role as ChatMemberRole,
+      last_read_message_id: myMembership?.last_read_message_id || null,
     };
 
-    console.log('✅ Fetched group details:', groupId);
+    console.log('✅ Fetched group details:', groupId, 'unread:', groupWithDetails.unread_count, 'last_read:', groupWithDetails.last_read_message_id);
     return { data: groupWithDetails, error: null };
   } catch (error: any) {
     console.error('❌ Unexpected error fetching group details:', error);
@@ -678,4 +683,8 @@ export const chatGroupService = {
   isGroupMember,
   isGroupAdmin,
 };
+
+
+
+
 

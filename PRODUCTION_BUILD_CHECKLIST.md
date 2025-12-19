@@ -78,3 +78,10 @@ eas build --platform all --profile production
 
 **הכל מוכן! 🎉**
 
+
+
+
+
+
+
+

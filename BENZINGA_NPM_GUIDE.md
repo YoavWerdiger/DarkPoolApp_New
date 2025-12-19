@@ -281,3 +281,10 @@ npm run supabase:logs:economics
 
 כל הקוד מוכן - רק צריך להריץ את הפקודות!
 
+
+
+
+
+
+
+

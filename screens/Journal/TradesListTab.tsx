@@ -7,6 +7,7 @@ import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
 import AddTradeModal from './AddTradeModal';
 import ShareTradeModal from './ShareTradeModal';
+import ExportTradeImage from '../../components/Journal/ExportTradeImage';
 import StatisticsCarousel, { StatisticItem } from '../../components/Journal/StatisticsCarousel';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
@@ -36,6 +37,7 @@ export default function TradesListTab() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDirection, setFilterDirection] = useState<'all' | 'long' | 'short'>('all');
@@ -161,6 +163,15 @@ export default function TradesListTab() {
             </View>
           </View>
           <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedTrade(item);
+                setShowExportModal(true);
+              }}
+              style={styles.shareButton}
+            >
+              <Ionicons name="image-outline" size={18} color={DesignTokens.colors.primary.main} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
                 setSelectedTrade(item);
@@ -416,15 +427,6 @@ export default function TradesListTab() {
         </View>
       )}
 
-      {/* Add Button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setShowAddModal(true)}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={28} color={DesignTokens.colors.text.primary} />
-      </TouchableOpacity>
-
       {/* Add Trade Modal */}
       <AddTradeModal
         visible={showAddModal}
@@ -444,6 +446,18 @@ export default function TradesListTab() {
           setSelectedTrade(null);
         }}
       />
+
+      {/* Export Trade Image Modal */}
+      {selectedTrade && (
+        <ExportTradeImage
+          trade={selectedTrade}
+          visible={showExportModal}
+          onClose={() => {
+            setShowExportModal(false);
+            setSelectedTrade(null);
+          }}
+        />
+      )}
     </View>
   );
 }
@@ -716,22 +730,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
-  },
-  addButton: {
-    position: 'absolute',
-    bottom: 10, // מעל ה-MainTabs (ה-View כבר מגביל את הגובה)
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: tokens.colors.primary.main,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
   },
 });
 

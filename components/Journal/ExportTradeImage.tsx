@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Image } from 'react-native';
+import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -17,7 +17,7 @@ interface ExportTradeImageProps {
 
 export default function ExportTradeImage({ trade, visible, onClose }: ExportTradeImageProps) {
   const DesignTokens = useDesignTokens();
-  const viewRef = useRef<View>(null);
+  const viewShotRef = useRef<ViewShot>(null);
   const [isExporting, setIsExporting] = React.useState(false);
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
@@ -51,8 +51,8 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   const returnPercentage = trade.return_percentage || 0;
 
   const handleExport = async () => {
-    if (!viewRef.current) {
-      Alert.alert('שגיאה', 'לא ניתן ליצור תמונה');
+    if (!viewShotRef.current) {
+      Alert.alert('שגיאה', 'לא ניתן ליצור תמונה: ViewShot ref is null');
       return;
     }
 
@@ -60,23 +60,29 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       setIsExporting(true);
 
       // המתן קצת כדי שהתצוגה תתעדכן
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const uri = await captureRef(viewRef, {
-        format: 'png',
-        quality: 1,
-        result: 'tmpfile',
-      });
+      console.log('Capturing view...');
+      if (viewShotRef.current?.capture) {
+        const uri = await viewShotRef.current.capture();
+        console.log('View captured:', uri);
 
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(uri);
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'image/png',
+            dialogTitle: 'שתף טרייד',
+            UTI: 'public.png'
+          });
+        } else {
+          Alert.alert('שגיאה', 'שיתוף לא זמין במכשיר זה');
+        }
       } else {
-        Alert.alert('שגיאה', 'שיתוף לא זמין במכשיר זה');
+        throw new Error('ViewShot capture method not available');
       }
     } catch (error: any) {
       console.error('Error exporting trade image:', error);
-      Alert.alert('שגיאה', 'לא ניתן ליצור תמונה');
+      Alert.alert('שגיאה', 'לא ניתן ליצור תמונה: ' + (error?.message || 'Unknown error'));
     } finally {
       setIsExporting(false);
     }
@@ -100,93 +106,106 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
         </View>
 
         <ScrollView style={styles.previewContainer} contentContainerStyle={styles.previewContent}>
-        <View ref={viewRef} collapsable={false} style={styles.tradeCard}>
-          <LinearGradient
-            colors={['#000000', '#000A04', '#001A0A']}
-            style={styles.gradient}
+          <ViewShot
+            ref={viewShotRef}
+            options={{ format: 'png', quality: 1, result: 'tmpfile' }}
+            style={styles.tradeCard}
           >
-            {/* Header with Logo/Branding */}
-            <View style={styles.brandingHeader}>
-              <Text style={styles.brandingText}>DarkPool</Text>
-              <View style={styles.brandingLine} />
-            </View>
+            <LinearGradient
+              colors={['#000000', '#000A04', '#001A0A']}
+              style={styles.gradient}
+            >
+              {/* Header with Logo/Branding */}
+              <View style={styles.brandingHeader}>
+                <Image
+                  source={require('../../assets/icon.png')}
+                  style={styles.brandingLogo}
+                  resizeMode="contain"
+                />
+                <Text style={styles.brandingText}>DarkPool</Text>
+                <View style={styles.brandingLine} />
+              </View>
 
-            {/* Trade Symbol and Direction */}
-            <View style={styles.symbolContainer}>
-              <Text style={styles.symbolText}>{trade.symbol}</Text>
-              <View style={[
-                styles.directionBadge,
-                { backgroundColor: trade.direction === 'long' 
-                  ? `${DesignTokens.colors.primary.main}30` 
-                  : `${DesignTokens.colors.text.danger}30` }
-              ]}>
-                <Text style={[
-                  styles.directionText,
-                  { color: trade.direction === 'long' 
-                    ? DesignTokens.colors.primary.main 
-                    : DesignTokens.colors.text.danger }
+              {/* Trade Symbol and Direction */}
+              <View style={styles.symbolContainer}>
+                <Text style={styles.symbolText}>{trade.symbol}</Text>
+                <View style={[
+                  styles.directionBadge,
+                  {
+                    backgroundColor: trade.direction === 'long'
+                      ? `${DesignTokens.colors.primary.main}30`
+                      : `${DesignTokens.colors.text.danger}30`
+                  }
                 ]}>
-                  {trade.direction === 'long' ? 'LONG' : 'SHORT'}
-                </Text>
+                  <Text style={[
+                    styles.directionText,
+                    {
+                      color: trade.direction === 'long'
+                        ? DesignTokens.colors.primary.main
+                        : DesignTokens.colors.text.danger
+                    }
+                  ]}>
+                    {trade.direction === 'long' ? 'LONG' : 'SHORT'}
+                  </Text>
+                </View>
               </View>
-            </View>
 
-            {/* Trade Details */}
-            <View style={styles.detailsContainer}>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>מחיר כניסה:</Text>
-                <Text style={styles.detailValue}>${trade.entry_price.toFixed(2)}</Text>
+              {/* Trade Details */}
+              <View style={styles.detailsContainer}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>מחיר כניסה:</Text>
+                  <Text style={styles.detailValue}>${trade.entry_price.toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>מחיר יציאה:</Text>
+                  <Text style={styles.detailValue}>${trade.exit_price.toFixed(2)}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>כמות:</Text>
+                  <Text style={styles.detailValue}>{trade.quantity}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>תאריך כניסה:</Text>
+                  <Text style={styles.detailValue}>
+                    {formatDate(trade.entry_date)} {formatTime(trade.entry_date)}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>תאריך יציאה:</Text>
+                  <Text style={styles.detailValue}>
+                    {formatDate(trade.exit_date)} {formatTime(trade.exit_date)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>מחיר יציאה:</Text>
-                <Text style={styles.detailValue}>${trade.exit_price.toFixed(2)}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>כמות:</Text>
-                <Text style={styles.detailValue}>{trade.quantity}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>תאריך כניסה:</Text>
-                <Text style={styles.detailValue}>
-                  {formatDate(trade.entry_date)} {formatTime(trade.entry_date)}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>תאריך יציאה:</Text>
-                <Text style={styles.detailValue}>
-                  {formatDate(trade.exit_date)} {formatTime(trade.exit_date)}
-                </Text>
-              </View>
-            </View>
 
-            {/* P&L Section */}
-            <View style={styles.pnlContainer}>
-              <View style={styles.pnlRow}>
-                <Text style={styles.pnlLabel}>P&L:</Text>
-                <Text style={[
-                  styles.pnlValue,
-                  isProfit ? styles.pnlValueProfit : styles.pnlValueLoss
-                ]}>
-                  {isProfit ? '+' : ''}${formatCurrency(trade.pnl)}
-                </Text>
+              {/* P&L Section */}
+              <View style={styles.pnlContainer}>
+                <View style={styles.pnlRow}>
+                  <Text style={styles.pnlLabel}>P&L:</Text>
+                  <Text style={[
+                    styles.pnlValue,
+                    isProfit ? styles.pnlValueProfit : styles.pnlValueLoss
+                  ]}>
+                    {isProfit ? '+' : ''}${formatCurrency(trade.pnl)}
+                  </Text>
+                </View>
+                <View style={styles.pnlRow}>
+                  <Text style={styles.pnlLabel}>תשואה:</Text>
+                  <Text style={[
+                    styles.returnValue,
+                    isProfit ? styles.returnValueProfit : styles.returnValueLoss
+                  ]}>
+                    {returnPercentage > 0 ? '+' : ''}{returnPercentage.toFixed(2)}%
+                  </Text>
+                </View>
               </View>
-              <View style={styles.pnlRow}>
-                <Text style={styles.pnlLabel}>תשואה:</Text>
-                <Text style={[
-                  styles.returnValue,
-                  isProfit ? styles.returnValueProfit : styles.returnValueLoss
-                ]}>
-                  {returnPercentage > 0 ? '+' : ''}{returnPercentage.toFixed(2)}%
-                </Text>
-              </View>
-            </View>
 
-            {/* Footer Branding */}
-            <View style={styles.footerBranding}>
-              <Text style={styles.footerText}>DarkPool App</Text>
-            </View>
-          </LinearGradient>
-        </View>
+              {/* Footer Branding */}
+              <View style={styles.footerBranding}>
+                <Text style={styles.footerText}>DarkPool App</Text>
+              </View>
+            </LinearGradient>
+          </ViewShot>
         </ScrollView>
 
         {/* Export Button */}
@@ -229,7 +248,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   headerTitle: {
     fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
   },
   closeButton: {
@@ -262,9 +281,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     marginBottom: tokens.spacing.xl,
   },
+  brandingLogo: {
+    width: 60,
+    height: 60,
+    marginBottom: tokens.spacing.sm,
+    borderRadius: 12,
+  },
   brandingText: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: 'bold' as any,
     color: tokens.colors.primary.main,
     letterSpacing: 2,
   },
@@ -282,7 +307,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   symbolText: {
     fontSize: 36,
-    fontWeight: 'bold',
+    fontWeight: 'bold' as any,
     color: tokens.colors.text.primary,
   },
   directionBadge: {
@@ -292,7 +317,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   directionText: {
     fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     letterSpacing: 1,
   },
   detailsContainer: {
@@ -309,12 +334,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   detailLabel: {
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   detailValue: {
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.primary,
-    fontWeight: tokens.typography.fontWeight.semibold,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
   },
   pnlContainer: {
     marginTop: tokens.spacing.xl,
@@ -330,11 +355,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   pnlLabel: {
     fontSize: tokens.typography.fontSize.lg,
     color: tokens.colors.text.secondary,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   pnlValue: {
     fontSize: tokens.typography.fontSize['2xl'],
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
   },
   pnlValueProfit: {
     color: tokens.colors.primary.main,
@@ -344,7 +369,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   returnValue: {
     fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
   },
   returnValueProfit: {
     color: tokens.colors.primary.main,
@@ -362,7 +387,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   footerText: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.tertiary,
-    fontWeight: tokens.typography.fontWeight.medium,
+    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   footer: {
     padding: tokens.spacing.lg,
@@ -383,7 +408,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   exportButtonText: {
     fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold,
+    fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
   },
 });

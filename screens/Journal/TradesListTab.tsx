@@ -52,7 +52,7 @@ export default function TradesListTab() {
 
   const loadTrades = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -129,10 +129,10 @@ export default function TradesListTab() {
   const renderTrade = ({ item }: { item: Trade }) => {
     const isProfit = item.pnl >= 0;
     const directionText = item.direction === 'long' ? 'Long' : 'Short';
-    const directionColor = item.direction === 'long' 
-      ? DesignTokens.colors.primary.main 
+    const directionColor = item.direction === 'long'
+      ? DesignTokens.colors.primary.main
       : DesignTokens.colors.text.danger;
-    
+
     // חישוב תשואה אם לא קיים
     const calculateReturnPercentage = () => {
       if (item.return_percentage !== undefined && item.return_percentage !== null) {
@@ -148,7 +148,7 @@ export default function TradesListTab() {
       }
       return 0;
     };
-    
+
     const returnPercentage = calculateReturnPercentage();
 
     return (
@@ -427,6 +427,15 @@ export default function TradesListTab() {
         </View>
       )}
 
+      {/* Add Trade FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowAddModal(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={32} color={DesignTokens.colors.text.primary} />
+      </TouchableOpacity>
+
       {/* Add Trade Modal */}
       <AddTradeModal
         visible={showAddModal}
@@ -465,6 +474,24 @@ export default function TradesListTab() {
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight: number) => StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: mainTabsHeight + 16,
+    left: tokens.spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: tokens.colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+    zIndex: 100,
   },
   loadingContainer: {
     flex: 1,

@@ -46,13 +46,13 @@ export default function FearAndGreedCard({
   }
 
   // פרמטרים לגייג' חצי עגול - מותאם לגודל (הוגדל)
-  const gaugeSize = 280;
+  const gaugeSize = 380;
 
   const styles = useMemo(() => {
     return {
       container: {
         marginHorizontal: fullWidth ? 0 : DesignTokens.spacing.lg,
-        marginTop: DesignTokens.spacing.xs,
+        marginTop: 0,
         marginBottom: DesignTokens.spacing.md,
         borderRadius: DesignTokens.borderRadius.lg,
         overflow: 'hidden' as const,
@@ -61,7 +61,9 @@ export default function FearAndGreedCard({
         flexDirection: 'row-reverse' as const,
         alignItems: 'center' as const,
         justifyContent: 'space-between' as const,
-        marginBottom: DesignTokens.spacing.xs,
+        marginBottom: -60,
+        zIndex: 10,
+        paddingRight: DesignTokens.spacing.sm,
       },
       title: {
         fontSize: DesignTokens.typography.fontSize.lg,
@@ -135,7 +137,7 @@ export default function FearAndGreedCard({
       gaugeContainer: {
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
-        marginVertical: DesignTokens.spacing.xs,
+        marginVertical: 0,
         position: 'relative' as const,
         width: '100%' as const,
         height: gaugeSize * 0.5,
@@ -232,7 +234,7 @@ export default function FearAndGreedCard({
 
   useEffect(() => {
     loadFearAndGreedIndex();
-    
+
     // עדכון אוטומטי כל 30 דקות (המדד מתעדכן פעם ביום, אבל נבדוק לעתים קרובות יותר)
     const interval = setInterval(() => {
       console.log('🔄 FearAndGreedCard: Auto-refreshing data...');
@@ -381,7 +383,7 @@ export default function FearAndGreedCard({
   const needleLength = radius - 3; // ארוכה יותר
   const needleEndX = centerX + needleLength * Math.cos(needleAngleRad);
   const needleEndY = centerY + needleLength * Math.sin(needleAngleRad);
-  
+
   // נקודות לקצה המחט (משולש אלגנטי)
   const needleTipWidth = 10;
   const perpendicularAngle = needleAngleRad + Math.PI / 2;
@@ -389,7 +391,7 @@ export default function FearAndGreedCard({
   const tipLeftY = needleEndY + (needleTipWidth / 2) * Math.sin(perpendicularAngle);
   const tipRightX = needleEndX - (needleTipWidth / 2) * Math.cos(perpendicularAngle);
   const tipRightY = needleEndY - (needleTipWidth / 2) * Math.sin(perpendicularAngle);
-  
+
   // נקודות לגוף המחט (משולש צר)
   const needleBodyWidth = 2;
   const bodyStartX = centerX + 8 * Math.cos(needleAngleRad);
@@ -422,7 +424,7 @@ export default function FearAndGreedCard({
 
   const CardContent = (
     <View style={styles.container}>
-      <UICard variant="blur" padding="md">
+      <UICard variant="blur" padding="sm">
         {renderHeader(description)}
 
         {!effectiveExpanded ? (
@@ -435,210 +437,243 @@ export default function FearAndGreedCard({
             </Text>
           </View>
         ) : (
-        <>
+          <>
 
-      {/* פריסה אופקית - שני חלקים */}
-      <View style={styles.splitContainer}>
-        {/* צד שמאל - נתונים היסטוריים */}
-        <View style={styles.leftSection}>
-          {historicalData && (
-            <View style={styles.historicalDataContainer}>
-              <Text style={styles.historicalSectionTitle}>היסטוריה</Text>
-          {historicalData.previousClose && (
-            <View style={styles.historicalItem}>
-              <Text style={styles.historicalLabel}>סגירה קודמת:</Text>
-              <Text style={[styles.historicalValue, { color: fearAndGreedService.getValueColor(historicalData.previousClose.value) }]}>
-                {historicalData.previousClose.value}
+            {/* גייג' במרכז */}
+            <View style={{ alignItems: 'center', marginTop: 0 }}>
+              <View style={styles.gaugeContainer}>
+                <Svg width={gaugeSize} height={gaugeSize * 0.6} viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}>
+                  {/* רקע קשת אפור - מתחת לכל הקשתות */}
+                  <Path
+                    d={createArcPath(startAngle, endAngle, radius)}
+                    stroke={DesignTokens.colors.background.tertiary}
+                    strokeWidth={strokeWidth}
+                    fill="transparent"
+                    strokeLinecap="round"
+                    opacity={0.2}
+                  />
+
+                  {/* קשתות צבעוניות - עם הפרדות קטנות למניעת גלישה */}
+                  {segments.map((segment, index) => {
+                    // הפרדה קטנה מאוד (0.3 מעלות) למניעת גלישה אבל בלי רווח גדול
+                    const gap = 0.3;
+                    const adjustedStart = segment.start + gap;
+                    const adjustedEnd = segment.end - gap;
+
+                    return (
+                      <Path
+                        key={index}
+                        d={createArcPath(adjustedStart, adjustedEnd, radius)}
+                        stroke={segment.color}
+                        strokeWidth={strokeWidth}
+                        fill="transparent"
+                        strokeLinecap="butt"
+                      />
+                    );
+                  })}
+
+                  {/* קווי חלוקה - בעובי הגייג' */}
+                  {[0, 25, 50, 75, 100].map((val, index) => {
+                    const angle = startAngle + (val / 100) * totalAngle;
+                    const angleRad = (angle * Math.PI) / 180;
+                    // קווים בעובי הגייג' - מהקצה הפנימי לקצה החיצוני
+                    const x1 = centerX + (radius - strokeWidth / 2) * Math.cos(angleRad);
+                    const y1 = centerY + (radius - strokeWidth / 2) * Math.sin(angleRad);
+                    const x2 = centerX + (radius + strokeWidth / 2) * Math.cos(angleRad);
+                    const y2 = centerY + (radius + strokeWidth / 2) * Math.sin(angleRad);
+                    return (
+                      <Line
+                        key={index}
+                        x1={x1}
+                        y1={y1}
+                        x2={x2}
+                        y2={y2}
+                        stroke={DesignTokens.colors.text.tertiary}
+                        strokeWidth={1}
+                        opacity={0.4}
+                      />
+                    );
+                  })}
+
+                  {/* מספרים על הגייג' */}
+                  {[0, 25, 50, 75, 100].map((val, index) => {
+                    const angle = startAngle + (val / 100) * totalAngle;
+                    const angleRad = (angle * Math.PI) / 180;
+                    const textRadius = radius + strokeWidth / 2 + 15;
+                    const x = centerX + textRadius * Math.cos(angleRad);
+                    const y = centerY + textRadius * Math.sin(angleRad);
+                    return (
+                      <SvgText
+                        key={`text-${index}`}
+                        x={x}
+                        y={y}
+                        fontSize={12}
+                        fill={DesignTokens.colors.text.secondary}
+                        textAnchor="middle"
+                        alignmentBaseline="middle"
+                        fontWeight="500"
+                      >
+                        {val}
+                      </SvgText>
+                    );
+                  })}
+
+                  {/* מחט - מודרנית עם קצה מעוגל */}
+                  <Line
+                    x1={centerX}
+                    y1={centerY}
+                    x2={needleEndX}
+                    y2={needleEndY}
+                    stroke="#FFFFFF"
+                    strokeWidth={4}
+                    strokeLinecap="round"
+                  />
+
+                  {/* נקודת מרכז - מודרנית */}
+                  <Circle
+                    cx={centerX}
+                    cy={centerY}
+                    r={10}
+                    fill="#FFFFFF"
+                  />
+                  <Circle
+                    cx={centerX}
+                    cy={centerY}
+                    r={6}
+                    fill={DesignTokens.colors.background.secondary}
+                  />
+                </Svg>
+              </View>
+
+              {/* ערך עדכני - מתחת לגייג' */}
+              <View style={styles.currentValueContainer}>
+                <Text style={[styles.currentValueText, { color }]}>
+                  {value}
+                </Text>
+                <Text style={[styles.currentValueDescription, { color }]}>
+                  {description}
+                </Text>
+              </View>
+            </View>
+
+            {/* תוויות קטעים - אופקי ממורכז */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              flexWrap: 'wrap',
+              gap: DesignTokens.spacing.md,
+              marginBottom: DesignTokens.spacing.lg,
+              paddingHorizontal: DesignTokens.spacing.sm,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF0000' }} />
+                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary }}>פחד קיצוני</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF8C00' }} />
+                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary }}>פחד</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FFD700' }} />
+                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary }}>ניטרלי</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#00FF00' }} />
+                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary }}>תאווה</Text>
+              </View>
+            </View>
+
+            {/* היסטוריה - פרושה למטה */}
+            {historicalData && (
+              <View style={{
+                borderTopWidth: 1,
+                borderTopColor: DesignTokens.colors.border.primary,
+                paddingTop: DesignTokens.spacing.md,
+                marginTop: DesignTokens.spacing.sm,
+              }}>
+                <Text style={{
+                  fontSize: DesignTokens.typography.fontSize.base,
+                  fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                  color: DesignTokens.colors.text.primary,
+                  textAlign: 'center',
+                  marginBottom: DesignTokens.spacing.md,
+                }}>היסטוריה</Text>
+
+                <View style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  justifyContent: 'space-around',
+                  gap: DesignTokens.spacing.md,
+                }}>
+                  {historicalData.oneYearAgo && (
+                    <View style={{ alignItems: 'center', minWidth: 70 }}>
+                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary, marginBottom: 4 }}>לפני שנה</Text>
+                      <Text style={{
+                        fontSize: 18,
+                        fontWeight: 'bold' as any,
+                        color: fearAndGreedService.getValueColor(historicalData.oneYearAgo.value)
+                      }}>
+                        {historicalData.oneYearAgo.value}
+                      </Text>
+                    </View>
+                  )}
+                  {historicalData.oneMonthAgo && (
+                    <View style={{ alignItems: 'center', minWidth: 70 }}>
+                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary, marginBottom: 4 }}>לפני חודש</Text>
+                      <Text style={{
+                        fontSize: 18,
+                        fontWeight: 'bold' as any,
+                        color: fearAndGreedService.getValueColor(historicalData.oneMonthAgo.value)
+                      }}>
+                        {historicalData.oneMonthAgo.value}
+                      </Text>
+                    </View>
+                  )}
+                  {historicalData.oneWeekAgo && (
+                    <View style={{ alignItems: 'center', minWidth: 70 }}>
+                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary, marginBottom: 4 }}>לפני שבוע</Text>
+                      <Text style={{
+                        fontSize: 18,
+                        fontWeight: 'bold' as any,
+                        color: fearAndGreedService.getValueColor(historicalData.oneWeekAgo.value)
+                      }}>
+                        {historicalData.oneWeekAgo.value}
+                      </Text>
+                    </View>
+                  )}
+                  {historicalData.previousClose && (
+                    <View style={{ alignItems: 'center', minWidth: 70 }}>
+                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary, marginBottom: 4 }}>סגירה קודמת</Text>
+                      <Text style={{
+                        fontSize: 18,
+                        fontWeight: 'bold' as any,
+                        color: fearAndGreedService.getValueColor(historicalData.previousClose.value)
+                      }}>
+                        {historicalData.previousClose.value}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Timestamp */}
+            {data.timestamp && (
+              <Text style={[styles.description, {
+                fontSize: DesignTokens.typography.fontSize.xs,
+                marginTop: DesignTokens.spacing.sm,
+                textAlign: 'center',
+                color: DesignTokens.colors.text.tertiary,
+              }]}>
+                עודכן: {new Date(data.timestamp * 1000).toLocaleString('he-IL', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </Text>
-            </View>
-          )}
-          {historicalData.oneWeekAgo && (
-            <View style={styles.historicalItem}>
-              <Text style={styles.historicalLabel}>לפני שבוע:</Text>
-              <Text style={[styles.historicalValue, { color: fearAndGreedService.getValueColor(historicalData.oneWeekAgo.value) }]}>
-                {historicalData.oneWeekAgo.value}
-              </Text>
-            </View>
-          )}
-          {historicalData.oneMonthAgo && (
-            <View style={styles.historicalItem}>
-              <Text style={styles.historicalLabel}>לפני חודש:</Text>
-              <Text style={[styles.historicalValue, { color: fearAndGreedService.getValueColor(historicalData.oneMonthAgo.value) }]}>
-                {historicalData.oneMonthAgo.value}
-              </Text>
-            </View>
-          )}
-          {historicalData.oneYearAgo && (
-            <View style={styles.historicalItem}>
-              <Text style={styles.historicalLabel}>לפני שנה:</Text>
-              <Text style={[styles.historicalValue, { color: fearAndGreedService.getValueColor(historicalData.oneYearAgo.value) }]}>
-                {historicalData.oneYearAgo.value}
-              </Text>
-            </View>
-          )}
-            </View>
-          )}
-        </View>
-
-        {/* קו הפרדה */}
-        <View style={styles.divider} />
-
-        {/* צד ימין - גייג' בלבד */}
-        <View style={styles.rightSection}>
-          {/* גייג' חצי עגול */}
-          <View style={styles.gaugeContainer}>
-        <Svg width={gaugeSize} height={gaugeSize * 0.6} viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}>
-          {/* רקע קשת אפור - מתחת לכל הקשתות */}
-          <Path
-            d={createArcPath(startAngle, endAngle, radius)}
-            stroke={DesignTokens.colors.background.tertiary}
-            strokeWidth={strokeWidth}
-            fill="transparent"
-            strokeLinecap="round"
-            opacity={0.2}
-          />
-          
-          {/* קשתות צבעוניות - עם הפרדות קטנות למניעת גלישה */}
-          {segments.map((segment, index) => {
-            // הפרדה קטנה מאוד (0.3 מעלות) למניעת גלישה אבל בלי רווח גדול
-            const gap = 0.3;
-            const adjustedStart = segment.start + gap;
-            const adjustedEnd = segment.end - gap;
-            
-            return (
-              <Path
-                key={index}
-                d={createArcPath(adjustedStart, adjustedEnd, radius)}
-                stroke={segment.color}
-                strokeWidth={strokeWidth}
-                fill="transparent"
-                strokeLinecap="butt"
-              />
-            );
-          })}
-          
-          {/* קווי חלוקה - בעובי הגייג' */}
-          {[0, 25, 50, 75, 100].map((val, index) => {
-            const angle = startAngle + (val / 100) * totalAngle;
-            const angleRad = (angle * Math.PI) / 180;
-            // קווים בעובי הגייג' - מהקצה הפנימי לקצה החיצוני
-            const x1 = centerX + (radius - strokeWidth / 2) * Math.cos(angleRad);
-            const y1 = centerY + (radius - strokeWidth / 2) * Math.sin(angleRad);
-            const x2 = centerX + (radius + strokeWidth / 2) * Math.cos(angleRad);
-            const y2 = centerY + (radius + strokeWidth / 2) * Math.sin(angleRad);
-            return (
-              <Line
-                key={index}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke={DesignTokens.colors.text.tertiary}
-                strokeWidth={1}
-                opacity={0.4}
-              />
-            );
-          })}
-
-          {/* מספרים על הגייג' */}
-          {[0, 25, 50, 75, 100].map((val, index) => {
-            const angle = startAngle + (val / 100) * totalAngle;
-            const angleRad = (angle * Math.PI) / 180;
-            const textRadius = radius + strokeWidth / 2 + 15;
-            const x = centerX + textRadius * Math.cos(angleRad);
-            const y = centerY + textRadius * Math.sin(angleRad);
-            return (
-              <SvgText
-                key={`text-${index}`}
-                x={x}
-                y={y}
-                fontSize={12}
-                fill={DesignTokens.colors.text.secondary}
-                textAnchor="middle"
-                alignmentBaseline="middle"
-                fontWeight="500"
-              >
-                {val}
-              </SvgText>
-            );
-          })}
-
-          {/* מחט - מודרנית עם קצה מעוגל */}
-          <Line
-            x1={centerX}
-            y1={centerY}
-            x2={needleEndX}
-            y2={needleEndY}
-            stroke="#FFFFFF"
-            strokeWidth={4}
-            strokeLinecap="round"
-          />
-          
-          {/* נקודת מרכז - מודרנית */}
-          <Circle
-            cx={centerX}
-            cy={centerY}
-            r={10}
-            fill="#FFFFFF"
-          />
-          <Circle
-            cx={centerX}
-            cy={centerY}
-            r={6}
-            fill={DesignTokens.colors.background.secondary}
-          />
-        </Svg>
-          </View>
-
-          {/* ערך עדכני - מתחת לגייג' */}
-          <View style={styles.currentValueContainer}>
-            <Text style={[styles.currentValueText, { color }]}>
-              {value}
-            </Text>
-            <Text style={[styles.currentValueDescription, { color }]}>
-              {description}
-            </Text>
-          </View>
-
-          {/* תוויות קטעים */}
-          <View style={styles.segmentsLabels}>
-            <View style={styles.segmentLabelContainer}>
-              <View style={[styles.segmentColorDot, { backgroundColor: '#FF0000' }]} />
-              <Text style={styles.segmentLabel}>0-25: פחד קיצוני</Text>
-            </View>
-            <View style={styles.segmentLabelContainer}>
-              <View style={[styles.segmentColorDot, { backgroundColor: '#FF8C00' }]} />
-              <Text style={styles.segmentLabel}>25-50: פחד</Text>
-            </View>
-            <View style={styles.segmentLabelContainer}>
-              <View style={[styles.segmentColorDot, { backgroundColor: '#FFD700' }]} />
-              <Text style={styles.segmentLabel}>50-75: ניטרלי</Text>
-            </View>
-            <View style={styles.segmentLabelContainer}>
-              <View style={[styles.segmentColorDot, { backgroundColor: '#00FF00' }]} />
-              <Text style={styles.segmentLabel}>75-100: תאווה</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-        {/* Timestamp */}
-        {data.timestamp && (
-          <Text style={[styles.description, { 
-            fontSize: DesignTokens.typography.fontSize.xs, 
-            marginTop: DesignTokens.spacing.sm, 
-            textAlign: 'center',
-            color: DesignTokens.colors.text.tertiary,
-          }]}>
-            עודכן: {new Date(data.timestamp * 1000).toLocaleString('he-IL', {
-              day: 'numeric',
-              month: 'short',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
-        )}
-        </>
+            )}
+          </>
         )}
       </UICard>
     </View>

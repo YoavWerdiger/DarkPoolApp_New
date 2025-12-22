@@ -10,6 +10,7 @@ export interface UICardProps {
   padding?: 'none' | 'sm' | 'md' | 'lg';
   onPress?: () => void;
   style?: ViewStyle;
+  contentContainerStyle?: ViewStyle;
   pressable?: boolean;
 }
 
@@ -19,10 +20,11 @@ const UICard: React.FC<UICardProps> = ({
   padding = 'md',
   onPress,
   style,
+  contentContainerStyle,
   pressable = false,
 }) => {
   const DesignTokens = useDesignTokens();
-  const { colors, spacing, borderRadius, shadows } = DesignTokens;
+  const { colors, spacing, borderRadius, shadows, glassmorphism } = DesignTokens;
 
   const getVariantStyle = (): ViewStyle => {
     switch (variant) {
@@ -94,7 +96,7 @@ const UICard: React.FC<UICardProps> = ({
         <>
           {/* גרדיאנט ירוק כהה-שחור אנכי - אזור ירוק רחב יותר בגובה */}
           <LinearGradient
-            colors={gradientColors}
+            colors={gradientColors as any}
             locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
@@ -114,15 +116,15 @@ const UICard: React.FC<UICardProps> = ({
         </>
       ) : variant === 'blur' ? (
         <>
-          {/* Blur effect כמו ב-MainTabs - יותר שקוף ובהיר */}
+          {/* Blur effect כמו ב-MainTabs */}
           {Platform.OS === 'ios' ? (
             <BlurView
-              intensity={30}
+              intensity={40}
               tint="dark"
               style={[
                 StyleSheet.absoluteFill,
                 {
-                  backgroundColor: 'rgba(15, 15, 15, 0.3)',
+                  backgroundColor: 'rgba(15, 15, 15, 0.5)',
                 }
               ]}
             />
@@ -131,12 +133,12 @@ const UICard: React.FC<UICardProps> = ({
               style={[
                 StyleSheet.absoluteFill,
                 {
-                  backgroundColor: 'rgba(20, 20, 20, 0.4)',
+                  backgroundColor: 'rgba(20, 20, 20, 0.7)',
                 },
               ]}
             />
           )}
-          {/* גבול עדין כמו ב-MainTabs */}
+          {/* גבול כמו מקודם */}
           <View
             style={[
               StyleSheet.absoluteFill,
@@ -149,7 +151,7 @@ const UICard: React.FC<UICardProps> = ({
           />
         </>
       ) : null}
-      <View style={{ position: 'relative', zIndex: 1 }}>
+      <View style={[{ position: 'relative', zIndex: 1 }, contentContainerStyle]}>
         {children}
       </View>
     </>

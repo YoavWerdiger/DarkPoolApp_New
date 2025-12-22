@@ -215,10 +215,14 @@ class PaymentService {
       const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // הכנת נתוני התשלום ל-CardCom LowProfile API
-      const paymentData = {
+      // Operation: 2 = Charge + Create Token (למנויים חוזרים)
+      // Operation: 1 = ChargeOnly (תשלום חד פעמי בלבד)
+      const operation = request.isRecurring ? "2" : "ChargeOnly";
+      
+      const paymentData: any = {
         TerminalNumber: CARDCOM_CONFIG.terminalNumber,
         ApiName: CARDCOM_CONFIG.apiName,
-        Operation: "ChargeOnly",
+        Operation: operation,
         ReturnValue: transactionId,
         Amount: request.amount,
         SuccessRedirectUrl: CARDCOM_CONFIG.successUrl,
@@ -250,6 +254,13 @@ class PaymentService {
           }
         ]
       };
+
+      // אם זה recurring payment - מוסיפים פרמטרים ל-BillGold
+      if (request.isRecurring) {
+        // אפשר להוסיף פרמטרים נוספים ל-RecurringPayments אם נדרש
+        // (צריך לבדוק עם Cardcom מה הפרמטרים המדויקים)
+        console.log('🔄 PaymentService: Setting up recurring payment with BillGold');
+      }
 
       console.log('🔄 PaymentService: Sending request to CardCom LowProfile API');
       console.log('🔄 PaymentService: API Name:', CARDCOM_CONFIG.apiName);
@@ -587,6 +598,131 @@ class PaymentService {
     } catch (error) {
       console.error('❌ PaymentService: Error cancelling subscription:', error);
       return false;
+    }
+  }
+
+  /**
+   * יוצר recurring payment באמצעות Token שנשמר
+   * זה נקרא אוטומטית כשה-auto_renew = true והמנוי פג
+   */
+  async createRecurringPayment(userId: string, planId: string): Promise<PaymentResponse> {
+    try {
+      console.log('🔄 PaymentService: Creating recurring payment with Token:', { userId, planId });
+
+      // קבלת פרטי המנוי עם Token
+      const { data: subscription, error: subError } = await supabase
+        .from('user_subscriptions')
+        .select('*, subscription_plans(*)')
+        .eq('user_id', userId)
+        .eq('plan_id', planId)
+        .eq('auto_renew', true)
+        .single();
+
+      if (subError || !subscription) {
+        throw new Error('Subscription not found or auto-renew disabled');
+      }
+
+      if (!subscription.cardcom_token) {
+        throw new Error('No payment token found for recurring payment');
+      }
+
+      const plan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
+      if (!plan) {
+        throw new Error('Plan not found');
+      }
+
+      // יצירת transaction ID חדש
+      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // יצירת recurring payment באמצעות Transaction API עם Token
+      const transactionData = {
+        TerminalNumber: CARDCOM_CONFIG.terminalNumber,
+        ApiName: CARDCOM_CONFIG.apiName,
+        Amount: plan.price,
+        Token: subscription.cardcom_token,
+        ISOCoinId: 1,
+        ExternalUniqTranId: transactionId,
+        CustomFields: [
+          {
+            Name: "userId",
+            Value: userId
+          },
+          {
+            Name: "planId",
+            Value: planId
+          },
+          {
+            Name: "transactionId",
+            Value: transactionId
+          },
+          {
+            Name: "isRecurring",
+            Value: "true"
+          }
+        ]
+      };
+
+      console.log('🔄 PaymentService: Sending recurring payment request to CardCom Transaction API');
+
+      const response = await fetch(`${CARDCOM_CONFIG.baseUrl}/Transactions/Transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(transactionData)
+      });
+
+      const result = await response.json();
+      console.log('🔄 PaymentService: CardCom Transaction API response:', result);
+
+      if (result.ResponseCode === 0) {
+        // שמירת העסקה
+        await this.saveTransaction({
+          id: transactionId,
+          userId: userId,
+          planId: planId,
+          amount: plan.price,
+          status: 'success',
+          cardcomLowProfileId: null,
+          paymentUrl: null,
+          cardcomTransactionId: result.TranzactionId?.toString()
+        });
+
+        // עדכון תאריך תפוגה
+        const expiresAt = new Date();
+        if (plan.period === 'monthly') {
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+        } else if (plan.period === 'quarterly') {
+          expiresAt.setMonth(expiresAt.getMonth() + 3);
+        } else if (plan.period === 'yearly') {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        }
+
+        await supabase
+          .from('user_subscriptions')
+          .update({
+            expires_at: expiresAt.toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+          .eq('plan_id', planId);
+
+        console.log('✅ PaymentService: Recurring payment created successfully');
+
+        return {
+          success: true,
+          transactionId: transactionId
+        };
+      } else {
+        throw new Error(result.Description || 'שגיאה ביצירת תשלום חוזר');
+      }
+    } catch (error) {
+      console.error('❌ PaymentService: Error creating recurring payment:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'שגיאה ביצירת תשלום חוזר'
+      };
     }
   }
 }

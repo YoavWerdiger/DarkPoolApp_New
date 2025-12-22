@@ -850,8 +850,9 @@ export default function MessageInputBar({
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            paddingHorizontal: 8,
-            paddingVertical: 6,
+            paddingHorizontal: 12,
+            paddingTop: 8,
+            paddingBottom: insets.bottom > 0 ? 4 : 8,
             minHeight: 56,
             backgroundColor: DesignTokens.colors.background.primary,
           }}

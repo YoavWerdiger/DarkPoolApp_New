@@ -18,6 +18,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Video, ResizeMode } from 'expo-av';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
+import { Share, Forward, Copy, Download, Reply } from 'lucide-react-native';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { Alert, Share as RNShare, Platform } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -28,6 +33,7 @@ import {
   Gesture,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
+import { Message } from '../../services/supabase';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -36,7 +42,10 @@ interface MediaViewerProps {
   mediaUrl: string;
   mediaType: 'image' | 'video';
   caption?: string;
+  message?: Message;
   onClose: () => void;
+  onReply?: () => void;
+  onForward?: () => void;
 }
 
 export default function MediaViewer({
@@ -44,7 +53,10 @@ export default function MediaViewer({
   mediaUrl,
   mediaType,
   caption,
+  message,
   onClose,
+  onReply,
+  onForward,
 }: MediaViewerProps) {
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -90,6 +102,7 @@ export default function MediaViewer({
 
   // Pan gesture for drag (only when zoomed)
   const panGesture = Gesture.Pan()
+    .minDistance(10)
     .onUpdate((event) => {
       if (scale.value > 1) {
         translateX.value = savedTranslateX.value + event.translationX;
@@ -143,22 +156,27 @@ export default function MediaViewer({
     },
     mediaContainer: {
       flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
+      justifyContent: 'center',
+      alignItems: 'center',
+      width: '100%',
+      height: '100%',
     },
     headerOverlay: {
       position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
+      zIndex: 10,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    headerOverlayContent: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
     },
     header: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
     },
     captionOverlay: {
       position: 'absolute',
@@ -169,12 +187,45 @@ export default function MediaViewer({
     closeButton: {
       padding: 8,
     },
+    actionsContainerWrapper: {
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingTop: 12,
+    },
+    actionsContainer: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      width: '100%',
+      maxWidth: 220,
+      alignSelf: 'center',
+    },
+    actionButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+    },
+    actionButtonText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      marginTop: 4,
+      fontWeight: '500',
+    },
     captionContainer: {
       paddingHorizontal: 20,
-          paddingVertical: 16,
+      paddingVertical: 16,
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
       borderRadius: 20,
       marginHorizontal: 20,
+      marginTop: 12,
       marginBottom: 20,
       alignSelf: 'center',
       maxWidth: SCREEN_WIDTH - 80,
@@ -184,6 +235,7 @@ export default function MediaViewer({
       paddingVertical: 12,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
       marginHorizontal: 0,
+      marginTop: 12,
       borderRadius: 0,
       maxWidth: '100%',
     },
@@ -227,8 +279,8 @@ export default function MediaViewer({
       onRequestClose={onClose}
     >
       <GestureHandlerRootView style={styles.modal}>
-        {/* Media - Full Screen with Safe Area */}
-        <SafeAreaView style={styles.mediaContainer} edges={['top', 'bottom']}>
+        {/* Media - Full Screen */}
+        <View style={styles.mediaContainer}>
           {mediaType === 'image' ? (
             <>
               {imageLoading && (
@@ -268,39 +320,152 @@ export default function MediaViewer({
               </View>
             </>
           )}
-        </SafeAreaView>
-
-        {/* Header Overlay */}
-        <View 
-          style={[
-            styles.headerOverlay, 
-            { 
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              top: insets.top,
-            }
-          ]}
-        >
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
         </View>
 
-        {/* Caption Overlay - במרכז או עד למטה */}
-        {caption && typeof caption === 'string' && caption.trim().length > 0 && (
-          <SafeAreaView 
-            style={[styles.captionOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]} 
-            edges={['bottom']}
+        {/* Header Overlay - צמוד ל-safe area */}
+        <SafeAreaView 
+          style={styles.headerOverlay} 
+          edges={['top']}
+        >
+          <View 
+            style={[
+              styles.headerOverlayContent,
+              { 
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              }
+            ]}
           >
+            <View style={styles.header}>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={28} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
+
+        {/* Actions Menu & Caption Overlay - בתחתית */}
+        <SafeAreaView 
+          style={styles.captionOverlay} 
+          edges={['bottom']}
+        >
+          {/* Actions Menu - צר יותר כמו וואטסאפ עם פינות מעוגלות */}
+          <View style={styles.actionsContainerWrapper}>
+            <View style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={async () => {
+                try {
+                  await RNShare.share({
+                    message: mediaUrl,
+                    url: mediaUrl,
+                  });
+                } catch (error) {
+                  console.error('Error sharing:', error);
+                }
+              }}
+            >
+              <Share size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>שתף</Text>
+            </TouchableOpacity>
+
+            {onReply && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => {
+                  onClose();
+                  onReply();
+                }}
+              >
+                <Reply size={24} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>השב</Text>
+              </TouchableOpacity>
+            )}
+
+            {onForward && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => {
+                  onClose();
+                  onForward();
+                }}
+              >
+                <Forward size={24} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>העבר</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={async () => {
+                try {
+                  await Clipboard.setStringAsync(mediaUrl);
+                  Alert.alert('הועתק', 'הקישור הועתק ללוח');
+                } catch (error) {
+                  console.error('Error copying:', error);
+                }
+              }}
+            >
+              <Copy size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>העתק</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={async () => {
+                try {
+                  if (Platform.OS === 'web') {
+                    Alert.alert('מידע', 'הורדה לא זמינה בפלטפורמה זו');
+                    return;
+                  }
+                  // @ts-ignore - cacheDirectory exists in runtime
+                  const cacheDir = FileSystem.cacheDirectory;
+                  if (!cacheDir) {
+                    Alert.alert('שגיאה', 'לא ניתן לגשת לתיקיית cache');
+                    return;
+                  }
+                  const fileUri = `${cacheDir}media_${Date.now()}.${mediaType === 'image' ? 'jpg' : 'mp4'}`;
+                  const downloadResult = await FileSystem.downloadAsync(mediaUrl, fileUri);
+                  
+                  if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(downloadResult.uri);
+                  } else {
+                    Alert.alert('הורד', 'הקובץ נשמר בהצלחה');
+                  }
+                } catch (error) {
+                  console.error('Error downloading:', error);
+                  Alert.alert('שגיאה', 'לא ניתן להוריד את הקובץ');
+                }
+              }}
+            >
+              <Download size={24} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>הורד</Text>
+            </TouchableOpacity>
+
+            {onReply && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => {
+                  onClose();
+                  onReply();
+                }}
+              >
+                <Reply size={24} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>השב</Text>
+              </TouchableOpacity>
+            )}
+            </View>
+          </View>
+
+          {/* Caption */}
+          {caption && typeof caption === 'string' && caption.trim().length > 0 && (
             <View style={[
               styles.captionContainer,
               caption.length > 50 ? styles.captionContainerFullWidth : undefined
             ]}>
               <Text style={styles.captionText}>{String(caption)}</Text>
             </View>
-          </SafeAreaView>
-        )}
+          )}
+        </SafeAreaView>
       </GestureHandlerRootView>
     </Modal>
   );

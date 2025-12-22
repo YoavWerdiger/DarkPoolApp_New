@@ -1326,10 +1326,36 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
                 javaScriptEnabled={true}
                 domStorageEnabled={true}
                 startInLoadingState={true}
+                originWhitelist={['*']}
+                mixedContentMode="always"
+                allowsInlineMediaPlayback={true}
+                mediaPlaybackRequiresUserAction={false}
                 scalesPageToFit={true}
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
                 scrollEnabled={false}
+                onLoadStart={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.log('📈 EarningsChart: Loading started', nativeEvent.url, 'for symbol:', report.code);
+                }}
+                onLoadEnd={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.log('✅ EarningsChart: Loading ended', nativeEvent.url, 'for symbol:', report.code);
+                }}
+                onError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.error('❌ EarningsChart: Error', nativeEvent, 'for symbol:', report.code);
+                }}
+                onHttpError={(syntheticEvent) => {
+                  const { nativeEvent } = syntheticEvent;
+                  console.error('❌ EarningsChart: HTTP Error', nativeEvent.statusCode, nativeEvent.url, 'for symbol:', report.code);
+                }}
+                onShouldStartLoadWithRequest={(request) => {
+                  console.log('🔍 EarningsChart: Request to load:', request.url, 'for symbol:', report.code);
+                  const shouldLoad = request.url.startsWith('about:blank') || request.url.includes('tradingview.com');
+                  console.log('🔍 EarningsChart: Should load:', shouldLoad, 'for symbol:', report.code);
+                  return shouldLoad;
+                }}
               />
             </View>
 

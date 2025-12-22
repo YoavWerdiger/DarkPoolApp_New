@@ -1119,8 +1119,8 @@ export default function ChatRoomScreen() {
   
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
     >
         <ImageBackground
@@ -1131,8 +1131,8 @@ export default function ChatRoomScreen() {
           resizeMode="cover"
         >
           <SafeAreaView
-            style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
-            edges={['left', 'right', 'bottom']}
+            style={{ flex: 1, backgroundColor: 'transparent' }}
+            edges={['left', 'right', 'top']}
           >
             {renderHeader()}
 
@@ -1226,7 +1226,7 @@ export default function ChatRoomScreen() {
               </View>
             )}
 
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={{ flex: 1 }}>
               <FlatList
                 ref={flatListRef}
                 data={searchQuery.trim() ? (filteredMessages || []) : (messagesWithDividers || [])}
@@ -1238,11 +1238,14 @@ export default function ChatRoomScreen() {
                 }}
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
-              initialNumToRender={15}
-              maxToRenderPerBatch={8}
-              windowSize={10}
-              removeClippedSubviews={false}
-              updateCellsBatchingPeriod={100}
+                initialNumToRender={15}
+                maxToRenderPerBatch={8}
+                windowSize={10}
+                removeClippedSubviews={false}
+                updateCellsBatchingPeriod={100}
+                scrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
               onScrollToIndexFailed={(info) => {
                 console.warn('⚠️ ChatRoomScreen: scrollToIndex failed, using offset fallback:', info);
                 setTimeout(() => {
@@ -1359,8 +1362,8 @@ export default function ChatRoomScreen() {
                 paddingBottom: 8,
               }}
               showsVerticalScrollIndicator={false}
-            />
-            </TouchableWithoutFeedback>
+              />
+            </View>
             {/* כפתור גלילה לתחתית - תמיד מרונדר עם אנימציית opacity */}
             <Animated.View
               style={{

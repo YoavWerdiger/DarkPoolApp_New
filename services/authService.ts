@@ -1,4 +1,10 @@
 import { supabase } from './supabase';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+
+// Complete the auth session for better UX
+WebBrowser.maybeCompleteAuthSession();
 
 export interface AuthUser {
   id: string;
@@ -564,6 +570,220 @@ export class AuthService {
       return { user: data, error: null };
     } catch (error: any) {
       return { user: null, error: error.message };
+    }
+  }
+
+  // Sign in with Google OAuth using Supabase
+  static async signInWithGoogle(): Promise<{ user: AuthUser | null; error: string | null }> {
+    try {
+      console.log('🔄 AuthService: Starting Google OAuth sign in with Supabase...');
+      
+      // Get the correct redirect URI based on environment
+      // In Expo Go: exp://192.168.x.x:port/--/oauth
+      // In standalone: com.darkpool.app://oauth
+      const redirectUri = AuthSession.makeRedirectUri({
+        path: 'oauth',
+        // Let Expo detect scheme automatically (exp:// or com.darkpool.app://)
+      });
+      
+      console.log('🔄 AuthService: Redirect URI:', redirectUri);
+      
+      // Validate redirect URI
+      if (!redirectUri || redirectUri.includes('localhost') || redirectUri.includes('127.0.0.1')) {
+        console.error('❌ AuthService: Invalid redirect URI:', redirectUri);
+        return { user: null, error: 'שגיאה בהגדרת ה-redirect URI. אנא בדוק את ההגדרות.' };
+      }
+
+      // Ensure redirect URI is properly formatted
+      // Supabase expects the redirect URI to match what's configured in the dashboard
+      console.log('🔄 AuthService: Using redirect URI:', redirectUri);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUri,
+          skipBrowserRedirect: false,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        console.error('❌ AuthService: Supabase OAuth error:', error);
+        return { user: null, error: error.message || 'שגיאה בהתחברות עם Google' };
+      }
+
+      // Supabase returns a URL that needs to be opened in a browser
+      if (data?.url) {
+        console.log('✅ AuthService: Opening OAuth URL in browser...');
+        console.log('🔄 AuthService: OAuth URL:', data.url);
+        console.log('🔄 AuthService: Expected redirect URI:', redirectUri);
+        
+        // Use openAuthSessionAsync with proper options
+        const result = await WebBrowser.openAuthSessionAsync(
+          data.url, 
+          redirectUri,
+          {
+            showInRecents: true,
+            enableBarCollapsing: false,
+          }
+        );
+        
+        console.log('🔄 AuthService: OAuth result:', {
+          type: result.type,
+          hasUrl: !!(result as any).url,
+          url: (result as any).url,
+        });
+
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          console.log('❌ AuthService: User cancelled Google OAuth');
+          return { user: null, error: 'ההתחברות בוטלה' };
+        }
+
+        if (result.type === 'success') {
+          const redirectUrl = (result as any).url;
+          if (!redirectUrl) {
+            console.log('⚠️ AuthService: No redirect URL in result, waiting for session...');
+            // Wait a bit for Supabase to process
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              const user = await this.getUserProfile(session.user.id);
+              return { user, error: null };
+            }
+            return { user: null, error: 'לא התקבל URL redirect' };
+          }
+          
+          console.log('✅ AuthService: Got redirect URL:', redirectUrl);
+          
+          // Extract the URL fragment or query params
+          try {
+            // Handle custom scheme URLs (com.darkpool.app://, exp://)
+            const isCustomScheme = redirectUrl.startsWith('com.darkpool.app://') || 
+                                   redirectUrl.startsWith('exp://') ||
+                                   redirectUrl.startsWith('exps://');
+            
+            if (isCustomScheme) {
+              console.log('🔄 AuthService: Parsing custom scheme URL...');
+              // Custom scheme URL - parse manually
+              const parts = redirectUrl.split('#');
+              if (parts.length > 1) {
+                const hash = parts[1];
+                const params = new URLSearchParams(hash);
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                const error = params.get('error') || params.get('error_description');
+                
+                if (error) {
+                  console.error('❌ AuthService: OAuth error in redirect:', error);
+                  return { user: null, error: error || 'שגיאה בהתחברות עם Google' };
+                }
+
+                if (accessToken && refreshToken) {
+                  console.log('✅ AuthService: Got tokens from redirect, setting session...');
+                  const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken,
+                  });
+
+                  if (sessionError) {
+                    console.error('❌ AuthService: Error setting session:', sessionError);
+                    return { user: null, error: sessionError.message || 'שגיאה בהתחברות' };
+                  }
+
+                  if (sessionData?.user) {
+                    console.log('✅ AuthService: Session set successfully, fetching user profile...');
+                    const user = await this.getUserProfile(sessionData.user.id);
+                    return { user, error: null };
+                  }
+                }
+              }
+              // If no hash, wait for session
+              console.log('⏳ AuthService: No tokens in URL, waiting for session...');
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                const user = await this.getUserProfile(session.user.id);
+                return { user, error: null };
+              }
+              return { user: null, error: 'לא התקבל token ב-redirect' };
+            }
+            
+            // Standard URL
+            const url = new URL(redirectUrl);
+            const hash = url.hash.substring(1); // Remove the #
+            const params = new URLSearchParams(hash);
+            
+            const accessToken = params.get('access_token');
+            const refreshToken = params.get('refresh_token');
+            const error = params.get('error') || params.get('error_description');
+            
+            if (error) {
+              console.error('❌ AuthService: OAuth error in redirect:', error);
+              return { user: null, error: error || 'שגיאה בהתחברות עם Google' };
+            }
+
+            if (accessToken && refreshToken) {
+              console.log('✅ AuthService: Got tokens, setting session...');
+              
+              // Set the session with Supabase
+              const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+
+              if (sessionError) {
+                console.error('❌ AuthService: Error setting session:', sessionError);
+                return { user: null, error: sessionError.message || 'שגיאה בהתחברות' };
+              }
+
+              if (sessionData?.user) {
+                console.log('✅ AuthService: Session set successfully, fetching user profile...');
+                const user = await this.getUserProfile(sessionData.user.id);
+                return { user, error: null };
+              }
+            } else {
+              // Try to get code from query params
+              const code = url.searchParams.get('code');
+              if (code) {
+                console.log('✅ AuthService: Got authorization code, waiting for session...');
+                // Wait a bit for Supabase to process the code
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Check if session was created
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                  const user = await this.getUserProfile(session.user.id);
+                  return { user, error: null };
+                }
+              }
+            }
+          } catch (urlError: any) {
+            console.error('❌ AuthService: Error parsing redirect URL:', urlError);
+            // Try to continue anyway - Supabase might have processed it
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              const user = await this.getUserProfile(session.user.id);
+              return { user, error: null };
+            }
+          }
+        }
+      }
+
+      // The OAuth flow will redirect to our app, and the auth state change listener
+      // will handle updating the user. We return success here.
+      console.log('✅ AuthService: OAuth flow initiated successfully');
+      console.log('🔄 AuthService: Waiting for OAuth redirect...');
+      
+      // Note: The user will be set automatically by the auth state change listener
+      // when the OAuth flow completes and redirects back to the app
+      return { user: null, error: null };
+    } catch (error: any) {
+      console.error('❌ AuthService: Google OAuth exception:', error);
+      return { user: null, error: error.message || 'שגיאה בהתחברות עם Google' };
     }
   }
 

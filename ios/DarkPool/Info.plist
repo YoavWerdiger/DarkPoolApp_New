@@ -28,6 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>com.darkpool.app</string>
+          <string>com.googleusercontent.apps.37411689238-19ik1fukt8gg3h938anfle1boecq235f</string>
         </array>
       </dict>
     </array>

@@ -71,6 +71,60 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     }
   }, [planId, user, fromRegistration, registrationData]);
 
+  // אם זה רישום והפרטים קיימים - עובר ישירות ל-Cardcom
+  useEffect(() => {
+    if (fromRegistration && registrationData && plan && !showIframe && !loading) {
+      const hasAllData = registrationData.email && 
+                        registrationData.fullName && 
+                        registrationData.phone;
+      
+      if (hasAllData) {
+        // עובר ישירות ל-Cardcom ללא הצגת טופס
+        handlePaymentDirect();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // רק פעם אחת כשהקומפוננטה נטענת
+
+  const handlePaymentDirect = async () => {
+    if (!plan || !registrationData) return;
+
+    setLoading(true);
+    
+    try {
+      console.log('🔄 יצירת בקשת תשלום ישירה עם LowProfile iframe');
+
+      // יצירת בקשת תשלום ל-CardCom LowProfile
+      const paymentResponse = await paymentService.createPaymentRequest({
+        amount: plan.price,
+        currency: 'ILS',
+        description: `מנוי ${plan.name} - ${registrationData.fullName}`,
+        userId: null, // במהלך רישום עדיין אין userId
+        planId: selectedPlan,
+        userEmail: registrationData.email,
+        userName: registrationData.fullName,
+        userPhone: registrationData.phone
+      });
+
+      if (paymentResponse.success && paymentResponse.paymentUrl) {
+        console.log('✅ URL של iframe התשלום התקבל, פותח iframe...');
+        setPaymentUrl(paymentResponse.paymentUrl);
+        setShowIframe(true);
+      } else {
+        throw new Error(paymentResponse.error || 'שגיאה ביצירת בקשת התשלום');
+      }
+      
+    } catch (error) {
+      console.error('❌ שגיאה בתשלום:', error);
+      Alert.alert(
+        'שגיאה בתשלום', 
+        error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const validateForm = () => {
     if (!cardholderName.trim()) {
       Alert.alert('שגיאה', 'אנא הכנס שם מלא');
@@ -369,6 +423,17 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           source={{ uri: paymentUrl }}
           style={{ flex: 1 }}
           onMessage={handleWebViewMessage}
+          onNavigationStateChange={(navState) => {
+            // בדיקה אם זה redirect מ-Cardcom
+            const url = navState.url;
+            console.log('🔄 WebView navigation:', url);
+            
+            // אם זה redirect ל-success או failed URL
+            if (url.includes('smart-action') || url.includes('rapid-responder')) {
+              // Webhook יטפל בזה, אבל נוכל לבדוק את התוצאה
+              console.log('🔄 Cardcom redirect detected:', url);
+            }
+          }}
           javaScriptEnabled={true}
           domStorageEnabled={true}
           startInLoadingState={true}
@@ -396,6 +461,45 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           )}
         />
       </View>
+    );
+  }
+
+  // אם זה רישום - מציג מסך טעינה או WebView
+  if (fromRegistration && (loading || showIframe)) {
+    if (showIframe && paymentUrl) {
+      return renderWebView();
+    }
+    
+    // מציג מסך טעינה
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }} edges={['top']}>
+        <View style={{ 
+          flex: 1, 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          paddingHorizontal: 24
+        }}>
+          <ActivityIndicator color={DesignTokens.colors.primary.main} size="large" />
+          <Text style={{
+            color: DesignTokens.colors.text.primary,
+            fontSize: 18,
+            marginTop: 24,
+            textAlign: 'center',
+            writingDirection: 'rtl'
+          }}>
+            מכין את דף התשלום המאובטח...
+          </Text>
+          <Text style={{
+            color: DesignTokens.colors.text.secondary,
+            fontSize: 14,
+            marginTop: 12,
+            textAlign: 'center',
+            writingDirection: 'rtl'
+          }}>
+            תועבר לדף תשלום מאובטח של CardCom
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 

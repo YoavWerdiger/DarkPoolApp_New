@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from 'react';
 
 type RegistrationData = {
   // פרטים בסיסיים
@@ -17,9 +17,12 @@ type RegistrationData = {
   markets: string[];
   styles: string[];
   brokers: string[];
+  style: string; // סגנון מסחר (day, swing, etc.)
+  fullTime: string; // סטטוס סחר (full, part, passive)
   
   // מטרות וזמן
   goal: string;
+  goals: string; // מטרות בטקסט חופשי
   communityGoals: string[];
   hours: string;
   
@@ -30,6 +33,10 @@ type RegistrationData = {
   
   // סוג חשבון
   accountType: string;
+  
+  // הרשמה עם Google
+  isGoogleSignUp: boolean;
+  googleUserId: string | null;
 };
 
 const defaultData: RegistrationData = {
@@ -49,9 +56,12 @@ const defaultData: RegistrationData = {
   markets: [],
   styles: [],
   brokers: [],
+  style: '',
+  fullTime: '',
   
   // מטרות וזמן
   goal: '',
+  goals: '',
   communityGoals: [],
   hours: '',
   
@@ -62,20 +72,56 @@ const defaultData: RegistrationData = {
   
   // סוג חשבון
   accountType: 'free',
+  
+  // הרשמה עם Google
+  isGoogleSignUp: false,
+  googleUserId: null,
 };
 
-const RegistrationContext = createContext<{
+type RegistrationContextType = {
   data: RegistrationData;
   setData: React.Dispatch<React.SetStateAction<RegistrationData>>;
-}>({
+  setGoogleUserData: (userData: { id: string; email: string; fullName: string; profileImage: string | null }) => void;
+  resetData: () => void;
+};
+
+const RegistrationContext = createContext<RegistrationContextType>({
   data: defaultData,
   setData: () => {},
+  setGoogleUserData: () => {},
+  resetData: () => {},
 });
 
 export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [data, setData] = useState(defaultData);
+  
+  // הגדרת נתוני משתמש Google - ידלג על שלבי פרטים אישיים ותמונה
+  const setGoogleUserData = useCallback((userData: { 
+    id: string; 
+    email: string; 
+    fullName: string; 
+    profileImage: string | null 
+  }) => {
+    console.log('🔄 RegistrationContext: Setting Google user data:', userData);
+    setData(prev => ({
+      ...prev,
+      fullName: userData.fullName,
+      email: userData.email,
+      profileImage: userData.profileImage,
+      isGoogleSignUp: true,
+      googleUserId: userData.id,
+      password: '', // לא צריך סיסמה להרשמה עם Google
+    }));
+  }, []);
+  
+  // איפוס נתוני הרשמה
+  const resetData = useCallback(() => {
+    console.log('🔄 RegistrationContext: Resetting registration data');
+    setData(defaultData);
+  }, []);
+  
   return (
-    <RegistrationContext.Provider value={{ data, setData }}>
+    <RegistrationContext.Provider value={{ data, setData, setGoogleUserData, resetData }}>
       {children}
     </RegistrationContext.Provider>
   );

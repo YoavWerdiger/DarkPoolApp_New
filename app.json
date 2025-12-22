@@ -56,7 +56,8 @@
       "androidDisplayInForeground": true
     },
     "bundler": "metro",
-    "owner": "darkpoolapp"
+    "owner": "darkpoolapp",
+    "scheme": "com.darkpool.app"
   },
   "locales": {
     "he": {

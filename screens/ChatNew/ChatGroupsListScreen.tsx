@@ -160,6 +160,20 @@ export default function ChatGroupsListScreen() {
         return;
       }
 
+      // סנן קבוצות דמה שנוצרו במיגרציה
+      const realGroups = groups?.filter(group => {
+        const name = group.name || '';
+        // סנן קבוצות מיגרציה
+        if (name.includes('מיגרציה') || name.includes('מיגרציה - לא בשימוש')) {
+          return false;
+        }
+        // סנן קבוצות ללא שם או עם שם ריק
+        if (!name.trim()) {
+          return false;
+        }
+        return true;
+      }) || [];
+
       const { data: memberships } = await supabase
         .from('chat_group_members')
         .select('id, group_id, unread_count, mentioned_count')
@@ -171,7 +185,7 @@ export default function ChatGroupsListScreen() {
       const mentionedCountMap = new Map(memberships?.map(m => [m.group_id, m.mentioned_count || 0]) || []);
 
       const groupsWithLastMessage = await Promise.all(
-        groups.map(async (g) => {
+        realGroups.map(async (g) => {
           const { data: messages, error: lastMessageError } = await supabase
             .from('chat_messages')
             .select(`
@@ -638,7 +652,7 @@ export default function ChatGroupsListScreen() {
               refreshControl={
                 <RefreshControl refreshing={isLoading} onRefresh={loadGroups} tintColor={COLORS.accent} />
               }
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
               contentContainerStyle={
                 filteredGroups.length === 0 ? styles.emptyListContainer : undefined
               }

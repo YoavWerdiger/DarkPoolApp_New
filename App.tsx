@@ -16,6 +16,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NotificationService } from './services/notificationService';
 import { useDesignTokens } from './components/ui/DesignTokens';
 import { SafeAreaProvider, useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
+import { supabase } from './services/supabase';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,6 +45,103 @@ function AppContent() {
   const safeBottom = insets.bottom || 0;
 
   console.log('🎓 AppContent: Auth state:', { user: user?.id, isLoading });
+
+  // טיפול ב-deep linking עבור OAuth
+  useEffect(() => {
+    // Handle initial URL (when app opens from a link)
+    const handleInitialURL = async () => {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        console.log('🔗 AppContent: Initial URL:', initialUrl);
+        handleOAuthRedirect(initialUrl);
+      }
+    };
+
+    // Handle URL when app is already open
+    const subscription = Linking.addEventListener('url', (event) => {
+      console.log('🔗 AppContent: URL event:', event.url);
+      handleOAuthRedirect(event.url);
+    });
+
+    handleInitialURL();
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // Handle OAuth redirect
+  const handleOAuthRedirect = async (url: string) => {
+    console.log('🔄 AppContent: Handling OAuth redirect:', url);
+    
+    // Check if this is an OAuth redirect (supports both exp:// and com.darkpool.app://)
+    const isOAuthRedirect = url.includes('/oauth') || 
+                           url.includes('com.darkpool.app://oauth') ||
+                           url.includes('exp://') && url.includes('oauth') ||
+                           url.includes('exps://') && url.includes('oauth');
+    
+    if (isOAuthRedirect) {
+      try {
+        console.log('✅ AppContent: Detected OAuth redirect, parsing...');
+        
+        // Extract the URL fragment (everything after #)
+        let hash = '';
+        if (url.includes('#')) {
+          hash = url.split('#')[1];
+        } else if (url.includes('?')) {
+          // Some redirects use query params instead of hash
+          const queryPart = url.split('?')[1];
+          hash = queryPart;
+        }
+        
+        if (hash) {
+          const params = new URLSearchParams(hash);
+          const accessToken = params.get('access_token');
+          const refreshToken = params.get('refresh_token');
+          const error = params.get('error') || params.get('error_description');
+          
+          if (error) {
+            console.error('❌ AppContent: OAuth error:', error);
+            return;
+          }
+
+          if (accessToken && refreshToken) {
+            console.log('✅ AppContent: Got tokens from redirect, setting session...');
+            const { data, error: sessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+
+            if (sessionError) {
+              console.error('❌ AppContent: Error setting session:', sessionError);
+            } else if (data?.user) {
+              console.log('✅ AppContent: Session set successfully, user:', data.user.id);
+            }
+          } else {
+            console.log('⚠️ AppContent: No tokens in redirect URL, waiting for session...');
+            // Wait a bit for Supabase to process the redirect
+            setTimeout(async () => {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.user) {
+                console.log('✅ AppContent: Session found after delay');
+              }
+            }, 2000);
+          }
+        } else {
+          console.log('⚠️ AppContent: No hash in redirect URL, waiting for session...');
+          // Wait a bit for Supabase to process the redirect
+          setTimeout(async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              console.log('✅ AppContent: Session found after delay');
+            }
+          }, 2000);
+        }
+      } catch (error) {
+        console.error('❌ AppContent: Error handling OAuth redirect:', error);
+      }
+    }
+  };
 
   // טיפול בהתראות
   useEffect(() => {

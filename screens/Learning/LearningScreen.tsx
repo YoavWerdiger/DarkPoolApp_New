@@ -1541,37 +1541,53 @@ function LearningScreen() {
 
     return (
       <View style={styles.lessonContainer}>
-        {/* Header - extends to top of screen */}
-        <View style={styles.newLessonHeader}>
-          <View style={styles.newHeaderContent}>
-            <Text style={styles.newLessonNumber}>
-              שיעור {(() => {
-                const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                return currentIndex >= 0 ? currentIndex + 1 : 1;
-              })()}
-            </Text>
-            <Text style={styles.newLessonTitle} numberOfLines={2}>
-              {selectedLesson.title}
-            </Text>
+        {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
+        <LinearGradient
+          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+          {/* Header עם UICard */}
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.md }}>
+            <UICard variant="blur" padding="md" style={{ 
+              borderTopLeftRadius: 0,
+              borderTopRightRadius: 0,
+            }}>
+              <View style={styles.newLessonHeaderContent}>
+                <View style={styles.newHeaderContent}>
+                  <Text style={styles.newLessonNumber}>
+                    שיעור {(() => {
+                      const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                      const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                      return currentIndex >= 0 ? currentIndex + 1 : 1;
+                    })()}
+                  </Text>
+                  <Text style={styles.newLessonTitle} numberOfLines={2}>
+                    {selectedLesson.title}
+                  </Text>
+                </View>
+                
+                <TouchableOpacity 
+                  style={styles.newBackButton}
+                  onPress={async () => {
+                    // שמירת המיקום האחרון לפני סגירה
+                    if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
+                      await updateLessonProgress(progress, duration);
+                    }
+                    setIsYouTubePlayerReady(false); // איפוס flag כשסוגרים
+                    durationUpdatedRef.current.clear(); // איפוס מעקב duration כשסוגרים
+                    durationCheckInProgressRef.current.clear(); // איפוס מעקב בדיקות duration
+                    setSelectedLesson(null);
+                  }}
+                >
+                  <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+            </UICard>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.newBackButton}
-            onPress={async () => {
-              // שמירת המיקום האחרון לפני סגירה
-              if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
-                await updateLessonProgress(progress, duration);
-              }
-              setIsYouTubePlayerReady(false); // איפוס flag כשסוגרים
-              durationUpdatedRef.current.clear(); // איפוס מעקב duration כשסוגרים
-              durationCheckInProgressRef.current.clear(); // איפוס מעקב בדיקות duration
-              setSelectedLesson(null);
-            }}
-          >
-            <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
         
         {/* Safe Area for content */}
         <SafeAreaView style={styles.safeAreaContent}>
@@ -1775,10 +1791,10 @@ function LearningScreen() {
           <ScrollView 
             style={styles.contentSection}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.contentContainer}
+            contentContainerStyle={[styles.contentContainer, { paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.md }]}
           >
-            {/* Lesson Info - פשוט */}
-            <View style={styles.simpleLessonInfo}>
+            {/* Lesson Info - עם UICard */}
+            <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.md }}>
               <Text style={styles.simpleLessonTitle}>{selectedLesson.title}</Text>
               <Text style={styles.simpleLessonDescription}>{selectedLesson.description}</Text>
               
@@ -1800,75 +1816,79 @@ function LearningScreen() {
                   </View>
                 )}
               </View>
-            </View>
+            </UICard>
 
-            {/* Navigation Buttons - פשוט */}
-            <View style={styles.simpleNavigationButtons}>
-                  <TouchableOpacity
-                style={[styles.simpleNavButton, { opacity: (() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex >= 0 && currentIndex < lessons.length - 1 ? 1 : 0.5;
-                })() }]}
-                    onPress={() => {
-                      const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                      const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  if (currentIndex >= 0 && currentIndex < lessons.length - 1) {
-                    const nextLesson = lessons[currentIndex + 1];
-                    handleLessonPress(nextLesson, currentIndex + 1);
-                  }
-                }}
-                disabled={(() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex < 0 || currentIndex >= lessons.length - 1;
-                })()}
-              >
-                <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                <Text style={styles.simpleNavButtonText}>שיעור הבא</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.simpleNavButton, { opacity: (() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex > 0 ? 1 : 0.5;
-                })() }]}
-                onPress={() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  if (currentIndex > 0) {
-                    const prevLesson = lessons[currentIndex - 1];
-                    handleLessonPress(prevLesson, currentIndex - 1);
-                  }
-                }}
-                disabled={(() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex <= 0;
-                })()}
-              >
-                <Text style={styles.simpleNavButtonText}>שיעור קודם</Text>
-                <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </TouchableOpacity>
-          </View>
-          
-            {/* Notes Section - כפתור לפתיחת Bottom Sheet */}
-            <TouchableOpacity 
-              style={styles.simpleNotesSection}
-              onPress={() => setNotesModalVisible(true)}
-            >
-              <View style={styles.simpleNotesHeader}>
-                <Edit3 size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                <Text style={styles.simpleNotesTitle}>הערות אישיות על השיעור</Text>
-                <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                  </View>
-              <Text style={styles.notesPreview}>
-                {userNotes.trim() ? 
-                  (userNotes.length > 100 ? userNotes.substring(0, 100) + '...' : userNotes) : 
-                  'לחץ לכתיבת הערות...'}
-              </Text>
+            {/* Navigation Buttons - עם UICard */}
+            <UICard variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.md }}>
+              <View style={styles.simpleNavigationButtons}>
+                <TouchableOpacity
+                  style={[styles.simpleNavButton, { opacity: (() => {
+                    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                    const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                    return currentIndex >= 0 && currentIndex < lessons.length - 1 ? 1 : 0.5;
+                  })() }]}
+                  onPress={() => {
+                    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                    const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                    if (currentIndex >= 0 && currentIndex < lessons.length - 1) {
+                      const nextLesson = lessons[currentIndex + 1];
+                      handleLessonPress(nextLesson, currentIndex + 1);
+                    }
+                  }}
+                  disabled={(() => {
+                    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                    const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                    return currentIndex < 0 || currentIndex >= lessons.length - 1;
+                  })()}
+                >
+                  <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                  <Text style={styles.simpleNavButtonText}>שיעור הבא</Text>
                 </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[styles.simpleNavButton, { opacity: (() => {
+                    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                    const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                    return currentIndex > 0 ? 1 : 0.5;
+                  })() }]}
+                  onPress={() => {
+                    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                    const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                    if (currentIndex > 0) {
+                      const prevLesson = lessons[currentIndex - 1];
+                      handleLessonPress(prevLesson, currentIndex - 1);
+                    }
+                  }}
+                  disabled={(() => {
+                    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                    const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                    return currentIndex <= 0;
+                  })()}
+                >
+                  <Text style={styles.simpleNavButtonText}>שיעור קודם</Text>
+                  <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+            </UICard>
+
+            {/* Notes Section - כפתור לפתיחת Bottom Sheet - עם UICard */}
+            <TouchableOpacity 
+              onPress={() => setNotesModalVisible(true)}
+              style={{ marginBottom: DesignTokens.spacing.xl }}
+            >
+              <UICard variant="blur" padding="md">
+                <View style={styles.simpleNotesHeader}>
+                  <Edit3 size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                  <Text style={styles.simpleNotesTitle}>הערות אישיות על השיעור</Text>
+                  <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                </View>
+                <Text style={styles.notesPreview}>
+                  {userNotes.trim() ? 
+                    (userNotes.length > 100 ? userNotes.substring(0, 100) + '...' : userNotes) : 
+                    'לחץ לכתיבת הערות...'}
+                </Text>
+              </UICard>
+            </TouchableOpacity>
           </ScrollView>
               </View>
               
@@ -2049,6 +2069,7 @@ function LearningScreen() {
           </View>
         </Modal>
         </SafeAreaView>
+        </RNSafeAreaView>
       </View>
     );
   }
@@ -2224,6 +2245,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flex: 1,
   },
   // New Lesson Header Styles
+  newLessonHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   newLessonHeader: {
     flexDirection: 'row',
     alignItems: 'flex-end',

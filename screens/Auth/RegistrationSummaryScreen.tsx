@@ -11,9 +11,7 @@ import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Debug: בדיקה שה-AuthService קיים
-console.log('🔍 RegistrationSummary: AuthService imported:', !!AuthService);
-console.log('🔍 RegistrationSummary: AuthService.signUp exists:', !!AuthService.signUp);
+const { width, height } = Dimensions.get('window');
 
 const tracks: Record<string, string> = {
   '1': 'מסלול משקיעים מתחילים',
@@ -22,128 +20,9 @@ const tracks: Record<string, string> = {
 };
 
 const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
-  const { data } = useRegistration();
+  const { data, resetData } = useRegistration();
   const { signIn, setUser, signOut, user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
-
-  const handleFinish = async () => {
-    setLoading(true);
-    
-    try {
-      console.log('🔄 RegistrationSummary: Starting registration with data:', data);
-      
-      // מחיקת כל הנתונים השמורים לפני יצירת משתמש חדש
-      // זה מבטיח שלא תהיה התחברות אוטומטית למשתמש אחר אחרי ריענון
-      try {
-        await AsyncStorage.removeItem('saved_email');
-        await AsyncStorage.removeItem('saved_password');
-        await AsyncStorage.removeItem('remember_me');
-        await AsyncStorage.setItem('explicit_logout', 'true'); // סימון שהמשתמש התנתק
-        console.log('✅ RegistrationSummary: Cleared all saved credentials before registration');
-      } catch (storageError) {
-        console.error('❌ RegistrationSummary: Error clearing saved credentials:', storageError);
-      }
-      
-      // אם יש משתמש מחובר, נתנתק קודם
-      if (currentUser) {
-        console.log('🔄 RegistrationSummary: User already logged in, signing out first...');
-        await signOut();
-        console.log('✅ RegistrationSummary: Signed out existing user');
-      }
-      
-      // וידוא שכל הנתונים הנדרשים קיימים
-      const registrationData = {
-        email: data.email,
-        password: data.password,
-        display_name: data.fullName,
-            full_name: data.fullName,
-        profile_picture: data.profileImage,
-        phone: data.phone,
-        track_id: data.trackId || '1', // default למסלול מתחילים
-        account_type: data.accountType,
-        intro_data: {
-          markets: data.markets || [],
-          experience: data.experience || '',
-          styles: data.styles || [],
-          brokers: data.brokers || [],
-          level: data.level || '',
-          goal: data.goal || '',
-          communityGoals: data.communityGoals || [],
-          hours: data.hours || '',
-          socials: data.socials || [],
-          heardFrom: data.heardFrom || '',
-          wish: data.wish || ''
-        }
-      };
-
-      console.log('🔄 RegistrationSummary: Sending registration data:', registrationData);
-
-      // יצירת משתמש עם כל הנתונים בבת אחת
-      console.log('🔄 RegistrationSummary: Calling AuthService.signUp...');
-      
-      let user, signUpError;
-      try {
-        const result = await AuthService.signUp(registrationData);
-        user = result.user;
-        signUpError = result.error;
-        console.log('🔄 RegistrationSummary: AuthService.signUp completed:', { user: !!user, error: signUpError });
-      } catch (authError) {
-        console.error('❌ RegistrationSummary: AuthService.signUp threw exception:', authError);
-        signUpError = authError.message || 'Unknown error in AuthService';
-      }
-
-      if (signUpError) {
-        setLoading(false);
-        Alert.alert('שגיאה בהרשמה', signUpError);
-        return;
-      }
-
-      // אם המשתמש נוצר בהצלחה, נעביר אותו ישירות לדף הקבוצות
-      if (user) {
-        console.log('✅ RegistrationSummary: User created successfully, navigating to main app');
-        
-        // מחיקת explicit_logout כדי לאפשר התחברות אוטומטית למשתמש החדש (אם יסומן "זכור אותי")
-        try {
-          await AsyncStorage.removeItem('explicit_logout');
-          console.log('✅ RegistrationSummary: Removed explicit_logout flag for new user');
-        } catch (error) {
-          console.error('❌ RegistrationSummary: Error removing explicit_logout:', error);
-        }
-        
-      // עדכון ה-AuthContext עם המשתמש החדש
-      setUser(user);
-      
-      // קבלת פרטי התוכנית שנבחרה
-      const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
-      const planName = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
-      
-      Alert.alert(
-        'הרשמה הושלמה בהצלחה!',
-        `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}. תוכל להתחיל להשתמש באפליקציה.`,
-        [
-          {
-            text: 'התחל',
-            onPress: () => {
-              // ניווט ישיר לדף הקבוצות
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Main' }],
-              });
-            }
-          }
-        ]
-      );
-      } else {
-        Alert.alert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
-      }
-    } catch (error: any) {
-      setLoading(false);
-      Alert.alert('שגיאה', 'אירעה שגיאה בעת השלמת ההרשמה');
-      console.error('Registration completion error:', error);
-    }
-  };
-
-  const { width, height } = Dimensions.get('window');
 
   // Create subtle background pattern
   const createBackgroundPattern = () => {
@@ -160,6 +39,142 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   };
 
   const backgroundPattern = createBackgroundPattern();
+
+  const handleFinish = async () => {
+    setLoading(true);
+    
+    try {
+      console.log('🔄 RegistrationSummary: Starting registration with data:', data);
+      console.log('🔄 RegistrationSummary: isGoogleSignUp:', data.isGoogleSignUp);
+      
+      const introData = {
+        markets: data.markets || [],
+        experience: data.experience || '',
+        styles: data.styles || [],
+        brokers: data.brokers || [],
+        level: data.level || '',
+        goal: data.goal || '',
+        communityGoals: data.communityGoals || [],
+        hours: data.hours || '',
+        socials: data.socials || [],
+        heardFrom: data.heardFrom || '',
+        wish: data.wish || '',
+        fullTime: data.fullTime || '',
+        style: data.style || ''
+      };
+      
+      let user, signUpError;
+      
+      // הרשמה עם Google - עדכון פרופיל קיים
+      if (data.isGoogleSignUp && data.googleUserId) {
+        console.log('🔄 RegistrationSummary: Completing Google sign-up for user:', data.googleUserId);
+        
+        try {
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              phone: data.phone || null,
+              track_id: data.trackId || '1',
+              account_type: data.accountType,
+              intro_data: introData,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', data.googleUserId);
+          
+          if (updateError) {
+            console.error('❌ RegistrationSummary: Error updating Google user profile:', updateError);
+            signUpError = updateError.message;
+          } else {
+            const updatedUser = await AuthService.getUserProfile(data.googleUserId);
+            user = updatedUser;
+            console.log('✅ RegistrationSummary: Google user profile updated successfully');
+          }
+        } catch (error: any) {
+          console.error('❌ RegistrationSummary: Exception updating Google user:', error);
+          signUpError = error.message || 'שגיאה בעדכון הפרופיל';
+        }
+      } else {
+        // הרשמה רגילה
+        console.log('🔄 RegistrationSummary: Standard registration');
+        
+        try {
+          await AsyncStorage.removeItem('saved_email');
+          await AsyncStorage.removeItem('saved_password');
+          await AsyncStorage.removeItem('remember_me');
+          await AsyncStorage.setItem('explicit_logout', 'true');
+        } catch (storageError) {
+          console.error('❌ RegistrationSummary: Error clearing saved credentials:', storageError);
+        }
+        
+        if (currentUser) {
+          console.log('🔄 RegistrationSummary: User already logged in, signing out first...');
+          await signOut();
+        }
+        
+        const registrationData = {
+          email: data.email,
+          password: data.password,
+          display_name: data.fullName,
+          full_name: data.fullName,
+          profile_picture: data.profileImage,
+          phone: data.phone,
+          track_id: data.trackId || '1',
+          account_type: data.accountType,
+          intro_data: introData
+        };
+
+        try {
+          const result = await AuthService.signUp(registrationData);
+          user = result.user;
+          signUpError = result.error;
+        } catch (authError: any) {
+          signUpError = authError.message || 'Unknown error in AuthService';
+        }
+      }
+
+      if (signUpError) {
+        setLoading(false);
+        Alert.alert('שגיאה בהרשמה', signUpError);
+        return;
+      }
+
+      if (user) {
+        try {
+          await AsyncStorage.removeItem('explicit_logout');
+        } catch (error) {
+          console.error('❌ RegistrationSummary: Error removing explicit_logout:', error);
+        }
+        
+        setUser(user);
+        if (resetData) resetData();
+        
+        const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
+        const planName = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
+        
+        Alert.alert(
+          'הרשמה הושלמה בהצלחה!',
+          `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}. תוכל להתחיל להשתמש באפליקציה.`,
+          [
+            {
+              text: 'התחל',
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'Main' }],
+                });
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
+      }
+    } catch (error: any) {
+      setLoading(false);
+      Alert.alert('שגיאה', 'אירעה שגיאה בעת השלמת ההרשמה');
+      console.error('Registration completion error:', error);
+    }
+  };
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -200,7 +215,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           />
 
-          {/* Transparent Background Image - Center */}
+          {/* Transparent Background Image */}
           <View style={{
             position: 'absolute',
             top: 0,
@@ -227,7 +242,6 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
             {/* Header Section */}
             <View style={{ alignItems: 'center', marginBottom: 40 }}>
-              {/* Success Icon */}
               <View style={{
                 width: 80,
                 height: 80,
@@ -247,33 +261,28 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                 <Check size={40} color={DesignTokens.colors.primary.main} strokeWidth={2} />
               </View>
 
-              {/* Main Title */}
               <Text style={{ 
                 fontSize: 32, 
                 fontWeight: '800', 
                 color: DesignTokens.colors.text.primary, 
                 marginBottom: 8,
                 letterSpacing: -0.8,
-                textAlign: 'center',
-                writingDirection: 'rtl'
+                textAlign: 'center'
               }}>
                 הרשמה הושלמה!
               </Text>
               
-              {/* Subtitle */}
               <Text style={{ 
                 fontSize: 16, 
                 color: DesignTokens.colors.text.secondary, 
                 fontWeight: '400',
                 letterSpacing: 0.3,
                 textAlign: 'center',
-                lineHeight: 22,
-                writingDirection: 'rtl'
+                lineHeight: 22
               }}>
                 ברוכים הבאים ל-DarkPool
               </Text>
               
-              {/* Decorative Line */}
               <View style={{
                 width: 60,
                 height: 2,
@@ -294,7 +303,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             }}>
               {/* Profile Section */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-        {data.profileImage ? (
+                {data.profileImage ? (
                   <Image
                     source={{ uri: data.profileImage }}
                     style={{
@@ -322,14 +331,14 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                     color: DesignTokens.colors.text.primary, 
                     fontSize: 18, 
                     fontWeight: '700',
-                    writingDirection: 'rtl'
+                    textAlign: 'right'
                   }}>
                     {data.fullName}
                   </Text>
                   <Text style={{ 
                     color: DesignTokens.colors.text.secondary, 
                     fontSize: 14,
-                    writingDirection: 'rtl'
+                    textAlign: 'right'
                   }}>
                     {data.email}
                   </Text>
@@ -338,37 +347,33 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
 
               {/* Details Section */}
               <View style={{ gap: 16 }}>
-                {/* Phone */}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Phone size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} style={{ marginLeft: 12 }} />
-                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
+                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, textAlign: 'right', flex: 1 }}>
                     {data.phone}
                   </Text>
                 </View>
 
-                {/* Track */}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <TrendingUp size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} style={{ marginLeft: 12 }} />
-                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
+                  <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, textAlign: 'right', flex: 1 }}>
                     {tracks[data.trackId] || 'מסלול לא נבחר'}
                   </Text>
                 </View>
 
-                {/* Markets */}
                 {data.markets && data.markets.length > 0 && (
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <BarChart3 size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} style={{ marginLeft: 12 }} />
-                    <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
+                    <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, textAlign: 'right', flex: 1 }}>
                       {data.markets.join(', ')}
                     </Text>
                   </View>
                 )}
 
-                {/* Experience */}
                 {data.experience && (
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Clock size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} style={{ marginLeft: 12 }} />
-                    <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
+                    <Text style={{ color: DesignTokens.colors.text.primary, fontSize: 14, textAlign: 'right', flex: 1 }}>
                       {data.experience}
                     </Text>
                   </View>
@@ -378,7 +383,6 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
 
             {/* Action Buttons */}
             <View style={{ gap: 16 }}>
-              {/* Finish Button */}
               <LinearGradient
                 colors={['#00E654', '#00B84A', '#008F3A']}
                 start={{ x: 0, y: 0 }}
@@ -392,17 +396,17 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                   elevation: 8
                 }}
               >
-        <TouchableOpacity
-          onPress={handleFinish}
-          disabled={loading}
+                <TouchableOpacity
+                  onPress={handleFinish}
+                  disabled={loading}
                   style={{
                     paddingVertical: 16,
                     alignItems: 'center',
                     justifyContent: 'center',
                     opacity: loading ? 0.7 : 1
                   }}
-        >
-          {loading ? (
+                >
+                  {loading ? (
                     <ActivityIndicator color="#000000" size="small" />
                   ) : (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -412,17 +416,15 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                         fontSize: 16, 
                         fontWeight: '700',
                         letterSpacing: 0.5,
-                        textTransform: 'uppercase',
-                        writingDirection: 'rtl'
+                        textTransform: 'uppercase'
                       }}>
                         התחל להשתמש
                       </Text>
                     </View>
-          )}
-        </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
               </LinearGradient>
 
-              {/* Edit Button */}
               <TouchableOpacity
                 onPress={() => navigation.goBack()}
                 style={{
@@ -439,18 +441,17 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                   color: DesignTokens.colors.text.secondary, 
                   fontSize: 16, 
                   fontWeight: '600',
-                  letterSpacing: 0.3,
-                  writingDirection: 'rtl'
+                  letterSpacing: 0.3
                 }}>
                   ערוך פרטים
                 </Text>
               </TouchableOpacity>
             </View>
-    </View>
+          </View>
         </LinearGradient>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 };
 
-export default RegistrationSummaryScreen; 
+export default RegistrationSummaryScreen;

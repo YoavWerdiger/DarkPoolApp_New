@@ -746,127 +746,14 @@ export default function EconomicCalendarTab() {
             </TouchableOpacity>
           </View>
 
-          {/* שורה תחתונה - כפתורים נוספים */}
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            gap: 10
-          }}>
-            {/* כפתור גלילה לכעת - תמיד מוצג כשהיום (לבדיקה) */}
-            {selectedDate.toDateString() === new Date().toDateString() && (
-              <TouchableOpacity
-                onPress={() => {
-                  console.log('🔘 Button pressed! Events:', dailyEvents.length);
-                  Alert.alert(
-                    'בדיקת גלילה',
-                    `מספר אירועים: ${dailyEvents.length}\nתאריך: ${selectedDate.toDateString()}`,
-                    [
-                      {
-                        text: 'גלול',
-                        onPress: () => {
-                          if (dailyEvents.length === 0) {
-                            Alert.alert('אין אירועים', 'אין אירועים להיום');
-                            return;
-                          }
-                          
-                          const now = new Date();
-                          const currentMinutes = now.getHours() * 60 + now.getMinutes();
-                          
-                          let closestIndex = 0;
-                          let smallestDiff = Infinity;
-
-                          dailyEvents.forEach((event, index) => {
-                            const [hours, minutes] = (event.time || '00:00').split(':').map(Number);
-                            const eventMinutes = hours * 60 + minutes;
-                            const diff = Math.abs(eventMinutes - currentMinutes);
-                            
-                            if (diff < smallestDiff) {
-                              smallestDiff = diff;
-                              closestIndex = index;
-                            }
-                          });
-
-                          const event = dailyEvents[closestIndex];
-                          console.log('📍 Scrolling to index:', closestIndex, event?.title);
-                          
-                          console.log('📏 dailyEventsListRef exists:', !!dailyEventsListRef.current);
-                          // נחכה 100ms לוודא שה-FlatList מוכן
-                          setTimeout(() => {
-                            if (dailyEventsListRef.current) {
-                              console.log('📏 Scrolling to index:', closestIndex);
-                              
-                              // גלילה עם FlatList
-                              dailyEventsListRef.current.scrollToIndex({
-                                index: closestIndex,
-                                animated: true,
-                                viewPosition: 0.5
-                              });
-                              console.log('✅ FlatList.scrollToIndex called');
-                            } else {
-                              console.log('❌ FlatList ref still null');
-                              Alert.alert('שגיאה', 'FlatList לא מוכן');
-                            }
-                          }, 100);
-                        }
-                      },
-                      { text: 'ביטול', style: 'cancel' }
-                    ]
-                  );
-                }}
-                activeOpacity={0.6}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  borderRadius: 20,
-                  backgroundColor: DesignTokens.colors.primary.main,
-                  gap: 6
-                }}
-              >
-                <Clock size={14} color="#000" strokeWidth={2} />
-                <Text style={{
-                  fontSize: 12,
-                  color: '#000',
-                  fontWeight: '700'
-                }}>
-                  גלול לכעת ({dailyEvents.length})
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            {/* כפתור בדיקה - גלול לסוף */}
-            <TouchableOpacity
-              onPress={() => {
-                console.log('🔽 Scroll to end pressed, ref exists:', !!dailyEventsListRef.current);
-                // נחכה 100ms לוודא שה-FlatList מוכן
-                setTimeout(() => {
-                  if (dailyEventsListRef.current && dailyEvents.length > 0) {
-                    console.log('✅ scrollToEnd calling...');
-                    dailyEventsListRef.current.scrollToEnd({ animated: true });
-                  } else {
-                    console.log('❌ FlatList ref still null or no events');
-                    Alert.alert('שגיאה', 'FlatList ref is null');
-                  }
-                }, 100);
-              }}
-              activeOpacity={0.6}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 9,
-                borderRadius: 20,
-                backgroundColor: '#FF6B6B'
-              }}
-            >
-              <Text style={{ fontSize: 12, color: '#fff', fontWeight: '700' }}>
-                לסוף ↓
-              </Text>
-            </TouchableOpacity>
-
-            {/* כפתור חזרה להיום - מוצג רק כשלא בהיום */}
-            {selectedDate.toDateString() !== new Date().toDateString() && (
+          {/* כפתור חזרה להיום - מוצג רק כשלא בהיום */}
+          {selectedDate.toDateString() !== new Date().toDateString() && (
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              marginTop: 8
+            }}>
               <TouchableOpacity
                 onPress={goToToday}
                 activeOpacity={0.6}
@@ -887,8 +774,8 @@ export default function EconomicCalendarTab() {
                   היום
                 </Text>
               </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          )}
         </UICard>
       </View>
 
@@ -903,8 +790,8 @@ export default function EconomicCalendarTab() {
           renderItem={renderEvent}
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingTop: 4, flexGrow: 1 }}
-        showsVerticalScrollIndicator={true}
-        // אופטימיזציות ביצועים
+          showsVerticalScrollIndicator={true}
+          // אופטימיזציות ביצועים
         initialNumToRender={10}
         maxToRenderPerBatch={8}
         windowSize={10}

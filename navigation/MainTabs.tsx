@@ -1,14 +1,12 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { getFocusedRouteNameFromRoute, useNavigation, NavigationContainerRef } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import NewsScreen from '../screens/News';
 import JournalScreen from '../screens/Journal';
-import { Ionicons } from '@expo/vector-icons';
-import { View, Platform, StyleSheet, TouchableOpacity } from 'react-native';
-import { User, Newspaper, BookOpen, GraduationCap, Users } from 'lucide-react-native';
+import MarketsScreen from '../screens/Markets/MarketsScreen';
+import { View, Platform, StyleSheet } from 'react-native';
+import { Newspaper, BookOpen, GraduationCap, Users, TrendingUp } from 'lucide-react-native';
 import ChatStack from '../navigation/ChatStack';
 import LearningStack from '../navigation/LearningStack';
-import ProfileStack from '../navigation/ProfileStack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../components/ui/DesignTokens';
 import { BlurView } from 'expo-blur';
@@ -66,64 +64,11 @@ export default function MainTabs() {
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const safeBottom = insets.bottom || 0;
-  const navigation = useNavigation<BottomTabNavigationProp<any>>();
-  
-  // כפתור FAB ליצירת טרייד
-  const CreateTradeFAB = () => {
-    const handlePress = () => {
-      // ניווט לטאב יומן - שימוש ב-jumpTo עבור bottom tab navigator
-      try {
-        // נסה להשתמש ב-jumpTo אם זה bottom tab navigator
-        if ('jumpTo' in navigation && typeof navigation.jumpTo === 'function') {
-          navigation.jumpTo('Journal');
-        } else {
-          // Fallback - נסה לנווט דרך parent
-          const parent = navigation.getParent();
-          if (parent) {
-            parent.navigate('Main', { screen: 'Journal' });
-          } else {
-            // Fallback אחרון - נסה navigate ישירות
-            (navigation as any).navigate('Journal');
-          }
-        }
-      } catch (error) {
-        console.error('Error navigating to Journal:', error);
-      }
-    };
-
-    return (
-      <TouchableOpacity
-        style={[
-          {
-            position: 'absolute',
-            bottom: 60 + safeBottom + 16,
-            alignSelf: 'center',
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: DesignTokens.colors.primary.main,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-            zIndex: 1000,
-          }
-        ]}
-        onPress={handlePress}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={28} color={DesignTokens.colors.text.primary} />
-      </TouchableOpacity>
-    );
-  };
   
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <Tab.Navigator
-        initialRouteName="Chat"
+        initialRouteName="Markets"
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarActiveTintColor: DesignTokens.colors.primary.main,
@@ -164,10 +109,10 @@ export default function MainTabs() {
             const iconSize = focused ? size + 2 : size;
             const strokeWidth = focused ? 2.5 : 2;
             
-            if (route.name === 'Chat') {
+            if (route.name === 'Markets') {
+              return <TrendingUp size={iconSize} color={color} strokeWidth={strokeWidth} />;
+            } else if (route.name === 'Chat') {
               return <Users size={iconSize} color={color} strokeWidth={strokeWidth} />;
-            } else if (route.name === 'Profile') {
-              return <User size={iconSize} color={color} strokeWidth={strokeWidth} />;
             } else if (route.name === 'News') {
               return <Newspaper size={iconSize} color={color} strokeWidth={strokeWidth} />;
             } else if (route.name === 'Journal') {
@@ -185,6 +130,19 @@ export default function MainTabs() {
           },
         })}
       >
+      <Tab.Screen 
+        name="Markets" 
+        component={MarketsScreen} 
+        options={{ title: 'שווקים' }}
+        listeners={{
+          tabPress: (e) => {
+            console.log('📈 MainTabs: Markets tab pressed', e);
+          },
+          focus: () => {
+            console.log('📈 MainTabs: Markets tab focused');
+          },
+        }}
+      />
       <Tab.Screen 
         name="News" 
         component={NewsScreen} 
@@ -256,9 +214,7 @@ export default function MainTabs() {
           },
         }}
       />
-      <Tab.Screen name="Profile" component={ProfileStack} options={{ title: 'פרופיל' }} />
       </Tab.Navigator>
-      <CreateTradeFAB />
     </View>
   );
 } 

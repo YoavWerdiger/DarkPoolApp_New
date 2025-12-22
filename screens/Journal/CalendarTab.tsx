@@ -5,6 +5,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
+import AddTradeModal from './AddTradeModal';
 import { Trade } from './TradesListTab';
 import StatisticsCarousel, { StatisticItem } from '../../components/Journal/StatisticsCarousel';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -24,6 +25,7 @@ export default function CalendarTab() {
   const [dailyPnl, setDailyPnl] = useState<DailyPnl[]>([]);
   const [loading, setLoading] = useState(true);
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -196,121 +198,140 @@ export default function CalendarTab() {
 
   return (
     <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
-      <ScrollView 
+      <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={true}
       >
-      {/* Month Header */}
-      <View style={styles.monthHeaderContainer}>
-        <UICard variant="blur" padding="md">
-          <View style={styles.monthHeader}>
-            <TouchableOpacity
-              onPress={() => navigateMonth('prev')}
-              style={styles.navButton}
-            >
-              <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
-            </TouchableOpacity>
+        {/* Month Header */}
+        <View style={styles.monthHeaderContainer}>
+          <UICard variant="blur" padding="md">
+            <View style={styles.monthHeader}>
+              <TouchableOpacity
+                onPress={() => navigateMonth('prev')}
+                style={styles.navButton}
+              >
+                <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
+              </TouchableOpacity>
 
-            <View style={styles.monthInfo}>
-              <Text style={styles.monthName}>{getMonthName(currentDate)}</Text>
-              <View style={styles.monthTotal}>
-                <Text style={styles.monthTotalLabel}>סה"כ חודש:</Text>
-                <Text style={[
-                  styles.monthTotalValue,
-                  isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
-                ]}>
+              <View style={styles.monthInfo}>
+                <Text style={styles.monthName}>{getMonthName(currentDate)}</Text>
+                <View style={styles.monthTotal}>
+                  <Text style={styles.monthTotalLabel}>סה"כ חודש:</Text>
                   <Text style={[
                     styles.monthTotalValue,
                     isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
-                  ]}>$</Text>
-                  {formatCurrencyWithColor(monthTotal)}
-                </Text>
+                  ]}>
+                    <Text style={[
+                      styles.monthTotalValue,
+                      isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
+                    ]}>$</Text>
+                    {formatCurrencyWithColor(monthTotal)}
+                  </Text>
+                </View>
               </View>
+
+              <TouchableOpacity
+                onPress={() => navigateMonth('next')}
+                style={styles.navButton}
+              >
+                <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
+              </TouchableOpacity>
             </View>
+          </UICard>
+        </View>
 
-            <TouchableOpacity
-              onPress={() => navigateMonth('next')}
-              style={styles.navButton}
-            >
-              <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
-            </TouchableOpacity>
+        {/* Calendar Grid */}
+        {dailyPnl.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="calendar-outline" size={64} color={DesignTokens.colors.text.tertiary} />
+            <Text style={styles.emptyText}>אין טריידים בחודש הזה</Text>
           </View>
-        </UICard>
-      </View>
+        ) : (
+          <FlatList
+            data={dailyPnl}
+            renderItem={renderCalendarDay}
+            keyExtractor={(item) => item.date}
+            numColumns={7}
+            contentContainerStyle={styles.calendarGrid}
+            scrollEnabled={false}
+          />
+        )}
 
-      {/* Calendar Grid */}
-      {dailyPnl.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="calendar-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-          <Text style={styles.emptyText}>אין טריידים בחודש הזה</Text>
+        {/* Legend */}
+        <View style={styles.legend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.success.main}20` }]} />
+            <Text style={styles.legendText}>רווח</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.text.danger}20` }]} />
+            <Text style={styles.legendText}>הפסד</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: 'transparent' }]} />
+            <Text style={styles.legendText}>ללא טריידים</Text>
+          </View>
         </View>
-      ) : (
-        <FlatList
-          data={dailyPnl}
-          renderItem={renderCalendarDay}
-          keyExtractor={(item) => item.date}
-          numColumns={7}
-          contentContainerStyle={styles.calendarGrid}
-          scrollEnabled={false}
-        />
-      )}
 
-      {/* Legend */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.success.main}20` }]} />
-          <Text style={styles.legendText}>רווח</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.text.danger}20` }]} />
-          <Text style={styles.legendText}>הפסד</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendColor, { backgroundColor: 'transparent' }]} />
-          <Text style={styles.legendText}>ללא טריידים</Text>
-        </View>
-      </View>
-
-      {/* Statistics Carousel */}
-      {(() => {
-        const statistics: StatisticItem[] = trades.length > 0 ? [
-          {
-            id: 'total-trades',
-            title: 'כמות עסקאות',
-            value: trades.length,
-            icon: 'list',
-            color: DesignTokens.colors.primary.main,
-            subtitle: `בחודש ${getMonthName(currentDate)}`,
-          },
-          {
-            id: 'month-pnl',
-            title: 'סה"כ חודש',
-            value: `$${formatCurrencyWithColor(monthTotal)}`,
-            icon: isMonthProfit ? 'trending-up' : 'trending-down',
-            color: isMonthProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
-            subtitle: isMonthProfit ? 'רווח חודשי' : 'הפסד חודשי',
-          },
-          {
-            id: 'average-pnl',
-            title: calculateAveragePnl() >= 0 ? 'רווח ממוצע' : 'הפסד ממוצע',
-            value: `$${formatCurrencyWithColor(calculateAveragePnl())}`,
-            icon: calculateAveragePnl() >= 0 ? 'trending-up' : 'trending-down',
-            color: calculateAveragePnl() >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
-            subtitle: 'לעסקה',
-          },
-          {
-            id: 'win-rate',
-            title: 'Win Rate',
-            value: `${calculateWinRate()}%`,
-            icon: 'trophy',
-            color: DesignTokens.colors.primary.main,
-            subtitle: `${trades.filter(t => t.pnl > 0).length} מתוך ${trades.length}`,
-          },
-        ] : [];
-        return statistics.length > 0 ? <StatisticsCarousel statistics={statistics} /> : null;
-      })()}
+        {/* Statistics Carousel */}
+        {(() => {
+          const statistics: StatisticItem[] = trades.length > 0 ? [
+            {
+              id: 'total-trades',
+              title: 'כמות עסקאות',
+              value: trades.length,
+              icon: 'list',
+              color: DesignTokens.colors.primary.main,
+              subtitle: `בחודש ${getMonthName(currentDate)}`,
+            },
+            {
+              id: 'month-pnl',
+              title: 'סה"כ חודש',
+              value: `$${formatCurrencyWithColor(monthTotal)}`,
+              icon: isMonthProfit ? 'trending-up' : 'trending-down',
+              color: isMonthProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
+              subtitle: isMonthProfit ? 'רווח חודשי' : 'הפסד חודשי',
+            },
+            {
+              id: 'average-pnl',
+              title: calculateAveragePnl() >= 0 ? 'רווח ממוצע' : 'הפסד ממוצע',
+              value: `$${formatCurrencyWithColor(calculateAveragePnl())}`,
+              icon: calculateAveragePnl() >= 0 ? 'trending-up' : 'trending-down',
+              color: calculateAveragePnl() >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
+              subtitle: 'לעסקה',
+            },
+            {
+              id: 'win-rate',
+              title: 'Win Rate',
+              value: `${calculateWinRate()}%`,
+              icon: 'trophy',
+              color: DesignTokens.colors.primary.main,
+              subtitle: `${trades.filter(t => t.pnl > 0).length} מתוך ${trades.length}`,
+            },
+          ] : [];
+          return statistics.length > 0 ? <StatisticsCarousel statistics={statistics} /> : null;
+        })()}
       </ScrollView>
+
+      {/* Add Trade FAB */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowAddModal(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="add" size={32} color={DesignTokens.colors.text.primary} />
+      </TouchableOpacity>
+
+      {/* Add Trade Modal */}
+      <AddTradeModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          setShowAddModal(false);
+          loadTrades();
+        }}
+      />
     </View>
   );
 }
@@ -321,6 +342,24 @@ const dayWidth = (width - 48) / 7; // 7 columns with padding
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight: number) => StyleSheet.create({
   container: {
     flex: 1,
+    position: 'relative',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: mainTabsHeight + 16,
+    left: tokens.spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: tokens.colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+    zIndex: 100,
   },
   scrollContent: {
   },

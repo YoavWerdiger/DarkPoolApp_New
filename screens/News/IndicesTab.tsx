@@ -167,9 +167,7 @@ export default function IndicesTab() {
       widgetCard: {
         marginTop: DesignTokens.spacing.xs,
         marginBottom: DesignTokens.spacing.lg,
-        borderRadius: DesignTokens.borderRadius.lg,
-        overflow: 'hidden' as const,
-      },
+      } as const,
       widgetTitle: {
         fontSize: DesignTokens.typography.fontSize.lg,
         fontWeight: DesignTokens.typography.fontWeight.bold as any,
@@ -178,7 +176,7 @@ export default function IndicesTab() {
         marginBottom: DesignTokens.spacing.sm,
       },
       webviewContainer: {
-        height: SCREEN_HEIGHT * 0.45,
+        height: SCREEN_HEIGHT * 0.4,
         borderRadius: DesignTokens.borderRadius.md,
         overflow: 'hidden' as const,
       },
@@ -212,16 +210,54 @@ export default function IndicesTab() {
         showsVerticalScrollIndicator={false}
       >
         {/* ווידג'ט מדדים של TradingView למעלה */}
-        <UICard variant="blur" padding="md" style={styles.widgetCard}>
+        <UICard 
+          variant="blur" 
+          padding="md" 
+          style={{
+            ...styles.widgetCard,
+            ...DesignTokens.shadows.lg,
+          }}
+        >
           <Text style={styles.widgetTitle}>מדדי שוק מרכזיים</Text>
           <View style={styles.webviewContainer}>
             <WebView
               source={{ html: widgetHtml }}
               style={[styles.webview, { backgroundColor: 'transparent' }]}
-              javaScriptEnabled
-              domStorageEnabled
-              startInLoadingState
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              startInLoadingState={true}
               originWhitelist={['*']}
+              mixedContentMode="always"
+              allowsInlineMediaPlayback={true}
+              mediaPlaybackRequiresUserAction={false}
+              nestedScrollEnabled={true}
+              scrollEnabled={true}
+              bounces={false}
+              showsVerticalScrollIndicator={true}
+              showsHorizontalScrollIndicator={false}
+              onLoadStart={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.log('📊 IndicesTab: Loading started', nativeEvent.url);
+              }}
+              onLoadEnd={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.log('✅ IndicesTab: Loading ended', nativeEvent.url);
+              }}
+              onError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.error('❌ IndicesTab: Error', nativeEvent);
+              }}
+              onHttpError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                console.error('❌ IndicesTab: HTTP Error', nativeEvent.statusCode, nativeEvent.url);
+              }}
+              onShouldStartLoadWithRequest={(request) => {
+                console.log('🔍 IndicesTab: Request to load:', request.url);
+                // מונע ניווט חיצוני - שומר את כל הניווט בתוך ה-WebView
+                const shouldLoad = request.url.startsWith('about:blank') || request.url.includes('tradingview.com');
+                console.log('🔍 IndicesTab: Should load:', shouldLoad);
+                return shouldLoad;
+              }}
             />
           </View>
         </UICard>

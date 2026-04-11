@@ -32,7 +32,7 @@ const EarningsReportCard: React.FC<{
   // פונקציה לקבלת צבע לפי surprise
   const getSurpriseColor = (percent: number | null | undefined): string => {
     if (percent === null || percent === undefined) return DesignTokens.colors.text.secondary;
-    if (percent > 0) return '#00D84A'; // ירוק
+    if (percent > 0) return DesignTokens.colors.primary.main; // ירוק
     if (percent < 0) return DesignTokens.colors.danger.main; // אדום
     return DesignTokens.colors.text.secondary; // אפור (percent === 0)
   };
@@ -117,8 +117,9 @@ const EarningsReportCard: React.FC<{
     return `https://cdn.brandfetch.io/${cleanSymbol}?c=1idgv-PUKssFHXQBcKA`;
   };
 
+  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   return (
-    <Pressable onPress={() => onPress(report)} style={{ marginHorizontal: 16, marginBottom: 12 }}>
+    <Pressable onPress={() => onPress(report)} style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
       <UICard
         variant="blur"
         padding="lg"
@@ -156,7 +157,6 @@ const EarningsReportCard: React.FC<{
                 backgroundColor: DesignTokens.colors.background.tertiary
               }}
               onError={(error) => {
-                console.log('Logo load error for', report.code, error);
               }}
             />
             <View style={{ flex: 1, justifyContent: 'flex-start' }}>
@@ -203,13 +203,13 @@ const EarningsReportCard: React.FC<{
               }}>
                 <IconComponent 
                   size={11} 
-                  color={timeInfo.color || '#00D84A'} 
+                  color={timeInfo.color || DesignTokens.colors.primary.main} 
                   strokeWidth={2} 
                   style={{ marginRight: 5 }} 
                 />
                 <Text style={{ 
                   fontSize: 11, 
-                  color: timeInfo.color || '#00D84A',
+                  color: timeInfo.color || DesignTokens.colors.primary.main,
                   fontWeight: '600'
                 }}>
                   {timeInfo.text}
@@ -415,37 +415,17 @@ export default function EarningsReportsTab() {
   const loadEarningsReports = useCallback(async () => {
     try {
       const selectedDateStr = selectedDate.toISOString().split('T')[0];
-      console.log('📈 EarningsReportsTab: ===== Starting loadEarningsReports =====');
-      console.log('📅 Selected date:', selectedDateStr);
-      console.log('📅 Selected date object:', selectedDate);
       setLoading(true);
       
       // שליפה אחת של כל הנתונים
-      console.log('🔄 EarningsReportsTab: Calling EarningsService.getAll()...');
       const startTime = Date.now();
       const allReports = await EarningsService.getAll();
       const loadTime = Date.now() - startTime;
-      console.log(`✅ EarningsReportsTab: getAll() completed in ${loadTime}ms`);
-      console.log(`📊 Total reports loaded: ${allReports.length}`);
-      
       if (allReports.length > 0) {
-        console.log('📋 Sample report:', {
-          code: allReports[0].code,
-          report_date: allReports[0].report_date,
-          before_after_market: allReports[0].before_after_market,
-          actual: allReports[0].actual,
-          estimate: allReports[0].estimate
-        });
       }
       
       // סינון לפי התאריך הנבחר
-      console.log(`🔍 Filtering reports for date: ${selectedDateStr}`);
-      console.log(`📅 All available dates in reports:`, 
-        Array.from(new Set(allReports.map(r => r.report_date))).sort().slice(0, 10)
-      );
       let dateReports = EarningsService.filterByDate(allReports, selectedDateStr);
-      console.log(`📊 Reports for selected date: ${dateReports.length}`);
-      
       // אם אין דיווחים לתאריך הנבחר, נבדוק אם יש דיווחים קרובים
       if (dateReports.length === 0) {
         const today = new Date().toISOString().split('T')[0];
@@ -456,10 +436,6 @@ export default function EarningsReportsTab() {
         const todayReports = EarningsService.filterByDate(allReports, today);
         const tomorrowReports = EarningsService.filterByDate(allReports, tomorrowStr);
         
-        console.log(`⚠️ No reports for ${selectedDateStr}`);
-        console.log(`   📅 Today (${today}): ${todayReports.length} reports`);
-        console.log(`   📅 Tomorrow (${tomorrowStr}): ${tomorrowReports.length} reports`);
-        
         // מציגים את הדיווחים הקרובים ביותר (אם יש)
         const closestReports = allReports
           .filter(r => r.report_date >= selectedDateStr)
@@ -467,9 +443,6 @@ export default function EarningsReportsTab() {
           .slice(0, 5);
         
         if (closestReports.length > 0) {
-          console.log(`   📅 Closest future reports:`, 
-            closestReports.map(r => `${r.report_date} (${r.code})`)
-          );
         }
       }
       
@@ -535,28 +508,22 @@ export default function EarningsReportsTab() {
       const afterCount = dateReports.filter(r => r.before_after_market === 'AfterMarket').length;
       const nullCount = dateReports.filter(r => !r.before_after_market).length;
       
-      console.log(`✅ EarningsReportsTab: Filtered ${sortedReports.length} reports for ${selectedDateStr}`);
-      console.log(`   📊 Breakdown: BeforeMarket: ${beforeCount}, AfterMarket: ${afterCount}, NULL: ${nullCount}`);
-      
       if (sortedReports.length > 0) {
-        console.log('📋 First filtered report:', {
-          code: sortedReports[0].code,
-          report_date: sortedReports[0].report_date,
-          before_after_market: sortedReports[0].before_after_market
-        });
       }
       
       setReports(allReports); // שמירת כל הנתונים
+      
+      if (sortedReports.length === 0 && allReports.length > 0 && selectedDateStr === new Date().toISOString().split('T')[0]) {
+        const datesWithReports = [...new Set(allReports.map(r => r.report_date))].sort();
+        const nextDate = datesWithReports.find(d => d >= selectedDateStr);
+        if (nextDate) {
+          setSelectedDate(new Date(nextDate + 'T12:00:00'));
+        }
+      }
       setFilteredReports(sortedReports); // הצגת דיווחי התאריך הנבחר ממוינים
       
-      console.log('✅ EarningsReportsTab: ===== loadEarningsReports completed successfully =====');
-      
     } catch (error) {
-      console.error('❌ EarningsReportsTab: ===== Error in loadEarningsReports =====');
-      console.error('❌ Error details:', error);
       if (error instanceof Error) {
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error stack:', error.stack);
       }
       Alert.alert('שגיאה', 'לא ניתן לטעון את דיווחי התוצאות');
       setReports([]);
@@ -564,7 +531,6 @@ export default function EarningsReportsTab() {
     } finally {
       setLoading(false);
       setRefreshing(false);
-      console.log('🏁 EarningsReportsTab: loadEarningsReports finished (loading set to false)');
     }
   }, [selectedDate]);
 
@@ -575,39 +541,32 @@ export default function EarningsReportsTab() {
 
   // Realtime subscription
   useEffect(() => {
-    console.log('🔄 Subscribing to earnings_calendar realtime updates...');
-    
     const subscription = supabase
       .channel('earnings_calendar_channel')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'earnings_calendar' },
         (payload) => {
-          console.log('📡 Earnings report realtime update:', payload);
           loadEarningsReports();
         }
       )
       .subscribe();
 
     return () => {
-      console.log('🔄 Unsubscribing from earnings_calendar realtime');
       subscription.unsubscribe();
     };
   }, []); // הסרנו את התלות ב-loadEarningsReports
 
   // רענון
   const handleRefresh = useCallback(async () => {
-    console.log('🔄 EarningsReportsTab: Starting refresh...');
     setRefreshing(true);
     
     // טען את הנתונים מהטבלה (ללא קריאה ל-Edge Function שלא קיים)
     await loadEarningsReports();
     
-    console.log('✅ EarningsReportsTab: Refresh completed');
   }, [loadEarningsReports]);
 
   // בחירת דיווח - פתיחת bottom sheet
   const handleReportPress = useCallback((report: EarningsReport) => {
-    console.log('📈 EarningsReportsTab: Report pressed:', report.code);
     setSelectedReport(report);
     setDetailModalVisible(true);
   }, []);
@@ -782,9 +741,25 @@ export default function EarningsReportsTab() {
             : `לא נמצאו דיווחי תוצאות ב${dateStr}`
           }
         </Text>
+        {hasClosestReports && closestDate && (
+          <TouchableOpacity
+            style={{
+              marginTop: 16,
+              paddingHorizontal: 24,
+              paddingVertical: 12,
+              borderRadius: 14,
+              backgroundColor: DesignTokens.colors.primary.main
+            }}
+            onPress={() => setSelectedDate(closestDate)}
+          >
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#000' }}>
+              עבור לתאריך עם דיווחים ({closestDate.toLocaleDateString('he-IL', { day: 'numeric', month: 'short' })})
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={{
-            marginTop: 24,
+            marginTop: 12,
             paddingHorizontal: 28,
             paddingVertical: 14,
             borderRadius: 14,
@@ -1017,11 +992,9 @@ interface EarningsDetailSheetProps {
 
 const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, report, onClose }) => {
   const DesignTokens = useDesignTokens();
-  console.log('📊 EarningsDetailSheet: visible =', visible, 'report =', report?.code);
-  
   const getSurpriseColor = (percent: number | null): string => {
     if (!percent) return DesignTokens.colors.text.secondary;
-    if (percent > 0) return '#00D84A';
+    if (percent > 0) return DesignTokens.colors.primary.main;
     if (percent < 0) return DesignTokens.colors.danger.main;
     return DesignTokens.colors.text.secondary;
   };
@@ -1278,7 +1251,6 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
                   backgroundColor: DesignTokens.colors.background.tertiary
                 }}
                 onError={(error) => {
-                  console.log('Logo load error for', report.code, error);
                 }}
               />
               <View style={{ flex: 1 }}>
@@ -1336,24 +1308,18 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
                 scrollEnabled={false}
                 onLoadStart={(syntheticEvent) => {
                   const { nativeEvent } = syntheticEvent;
-                  console.log('📈 EarningsChart: Loading started', nativeEvent.url, 'for symbol:', report.code);
                 }}
                 onLoadEnd={(syntheticEvent) => {
                   const { nativeEvent } = syntheticEvent;
-                  console.log('✅ EarningsChart: Loading ended', nativeEvent.url, 'for symbol:', report.code);
                 }}
                 onError={(syntheticEvent) => {
                   const { nativeEvent } = syntheticEvent;
-                  console.error('❌ EarningsChart: Error', nativeEvent, 'for symbol:', report.code);
                 }}
                 onHttpError={(syntheticEvent) => {
                   const { nativeEvent } = syntheticEvent;
-                  console.error('❌ EarningsChart: HTTP Error', nativeEvent.statusCode, nativeEvent.url, 'for symbol:', report.code);
                 }}
                 onShouldStartLoadWithRequest={(request) => {
-                  console.log('🔍 EarningsChart: Request to load:', request.url, 'for symbol:', report.code);
                   const shouldLoad = request.url.startsWith('about:blank') || request.url.includes('tradingview.com');
-                  console.log('🔍 EarningsChart: Should load:', shouldLoad, 'for symbol:', report.code);
                   return shouldLoad;
                 }}
               />

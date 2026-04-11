@@ -49,11 +49,12 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
       return DesignTokens.colors.text.primary;
     }
     // כלל פשוט: תוצאה >= תחזית → ירוק עדין, אחרת אדום עדין
-    return actual >= forecast ? '#00D84A' : DesignTokens.colors.danger.main;
+    return actual >= forecast ? DesignTokens.colors.primary.main : DesignTokens.colors.danger.main;
   };
 
+  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   return (
-    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: 16, marginBottom: 12 }}>
+    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
       <UICard variant="blur" padding="lg" style={{ flexDirection: 'row', alignItems: 'flex-start', overflow: 'hidden' }}>
       {/* פס חשיבות דק מיושר לימין, מעוגל בפינות - מתאים לגובה הכרטיסיה */}
       <View
@@ -88,14 +89,14 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
             {cleanTitle}
           </Text>
           <View style={{
-            backgroundColor: 'rgba(0, 216, 74, 0.15)',
+            backgroundColor: (DesignTokens.colors.primary as any).dim || 'rgba(0, 210, 106, 0.12)',
             paddingHorizontal: 10,
             paddingVertical: 6,
             borderRadius: 20
           }}>
             <Text style={{ 
               fontSize: 16, 
-              color: '#00D84A',
+              color: DesignTokens.colors.primary.main,
               fontWeight: '600',
               textAlign: 'center'
             }}>
@@ -214,7 +215,6 @@ export default function EconomicCalendarTab() {
   // דיבאג - בדיקה מתי הref מוכן (useLayoutEffect רץ סינכרוני אחרי DOM update)
   useLayoutEffect(() => {
     if (!loading) {
-      console.log('📜 useLayoutEffect: FlatList ref check:', !!dailyEventsListRef.current);
     }
   }, [loading]);
   
@@ -222,7 +222,6 @@ export default function EconomicCalendarTab() {
   useEffect(() => {
     if (!loading) {
       const timer = setTimeout(() => {
-        console.log('📜 setTimeout (300ms): FlatList ref check:', !!dailyEventsListRef.current);
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -264,10 +263,6 @@ export default function EconomicCalendarTab() {
   // פילטור אירועים לפי יום נבחר עם תיקון שעה
   const filterEventsByDate = useCallback(() => {
     const selectedDateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
-    console.log(`🔍 DEBUG: Filtering for date: ${selectedDateStr}`);
-    console.log(`🔍 DEBUG: Selected date object:`, selectedDate);
-    console.log(`🔍 DEBUG: Total events available:`, events.length);
-    
     // פילטור חכם: דיווחים מ-00:00 עד 06:00 שייכים ליום הקודם
     // דיווחים מ-06:00 והלאה שייכים ליום הנוכחי
     let eventsForDay = events.filter(event => {
@@ -288,7 +283,6 @@ export default function EconomicCalendarTab() {
           previousDay.setDate(selectedDateObj.getDate() - 1);
           const previousDayStr = previousDay.toISOString().split('T')[0];
           
-          console.log(`🕐 Early event ${event.title} at ${eventTime} - should be on ${previousDayStr}, not ${selectedDateStr}`);
           return false; // לא להציג אותו ביום הנוכחי
         }
         
@@ -307,18 +301,12 @@ export default function EconomicCalendarTab() {
         const cutoffHour = 6 * 60; // 06:00
         
         if (eventHour <= cutoffHour) {
-          console.log(`🕐 Late event ${event.title} at ${eventTime} - should be on ${selectedDateStr}, not ${nextDayStr}`);
           return true; // להציג אותו ביום הנוכחי
         }
       }
       
       return false;
     });
-    
-    console.log(`🔍 DEBUG: Events found for ${selectedDateStr} (with time correction):`, eventsForDay.length);
-    console.log(`🔍 DEBUG: Sample events:`, eventsForDay.slice(0, 3).map(e => ({ title: e.title, date: e.date, time: e.time, actual: e.actual })));
-    
-    console.log(`📅 Filtering events for ${selectedDateStr}: found ${eventsForDay.length} events`);
     
     // מיון לפי זמן (מהשעה הקטנה לגדולה)
     eventsForDay.sort((a, b) => {
@@ -390,43 +378,53 @@ export default function EconomicCalendarTab() {
   }, [dailyEvents, selectedDate]);
 
 
-  // טעינת אירועים מ-Supabase Database
+  // טעינת אירועים מ-Supabase Database – קודם טווח קצר (היום והלאה), אחר כך עבר
   const loadFromDatabase = async (): Promise<EconEvent[]> => {
     try {
-      console.log('💾 Loading from Supabase Database...');
-      
-      // קבלת טווח תאריכים - 3 חודשים אחורה ו-3 חודשים קדימה מהיום (לא מהתאריך הנבחר)
-      const today = new Date(); // תמיד התאריך הנוכחי
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
       const startDate = new Date(today);
       startDate.setMonth(startDate.getMonth() - 3);
       const endDate = new Date(today);
       endDate.setMonth(endDate.getMonth() + 3);
-      
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
       
-      console.log(`📅 Fetching events from ${startDateStr} to ${endDateStr}`);
+      // שליפה 1: אירועים מהיום והלאה (טווח קצר) – עד 600 רשומות
+      const { data: futureData, error: futureError } = await supabase
+        .from('economic_events')
+        .select('*')
+        .gte('date', todayStr)
+        .lte('date', endDateStr)
+        .order('date', { ascending: true })
+        .limit(600);
       
-      const { data, error } = await supabase
+      if (futureError) {
+      }
+      
+      // שליפה 2: אירועים לפני היום (עבר) – עד 600 רשומות
+      const { data: pastData, error: pastError } = await supabase
         .from('economic_events')
         .select('*')
         .gte('date', startDateStr)
-        .lte('date', endDateStr)
-        .order('date', { ascending: true })
-        .limit(1000);
+        .lt('date', todayStr)
+        .order('date', { ascending: false })
+        .limit(600);
       
-      if (error) {
-        console.error('❌ Supabase error:', error);
-        return [];
+      if (pastError) {
       }
       
-      if (!data || data.length === 0) {
-        console.log('⚠️ No data in database');
+      const future = futureData || [];
+      const past = (pastData || []).reverse();
+      const byId = new Map<string, (typeof future)[0]>();
+      [...past, ...future].forEach(e => byId.set(e.id, e));
+      const data = Array.from(byId.values()).sort(
+        (a, b) => (a.date as string).localeCompare(b.date as string)
+      );
+      
+      if (data.length === 0) {
         return [];
       }
-      
-      console.log(`✅ Loaded ${data.length} events from database`);
-      console.log(`🔍 DEBUG: Sample data from DB:`, data.slice(0, 3).map(e => ({ title: e.title, date: e.date, actual: e.actual })));
       
       // המרה לפורמט של האפליקציה
       return data.map(event => {
@@ -452,13 +450,11 @@ export default function EconomicCalendarTab() {
         const eventDateTime = new Date(`${convertedEvent.date}T${convertedEvent.time}`);
         const now = new Date();
         if (convertedEvent.actual && eventDateTime > now) {
-          console.warn(`⚠️ WARNING: Event ${convertedEvent.title} on ${convertedEvent.date} has actual value but is in the future!`);
         }
         
         return convertedEvent;
       });
     } catch (error) {
-      console.error('❌ Error loading from database:', error);
       return [];
     }
   };
@@ -466,20 +462,22 @@ export default function EconomicCalendarTab() {
   // טעינת אירועים כלכליים מ-Database בלבד
   const loadEconomicEvents = useCallback(async () => {
     try {
-      console.log('📅 EconomicCalendarTab: Loading economic events from Database');
-      
       // טעינה מ-Supabase Database
       const loadedEvents = await loadFromDatabase();
       
       if (loadedEvents.length === 0) {
-        Alert.alert('אין נתונים', 'הטבלה ריקה. הרץ את daily-economic-sync להביא נתונים.');
+      } else {
+        const datesWithEvents = [...new Set(loadedEvents.map(e => e.date))].sort();
+        const todayStr = new Date().toISOString().split('T')[0];
+        const hasEventsForToday = loadedEvents.some(e => e.date === todayStr);
+        if (datesWithEvents.length > 0 && !hasEventsForToday) {
+          setSelectedDate(new Date(datesWithEvents[0] + 'T12:00:00'));
+        }
       }
       
-      console.log('✅ EconomicCalendarTab: Loaded', loadedEvents.length, 'events');
       setEvents(loadedEvents);
       filterEvents(loadedEvents, selectedImportance);
     } catch (error) {
-      console.error('❌ EconomicCalendarTab: Error loading events:', error);
       Alert.alert('שגיאה', 'לא ניתן לטעון את האירועים הכלכליים');
       setEvents([]);
       setFilteredEvents([]);
@@ -520,14 +518,11 @@ export default function EconomicCalendarTab() {
 
   // Realtime subscription - עדכונים אוטומטיים מ-Supabase
   useEffect(() => {
-    console.log('🔄 Subscribing to economic_events realtime updates...');
-    
     const subscription = supabase
       .channel('economic_events_channel')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'economic_events' },
         (payload) => {
-          console.log('📡 Economic event realtime update:', payload);
           // רענן את הנתונים
           loadEconomicEvents();
         }
@@ -535,7 +530,6 @@ export default function EconomicCalendarTab() {
       .subscribe();
 
     return () => {
-      console.log('🔄 Unsubscribing from economic_events realtime');
       subscription.unsubscribe();
     };
   }, [loadEconomicEvents]);
@@ -550,8 +544,6 @@ export default function EconomicCalendarTab() {
 
   // בחירת אירוע
   const handleEventPress = useCallback((event: EconomicEvent) => {
-    console.log('📅 EconomicCalendarTab: Event pressed:', event.title);
-    
     // קבלת הסבר מקצועי למדד
     const translatedTitle = translateEconomicEventNameSmart(event.title);
     const explanation = getIndicatorExplanation(event.title, event.description, event.category);
@@ -660,7 +652,6 @@ export default function EconomicCalendarTab() {
   };
 
   if (loading) {
-    console.log('📅 EconomicCalendarTab: Still loading...');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
@@ -678,8 +669,6 @@ export default function EconomicCalendarTab() {
     );
   }
 
-  console.log('📅 EconomicCalendarTab: Rendering main view, dailyEventsListRef exists:', !!dailyEventsListRef.current);
-  
   return (
     <View style={{ flex: 1 }}>
       {/* ניווט תאריכים - SwiftUI style */}
@@ -806,7 +795,6 @@ export default function EconomicCalendarTab() {
         }
         ListEmptyComponent={renderEmptyState}
         onScrollToIndexFailed={(info) => {
-          console.warn('⚠️ Scroll to index failed:', info);
           const estimatedItemHeight = info.averageItemLength || 100;
           const targetOffset = Math.max(0, info.index * estimatedItemHeight - 100);
           setTimeout(() => {
@@ -816,7 +804,6 @@ export default function EconomicCalendarTab() {
                 animated: true,
               });
             } catch (e) {
-              console.error('❌ scrollToOffset failed:', e);
             }
           }, 100);
         }}

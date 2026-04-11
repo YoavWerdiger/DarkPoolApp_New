@@ -68,24 +68,43 @@ export async function retryWithCondition<T>(
 ): Promise<T> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   let delay = opts.initialDelay;
+  let lastError: any;
 
   for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
-    const result = await fn();
+    try {
+      const result = await fn();
 
-    if (condition(result)) {
-      return result;
-    }
+      if (condition(result)) {
+        return result;
+      }
 
-    if (attempt === opts.maxRetries) {
-      throw new Error('Max retries reached without meeting condition');
+      if (attempt === opts.maxRetries) {
+        throw new Error('Max retries reached without meeting condition');
+      }
+    } catch (error: any) {
+      lastError = error;
+
+      if (attempt === opts.maxRetries) {
+        throw error;
+      }
+
+      const errorCode = error?.code || error?.message || '';
+      const isRetryable = opts.retryableErrors.some(code =>
+        errorCode.includes(code) || errorCode === code
+      );
+
+      if (!isRetryable) {
+        throw error;
+      }
     }
 
     await new Promise(resolve => setTimeout(resolve, delay));
     delay = Math.min(delay * opts.backoffMultiplier, opts.maxDelay);
   }
 
-  throw new Error('Retry failed');
+  throw lastError || new Error('Retry failed');
 }
+
 
 
 

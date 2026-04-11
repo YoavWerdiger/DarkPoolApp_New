@@ -108,3 +108,4 @@ SELECT * FROM trigger_economics_sync();
 
 
 
+

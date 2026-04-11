@@ -5,7 +5,14 @@ import { CourseDetailScreen } from '../screens/Learning/CourseDetailScreen';
 import { CoursePreviewScreen } from '../screens/Learning/CoursePreviewScreen';
 import { MyNotesScreen } from '../screens/Learning/MyNotesScreen';
 import { LessonPlayerScreen } from '../screens/Learning/LessonPlayerScreen';
-import { useDesignTokens } from '../components/ui/DesignTokens';
+import { withVideoBackground } from '../components/VideoBackground';
+
+const CoursesWithVideo = withVideoBackground(CoursesScreen);
+const LearningWithVideo = withVideoBackground(LearningScreen);
+const CourseDetailWithVideo = withVideoBackground(CourseDetailScreen);
+const CoursePreviewWithVideo = withVideoBackground(CoursePreviewScreen);
+const LessonPlayerWithVideo = withVideoBackground(LessonPlayerScreen);
+const MyNotesWithVideo = withVideoBackground(MyNotesScreen);
 
 export type LearningStackParamList = {
   CoursesScreen: undefined;
@@ -19,49 +26,45 @@ export type LearningStackParamList = {
 const Stack = createNativeStackNavigator<LearningStackParamList>();
 
 export default function LearningStack() {
-  const DesignTokens = useDesignTokens();
-  
   return (
     <Stack.Navigator
       initialRouteName="CoursesScreen"
       screenOptions={{
         headerShown: false,
-        cardStyle: {
-          backgroundColor: DesignTokens.colors.background.primary,
-        },
-        contentStyle: {
-          backgroundColor: DesignTokens.colors.background.primary,
-        },
+        contentStyle: { backgroundColor: '#0A0E0A' },
+        animation: 'fade',
+        gestureEnabled: true,
+        animationDuration: 200,
       }}
     >
       <Stack.Screen 
         name="CoursesScreen" 
-        component={CoursesScreen}
+        component={CoursesWithVideo}
         options={{ title: 'קורסים' }}
       />
       <Stack.Screen 
         name="LearningScreen" 
-        component={LearningScreen}
+        component={LearningWithVideo}
         options={{ title: 'קורס' }}
       />
       <Stack.Screen
         name="CourseDetailScreen"
-        component={CourseDetailScreen}
+        component={CourseDetailWithVideo}
         options={{ title: 'פרטי קורס' }}
       />
       <Stack.Screen
         name="CoursePreviewScreen"
-        component={CoursePreviewScreen}
+        component={CoursePreviewWithVideo}
         options={{ title: 'תצוגה מקדימה' }}
       />
       <Stack.Screen
         name="LessonPlayerScreen"
-        component={LessonPlayerScreen}
-        options={{ title: 'שיעור' }}
+        component={LessonPlayerWithVideo}
+        options={{ title: 'שיעור', headerShown: false }}
       />
       <Stack.Screen
         name="MyNotesScreen"
-        component={MyNotesScreen}
+        component={MyNotesWithVideo}
         options={{ title: 'ההערות שלי' }}
       />
     </Stack.Navigator>

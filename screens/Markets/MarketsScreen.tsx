@@ -1,15 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, Dimensions, ScrollView, TouchableOpacity, StyleSheet, Platform, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useCallback } from 'react';
+import { View, Text, Dimensions, ScrollView, TouchableOpacity, StyleSheet, Platform, ActivityIndicator, Modal } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import FearAndGreedCard from '../../components/News/FearAndGreedCard';
-import { TrendingUp, DollarSign, Coins, Map } from 'lucide-react-native';
+import { TrendingUp, DollarSign, Coins, Map, Maximize2, X } from 'lucide-react-native';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
-
+import { useTheme } from '../../context/ThemeContext';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const hexToRgba = (hex: string, alpha: number) => {
@@ -23,7 +23,7 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const TAB_HTML_TEMPLATE = (bodyContent: string) => `
+const TAB_HTML_TEMPLATE = (bodyContent: string, clipBottom: number = 0) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -46,6 +46,14 @@ const TAB_HTML_TEMPLATE = (bodyContent: string) => `
     .tradingview-widget-container__widget {
       flex: 1;
       min-height: 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .tradingview-widget-container__widget iframe,
+    .tradingview-widget-container__widget > div {
+      width: 100% !important;
+      height: ${clipBottom > 0 ? `calc(100% + ${clipBottom}px)` : '100%'} !important;
+      border: none !important;
     }
     .tradingview-widget-copyright {
       display: none !important;
@@ -76,7 +84,7 @@ const getTradingViewMarketOverviewHTML = (tokens: ReturnType<typeof useDesignTok
     plotLineColorGrowing: hexToRgba(growing, 1),
     plotLineColorFalling: hexToRgba(falling, 1),
     gridLineColor: 'rgba(240, 243, 250, 0)',
-    scaleFontColor: '#DBDBDB',
+    scaleFontColor: tokens.colors.text.secondary,
     belowLineFillColorGrowing: hexToRgba(growing, 0.12),
     belowLineFillColorFalling: hexToRgba(falling, 0.12),
     belowLineFillColorGrowingBottom: hexToRgba(growing, 0),
@@ -95,6 +103,7 @@ const getTradingViewMarketOverviewHTML = (tokens: ReturnType<typeof useDesignTok
             logoid: 'indices/russell-2000',
             'currency-logoid': 'country/US',
           },
+          { s: 'AMEX:SPY', d: 'SPY ETF (S&P 500)' },
         ],
         originalTitle: 'Bonds',
       },
@@ -236,11 +245,11 @@ const getTradingViewHeatmapHTML = (type: 'stock' | 'crypto' | 'nasdaq') => {
   </div>
   `;
 
-  return TAB_HTML_TEMPLATE(body);
+  return TAB_HTML_TEMPLATE(body, 48);
 };
 
 const getTradingViewScreenerHTML = (
-  type: 'stock' | 'crypto' | 'forex',
+  type: 'sp500' | 'nasdaq' | 'crypto',
   tokens: ReturnType<typeof useDesignTokens>
 ) => {
   const widgetUrl = 'https://s3.tradingview.com/external-embedding/embed-widget-screener.js';
@@ -248,7 +257,7 @@ const getTradingViewScreenerHTML = (
   let config: any = {};
 
   switch (type) {
-    case 'stock':
+    case 'sp500':
       config = {
         market: 'america',
         showToolbar: true,
@@ -261,12 +270,12 @@ const getTradingViewScreenerHTML = (
         height: '100%',
       };
       break;
-    case 'crypto':
+    case 'nasdaq':
       config = {
-        market: 'crypto',
+        market: 'america',
         showToolbar: true,
         defaultColumn: 'overview',
-        defaultScreen: 'general',
+        defaultScreen: 'nasdaq',
         isTransparent: true,
         locale: 'he_IL',
         colorTheme: 'dark',
@@ -274,9 +283,9 @@ const getTradingViewScreenerHTML = (
         height: '100%',
       };
       break;
-    case 'forex':
+    case 'crypto':
       config = {
-        market: 'forex',
+        market: 'crypto',
         showToolbar: true,
         defaultColumn: 'overview',
         defaultScreen: 'general',
@@ -299,22 +308,34 @@ const getTradingViewScreenerHTML = (
   </div>
   `;
 
-  return TAB_HTML_TEMPLATE(body);
+  return TAB_HTML_TEMPLATE(body, 48);
 };
 
 type MarketsTab = 'indices' | 'heatmaps' | 'screener' | 'feargreed';
 
 export default function MarketsScreen() {
   const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const [activeTab, setActiveTab] = useState<MarketsTab>('indices');
 
   // State for Heatmaps Tab
   const [heatmapType, setHeatmapType] = useState<'stock' | 'crypto' | 'nasdaq'>('stock');
+  const [fullscreenHeatmap, setFullscreenHeatmap] = useState(false);
 
   // State for Screener Tab
-  const [screenerType, setScreenerType] = useState<'stock' | 'crypto' | 'forex'>('stock');
+  const [screenerType, setScreenerType] = useState<'sp500' | 'nasdaq' | 'crypto'>('sp500');
 
   const mainTabsHeight = useMainTabsHeight();
+  
+  // פתיחת מסך מלא בלבד (ללא נעילת/סיבוב אוריינטציה – המכשיר קובע)
+  const openFullscreenHeatmap = useCallback(async () => {
+    setFullscreenHeatmap(true);
+  }, []);
+
+  // סגירת מסך מלא (האוריינטציה נשארת למה שהמשתמש בחר)
+  const closeFullscreenHeatmap = useCallback(async () => {
+    setFullscreenHeatmap(false);
+  }, []);
 
   const styles = useMemo(
     () => ({
@@ -332,29 +353,29 @@ export default function MarketsScreen() {
         flex: 1,
       },
       headerContainer: {
-        paddingHorizontal: DesignTokens.spacing.lg,
+        paddingHorizontal: DesignTokens.layout?.screenPadding ?? DesignTokens.spacing.xl,
         paddingTop: DesignTokens.spacing.lg,
       },
       headerTitle: {
-        fontSize: DesignTokens.typography.fontSize['2xl'],
+        fontSize: DesignTokens.typography.displayXs.size,
         fontWeight: DesignTokens.typography.fontWeight.bold as any,
         color: DesignTokens.colors.text.primary,
         textAlign: 'right' as const,
       },
       headerSubtitle: {
-        fontSize: DesignTokens.typography.fontSize.base,
+        fontSize: DesignTokens.typography.body.size,
         color: DesignTokens.colors.text.secondary,
         textAlign: 'right' as const,
         marginTop: DesignTokens.spacing.xs,
         marginBottom: DesignTokens.spacing.sm,
       },
       tabsContainer: {
-        paddingHorizontal: DesignTokens.spacing.lg,
+        paddingHorizontal: DesignTokens.layout?.screenPadding ?? DesignTokens.spacing.xl,
         paddingTop: DesignTokens.spacing.md,
         marginBottom: DesignTokens.spacing.md,
       },
       tabsCard: {
-        borderRadius: 30,
+        borderRadius: DesignTokens.borderRadius['3xl'],
         overflow: 'hidden' as const,
         alignSelf: 'center' as const,
         width: '100%' as const,
@@ -362,12 +383,12 @@ export default function MarketsScreen() {
       },
       tabs: {
         flexDirection: 'row' as const,
-        padding: 4,
+        padding: DesignTokens.spacing.xs,
       },
       tab: {
         flex: 1,
         height: 44,
-        borderRadius: 26,
+        borderRadius: DesignTokens.borderRadius['3xl'],
         backgroundColor: 'transparent',
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
@@ -382,11 +403,11 @@ export default function MarketsScreen() {
         left: 0,
         right: 0,
         bottom: 0,
-        borderRadius: 26,
-        backgroundColor: `${DesignTokens.colors.primary.main}14`,
+        borderRadius: DesignTokens.borderRadius['3xl'],
+        backgroundColor: DesignTokens.colors.background.cardSolid,
       },
       tabText: {
-        fontSize: DesignTokens.typography.fontSize.sm,
+        fontSize: DesignTokens.typography.bodySmall.size,
         fontWeight: DesignTokens.typography.fontWeight.medium as any,
         color: DesignTokens.colors.text.secondary,
         textAlign: 'center' as const,
@@ -408,21 +429,16 @@ export default function MarketsScreen() {
         marginBottom: DesignTokens.spacing.lg,
       } as const,
       widgetTitle: {
-        fontSize: DesignTokens.typography.fontSize.lg,
+        fontSize: DesignTokens.typography.titleSmall.size,
         fontWeight: DesignTokens.typography.fontWeight.bold as any,
         color: DesignTokens.colors.text.primary,
         textAlign: 'right' as const,
         marginBottom: DesignTokens.spacing.sm,
       },
       webviewContainer: {
-        height: SCREEN_HEIGHT * 0.7, // גובה נוח
-        borderRadius: DesignTokens.borderRadius.md,
+        flex: 1, // משתמש בגודל הקונטיינר
+        borderRadius: DesignTokens.borderRadius.lg,
         overflow: 'hidden' as const,
-      },
-      webview: {
-        flex: 1,
-        backgroundColor: 'transparent',
-        opacity: 0.99, // Hack for Android rendering
       },
       filterButtons: {
         flexDirection: 'row' as const,
@@ -434,8 +450,8 @@ export default function MarketsScreen() {
       filterButton: {
         paddingHorizontal: DesignTokens.spacing.md,
         paddingVertical: DesignTokens.spacing.sm,
-        borderRadius: DesignTokens.borderRadius.md,
-        backgroundColor: DesignTokens.colors.background.elevated,
+        borderRadius: DesignTokens.borderRadius.lg,
+        backgroundColor: DesignTokens.colors.background.cardSolid,
         borderWidth: 1,
         borderColor: DesignTokens.colors.border.primary,
         flexDirection: 'row' as const,
@@ -448,11 +464,11 @@ export default function MarketsScreen() {
       },
       filterButtonText: {
         color: DesignTokens.colors.text.primary,
-        fontSize: DesignTokens.typography.fontSize.sm,
+        fontSize: DesignTokens.typography.bodySmall.size,
         fontWeight: DesignTokens.typography.fontWeight.medium as any,
       },
       filterButtonTextActive: {
-        color: '#FFFFFF',
+        color: isDarkMode ? DesignTokens.colors.text.primary : DesignTokens.colors.text.inverse,
       },
       loadingOverlay: {
         position: 'absolute' as const,
@@ -465,7 +481,7 @@ export default function MarketsScreen() {
         backgroundColor: DesignTokens.colors.background.elevated,
       }
     }),
-    [DesignTokens, mainTabsHeight]
+    [DesignTokens, mainTabsHeight, isDarkMode]
   );
 
   const marketOverviewHtml = useMemo(
@@ -484,19 +500,19 @@ export default function MarketsScreen() {
   );
 
   const tabs: Array<{ id: MarketsTab; title: string }> = [
-    { id: 'indices', title: 'מדדים' },
-    { id: 'heatmaps', title: 'מפות חום' },
     { id: 'screener', title: 'סורק' },
     { id: 'feargreed', title: 'מדד הפחד' },
+    { id: 'heatmaps', title: 'מפות חום' },
+    { id: 'indices', title: 'מדדים' },
   ];
 
-  const renderWebView = (html: string, key: string) => (
-    <View style={styles.webviewContainer}>
+  const renderWebView = (html: string, key: string, fullHeight: boolean = false) => (
+    <View style={{ flex: 1, borderRadius: DesignTokens.borderRadius.lg, overflow: 'hidden' }}>
       <WebView
         key={key}
         source={{ html, baseUrl: 'https://tradingview.com' }}
-        style={styles.webview}
-        androidLayerType="software"
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+        androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         startInLoadingState={true}
@@ -504,14 +520,14 @@ export default function MarketsScreen() {
         mixedContentMode="always"
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
-        // Enable gestures
-        scalesPageToFit={true}
+        scalesPageToFit={Platform.OS === 'android'}
         scrollEnabled={true}
         nestedScrollEnabled={true}
         overScrollMode="never"
         bounces={false}
         showsVerticalScrollIndicator={true}
         showsHorizontalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="never"
         renderLoading={() => (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
@@ -523,11 +539,7 @@ export default function MarketsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        style={styles.gradientContainer}
-      />
+      <ScreenGradientBackground style={styles.gradientContainer} />
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         {/* כותרת */}
@@ -571,19 +583,25 @@ export default function MarketsScreen() {
               <ScrollView contentContainerStyle={{ paddingHorizontal: DesignTokens.spacing.lg }} showsVerticalScrollIndicator={false}>
                 <UICard variant="blur" padding="md" style={{ ...styles.widgetCard, ...DesignTokens.shadows.lg }}>
                   <Text style={styles.widgetTitle}>מדדים ועתידיים</Text>
-                  {/* גובה קבוע למדדים */}
-                  <View style={{ height: SCREEN_HEIGHT * 0.6, borderRadius: DesignTokens.borderRadius.md, overflow: 'hidden' }}>
+                  {/* גובה קטן יותר למדדים */}
+                  <View style={{ height: SCREEN_HEIGHT * 0.45, borderRadius: DesignTokens.borderRadius.lg, overflow: 'hidden' }}>
                     <WebView
                       key="market-overview"
                       source={{ html: marketOverviewHtml, baseUrl: 'https://tradingview.com' }}
-                      style={styles.webview}
-                      androidLayerType="software"
+                      style={{ flex: 1, backgroundColor: 'transparent' }}
+                      androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
                       javaScriptEnabled={true}
                       domStorageEnabled={true}
                       startInLoadingState={true}
                       originWhitelist={['*']}
                       mixedContentMode="always"
-                      showsVerticalScrollIndicator={false}
+                      scrollEnabled={true}
+                      nestedScrollEnabled={true}
+                      showsVerticalScrollIndicator={true}
+                      showsHorizontalScrollIndicator={false}
+                      bounces={false}
+                      overScrollMode="never"
+                      scalesPageToFit={Platform.OS === 'android'}
                       renderLoading={() => (
                         <View style={styles.loadingOverlay}>
                           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
@@ -599,12 +617,14 @@ export default function MarketsScreen() {
           {activeTab === 'heatmaps' && (
             <View style={{ flex: 1, paddingHorizontal: DesignTokens.spacing.lg, marginBottom: mainTabsHeight - 12 }}>
               {/* Sub-tabs bar like main tabs */}
-              <UICard variant="blur" padding="none" style={{ borderRadius: 30, overflow: 'hidden', marginBottom: DesignTokens.spacing.md }}>
-                <View style={{ flexDirection: 'row', padding: 4 }}>
+              <UICard variant="blur" padding="none" style={{ borderRadius: DesignTokens.borderRadius['3xl'], overflow: 'hidden', marginBottom: DesignTokens.spacing.md }}>
+                <View style={{ flexDirection: 'row', padding: DesignTokens.spacing.xs }}>
                   {[
-                    { id: 'stock', label: 'S&P500' },
-                    { id: 'nasdaq', label: 'Nasdaq' },
                     { id: 'crypto', label: 'קריפטו' },
+                    { id: 'nasdaq', label: 'Nasdaq' },   
+                    { id: 'sp500', label: 'S&P500' },
+
+                    
                   ].map((tab) => {
                     const isActive = heatmapType === tab.id;
                     return (
@@ -615,11 +635,11 @@ export default function MarketsScreen() {
                         style={{
                           flex: 1,
                           height: 40,
-                          borderRadius: 26,
+                          borderRadius: DesignTokens.borderRadius['3xl'],
                           backgroundColor: 'transparent',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          marginHorizontal: 2,
+                          marginHorizontal: DesignTokens.spacing.xs / 2,
                           position: 'relative',
                         }}
                       >
@@ -627,12 +647,12 @@ export default function MarketsScreen() {
                           <View style={{
                             position: 'absolute',
                             top: 0, left: 0, right: 0, bottom: 0,
-                            borderRadius: 26,
-                            backgroundColor: `${DesignTokens.colors.primary.main}14`,
+                            borderRadius: DesignTokens.borderRadius['3xl'],
+                            backgroundColor: DesignTokens.colors.background.cardSolid,
                           }} />
                         )}
                         <Text style={{
-                          fontSize: DesignTokens.typography.fontSize.sm,
+                          fontSize: DesignTokens.typography.bodySmall.size,
                           fontWeight: isActive ? DesignTokens.typography.fontWeight.bold as any : DesignTokens.typography.fontWeight.medium as any,
                           color: isActive ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary,
                           textAlign: 'center',
@@ -643,24 +663,52 @@ export default function MarketsScreen() {
                 </View>
               </UICard>
 
-              {/* Heatmap content */}
-              <UICard variant="blur" padding="md" style={{ flex: 1, ...DesignTokens.shadows.lg }} contentContainerStyle={{ flex: 1 }}>
-                <View style={{ flex: 1, borderRadius: DesignTokens.borderRadius.md, overflow: 'hidden' }}>
-                  {renderWebView(heatmapHtml, `heatmap-${heatmapType}`)}
+              {/* כפתור מסך מלא */}
+              <TouchableOpacity
+                onPress={openFullscreenHeatmap}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: DesignTokens.colors.background.cardSolid,
+                  borderRadius: DesignTokens.borderRadius.sm,
+                  padding: DesignTokens.spacing.sm,
+                  marginBottom: DesignTokens.spacing.sm,
+                  gap: DesignTokens.spacing.sm,
+                }}
+              >
+                <Maximize2 size={DesignTokens.typography.bodySmall.size} color={DesignTokens.colors.text.secondary} />
+                <Text style={{ fontSize: DesignTokens.typography.caption.size, color: DesignTokens.colors.text.secondary }}>מסך מלא (סובב)</Text>
+              </TouchableOpacity>
+
+              {/* Heatmap content - 100% על הכרטיסיה עם scroll, ללא שטח מת */}
+              <UICard variant="blur" padding="none" style={{ flex: 1, ...DesignTokens.shadows.lg, minHeight: 0 }} contentContainerStyle={{ flex: 1, minHeight: 0 }}>
+                <View style={{ flex: 1, borderRadius: DesignTokens.borderRadius.lg, overflow: 'hidden', minHeight: 0 }}>
+                  {renderWebView(heatmapHtml, `heatmap-${heatmapType}`, true)}
                 </View>
               </UICard>
+            </View>
+          )}
+
+          {activeTab === 'feargreed' && (
+            <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+              <ScrollView contentContainerStyle={{ paddingHorizontal: DesignTokens.spacing.lg }} showsVerticalScrollIndicator={false}>
+                <FearAndGreedCard initialExpanded disableToggle fullWidth />
+              </ScrollView>
             </View>
           )}
 
           {activeTab === 'screener' && (
             <View style={{ flex: 1, paddingHorizontal: DesignTokens.spacing.lg, marginBottom: mainTabsHeight - 12 }}>
               {/* Sub-tabs bar like main tabs */}
-              <UICard variant="blur" padding="none" style={{ borderRadius: 30, overflow: 'hidden', marginBottom: DesignTokens.spacing.md }}>
-                <View style={{ flexDirection: 'row', padding: 4 }}>
+              <UICard variant="blur" padding="none" style={{ borderRadius: DesignTokens.borderRadius['3xl'], overflow: 'hidden', marginBottom: DesignTokens.spacing.md }}>
+                <View style={{ flexDirection: 'row', padding: DesignTokens.spacing.xs }}>
                   {[
-                    { id: 'stock', label: 'מניות' },
+                                   
                     { id: 'crypto', label: 'קריפטו' },
-                    { id: 'forex', label: 'מט״ח' },
+                    { id: 'nasdaq', label: 'Nasdaq' },   
+                    { id: 'sp500', label: 'S&P500' },
+
                   ].map((tab) => {
                     const isActive = screenerType === tab.id;
                     return (
@@ -671,11 +719,11 @@ export default function MarketsScreen() {
                         style={{
                           flex: 1,
                           height: 40,
-                          borderRadius: 26,
+                          borderRadius: DesignTokens.borderRadius['3xl'],
                           backgroundColor: 'transparent',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          marginHorizontal: 2,
+                          marginHorizontal: DesignTokens.spacing.xs / 2,
                           position: 'relative',
                         }}
                       >
@@ -683,12 +731,12 @@ export default function MarketsScreen() {
                           <View style={{
                             position: 'absolute',
                             top: 0, left: 0, right: 0, bottom: 0,
-                            borderRadius: 26,
-                            backgroundColor: `${DesignTokens.colors.primary.main}14`,
+                            borderRadius: DesignTokens.borderRadius['3xl'],
+                            backgroundColor: DesignTokens.colors.background.cardSolid,
                           }} />
                         )}
                         <Text style={{
-                          fontSize: DesignTokens.typography.fontSize.sm,
+                          fontSize: DesignTokens.typography.bodySmall.size,
                           fontWeight: isActive ? DesignTokens.typography.fontWeight.bold as any : DesignTokens.typography.fontWeight.medium as any,
                           color: isActive ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary,
                           textAlign: 'center',
@@ -699,24 +747,64 @@ export default function MarketsScreen() {
                 </View>
               </UICard>
 
-              {/* Screener content */}
-              <UICard variant="blur" padding="md" style={{ flex: 1, ...DesignTokens.shadows.lg }} contentContainerStyle={{ flex: 1 }}>
-                <View style={{ flex: 1, borderRadius: DesignTokens.borderRadius.md, overflow: 'hidden' }}>
-                  {renderWebView(screenerHtml, `screener-${screenerType}`)}
+              {/* Screener content - 100% על הכרטיסיה עם scroll, ללא שטח מת */}
+              <UICard variant="blur" padding="none" style={{ flex: 1, ...DesignTokens.shadows.lg, minHeight: 0 }} contentContainerStyle={{ flex: 1, minHeight: 0 }}>
+                <View style={{ flex: 1, borderRadius: DesignTokens.borderRadius.lg, overflow: 'hidden', minHeight: 0 }}>
+                  {renderWebView(screenerHtml, `screener-${screenerType}`, true)}
                 </View>
               </UICard>
-            </View>
-          )}
-          {activeTab === 'feargreed' && (
-            <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
-              <ScrollView contentContainerStyle={{ paddingHorizontal: DesignTokens.spacing.lg }} showsVerticalScrollIndicator={false}>
-                <FearAndGreedCard initialExpanded disableToggle fullWidth />
-              </ScrollView>
             </View>
           )}
 
         </View >
       </RNSafeAreaView >
+      
+      {/* מודל מסך מלא למפת חום */}
+      <Modal
+        visible={fullscreenHeatmap}
+        animationType="fade"
+        statusBarTranslucent
+        supportedOrientations={['portrait', 'landscape', 'landscape-left', 'landscape-right']}
+        onRequestClose={closeFullscreenHeatmap}
+      >
+        <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+          {/* כפתור סגירה - כפתור זכוכית עגול, פשוט ונקי */}
+          <TouchableOpacity
+            onPress={closeFullscreenHeatmap}
+            style={{
+              position: 'absolute',
+              top: 40,
+              right: DesignTokens.spacing.lg,
+              zIndex: 100,
+              width: 44,
+              height: 44,
+              borderRadius: DesignTokens.borderRadius.full,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: DesignTokens.colors.overlay,
+              borderWidth: 1,
+              borderColor: DesignTokens.colors.border.primary,
+              ...DesignTokens.shadows.sm,
+            }}
+          >
+            <X size={DesignTokens.typography.fontSize.xl} color={DesignTokens.colors.text.primary} />
+          </TouchableOpacity>
+          
+          {/* תוכן מפת החום */}
+          <WebView
+            source={{ html: heatmapHtml }}
+            style={{ flex: 1 }}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+            scalesPageToFit={Platform.OS === 'android'}
+          />
+        </View>
+      </Modal>
     </View >
   );
 }
+

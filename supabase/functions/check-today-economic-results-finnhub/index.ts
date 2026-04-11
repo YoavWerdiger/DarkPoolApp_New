@@ -2,11 +2,14 @@
 // בודקת ומעדכנת תוצאות (actual values) רק לאירועים של היום באמצעות Finnhub API
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
-const FINNHUB_API_KEY = 'd1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g'
+const FINNHUB_API_KEY = Deno.env.get('FINNHUB_API_KEY') ?? ''
 const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1'
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send'
+
+// 🔑 Expo Access Token נדרש לשליחת התראות ל-production builds
+const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || ''
 
 // המרת תאריך מ-Finnhub (ISO 8601) לתאריך ושעה
 function parseFinnhubDateTime(timeString: string): { date: string; time: string; fullDateTime: Date } {
@@ -307,12 +310,18 @@ serve(async (req) => {
                   }
                 }))
                 
+                // 🔑 Access Token נדרש עבור production builds
+                const pushHeaders: Record<string, string> = {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                }
+                if (EXPO_ACCESS_TOKEN) {
+                  pushHeaders['Authorization'] = `Bearer ${EXPO_ACCESS_TOKEN}`
+                }
+                
                 const pushResponse = await fetch(EXPO_PUSH_API_URL, {
                   method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                  },
+                  headers: pushHeaders,
                   body: JSON.stringify(pushMessages)
                 })
                 

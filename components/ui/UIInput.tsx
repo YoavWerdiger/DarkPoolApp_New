@@ -37,63 +37,46 @@ const UIInput: React.FC<UIInputProps> = ({
   inputStyle,
   ...textInputProps
 }) => {
-  const DesignTokens = useDesignTokens();
-  const { colors, typography, spacing, borderRadius } = DesignTokens;
+  const tokens = useDesignTokens();
+  const { colors, typography, spacing, borderRadius } = tokens;
   const [isFocused, setIsFocused] = useState(false);
 
   const getSizeStyles = () => {
     switch (size) {
       case 'sm':
         return {
-          container: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-          text: { fontSize: typography.fontSize.sm },
-          icon: 16,
+          container: { paddingHorizontal: spacing.md, minHeight: 40 },
+          text: { fontSize: typography.bodySmall.size },
+          icon: 18,
         };
       case 'lg':
         return {
-          container: { paddingHorizontal: spacing.xl, paddingVertical: spacing.lg },
-          text: { fontSize: typography.fontSize.lg },
-          icon: 24,
+          container: { paddingHorizontal: spacing.xl, minHeight: 56 },
+          text: { fontSize: typography.body.size },
+          icon: 22,
         };
       default:
         return {
-          container: { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
-          text: { fontSize: typography.fontSize.base },
+          container: { paddingHorizontal: spacing.lg, minHeight: 48 },
+          text: { fontSize: typography.body.size },
           icon: 20,
         };
     }
   };
 
-  const getVariantStyles = () => {
-    const baseStyle = {
-      borderRadius: borderRadius.md,
-      borderWidth: 1,
-    };
-
-    if (variant === 'filled') {
-      return {
-        ...baseStyle,
-        backgroundColor: colors.background.elevated,
-        borderColor: isFocused ? colors.primary.main : 'transparent',
-      };
-    }
-
-    return {
-      ...baseStyle,
-      backgroundColor: 'transparent',
-      borderColor: error 
-        ? colors.danger.main
-        : isFocused 
-          ? colors.primary.main 
-          : colors.border.primary,
-    };
+  const getBorderColor = () => {
+    if (error) return colors.danger.main;
+    if (isFocused) return colors.border.accent;
+    return colors.border.default;
   };
 
   const sizeStyles = getSizeStyles();
-  const variantStyles = getVariantStyles();
 
-  const containerStyles: ViewStyle = {
-    ...variantStyles,
+  const fieldStyle: ViewStyle = {
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: getBorderColor(),
+    backgroundColor: colors.background.input,
     ...sizeStyles.container,
     flexDirection: 'row',
     alignItems: 'center',
@@ -105,37 +88,38 @@ const UIInput: React.FC<UIInputProps> = ({
     color: colors.text.primary,
     fontSize: sizeStyles.text.fontSize,
     fontFamily: typography.fontFamily.system[0],
-    paddingVertical: 0, // Remove default padding
+    paddingVertical: 0,
     ...inputStyle,
   };
 
   const labelStyle: TextStyle = {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
+    fontSize: typography.caption.size,
+    fontWeight: typography.label.weight,
     color: colors.text.secondary,
     marginBottom: spacing.xs,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   };
 
-  const helperTextStyle: TextStyle = {
-    fontSize: typography.fontSize.xs,
+  const helperStyle: TextStyle = {
+    fontSize: typography.captionSmall.size,
+    fontWeight: typography.caption.weight,
     color: error ? colors.danger.main : colors.text.tertiary,
     marginTop: spacing.xs,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   };
 
   const iconColor = error 
     ? colors.danger.main 
     : isFocused 
       ? colors.primary.main 
-      : colors.text.secondary;
+      : colors.text.tertiary;
 
   return (
     <View>
-      {/* Label */}
       {label && <Text style={labelStyle}>{label}</Text>}
-      
-      {/* Input Container */}
-      <View style={containerStyles}>
-        {/* Left Icon */}
+      <View style={fieldStyle}>
         {leftIcon && (
           <Ionicons 
             name={leftIcon} 
@@ -144,17 +128,13 @@ const UIInput: React.FC<UIInputProps> = ({
             style={{ marginRight: spacing.sm }}
           />
         )}
-
-        {/* Text Input */}
         <TextInput
           style={inputStyles}
-          placeholderTextColor={colors.text.tertiary}
+          placeholderTextColor={colors.text.muted}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           {...textInputProps}
         />
-
-        {/* Right Icon */}
         {rightIcon && (
           <Pressable
             onPress={onRightIconPress}
@@ -168,10 +148,8 @@ const UIInput: React.FC<UIInputProps> = ({
           </Pressable>
         )}
       </View>
-
-      {/* Helper Text / Error */}
       {(helperText || error) && (
-        <Text style={helperTextStyle}>
+        <Text style={helperStyle}>
           {error || helperText}
         </Text>
       )}
@@ -180,4 +158,3 @@ const UIInput: React.FC<UIInputProps> = ({
 };
 
 export default UIInput;
-

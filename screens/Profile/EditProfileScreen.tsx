@@ -31,6 +31,7 @@ import { mediaService } from '../../services/mediaService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import OnboardingInput from '../../components/onboarding/OnboardingInput';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 export default function EditProfileScreen({ navigation }: any) {
@@ -73,7 +74,6 @@ export default function EditProfileScreen({ navigation }: any) {
       
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading user data:', error);
       setIsLoading(false);
     }
   };
@@ -88,7 +88,7 @@ export default function EditProfileScreen({ navigation }: any) {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -98,7 +98,6 @@ export default function EditProfileScreen({ navigation }: any) {
         setProfileImage(result.assets[0].uri);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
       Alert.alert('שגיאה', 'שגיאה בבחירת תמונה');
     }
   };
@@ -148,48 +147,32 @@ export default function EditProfileScreen({ navigation }: any) {
       
     } catch (error) {
       setIsSaving(false);
-      console.error('Error saving profile:', error);
       Alert.alert('שגיאה', 'שגיאה בעדכון הפרופיל');
     }
   };
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1 }}>
-        <LinearGradient
-          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
-          </View>
-        </RNSafeAreaView>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+        <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
       </View>
     );
   }
 
   return (
     <View style={{ flex: 1 }}>
-      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Header עם blur */}
+        {/* Header - עיצוב כמו שדות דף הכניסה */}
         <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <UICard 
-            variant="blur"
-            padding="sm"
-          >
+          <View style={{
+            backgroundColor: 'rgba(255,255,255,0.05)',
+            borderRadius: 16,
+            borderWidth: 1.5,
+            borderColor: 'rgba(255,255,255,0.1)',
+            paddingHorizontal: DesignTokens.spacing.md,
+            paddingVertical: DesignTokens.spacing.sm,
+          }}>
             <View style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -222,7 +205,7 @@ export default function EditProfileScreen({ navigation }: any) {
                 <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
               </TouchableOpacity>
             </View>
-          </UICard>
+          </View>
         </View>
 
         <KeyboardAvoidingView 
@@ -230,7 +213,7 @@ export default function EditProfileScreen({ navigation }: any) {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <View style={{ flex: 1 }}>
             <ScrollView
               style={{ flex: 1 }}
               showsVerticalScrollIndicator={false}
@@ -238,12 +221,15 @@ export default function EditProfileScreen({ navigation }: any) {
                 paddingTop: DesignTokens.spacing.md
               }}
             >
-            {/* Avatar Card - נפרד */}
+            {/* Avatar Card - עיצוב כמו שדות דף הכניסה */}
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
-              <UICard 
-                variant="blur"
-                padding="lg"
-              >
+              <View style={{
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                borderRadius: 16,
+                borderWidth: 1.5,
+                borderColor: 'rgba(255,255,255,0.1)',
+                padding: DesignTokens.spacing.lg,
+              }}>
                 {/* Avatar Section */}
                 <View style={{
                   alignItems: 'center',
@@ -303,86 +289,37 @@ export default function EditProfileScreen({ navigation }: any) {
                     לחץ לשינוי תמונת פרופיל
                   </Text>
                 </View>
-              </UICard>
+              </View>
             </View>
 
-            {/* Form Fields Card - נפרד */}
+            {/* Form Fields - עיצוב כמו דף הכניסה (OnboardingInput) */}
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
-              <UICard 
-                variant="blur"
-                padding="lg"
-              >
+              {/* Display Name */}
+              <OnboardingInput
+                label="שם תצוגה"
+                icon="person-outline"
+                value={displayName}
+                onChangeText={setDisplayName}
+                placeholder="הזן שם תצוגה"
+              />
 
-                {/* Display Name */}
-                <View style={{ marginBottom: DesignTokens.spacing.lg }}>
-                  <Text style={{ 
-                    fontSize: DesignTokens.typography.fontSize.sm,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold as any, 
-                    color: DesignTokens.colors.text.primary,
-                    marginBottom: DesignTokens.spacing.sm,
-                    textAlign: 'right'
-                  }}>
-                    שם תצוגה
-                  </Text>
-                  <TextInput
-                    value={displayName}
-                    onChangeText={setDisplayName}
-                    placeholder="הזן שם תצוגה"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                      borderRadius: DesignTokens.borderRadius.md,
-                      paddingHorizontal: DesignTokens.spacing.md,
-                      paddingVertical: DesignTokens.spacing.sm + 4,
-                      fontSize: DesignTokens.typography.fontSize.base,
-                      color: DesignTokens.colors.text.primary,
-                      textAlign: 'right',
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.12)',
-                      minHeight: 48
-                    }}
-                  />
-                </View>
+              {/* Phone */}
+              <OnboardingInput
+                label="טלפון"
+                icon="call-outline"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="הזן מספר טלפון"
+                keyboardType="phone-pad"
+              />
 
-                {/* Phone */}
-                <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+                {/* Gender - עיצוב כמו OnboardingInput */}
+                <View style={{ marginBottom: 18 }}>
                   <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.sm,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                    color: DesignTokens.colors.text.primary,
-                    marginBottom: DesignTokens.spacing.sm,
-                    textAlign: 'right'
-                  }}>
-                    טלפון
-                  </Text>
-                  <TextInput
-                    value={phone}
-                    onChangeText={setPhone}
-                    placeholder="הזן מספר טלפון"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    keyboardType="phone-pad"
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                      borderRadius: DesignTokens.borderRadius.md,
-                      paddingHorizontal: DesignTokens.spacing.md,
-                      paddingVertical: DesignTokens.spacing.sm + 4,
-                      fontSize: DesignTokens.typography.fontSize.base,
-                      color: DesignTokens.colors.text.primary,
-                      textAlign: 'right',
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.12)',
-                      minHeight: 48
-                    }}
-                  />
-                </View>
-
-                {/* Gender */}
-                <View style={{ marginBottom: DesignTokens.spacing.lg }}>
-                  <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.sm,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                    color: DesignTokens.colors.text.primary,
-                    marginBottom: DesignTokens.spacing.sm,
+                    color: 'rgba(255,255,255,0.55)',
+                    fontSize: 13,
+                    fontWeight: '600',
+                    marginBottom: 8,
                     textAlign: 'right'
                   }}>
                     מין
@@ -391,16 +328,15 @@ export default function EditProfileScreen({ navigation }: any) {
                     onPress={() => setShowGenderPicker(true)}
                     activeOpacity={0.7}
                     style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                      borderRadius: DesignTokens.borderRadius.md,
-                      paddingHorizontal: DesignTokens.spacing.md,
-                      paddingVertical: DesignTokens.spacing.sm + 4,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.12)',
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      paddingHorizontal: 16,
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      minHeight: 48
+                      minHeight: 52
                     }}
                   >
                     <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
@@ -415,31 +351,30 @@ export default function EditProfileScreen({ navigation }: any) {
                   </TouchableOpacity>
                 </View>
 
-                {/* Email (Read Only) */}
-                <View>
+                {/* Email (Read Only) - עיצוב כמו OnboardingInput */}
+                <View style={{ marginBottom: 18 }}>
                   <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.sm,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                    color: DesignTokens.colors.text.primary,
-                    marginBottom: DesignTokens.spacing.sm,
+                    color: 'rgba(255,255,255,0.55)',
+                    fontSize: 13,
+                    fontWeight: '600',
+                    marginBottom: 8,
                     textAlign: 'right'
                   }}>
                     אימייל
                   </Text>
                   <View style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                    borderRadius: DesignTokens.borderRadius.md,
-                    paddingHorizontal: DesignTokens.spacing.md,
-                    paddingVertical: DesignTokens.spacing.sm + 4,
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.08)',
-                    minHeight: 48,
-                    justifyContent: 'center',
-                    opacity: 0.8
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    borderRadius: 16,
+                    borderWidth: 1.5,
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    paddingHorizontal: 16,
+                    paddingVertical: 16,
+                    minHeight: 52,
+                    justifyContent: 'center'
                   }}>
                     <Text style={{
-                      fontSize: DesignTokens.typography.fontSize.base,
-                      color: DesignTokens.colors.text.tertiary,
+                      fontSize: 16,
+                      color: 'rgba(255,255,255,0.7)',
                       textAlign: 'right'
                     }}>
                       {user?.email || ''}
@@ -454,7 +389,6 @@ export default function EditProfileScreen({ navigation }: any) {
                     לא ניתן לשנות את כתובת האימייל
                   </Text>
                 </View>
-              </UICard>
             </View>
 
             {/* Save Button - נפרד וצמוד למטה */}

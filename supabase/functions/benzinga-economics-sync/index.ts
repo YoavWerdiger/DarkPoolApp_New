@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,7 +58,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     // Benzinga API Key
-    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY') || 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC'
+    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY') ?? ''
     
     // חישוב טווח תאריכים - חודש אחורה + 6 חודשים קדימה
     // מטרה: טווח זמן מכובד קדימה שיש EST (אירועים כלכליים)

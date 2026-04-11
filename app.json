@@ -2,7 +2,8 @@
   "expo": {
     "name": "DarkPool",
     "slug": "DarkPool",
-    "version": "1.0.0",
+    "scheme": "com.darkpool.app",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -10,7 +11,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -21,10 +22,12 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
+        "monochromeImage": "./assets/icon.png",
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.darkpool.app",
       "googleServicesFile": "./google-services.json"
     },
@@ -41,14 +44,23 @@
         "expo-notifications",
         {
           "mode": "production",
-          "icon": "./assets/icon.png",
+          "icon": "./assets/noti.png",
           "color": "#000000",
           "sounds": []
+        }
+      ],
+      "expo-video",
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "נדרשת גישה למצלמה לצילום סטוריז",
+          "microphonePermission": "נדרשת גישה למיקרופון להקלטת וידאו"
         }
       ]
     ],
     "notification": {
-      "icon": "./assets/icon.png",
+      "icon": "./assets/noti.png",
       "color": "#000000",
       "androidMode": "default",
       "androidCollapsedTitle": "DarkPool",
@@ -56,8 +68,7 @@
       "androidDisplayInForeground": true
     },
     "bundler": "metro",
-    "owner": "darkpoolapp",
-    "scheme": "com.darkpool.app"
+    "owner": "darkpoolapp"
   },
   "locales": {
     "he": {

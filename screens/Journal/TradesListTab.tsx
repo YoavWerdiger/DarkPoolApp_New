@@ -64,7 +64,6 @@ export default function TradesListTab() {
       if (error) throw error;
       setTrades(data || []);
     } catch (error: any) {
-      console.error('Error loading trades:', error);
       Alert.alert('שגיאה', 'לא ניתן לטעון את הטריידים');
     } finally {
       setLoading(false);
@@ -91,7 +90,6 @@ export default function TradesListTab() {
               if (error) throw error;
               loadTrades();
             } catch (error: any) {
-              console.error('Error deleting trade:', error);
               Alert.alert('שגיאה', 'לא ניתן למחוק את הטרייד');
             }
           },
@@ -427,14 +425,16 @@ export default function TradesListTab() {
         </View>
       )}
 
-      {/* Add Trade FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setShowAddModal(true)}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={32} color={DesignTokens.colors.text.primary} />
-      </TouchableOpacity>
+      {/* Add Trade FAB — ממורכז כדי שלא יחפוף לשורת החיפוש */}
+      <View style={styles.fabWrap} pointerEvents="box-none">
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => setShowAddModal(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={32} color={DesignTokens.colors.text.inverse} />
+        </TouchableOpacity>
+      </View>
 
       {/* Add Trade Modal */}
       <AddTradeModal
@@ -476,22 +476,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     flex: 1,
     position: 'relative',
   },
-  fab: {
+  fabWrap: {
     position: 'absolute',
-    bottom: mainTabsHeight + 16,
-    left: tokens.spacing.lg,
+    left: 0,
+    right: 0,
+    bottom: mainTabsHeight + 20,
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  fab: {
     width: 56,
     height: 56,
     borderRadius: 28,
     backgroundColor: tokens.colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
-    zIndex: 100,
+    ...tokens.shadows.md,
   },
   loadingContainer: {
     flex: 1,
@@ -500,7 +500,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     gap: 16,
   },
   loadingText: {
-    fontSize: tokens.typography.fontSize.base,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.body.weight as any,
+    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
   },
   searchCard: {
@@ -509,7 +511,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     marginBottom: tokens.spacing.sm,
   },
   searchCardInner: {
-    borderRadius: tokens.borderRadius.xl,
+    borderRadius: tokens.borderRadius.lg,
     minHeight: 44,
   },
   searchContainer: {
@@ -545,23 +547,24 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     paddingHorizontal: tokens.spacing.sm,
     paddingVertical: 6,
     borderRadius: tokens.borderRadius.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: tokens.colors.glass.card.bg,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: tokens.colors.border.primary,
     minWidth: 50,
   },
   filterDivider: {
     width: 1,
     height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tokens.colors.border.primary,
     marginHorizontal: tokens.spacing.xs,
   },
   filterButtonActive: {
-    backgroundColor: `${tokens.colors.primary.main}14`,
+    backgroundColor: tokens.colors.background.cardSolid,
     borderColor: tokens.colors.primary.main,
   },
   filterButtonText: {
-    fontSize: tokens.typography.fontSize.sm,
+    fontSize: tokens.typography.bodySmall.size,
+    fontWeight: tokens.typography.bodySmall.weight as any,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
@@ -570,12 +573,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     fontWeight: tokens.typography.fontWeight.bold as any,
   },
   summaryContainer: {
-    backgroundColor: tokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.cardSolid,
     marginHorizontal: tokens.spacing.lg,
     marginTop: tokens.spacing.md,
     marginBottom: tokens.spacing.sm,
     padding: tokens.spacing.md,
-    borderRadius: tokens.borderRadius.md,
+    borderRadius: tokens.borderRadius.lg,
   },
   summaryRow: {
     flexDirection: 'row-reverse',
@@ -584,7 +587,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     marginVertical: tokens.spacing.xs,
   },
   summaryLabel: {
-    fontSize: tokens.typography.fontSize.base,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.body.weight as any,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
@@ -677,7 +681,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     marginTop: tokens.spacing.sm,
     paddingTop: tokens.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    borderTopColor: tokens.colors.border.primary,
   },
   footerRow: {
     flexDirection: 'row-reverse',
@@ -742,19 +746,25 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
+    minHeight: 200,
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: tokens.spacing.xl,
+    paddingTop: tokens.spacing['3xl'],
+    paddingBottom: mainTabsHeight + 88,
     gap: tokens.spacing.md,
   },
   emptyText: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    fontSize: tokens.typography.displayXs.size,
+    fontWeight: tokens.typography.displayXs.weight as any,
+    letterSpacing: tokens.typography.displayXs.letterSpacing,
     color: tokens.colors.text.primary,
     textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: tokens.typography.fontSize.base,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.body.weight as any,
+    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },

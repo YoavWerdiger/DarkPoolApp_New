@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   Alert,
   ActivityIndicator,
   Dimensions,
@@ -12,10 +13,11 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLesson, useSaveProgress, useGetSignedUrl } from '../../hooks/useLearning';
 import { LessonWithProgress, BlockType } from '../../types/learning';
-import { ArrowRight, ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3 } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -25,6 +27,7 @@ const { width: screenWidth } = Dimensions.get('window');
 export const LessonPlayerScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
@@ -43,8 +46,41 @@ export const LessonPlayerScreen: React.FC = () => {
   const [lessonProgress, setLessonProgress] = useState(0);
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [notes, setNotes] = useState('');
+  const [timelineWidth, setTimelineWidth] = useState(0);
+  const videoRef = useRef<Video>(null);
 
   const { data: lesson, isLoading, error } = useLesson(lessonId);
+
+  const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleSeek = useCallback((positionSeconds: number) => {
+    const ms = Math.max(0, positionSeconds) * 1000;
+    (videoRef.current as any)?.setPositionAsync(ms).then(() => {
+      setProgress(positionSeconds);
+      if (duration > 0) {
+        setLessonProgress(Math.round((positionSeconds / duration) * 100));
+      }
+    }).catch(() => {});
+  }, [duration]);
+
+  const handleTimelinePress = useCallback((evt: { nativeEvent: { locationX: number } }) => {
+    if (timelineWidth <= 0 || duration <= 0) return;
+    const ratio = Math.max(0, Math.min(1, evt.nativeEvent.locationX / timelineWidth));
+    handleSeek(ratio * duration);
+  }, [timelineWidth, duration, handleSeek]);
+
+  const togglePlayPause = useCallback(() => {
+    if (!videoRef.current) return;
+    const next = !isPlaying;
+    setIsPlaying(next);
+    if (next) (videoRef.current as any).playAsync?.();
+    else (videoRef.current as any).pauseAsync?.();
+  }, [isPlaying]);
   const saveProgressMutation = useSaveProgress();
   const getSignedUrlMutation = useGetSignedUrl();
 
@@ -145,10 +181,12 @@ export const LessonPlayerScreen: React.FC = () => {
     return (
       <View style={styles.videoContainer}>
         <Video
+          ref={videoRef}
           style={styles.video}
           source={{ uri: signedUrl }}
           resizeMode={ResizeMode.CONTAIN}
           shouldPlay={isPlaying}
+          useNativeControls={false}
           onPlaybackStatusUpdate={(status) => {
             if (status.isLoaded) {
               const currentPosition = status.positionMillis / 1000;
@@ -167,6 +205,25 @@ export const LessonPlayerScreen: React.FC = () => {
           posterSource={currentBlock.video_poster_url ? { uri: currentBlock.video_poster_url } : undefined}
           usePoster={true}
         />
+        {/* נגן מותאם: טיימליין + play/pause */}
+        <View style={styles.playerControls}>
+          <TouchableOpacity style={styles.playerPlayButton} onPress={togglePlayPause} activeOpacity={0.8}>
+            {isPlaying ? (
+              <Ionicons name="pause" size={24} color={DesignTokens.colors.background.primary} />
+            ) : (
+              <Ionicons name="play" size={24} color={DesignTokens.colors.background.primary} />
+            )}
+          </TouchableOpacity>
+          <Text style={styles.playerTimeText}>{formatTime(progress)}</Text>
+          <Pressable
+            style={styles.timelineTrack}
+            onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+            onPress={handleTimelinePress}
+          >
+            <View style={[styles.timelineFill, { width: `${duration > 0 ? (progress / duration) * 100 : 0}%` }]} />
+          </Pressable>
+          <Text style={styles.playerTimeText}>{formatTime(duration)}</Text>
+        </View>
       </View>
     );
   };
@@ -254,7 +311,7 @@ export const LessonPlayerScreen: React.FC = () => {
   if (isLoading) {
     return (
       <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
         locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
         style={styles.gradientContainer}
       >
@@ -271,7 +328,7 @@ export const LessonPlayerScreen: React.FC = () => {
   if (error || !lesson) {
     return (
       <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
         locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
         style={styles.gradientContainer}
       >
@@ -290,22 +347,43 @@ export const LessonPlayerScreen: React.FC = () => {
 
   return (
     <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+      colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
       locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
       style={styles.gradientContainer}
     >
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-        {/* Header */}
-        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.md }}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-            >
-              <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-            </TouchableOpacity>
-          </View>
+        {/* Header – באותו סגנון כמו צ'אט */}
+        <View style={styles.headerWrapper}>
+          <UICard
+            variant="blur"
+            padding="md"
+            style={[
+              styles.headerCard,
+              { paddingTop: insets.top + 8 },
+            ]}
+          >
+            <View style={styles.headerRow}>
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+                <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.secondary} />
+              </TouchableOpacity>
+              <View style={styles.headerContent}>
+                <View style={styles.headerInfo}>
+                  <View style={styles.headerTitleRow}>
+                    <View style={styles.headerIconPlaceholder}>
+                      <Ionicons name="book-outline" size={18} color={DesignTokens.colors.text.secondary} />
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.headerTitle} numberOfLines={1}>{lesson.title}</Text>
+                      <Text style={styles.headerSubtitle}>
+                        שיעור {currentBlockIndex + 1} מתוך {lesson.blocks?.length ?? 0}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+              <View style={styles.headerSpacer} />
+            </View>
+          </UICard>
         </View>
 
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
@@ -494,18 +572,68 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
-  header: {
-    flexDirection: 'row',
+  headerWrapper: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: tokens.spacing.sm,
+  },
+  headerCard: {
+    marginHorizontal: 0,
+    marginTop: 0,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    borderBottomLeftRadius: tokens.borderRadius['2xl'],
+    borderBottomRightRadius: tokens.borderRadius['2xl'],
+  },
+  headerRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 8,
+    marginLeft: 5,
+    marginRight: -3,
+  },
+  headerContent: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+  },
+  headerInfo: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  headerTitleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIconPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: tokens.colors.text.primary,
+    marginBottom: 2,
+    marginRight: 5,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    marginRight: 5,
+    color: tokens.colors.text.secondary,
+  },
+  headerSpacer: {
+    width: 36,
   },
   videoContainer: {
     borderRadius: 16,

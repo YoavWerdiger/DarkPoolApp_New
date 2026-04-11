@@ -59,13 +59,11 @@ class LearningProgressService {
         .single();
 
       if (error) {
-        console.error('Error saving user progress:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in saveUserProgress:', error);
       return null;
     }
   }
@@ -86,13 +84,11 @@ class LearningProgressService {
         if (error.code === 'PGRST116') {
           return null;
         }
-        console.error('Error getting user progress:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getUserProgress:', error);
       return null;
     }
   }
@@ -108,13 +104,11 @@ class LearningProgressService {
         .order('lesson_id');
 
       if (error) {
-        console.error('Error getting user course progress:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getUserCourseProgress:', error);
       return [];
     }
   }
@@ -136,13 +130,11 @@ class LearningProgressService {
         .single();
 
       if (error) {
-        console.error('Error saving user notes:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in saveUserNotes:', error);
       return null;
     }
   }
@@ -163,13 +155,11 @@ class LearningProgressService {
         if (error.code === 'PGRST116') {
           return null;
         }
-        console.error('Error getting user notes:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getUserNotes:', error);
       return null;
     }
   }
@@ -184,7 +174,6 @@ class LearningProgressService {
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('Error getting all user notes:', error);
         return [];
       }
 
@@ -243,7 +232,6 @@ class LearningProgressService {
         };
       });
     } catch (error) {
-      console.error('Error in getAllUserNotes:', error);
       return [];
     }
   }
@@ -319,7 +307,6 @@ class LearningProgressService {
         totalWatchTime: Math.round(totalWatchTime / 60), // המרה לדקות
       };
     } catch (error) {
-      console.error('Error in getUserLearningStats:', error);
       return {
         totalCourses: 0,
         enrolledCourses: 0,
@@ -347,13 +334,11 @@ class LearningProgressService {
         if (error.code === 'PGRST116') {
           return null;
         }
-        console.error('Error getting lesson media:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getLessonMedia:', error);
       return null;
     }
   }
@@ -372,14 +357,12 @@ class LearningProgressService {
         .eq('is_active', true);
 
       if (error) {
-        console.error('Error getting lessons count:', error);
         return 0;
       }
 
       const totalLessons = lessons?.length || 0;
       return totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
     } catch (error) {
-      console.error('Error in calculateUserCourseProgress:', error);
       return 0;
     }
   }
@@ -402,13 +385,11 @@ class LearningProgressService {
         });
 
       if (error) {
-        console.error('Error marking lesson as completed:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in markLessonAsCompleted:', error);
       return false;
     }
   }
@@ -435,13 +416,11 @@ class LearningProgressService {
         });
 
       if (error) {
-        console.error('Error updating watching time:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in updateWatchingTime:', error);
       return false;
     }
   }

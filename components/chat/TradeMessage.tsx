@@ -20,7 +20,7 @@ interface TradeMessageProps {
   isMe: boolean;
 }
 
-export default function TradeMessage({ trade, isMe }: TradeMessageProps) {
+function TradeMessage({ trade, isMe }: TradeMessageProps) {
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens, isMe), [DesignTokens, isMe]);
 

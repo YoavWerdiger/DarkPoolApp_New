@@ -60,7 +60,6 @@ export const CoursePreviewScreen: React.FC = () => {
         Alert.alert('שגיאה', 'לא ניתן ליצור את הקורס כרגע');
       }
     } catch (error) {
-      console.error('Error creating course:', error);
       Alert.alert('שגיאה', 'אירעה שגיאה ביצירת הקורס');
     } finally {
       setIsCreating(false);
@@ -70,7 +69,6 @@ export const CoursePreviewScreen: React.FC = () => {
   const handleOpenYoutubeLink = (url: string) => {
     if (url) {
       Linking.openURL(url).catch((err) => {
-        console.error('Error opening YouTube link:', err);
         Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
       });
     }
@@ -102,7 +100,7 @@ export const CoursePreviewScreen: React.FC = () => {
 
   return (
     <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+      colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
       locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
       style={styles.gradientContainer}
     >

@@ -33,10 +33,36 @@ interface RateLimitEntry {
 
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
+function cleanExpiredRateLimits() {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now > entry.resetTime) {
+      rateLimitStore.delete(key);
+    }
+  }
+}
+
+let rateLimitCleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+function ensureRateLimitCleanup() {
+  if (!rateLimitCleanupInterval) {
+    rateLimitCleanupInterval = setInterval(cleanExpiredRateLimits, 2 * 60 * 1000);
+  }
+}
+
+export function stopRateLimitCleanup() {
+  if (rateLimitCleanupInterval) {
+    clearInterval(rateLimitCleanupInterval);
+    rateLimitCleanupInterval = null;
+  }
+  rateLimitStore.clear();
+}
+
 export function checkRateLimit(
   userId: string,
   isMedia: boolean = false
 ): { allowed: boolean; error?: ChatError } {
+  ensureRateLimitCleanup();
   const key = `${userId}:${isMedia ? 'media' : 'text'}`;
   const limit = isMedia ? RATE_LIMIT_MEDIA_PER_MINUTE : RATE_LIMIT_MESSAGES_PER_MINUTE;
   const now = Date.now();
@@ -45,7 +71,6 @@ export function checkRateLimit(
   const entry = rateLimitStore.get(key);
   
   if (!entry || now > entry.resetTime) {
-    // Reset or create new entry
     rateLimitStore.set(key, { count: 1, resetTime: now + oneMinute });
     return { allowed: true };
   }
@@ -177,10 +202,12 @@ export function validateFileName(fileName: string): { valid: boolean; error?: Ch
 }
 
 export function sanitizeMessageContent(content: string): string {
-  // Remove null bytes and control characters (except newlines and tabs)
   return content
-    .replace(/\x00/g, '') // Remove null bytes
-    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars except \n, \t
+    .replace(/\x00/g, '')
+    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/&(?!lt;|gt;|amp;|quot;|#39;)/g, '&amp;')
     .trim();
 }
 
@@ -230,6 +257,22 @@ export function validateUserId(userId: string): { valid: boolean; error?: ChatEr
   return { valid: true };
 }
 
+const EMOJI_REGEX = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*$/u;
+const MAX_EMOJI_LENGTH = 10;
 
+export function validateEmoji(emoji: string): { valid: boolean; error?: ChatError } {
+  if (!emoji || typeof emoji !== 'string') {
+    return { valid: false, error: { code: 'INVALID_EMOJI', message: 'אמוג\'י לא תקין' } };
+  }
 
+  if (emoji.length > MAX_EMOJI_LENGTH) {
+    return { valid: false, error: { code: 'INVALID_EMOJI', message: 'אמוג\'י ארוך מדי' } };
+  }
+
+  if (!EMOJI_REGEX.test(emoji)) {
+    return { valid: false, error: { code: 'INVALID_EMOJI', message: 'רק אמוג\'י מותר כריאקציה' } };
+  }
+
+  return { valid: true };
+}
 

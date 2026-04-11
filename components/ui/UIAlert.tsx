@@ -82,25 +82,25 @@ const UIAlert: React.FC<UIAlertProps> = ({
         return {
           icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
           iconColor: colors.success.main,
-          backgroundColor: colors.background.elevated,
+          backgroundColor: colors.background.sheet,
         };
       case 'warning':
         return {
           icon: 'warning' as keyof typeof Ionicons.glyphMap,
           iconColor: colors.warning.main,
-          backgroundColor: colors.background.elevated,
+          backgroundColor: colors.background.sheet,
         };
       case 'error':
         return {
           icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
           iconColor: colors.danger.main,
-          backgroundColor: colors.background.elevated,
+          backgroundColor: colors.background.sheet,
         };
       default: // info
         return {
           icon: 'information-circle' as keyof typeof Ionicons.glyphMap,
           iconColor: colors.info.main,
-          backgroundColor: colors.background.elevated,
+          backgroundColor: colors.background.sheet,
         };
     }
   };
@@ -126,13 +126,13 @@ const UIAlert: React.FC<UIAlertProps> = ({
 
   const containerStyle: ViewStyle = {
     backgroundColor: typeConfig.backgroundColor,
-    borderRadius: borderRadius.xl,
-    padding: spacing['2xl'],
+    borderRadius: borderRadius['2xl'],
+    padding: spacing.xl,
     width: '100%',
     maxWidth: 320,
     ...shadows.lg,
     borderWidth: 0.5,
-    borderColor: colors.border.primary,
+    borderColor: colors.border.default,
   };
 
   const titleStyle: TextStyle = {

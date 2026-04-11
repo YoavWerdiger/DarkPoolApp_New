@@ -1,3 +1,4 @@
+import 'react-native-get-random-values'; // Must be first for WebCrypto support (PKCE OAuth)
 import 'react-native-gesture-handler';
 import { registerRootComponent } from 'expo';
 import { I18nManager } from 'react-native';

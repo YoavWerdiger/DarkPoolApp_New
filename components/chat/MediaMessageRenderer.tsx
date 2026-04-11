@@ -7,6 +7,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { Audio } from 'expo-av';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { LinearGradient } from 'expo-linear-gradient';
+import { logger } from '../../utils/logger';
 
 interface MediaMessageRendererProps {
   message: {
@@ -54,16 +55,14 @@ export default function MediaMessageRenderer({
     if (message.type === 'audio' && message.file_url) {
       const loadDuration = async () => {
         try {
-          console.log('🎵 Loading duration from file:', message.file_url);
           const { sound } = await Audio.Sound.createAsync({ uri: message.file_url! });
           const status = await sound.getStatusAsync();
           if (status.isLoaded && status.durationMillis && status.durationMillis > 0) {
             setDurationMs(status.durationMillis);
-            console.log('🎵 Duration loaded from file:', status.durationMillis);
           }
           await sound.unloadAsync();
         } catch (error) {
-          console.log('Error loading audio duration:', error);
+          logger.error('MediaMessageRenderer', 'Failed to load audio duration', error);
         }
       };
       loadDuration();
@@ -101,9 +100,7 @@ export default function MediaMessageRenderer({
             setVideoThumbnail(uri);
           }
         } catch (error) {
-          // אם יש שגיאה, פשוט נשאיר את videoThumbnail כ-null
-          // והקומפוננטה תציג fallback
-          console.log('Error generating video thumbnail:', error);
+          logger.error('MediaMessageRenderer', 'Failed to generate video thumbnail', error);
         }
       };
       generateThumbnail();
@@ -131,7 +128,9 @@ export default function MediaMessageRenderer({
           // סיים – איפוס להתחלה
           setIsPlaying(false);
           setPositionMs(0);
-          try { await soundRef.current?.setPositionAsync(0); } catch {}
+          try { await soundRef.current?.setPositionAsync(0); } catch (error) {
+          logger.error('MediaMessageRenderer', 'Failed to reset audio position', error);
+        }
         }
       }
     });
@@ -144,19 +143,22 @@ export default function MediaMessageRenderer({
   };
 
   const togglePlay = async () => {
-    const sound = await ensureSound();
-    const st = await sound.getStatusAsync();
-    if (st.isLoaded && st.isPlaying) {
-      await sound.pauseAsync();
-      setIsPlaying(false);
-    } else if (st.isLoaded) {
-      // אם אנחנו קרובים לסוף – התחל מהתחלה
-      if ((st.durationMillis ?? 0) > 0 && (st.durationMillis! - st.positionMillis!) < 500) {
-        await sound.setPositionAsync(0);
-        setPositionMs(0);
+    try {
+      const sound = await ensureSound();
+      const st = await sound.getStatusAsync();
+      if (st.isLoaded && st.isPlaying) {
+        await sound.pauseAsync();
+        setIsPlaying(false);
+      } else if (st.isLoaded) {
+        if ((st.durationMillis ?? 0) > 0 && (st.durationMillis! - st.positionMillis!) < 500) {
+          await sound.setPositionAsync(0);
+          setPositionMs(0);
+        }
+        await sound.playAsync();
+        setIsPlaying(true);
       }
-      await sound.playAsync();
-      setIsPlaying(true);
+    } catch (e) {
+      logger.error('MediaMessageRenderer', 'togglePlay failed', e);
     }
   };
 
@@ -196,8 +198,10 @@ export default function MediaMessageRenderer({
         soundRef.current.unloadAsync();
         soundRef.current = null;
       }
+      setIsPlaying(false);
+      setPositionMs(0);
     };
-  }, []);
+  }, [message.id]);
 
   // Polling עדין כדי לעדכן את המחוון בזמן ניגון
   useEffect(() => {

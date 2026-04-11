@@ -273,16 +273,12 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       // המתן קצת כדי שהדף יטען לגמרי
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      console.log('Capturing WebView...');
-
       // צלם את ה-View שמכיל את ה-WebView
       const uri = await captureRef(viewShotRef, {
         format: 'png',
         quality: 1,
         result: 'tmpfile',
       });
-
-      console.log('WebView captured:', uri);
 
       const isAvailable = await Sharing.isAvailableAsync();
       if (isAvailable) {
@@ -295,7 +291,6 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
         Alert.alert('שגיאה', 'שיתוף לא זמין במכשיר זה');
       }
     } catch (error: any) {
-      console.error('Error exporting trade image:', error);
       Alert.alert('שגיאה', 'לא ניתן ליצור תמונה: ' + (error?.message || 'Unknown error'));
     } finally {
       setIsExporting(false);
@@ -308,8 +303,7 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       if (data.type === 'loaded') {
         setIsWebViewReady(true);
       }
-    } catch (error) {
-      console.error('Error parsing WebView message:', error);
+    } catch {
     }
   };
 

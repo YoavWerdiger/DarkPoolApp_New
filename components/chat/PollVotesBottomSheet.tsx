@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { PollService, PollOption } from '../../services/pollService';
+import { logger } from '../../utils/logger';
 
 interface PollVotesBottomSheetProps {
   visible: boolean;
@@ -46,7 +47,7 @@ export default function PollVotesBottomSheet({
       const voters = await PollService.getPollVoters(pollId);
       setVotersByOption(voters);
     } catch (error) {
-      console.error('❌ Error loading poll voters:', error);
+      logger.error('PollVotesBottomSheet', 'Failed to load voters', error);
     } finally {
       setLoading(false);
     }
@@ -304,3 +305,4 @@ const createStyles = (tokens: any) => {
     },
   });
 };
+

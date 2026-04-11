@@ -5,6 +5,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AddTradeModalProps {
   visible: boolean;
@@ -14,6 +15,7 @@ interface AddTradeModalProps {
 
 export default function AddTradeModal({ visible, onClose, onSuccess }: AddTradeModalProps) {
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
@@ -115,7 +117,6 @@ export default function AddTradeModal({ visible, onClose, onSuccess }: AddTradeM
       // Reset form - ה-useEffect ידאג לזה כשהמודל נסגר
       onSuccess();
     } catch (error: any) {
-      console.error('Error adding trade:', error);
       Alert.alert('שגיאה', 'לא ניתן להוסיף את הטרייד');
     } finally {
       setLoading(false);
@@ -323,7 +324,7 @@ export default function AddTradeModal({ visible, onClose, onSuccess }: AddTradeM
       </ScrollView>
 
       {/* Footer */}
-      <View style={styles.modalFooter}>
+      <View style={[styles.modalFooter, { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 20) + 16 : styles.modalFooter.padding }]}>
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleSubmit}

@@ -1,18 +1,20 @@
 // ============================================
 // Chat Media Service
 // ============================================
-// העלאת וניהול מדיה - תמונות, סרטונים, אודיו, מסמכים
-// ============================================
 
 import { supabase } from '../../lib/supabase';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import * as Sharing from 'expo-sharing';
 import { decode } from 'base64-arraybuffer';
 import {
   ChatMediaUploadProgress,
   ChatError,
   ChatMessageType,
 } from '../../types/chat.types';
+import { logger } from '../../utils/logger';
+import { chatMediaStoragePathFromRef, getChatMediaDisplayUri } from './chatSignedMediaUrl';
 
 // ============================================
 // קונפיגורציה
@@ -23,10 +25,79 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_AUDIO_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_DOCUMENT_SIZE = 50 * 1024 * 1024; // 50MB
+const GALLERY_PAGE_SIZE = 50;
 
-// גודלי thumbnails
-const THUMBNAIL_SIZE = 200;
-const PREVIEW_SIZE = 1200;
+// ============================================
+// Helpers
+// ============================================
+
+/** Simple retry helper for transient upload failures (network errors, 5xx) */
+async function withUploadRetry<T>(
+  fn: () => Promise<T & { error: any }>,
+  maxAttempts = 3
+): Promise<T & { error: any }> {
+  let lastResult: any;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    lastResult = await fn();
+    if (!lastResult.error) return lastResult;
+    const err = lastResult.error;
+    // Retry on network errors, timeouts, and 5xx server errors from Supabase Storage
+    const retryable =
+      err?.statusCode >= 500 ||
+      err?.message?.toLowerCase().includes('timeout') ||
+      err?.message?.toLowerCase().includes('network') ||
+      err?.message?.toLowerCase().includes('fetch') ||
+      ['StorageApiError', 'UNEXPECTED_ERROR', 'UPLOAD_ERROR'].includes(err?.name ?? err?.code ?? '');
+    if (!retryable || attempt === maxAttempts) return lastResult;
+    await new Promise(res => setTimeout(res, 500 * attempt));
+  }
+  return lastResult;
+}
+
+function generateSecureId(): string {
+  const array = new Uint8Array(12);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(array);
+  } else {
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function sanitizeFileName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 200);
+}
+
+function validateGroupPath(groupId: string): boolean {
+  if (!groupId || typeof groupId !== 'string') return false;
+  if (groupId.includes('..') || groupId.includes('/') || groupId.includes('\\')) return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(groupId);
+}
+
+const activeUploads = new Map<string, { cancelled: boolean }>();
+
+export function cancelUpload(uploadId: string): void {
+  const upload = activeUploads.get(uploadId);
+  if (upload) {
+    upload.cancelled = true;
+    activeUploads.delete(uploadId);
+  }
+}
+
+export function cancelAllUploads(): void {
+  activeUploads.forEach(upload => { upload.cancelled = true; });
+  activeUploads.clear();
+}
+
+function createUploadHandle(): { id: string; handle: { cancelled: boolean } } {
+  const id = generateSecureId();
+  const handle = { cancelled: false };
+  activeUploads.set(id, handle);
+  return { id, handle };
+}
 
 // ============================================
 // העלאת תמונה
@@ -43,145 +114,95 @@ export async function uploadImage(
   height: number;
   size: number;
   error: ChatError | null;
+  uploadId?: string;
 }> {
-  try {
-    console.log('📤 Starting image upload:', uri);
+  const { id: uploadId, handle } = createUploadHandle();
+  const CANCELLED_RESULT = { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_CANCELLED' as const, message: 'ההעלאה בוטלה' }, uploadId };
 
-    // בדיקת גודל קובץ
+  try {
+    if (!validateGroupPath(groupId)) {
+      activeUploads.delete(uploadId);
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'INVALID_GROUP', message: 'Invalid group ID' } };
+    }
+
     const fileInfo = await FileSystem.getInfoAsync(uri);
+    
     if (!fileInfo.exists) {
+      activeUploads.delete(uploadId);
       return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
     }
 
     if (fileInfo.size && fileInfo.size > MAX_IMAGE_SIZE) {
+      activeUploads.delete(uploadId);
       return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'התמונה גדולה מדי (מקסימום 10MB)' } };
     }
 
-    // קריאת התמונה כ-base64
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: 'base64',
-    });
+    if (handle.cancelled) return CANCELLED_RESULT;
 
-    // קבלת מידות התמונה המקורית ויצירת preview/thumbnail
-    let imageInfo: any;
-    let thumbnail: any;
-    let previewImage: any;
-    let originalWidth = 0;
-    let originalHeight = 0;
+    if (onProgress) {
+      onProgress({ file_name: '', progress: 10, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
+    }
 
+    let imageToUpload: { base64: string; width: number; height: number };
+    
     try {
-      // ניסיון להשתמש ב-ImageManipulator (עובד ב-Expo Go)
-      imageInfo = await ImageManipulator.manipulateAsync(uri, [], { base64: true });
-      originalWidth = imageInfo.width;
-      originalHeight = imageInfo.height;
-
-      // יצירת thumbnail
-      thumbnail = await ImageManipulator.manipulateAsync(
+      const compressed = await ImageManipulator.manipulateAsync(
         uri,
-        [{ resize: { width: THUMBNAIL_SIZE } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        [],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
-
-      // יצירת preview (גרסה מוקטנת לשליחה)
-      previewImage = imageInfo;
-      if (originalWidth > PREVIEW_SIZE || originalHeight > PREVIEW_SIZE) {
-        const scale = Math.min(PREVIEW_SIZE / originalWidth, PREVIEW_SIZE / originalHeight);
-        previewImage = await ImageManipulator.manipulateAsync(
-          uri,
-          [{ resize: { width: Math.round(originalWidth * scale) } }],
-          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-        );
-      }
-    } catch (manipulatorError) {
-      // Fallback: אם ImageManipulator לא עובד, נשתמש בתמונה המקורית
-      console.log('⚠️ ImageManipulator not available, using original image');
+      imageToUpload = { base64: compressed.base64!, width: compressed.width, height: compressed.height };
+    } catch {
       const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-      imageInfo = { base64, width: 0, height: 0 };
-      thumbnail = { base64, width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE };
-      previewImage = { base64, width: 0, height: 0 };
+      imageToUpload = { base64, width: 0, height: 0 };
     }
 
-    // שמות קבצים ייחודיים
+    if (handle.cancelled) return CANCELLED_RESULT;
+
+    if (onProgress) {
+      onProgress({ file_name: '', progress: 40, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
+    }
+
     const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(7);
+    const randomId = generateSecureId();
     const fileName = `${groupId}/${timestamp}-${randomId}.jpg`;
-    const thumbnailFileName = `${groupId}/${timestamp}-${randomId}-thumb.jpg`;
 
-    // העלאת ה-preview
-    if (onProgress) {
-      onProgress({
-        file_name: fileName,
-        progress: 25,
-        uploaded_bytes: 0,
-        total_bytes: fileInfo.size || 0,
-      });
+    // Retry up to 3 times for transient network errors
+    let uploadError: any = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const result = await supabase.storage
+        .from(CHAT_MEDIA_BUCKET)
+        .upload(fileName, decode(imageToUpload.base64), {
+          contentType: 'image/jpeg',
+          upsert: false,
+        });
+      uploadError = result.error;
+      if (!uploadError) break;
+      if (attempt < 3) await new Promise(res => setTimeout(res, 600 * attempt));
     }
 
-    const { data: previewData, error: previewError } = await supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .upload(fileName, decode(previewImage.base64!), {
-        contentType: 'image/jpeg',
-        upsert: false,
-      });
-
-    if (previewError) {
-      console.error('❌ Error uploading preview:', previewError);
-      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: previewError.message } };
+    if (uploadError) {
+      logger.error('ChatMedia', 'Image upload failed after retries', uploadError);
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת תמונה' } };
     }
 
     if (onProgress) {
-      onProgress({
-        file_name: fileName,
-        progress: 75,
-        uploaded_bytes: fileInfo.size || 0,
-        total_bytes: fileInfo.size || 0,
-      });
+      onProgress({ file_name: fileName, progress: 100, uploaded_bytes: fileInfo.size || 0, total_bytes: fileInfo.size || 0, url: fileName });
     }
 
-    // העלאת ה-thumbnail
-    const { data: thumbnailData, error: thumbnailError } = await supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .upload(thumbnailFileName, decode(thumbnail.base64!), {
-        contentType: 'image/jpeg',
-        upsert: false,
-      });
-
-    if (thumbnailError) {
-      console.error('⚠️ Warning: Error uploading thumbnail:', thumbnailError);
-      // לא נכשיל את כל התהליך בגלל thumbnail
-    }
-
-    // קבלת URLs ציבוריים
-    const { data: urlData } = supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .getPublicUrl(fileName);
-
-    const { data: thumbnailUrlData } = supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .getPublicUrl(thumbnailFileName);
-
-    if (onProgress) {
-      onProgress({
-        file_name: fileName,
-        progress: 100,
-        uploaded_bytes: fileInfo.size || 0,
-        total_bytes: fileInfo.size || 0,
-        url: urlData.publicUrl,
-      });
-    }
-
-    console.log('✅ Image uploaded successfully:', urlData.publicUrl);
-
+    activeUploads.delete(uploadId);
     return {
-      url: urlData.publicUrl,
-      thumbnail_url: thumbnailData ? thumbnailUrlData.publicUrl : null,
-      width: previewImage.width || originalWidth || 0,
-      height: previewImage.height || originalHeight || 0,
+      url: fileName,
+      thumbnail_url: null,
+      width: imageToUpload.width,
+      height: imageToUpload.height,
       size: fileInfo.size || 0,
       error: null,
+      uploadId,
     };
   } catch (error: any) {
-    console.error('❌ Unexpected error uploading image:', error);
+    activeUploads.delete(uploadId);
+    logger.error('ChatMedia', 'Unexpected image upload error', error);
     return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -204,9 +225,10 @@ export async function uploadVideo(
   error: ChatError | null;
 }> {
   try {
-    console.log('📤 Starting video upload:', uri);
+    if (!validateGroupPath(groupId)) {
+      return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'INVALID_GROUP', message: 'Invalid group ID' } };
+    }
 
-    // בדיקת גודל קובץ
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) {
       return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
@@ -216,99 +238,83 @@ export async function uploadVideo(
       return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'הסרטון גדול מדי (מקסימום 100MB)' } };
     }
 
-    // קבלת מידות הסרטון ו-duration
-    const width = 1920;
-    const height = 1080;
-    const duration = 0;
-
-    // יצירת thumbnail מהסרטון
-    let thumbnailUrl: string | null = null;
-    try {
-      // ניסיון להשתמש ב-expo-video-thumbnails (לא עובד ב-Expo Go)
-      let thumbnailUri: string | null = null;
-      
-      try {
-        const { VideoThumbnails } = require('expo-video-thumbnails');
-        const result = await VideoThumbnails.getThumbnailAsync(uri, {
-          time: 1000,
-        });
-        thumbnailUri = result.uri;
-      } catch (thumbnailError) {
-        // Fallback: ניצור תמונה ראשונה מהסרטון באמצעות ImageManipulator
-        // או נשאיר null (הסרטון יוצג בלי thumbnail)
-        console.log('⚠️ Video thumbnails not available in Expo Go, skipping thumbnail');
-      }
-
-      if (thumbnailUri) {
-        const thumbnailResult = await uploadImage(thumbnailUri, groupId);
-        thumbnailUrl = thumbnailResult.thumbnail_url;
-      }
-    } catch (error) {
-      console.error('⚠️ Warning: Could not generate video thumbnail:', error);
-      // לא נכשיל את העלאת הסרטון בגלל thumbnail
+    if (onProgress) {
+      onProgress({ file_name: '', progress: 10, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
     }
 
-    // שם קובץ ייחודי
     const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(7);
-    const extension = uri.split('.').pop() || 'mp4';
+    const randomId = generateSecureId();
+    const rawExt = uri.split('.').pop() || 'mp4';
+    const extension = rawExt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
     const fileName = `${groupId}/${timestamp}-${randomId}.${extension}`;
 
-    if (onProgress) {
-      onProgress({
-        file_name: fileName,
-        progress: 10,
-        uploaded_bytes: 0,
-        total_bytes: fileInfo.size || 0,
-      });
-    }
-
-    // קריאת הקובץ כ-base64
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: 'base64',
-    });
-
-    // העלאה
-    const { data, error } = await supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .upload(fileName, decode(base64), {
-        contentType: `video/${extension}`,
-        upsert: false,
-      });
-
-    if (error) {
-      console.error('❌ Error uploading video:', error);
-      return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: error.message } };
-    }
-
-    // קבלת URL ציבורי
-    const { data: urlData } = supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .getPublicUrl(fileName);
+    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
 
     if (onProgress) {
-      onProgress({
-        file_name: fileName,
-        progress: 100,
-        uploaded_bytes: fileInfo.size || 0,
-        total_bytes: fileInfo.size || 0,
-        url: urlData.publicUrl,
-      });
+      onProgress({ file_name: fileName, progress: 50, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
     }
 
-    console.log('✅ Video uploaded successfully:', urlData.publicUrl);
+    const mimeType = extension === 'mov' ? 'video/quicktime' : `video/${extension}`;
+    let videoUploadError: any = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const result = await supabase.storage
+        .from(CHAT_MEDIA_BUCKET)
+        .upload(fileName, decode(base64), { contentType: mimeType, upsert: false });
+      videoUploadError = result.error;
+      if (!videoUploadError) break;
+      if (attempt < 3) await new Promise(res => setTimeout(res, 600 * attempt));
+    }
+
+    if (videoUploadError) {
+      logger.error('ChatMedia', 'Video upload failed after retries', videoUploadError);
+      return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת סרטון' } };
+    }
+
+    if (onProgress) {
+      onProgress({ file_name: fileName, progress: 70, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
+    }
+
+    let thumbnailUrl: string | null = null;
+    try {
+      const { uri: thumbnailUri } = await VideoThumbnails.getThumbnailAsync(uri, {
+        time: 1000,
+        quality: 0.7,
+      });
+      
+      if (thumbnailUri) {
+        const thumbnailBase64 = await FileSystem.readAsStringAsync(thumbnailUri, { encoding: 'base64' });
+        const thumbnailFileName = `${groupId}/${timestamp}-${randomId}-thumb.jpg`;
+        
+        const { error: thumbError } = await supabase.storage
+          .from(CHAT_MEDIA_BUCKET)
+          .upload(thumbnailFileName, decode(thumbnailBase64), {
+            contentType: 'image/jpeg',
+            upsert: false,
+          });
+        
+        if (!thumbError) {
+          thumbnailUrl = thumbnailFileName;
+        }
+      }
+    } catch (thumbError) {
+      logger.warn('ChatMedia', 'Could not generate video thumbnail');
+    }
+
+    if (onProgress) {
+      onProgress({ file_name: fileName, progress: 100, uploaded_bytes: fileInfo.size || 0, total_bytes: fileInfo.size || 0, url: fileName });
+    }
 
     return {
-      url: urlData.publicUrl,
+      url: fileName,
       thumbnail_url: thumbnailUrl,
-      duration,
-      width,
-      height,
+      duration: 0,
+      width: 0,
+      height: 0,
       size: fileInfo.size || 0,
       error: null,
     };
   } catch (error: any) {
-    console.error('❌ Unexpected error uploading video:', error);
+    logger.error('ChatMedia', 'Unexpected video upload error', error);
     return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -329,9 +335,10 @@ export async function uploadAudio(
   error: ChatError | null;
 }> {
   try {
-    console.log('📤 Starting audio upload:', uri);
+    if (!validateGroupPath(groupId)) {
+      return { url: null, duration: 0, size: 0, error: { code: 'INVALID_GROUP', message: 'Invalid group ID' } };
+    }
 
-    // בדיקת גודל קובץ
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) {
       return { url: null, duration: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
@@ -341,10 +348,10 @@ export async function uploadAudio(
       return { url: null, duration: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'הקובץ גדול מדי (מקסימום 50MB)' } };
     }
 
-    // שם קובץ ייחודי
     const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(7);
-    const extension = uri.split('.').pop() || 'm4a';
+    const randomId = generateSecureId();
+    const rawExt = uri.split('.').pop() || 'm4a';
+    const extension = rawExt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
     const fileName = `${groupId}/${timestamp}-${randomId}.${extension}`;
 
     if (onProgress) {
@@ -356,28 +363,23 @@ export async function uploadAudio(
       });
     }
 
-    // קריאת הקובץ כ-base64
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: 'base64',
     });
 
-    // העלאה
-    const { data, error } = await supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .upload(fileName, decode(base64), {
-        contentType: `audio/${extension}`,
-        upsert: false,
-      });
+    const uploadResult = await withUploadRetry(() =>
+      supabase.storage
+        .from(CHAT_MEDIA_BUCKET)
+        .upload(fileName, decode(base64), {
+          contentType: `audio/${extension}`,
+          upsert: false,
+        })
+    );
 
-    if (error) {
-      console.error('❌ Error uploading audio:', error);
-      return { url: null, duration: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: error.message } };
+    if (uploadResult.error) {
+      logger.error('ChatMedia', 'Audio upload failed', uploadResult.error);
+      return { url: null, duration: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת אודיו' } };
     }
-
-    // קבלת URL ציבורי
-    const { data: urlData } = supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .getPublicUrl(fileName);
 
     if (onProgress) {
       onProgress({
@@ -385,20 +387,18 @@ export async function uploadAudio(
         progress: 100,
         uploaded_bytes: fileInfo.size || 0,
         total_bytes: fileInfo.size || 0,
-        url: urlData.publicUrl,
+        url: fileName,
       });
     }
 
-    console.log('✅ Audio uploaded successfully:', urlData.publicUrl);
-
     return {
-      url: urlData.publicUrl,
+      url: fileName,
       duration,
       size: fileInfo.size || 0,
       error: null,
     };
   } catch (error: any) {
-    console.error('❌ Unexpected error uploading audio:', error);
+    logger.error('ChatMedia', 'Unexpected audio upload error', error);
     return { url: null, duration: 0, size: 0, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -418,9 +418,10 @@ export async function uploadDocument(
   error: ChatError | null;
 }> {
   try {
-    console.log('📤 Starting document upload:', uri);
+    if (!validateGroupPath(groupId)) {
+      return { url: null, size: 0, error: { code: 'INVALID_GROUP', message: 'Invalid group ID' } };
+    }
 
-    // בדיקת גודל קובץ
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) {
       return { url: null, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
@@ -430,11 +431,11 @@ export async function uploadDocument(
       return { url: null, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'הקובץ גדול מדי (מקסימום 50MB)' } };
     }
 
-    // שם קובץ ייחודי (שמירה על השם המקורי)
     const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(7);
-    const extension = fileName.split('.').pop() || 'pdf';
-    const uniqueFileName = `${groupId}/${timestamp}-${randomId}-${fileName}`;
+    const randomId = generateSecureId();
+    const sanitized = sanitizeFileName(fileName);
+    const extension = sanitized.split('.').pop()?.toLowerCase() || 'pdf';
+    const uniqueFileName = `${groupId}/${timestamp}-${randomId}-${sanitized}`;
 
     if (onProgress) {
       onProgress({
@@ -445,12 +446,10 @@ export async function uploadDocument(
       });
     }
 
-    // קריאת הקובץ כ-base64
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: 'base64',
     });
 
-    // קביעת content type לפי סוג הקובץ
     const mimeTypes: Record<string, string> = {
       pdf: 'application/pdf',
       doc: 'application/msword',
@@ -463,25 +462,21 @@ export async function uploadDocument(
       zip: 'application/zip',
     };
 
-    const contentType = mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
+    const contentType = mimeTypes[extension] || 'application/octet-stream';
 
-    // העלאה
-    const { data, error } = await supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .upload(uniqueFileName, decode(base64), {
-        contentType,
-        upsert: false,
-      });
+    const uploadResult = await withUploadRetry(() =>
+      supabase.storage
+        .from(CHAT_MEDIA_BUCKET)
+        .upload(uniqueFileName, decode(base64), {
+          contentType,
+          upsert: false,
+        })
+    );
 
-    if (error) {
-      console.error('❌ Error uploading document:', error);
-      return { url: null, size: 0, error: { code: 'UPLOAD_ERROR', message: error.message } };
+    if (uploadResult.error) {
+      logger.error('ChatMedia', 'Document upload failed', uploadResult.error);
+      return { url: null, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת מסמך' } };
     }
-
-    // קבלת URL ציבורי
-    const { data: urlData } = supabase.storage
-      .from(CHAT_MEDIA_BUCKET)
-      .getPublicUrl(uniqueFileName);
 
     if (onProgress) {
       onProgress({
@@ -489,19 +484,17 @@ export async function uploadDocument(
         progress: 100,
         uploaded_bytes: fileInfo.size || 0,
         total_bytes: fileInfo.size || 0,
-        url: urlData.publicUrl,
+        url: uniqueFileName,
       });
     }
 
-    console.log('✅ Document uploaded successfully:', urlData.publicUrl);
-
     return {
-      url: urlData.publicUrl,
+      url: uniqueFileName,
       size: fileInfo.size || 0,
       error: null,
     };
   } catch (error: any) {
-    console.error('❌ Unexpected error uploading document:', error);
+    logger.error('ChatMedia', 'Unexpected document upload error', error);
     return { url: null, size: 0, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -511,42 +504,69 @@ export async function uploadDocument(
 // ============================================
 
 export async function deleteMedia(
-  mediaUrl: string
+  mediaUrl: string,
+  groupId?: string
 ): Promise<{ error: ChatError | null }> {
   try {
-    // חילוץ שם הקובץ מה-URL
-    const fileName = mediaUrl.split('/').slice(-2).join('/');
+    let storagePath = chatMediaStoragePathFromRef(mediaUrl);
+    if (!storagePath) {
+      try {
+        const urlObj = new URL(mediaUrl);
+        const pathParts = urlObj.pathname.split('/');
+        const bucketIdx = pathParts.indexOf(CHAT_MEDIA_BUCKET);
+        if (bucketIdx === -1 || bucketIdx >= pathParts.length - 1) {
+          return { error: { code: 'INVALID_URL', message: 'Invalid media URL' } };
+        }
+        storagePath = pathParts.slice(bucketIdx + 1).join('/');
+      } catch {
+        return { error: { code: 'INVALID_URL', message: 'Invalid media URL' } };
+      }
+    }
+
+    if (storagePath.includes('..')) {
+      return { error: { code: 'INVALID_PATH', message: 'Invalid file path' } };
+    }
+
+    if (groupId && !storagePath.startsWith(`${groupId}/`)) {
+      return { error: { code: 'ACCESS_DENIED', message: 'Cannot delete media from another group' } };
+    }
 
     const { error } = await supabase.storage
       .from(CHAT_MEDIA_BUCKET)
-      .remove([fileName]);
+      .remove([storagePath]);
 
     if (error) {
-      console.error('❌ Error deleting media:', error);
-      return { error: { code: 'DELETE_MEDIA_ERROR', message: error.message } };
+      logger.error('ChatMedia', 'Delete failed', error);
+      return { error: { code: 'DELETE_MEDIA_ERROR', message: 'שגיאה במחיקת מדיה' } };
     }
 
-    console.log('✅ Media deleted successfully:', fileName);
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error deleting media:', error);
+    logger.error('ChatMedia', 'Unexpected delete error', error);
     return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
 
 // ============================================
-// קבלת כל המדיה של קבוצה
+// קבלת כל המדיה של קבוצה (עם pagination)
 // ============================================
 
 export async function getGroupMediaGallery(
   groupId: string,
-  mediaType?: 'image' | 'video' | 'all'
+  mediaType?: 'image' | 'video' | 'all',
+  page: number = 0,
+  pageSize: number = GALLERY_PAGE_SIZE
 ): Promise<{ 
   images: any[];
   videos: any[];
+  hasMore: boolean;
   error: ChatError | null;
 }> {
   try {
+    if (!validateGroupPath(groupId)) {
+      return { images: [], videos: [], hasMore: false, error: { code: 'INVALID_GROUP', message: 'Invalid group ID' } };
+    }
+
     let query = supabase
       .from('chat_messages')
       .select(`
@@ -574,21 +594,28 @@ export async function getGroupMediaGallery(
       query = query.in('message_type', [ChatMessageType.IMAGE, ChatMessageType.VIDEO]);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const from = page * pageSize;
+    const to = from + pageSize;
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
 
     if (error) {
-      console.error('❌ Error fetching media gallery:', error);
-      return { images: [], videos: [], error: { code: 'FETCH_MEDIA_ERROR', message: error.message } };
+      logger.error('ChatMedia', 'Gallery fetch failed', error);
+      return { images: [], videos: [], hasMore: false, error: { code: 'FETCH_MEDIA_ERROR', message: 'שגיאה בטעינת גלריה' } };
     }
 
-    const images = data.filter(m => m.message_type === ChatMessageType.IMAGE);
-    const videos = data.filter(m => m.message_type === ChatMessageType.VIDEO);
+    const hasMore = (data?.length ?? 0) > pageSize;
+    const items = hasMore ? data!.slice(0, pageSize) : (data || []);
 
-    console.log(`✅ Fetched ${images.length} images and ${videos.length} videos`);
-    return { images, videos, error: null };
+    const images = items.filter(m => m.message_type === ChatMessageType.IMAGE);
+    const videos = items.filter(m => m.message_type === ChatMessageType.VIDEO);
+
+    return { images, videos, hasMore, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error fetching media gallery:', error);
-    return { images: [], videos: [], error: { code: 'UNEXPECTED_ERROR', message: error.message } };
+    logger.error('ChatMedia', 'Unexpected gallery error', error);
+    return { images: [], videos: [], hasMore: false, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
 
@@ -600,9 +627,33 @@ export async function downloadMedia(
   mediaUrl: string,
   fileName: string
 ): Promise<{ localUri: string | null; error: ChatError | null }> {
-  // TODO: להוסיף הורדת קבצים בהמשך
-  console.log('⬇️ Download requested but not implemented yet');
-  return { localUri: null, error: { code: 'NOT_IMPLEMENTED', message: 'הורדה לא מיושמת עדיין' } };
+  try {
+    const sanitized = sanitizeFileName(fileName);
+    const dir = FileSystem.documentDirectory + 'chat-downloads/';
+    const dirInfo = await FileSystem.getInfoAsync(dir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    }
+
+    const localUri = dir + sanitized;
+    const signed = await getChatMediaDisplayUri(mediaUrl);
+    const download = await FileSystem.downloadAsync(signed || mediaUrl, localUri);
+
+    if (download.status !== 200) {
+      // Clean up failed download
+      try { await FileSystem.deleteAsync(localUri, { idempotent: true }); } catch { /* best effort */ }
+      return { localUri: null, error: { code: 'DOWNLOAD_FAILED', message: `HTTP ${download.status}` } };
+    }
+
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(download.uri);
+    }
+
+    return { localUri: download.uri, error: null };
+  } catch (error: any) {
+    logger.error('ChatMedia', 'Download failed', error);
+    return { localUri: null, error: { code: 'DOWNLOAD_ERROR', message: error.message } };
+  }
 }
 
 // ============================================
@@ -657,4 +708,3 @@ export const chatMediaService = {
   formatFileSize,
   formatDuration,
 };
-

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Check for hardcoded secrets
+        run: |
+          # Pattern file is NOT committed - set patterns via GitHub secret SECRET_PATTERNS
+          # or use a generic check for common secret formats
+          if grep -rn "sk_live_\|sk_test_\|AKIA[0-9A-Z]\{16\}\|-----BEGIN.*PRIVATE KEY" \
+            --include="*.ts" --include="*.tsx" \
+            --exclude-dir=node_modules --exclude-dir=.git .; then
+            echo "::error::Potential hardcoded secrets detected!"
+            exit 1
+          fi
+
+  build:
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Expo Doctor
+        run: npx expo-doctor
+        continue-on-error: true
+
+      - name: Export (web check)
+        run: npx expo export --platform web

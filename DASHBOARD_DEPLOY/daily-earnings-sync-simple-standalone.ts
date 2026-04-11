@@ -179,7 +179,10 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY') || 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC'
+    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY')
+    if (!benzingaApiKey) {
+      throw new Error('BENZINGA_API_KEY not configured')
+    }
     
     const today = new Date()
     const startDate = new Date(today)
@@ -360,6 +363,7 @@ serve(async (req) => {
     )
   }
 })
+
 
 
 

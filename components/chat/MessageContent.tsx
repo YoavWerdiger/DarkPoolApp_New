@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, I18nManager } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { extractTextSegments } from '../../utils/textRanges';
 
@@ -10,13 +11,20 @@ interface MessageContentProps {
   textDirection: 'rtl' | 'ltr';
 }
 
-export default function MessageContent({
+function MessageContent({
   content,
   mentions,
   isMe,
   textDirection
 }: MessageContentProps) {
   const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
+
+  const bubbleTextColor = isMe
+    ? isDarkMode
+      ? DesignTokens.colors.text.inverse
+      : DesignTokens.colors.text.primary
+    : DesignTokens.colors.text.primary;
 
   // Render text with mentions
   const renderTextWithMentions = (text: string, mentions?: any[]) => {
@@ -27,7 +35,7 @@ export default function MessageContent({
           style={{
             textAlign: isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right',
             width: '100%',
-            color: isMe ? '#000000' : '#FFFFFF',
+            color: bubbleTextColor,
             writingDirection: textDirection,
             flexWrap: 'wrap',
             flexShrink: 1
@@ -82,7 +90,7 @@ export default function MessageContent({
             <Text
               key={uniqueKey}
               style={{
-                color: isMe ? '#000000' : '#FFFFFF',
+                color: bubbleTextColor,
                 fontSize: DesignTokens.typography.fontSize.base
               }}
             >

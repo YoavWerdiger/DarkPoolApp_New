@@ -5,20 +5,22 @@ import ChatGroupScreen from '../screens/ChatNew/ChatGroupScreen';
 import ChatGroupInfoScreen from '../screens/ChatNew/ChatGroupInfoScreen';
 import SavedMediaScreen from '../screens/ChatNew/SavedMediaScreen';
 import PrivacySupportScreen from '../screens/ChatNew/PrivacySupportScreen';
-import { useDesignTokens } from '../components/ui/DesignTokens';
+import ChatGroupPinnedMessagesScreen from '../screens/ChatNew/ChatGroupPinnedMessagesScreen';
+import { ChatProvider } from '../context/ChatContext';
 
 const Stack = createNativeStackNavigator();
 
-export default function ChatStack() {
-  const DesignTokens = useDesignTokens();
-  
+function ChatStackNavigator() {
   return (
     <Stack.Navigator 
       screenOptions={{ 
         headerShown: false,
         contentStyle: {
-          backgroundColor: DesignTokens.colors.background.primary,
+          backgroundColor: 'transparent',
         },
+        animation: 'fade',
+        gestureEnabled: true,
+        animationDuration: 200,
       }}
     >
       <Stack.Screen 
@@ -30,6 +32,7 @@ export default function ChatStack() {
         component={ChatGroupScreen}
         options={{
           presentation: 'card',
+          animation: 'slide_from_right',
         }}
       />
       <Stack.Screen 
@@ -44,6 +47,18 @@ export default function ChatStack() {
         name="PrivacySupport" 
         component={PrivacySupportScreen}
       />
+      <Stack.Screen 
+        name="ChatGroupPinnedMessages" 
+        component={ChatGroupPinnedMessagesScreen}
+      />
     </Stack.Navigator>
+  );
+}
+
+export default function ChatStack() {
+  return (
+    <ChatProvider>
+      <ChatStackNavigator />
+    </ChatProvider>
   );
 }

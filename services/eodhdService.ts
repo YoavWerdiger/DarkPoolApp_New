@@ -129,8 +129,10 @@ class EODHDService {
   private cacheTimeout = 5 * 60 * 1000; // 5 דקות
 
   constructor() {
-    // שימוש במפתח מהקישור שסופק (ללא רווח)
-    this.apiKey = process.env.EXPO_PUBLIC_EODHD_API_KEY || '68e3c3af900997.85677801';
+    const key = process.env.EXPO_PUBLIC_EODHD_API_KEY;
+    if (!key) {
+    }
+    this.apiKey = key ?? '';
   }
 
   private async getCachedData(key: string): Promise<any | null> {
@@ -170,7 +172,6 @@ class EODHDService {
       this.setCachedData(cacheKey, data);
       return data;
     } catch (error) {
-      console.error('EODHD API Request failed:', error);
       throw error;
     }
   }
@@ -220,7 +221,6 @@ class EODHDService {
         period: event.event_period || undefined,
       }));
     } catch (error) {
-      console.error('Error fetching economic events from Benzinga:', error);
       return [];
     }
   }
@@ -238,7 +238,6 @@ class EODHDService {
       const indicators = await this.makeRequest<EODHDMacroIndicator[]>('macroeconomic', params);
       return Array.isArray(indicators) ? indicators : [];
     } catch (error) {
-      console.error('Error fetching macro indicators:', error);
       return [];
     }
   }
@@ -276,7 +275,6 @@ class EODHDService {
           }
         }
       } catch (error) {
-        console.error('Error in pagination:', error);
         hasMore = false;
       }
     }
@@ -315,7 +313,6 @@ class EODHDService {
           }
         }
       } catch (error) {
-        console.error('Error in macro pagination:', error);
         hasMore = false;
       }
     }
@@ -370,7 +367,6 @@ class EODHDService {
         return dateA.getTime() - dateB.getTime();
       });
     } catch (error) {
-      console.error('Error fetching popular economic indicators from Benzinga:', error);
       return [];
     }
   }
@@ -389,7 +385,6 @@ class EODHDService {
         symbols: params.symbols
       });
     } catch (error) {
-      console.error('Error fetching earnings calendar from Benzinga:', error);
       return [];
     }
   }
@@ -497,18 +492,15 @@ class EODHDService {
       const response = await fetch(testUrl);
       
       if (response.status === 403) {
-        console.log('❌ EODHD API: 403 Forbidden - API key may be invalid or expired');
         return false;
       }
       
       if (response.status === 401) {
-        console.log('❌ EODHD API: 401 Unauthorized - API key invalid');
         return false;
       }
       
       return response.ok;
     } catch (error) {
-      console.error('EODHD API not available:', error);
       return false;
     }
   }

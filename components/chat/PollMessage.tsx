@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,16 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Lock, Trash2, Clock, X } from 'lucide-react-native';
 import { PollService, PollWithVotes, PollOption } from '../../services/pollService';
 import PollResults from './PollResults';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface PollMessageProps {
   poll: PollWithVotes;
@@ -24,7 +27,7 @@ interface PollMessageProps {
   isMe?: boolean;
 }
 
-export default function PollMessage({
+function PollMessage({
   poll,
   chatId,
   onPollUpdated,
@@ -32,6 +35,9 @@ export default function PollMessage({
   isMe = false
 }: PollMessageProps) {
   const { user } = useAuth();
+  const { isDarkMode } = useTheme();
+  const DesignTokens = useDesignTokens();
+  const styles = useMemo(() => createStyles(DesignTokens, isMe, isDarkMode), [DesignTokens, isMe, isDarkMode]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [isVoting, setIsVoting] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -83,24 +89,17 @@ export default function PollMessage({
         user?.id || ''
       );
 
-      // רענן את הסקר
-      console.log('🔄 Refreshing poll after vote...');
       const updatedPoll = await PollService.getPollResults(currentPoll.id, user?.id);
-      console.log('🔄 Updated poll received:', updatedPoll);
       
       if (updatedPoll) {
         setCurrentPoll(updatedPoll);
         onPollUpdated(updatedPoll);
         setShowResults(true);
         setSelectedOptions([]);
-        console.log('✅ Poll updated successfully');
-      } else {
-        console.log('❌ No updated poll received');
       }
 
       Alert.alert('הצלחה', 'ההצבעה נשלחה בהצלחה!');
     } catch (error: any) {
-      console.error('❌ Error voting:', error);
       Alert.alert('שגיאה', error.message || 'לא ניתן לשלוח את ההצבעה');
     } finally {
       setIsVoting(false);
@@ -131,7 +130,6 @@ export default function PollMessage({
 
               Alert.alert('הצלחה', 'הסקר ננעל בהצלחה');
             } catch (error: any) {
-              console.error('❌ Error locking poll:', error);
               Alert.alert('שגיאה', error.message || 'לא ניתן לנעול את הסקר');
             }
           }
@@ -157,7 +155,6 @@ export default function PollMessage({
               Alert.alert('הצלחה', 'הסקר נמחק בהצלחה');
               // כאן צריך להודיע להורה על המחיקה
             } catch (error: any) {
-              console.error('❌ Error deleting poll:', error);
               Alert.alert('שגיאה', error.message || 'לא ניתן למחוק את הסקר');
             }
           }
@@ -168,61 +165,44 @@ export default function PollMessage({
 
   const isUserVoted = currentPoll.user_votes && currentPoll.user_votes.length > 0;
   const canVote = !currentPoll.is_locked && !isUserVoted;
-  
-  console.log('🔍 PollMessage Debug:', {
-    pollId: currentPoll.id,
-    userId: user?.id,
-    isMe,
-    isAdmin,
-    isUserVoted,
-    canVote,
-    userVotes: currentPoll.user_votes,
-    isLocked: currentPoll.is_locked
-  });
 
   return (
-    <View className={`${isMe ? 'bg-[#00E654]' : 'bg-[#111111]'} border border-[#333] rounded-xl p-4 mb-3`}>
+    <View style={styles.container}>
       {/* Poll Header */}
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center">
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
           <Image 
             source={require('../../assets/icons/ico-40-poll-2.png')} 
-            style={{ width: 20, height: 20, marginRight: 8 }} 
+            style={styles.pollIcon} 
             resizeMode="contain"
           />
-          <Text className={`${isMe ? 'text-black' : 'text-primary'} font-bold text-sm mr-2`}>סקר</Text>
+          <Text style={styles.pollLabel}>סקר</Text>
           {currentPoll.multiple_choice && (
-            <View className="bg-gray-600 px-2 py-1 rounded-lg mr-2">
-              <Text className="text-white text-xs">בחירה מרובה</Text>
+            <View style={styles.multipleChoiceBadge}>
+              <Text style={styles.multipleChoiceText}>בחירה מרובה</Text>
             </View>
           )}
         </View>
         
-        <View className="flex-row items-center">
+        <View style={styles.headerRight}>
           {currentPoll.is_locked && (
-            <View className="flex-row items-center mr-2">
+            <View style={styles.lockedBadge}>
               <Lock size={14} color="#ff6b6b" strokeWidth={2} />
-              <Text className="text-red-400 text-xs">נעול</Text>
+              <Text style={styles.lockedText}>נעול</Text>
             </View>
           )}
           
           {/* Admin Actions */}
           {isAdmin && currentPoll.creator_id === user?.id && (
-            <View className="flex-row">
+            <View style={styles.adminActions}>
               {!currentPoll.is_locked && (
-                <TouchableOpacity
-                  onPress={handleLockPoll}
-                  className="bg-yellow-600 p-2 rounded-lg mr-2"
-                >
-                  <Lock size={16} color="#fff" strokeWidth={2} />
+                <TouchableOpacity onPress={handleLockPoll} style={styles.lockButton}>
+                  <Lock size={16} color={DesignTokens.colors.text.inverse} strokeWidth={2} />
                 </TouchableOpacity>
               )}
               
-              <TouchableOpacity
-                onPress={handleDeletePoll}
-                className="bg-red-600 p-2 rounded-lg"
-              >
-                <Trash2 size={16} color="#fff" strokeWidth={2} />
+              <TouchableOpacity onPress={handleDeletePoll} style={styles.deleteButton}>
+                <Trash2 size={16} color={DesignTokens.colors.text.inverse} strokeWidth={2} />
               </TouchableOpacity>
             </View>
           )}
@@ -230,58 +210,49 @@ export default function PollMessage({
       </View>
 
       {/* Question */}
-      <Text className={`${isMe ? 'text-black' : 'text-white'} font-bold text-lg mb-4 text-center`}>
-        {currentPoll.question}
-      </Text>
+      <Text style={styles.question}>{currentPoll.question}</Text>
 
       {/* Options */}
       {!showResults ? (
         <View>
-          {currentPoll.options.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              onPress={() => handleOptionSelect(option.id)}
-              disabled={!canVote}
-              className={`mb-3 p-3 rounded-xl border-2 ${
-                selectedOptions.includes(option.id)
-                  ? isMe ? 'border-black bg-black/20' : 'border-primary bg-primary/20'
-                  : isMe ? 'border-[#333] bg-white/10' : 'border-[#333] bg-[#1a1a1a]'
-              } ${!canVote ? 'opacity-50' : ''}`}
-            >
-              <View className="flex-row items-center">
-                <Ionicons
-                  name={
-                    currentPoll.multiple_choice
-                      ? selectedOptions.includes(option.id)
-                        ? 'checkbox'
-                        : 'checkbox-outline'
-                      : selectedOptions.includes(option.id)
-                      ? 'radio-button-on'
-                      : 'radio-button-off'
-                  }
-                  size={20}
-                  color={selectedOptions.includes(option.id) ? '#00E654' : '#666'}
-                  style={{ marginRight: 12 }}
-                />
-                <Text className={`${isMe ? 'text-black' : 'text-white'} text-base flex-1`}>{option.text}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {currentPoll.options.map((option) => {
+            const isSelected = selectedOptions.includes(option.id);
+            return (
+              <TouchableOpacity
+                key={option.id}
+                onPress={() => handleOptionSelect(option.id)}
+                disabled={!canVote}
+                style={[
+                  styles.optionButton,
+                  isSelected ? styles.optionButtonSelected : styles.optionButtonUnselected,
+                  !canVote && styles.optionButtonDisabled
+                ]}
+              >
+                <View style={styles.optionContent}>
+                  <Ionicons
+                    name={
+                      currentPoll.multiple_choice
+                        ? isSelected ? 'checkbox' : 'checkbox-outline'
+                        : isSelected ? 'radio-button-on' : 'radio-button-off'
+                    }
+                    size={20}
+                    color={isSelected ? DesignTokens.colors.primary.main : DesignTokens.colors.text.tertiary}
+                    style={styles.optionIcon}
+                  />
+                  <Text style={styles.optionText}>{option.text}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
 
           {/* Vote Button - הצבעה ישירה */}
           {canVote && selectedOptions.length > 0 && (
             <TouchableOpacity
               onPress={handleVote}
               disabled={isVoting}
-              className={`mt-4 py-3 rounded-xl ${
-                isVoting ? 'bg-gray-600' : isMe ? 'bg-black' : 'bg-primary'
-              }`}
+              style={[styles.voteButton, isVoting && styles.voteButtonDisabled]}
             >
-              <Text
-                className={`text-center font-bold text-lg ${
-                  isVoting ? 'text-gray-400' : isMe ? 'text-white' : 'text-black'
-                }`}
-              >
+              <Text style={[styles.voteButtonText, isVoting && styles.voteButtonTextDisabled]}>
                 {isVoting ? 'שולח...' : 'הצבע'}
               </Text>
             </TouchableOpacity>
@@ -289,13 +260,8 @@ export default function PollMessage({
 
           {/* Show Results Button */}
           {isUserVoted && (
-            <TouchableOpacity
-              onPress={() => setShowResults(true)}
-              className="mt-3 py-2 rounded-xl bg-[#1a1a1a] border border-[#333]"
-            >
-              <Text className="text-white text-center font-bold">
-                הצג תוצאות
-              </Text>
+            <TouchableOpacity onPress={() => setShowResults(true)} style={styles.showResultsButton}>
+              <Text style={styles.showResultsText}>הצג תוצאות</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -311,14 +277,14 @@ export default function PollMessage({
       )}
 
       {/* Footer */}
-      <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-[#333]">
-        <Text className="text-gray-400 text-xs">
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
           נוצר על ידי {currentPoll.creator_id === user?.id ? 'אתה' : 'משתמש אחר'}
         </Text>
         
-        <View className="flex-row items-center">
-          <Clock size={14} color="#666" strokeWidth={2} />
-          <Text className="text-gray-400 text-xs mr-1">
+        <View style={styles.footerRight}>
+          <Clock size={14} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+          <Text style={styles.footerDate}>
             {new Date(currentPoll.created_at).toLocaleDateString('he-IL')}
           </Text>
         </View>
@@ -327,3 +293,195 @@ export default function PollMessage({
     </View>
   );
 }
+
+export default React.memo(PollMessage);
+
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>, isMe: boolean, isDarkMode: boolean) => StyleSheet.create({
+  container: {
+    backgroundColor: isMe ? tokens.colors.primary.main : tokens.colors.background.secondary,
+    borderRadius: tokens.borderRadius.lg,
+    padding: tokens.spacing.lg,
+    marginBottom: tokens.spacing.md,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.primary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: tokens.spacing.md,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pollIcon: {
+    width: 20,
+    height: 20,
+    marginRight: tokens.spacing.sm,
+  },
+  pollLabel: {
+    color: isMe
+      ? isDarkMode
+        ? tokens.colors.text.inverse
+        : tokens.colors.text.primary
+      : tokens.colors.primary.main,
+    fontWeight: tokens.typography.fontWeight.bold,
+    fontSize: tokens.typography.bodySmall.size,
+    marginRight: tokens.spacing.sm,
+  },
+  multipleChoiceBadge: {
+    backgroundColor: tokens.colors.background.surface,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.sm,
+    marginRight: tokens.spacing.sm,
+  },
+  multipleChoiceText: {
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.sm,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  lockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  lockedText: {
+    color: tokens.colors.text.danger,
+    fontSize: tokens.typography.fontSize.sm,
+    marginLeft: tokens.spacing.xs,
+  },
+  adminActions: {
+    flexDirection: 'row',
+  },
+  lockButton: {
+    backgroundColor: tokens.colors.text.warning,
+    padding: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.sm,
+    marginRight: tokens.spacing.sm,
+  },
+  deleteButton: {
+    backgroundColor: tokens.colors.text.danger,
+    padding: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.sm,
+  },
+  question: {
+    color: isMe
+      ? isDarkMode
+        ? tokens.colors.text.inverse
+        : tokens.colors.text.primary
+      : tokens.colors.text.primary,
+    fontWeight: tokens.typography.fontWeight.bold,
+    fontSize: tokens.typography.titleSmall.size,
+    marginBottom: tokens.spacing.lg,
+    textAlign: 'center',
+  },
+  optionButton: {
+    marginBottom: tokens.spacing.md,
+    padding: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.md,
+    borderWidth: tokens.layout.borderWidth.thick,
+  },
+  optionButtonSelected: {
+    borderColor: isMe
+      ? isDarkMode
+        ? tokens.colors.text.inverse
+        : tokens.colors.text.primary
+      : tokens.colors.primary.main,
+    backgroundColor: isMe
+      ? `${tokens.colors.text.inverse}33`
+      : `${tokens.colors.primary.main}33`,
+  },
+  optionButtonUnselected: {
+    borderColor: tokens.colors.border.primary,
+    backgroundColor: isMe ? tokens.colors.border.hover : tokens.colors.background.tertiary,
+  },
+  optionButtonDisabled: {
+    opacity: 0.5,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  optionIcon: {
+    marginRight: tokens.spacing.md,
+  },
+  optionText: {
+    color: isMe
+      ? isDarkMode
+        ? tokens.colors.text.inverse
+        : tokens.colors.text.primary
+      : tokens.colors.text.primary,
+    fontSize: tokens.typography.titleXs.size,
+    flex: 1,
+    textAlign: 'right',
+  },
+  voteButton: {
+    marginTop: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.md,
+    backgroundColor: isMe
+      ? isDarkMode
+        ? tokens.colors.text.inverse
+        : tokens.colors.text.primary
+      : tokens.colors.primary.main,
+  },
+  voteButtonDisabled: {
+    backgroundColor: tokens.colors.background.surface,
+  },
+  voteButtonText: {
+    textAlign: 'center',
+    fontWeight: tokens.typography.fontWeight.bold,
+    fontSize: tokens.typography.titleSmall.size,
+    color: !isMe
+      ? isDarkMode
+        ? tokens.colors.text.inverse
+        : tokens.colors.text.primary
+      : isDarkMode
+        ? tokens.colors.text.primary
+        : tokens.colors.text.inverse,
+  },
+  voteButtonTextDisabled: {
+    color: tokens.colors.text.tertiary,
+  },
+  showResultsButton: {
+    marginTop: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.md,
+    backgroundColor: tokens.colors.background.tertiary,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.primary,
+  },
+  showResultsText: {
+    color: tokens.colors.text.primary,
+    textAlign: 'center',
+    fontWeight: tokens.typography.fontWeight.bold,
+    fontSize: tokens.typography.bodySmall.size,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: tokens.spacing.lg,
+    paddingTop: tokens.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: tokens.colors.border.primary,
+  },
+  footerText: {
+    color: tokens.colors.text.tertiary,
+    fontSize: tokens.typography.fontSize.sm,
+  },
+  footerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  footerDate: {
+    color: tokens.colors.text.tertiary,
+    fontSize: tokens.typography.fontSize.sm,
+    marginLeft: tokens.spacing.xs,
+  },
+});

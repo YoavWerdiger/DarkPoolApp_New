@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -113,47 +113,83 @@ serve(async (req) => {
 
     let notificationsCreated = 0
 
+    // ─── עזר: פורמט מספר גדול כ-$XB / $XM / $XK
+    const formatRevenue = (val: number | null | undefined): string => {
+      if (val == null || isNaN(val)) return 'N/A'
+      const abs = Math.abs(val)
+      if (abs >= 1e12) return `$${(val / 1e12).toFixed(2)}T`
+      if (abs >= 1e9)  return `$${(val / 1e9).toFixed(2)}B`
+      if (abs >= 1e6)  return `$${(val / 1e6).toFixed(1)}M`
+      if (abs >= 1e3)  return `$${(val / 1e3).toFixed(1)}K`
+      return `$${val.toFixed(2)}`
+    }
+
+    // ─── עזר: פורמט EPS
+    const formatEps = (val: number | null | undefined): string => {
+      if (val == null || isNaN(val)) return 'N/A'
+      return `$${val.toFixed(2)}`
+    }
+
+    // ─── עזר: סמל עליה/ירידה
+    const surpriseIcon = (pct: number | null | undefined): string => {
+      if (pct == null) return ''
+      return pct >= 0 ? ' ✅' : ' ❌'
+    }
+
+    // ─── עזר: פורמט אחוז הפתעה
+    const formatPct = (pct: number | null | undefined): string => {
+      if (pct == null) return ''
+      const sign = pct >= 0 ? '+' : ''
+      return ` (${sign}${pct.toFixed(1)}%)`
+    }
+
     // יצירת התראות לכל דיווח שפורסם
     for (const report of publishedReports) {
       const ticker = report.ticker || report.code.replace('.US', '')
       const companyName = report.company_name || ticker
-      
-      // חישוב surprise
-      const epsSurprise = report.percent
-      const revenueSurprise = report.revenue_surprise_percent
-      
-      // בניית הודעה
-      let message = `${companyName} (${ticker}) - תוצאות פורסמו`
-      let emoji = '📊'
-      
-      if (epsSurprise !== null) {
-        if (epsSurprise > 5) {
-          emoji = '🚀'
-          message += ` - EPS הפתעה חיובית של ${epsSurprise.toFixed(1)}%`
-        } else if (epsSurprise < -5) {
-          emoji = '📉'
-          message += ` - EPS הפתעה שלילית של ${epsSurprise.toFixed(1)}%`
-        } else {
-          message += ` - EPS: $${report.actual?.toFixed(2) || 'N/A'}`
-        }
+
+      // ─── אמוג'י כותרת לפי ה-EPS surprise
+      const epsSurprise: number | null = report.percent ?? null
+      let titleEmoji = '📊'
+      if (epsSurprise != null) {
+        if (epsSurprise > 5)  titleEmoji = '🚀'
+        else if (epsSurprise < -5) titleEmoji = '📉'
       }
+
+      // ─── כותרת: "Apple דיווחה דוח רבעוני 🚀"
+      const notificationTitle = `${companyName} דיווחה דוח רבעוני ${titleEmoji}`
+
+      // ─── שורת EPS
+      const epsActual   = formatEps(report.actual)
+      const epsEstimate = formatEps(report.estimate)
+      const epsLine = `EPS: ${epsActual} vs ${epsEstimate} צפוי${formatPct(epsSurprise)}${surpriseIcon(epsSurprise)}`
+
+      // ─── שורת Revenue (אם קיים)
+      const revActual   = report.revenue_actual   ?? null
+      const revEstimate = report.revenue_estimate_avg ?? report.revenue_estimate ?? null
+      const revSurprisePct: number | null = report.revenue_surprise_percent ?? null
+      let revLine = ''
+      if (revActual != null) {
+        revLine = `\nRevenue: ${formatRevenue(revActual)} vs ${revEstimate != null ? formatRevenue(revEstimate) : 'N/A'} צפוי${formatPct(revSurprisePct)}${surpriseIcon(revSurprisePct)}`
+      }
+
+      const notificationBody = epsLine + revLine
 
       // יצירת התראה לכל משתמש
       for (const user of usersWithNotifications) {
-        // בדיקה אם כבר יש התראה על הדיווח הזה למשתמש הזה
+        // בדיקה אם כבר יש התראה על הדיווח הזה למשתמש הזה (ב-30 דקות האחרונות)
         const { data: existingNotification } = await supabase
           .from('pending_notifications')
           .select('id')
           .eq('user_id', user.user_id)
           .eq('notification_type', 'earnings')
           .eq('is_sent', false)
-          .like('body', `%${ticker}%`)
-          .like('body', '%תוצאות פורסמו%')
-          .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()) // ב-30 דקות האחרונות
+          .like('title', `%${companyName}%`)
+          .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
           .limit(1)
 
         if (existingNotification && existingNotification.length > 0) {
-          continue // כבר יש התראה
+          continue
         }
 
         // יצירת התראה
@@ -162,8 +198,8 @@ serve(async (req) => {
           .insert({
             user_id: user.user_id,
             notification_type: 'earnings',
-            title: `${emoji} תוצאות דיווח רווחים`,
-            body: message,
+            title: notificationTitle,
+            body: notificationBody,
             data: {
               type: 'earnings_results',
               ticker: ticker,
@@ -173,6 +209,7 @@ serve(async (req) => {
               estimate: report.estimate,
               percent: report.percent,
               revenue_actual: report.revenue_actual,
+              revenue_estimate_avg: report.revenue_estimate_avg,
               revenue_surprise_percent: report.revenue_surprise_percent
             },
             is_sent: false
@@ -215,6 +252,7 @@ serve(async (req) => {
     )
   }
 })
+
 
 
 

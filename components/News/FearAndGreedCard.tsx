@@ -40,7 +40,6 @@ export default function FearAndGreedCard({
 
   // בדיקת בטיחות - אם DesignTokens לא מוגדר, נשתמש בערכים ברירת מחדל
   if (!DesignTokens || !DesignTokens.colors || !DesignTokens.colors.primary) {
-    console.error('❌ FearAndGreedCard: DesignTokens not properly initialized');
     // נחזיר null במקום לזרוק שגיאה כדי לא לקרוס את המסך
     return null;
   }
@@ -237,7 +236,6 @@ export default function FearAndGreedCard({
 
     // עדכון אוטומטי כל 30 דקות (המדד מתעדכן פעם ביום, אבל נבדוק לעתים קרובות יותר)
     const interval = setInterval(() => {
-      console.log('🔄 FearAndGreedCard: Auto-refreshing data...');
       loadFearAndGreedIndex();
     }, 30 * 60 * 1000); // 30 דקות
 
@@ -260,14 +258,12 @@ export default function FearAndGreedCard({
         oneYearAgo: fullData.fgi.oneYearAgo,
       });
     } catch (err: any) {
-      console.error('❌ FearAndGreedCard: Error loading data:', err);
       setError(err.message || 'שגיאה בטעינת המדד');
       // נסה לטעון רק את הערך הנוכחי
       try {
         const currentValue = await fearAndGreedService.getCurrentValue();
         setData(currentValue);
-      } catch (fallbackErr) {
-        console.error('❌ FearAndGreedCard: Fallback also failed:', fallbackErr);
+      } catch {
       }
     } finally {
       setLoading(false);

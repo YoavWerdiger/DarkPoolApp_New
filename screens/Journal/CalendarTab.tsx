@@ -84,7 +84,6 @@ export default function CalendarTab() {
 
       setDailyPnl(allDays);
     } catch (error: any) {
-      console.error('Error loading calendar data:', error);
     } finally {
       setLoading(false);
     }
@@ -132,7 +131,49 @@ export default function CalendarTab() {
     return dayNames[date.getDay()];
   };
 
-  const renderCalendarDay = ({ item }: { item: DailyPnl }) => {
+  // יצירת מערך לוח שנה עם תאים ריקים בתחילה
+  const getCalendarData = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // היום הראשון בחודש
+    const firstDayOfMonth = new Date(year, month, 1);
+    // באיזה יום בשבוע מתחיל החודש (0=ראשון, 6=שבת)
+    const startDayOfWeek = firstDayOfMonth.getDay();
+    
+    // מספר ימים בחודש
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // יצירת מערך עם תאים ריקים בתחילה
+    const calendarData: (DailyPnl | null)[] = [];
+    
+    // הוספת תאים ריקים לפני היום הראשון
+    for (let i = 0; i < startDayOfWeek; i++) {
+      calendarData.push(null);
+    }
+    
+    // הוספת הימים של החודש
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = new Date(year, month, day).toISOString().split('T')[0];
+      const existingPnl = dailyPnl.find(d => d.date === dateStr);
+      calendarData.push({
+        date: dateStr,
+        pnl: existingPnl?.pnl || 0,
+      });
+    }
+    
+    return calendarData;
+  };
+
+  const calendarData = getCalendarData();
+
+  const renderCalendarDay = ({ item, index }: { item: DailyPnl | null; index: number }) => {
+    // תא ריק
+    if (!item) {
+      return (
+        <View style={[styles.calendarDay, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
+      );
+    }
     const dayNumber = formatDate(item.date);
     const dayName = getDayName(item.date);
     const hasTrades = item.pnl !== 0;
@@ -242,16 +283,25 @@ export default function CalendarTab() {
         </View>
 
         {/* Calendar Grid */}
-        {dailyPnl.length === 0 ? (
+        {/* כותרת ימי השבוע */}
+        <View style={styles.weekDaysHeader}>
+          {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map((day, index) => (
+            <View key={index} style={styles.weekDayCell}>
+              <Text style={styles.weekDayText}>{day}</Text>
+            </View>
+          ))}
+        </View>
+        
+        {calendarData.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={64} color={DesignTokens.colors.text.tertiary} />
             <Text style={styles.emptyText}>אין טריידים בחודש הזה</Text>
           </View>
         ) : (
           <FlatList
-            data={dailyPnl}
+            data={calendarData}
             renderItem={renderCalendarDay}
-            keyExtractor={(item) => item.date}
+            keyExtractor={(item, index) => item ? item.date : `empty-${index}`}
             numColumns={7}
             contentContainerStyle={styles.calendarGrid}
             scrollEnabled={false}
@@ -354,11 +404,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     backgroundColor: tokens.colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 8,
+    ...tokens.shadows.md,
     zIndex: 100,
   },
   scrollContent: {
@@ -375,7 +421,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     gap: 16,
   },
   loadingText: {
-    fontSize: tokens.typography.fontSize.base,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.body.weight as any,
+    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
   },
   monthHeader: {
@@ -391,8 +439,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     gap: tokens.spacing.xs,
   },
   monthName: {
-    fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    fontSize: tokens.typography.displayXs.size,
+    fontWeight: tokens.typography.displayXs.weight as any,
+    letterSpacing: tokens.typography.displayXs.letterSpacing,
     color: tokens.colors.text.primary,
     textAlign: 'right',
   },
@@ -402,7 +451,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     gap: tokens.spacing.xs,
   },
   monthTotalLabel: {
-    fontSize: tokens.typography.fontSize.sm,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.body.weight as any,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
@@ -417,6 +467,23 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   monthTotalLoss: {
     color: tokens.colors.text.danger,
   },
+  weekDaysHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: tokens.spacing.lg,
+    marginBottom: 4,
+  },
+  weekDayCell: {
+    width: dayWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    margin: 2,
+  },
+  weekDayText: {
+    fontSize: tokens.typography.bodySmall.size,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.secondary,
+  },
   calendarGrid: {
     paddingHorizontal: tokens.spacing.lg,
     paddingBottom: tokens.spacing.md,
@@ -425,32 +492,35 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     width: dayWidth,
     aspectRatio: 1,
     margin: 2,
-    borderRadius: tokens.borderRadius.sm,
-    padding: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.lg,
+    padding: 2, // padding קטן יותר כדי שהמספר יכנס
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: tokens.colors.border.primary,
+    backgroundColor: tokens.colors.glass.card.bg,
+    overflow: 'hidden', // חיתוך תוכן שחורג
   },
   dayName: {
     fontSize: tokens.typography.fontSize.xs,
     color: tokens.colors.text.tertiary,
     marginBottom: 2,
+    display: 'none', // הסתרת שם היום כי יש כותרת נפרדת
   },
   dayNumber: {
-    fontSize: tokens.typography.fontSize.base,
+    fontSize: tokens.typography.fontSize.sm,
     fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   pnlIndicator: {
-    marginTop: 2,
+    marginTop: 1,
+    maxWidth: '100%',
   },
   pnlText: {
-    fontSize: tokens.typography.fontSize.xs,
+    fontSize: 9, // גודל קטן יותר כדי להכנס בתא
     fontWeight: tokens.typography.fontWeight.bold as any,
-    textAlign: 'right',
+    textAlign: 'center',
   },
   pnlTextProfit: {
     color: tokens.colors.primary.main,
@@ -491,7 +561,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     height: 16,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: tokens.colors.border.primary,
   },
   legendText: {
     fontSize: tokens.typography.fontSize.sm,

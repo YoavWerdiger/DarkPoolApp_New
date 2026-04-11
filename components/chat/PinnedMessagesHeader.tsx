@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Star, RefreshCw, XCircle } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
+import { logger } from '../../utils/logger';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 
@@ -22,20 +23,118 @@ interface PinnedMessagesHeaderProps {
   onMessagePress?: (messageId: string) => void;
 }
 
+const createStyles = (tokens: any) =>
+  StyleSheet.create({
+    root: {
+      backgroundColor: tokens.colors.background.cardSolid,
+      borderBottomWidth: tokens.layout.borderWidth.normal,
+      borderBottomColor: tokens.colors.border.main,
+      paddingHorizontal: tokens.spacing.lg,
+      paddingVertical: tokens.spacing.md,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: tokens.spacing.md,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      color: tokens.colors.text.primary,
+      fontWeight: tokens.typography.fontWeight.bold,
+      fontSize: tokens.typography.fontSize.base,
+      marginRight: tokens.spacing.sm,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    expandHit: {
+      marginRight: tokens.spacing.md,
+    },
+    card: {
+      borderRadius: tokens.borderRadius.xl,
+      padding: tokens.spacing.md,
+      marginRight: tokens.spacing.md,
+      minWidth: 200,
+      maxWidth: 250,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: tokens.spacing.sm,
+    },
+    cardHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    pinnedByText: {
+      fontSize: tokens.typography.fontSize.xs,
+      fontWeight: tokens.typography.fontWeight.semibold,
+      color: tokens.colors.primary.main,
+      marginRight: tokens.spacing.sm,
+    },
+    unpinHit: {
+      padding: tokens.spacing.xs,
+    },
+    messagePreview: {
+      marginBottom: tokens.spacing.sm,
+    },
+    messageBody: {
+      lineHeight: 18,
+      color: tokens.colors.text.primary,
+      fontSize: tokens.typography.fontSize.sm,
+      textAlign: 'right',
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    metaText: {
+      color: tokens.colors.text.secondary,
+      fontSize: tokens.typography.fontSize.xs,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    metaLabel: {
+      color: tokens.colors.text.secondary,
+      fontSize: tokens.typography.fontSize.xs,
+      marginRight: tokens.spacing.xs,
+    },
+    showMoreWrap: {
+      marginTop: tokens.spacing.md,
+      alignItems: 'center',
+    },
+    showMoreText: {
+      color: tokens.colors.primary.main,
+      fontSize: tokens.typography.fontSize.sm,
+      fontWeight: tokens.typography.fontWeight.semibold,
+    },
+    scrollRow: {
+      flexDirection: 'row',
+    },
+  });
+
 export default function PinnedMessagesHeader({ channelId, onMessagePress }: PinnedMessagesHeaderProps) {
   const DesignTokens = useDesignTokens();
+  const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const { user } = useAuth();
   const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
-  const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    if (channelId) {
-      loadPinnedMessages();
-    }
-  }, [channelId]);
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
-  // Listen for refresh requests from parent component
   useEffect(() => {
     if (channelId) {
       loadPinnedMessages();
@@ -44,21 +143,19 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
 
   const loadPinnedMessages = async () => {
     try {
-      setLoading(true);
-      
       const { data, error } = await supabase
         .rpc('get_pinned_messages', { channel_uuid: channelId });
+
+      if (!isMountedRef.current) return;
       
       if (error) {
-        console.error('❌ Error loading pinned messages:', error);
+        logger.error('PinnedMessagesHeader', 'Error loading pinned messages', error);
         return;
       }
       
       setPinnedMessages(data || []);
     } catch (error) {
-      console.error('❌ Exception loading pinned messages:', error);
-    } finally {
-      setLoading(false);
+      logger.error('PinnedMessagesHeader', 'Failed to load pinned messages', error);
     }
   };
 
@@ -73,7 +170,6 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
         .eq('message_id', messageId);
       
       if (error) {
-        console.error('❌ Error unpinning message:', error);
         Alert.alert('שגיאה', 'לא ניתן להסיר את ההצמדה');
         return;
       }
@@ -85,7 +181,6 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
       // Notify parent component about the change
       onMessagePress?.('refresh_pinned');
     } catch (error) {
-      console.error('❌ Exception unpinning message:', error);
       Alert.alert('שגיאה', 'שגיאה בהסרת ההצמדה');
     }
   };
@@ -133,32 +228,33 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
   }
 
   const displayMessages = isExpanded ? pinnedMessages : pinnedMessages.slice(0, 2);
+  const starColor = DesignTokens.colors.text.warning;
 
   return (
-    <View className="bg-[#1a1a1a] border-b border-[#333] px-4 py-3">
+    <View style={styles.root}>
       {/* Header */}
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center">
-          <Star size={20} color="#FFD700" strokeWidth={2} />
-          <Text className="text-white font-bold text-base mr-2">
+      <View style={styles.headerRow}>
+        <View style={styles.headerLeft}>
+          <Star size={20} color={starColor} strokeWidth={2} />
+          <Text style={styles.headerTitle}>
             הודעות מוצמדות ({pinnedMessages.length})
           </Text>
         </View>
         
-        <View className="flex-row items-center">
+        <View style={styles.headerActions}>
           <Pressable
             onPress={() => setIsExpanded(!isExpanded)}
-            className="mr-3"
+            style={styles.expandHit}
           >
             <Ionicons 
               name={isExpanded ? "chevron-up" : "chevron-down"} 
               size={20} 
-              color="#666" 
+              color={DesignTokens.colors.text.tertiary} 
             />
           </Pressable>
           
           <Pressable onPress={loadPinnedMessages}>
-            <RefreshCw size={20} color="#666" strokeWidth={2} />
+            <RefreshCw size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
           </Pressable>
         </View>
       </View>
@@ -167,39 +263,32 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
-        className="flex-row"
+        style={styles.scrollRow}
       >
         {displayMessages.map((pinnedMsg) => (
           <View 
             key={pinnedMsg.id}
-            className="rounded-xl p-3 mr-3 min-w-[200px] max-w-[250px]"
-            style={{ 
-              backgroundColor: DesignTokens.colors.background.secondary,
-            }}
+            style={[
+              styles.card,
+              { backgroundColor: DesignTokens.colors.background.secondary },
+            ]}
           >
             {/* Message Header */}
-            <View className="flex-row items-center justify-between mb-2">
-              <View className="flex-row items-center">
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderLeft}>
                 <Ionicons 
                   name={getMessageIcon(pinnedMsg.message_type) as any} 
                   size={16} 
                   color={DesignTokens.colors.accent.main} 
                 />
-                <Text 
-                  className="text-xs font-semibold mr-2"
-                  style={{ 
-                    color: DesignTokens.colors.primary.main,
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold
-                  }}
-                >
+                <Text style={styles.pinnedByText}>
                   {pinnedMsg.pinned_by_name}
                 </Text>
               </View>
               
               <Pressable
                 onPress={() => handleUnpinMessage(pinnedMsg.message_id)}
-                className="p-1"
+                style={styles.unpinHit}
               >
                 <XCircle size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
               </Pressable>
@@ -208,30 +297,25 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
             {/* Message Content */}
             <Pressable
               onPress={() => onMessagePress?.(pinnedMsg.message_id)}
-              className="mb-2"
+              style={styles.messagePreview}
             >
               <Text 
-                className="text-sm" 
+                style={styles.messageBody} 
                 numberOfLines={2}
-                style={{ 
-                  lineHeight: 18,
-                  color: DesignTokens.colors.text.primary,
-                  fontSize: DesignTokens.typography.fontSize.sm
-                }}
               >
                 {pinnedMsg.message_content}
               </Text>
             </Pressable>
 
             {/* Message Footer */}
-            <View className="flex-row items-center justify-between">
-              <Text className="text-gray-400 text-xs">
+            <View style={styles.cardFooter}>
+              <Text style={styles.metaText}>
                 {formatTimeAgo(pinnedMsg.pinned_at)}
               </Text>
               
-              <View className="flex-row items-center">
-                <Star size={12} color="#FFD700" strokeWidth={2} />
-                <Text className="text-gray-400 text-xs mr-1">
+              <View style={styles.metaRow}>
+                <Star size={12} color={starColor} strokeWidth={2} />
+                <Text style={styles.metaLabel}>
                   מוצמד
                 </Text>
               </View>
@@ -244,9 +328,9 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
       {pinnedMessages.length > 2 && (
         <Pressable
           onPress={() => setIsExpanded(!isExpanded)}
-          className="mt-3 items-center"
+          style={styles.showMoreWrap}
         >
-          <Text className="text-primary text-sm font-semibold">
+          <Text style={styles.showMoreText}>
             {isExpanded ? 'הצג פחות' : `הצג עוד ${pinnedMessages.length - 2} הודעות`}
           </Text>
         </Pressable>

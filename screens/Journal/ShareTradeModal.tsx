@@ -43,7 +43,6 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         .eq('user_id', user.id);
 
       if (memberError) {
-        console.error('Error fetching channel members:', memberError);
         Alert.alert('שגיאה', 'לא ניתן לטעון קבוצות');
         return;
       }
@@ -58,7 +57,6 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
           .order('name');
 
         if (channelsError) {
-          console.error('Error fetching channels:', channelsError);
           Alert.alert('שגיאה', 'לא ניתן לטעון פרטי קבוצות');
           return;
         }
@@ -68,7 +66,6 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         setChatGroups([]);
       }
     } catch (error) {
-      console.error('Error loading chat groups:', error);
       Alert.alert('שגיאה', 'שגיאה בטעינת קבוצות');
     } finally {
       setLoading(false);
@@ -113,7 +110,6 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         });
 
       if (error) {
-        console.error('Error sharing trade to group:', error);
         Alert.alert('שגיאה', 'לא ניתן לשתף לקבוצה');
         return;
       }
@@ -121,7 +117,6 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
       Alert.alert('הצלחה', `הטרייד שותף לקבוצה "${groupName}"`);
       onClose();
     } catch (error) {
-      console.error('Error sharing trade to group:', error);
       Alert.alert('שגיאה', 'לא ניתן לשתף לקבוצה');
     }
   };

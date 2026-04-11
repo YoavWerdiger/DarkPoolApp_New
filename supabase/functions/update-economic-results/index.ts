@@ -2,11 +2,14 @@
 // מעדכן תוצאות (actual values) בלייב ושולח Push Notifications
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
-const EODHD_API_KEY = '68e3c3af900997.85677801'
+const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
 const EODHD_BASE_URL = 'https://eodhd.com/api'
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send'
+
+// 🔑 Expo Access Token נדרש לשליחת התראות ל-production builds
+const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || ''
 
 // חילוץ תאריך ושעה נכון מ-EODHD API - בדיוק כמו ב-daily-economic-sync-simple
 function parseEventDateTime(eodhdDateString: string): { date: string; time: string; fullDateTime: Date } {
@@ -337,13 +340,19 @@ serve(async (req) => {
           // שליחת התראות דרך Expo Push API
           if (messages.length > 0) {
             try {
+              // 🔑 Access Token נדרש עבור production builds
+              const pushHeaders: Record<string, string> = {
+                'Accept': 'application/json',
+                'Accept-Encoding': 'gzip, deflate',
+                'Content-Type': 'application/json',
+              }
+              if (EXPO_ACCESS_TOKEN) {
+                pushHeaders['Authorization'] = `Bearer ${EXPO_ACCESS_TOKEN}`
+              }
+              
               const pushResponse = await fetch(EXPO_PUSH_API_URL, {
                 method: 'POST',
-                headers: {
-                  'Accept': 'application/json',
-                  'Accept-Encoding': 'gzip, deflate',
-                  'Content-Type': 'application/json',
-                },
+                headers: pushHeaders,
                 body: JSON.stringify(messages),
               })
               

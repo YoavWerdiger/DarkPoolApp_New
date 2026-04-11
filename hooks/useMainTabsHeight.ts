@@ -1,13 +1,16 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+/** אין סרגל טאבים תחתון (Drawer) — רק safe area + מרווח קטן לתוכן */
+const TAB_BAR_BASE_HEIGHT = 0;
+
 /**
- * Hook שמחזיר את הגובה של MainTabs כולל safe area
- * שימושי ל-paddingBottom ב-ScrollView/FlatList כדי למנוע גלילה מתחת לטאבים
+ * Hook שמחזיר padding תחתון מותאם לניווט הראשי (Drawer).
+ * default 12: מרווח נוסף מעל ה-safe area.
  */
-export const useMainTabsHeight = (additionalPadding: number = 16) => {
+export const useMainTabsHeight = (additionalPadding: number = 12) => {
   const insets = useSafeAreaInsets();
   const safeBottom = insets.bottom || 0;
-  // גובה MainTabs: 60 (גובה קבוע) + safeBottom (safe area) + padding נוסף
-  return 60 + safeBottom + additionalPadding;
+  return TAB_BAR_BASE_HEIGHT + safeBottom + additionalPadding;
 };
+
 

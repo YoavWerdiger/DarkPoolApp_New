@@ -45,8 +45,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
             setThumbnailUrl(`https://vumbnail.com/${media.vimeo_id}.jpg`);
           }
         }
-      } catch (error) {
-        console.error('Error loading lesson media:', error);
+      } catch {
       }
     };
 
@@ -57,10 +56,6 @@ export const LessonRow: React.FC<LessonRowProps> = ({
   // הקוד ב-learningService.ts כבר ממיר את duration_minutes ל-duration בפורמט MM:SS או HH:MM:SS
   const displayDuration = (lesson as any).duration || '00:00';
   
-  // לוג לבדיקה
-  React.useEffect(() => {
-    console.log(`📊 LessonRow ${lesson.id}: duration = ${(lesson as any).duration}, displayDuration = ${displayDuration}`);
-  }, [lesson.id, (lesson as any).duration, displayDuration]);
   const isCompleted = lesson.progress?.status === 'completed';
 
   const styles = React.useMemo(() => StyleSheet.create({
@@ -210,7 +205,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
               backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.7)' : '#FFFFFF',
             }
           ]}>
-            <CheckCircle2 size={24} color="#05d157" strokeWidth={2} />
+            <CheckCircle2 size={24} color="#00C805" strokeWidth={2} />
           </View>
         )}
       </View>

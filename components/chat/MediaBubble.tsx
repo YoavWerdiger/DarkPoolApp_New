@@ -3,6 +3,7 @@ import { View, Text, Pressable, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ImageIcon, Play, FileText, Download } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
+import { logger } from '../../utils/logger';
 import { Audio } from 'expo-av';
 import MediaViewer from './MediaViewer';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -25,7 +26,10 @@ const { width: screenWidth } = Dimensions.get('window');
 const maxImageWidth = screenWidth * 0.6;
 const maxImageHeight = 300;
 
-export default function MediaBubble({
+// Module-level cache so thumbnails aren't re-generated on remount
+const thumbnailCache = new Map<string, string>();
+
+function MediaBubble({
   mediaUrl,
   mediaType,
   caption,
@@ -35,6 +39,8 @@ export default function MediaBubble({
   const DesignTokens = useDesignTokens();
   const [showMediaViewer, setShowMediaViewer] = useState(false);
   const [audioStatus, setAudioStatus] = useState(false);
+  const [audioPosition, setAudioPosition] = useState(0); // seconds
+  const [audioDuration, setAudioDuration] = useState(0); // seconds
   const audioRef = useRef<Audio.Sound | null>(null);
 
   // פורמט גודל קובץ
@@ -70,15 +76,19 @@ export default function MediaBubble({
         await sound.playAsync();
         setAudioStatus(true);
 
-        // עצור אוטומטית בסיום
         sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setAudioStatus(false);
+          if (status.isLoaded) {
+            if (status.durationMillis) setAudioDuration(status.durationMillis / 1000);
+            setAudioPosition(status.positionMillis / 1000);
+            if (status.didJustFinish) {
+              setAudioStatus(false);
+              setAudioPosition(0);
+            }
           }
         });
       }
     } catch (error) {
-      console.error('Error toggling audio:', error);
+      logger.error('MediaBubble', 'Error toggling audio', error);
     }
   };
 
@@ -96,19 +106,25 @@ export default function MediaBubble({
     };
   }, []);
 
-  const [thumbUri, setThumbUri] = useState<string | null>(null);
+  const [thumbUri, setThumbUri] = useState<string | null>(() =>
+    thumbnailCache.get(mediaUrl) ?? null
+  );
 
   useEffect(() => {
+    if (mediaType !== 'video') return;
+    if (thumbnailCache.has(mediaUrl)) {
+      setThumbUri(thumbnailCache.get(mediaUrl)!);
+      return;
+    }
     const gen = async () => {
-      if (mediaType !== 'video') return;
       try {
-        // dynamic import to avoid bundler error if package not installed yet
         const mod: any = await import('expo-video-thumbnails');
         if (mod && typeof mod.getThumbnailAsync === 'function') {
           const { uri } = await mod.getThumbnailAsync(mediaUrl, { time: 1000 });
+          thumbnailCache.set(mediaUrl, uri);
           setThumbUri(uri);
         }
-      } catch (e) {
+      } catch {
         // fallback: no thumbnail available
       }
     };
@@ -126,20 +142,18 @@ export default function MediaBubble({
                 style={{
                   width: Math.min(metadata?.width || maxImageWidth, maxImageWidth),
                   height: Math.min(metadata?.height || maxImageHeight, maxImageHeight),
-                  borderRadius: 12,
+                  borderRadius: DesignTokens.borderRadius.md,
                   borderWidth: 1,
                   borderColor: DesignTokens.colors.border.primary
                 }}
                 resizeMode="cover"
-                onError={(error) => {
-                  console.error('Image load error in MediaBubble:', error);
-                }}
+                onError={() => {}}
               />
             ) : (
               <View style={{
                 width: Math.min(metadata?.width || maxImageWidth, maxImageWidth),
                 height: Math.min(metadata?.height || maxImageHeight, maxImageHeight),
-                borderRadius: 12,
+                borderRadius: DesignTokens.borderRadius.md,
                 backgroundColor: DesignTokens.colors.background.tertiary,
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -167,9 +181,7 @@ export default function MediaBubble({
                     borderColor: DesignTokens.colors.border.primary
                   }}
                   resizeMode="cover"
-                  onError={(error) => {
-                    console.error('Video thumbnail load error in MediaBubble:', error);
-                  }}
+                  onError={() => {}}
                 />
               ) : (
                 <View style={{
@@ -186,18 +198,18 @@ export default function MediaBubble({
                 top: 0, left: 0, right: 0, bottom: 0,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                borderRadius: 12
+                backgroundColor: DesignTokens.colors.backdrop,
+                borderRadius: DesignTokens.borderRadius.md
               }}>
                 <View style={{
                   width: 48,
                   height: 48,
-                  backgroundColor: 'rgba(255,255,255,0.9)',
-                  borderRadius: 24,
+                  backgroundColor: DesignTokens.colors.text.primary,
+                  borderRadius: DesignTokens.borderRadius.full,
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <Play size={24} color="#000" strokeWidth={2} />
+                  <Play size={24} color={DesignTokens.colors.text.inverse} strokeWidth={2} />
                 </View>
               </View>
             </View>
@@ -210,8 +222,8 @@ export default function MediaBubble({
             flexDirection: 'row',
             alignItems: 'center',
             backgroundColor: DesignTokens.colors.background.tertiary,
-            borderRadius: 12,
-            padding: 12,
+            borderRadius: DesignTokens.borderRadius.md,
+            padding: DesignTokens.spacing.md,
             minWidth: 200,
             borderWidth: 1,
             borderColor: DesignTokens.colors.border.primary
@@ -222,36 +234,36 @@ export default function MediaBubble({
                 width: 40,
                 height: 40,
                 backgroundColor: DesignTokens.colors.primary.main,
-                borderRadius: 20,
+                borderRadius: DesignTokens.borderRadius.full,
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginRight: 12
+                marginRight: DesignTokens.spacing.md
               }}
             >
               <Ionicons
                 name={audioStatus ? 'pause' : 'play'}
                 size={20}
-                color="white"
+                color={DesignTokens.colors.text.inverse}
               />
             </Pressable>
             <View style={{ flex: 1 }}>
               <View style={{
                 height: 4,
                 backgroundColor: DesignTokens.colors.background.primary,
-                borderRadius: 2,
-                marginBottom: 6,
+                borderRadius: DesignTokens.borderRadius.full,
+                marginBottom: DesignTokens.spacing.xs + DesignTokens.spacing.micro,
                 overflow: 'hidden'
               }}>
                 <View style={{
                   height: 4,
                   backgroundColor: DesignTokens.colors.primary.main,
-                  borderRadius: 2,
-                  width: '30%'
+                  borderRadius: DesignTokens.borderRadius.full,
+                  width: `${audioDuration > 0 ? Math.min((audioPosition / audioDuration) * 100, 100) : 0}%`,
                 }} />
               </View>
               <Text style={{
                 color: DesignTokens.colors.text.secondary,
-                fontSize: 12
+                fontSize: DesignTokens.typography.fontSize.sm
               }}>
                 {metadata?.duration ? formatDuration(metadata.duration) : '0:00'}
               </Text>
@@ -266,8 +278,8 @@ export default function MediaBubble({
               flexDirection: 'row',
               alignItems: 'center',
               backgroundColor: DesignTokens.colors.background.tertiary,
-              borderRadius: 12,
-              padding: 12,
+              borderRadius: DesignTokens.borderRadius.md,
+              padding: DesignTokens.spacing.md,
               minWidth: 200,
               borderWidth: 1,
               borderColor: DesignTokens.colors.border.primary
@@ -276,19 +288,19 @@ export default function MediaBubble({
                 width: 40,
                 height: 40,
                 backgroundColor: DesignTokens.colors.primary.main,
-                borderRadius: 20,
+                borderRadius: DesignTokens.borderRadius.full,
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginRight: 12
+                marginRight: DesignTokens.spacing.md
               }}>
-                <FileText size={20} color="white" strokeWidth={2} />
+                <FileText size={20} color={DesignTokens.colors.text.inverse} strokeWidth={2} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{
                   color: DesignTokens.colors.text.primary,
                   fontWeight: '500',
-                  fontSize: 14,
-                  marginBottom: 2
+                  fontSize: DesignTokens.typography.bodySmall.size,
+                  marginBottom: DesignTokens.spacing.micro
                 }} numberOfLines={1}>
                   {metadata?.file_name || 'מסמך'}
                 </Text>
@@ -308,8 +320,8 @@ export default function MediaBubble({
         return (
           <View style={{
             backgroundColor: DesignTokens.colors.background.tertiary,
-            borderRadius: 12,
-            padding: 12
+            borderRadius: DesignTokens.borderRadius.md,
+            padding: DesignTokens.spacing.md
           }}>
             <Text style={{ color: DesignTokens.colors.text.primary }}>סוג מדיה לא נתמך</Text>
           </View>
@@ -332,8 +344,8 @@ export default function MediaBubble({
           <Text
             style={{
               color: DesignTokens.colors.text.primary,
-              fontSize: 14,
-              marginTop: 6,
+              fontSize: DesignTokens.typography.bodySmall.size,
+              marginTop: DesignTokens.spacing.xs + DesignTokens.spacing.micro,
               textAlign: isMe ? 'right' : 'left'
             }}
           >
@@ -353,3 +365,5 @@ export default function MediaBubble({
     </>
   );
 }
+
+export default React.memo(MediaBubble);

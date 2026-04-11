@@ -205,7 +205,7 @@ export default function MessageActionSheet({
         
         {/* Message Preview */}
         <View className="absolute top-20 left-4 right-4">
-          <View className="bg-[#111111] rounded-3xl p-4" style={{
+          <View className="bg-[#141F14] rounded-3xl p-4" style={{
             shadowColor: '#000',
             shadowOffset: { width: 0, height: 4 },
             shadowOpacity: 0.3,

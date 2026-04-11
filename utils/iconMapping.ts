@@ -161,6 +161,5 @@ export const getIcon = (ioniconName: string, size: number = 24, color: string = 
   }
   
   // אם לא נמצא, החזר אייקון ברירת מחדל
-  console.warn(`Icon not found: ${ioniconName}`);
   return X({ size, color, strokeWidth });
 };

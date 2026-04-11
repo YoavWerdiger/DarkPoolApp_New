@@ -1,4 +1,5 @@
 import { useDesignTokens } from "../ui/DesignTokens";
+import { logger } from '../../utils/logger';
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
   View,
@@ -12,6 +13,8 @@ import {
 import { ChatMessage, ChatReactionGroup } from '../../types/chat.types';
 import { chatMessageService } from '../../services/chat';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { formatDistanceToNow } from 'date-fns';
+import { he } from 'date-fns/locale';
 
 interface ReactionDetailsModalProps {
   visible: boolean;
@@ -46,12 +49,12 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
     try {
       const { data, error } = await chatMessageService.getMessageReactionDetails(message.id);
       if (error) {
-        console.error('❌ ReactionDetailsModal: Error loading reaction details:', error);
+        logger.error('ReactionDetailsModal', 'Failed to load reaction details', error);
       } else if (data) {
         setReactionDetails(data);
       }
     } catch (error) {
-      console.error('❌ ReactionDetailsModal: Unexpected error:', error);
+      logger.error('ReactionDetailsModal', 'Unexpected error loading reactions', error);
     } finally {
       setLoading(false);
     }
@@ -65,6 +68,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
       userId: user.id,
       userName: user.name,
       profilePicture: user.profile_picture,
+      reactedAt: (user as any).reacted_at,
     }))
   ), [reactionDetails]);
 
@@ -156,12 +160,21 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
       fontWeight: '600',
       color: DesignTokens.colors.primary.main,
     },
+    userInfo: {
+      flex: 1,
+      alignItems: 'flex-end',
+    },
     userName: {
       color: DesignTokens.colors.text.primary,
-      flex: 1,
       fontSize: 15,
       fontWeight: '500',
       textAlign: 'right',
+    },
+    userTime: {
+      color: DesignTokens.colors.text.tertiary,
+      fontSize: 12,
+      textAlign: 'right',
+      marginTop: 2,
     },
     userEmoji: {
       fontSize: 24,
@@ -266,7 +279,14 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
                       </Text>
                     </View>
                   )}
-                  <Text style={styles.userName}>{item.userName}</Text>
+                  <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{item.userName}</Text>
+                    {item.reactedAt && (
+                      <Text style={styles.userTime}>
+                        {formatDistanceToNow(new Date(item.reactedAt), { addSuffix: true, locale: he })}
+                      </Text>
+                    )}
+                  </View>
                   <Text style={styles.userEmoji}>{item.emoji}</Text>
                 </View>
               ))}

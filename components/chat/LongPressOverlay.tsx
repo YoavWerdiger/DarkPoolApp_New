@@ -6,12 +6,11 @@ import ReactionBar from './ReactionBar';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
-import { useDesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens, DesignTokens as CoreDesignTokens } from '../ui/DesignTokens';
 import { format } from 'date-fns';
 
-// רטט קצר ועדין בעת פתיחת התצוגה (עם fallback אם אין expo-haptics)
-let Haptics: any = { selectionAsync: async () => {}, impactAsync: async () => {}, ImpactFeedbackStyle: { Light: 'Light' } };
-try { Haptics = require('expo-haptics'); } catch {}
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { logger } from '../../utils/logger';
 
 interface LongPressOverlayProps {
   visible: boolean;
@@ -53,16 +52,18 @@ export default function LongPressOverlay({
         if (!userId || !channelId) return;
 
         const { data, error } = await supabase
-          .from('channel_members')
+          .from('chat_group_members')
           .select('role')
-          .eq('channel_id', channelId)
+          .eq('group_id', channelId)
           .eq('user_id', userId)
           .single();
 
         if (!error && data) {
           setIsAdmin(data.role === 'admin' || data.role === 'owner');
         }
-      } catch {}
+      } catch (error) {
+        logger.error('LongPressOverlay', 'Failed to fetch role', error);
+      }
     };
     if (message) {
       fetchRole();
@@ -72,7 +73,7 @@ export default function LongPressOverlay({
   useEffect(() => {
     if (visible && message) {
       // רטט קצר מאוד בעת פתיחה (אסתטי ועדין)
-      try { Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Light); } catch {}
+      try { HapticFeedback.impactLight(); } catch { /* non-critical */ }
     }
   }, [visible, message]);
 
@@ -172,6 +173,7 @@ export default function LongPressOverlay({
             onSelect={handleOptionSelect} 
             isAdmin={isAdmin}
             isMe={message.isMe}
+            canEdit={!message.id?.toString().startsWith('temp-')}
           />
         </View>
       </View>
@@ -181,71 +183,71 @@ export default function LongPressOverlay({
 
 const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
   previewContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.lg,
+    paddingBottom: tokens.spacing.md,
     alignItems: 'center',
   },
   bubble: {
     maxWidth: '85%',
-    borderRadius: 16,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: tokens.borderRadius.lg,
+    paddingVertical: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.md,
     flexDirection: 'row-reverse',
     alignItems: 'flex-end',
-    gap: 8,
+    gap: tokens.spacing.sm,
   },
   myBubble: {
-    backgroundColor: 'rgba(15, 185, 110, 0.25)',
-    borderBottomRightRadius: 4,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderBottomLeftRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(15, 185, 110, 0.4)',
+    backgroundColor: tokens.colors.primary.dim,
+    borderBottomRightRadius: tokens.borderRadius.xs,
+    borderTopLeftRadius: tokens.borderRadius.lg,
+    borderTopRightRadius: tokens.borderRadius.lg,
+    borderBottomLeftRadius: tokens.borderRadius.lg,
+    borderWidth: tokens.layout.borderWidth.normal,
+    borderColor: tokens.colors.border.active,
     alignSelf: 'flex-end',
   },
   theirBubble: {
-    backgroundColor: 'rgba(6, 18, 12, 0.8)',
-    borderBottomLeftRadius: 4,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderBottomRightRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderBottomLeftRadius: tokens.borderRadius.xs,
+    borderTopLeftRadius: tokens.borderRadius.lg,
+    borderTopRightRadius: tokens.borderRadius.lg,
+    borderBottomRightRadius: tokens.borderRadius.lg,
+    borderWidth: tokens.layout.borderWidth.normal,
+    borderColor: tokens.colors.border.primary,
     alignSelf: 'flex-start',
   },
   avatar: {
     width: 32,
     height: 30,
-    borderRadius: 16,
+    borderRadius: tokens.borderRadius.lg,
   },
   messageContent: {
     flex: 1,
     alignItems: 'flex-end',
   },
   senderName: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: tokens.typography.label.size,
+    fontWeight: tokens.typography.fontWeight.semibold,
     color: tokens.colors.text.primary,
-    marginBottom: 4,
+    marginBottom: tokens.spacing.xs,
   },
   messageText: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.base,
+    lineHeight: Math.round(tokens.typography.fontSize.base * tokens.typography.lineHeight.normal),
+    color: tokens.colors.text.primary,
     textAlign: 'right',
   },
   mediaImage: {
     width: 200,
     height: 200,
-    borderRadius: 12,
-    marginBottom: 4,
+    borderRadius: tokens.borderRadius.md,
+    marginBottom: tokens.spacing.xs,
   },
   timeText: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.6)',
-    marginTop: 4,
+    fontSize: tokens.typography.fontSize.xs,
+    color: tokens.colors.text.secondary,
+    marginTop: tokens.spacing.xs,
     textAlign: 'right',
   },
 });
@@ -254,12 +256,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 0,
-    paddingBottom: 8,
+    paddingBottom: CoreDesignTokens.spacing.sm,
   },
   reactionWrapper: {
     alignItems: 'center',
-    marginBottom: 16,
-    marginTop: 8,
+    marginBottom: CoreDesignTokens.spacing.lg,
+    marginTop: CoreDesignTokens.spacing.sm,
   },
   contextMenuWrapper: {
     flex: 1,

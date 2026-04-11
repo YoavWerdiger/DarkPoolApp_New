@@ -1,77 +1,98 @@
 import { Platform, Vibration } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class HapticFeedback {
+  private static _enabled: boolean = true;
+  private static _initialized: boolean = false;
+
+  static async init() {
+    if (HapticFeedback._initialized) return;
+    HapticFeedback._initialized = true;
+    try {
+      const saved = await AsyncStorage.getItem('notificationSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        HapticFeedback._enabled = parsed.vibration !== false;
+      }
+    } catch {}
+  }
+
+  static setEnabled(enabled: boolean) {
+    HapticFeedback._enabled = enabled;
+  }
+
+  static isEnabled(): boolean {
+    return HapticFeedback._enabled;
+  }
+
+  private static async ensureInit() {
+    if (!HapticFeedback._initialized) {
+      await HapticFeedback.init();
+    }
+  }
+
   static async light() {
     try {
-      if (Platform.OS === 'android') {
-        Vibration.vibrate(10); // רטט קצר של 10ms
-      }
-      // iOS - ננסה להשתמש בVibration או פשוט נתעלם
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(10);
-      }
-    } catch (error) {
-      // אם יש שגיאה, פשוט נתעלם
-      console.log('Haptic feedback not available');
-    }
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate(10);
+    } catch {}
   }
 
   static async medium() {
     try {
-      if (Platform.OS === 'android') {
-        Vibration.vibrate(25);
-      }
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(25);
-      }
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate(25);
+    } catch {}
   }
 
   static async heavy() {
     try {
-      if (Platform.OS === 'android') {
-        Vibration.vibrate(50);
-      }
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(50);
-      }
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate(50);
+    } catch {}
   }
 
   static async success() {
     try {
-      Vibration.vibrate([0, 10, 50, 10]); // דפוס רטט להצלחה
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate([0, 10, 50, 10]);
+    } catch {}
   }
 
   static async warning() {
     try {
-      Vibration.vibrate([0, 25, 25, 25]); // דפוס רטט לאזהרה
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate([0, 25, 25, 25]);
+    } catch {}
   }
 
   static async error() {
     try {
-      Vibration.vibrate([0, 50, 50, 50, 50, 50]); // דפוס רטט לשגיאה
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate([0, 50, 50, 50, 50, 50]);
+    } catch {}
   }
 
   static async selection() {
     try {
-      Vibration.vibrate(5); // רטט קצר מאוד לבחירה
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate(5);
+    } catch {}
+  }
+
+  static async impactLight() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      const Haptics = require('expo-haptics');
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
   }
 }
-

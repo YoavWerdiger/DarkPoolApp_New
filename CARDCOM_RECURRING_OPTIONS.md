@@ -70,3 +70,4 @@ POST https://secure.cardcom.solutions/api/v11/BillGold/CreateCharge
 4. האם יש API endpoint ל-Scheduled Recurring Charges?
 
 אם **אין** שירות אוטומטי - צריך ליצור Scheduled Function בעצמנו! 🔧
+

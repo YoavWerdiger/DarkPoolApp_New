@@ -13,12 +13,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { chatGroupService } from '../../services/chat';
 import { ChatGroup } from '../../types/chat.types';
 import { useAuth } from '../../context/AuthContext';
+import { logger } from '../../utils/logger';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 
 interface ForwardMessageModalProps {
@@ -60,7 +62,7 @@ export default function ForwardMessageModal({
     try {
       const { data, error } = await chatGroupService.getChatGroups(user.id);
       if (error) {
-        console.error('❌ Error loading groups:', error);
+        logger.error('ForwardMessageModal', 'getChatGroups failed', error);
         return;
       }
 
@@ -70,7 +72,7 @@ export default function ForwardMessageModal({
       );
       setGroups(filteredGroups);
     } catch (error) {
-      console.error('❌ Error loading groups:', error);
+      logger.error('ForwardMessageModal', 'Failed to load groups', error);
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +99,8 @@ export default function ForwardMessageModal({
       onClose();
       setSelectedGroups(new Set());
     } catch (error) {
-      console.error('❌ Error forwarding message:', error);
+      logger.error('ForwardMessageModal', 'Forward failed', error);
+      Alert.alert('שגיאה', 'לא ניתן להעביר את ההודעה');
     } finally {
       setIsForwarding(false);
     }
@@ -241,18 +244,18 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.background.secondary,
-    marginBottom: 8,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    borderBottomWidth: tokens.layout.borderWidth.normal,
+    borderBottomColor: tokens.colors.border.divider,
+    marginBottom: tokens.spacing.sm,
   },
   closeButton: {
-    padding: 8,
+    padding: tokens.spacing.sm,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.bold,
     color: tokens.colors.text.primary,
   },
   loadingContainer: {
@@ -267,40 +270,40 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: tokens.typography.titleXs.size,
     color: tokens.colors.text.secondary,
-    marginTop: 16,
+    marginTop: tokens.spacing.lg,
   },
   list: {
     flex: 1,
   },
   listContent: {
-    paddingVertical: 8,
+    paddingVertical: tokens.spacing.sm,
   },
   groupItem: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
     backgroundColor: tokens.colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.background.secondary,
+    borderBottomWidth: tokens.layout.borderWidth.normal,
+    borderBottomColor: tokens.colors.border.divider,
   },
   groupItemSelected: {
-    backgroundColor: tokens.colors.primary.main + '15',
+    backgroundColor: tokens.colors.primary.dim,
   },
   groupAvatarContainer: {
-    marginLeft: 12,
+    marginLeft: tokens.spacing.md,
   },
   groupAvatar: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: tokens.borderRadius.full,
   },
   groupAvatarPlaceholder: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: tokens.borderRadius.full,
     backgroundColor: tokens.colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -309,34 +312,34 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flex: 1,
   },
   groupName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.fontWeight.semibold,
     color: tokens.colors.text.primary,
-    marginBottom: 4,
+    marginBottom: tokens.spacing.xs,
   },
   groupMembers: {
-    fontSize: 14,
+    fontSize: tokens.typography.bodySmall.size,
     color: tokens.colors.text.secondary,
   },
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
+    borderRadius: tokens.borderRadius.md,
+    borderWidth: tokens.layout.borderWidth.thick,
     borderColor: tokens.colors.text.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: tokens.spacing.sm,
   },
   checkboxSelected: {
     backgroundColor: tokens.colors.primary.main,
     borderColor: tokens.colors.primary.main,
   },
   footer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: tokens.colors.background.secondary,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
+    borderTopWidth: tokens.layout.borderWidth.normal,
+    borderTopColor: tokens.colors.border.divider,
     backgroundColor: tokens.colors.background.primary,
   },
   forwardButton: {
@@ -344,17 +347,17 @@ const createStyles = (tokens: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: tokens.colors.primary.main,
-    borderRadius: 25,
+    borderRadius: tokens.borderRadius.full,
     paddingVertical: 14,
-    paddingHorizontal: 24,
-    gap: 8,
+    paddingHorizontal: tokens.spacing['2xl'],
+    gap: tokens.spacing.sm,
   },
   forwardButtonDisabled: {
     opacity: 0.6,
   },
   forwardButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.fontWeight.bold,
     color: tokens.colors.text.primary,
   },
 });

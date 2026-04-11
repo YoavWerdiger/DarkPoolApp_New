@@ -1,100 +1,120 @@
 // ============================================
-// Voice Waveform with Progress - גלי קול עם progress bar
+// Voice Waveform With Progress - להשמעת הקלטה
+// מציג waveform עם progress indicator
 // ============================================
 
-import React, { useEffect, useState } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 
 interface VoiceWaveformWithProgressProps {
-  progress: Animated.AnimatedValue; // 0-1
-  duration?: number; // משך ההקלטה בשניות (לא בשימוש כרגע, אבל נשמר ל-compatibility)
-  isPlaying?: boolean; // האם מנגן כרגע
+  progress: Animated.Value; // 0-1
+  duration: number;
+  isPlaying: boolean;
+  waveformData?: number[]; // Optional actual waveform data
 }
 
-const BARS_COUNT = 30; // מספר פסים
+const BARS_COUNT = 28;
 
-export default function VoiceWaveformWithProgress({ 
-  progress, 
-  duration, // לא בשימוש כרגע
-  isPlaying = false 
-}: VoiceWaveformWithProgressProps) {
+// יצירת waveform סטטי פסאודו-רנדומי (fallback)
+const generateStaticWaveform = (): number[] => {
+  const waveform: number[] = [];
+  for (let i = 0; i < BARS_COUNT; i++) {
+    // יצירת תבנית טבעית - גבוה יותר באמצע עם יותר וריאציה
+    const centerFactor = 1 - Math.abs((i - BARS_COUNT / 2) / (BARS_COUNT / 2)) * 0.4;
+    const noise = Math.sin(i * 1.2) * 0.25 + Math.cos(i * 0.7) * 0.2;
+    const value = 0.25 + centerFactor * 0.5 + noise;
+    waveform.push(Math.max(0.15, Math.min(0.95, value)));
+  }
+  return waveform;
+};
+
+const staticWaveform = generateStaticWaveform();
+
+function VoiceWaveformWithProgress({ progress, duration, isPlaying, waveformData }: VoiceWaveformWithProgressProps) {
   const DesignTokens = useDesignTokens();
-  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
-  
-  // יצירת גבהים סטטיים ל-waveforms (לא דינמיים כמו בזמן הקלטה)
-  // כל פס מקבל גובה אקראי אבל קבוע
-  const barHeights = React.useMemo(() => {
-    return Array.from({ length: BARS_COUNT }, () => {
-      // גבהים אקראיים בין 0.3 ל-1.0
-      return 0.3 + Math.random() * 0.7;
-    });
-  }, []);
+  const barColor = DesignTokens.colors.primary.main;
+  const inactiveColor = 'rgba(255, 255, 255, 0.3)';
 
-  // מעקב אחרי progress value
-  const [progressValue, setProgressValue] = useState(0);
-
-  useEffect(() => {
-    const listenerId = progress.addListener(({ value }) => {
-      setProgressValue(value);
-    });
-
-    return () => {
-      progress.removeListener(listenerId);
-    };
-  }, [progress]);
+  // Use provided waveform data or fallback to static
+  const displayWaveform = useMemo(() => {
+    if (waveformData && waveformData.length > 0) {
+      // Resample to BARS_COUNT
+      const result: number[] = [];
+      const step = waveformData.length / BARS_COUNT;
+      
+      for (let i = 0; i < BARS_COUNT; i++) {
+        const start = Math.floor(i * step);
+        const end = Math.floor((i + 1) * step);
+        let maxVal = 0;
+        for (let j = start; j < end && j < waveformData.length; j++) {
+          maxVal = Math.max(maxVal, waveformData[j]);
+        }
+        result.push(maxVal || waveformData[Math.floor(i * step)] || 0.3);
+      }
+      
+      // Enhance contrast
+      const minVal = Math.min(...result);
+      const maxVal = Math.max(...result);
+      const range = maxVal - minVal;
+      
+      if (range > 0.05) {
+        return result.map(v => 0.15 + ((v - minVal) / range) * 0.85);
+      }
+      return result;
+    }
+    return staticWaveform;
+  }, [waveformData]);
 
   return (
     <View style={styles.container}>
-      {barHeights.map((height, index) => {
-        // חישוב אם הפס הזה צריך להיות "מואר" לפי ה-progress
-        // progress הוא 0-1, אנחנו רוצים שהפסים משמאל (RTL) יהיו מוארים
-        // index 0 = משמאל (RTL), index 29 = מימין
-        // barPosition = 0 (משמאל) עד 1 (מימין)
-        const barPosition = index / (BARS_COUNT - 1); // 0-1 (0 = משמאל, 1 = מימין)
+      {displayWaveform.map((value, index) => {
+        const barProgress = (index + 1) / BARS_COUNT; // +1 to avoid 0
+        const height = 3 + value * 18;
         
-        // אם barPosition <= progressValue, הפס מואר (כבר עבר)
-        // אחרת, הפס כהה (עוד לא הגענו)
-        const isActive = barPosition <= progressValue;
-        const opacity = isActive ? 0.8 : 0.3;
-        
+        // יצירת inputRange מונוטוני עולה
+        const inputStart = Math.max(0.001, barProgress - 0.02);
+
         return (
-          <View key={index} style={styles.barContainer}>
-            <Animated.View
-              style={[
-                styles.bar,
-                {
-                  height: height * 28, // גובה בין 8.4 ל-28
-                  opacity: opacity,
-                },
-              ]}
-            />
-          </View>
+          <Animated.View
+            key={index}
+            style={[
+              styles.bar,
+              {
+                height,
+                backgroundColor: progress.interpolate({
+                  inputRange: [0, inputStart, barProgress, 1],
+                  outputRange: [inactiveColor, inactiveColor, barColor, barColor],
+                  extrapolate: 'clamp',
+                }),
+                opacity: progress.interpolate({
+                  inputRange: [0, inputStart, barProgress, 1],
+                  outputRange: [0.4, 0.4, 1, 1],
+                  extrapolate: 'clamp',
+                }),
+              },
+            ]}
+          />
         );
       })}
     </View>
   );
 }
 
-const createStyles = (tokens: any) => StyleSheet.create({
+export default memo(VoiceWaveformWithProgress);
+
+const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-start',
     flex: 1,
-    height: 40,
-    paddingHorizontal: 4,
-    position: 'relative',
-  },
-  barContainer: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    minWidth: 0,
+    height: 24,
   },
   bar: {
-    width: 3,
-    backgroundColor: tokens.colors.primary.main,
-    borderRadius: 1.5,
-    minHeight: 9.6,
-    maxHeight: 32,
+    width: 2.5,
+    marginRight: 2,
+    borderRadius: 1.25,
   },
 });

@@ -37,6 +37,12 @@ export default function ChatSearchBottomSheet({
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const handleSearch = useCallback(async () => {
     if (!searchTerm.trim()) {
@@ -50,18 +56,18 @@ export default function ChatSearchBottomSheet({
 
     try {
       const { data, error } = await searchMessagesInGroup(groupId, searchTerm.trim(), 50);
+      if (!isMountedRef.current) return;
       
       if (error) {
-        console.error('❌ Search error:', error);
         setSearchResults([]);
       } else {
         setSearchResults(data || []);
       }
     } catch (error) {
-      console.error('❌ Unexpected search error:', error);
+      if (!isMountedRef.current) return;
       setSearchResults([]);
     } finally {
-      setIsSearching(false);
+      if (isMountedRef.current) setIsSearching(false);
     }
   }, [groupId, searchTerm]);
 
@@ -74,30 +80,15 @@ export default function ChatSearchBottomSheet({
   // Focus input when bottom sheet opens (with delay to avoid crash)
   useEffect(() => {
     if (visible) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:75',message:'Bottom sheet opened, scheduling focus',data:{visible},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       const timer = setTimeout(() => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:78',message:'Attempting to focus TextInput',data:{hasRef:!!searchInputRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
         try {
           searchInputRef.current?.focus();
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:81',message:'Focus call completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
         } catch (error) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:84',message:'Focus error',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          console.error('❌ Error focusing search input:', error);
+          /* focus failed - non-critical */
         }
       }, 500); // Increased delay to 500ms
       return () => clearTimeout(timer);
     } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:92',message:'Bottom sheet closed, resetting state',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       // Reset when closing
       setSearchTerm('');
       setSearchResults([]);
@@ -139,7 +130,6 @@ export default function ChatSearchBottomSheet({
         </Text>
       );
     } catch (error) {
-      console.error('❌ Error highlighting text:', error);
       return text;
     }
   };
@@ -204,29 +194,13 @@ export default function ChatSearchBottomSheet({
               placeholderTextColor={DesignTokens.colors.text.secondary}
               value={searchTerm}
               onChangeText={(text) => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:185',message:'onChangeText called',data:{textLength:text.length,hasSpecialChars:/[\u0000-\u001F\u007F-\u009F]/.test(text)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
                 // הגנה מפני rich text - רק טקסט רגיל
                 // הסר תווים מיוחדים שעלולים לגרום לבעיות
                 const plainText = text
                   .replace(/[\u0000-\u001F\u007F-\u009F]/g, '') // Control characters
                   .replace(/[\u200B-\u200D\uFEFF]/g, '') // Zero-width characters
                   .replace(/[\u202A-\u202E]/g, ''); // Bidirectional override characters
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:193',message:'Setting plain text',data:{originalLength:text.length,plainTextLength:plainText.length,changed:text!==plainText},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
                 setSearchTerm(plainText);
-              }}
-              onFocus={() => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:200',message:'TextInput focused',data:{searchTermLength:searchTerm.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
-              }}
-              onBlur={() => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatSearchBottomSheet.tsx:206',message:'TextInput blurred',data:{searchTermLength:searchTerm.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-                // #endregion
               }}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
@@ -310,21 +284,21 @@ const createStyles = (tokens: any) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.border?.default || tokens.colors.background.secondary,
+    borderBottomWidth: tokens.layout.borderWidth.normal,
+    borderBottomColor: tokens.colors.border.divider,
   },
   closeButton: {
     padding: tokens.spacing.xs,
   },
   title: {
     flex: 1,
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.bold,
     color: tokens.colors.text.primary,
     textAlign: 'center',
   },
   spacer: {
-    width: 40,
+    width: tokens.layout.screenPadding * 2,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -338,17 +312,17 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: tokens.colors.background.secondary,
-    borderRadius: 12,
+    borderRadius: tokens.borderRadius.md,
     paddingHorizontal: tokens.spacing.sm,
-    borderWidth: 1,
-    borderColor: tokens.colors.border?.default || tokens.colors.background.tertiary,
+    borderWidth: tokens.layout.borderWidth.normal,
+    borderColor: tokens.colors.border.primary,
   },
   searchIcon: {
     marginRight: tokens.spacing.xs,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: tokens.typography.titleXs.size,
     color: tokens.colors.text.primary,
     paddingVertical: tokens.spacing.sm,
     textAlign: 'right',
@@ -358,7 +332,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   searchButton: {
     padding: tokens.spacing.sm,
-    borderRadius: 12,
+    borderRadius: tokens.borderRadius.md,
     backgroundColor: tokens.colors.accent.main,
     justifyContent: 'center',
     alignItems: 'center',
@@ -382,8 +356,8 @@ const createStyles = (tokens: any) => StyleSheet.create({
   resultItem: {
     paddingVertical: tokens.spacing.md,
     paddingHorizontal: tokens.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.border?.default || tokens.colors.background.secondary,
+    borderBottomWidth: tokens.layout.borderWidth.normal,
+    borderBottomColor: tokens.colors.border.divider,
   },
   resultHeader: {
     flexDirection: 'row',
@@ -392,16 +366,16 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginBottom: tokens.spacing.xs,
   },
   senderName: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: tokens.typography.bodySmall.size,
+    fontWeight: tokens.typography.fontWeight.semibold,
     color: tokens.colors.text.primary,
   },
   messageDate: {
-    fontSize: 12,
+    fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
   },
   messageContent: {
-    fontSize: 16,
+    fontSize: tokens.typography.titleXs.size,
     color: tokens.colors.text.primary,
     lineHeight: 22,
   },
@@ -417,18 +391,18 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   loadingText: {
     marginTop: tokens.spacing.md,
-    fontSize: 16,
+    fontSize: tokens.typography.titleXs.size,
     color: tokens.colors.text.secondary,
   },
   emptyText: {
     marginTop: tokens.spacing.md,
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: tokens.typography.titleSmall.size,
+    fontWeight: tokens.typography.fontWeight.semibold,
     color: tokens.colors.text.primary,
   },
   emptySubtext: {
     marginTop: tokens.spacing.xs,
-    fontSize: 14,
+    fontSize: tokens.typography.bodySmall.size,
     color: tokens.colors.text.secondary,
   },
 });

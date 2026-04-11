@@ -1,48 +1,52 @@
 // ============================================
-// Media Viewer Component
-// ============================================
-// מסך מלא להצגת תמונות וסרטונים
+// Media Viewer Component - Glass Design
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { logger } from '../../utils/logger';
 import {
   View,
   Text,
   Modal,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  Alert,
+  Share as RNShare,
+  Platform,
+  TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from 'expo-av';
-import { useDesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
-import { Share, Forward, Copy, Download, Reply } from 'lucide-react-native';
-import * as FileSystem from 'expo-file-system';
+import { X, Share, Forward, Copy, Download, Reply } from 'lucide-react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { Alert, Share as RNShare, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  runOnJS,
+  withTiming,
 } from 'react-native-reanimated';
 import {
   GestureDetector,
   Gesture,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
-import { Message } from '../../services/supabase';
+import { BlurView } from 'expo-blur';
+import { Image as ExpoImage } from 'expo-image';
+import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
+import { chatPalette as COLORS } from './chatDesignTokens';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface MediaViewerProps {
   visible: boolean;
   mediaUrl: string;
-  mediaType: 'image' | 'video';
+  mediaType: 'image' | 'video' | 'audio' | 'document';
   caption?: string;
-  message?: Message;
   onClose: () => void;
   onReply?: () => void;
   onForward?: () => void;
@@ -53,15 +57,194 @@ export default function MediaViewer({
   mediaUrl,
   mediaType,
   caption,
-  message,
   onClose,
   onReply,
   onForward,
 }: MediaViewerProps) {
-  const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
-  const [imageLoading, setImageLoading] = useState(true);
-  const [videoLoading, setVideoLoading] = useState(true);
+  const [displayUri, setDisplayUri] = useState(mediaUrl);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const videoRef = useRef<Video>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [timelineWidth, setTimelineWidth] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPosition, setDragPosition] = useState(0);
+  const positionRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const lastSeekTargetRef = useRef<number | null>(null);
+  const durationVal = useSharedValue(0);
+  const timelineWidthVal = useSharedValue(0);
+  const startPositionVal = useSharedValue(0);
+  const positionShared = useSharedValue(0);
+  positionRef.current = position;
+
+  const displayPosition = isDragging ? dragPosition : position;
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    setDisplayUri(mediaUrl);
+  }, [mediaUrl]);
+
+  useEffect(() => {
+    if (!visible || !mediaUrl) return;
+    let cancelled = false;
+    getChatMediaDisplayUri(mediaUrl).then((u) => {
+      if (!cancelled && u) setDisplayUri(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, mediaUrl]);
+
+  useEffect(() => {
+    if (!visible && videoRef.current) {
+      videoRef.current.stopAsync().catch(() => {});
+      videoRef.current.unloadAsync().catch(() => {});
+      setIsPlaying(false);
+      setPosition(0);
+      setDuration(0);
+    }
+  }, [visible]);
+
+  React.useEffect(() => {
+    if (!isDragging) {
+      positionShared.value = withTiming(position, { duration: 120 });
+    }
+  }, [position, isDragging]);
+
+  React.useEffect(() => {
+    durationVal.value = duration;
+    timelineWidthVal.value = timelineWidth;
+  }, [duration, timelineWidth]);
+
+  const formatTime = useCallback((seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }, []);
+
+  const handleSeek = useCallback((positionSeconds: number) => {
+    lastSeekTargetRef.current = positionSeconds;
+    const ms = Math.max(0, positionSeconds) * 1000;
+    (videoRef.current as any)?.setPositionAsync(ms).then(() => {
+      setPosition(positionSeconds);
+      lastSeekTargetRef.current = null;
+    }).catch(() => {
+      lastSeekTargetRef.current = null;
+    });
+  }, []);
+
+  const handleTimelinePress = useCallback((evt: { nativeEvent: { locationX: number } }) => {
+    if (timelineWidth <= 0 || duration <= 0) return;
+    const ratio = Math.max(0, Math.min(1, evt.nativeEvent.locationX / timelineWidth));
+    handleSeek(ratio * duration);
+  }, [timelineWidth, duration, handleSeek]);
+
+  isDraggingRef.current = isDragging;
+
+  const recordDragStart = useCallback(() => {
+    startPositionVal.value = position;
+    positionShared.value = position;
+    setDragPosition(position);
+    setIsDragging(true);
+    isDraggingRef.current = true;
+  }, [position]);
+
+  const commitSeek = useCallback((finalPositionSeconds: number) => {
+    positionShared.value = finalPositionSeconds;
+    setPosition(finalPositionSeconds);
+    setIsDragging(false);
+    isDraggingRef.current = false;
+    handleSeek(finalPositionSeconds);
+  }, [handleSeek]);
+
+  const handleTimelineTap = useCallback((x: number) => {
+    if (timelineWidth <= 0 || duration <= 0) return;
+    const ratio = Math.max(0, Math.min(1, x / timelineWidth));
+    const sec = ratio * duration;
+    positionShared.value = sec;
+    setPosition(sec);
+    handleSeek(sec);
+  }, [timelineWidth, duration, handleSeek]);
+
+  const timelinePanGesture = Gesture.Pan()
+    .minDistance(6)
+    .onStart(() => {
+      'worklet';
+      runOnJS(recordDragStart)();
+    })
+    .onUpdate((e) => {
+      'worklet';
+      const w = timelineWidthVal.value;
+      const d = durationVal.value;
+      if (w <= 0 || d <= 0) return;
+      const newSec = startPositionVal.value + (e.translationX / w) * d;
+      const clamped = Math.max(0, Math.min(d, newSec));
+      positionShared.value = clamped;
+      runOnJS(setDragPosition)(clamped);
+    })
+    .onEnd((e) => {
+      'worklet';
+      const w = timelineWidthVal.value;
+      const d = durationVal.value;
+      if (w <= 0 || d <= 0) {
+        runOnJS(commitSeek)(startPositionVal.value);
+        return;
+      }
+      const newSec = startPositionVal.value + (e.translationX / w) * d;
+      const clamped = Math.max(0, Math.min(d, newSec));
+      runOnJS(commitSeek)(clamped);
+    });
+
+  const timelineTapGesture = Gesture.Tap()
+    .onEnd((e) => {
+      'worklet';
+      runOnJS(handleTimelineTap)(e.x);
+    });
+
+  const timelineGesture = Gesture.Exclusive(timelinePanGesture, timelineTapGesture);
+
+  const animatedFillStyle = useAnimatedStyle(() => {
+    const d = durationVal.value;
+    const p = positionShared.value;
+    if (d <= 0) return { width: 0 };
+    const w = timelineWidthVal.value;
+    return { width: w * (p / d) };
+  }, []);
+
+  const animatedThumbStyle = useAnimatedStyle(() => {
+    const d = durationVal.value;
+    const p = positionShared.value;
+    if (d <= 0) return { left: -7 };
+    const w = timelineWidthVal.value;
+    return { left: w * (p / d) - 7 };
+  }, []);
+
+  const togglePlayPause = useCallback(() => {
+    if (!videoRef.current) return;
+    const next = !isPlaying;
+    setIsPlaying(next);
+    if (next) (videoRef.current as any).playAsync?.();
+    else (videoRef.current as any).pauseAsync?.();
+  }, [isPlaying]);
+
+  // Reset video state when modal closes or url changes
+  React.useEffect(() => {
+    if (!visible) {
+      setIsPlaying(false);
+      setPosition(0);
+      setDuration(0);
+    }
+  }, [visible, mediaUrl]);
 
   // Animation values for zoom and pan
   const scale = useSharedValue(1);
@@ -71,7 +254,7 @@ export default function MediaViewer({
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
-  // Reset animation values when modal closes
+  // Reset when modal closes
   React.useEffect(() => {
     if (!visible) {
       scale.value = 1;
@@ -89,187 +272,139 @@ export default function MediaViewer({
       scale.value = savedScale.value * event.scale;
     })
     .onEnd(() => {
-      savedScale.value = scale.value;
-      // Limit zoom between 1 and 5
+      // If pinched smaller than 1, return to 1 (no spring - natural feel)
       if (scale.value < 1) {
-        scale.value = withSpring(1);
+        scale.value = 1;
         savedScale.value = 1;
+        translateX.value = 0;
+        translateY.value = 0;
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
       } else if (scale.value > 5) {
-        scale.value = withSpring(5);
+        scale.value = 5;
         savedScale.value = 5;
+      } else {
+        savedScale.value = scale.value;
       }
     });
 
-  // Pan gesture for drag (only when zoomed)
+  // Pan gesture for drag - only when zoomed in
   const panGesture = Gesture.Pan()
     .minDistance(10)
     .onUpdate((event) => {
+      // Only allow panning when zoomed in
       if (scale.value > 1) {
         translateX.value = savedTranslateX.value + event.translationX;
         translateY.value = savedTranslateY.value + event.translationY;
       }
     })
     .onEnd(() => {
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-      
-      // Spring back to center if not zoomed
+      // When not zoomed, don't allow panning (stays at center)
       if (scale.value <= 1) {
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
+        translateX.value = 0;
+        translateY.value = 0;
         savedTranslateX.value = 0;
         savedTranslateY.value = 0;
       } else {
-        // Constrain pan when zoomed
+        // When zoomed, constrain to bounds (natural, no spring)
         const maxTranslateX = (SCREEN_WIDTH * (scale.value - 1)) / 2;
         const maxTranslateY = (SCREEN_HEIGHT * (scale.value - 1)) / 2;
-        
+
+        let finalX = translateX.value;
+        let finalY = translateY.value;
+
         if (Math.abs(translateX.value) > maxTranslateX) {
-          translateX.value = withSpring(translateX.value > 0 ? maxTranslateX : -maxTranslateX);
-          savedTranslateX.value = translateX.value;
+          finalX = translateX.value > 0 ? maxTranslateX : -maxTranslateX;
         }
         if (Math.abs(translateY.value) > maxTranslateY) {
-          translateY.value = withSpring(translateY.value > 0 ? maxTranslateY : -maxTranslateY);
-          savedTranslateY.value = translateY.value;
+          finalY = translateY.value > 0 ? maxTranslateY : -maxTranslateY;
         }
+
+        translateX.value = finalX;
+        translateY.value = finalY;
+        savedTranslateX.value = finalX;
+        savedTranslateY.value = finalY;
       }
     });
 
-  // Combined gesture
-  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
+  // Double tap to zoom - original direct animation (no spring)
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      if (savedScale.value > 1) {
+        scale.value = 1;
+        savedScale.value = 1;
+        translateX.value = 0;
+        translateY.value = 0;
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+      } else {
+        scale.value = 2;
+        savedScale.value = 2;
+      }
+    });
 
-  // Animated style for image
-  const imageAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-        { scale: scale.value },
-      ],
-    };
-  });
+  const composedGesture = Gesture.Race(
+    doubleTapGesture,
+    Gesture.Simultaneous(pinchGesture, panGesture)
+  );
 
-  const styles = StyleSheet.create({
-    modal: {
-      flex: 1,
-      backgroundColor: '#000000',
-    },
-    mediaContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      width: '100%',
-      height: '100%',
-    },
-    headerOverlay: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    headerOverlayContent: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-    },
-    header: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    captionOverlay: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-    },
-    closeButton: {
-      padding: 8,
-    },
-    actionsContainerWrapper: {
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingTop: 12,
-    },
-    actionsContainer: {
-      flexDirection: 'row-reverse',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      paddingHorizontal: 8,
-      paddingVertical: 8,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      borderBottomLeftRadius: 0,
-      borderBottomRightRadius: 0,
-      width: '100%',
-      maxWidth: 220,
-      alignSelf: 'center',
-    },
-    actionButton: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-    },
-    actionButtonText: {
-      color: '#FFFFFF',
-      fontSize: 12,
-      marginTop: 4,
-      fontWeight: '500',
-    },
-    captionContainer: {
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      borderRadius: 20,
-      marginHorizontal: 20,
-      marginTop: 12,
-      marginBottom: 20,
-      alignSelf: 'center',
-      maxWidth: SCREEN_WIDTH - 80,
-    },
-    captionContainerFullWidth: {
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      marginHorizontal: 0,
-      marginTop: 12,
-      borderRadius: 0,
-      maxWidth: '100%',
-    },
-    captionText: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      textAlign: 'center',
-      lineHeight: 22,
-    },
-    image: {
-      width: '100%',
-      height: '100%',
-      resizeMode: 'contain',
-    },
-    videoContainer: {
-      flex: 1,
-      width: '100%',
-    },
-    video: {
-      width: '100%',
-      height: '100%',
-    },
-    loadingContainer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-              justifyContent: 'center',
-              alignItems: 'center',
-    },
-  });
+  const imageAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
+
+  const handleShare = async () => {
+    try {
+      await RNShare.share({ url: displayUri });
+    } catch (error) {
+      logger.error('MediaViewer', 'Share failed', error);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await Clipboard.setStringAsync(displayUri);
+      Alert.alert('הועתק', 'הקישור הועתק ללוח');
+    } catch (error) {
+      logger.error('MediaViewer', 'Copy URL failed', error);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        Alert.alert('מידע', 'הורדה לא זמינה בפלטפורמה זו');
+        return;
+      }
+      const cacheDir = FileSystem.cacheDirectory;
+      if (!cacheDir) {
+        Alert.alert('שגיאה', 'לא ניתן לגשת לתיקייה');
+        return;
+      }
+      const fileUri = `${cacheDir}media_${Date.now()}.${mediaType === 'image' ? 'jpg' : 'mp4'}`;
+      const downloadResult = await FileSystem.downloadAsync(displayUri, fileUri);
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(downloadResult.uri);
+      } else {
+        Alert.alert('הורד', 'הקובץ נשמר בהצלחה');
+      }
+    } catch (error) {
+      Alert.alert('שגיאה', 'לא ניתן להוריד את הקובץ');
+    }
+  };
 
   if (!visible) return null;
+
+  const ActionButton = ({ onPress, icon: Icon }: any) => (
+    <Pressable onPress={onPress} style={styles.actionButton}>
+      <Icon size={24} color={COLORS.text} strokeWidth={1.5} />
+    </Pressable>
+  );
 
   return (
     <Modal
@@ -278,195 +413,323 @@ export default function MediaViewer({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <GestureHandlerRootView style={styles.modal}>
-        {/* Media - Full Screen */}
+      <GestureHandlerRootView style={styles.container}>
+        {/* Media Content */}
         <View style={styles.mediaContainer}>
           {mediaType === 'image' ? (
             <>
-              {imageLoading && (
+              {isLoading && (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#FFFFFF" />
+                  <ActivityIndicator size="large" color={COLORS.primary} />
                 </View>
               )}
-              <GestureDetector gesture={composedGesture}>
-                <Animated.Image
-                  source={{ uri: mediaUrl }}
-                  style={[styles.image, imageAnimatedStyle]}
-                  resizeMode="contain"
-                  onLoadStart={() => setImageLoading(true)}
-                  onLoadEnd={() => setImageLoading(false)}
-                  onError={() => setImageLoading(false)}
-                />
-              </GestureDetector>
+              {loadError ? (
+                <View style={styles.mediaErrorContainer}>
+                  <Ionicons name="image-outline" size={64} color="rgba(255,255,255,0.3)" />
+                  <Text style={styles.mediaErrorText}>לא ניתן לטעון את התמונה</Text>
+                  <TouchableOpacity
+                    style={styles.mediaErrorRetry}
+                    onPress={() => { setLoadError(false); setIsLoading(true); }}
+                  >
+                    <Text style={styles.mediaErrorRetryText}>נסה שוב</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <GestureDetector gesture={composedGesture}>
+                  <Animated.Image
+                    source={{ uri: displayUri }}
+                    style={[styles.fullImage, imageAnimatedStyle]}
+                    resizeMode="contain"
+                    onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
+                    onLoadEnd={() => setIsLoading(false)}
+                    onError={() => { setIsLoading(false); setLoadError(true); }}
+                  />
+                </GestureDetector>
+              )}
             </>
           ) : (
-            <>
-              {videoLoading && (
+            <View style={styles.mediaContainer}>
+              {isLoading && (
                 <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color="#FFFFFF" />
+                  <ActivityIndicator size="large" color={COLORS.primary} />
                 </View>
               )}
-              <View style={styles.videoContainer}>
-                <Video
-                  source={{ uri: mediaUrl }}
-                  style={styles.video}
-                  useNativeControls
-                  resizeMode={ResizeMode.CONTAIN}
-                  shouldPlay={false}
-                  onLoadStart={() => setVideoLoading(true)}
-                  onLoad={() => setVideoLoading(false)}
-                  onError={() => setVideoLoading(false)}
-                />
-              </View>
-            </>
+              <Video
+                ref={videoRef}
+                source={{ uri: displayUri }}
+                style={styles.fullVideo}
+                useNativeControls={false}
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay={isPlaying}
+                onPlaybackStatusUpdate={(status) => {
+                  if (status.isLoaded) {
+                    if (status.durationMillis != null) setDuration(status.durationMillis / 1000);
+                    if (!isDraggingRef.current) {
+                      const reported = status.positionMillis / 1000;
+                      const target = lastSeekTargetRef.current;
+                      if (target == null) {
+                        setPosition(reported);
+                      } else if (Math.abs(reported - target) < 0.5) {
+                        lastSeekTargetRef.current = null;
+                        setPosition(reported);
+                      }
+                    }
+                  }
+                }}
+                onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
+                onLoad={() => {
+                  setIsLoading(false);
+                  (videoRef.current as any)?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
+                }}
+                onError={() => { setIsLoading(false); setLoadError(true); }}
+              />
+            </View>
           )}
         </View>
 
-        {/* Header Overlay - צמוד ל-safe area */}
-        <SafeAreaView 
-          style={styles.headerOverlay} 
-          edges={['top']}
-        >
-          <View 
-            style={[
-              styles.headerOverlayContent,
-              { 
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              }
-            ]}
-          >
-            <View style={styles.header}>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={28} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </SafeAreaView>
-
-        {/* Actions Menu & Caption Overlay - בתחתית */}
-        <SafeAreaView 
-          style={styles.captionOverlay} 
-          edges={['bottom']}
-        >
-          {/* Actions Menu - צר יותר כמו וואטסאפ עם פינות מעוגלות */}
-          <View style={styles.actionsContainerWrapper}>
-            <View style={styles.actionsContainer}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={async () => {
-                try {
-                  await RNShare.share({
-                    message: mediaUrl,
-                    url: mediaUrl,
-                  });
-                } catch (error) {
-                  console.error('Error sharing:', error);
-                }
-              }}
-            >
-              <Share size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>שתף</Text>
-            </TouchableOpacity>
-
-            {onReply && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => {
-                  onClose();
-                  onReply();
-                }}
-              >
-                <Reply size={24} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>השב</Text>
-              </TouchableOpacity>
-            )}
-
-            {onForward && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => {
-                  onClose();
-                  onForward();
-                }}
-              >
-                <Forward size={24} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>העבר</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={async () => {
-                try {
-                  await Clipboard.setStringAsync(mediaUrl);
-                  Alert.alert('הועתק', 'הקישור הועתק ללוח');
-                } catch (error) {
-                  console.error('Error copying:', error);
-                }
-              }}
-            >
-              <Copy size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>העתק</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={async () => {
-                try {
-                  if (Platform.OS === 'web') {
-                    Alert.alert('מידע', 'הורדה לא זמינה בפלטפורמה זו');
-                    return;
-                  }
-                  // @ts-ignore - cacheDirectory exists in runtime
-                  const cacheDir = FileSystem.cacheDirectory;
-                  if (!cacheDir) {
-                    Alert.alert('שגיאה', 'לא ניתן לגשת לתיקיית cache');
-                    return;
-                  }
-                  const fileUri = `${cacheDir}media_${Date.now()}.${mediaType === 'image' ? 'jpg' : 'mp4'}`;
-                  const downloadResult = await FileSystem.downloadAsync(mediaUrl, fileUri);
-                  
-                  if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(downloadResult.uri);
-                  } else {
-                    Alert.alert('הורד', 'הקובץ נשמר בהצלחה');
-                  }
-                } catch (error) {
-                  console.error('Error downloading:', error);
-                  Alert.alert('שגיאה', 'לא ניתן להוריד את הקובץ');
-                }
-              }}
-            >
-              <Download size={24} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>הורד</Text>
-            </TouchableOpacity>
-
-            {onReply && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => {
-                  onClose();
-                  onReply();
-                }}
-              >
-                <Reply size={24} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>השב</Text>
-              </TouchableOpacity>
-            )}
-            </View>
+        {/* Top Bar - Full Width (always visible like MediaPreviewModal) */}
+        <View style={styles.topBar}>
+            <BlurView intensity={80} tint="dark" style={styles.topBlur}>
+              <View style={[styles.topContent, { paddingTop: insets.top + 8 }]}>
+                <Pressable onPress={onClose} style={styles.closeButton}>
+                  <X size={24} color={COLORS.text} strokeWidth={2} />
+                </Pressable>
+                <View style={styles.topSpacer} />
+              </View>
+            </BlurView>
           </View>
 
-          {/* Caption */}
-          {caption && typeof caption === 'string' && caption.trim().length > 0 && (
-            <View style={[
-              styles.captionContainer,
-              caption.length > 50 ? styles.captionContainerFullWidth : undefined
-            ]}>
-              <Text style={styles.captionText}>{String(caption)}</Text>
-            </View>
-          )}
-        </SafeAreaView>
+        {/* Bottom Bar - Full Width (always visible like MediaPreviewModal) */}
+        <View style={styles.bottomBar}>
+            <BlurView intensity={80} tint="dark" style={styles.bottomBlur}>
+              <View style={[styles.bottomContent, { paddingBottom: insets.bottom + 12 }]}>
+                {/* Video controls: טיימליין + play/pause */}
+                {mediaType === 'video' && (
+                  <View style={styles.videoControlsRow}>
+                    <TouchableOpacity style={styles.videoPlayBtn} onPress={togglePlayPause}>
+                      <Ionicons name={isPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.videoTimeText}>{formatTime(displayPosition)}</Text>
+                    <GestureDetector gesture={timelineGesture}>
+                      <View
+                        style={styles.timelineTrack}
+                        onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+                      >
+                        <View style={styles.timelineTrackBg} />
+                        <Animated.View style={[styles.timelineFill, animatedFillStyle]} />
+                        <Animated.View style={[styles.timelineThumb, animatedThumbStyle]} />
+                      </View>
+                    </GestureDetector>
+                    <Text style={styles.videoTimeText}>{formatTime(duration)}</Text>
+                  </View>
+                )}
+
+                {/* Caption */}
+                {caption && caption.trim().length > 0 && (
+                  <View style={styles.captionContainer}>
+                    <Text style={styles.captionText} numberOfLines={2}>{caption}</Text>
+                  </View>
+                )}
+
+                {/* Actions Row */}
+                <View style={styles.actionsRow}>
+                  <ActionButton onPress={handleShare} icon={Share} />
+                  {onReply && (
+                    <ActionButton 
+                      onPress={() => { onClose(); onReply(); }} 
+                      icon={Reply} 
+                    />
+                  )}
+                  {onForward && (
+                    <ActionButton 
+                      onPress={() => { onClose(); onForward(); }} 
+                      icon={Forward} 
+                    />
+                  )}
+                  <ActionButton onPress={handleCopy} icon={Copy} />
+                  <ActionButton onPress={handleDownload} icon={Download} />
+                </View>
+              </View>
+            </BlurView>
+          </View>
       </GestureHandlerRootView>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  mediaContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  fullVideo: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  mediaErrorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mediaErrorText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  mediaErrorRetry: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  mediaErrorRetryText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  topBlur: {
+    width: '100%',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  topContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  topSpacer: {
+    flex: 1,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  bottomBlur: {
+    width: '100%',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  bottomContent: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingTop: 16,
+    paddingHorizontal: 20,
+  },
+  videoControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  videoPlayBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoTimeText: {
+    color: COLORS.text,
+    fontSize: 12,
+    minWidth: 36,
+    textAlign: 'center',
+  },
+  timelineTrack: {
+    flex: 1,
+    height: 20,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  timelineFill: {
+    position: 'absolute',
+    left: 0,
+    top: 7,
+    height: 6,
+    backgroundColor: COLORS.primary,
+    borderRadius: 3,
+  },
+  timelineThumb: {
+    position: 'absolute',
+    top: 3,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: COLORS.text,
+    marginLeft: -7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  timelineTrackBg: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 7,
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 3,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  actionButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  captionContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  captionText: {
+    color: COLORS.text,
+    fontSize: 15,
+    textAlign: 'right',
+    lineHeight: 22,
+    opacity: 0.9,
+  },
+});

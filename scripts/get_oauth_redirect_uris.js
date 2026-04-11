@@ -42,3 +42,4 @@ console.log('\n5. In Google Cloud Console:');
 console.log('   - Go to your Web OAuth Client ID');
 console.log('   - Add the Supabase Callback URL to "Authorized redirect URIs"');
 console.log('\n✅ Done!');
+

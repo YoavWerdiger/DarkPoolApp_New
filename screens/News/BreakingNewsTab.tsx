@@ -14,7 +14,8 @@ import {
   Share,
   ScrollView,
   Animated,
-  Dimensions
+  Dimensions,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +34,7 @@ import {
   getNewsCategoryIcon
 } from '../../services/newsService';
 import { LikedArticlesService } from '../../services/likedArticlesService';
+import UICard from '../../components/ui/UICard';
 // Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
 
 interface NewsCardProps {
@@ -65,99 +67,45 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
     }
   }, [visible, article]);
 
-  const debugDatabase = async () => {
-    try {
-      console.log('🔍 DEBUG: Checking database structure...');
-      
-      // בדיקת טבלת channel_members
-      const { data: membersTest, error: membersError } = await supabase
-        .from('channel_members')
-        .select('*')
-        .limit(1);
-      
-      console.log('📋 DEBUG: channel_members test:', { membersTest, membersError });
-      
-      // בדיקת טבלת channels
-      const { data: channelsTest, error: channelsError } = await supabase
-        .from('channels')
-        .select('id, name, image_url, is_private, created_by')
-        .limit(1);
-      
-      console.log('📢 DEBUG: channels test:', { channelsTest, channelsError });
-      
-      // בדיקת המשתמש הנוכחי
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('👤 DEBUG: current user:', { user: user?.id, userError });
-      
-    } catch (error) {
-      console.error('❌ DEBUG: Database check failed:', error);
-    }
-  };
-
   const loadChatGroups = async () => {
     setLoading(true);
     try {
-      console.log('🔄 ShareModal: Starting to load chat groups...');
-      
       // קבלת המשתמש הנוכחי
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('👤 ShareModal: Current user:', user?.id, 'Error:', userError);
       
       if (!user) {
-        console.log('❌ ShareModal: No user found');
         Alert.alert('שגיאה', 'משתמש לא מחובר');
         return;
       }
 
       // קבלת קבוצות הצ'אט של המשתמש
-      console.log('🔍 ShareModal: Fetching channel members for user:', user.id);
       const { data: memberRows, error: memberError } = await supabase
         .from('channel_members')
         .select('channel_id')
         .eq('user_id', user.id);
 
-      console.log('👥 ShareModal: Channel members result:', {
-        memberRows,
-        memberError,
-        count: memberRows?.length || 0
-      });
-
       if (memberError) {
-        console.error('❌ ShareModal: Error fetching channel members:', memberError);
         Alert.alert('שגיאה', `לא ניתן לטעון קבוצות: ${memberError.message}`);
         return;
       }
 
       const channelIds = memberRows?.map(row => row.channel_id) || [];
-      console.log('📋 ShareModal: Channel IDs:', channelIds);
 
       if (channelIds.length > 0) {
-        console.log('🔍 ShareModal: Fetching channels data...');
         const { data: channels, error: channelsError } = await supabase
           .from('channels')
           .select('id, name, image_url')
           .in('id', channelIds)
           .order('name');
 
-        console.log('📢 ShareModal: Channels result:', {
-          channels,
-          channelsError,
-          count: channels?.length || 0
-        });
-
         if (channelsError) {
-          console.error('❌ ShareModal: Error fetching channels:', channelsError);
           Alert.alert('שגיאה', `לא ניתן לטעון פרטי קבוצות: ${channelsError.message}`);
           return;
         }
 
-        console.log('✅ ShareModal: Successfully loaded channels:', channels);
         setChatGroups(channels || []);
       } else {
-        console.log('⚠️ ShareModal: User is not a member of any channels, trying alternative approach...');
-        
         // נסיון חלופי - לטעון את כל הערוצים הפומביים
-        console.log('🔄 ShareModal: Trying to load all public channels...');
         const { data: publicChannels, error: publicError } = await supabase
           .from('channels')
           .select('id, name, image_url')
@@ -165,26 +113,16 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
           .order('name')
           .limit(10);
 
-        console.log('🌐 ShareModal: Public channels result:', {
-          publicChannels,
-          publicError,
-          count: publicChannels?.length || 0
-        });
-
         if (!publicError && publicChannels && publicChannels.length > 0) {
-          console.log('✅ ShareModal: Found public channels, using them as fallback');
           setChatGroups(publicChannels);
         } else {
-          console.log('❌ ShareModal: No public channels found either');
           setChatGroups([]);
         }
       }
     } catch (error) {
-      console.error('❌ ShareModal: Exception loading chat groups:', error);
       Alert.alert('שגיאה', 'שגיאה בטעינת קבוצות');
     } finally {
       setLoading(false);
-      console.log('🏁 ShareModal: Finished loading chat groups');
     }
   };
 
@@ -225,7 +163,6 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
         });
 
       if (error) {
-        console.error('Error sharing news to group:', error);
         Alert.alert('שגיאה', 'לא ניתן לשתף לקבוצה');
         return;
       }
@@ -233,7 +170,6 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
       Alert.alert('הצלחה', `החדשה שותפה לקבוצה "${groupName}"`);
       onClose();
     } catch (error) {
-      console.error('Error sharing news to group:', error);
       Alert.alert('שגיאה', 'לא ניתן לשתף לקבוצה');
     }
   };
@@ -536,16 +472,12 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       const articleId = article.id;
       LikedArticlesService.getArticleLikeCount(articleId).then(count => {
         setLikeCount(count);
-      }).catch(error => {
-        console.error('Error loading like count:', error);
-      });
+      }).catch(() => {});
     } else {
       setLikeCount(0);
     }
   }, [visible, article?.id]);
 
-  console.log('📰 NewsDetailModal: visible =', visible, 'article =', article?.title);
-  
   if (!article) return null;
 
   const categoryColor = getNewsCategoryColor(article.category);
@@ -773,9 +705,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                   // עדכון ה-count אחרי לחיצה
                   LikedArticlesService.getArticleLikeCount(article.id).then(count => {
                     setLikeCount(count);
-                  }).catch(error => {
-                    console.error('Error updating like count:', error);
-                  });
+                  }).catch(() => {});
                 }}
                 activeOpacity={0.7}
               >
@@ -849,190 +779,216 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
   const DesignTokens = useDesignTokens();
   const categoryColor = getNewsCategoryColor(article.category);
   const categoryIcon = getNewsCategoryIcon(article.category);
-  
-  const handleSharePress = () => {
-    console.log('🔗 Share button pressed, opening modal...');
-    if (onShare) {
-      onShare(article);
-    }
-  };
-  
-  // זיהוי אם זה טוויטר או חדשה רגילה
-  const isTwitterPost = article.source === 'Twitter' || 
-                       article.source === 'Bloomberg' || 
-                       article.source === 'Reuters' ||
-                       article.source === 'CNN' ||
-                       article.source === 'BBC' ||
-                       article.source === 'טוויטר' ||
-                       article.url?.includes('twitter.com') ||
-                       article.source_url?.includes('twitter.com') ||
-                       article.id?.length > 15; // טוויטר IDs ארוכים
 
-  const cardContent = (
-    <Pressable
+  const handleSharePress = () => {
+    if (onShare) onShare(article);
+  };
+
+  const isTwitterPost = article.source === 'Twitter' ||
+    article.source === 'Bloomberg' || article.source === 'Reuters' ||
+    article.source === 'CNN' || article.source === 'BBC' ||
+    article.source === 'טוויטר' ||
+    article.url?.includes('twitter.com') ||
+    article.source_url?.includes('twitter.com') ||
+    article.id?.length > 15;
+
+  const hasImage = !!article.image_url;
+  const thumbnailHeight = 200;
+
+  return (
+    <UICard
+      variant="elevated"
+      padding="none"
       onPress={() => onPress(article)}
-      className="mx-4 py-4"
       style={{
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.25)',
-        paddingBottom: 16,
-        marginBottom: 8
+        marginHorizontal: DesignTokens.layout?.screenPadding ?? 20,
+        marginBottom: 0,
+        borderRadius: DesignTokens.borderRadius.lg,
+        overflow: 'hidden',
       }}
     >
-      <View className="flex-row items-start">
-        {/* תמונה קטנה */}
-        <View className="w-16 h-16 rounded-lg overflow-hidden mr-4 flex-shrink-0">
-          {article.image_url ? (
+      {/* Thumbnail + גרדיאנט רגיל לקריאת כותרת על התמונה */}
+      <View style={{ height: thumbnailHeight, width: '100%', position: 'relative' }}>
+        {hasImage ? (
+          <>
             <Image
               source={{ uri: article.image_url }}
-              className="w-full h-full"
+              style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
-              style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
             />
-          ) : (
-            <View 
-              className="w-full h-full items-center justify-center"
-              style={{ backgroundColor: DesignTokens.colors.background.tertiary }}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.75)']}
+              locations={[0.25, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            {/* כותרת על ה-gradient */}
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 12,
+                left: 12,
+                right: 12,
+              }}
             >
-              <Ionicons 
-                name={isTwitterPost ? "logo-twitter" : "newspaper-outline"} 
-                size={24} 
-                color={DesignTokens.colors.text.tertiary} 
-              />
+              <Text
+                style={{
+                  fontSize: 17,
+                  fontWeight: '600',
+                  color: '#FFFFFF',
+                  textAlign: 'right',
+                  lineHeight: 22,
+                }}
+                numberOfLines={2}
+              >
+                {article.label || article.title}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: 'rgba(255,255,255,0.7)',
+                  marginTop: 4,
+                  textAlign: 'right',
+                }}
+              >
+                {article.source} • {formatNewsDate(article.published_at)}
+              </Text>
             </View>
-          )}
-        </View>
-
-        {/* תוכן */}
-        <View className="flex-1">
-          {/* כותרת - מציג label אם קיים, אחרת title */}
-          <Text 
-            className="text-base font-semibold leading-5 mb-2"
-            style={{ 
-              color: DesignTokens.colors.text.primary,
-              textAlign: 'right',
-              writingDirection: 'rtl'
+          </>
+        ) : (
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: DesignTokens.colors.background.tertiary,
+              justifyContent: 'center',
+              alignItems: 'center',
             }}
-            numberOfLines={2}
           >
-            {article.label || article.title}
-          </Text>
-
-          {/* תוכן/תיאור - מציג title אם יש label, אחרת summary */}
-          {(article.label ? article.title : article.summary) && (
-            <Text 
-              className="text-sm leading-4 mb-3"
-              style={{ 
-                color: DesignTokens.colors.text.secondary,
+            <Ionicons
+              name={isTwitterPost ? 'logo-twitter' : 'newspaper-outline'}
+              size={48}
+              color={DesignTokens.colors.text.tertiary}
+            />
+            <Text
+              style={{
+                fontSize: 17,
+                fontWeight: '600',
+                color: DesignTokens.colors.text.primary,
                 textAlign: 'right',
-                writingDirection: 'rtl'
+                marginTop: 12,
+                marginHorizontal: 16,
               }}
               numberOfLines={2}
             >
-              {truncateText(article.label ? article.title : article.summary || '', 100)}
+              {article.label || article.title}
             </Text>
-          )}
+          </View>
+        )}
+      </View>
 
-          {/* מידע תחתון */}
-          <View className="flex-row items-center justify-between">
-            {/* כפתורי פעולה - בצד שמאל */}
-            <View className="flex-row items-center">
-              {/* לייק */}
-              <TouchableOpacity 
-                style={{ 
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                
-                  justifyContent: 'center',
-                  backgroundColor: isLiked 
-                    ? 'rgba(255, 59, 92, 0.15)' 
-                    : 'transparent',
-                  marginRight: 5
-                }}
-                onPress={() => onLike(article)}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name={isLiked ? "heart" : "heart-outline"} 
-                  size={16} 
-                  color={isLiked ? "#FF3B5C" : DesignTokens.colors.text.secondary} 
-                />
-              </TouchableOpacity>
+      {/* תוכן מתחת לתמונה */}
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingTop: 12,
+          paddingBottom: 16,
+        }}
+      >
+        {/* אם יש תמונה - הכותרת כבר מעל, מציגים רק summary */}
+        {hasImage && (article.label ? article.title : article.summary) && (
+          <Text
+            style={{
+              fontSize: 14,
+              color: DesignTokens.colors.text.secondary,
+              textAlign: 'right',
+              lineHeight: 20,
+              marginBottom: 12,
+            }}
+            numberOfLines={2}
+          >
+            {truncateText(article.label ? article.title : article.summary || '', 80)}
+          </Text>
+        )}
 
-              {/* שיתוף */}
-              <TouchableOpacity 
-                style={{ 
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'transparent'
-                }}
-                onPress={handleSharePress}
-              >
-                <Ionicons 
-                  name="share-outline" 
-                  size={16} 
-                  color={DesignTokens.colors.text.secondary} 
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* מקור וזמן - בצד ימין */}
-            <View className="flex-row items-center">
-              {/* זמן */}
-              <Text 
-                className="text-xs"
-                style={{ color: DesignTokens.colors.text.tertiary }}
-              >
-                {formatNewsDate(article.published_at)}
-              </Text>
-              
-              {/* נקודת הפרדה */}
-              <Text 
-                className="text-xs mx-2"
-                style={{ color: DesignTokens.colors.text.tertiary }}
-              >
-                •
-              </Text>
-              
-              {/* מקור */}
-              <Text 
-                className="text-xs font-medium mr-3"
-                style={{ color: DesignTokens.colors.text.secondary }}
-              >
-                {article.source}
-              </Text>
-            </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/* כפתורי פעולה */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.15)' : 'rgba(255,255,255,0.06)',
+              }}
+              onPress={() => onLike(article)}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={isLiked ? 'heart' : 'heart-outline'}
+                size={18}
+                color={isLiked ? '#FF3B5C' : DesignTokens.colors.text.secondary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255,255,255,0.06)',
+              }}
+              onPress={handleSharePress}
+            >
+              <Ionicons name="share-outline" size={18} color={DesignTokens.colors.text.secondary} />
+            </TouchableOpacity>
           </View>
 
-          {/* קטגוריה אם קיימת */}
-          {article.category && article.category !== 'כללי' && (
-            <View 
-              className="px-2 py-1 rounded-full self-start mt-2"
-              style={{ backgroundColor: categoryColor + '20' }}
+          {/* מקור וזמן - אם אין תמונה */}
+          {!hasImage && (
+            <Text
+              style={{
+                fontSize: 12,
+                color: DesignTokens.colors.text.tertiary,
+              }}
             >
-              <Text 
-                className="text-xs font-medium"
-                style={{ color: categoryColor }}
-              >
-                {article.category}
-              </Text>
-            </View>
+              {article.source} • {formatNewsDate(article.published_at)}
+            </Text>
           )}
         </View>
+
+        {/* קטגוריה */}
+        {article.category && article.category !== 'כללי' && (
+          <View
+            style={{
+              marginTop: 10,
+              alignSelf: 'flex-end',
+              backgroundColor: categoryColor + '25',
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 8,
+            }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: '500', color: categoryColor }}>
+              {article.category}
+            </Text>
+          </View>
+        )}
       </View>
-    </Pressable>
+    </UICard>
   );
-  
-  return cardContent;
 };
 
 export default function BreakingNewsTab() {
-  console.log('📰 BreakingNewsTab: Component rendering...');
   const DesignTokens = useDesignTokens();
   const mainTabsHeight = useMainTabsHeight();
   const [articles, setArticles] = useState<NewsArticle[]>([]);
@@ -1057,9 +1013,7 @@ export default function BreakingNewsTab() {
     try {
       const likedIds = await LikedArticlesService.getLikedArticleIds();
       setLikedArticles(new Set(likedIds));
-      console.log(`✅ BreakingNewsTab: Loaded ${likedIds.length} liked articles`);
     } catch (error) {
-      console.error('❌ BreakingNewsTab: Error loading liked articles:', error);
     }
   }, []);
 
@@ -1101,7 +1055,6 @@ export default function BreakingNewsTab() {
       }
       
     } catch (error) {
-      console.error('❌ Error handling like:', error);
       Alert.alert('שגיאה', 'בעיה בשמירת האהבתי');
     }
   }, [likedArticles]);
@@ -1109,11 +1062,6 @@ export default function BreakingNewsTab() {
   // טעינת חדשות מתפרצות
   const loadBreakingNews = useCallback(async () => {
     try {
-      console.log('⚡ BreakingNewsTab: Loading breaking news');
-      console.log('🔗 BreakingNewsTab: Supabase client:', supabase);
-      
-      // חיבור ישיר לטבלת app_news_clean
-      console.log('🔍 BreakingNewsTab: Attempting to fetch from app_news_clean table...');
       
       // נסה קודם לבדוק אם הטבלה קיימת
       const { data: testData, error: testError } = await supabase
@@ -1121,54 +1069,35 @@ export default function BreakingNewsTab() {
         .select('count')
         .limit(1);
       
-      console.log('🧪 BreakingNewsTab: Table test result:', { testData, testError });
-      
       // עכשיו נשלוף את הנתונים - מסודרים לפי time
       const { data, error } = await supabase
         .from('app_news_clean')
         .select('*')
         .order('time', { ascending: false });
-      
-      console.log('📊 BreakingNewsTab: Raw database response:', { data, error });
-      
-      // אם יש נתונים, נבדוק את המבנה
-      if (data && data.length > 0) {
-        console.log('🔍 BreakingNewsTab: First row structure:', data[0]);
-        console.log('🔍 BreakingNewsTab: Available columns:', Object.keys(data[0]));
-      }
 
       if (error) {
-        console.error('❌ BreakingNewsTab: Database error:', error);
-        console.error('❌ Error details:', error.message, error.code);
-        console.error('❌ Full error object:', error);
-        
         // ננסה טבלות אחרות
-        console.log('🔄 BreakingNewsTab: Trying alternative table names...');
         
         const alternativeTables = ['news', 'articles', 'tweets', 'posts', 'messages'];
         let foundData = null;
         
         for (const tableName of alternativeTables) {
           try {
-            console.log(`🔍 BreakingNewsTab: Trying table: ${tableName}`);
             const { data: altData, error: altError } = await supabase
               .from(tableName)
               .select('*')
               .limit(10);
             
             if (!altError && altData && altData.length > 0) {
-              console.log(`✅ BreakingNewsTab: Found data in table: ${tableName}`);
               foundData = altData;
               break;
             }
           } catch (altErr) {
-            console.log(`❌ BreakingNewsTab: Table ${tableName} failed:`, altErr);
+            // Table fetch failed
           }
         }
         
         if (foundData) {
-          // נשתמש בנתונים מהטבלה החלופית
-          console.log('🔄 BreakingNewsTab: Using alternative table data');
           const newsArticles: NewsArticle[] = foundData.map((row: any, index: number) => ({
             id: row.id || row.uuid || String(index),
             title: row.text_content || row.title || row.text || row.content || row.message || `כתבה ${index + 1}`,
@@ -1191,27 +1120,22 @@ export default function BreakingNewsTab() {
           }));
           
           setArticles(newsArticles);
-          console.log('✅ BreakingNewsTab: Loaded', newsArticles.length, 'articles from alternative table');
           return;
         }
         
         // אם לא מצאנו כלום, נציג רשימה ריקה
-        console.error('❌ BreakingNewsTab: Failed to load news, showing empty state');
         setArticles([]);
         return;
       }
 
       // בדיקה אם יש נתונים
       if (!data || data.length === 0) {
-        console.log('📭 BreakingNewsTab: No news articles found in database');
         setArticles([]);
         return;
       }
 
       // המרת הנתונים מהמסד לפורמט NewsArticle
       const newsArticles: NewsArticle[] = (data || []).map((row: any, index: number) => {
-        console.log(`🔍 BreakingNewsTab: Processing row ${index}:`, row);
-        
         // חיפוש כותרת - לפי המבנה שלך
         const title = row.text_content || row.title || row.headline || row.subject || row.name || 
                      row.tweet_text || row.text || row.content || 
@@ -1248,13 +1172,6 @@ export default function BreakingNewsTab() {
         if (rawDate && typeof rawDate === 'string') {
           rawDate = rawDate.trim();
         }
-        
-        console.log(`🕐 BreakingNewsTab: Raw date for article ${index}:`, {
-          rawDate,
-          type: typeof rawDate,
-          rowTime: row.time,
-          rowCreatedAt: row.created_at
-        });
 
         // בדיקת תקינות התאריך והמרה לפורמט ISO
         let validatedDate: string;
@@ -1269,13 +1186,11 @@ export default function BreakingNewsTab() {
             
             const testDate = new Date(dateToParse);
             if (isNaN(testDate.getTime()) || testDate.getTime() < 0) {
-              console.log(`⚠️ BreakingNewsTab: Invalid date for article ${index}, using created_at or current time`);
               validatedDate = row.created_at || new Date().toISOString();
             } else {
               validatedDate = testDate.toISOString();
             }
           } catch (error) {
-            console.log(`❌ BreakingNewsTab: Error validating date for article ${index}:`, error);
             validatedDate = row.created_at || new Date().toISOString();
           }
         } else {
@@ -1304,18 +1219,11 @@ export default function BreakingNewsTab() {
           reading_time: row.reading_time || row.read_time || Math.ceil(content.length / 300) || 1
         };
         
-        console.log(`✅ BreakingNewsTab: Mapped article ${index}:`, {
-          ...article,
-          published_at_formatted: formatNewsDate(article.published_at)
-        });
         return article;
       });
 
       setArticles(newsArticles);
-      console.log('✅ BreakingNewsTab: Loaded', newsArticles.length, 'articles');
-      console.log('📊 Sample article data:', newsArticles[0]);
     } catch (error) {
-      console.error('❌ BreakingNewsTab: Error loading breaking news:', error);
       Alert.alert('שגיאה', 'לא ניתן לטעון את החדשות המתפרצות');
     } finally {
       setLoading(false);
@@ -1331,8 +1239,6 @@ export default function BreakingNewsTab() {
 
   // הגדרת realtime subscription לעדכונים חדשים
   useEffect(() => {
-    console.log('🔄 BreakingNewsTab: Setting up realtime subscription');
-    
     const subscription = supabase
       .channel('app_news_clean_changes')
       .on(
@@ -1343,8 +1249,6 @@ export default function BreakingNewsTab() {
           table: 'app_news_clean'
         },
         (payload) => {
-          console.log('⚡ BreakingNewsTab: New article received via realtime:', payload.new);
-          
           // המרת הנתונים לפורמט NewsArticle עם מיפוי גמיש
           const row = payload.new;
           
@@ -1384,7 +1288,6 @@ export default function BreakingNewsTab() {
       .subscribe();
 
     return () => {
-      console.log('🔄 BreakingNewsTab: Unsubscribing from realtime');
       subscription.unsubscribe();
     };
   }, []);
@@ -1401,7 +1304,6 @@ export default function BreakingNewsTab() {
 
   // בחירת כתבה - פתיחת מודל מפורט
   const handleArticlePress = useCallback((article: NewsArticle) => {
-    console.log('⚡ BreakingNewsTab: Article pressed:', article.title);
     const index = articles.findIndex(a => a.id === article.id);
     setSelectedArticle(article);
     setSelectedArticleIndex(index >= 0 ? index : 0);
@@ -1444,7 +1346,6 @@ export default function BreakingNewsTab() {
 
       await Share.share(shareContent);
     } catch (error) {
-      console.error('❌ BreakingNewsTab: Error sharing:', error);
       Alert.alert('שגיאה', 'לא ניתן לשתף את הכתבה');
     }
   }, []);

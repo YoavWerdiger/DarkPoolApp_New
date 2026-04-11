@@ -143,8 +143,6 @@ export default function DividendsTab() {
 
   const loadDividends = useCallback(async () => {
     try {
-      console.log('💰 Loading dividends from Supabase');
-      
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
       
@@ -156,17 +154,14 @@ export default function DividendsTab() {
         .limit(200);
       
       if (error) {
-        console.error('❌ Supabase error:', error);
         return;
       }
       
       if (data) {
-        console.log(`✅ Loaded ${data.length} dividends`);
         setDividends(data);
         setSections(groupDividendsByMonth(data));
       }
     } catch (error) {
-      console.error('❌ Error loading dividends:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

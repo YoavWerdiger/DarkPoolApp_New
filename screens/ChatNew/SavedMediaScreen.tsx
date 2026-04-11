@@ -2,7 +2,7 @@
 // Saved Media Screen - Media saved from group
 // ============================================
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,21 +13,35 @@ import {
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useChat } from '../../context/ChatContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { Ionicons } from '@expo/vector-icons';
-import UICard from '../../components/ui/UICard';
+import { Video, ResizeMode } from 'expo-av';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
+import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 
 export default function SavedMediaScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const DesignTokens = useDesignTokens();
+  useLockParentDrawerWhileFocused();
   const { groupId } = route.params as { groupId: string };
   const { messages } = useChat();
 
   const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: string } | null>(null);
+  const videoRef = useRef<Video>(null);
+
+  const handleCloseModal = useCallback(async () => {
+    if (videoRef.current) {
+      try {
+        await videoRef.current.stopAsync();
+        await videoRef.current.unloadAsync();
+      } catch {}
+    }
+    setSelectedMedia(null);
+  }, []);
 
   // Extract saved media (images and videos) from group messages
   // In a real app, this would filter by messages that user "saved"
@@ -50,14 +64,31 @@ export default function SavedMediaScreen() {
       }));
   }, [messages, groupId]);
 
+  const [signedThumbs, setSignedThumbs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const next: Record<string, string> = {};
+      for (const item of savedMedia) {
+        const t = await getChatMediaDisplayUri(item.thumbnail);
+        next[item.id] = t || item.thumbnail;
+      }
+      if (!cancelled) setSignedThumbs(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [savedMedia]);
+
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
   const handleBack = () => {
     navigation.goBack();
   };
 
-  const handleMediaPress = (item: typeof savedMedia[0]) => {
-    setSelectedMedia({ url: item.url, type: item.type });
+  const handleMediaPress = async (item: typeof savedMedia[0]) => {
+    const full = (await getChatMediaDisplayUri(item.url)) || item.url;
+    setSelectedMedia({ url: full, type: item.type });
   };
 
   const renderMediaItem = ({ item }: { item: typeof savedMedia[0] }) => (
@@ -66,7 +97,7 @@ export default function SavedMediaScreen() {
       onPress={() => handleMediaPress(item)}
       activeOpacity={0.7}
     >
-      <Image source={{ uri: item.thumbnail }} style={styles.mediaImage} />
+      <Image source={{ uri: signedThumbs[item.id] || item.thumbnail }} style={styles.mediaImage} />
       {item.type === 'video' && (
         <View style={styles.videoBadge}>
           <Ionicons name="play" size={16} color="#FFFFFF" />
@@ -76,33 +107,9 @@ export default function SavedMediaScreen() {
   );
 
   return (
-    <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-      style={{ flex: 1 }}
-    >
+    <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {/* Header */}
-        <UICard
-          variant="blur"
-          padding="md"
-          style={{
-            marginHorizontal: 0,
-            marginTop: 0,
-            borderTopLeftRadius: 0,
-            borderTopRightRadius: 0,
-            borderBottomLeftRadius: DesignTokens.borderRadius['2xl'],
-            borderBottomRightRadius: DesignTokens.borderRadius['2xl'],
-          }}
-        >
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.secondary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>מדיה שמורה</Text>
-            <View style={{ width: 32 }} />
-          </View>
-        </UICard>
+        <ChatSubScreenHeader title="מדיה שמורה" onBack={handleBack} />
 
         {/* Media Grid */}
         {savedMedia.length > 0 ? (
@@ -127,26 +134,35 @@ export default function SavedMediaScreen() {
           visible={selectedMedia !== null}
           transparent={true}
           animationType="fade"
-          onRequestClose={() => setSelectedMedia(null)}
+          onRequestClose={handleCloseModal}
         >
           <View style={styles.modalContainer}>
             <TouchableOpacity
               style={styles.modalCloseButton}
-              onPress={() => setSelectedMedia(null)}
+              onPress={handleCloseModal}
             >
               <Ionicons name="close" size={28} color="#FFFFFF" />
             </TouchableOpacity>
-            {selectedMedia && (
+            {selectedMedia && selectedMedia.type === 'video' ? (
+              <Video
+                ref={videoRef}
+                source={{ uri: selectedMedia.url }}
+                style={styles.modalImage}
+                resizeMode={ResizeMode.CONTAIN}
+                useNativeControls
+                shouldPlay
+              />
+            ) : selectedMedia ? (
               <Image
                 source={{ uri: selectedMedia.url }}
                 style={styles.modalImage}
                 resizeMode="contain"
               />
-            )}
+            ) : null}
           </View>
         </Modal>
       </SafeAreaView>
-    </LinearGradient>
+    </ChatScreenShell>
   );
 }
 
@@ -154,21 +170,6 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: 'transparent',
-  },
-  header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 50,
-  },
-  headerTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'center',
   },
   listContainer: {
     padding: DesignTokens.spacing.lg,
@@ -231,4 +232,5 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     height: '100%',
   },
 });
+
 

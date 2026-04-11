@@ -233,7 +233,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
             {multiple && (
               <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
                 <LinearGradient
-                  colors={['#00E654', '#00B84A', '#008F3A']}
+                  colors={['#00C805', '#00A004', '#008F03']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{ borderRadius: 14 }}
@@ -264,3 +264,4 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
 };
 
 export default CustomDropdown;
+

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
+import { SUPABASE_URL } from '../../config/publicEnv';
 
 const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
@@ -54,7 +55,6 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
       });
       
     } catch (error) {
-      console.error('❌ שגיאה בתשלום:', error);
       Alert.alert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
@@ -142,7 +142,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
             opacity: 0.15
           }}>
             <ImageBackground
-              source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
+              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
               style={{
                 width: width,
                 height: height
@@ -256,7 +256,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       width: 24,
                       height: 24,
                       borderRadius: 12,
-                      backgroundColor: selectedPlan === plan.id ? '#00E654' : 'transparent',
+                      backgroundColor: selectedPlan === plan.id ? '#00C805' : 'transparent',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
@@ -290,7 +290,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               {/* Payment Button */}
               {selectedPlan !== 'free' ? (
                 <LinearGradient
-                  colors={['#00E654', '#00B84A', '#008F3A']}
+                  colors={['#00C805', '#00A004', '#008F03']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
@@ -333,7 +333,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 </LinearGradient>
               ) : (
                 <LinearGradient
-                  colors={['#00E654', '#00B84A', '#008F3A']}
+                  colors={['#00C805', '#00A004', '#008F03']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
@@ -372,7 +372,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 <TouchableOpacity
                   onPress={handleSkipPayment}
                   style={{
-                    backgroundColor: '#181818',
+                    backgroundColor: '#141F14',
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: 'center',

@@ -2,7 +2,7 @@
 // Chat Group Info Screen - Modern Design
 // ============================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,50 +12,47 @@ import {
   Image,
   Alert,
   Switch,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChatGroupMember } from '../../types/chat.types';
+import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
+import { ChatGroupMember, ChatMemberRole } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
-
-// ============================================
-// Design Colors (from reference design)
-// ============================================
-const COLORS = {
-  background: {
-    primary: 'transparent',
-    secondary: 'rgba(6, 18, 12, 0.85)',
-    tertiary: 'rgba(10, 24, 16, 0.9)',
-    hover: 'rgba(20, 32, 26, 0.9)',
-  },
-  border: 'rgba(255, 255, 255, 0.08)',
-  text: {
-    primary: '#FFFFFF',
-    secondary: 'rgba(209, 213, 219, 0.9)',
-    tertiary: 'rgba(148, 163, 184, 0.9)',
-  },
-  accent: '#0FB96E',
-  success: '#22C55E', // green-500
-  warning: '#EAB308', // yellow-500
-  danger: '#EF4444', // red-500
-};
+import { chatGroupService } from '../../services/chat';
+import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
+import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 
 export default function ChatGroupInfoScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
+  useLockParentDrawerWhileFocused();
 
   const { groupId } = route.params as { groupId: string };
-  const { currentGroup, leaveGroup, messages } = useChat();
+  const { currentGroup, leaveGroup, updateGroup, messages } = useChat();
 
   const [isMuted, setIsMuted] = useState(currentGroup?.is_muted || false);
+  const [promptVisible, setPromptVisible] = useState(false);
+  const [promptTitle, setPromptTitle] = useState('');
+  const [promptValue, setPromptValue] = useState('');
+  const [promptCallback, setPromptCallback] = useState<((value: string) => void) | null>(null);
+
+  const showPrompt = (title: string, defaultValue: string, callback: (value: string) => void) => {
+    setPromptTitle(title);
+    setPromptValue(defaultValue);
+    setPromptCallback(() => callback);
+    setPromptVisible(true);
+  };
   const [searchVisible, setSearchVisible] = useState(false);
   
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
@@ -71,12 +68,29 @@ export default function ChatGroupInfoScreen() {
         (msg.message_type === 'image' || msg.message_type === 'video')
       )
       .map(msg => ({
+        id: msg.id,
         url: msg.media_url!,
         thumbnail: msg.media_thumbnail_url || msg.media_url!,
         type: msg.message_type,
       }))
       .slice(0, 9); // Show max 9 items in grid
   }, [messages, groupId]);
+
+  const [gallerySignedThumbs, setGallerySignedThumbs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const next: Record<string, string> = {};
+      for (const item of groupMediaItems) {
+        const t = await getChatMediaDisplayUri(item.thumbnail);
+        next[item.id] = t || item.thumbnail;
+      }
+      if (!cancelled) setGallerySignedThumbs(next);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [groupMediaItems]);
 
   const isAdmin = currentGroup?.is_admin || false;
 
@@ -89,18 +103,33 @@ export default function ChatGroupInfoScreen() {
   };
 
   const handleEditGroup = () => {
-    Alert.alert('ערוך קבוצה', 'מסך עריכת קבוצה יפותח כאן');
+    if (!currentGroup) return;
+    showPrompt('ערוך תיאור קבוצה', currentGroup.description || '', async (newDesc) => {
+      if (!newDesc.trim()) return;
+      const { success, error } = await updateGroup(groupId, { description: newDesc.trim() });
+      if (!success) {
+        Alert.alert('שגיאה', error || 'לא ניתן לעדכן את הקבוצה');
+      }
+    });
   };
 
   const handleAddMembers = () => {
-    Alert.alert('הוסף חברים', 'מסך הוספת חברים יפותח כאן');
+    showPrompt('הוסף חבר', '', async (inputUserId) => {
+      if (!inputUserId?.trim() || !user?.id) return;
+      const { error } = await chatGroupService.addGroupMember(groupId, inputUserId.trim(), user.id);
+      if (error) {
+        Alert.alert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
+      } else {
+        Alert.alert('הצלחה', 'המשתמש נוסף לקבוצה');
+      }
+    });
   };
 
   const handleMemberPress = (member: ChatGroupMember) => {
     if (!isAdmin) return;
 
     const options: any[] = [
-      { text: 'הצג פרופיל', onPress: () => {} },
+      { text: 'הצג פרופיל', onPress: () => { (navigation as any).navigate('Profile', { screen: 'ProfileMain', params: { userId: member.user_id } }); } },
     ];
 
     if (member.role === 'member') {
@@ -128,7 +157,16 @@ export default function ChatGroupInfoScreen() {
       `האם להפוך את ${member.user?.display_name} לאדמין?`,
       [
         { text: 'ביטול', style: 'cancel' },
-        { text: 'אישור', onPress: () => Alert.alert('הצלחה', 'החבר הפך לאדמין') },
+        {
+          text: 'אישור',
+          onPress: async () => {
+            if (!user?.id) return;
+            const { error } = await chatGroupService.updateGroupMemberRole(groupId, member.user_id, ChatMemberRole.ADMIN, user.id);
+            if (error) {
+              Alert.alert('שגיאה', 'לא ניתן לקדם את החבר');
+            }
+          },
+        },
       ]
     );
   };
@@ -139,7 +177,16 @@ export default function ChatGroupInfoScreen() {
       `האם להוריד את ${member.user?.display_name} מאדמין?`,
       [
         { text: 'ביטול', style: 'cancel' },
-        { text: 'אישור', onPress: () => Alert.alert('הצלחה', 'החבר הורד מאדמין') },
+        {
+          text: 'אישור',
+          onPress: async () => {
+            if (!user?.id) return;
+            const { error } = await chatGroupService.updateGroupMemberRole(groupId, member.user_id, ChatMemberRole.MEMBER, user.id);
+            if (error) {
+              Alert.alert('שגיאה', 'לא ניתן להוריד את החבר מאדמין');
+            }
+          },
+        },
       ]
     );
   };
@@ -150,19 +197,33 @@ export default function ChatGroupInfoScreen() {
       `האם להסיר את ${member.user?.display_name} מהקבוצה?`,
       [
         { text: 'ביטול', style: 'cancel' },
-        { text: 'הסר', style: 'destructive', onPress: () => Alert.alert('הצלחה', 'החבר הוסר מהקבוצה') },
+        {
+          text: 'הסר',
+          style: 'destructive',
+          onPress: async () => {
+            if (!user?.id) return;
+            const { error } = await chatGroupService.removeGroupMember(groupId, member.user_id, user.id);
+            if (error) {
+              Alert.alert('שגיאה', 'לא ניתן להסיר את החבר מהקבוצה');
+            }
+          },
+        },
       ]
     );
   };
 
   const handleToggleMute = async (value: boolean) => {
     setIsMuted(value);
-    // TODO: Implement mute/unmute API call
+    if (!user?.id) return;
+    const { success } = await chatGroupService.toggleGroupMute(groupId, user.id, value);
+    if (!success) {
+      setIsMuted(!value);
+      Alert.alert('שגיאה', 'לא ניתן לשנות את הגדרות ההשתקה');
+    }
   };
 
   const handlePinnedMessages = () => {
-    // TODO: Navigate to pinned messages screen
-    Alert.alert('הודעות מוצמדות', 'מסך הודעות מוצמדות יפותח כאן');
+    (navigation as any).navigate('ChatGroupPinnedMessages', { groupId });
   };
 
   const handleSearchMessages = () => {
@@ -174,9 +235,14 @@ export default function ChatGroupInfoScreen() {
   };
 
   const handleGroupSettings = () => {
-    if (!isAdmin) return;
-    // TODO: Navigate to group settings screen
-    Alert.alert('הגדרות קבוצה', 'מסך הגדרות קבוצה יפותח כאן');
+    if (!isAdmin || !currentGroup) return;
+    showPrompt('שנה שם קבוצה', currentGroup.name || '', async (newName) => {
+      if (!newName?.trim()) return;
+      const { success, error } = await updateGroup(groupId, { name: newName.trim() });
+      if (!success) {
+        Alert.alert('שגיאה', error || 'לא ניתן לעדכן את הקבוצה');
+      }
+    });
   };
 
   const handlePrivacyAndSupport = () => {
@@ -184,10 +250,7 @@ export default function ChatGroupInfoScreen() {
   };
 
   const handleJumpToMessage = (messageId: string) => {
-    // Navigate back to chat and jump to message
-    navigation.goBack();
-    // The message jump will be handled by ChatGroupScreen when it receives focus
-    // TODO: Pass messageId via navigation params
+    (navigation as any).navigate('ChatGroup', { groupId, scrollToMessageId: messageId });
   };
 
   const handleLeaveGroup = () => {
@@ -212,7 +275,6 @@ export default function ChatGroupInfoScreen() {
                 Alert.alert('שגיאה', result.error || 'לא הצלחנו לעזוב את הקבוצה');
               }
             } catch (error) {
-              console.error('❌ Error leaving group:', error);
               Alert.alert('שגיאה', 'אירעה שגיאה בעת עזיבת הקבוצה');
             }
           },
@@ -226,25 +288,26 @@ export default function ChatGroupInfoScreen() {
   // Render
   // ============================================
 
+  if (!groupId) {
+    navigation.goBack();
+    return null;
+  }
+
   if (!currentGroup) {
     return (
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        style={{ flex: 1 }}
-      >
+      <ChatScreenShell>
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <View style={styles.container}>
             <View style={styles.header}>
               <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Ionicons name="arrow-forward" size={22} color={COLORS.text.secondary} />
+                <Ionicons name="arrow-forward" size={22} color={DesignTokens.colors.text.secondary} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>פרטי קבוצה</Text>
             </View>
             <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
           </View>
         </SafeAreaView>
-      </LinearGradient>
+      </ChatScreenShell>
     );
   }
 
@@ -256,39 +319,25 @@ export default function ChatGroupInfoScreen() {
   });
 
   return (
-    <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-      style={{ flex: 1 }}
-    >
+    <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
-          {/* Header - UICard blur, צמוד למעלה עם פינות תחתונות מעוגלות */}
-          <UICard
-            variant="blur"
-            padding="md"
-            style={{
-              marginHorizontal: 0,
-              marginTop: 0,
-              borderTopLeftRadius: 0,
-              borderTopRightRadius: 0,
-              borderBottomLeftRadius: DesignTokens.borderRadius['2xl'],
-              borderBottomRightRadius: DesignTokens.borderRadius['2xl'],
-            }}
-          >
+          {/* Header */}
+          <View style={{
+            paddingHorizontal: 16,
+            paddingTop: 4,
+            paddingBottom: 10,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: 'rgba(255,255,255,0.06)',
+          }}>
             <View style={styles.header}>
-              {/* כפתור חזור (ימין) */}
               <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Ionicons name="chevron-forward" size={22} color={COLORS.text.secondary} />
+                <Ionicons name="close" size={22} color={DesignTokens.colors.text.secondary} />
               </TouchableOpacity>
-
-              {/* כותרת */}
               <Text style={styles.headerTitle}>פרטי קבוצה</Text>
-
-              {/* רווח/placeholder לשמירת יישור */}
-              <View style={{ width: 32 }} />
+              <View style={{ width: 36 }} />
             </View>
-          </UICard>
+          </View>
 
           <ScrollView 
             style={styles.scrollView} 
@@ -333,8 +382,8 @@ export default function ChatGroupInfoScreen() {
             {groupMediaItems.length > 0 ? (
               <View style={styles.mediaGrid}>
                 {groupMediaItems.map((item, index) => (
-                  <TouchableOpacity key={index} style={styles.mediaItem}>
-                    <Image source={{ uri: item.thumbnail }} style={styles.mediaImage} />
+                  <TouchableOpacity key={item.id} style={styles.mediaItem}>
+                    <Image source={{ uri: gallerySignedThumbs[item.id] || item.thumbnail }} style={styles.mediaImage} />
                     {item.type === 'video' && (
                       <View style={styles.videoBadge}>
                         <Ionicons name="play" size={12} color="#FFFFFF" />
@@ -358,7 +407,7 @@ export default function ChatGroupInfoScreen() {
               <Switch
                 value={isMuted}
                 onValueChange={handleToggleMute}
-                trackColor={{ false: COLORS.background.tertiary, true: DesignTokens.colors.primary.main }}
+                trackColor={{ false: DesignTokens.colors.background.tertiary, true: DesignTokens.colors.primary.main }}
                 thumbColor="#FFFFFF"
               />
             </TouchableOpacity>
@@ -472,13 +521,35 @@ export default function ChatGroupInfoScreen() {
             ))}
           </UICard>
 
-          {/* עזיבת קבוצה - UICard blur, קטן וממורכז */}
-          <View style={{ alignItems: 'center', marginBottom: DesignTokens.spacing.lg }}>
-            <TouchableOpacity style={styles.leaveButton} onPress={handleLeaveGroup}>
-              <Ionicons name="exit-outline" size={18} color={DesignTokens.colors.danger.main} />
-              <Text style={styles.leaveButtonText}>עזוב קבוצה</Text>
-            </TouchableOpacity>
-          </View>
+          {/* עזיבת קבוצה - UICard blur */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={handleLeaveGroup}
+            style={{
+              marginTop: DesignTokens.spacing.lg,
+              marginBottom: DesignTokens.spacing.lg,
+              marginHorizontal: DesignTokens.spacing.lg,
+            }}
+          >
+            <UICard
+              variant="blur"
+              padding="md"
+              style={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: `${DesignTokens.colors.danger.main}40`,
+              }}
+            >
+              <Text style={{
+                fontSize: DesignTokens.typography.fontSize.base,
+                fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                color: DesignTokens.colors.danger.main,
+              }}>
+                עזוב קבוצה
+              </Text>
+            </UICard>
+          </TouchableOpacity>
           </ScrollView>
         </View>
       </SafeAreaView>
@@ -490,7 +561,37 @@ export default function ChatGroupInfoScreen() {
         groupId={groupId}
         onMessagePress={handleJumpToMessage}
       />
-    </LinearGradient>
+
+      {/* Cross-platform prompt modal */}
+      <Modal visible={promptVisible} transparent animationType="fade" onRequestClose={() => setPromptVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.promptOverlay}>
+          <View style={styles.promptContainer}>
+            <Text style={styles.promptTitle}>{promptTitle}</Text>
+            <TextInput
+              style={styles.promptInput}
+              value={promptValue}
+              onChangeText={setPromptValue}
+              autoFocus
+              placeholderTextColor="rgba(148,163,184,0.6)"
+            />
+            <View style={styles.promptButtons}>
+              <TouchableOpacity onPress={() => setPromptVisible(false)} style={styles.promptBtn}>
+                <Text style={styles.promptBtnCancel}>ביטול</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setPromptVisible(false);
+                  promptCallback?.(promptValue);
+                }}
+                style={[styles.promptBtn, styles.promptBtnConfirmBg]}
+              >
+                <Text style={styles.promptBtnConfirm}>אישור</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </ChatScreenShell>
   );
 }
 
@@ -510,21 +611,24 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     paddingTop: 0,
   },
 
-  // Header
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   backButton: {
-    padding: 8,
-    borderRadius: 50,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 18,
   },
   headerTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+    fontSize: 16,
+    fontWeight: '700' as any,
     color: DesignTokens.colors.text.primary,
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
 
   scrollView: {
@@ -794,5 +898,60 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     color: DesignTokens.colors.text.secondary,
     textAlign: 'center',
     marginTop: DesignTokens.spacing.xl,
+  },
+
+  promptOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  promptContainer: {
+    width: '85%',
+    backgroundColor: DesignTokens.colors.background.tertiary,
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: DesignTokens.colors.border.main,
+  },
+  promptTitle: {
+    fontSize: 17,
+    fontWeight: '600' as const,
+    color: DesignTokens.colors.text.primary,
+    textAlign: 'right',
+    marginBottom: 16,
+  },
+  promptInput: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    padding: 12,
+    color: DesignTokens.colors.text.primary,
+    fontSize: 15,
+    textAlign: 'right',
+    borderWidth: 1,
+    borderColor: DesignTokens.colors.border.main,
+  },
+  promptButtons: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'flex-start',
+    gap: 12,
+    marginTop: 20,
+  },
+  promptBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  promptBtnCancel: {
+    color: DesignTokens.colors.text.secondary,
+    fontSize: 15,
+  },
+  promptBtnConfirmBg: {
+    backgroundColor: DesignTokens.colors.primary.main,
+  },
+  promptBtnConfirm: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600' as const,
   },
 });

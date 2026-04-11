@@ -246,3 +246,4 @@ psql ... -f database/benzinga_economic_events_table.sql
 
 
 
+

@@ -43,13 +43,11 @@ class CourseService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error getting courses:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getAllCourses:', error);
       return [];
     }
   }
@@ -69,13 +67,11 @@ class CourseService {
         if (error.code === 'PGRST116') {
           return null;
         }
-        console.error('Error getting course:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getCourseById:', error);
       return null;
     }
   }
@@ -91,13 +87,11 @@ class CourseService {
         .order('order_index');
 
       if (error) {
-        console.error('Error getting course lessons:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getCourseLessons:', error);
       return [];
     }
   }
@@ -118,13 +112,11 @@ class CourseService {
         .single();
 
       if (error) {
-        console.error('Error creating course:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in createCourse:', error);
       return null;
     }
   }
@@ -139,13 +131,11 @@ class CourseService {
         .single();
 
       if (error) {
-        console.error('Error creating lesson:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in createLesson:', error);
       return null;
     }
   }
@@ -161,13 +151,11 @@ class CourseService {
         .single();
 
       if (error) {
-        console.error('Error updating course:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in updateCourse:', error);
       return null;
     }
   }
@@ -183,13 +171,11 @@ class CourseService {
         .single();
 
       if (error) {
-        console.error('Error updating lesson:', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in updateLesson:', error);
       return null;
     }
   }
@@ -203,13 +189,11 @@ class CourseService {
         .eq('id', courseId);
 
       if (error) {
-        console.error('Error deleting course:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in deleteCourse:', error);
       return false;
     }
   }
@@ -223,13 +207,11 @@ class CourseService {
         .eq('id', lessonId);
 
       if (error) {
-        console.error('Error deleting lesson:', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in deleteLesson:', error);
       return false;
     }
   }
@@ -242,9 +224,9 @@ class CourseService {
         title: 'קורס הלוויתנים',
         subtitle: 'הפריצה לשוק - דוד אריאל',
         description: 'קורס דיגיטלי פרקטי ומעשי שכולל בתוכו קונספטים ואסטרטגיית מסחר יומי מוכחת! \nהקורס פונה לסוחרים מתקדמים בשוק ההון שרוצים לקחת את המסחר שלהם לרמה הבאה! וללמוד אסטרטגיית מסחר מקצועית במסחר יומי!',
-        cover_url: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/Wheles.png',
+        cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/Wheles.png`,
         instructor_name: 'דוד אריאל',
-        instructor_avatar: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg',
+        instructor_avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
         duration_hours: 8,
         level: 'מתקדם',
         rating: 4.8,
@@ -255,7 +237,6 @@ class CourseService {
       });
 
       if (!course) {
-        console.error('Failed to create course');
         return false;
       }
 
@@ -359,7 +340,6 @@ class CourseService {
 
       return true;
     } catch (error) {
-      console.error('Error in createWhalesCourse:', error);
       return false;
     }
   }
@@ -448,9 +428,9 @@ class CourseService {
         title: 'הכשרה של דוד אריאל',
         subtitle: 'קורס הכשרה מקצועי',
         description: 'קורס הכשרה מקיף עם שיעורים מיוטיוב - מבוא לשוק ההון, מסחר בבורסה, אסטרטגיות מסחר וכלים מקצועיים',
-        cover_url: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg',
+        cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
         instructor_name: 'דוד אריאל',
-        instructor_avatar: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg',
+        instructor_avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
         duration_hours: Math.round(totalMinutes / 60),
         level: 'מתחיל',
         rating: 0,
@@ -485,7 +465,6 @@ class CourseService {
 
       if (existingCourse) {
         courseId = existingCourse.id;
-        console.log('Course already exists, using existing course ID:', courseId);
       } else {
         // יצירת הקורס
         const course = await this.createCourse({
@@ -493,9 +472,9 @@ class CourseService {
           title: 'הכשרה של דוד אריאל',
           subtitle: 'קורס הכשרה מקצועי',
           description: 'ההכשרה הינו קורס מסחר מלא בשוק ההון של דוד אריאל מערוץ היוטיוב של ״הפריצה לשוק ההון״, לימוד פורה ומעשיר!',
-          cover_url: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg',
+          cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
           instructor_name: 'דוד אריאל',
-          instructor_avatar: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg',
+          instructor_avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
           duration_hours: 6, // יעודכן לפי השיעורים
           level: 'מתחיל',
           rating: 0,
@@ -506,7 +485,6 @@ class CourseService {
         });
 
         if (!course) {
-          console.error('Failed to create David Training course');
           return false;
         }
 
@@ -606,7 +584,6 @@ class CourseService {
 
       return true;
     } catch (error) {
-      console.error('Error in createDavidTrainingCourse:', error);
       return false;
     }
   }

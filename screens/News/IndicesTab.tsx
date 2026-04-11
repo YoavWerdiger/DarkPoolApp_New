@@ -237,25 +237,19 @@ export default function IndicesTab() {
               showsHorizontalScrollIndicator={false}
               onLoadStart={(syntheticEvent) => {
                 const { nativeEvent } = syntheticEvent;
-                console.log('📊 IndicesTab: Loading started', nativeEvent.url);
               }}
               onLoadEnd={(syntheticEvent) => {
                 const { nativeEvent } = syntheticEvent;
-                console.log('✅ IndicesTab: Loading ended', nativeEvent.url);
               }}
               onError={(syntheticEvent) => {
                 const { nativeEvent } = syntheticEvent;
-                console.error('❌ IndicesTab: Error', nativeEvent);
               }}
               onHttpError={(syntheticEvent) => {
                 const { nativeEvent } = syntheticEvent;
-                console.error('❌ IndicesTab: HTTP Error', nativeEvent.statusCode, nativeEvent.url);
               }}
               onShouldStartLoadWithRequest={(request) => {
-                console.log('🔍 IndicesTab: Request to load:', request.url);
                 // מונע ניווט חיצוני - שומר את כל הניווט בתוך ה-WebView
                 const shouldLoad = request.url.startsWith('about:blank') || request.url.includes('tradingview.com');
-                console.log('🔍 IndicesTab: Should load:', shouldLoad);
                 return shouldLoad;
               }}
             />

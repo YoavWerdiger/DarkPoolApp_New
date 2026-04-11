@@ -1,23 +1,22 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface UnreadCounterProps {
   count: number;
   size?: 'small' | 'medium' | 'large';
 }
 
-const UnreadCounter: React.FC<UnreadCounterProps> = ({ 
-  count, 
-  size = 'medium' 
+const UnreadCounter: React.FC<UnreadCounterProps> = ({
+  count,
+  size = 'medium'
 }) => {
-  console.log('🎯 UnreadCounter: Rendering with count:', count, 'size:', size);
-  
+  const DesignTokens = useDesignTokens();
+
   if (count <= 0) {
-    console.log('🎯 UnreadCounter: Count is 0 or negative, not rendering');
     return null;
   }
 
-  // הגדרת גדלים
   const sizeConfig = {
     small: { width: 18, height: 18, fontSize: 10 },
     medium: { width: 22, height: 22, fontSize: 12 },
@@ -26,29 +25,27 @@ const UnreadCounter: React.FC<UnreadCounterProps> = ({
 
   const config = sizeConfig[size];
 
-  console.log('🎯 UnreadCounter: Rendered successfully with count:', count);
-  
   return (
-    <View 
-      className="rounded-full items-center justify-center"
+    <View
       style={{
         width: config.width,
         height: config.height,
         minWidth: config.width,
         minHeight: config.height,
-        backgroundColor: 'DesignTokens.colors.success.main'
+        borderRadius: config.width / 2,
+        backgroundColor: DesignTokens.colors.primary.main,
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      <Text 
-        className="text-white font-bold text-center"
-        style={{ fontSize: config.fontSize, color: '#181818' }}
+      <Text
+        style={{ fontSize: config.fontSize, color: '#fff', fontWeight: 'bold', textAlign: 'center' }}
         numberOfLines={1}
       >
         {count > 99 ? '99+' : count.toString()}
       </Text>
     </View>
   );
-}
+};
 
 export default UnreadCounter;
-

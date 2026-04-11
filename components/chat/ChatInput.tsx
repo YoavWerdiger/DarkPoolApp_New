@@ -5,32 +5,33 @@
 // ============================================
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Platform, KeyboardAvoidingView, Alert, Animated, Image } from 'react-native';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Animated, Image, Easing, PanResponder, GestureResponderEvent, PanResponderGestureState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { BlurView } from 'expo-blur';
+import UICard from '../ui/UICard';
 import * as ImagePicker from 'expo-image-picker';
 import MediaPickerSheet from './MediaPickerSheet';
 import PollCreationBottomSheet from './PollCreationBottomSheet';
 
-// עבור תאימות עם Expo Go - שימוש ב-MediaTypeOptions עדיין
-const MediaType = (ImagePicker as any).MediaType || (ImagePicker as any).MediaTypeOptions || {
-  Images: 'images',
-  Videos: 'videos',
-  All: 'all',
-};
+// ImagePicker media types - using new array format for Expo SDK 52+
 import * as DocumentPicker from 'expo-document-picker';
 import { Audio } from 'expo-av';
-import { ChatMessageType } from '../../types/chat.types';
+import { ChatMessage, ChatMessageType } from '../../types/chat.types';
 import { chatMediaService } from '../../services/chat';
 import { Ionicons } from '@expo/vector-icons';
 import VoiceWaveform from './VoiceWaveform';
 import VoiceWaveformWithProgress from './VoiceWaveformWithProgress';
 import MediaPreviewModal from './MediaPreviewModal';
+import { MediaFile } from '../../services/mediaService';
+import { useChat } from '../../context/ChatContext';
+import { useAuth } from '../../context/AuthContext';
+import { useMentions } from '../../hooks/useMentions';
+import MentionPicker from './MentionPicker';
+import { logger } from '../../utils/logger';
 
 interface ChatInputProps {
   groupId: string;
-  onSendMessage: (content: string, mediaUrl?: string, mediaType?: ChatMessageType) => Promise<void>;
+  onSendMessage: (content: string, mediaUrl?: string, mediaType?: ChatMessageType, metadata?: { waveformData?: number[];[key: string]: any }) => Promise<void>;
   onTyping?: (isTyping: boolean) => void;
   replyTo?: {
     id: string;
@@ -50,69 +51,52 @@ export default function ChatInput({
   disabled = false,
 }: ChatInputProps) {
   const DesignTokens = useDesignTokens();
-  
-  // #region agent log
-  if (!DesignTokens) {
-    fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:51',message:'DesignTokens is undefined',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  } else {
-    fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:51',message:'DesignTokens is defined',data:{hasColors:!!DesignTokens.colors,hasText:!!DesignTokens.colors?.text},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  }
-  // #endregion
-  
   const insets = useSafeAreaInsets();
+  const { addOptimisticMediaMessage, updateOptimisticMessage } = useChat();
+  const { user } = useAuth();
+
   const styles = useMemo(() => {
-    if (!DesignTokens) {
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:53',message:'DesignTokens is undefined in useMemo',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      return {};
-    }
     return createStyles(DesignTokens, insets.bottom);
-  }, [DesignTokens, insets.bottom]) as any;
-  
+  }, [DesignTokens, insets.bottom]);
+
   // Icon styles with DesignTokens
-  const iconImageStyle = useMemo(() => {
-    if (!DesignTokens || !DesignTokens.colors || !DesignTokens.colors.text) {
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:56',message:'DesignTokens missing in iconImageStyle',data:{hasDesignTokens:!!DesignTokens,hasColors:!!DesignTokens?.colors,hasText:!!DesignTokens?.colors?.text},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      return { width: 28, height: 28, tintColor: '#888' };
-    }
-    return {
-      width: 28,
-      height: 28,
-      tintColor: DesignTokens.colors.text.secondary
-    };
-  }, [DesignTokens]);
+  const iconImageStyle = useMemo(() => ({
+    width: 28,
+    height: 28,
+    tintColor: DesignTokens.colors.text.secondary,
+  }), [DesignTokens]);
 
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+
+  // Mentions hook
+  const {
+    mentionTokens,
+    showMentionPicker,
+    mentionSearchQuery,
+    insertMention,
+    handleInputChange: handleMentionInputChange,
+    getMentionRanges,
+    closeMentionPicker,
+    clearAllMentions,
+  } = useMentions(text);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioLevel, setAudioLevel] = useState(0); // רמת קול אמיתית
+  const [waveformSamples, setWaveformSamples] = useState<number[]>([]); // שמירת ה-waveform data
   const [isUploading, setIsUploading] = useState(false);
   const [recordedAudioUri, setRecordedAudioUri] = useState<string | null>(null);
-  
+
   const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [previewPosition, setPreviewPosition] = useState(0);
   const [previewDuration, setPreviewDuration] = useState(0);
-  
+
   // Media Preview State
   const [showMediaPreview, setShowMediaPreview] = useState(false);
-  const [previewMediaUri, setPreviewMediaUri] = useState<string>('');
-  const [previewMediaType, setPreviewMediaType] = useState<'image' | 'video'>('image');
+  const [selectedMedia, setSelectedMedia] = useState<MediaFile[]>([]);
   const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
   const [pollCreationVisible, setPollCreationVisible] = useState(false);
 
-  // Log when poll creation opens
-  useEffect(() => {
-    if (pollCreationVisible) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatInput.tsx:76',message:'PollCreationBottomSheet opened',data:{groupId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-    }
-  }, [pollCreationVisible, groupId]);
-
-  // Debug: Log state changes
-  useEffect(() => {
-    console.log('🔍 ChatInput state - disabled:', disabled, 'isUploading:', isUploading, 'isRecording:', isRecording, 'isPaused:', isPaused, 'showMediaPreview:', showMediaPreview);
-  }, [disabled, isUploading, isRecording, isPaused, showMediaPreview]);
 
   const textInputRef = useRef<TextInput>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -122,33 +106,115 @@ export default function ChatInput({
   const previewPositionInterval = useRef<NodeJS.Timeout | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordingDotOpacity = useRef(new Animated.Value(1)).current;
-  const timelineProgress = useRef(new Animated.Value(0)).current; // Progress on timeline (0-1)
-  const isStartingRecordingRef = useRef<boolean>(false); // Flag למניעת קריאות מרובות
-  
+  const timelineProgress = useRef(new Animated.Value(0)).current;
+  const sendBtnScale = useRef(new Animated.Value(1)).current;
+  const isStartingRecordingRef = useRef<boolean>(false);
+  const pulseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Hold-to-record gesture state
+  const [isHoldRecording, setIsHoldRecording] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const holdRecordingRef = useRef(false);
+  const isLockedRef = useRef(false);
+  const slideCancelAnim = useRef(new Animated.Value(0)).current;
+  const lockSlideAnim = useRef(new Animated.Value(0)).current;
+  const micScaleAnim = useRef(new Animated.Value(1)).current;
+  const trashScaleAnim = useRef(new Animated.Value(0)).current;
+  const CANCEL_THRESHOLD = 120; // px to slide left for cancel
+  const LOCK_THRESHOLD = 80; // px to slide up for lock
+
+  // Callback refs for PanResponder (avoids stale closures)
+  const startRecordingRef = useRef<() => void>(() => {});
+  const cancelRecordingRef = useRef<() => void>(() => {});
+  const stopAndSendRecordingRef = useRef<() => void>(() => {});
+  const isRecordingRef = useRef(false);
+  const isPausedRef = useRef(false);
+  const disabledRef = useRef(disabled);
+  const isUploadingRef = useRef(false);
+  const textRef = useRef(text);
+
   const MAX_RECORDING_DURATION = 60; // מקסימום 60 שניות
 
   const canSend = text.trim().length > 0 || isRecording;
+
+  // אנימציית מעבר בין מיקרופון לשליחה (0 = מיק, 1 = שלח)
+  const iconAnim = useRef(new Animated.Value(canSend ? 1 : 0)).current;
+  useEffect(() => {
+    const showSend = canSend && !isRecording && !isPaused;
+    Animated.spring(iconAnim, {
+      toValue: showSend ? 1 : 0,
+      tension: 60,
+      friction: 9,
+      useNativeDriver: true,
+    }).start();
+  }, [canSend, isRecording, isPaused]);
+
+  // ============================================
+  // Cleanup typing status when unmounting
+  // ============================================
+
+  useEffect(() => {
+    return () => {
+      // נקה timeout ו-שלח stop typing כשיוצאים מהמסך
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (onTyping) {
+        onTyping(false);
+      }
+    };
+  }, [onTyping]);
+
+  // הרשאות גלריה/מצלמה מראש – הפicker נפתח מיד בלחיצה
+  useEffect(() => {
+    ImagePicker.getMediaLibraryPermissionsAsync().then(({ status }) => {
+      if (status !== 'granted') ImagePicker.requestMediaLibraryPermissionsAsync().catch((error) => { logger.error('ChatInput', 'Media library permission request error', error); });
+    });
+    ImagePicker.getCameraPermissionsAsync().then(({ status }) => {
+      if (status !== 'granted') ImagePicker.requestCameraPermissionsAsync().catch((error) => { logger.error('ChatInput', 'Camera permission request error', error); });
+    });
+  }, []);
 
   // ============================================
   // Handle Text Change
   // ============================================
 
   const handleTextChange = (newText: string) => {
+    const previousText = text;
     setText(newText);
+
+    // Handle mentions (@)
+    handleMentionInputChange(newText);
 
     // Typing indicator
     if (onTyping) {
-      onTyping(true);
-
       // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
 
-      // Stop typing after 3 seconds
+      // אם הטקסט ריק - הפסק להקליד מיד
+      if (newText.trim().length === 0) {
+        onTyping(false);
+        return;
+      }
+
+      // יש טקסט - שלח typing status
+      onTyping(true);
+
+      // Stop typing after 2 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
         onTyping(false);
-      }, 3000);
+      }, 2000);
+    }
+  };
+
+  // Handle mention selection
+  const handleMentionSelect = (user: { id: string; display: string }) => {
+    const newText = insertMention(user);
+    if (newText) {
+      setText(newText);
     }
   };
 
@@ -158,35 +224,43 @@ export default function ChatInput({
 
   const handleSend = async () => {
     const messageText = text.trim();
-    
-    console.log('🔍 ChatInput handleSend called:', {
-      messageText,
-      messageLength: messageText.length,
-      disabled,
-      hasOnSendMessage: !!onSendMessage,
-    });
-    
+
     if (!messageText || disabled) {
-      console.log('⚠️ ChatInput handleSend: early return - no text or disabled');
       return;
     }
-    
+
+    // Extract mentions before clearing
+    const mentions = getMentionRanges(text);
+    const mentionedUserIds = mentions.map(m => m.user_id);
+
     const textToSend = messageText;
     setText('');
-    
+    clearAllMentions(); // Clear mentions after sending
+
     if (onTyping) {
       onTyping(false);
     }
 
+    // Keep reference to input for refocus
+    const inputRef = textInputRef.current;
+
     try {
-      console.log('📤 ChatInput: Calling onSendMessage with:', textToSend);
-      await onSendMessage(textToSend);
-      console.log('✅ ChatInput: onSendMessage completed successfully');
+      // Send message with mentions
+      onSendMessage(textToSend, undefined, undefined, {
+        mentioned_users: mentionedUserIds,
+        mentions: mentions
+      }).catch((error) => {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        Alert.alert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
+        // Restore text on error
+        setText(textToSend);
+      });
+
+      // Immediately refocus to keep keyboard open
+      inputRef?.focus();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('❌ ChatInput Error sending message:', errorMessage, error);
       Alert.alert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
-      // Restore text on error
       setText(textToSend);
     }
   };
@@ -195,114 +269,242 @@ export default function ChatInput({
   // Send Media with Caption
   // ============================================
 
-  const handleSendMedia = async (caption: string) => {
-    if (!previewMediaUri) {
-      console.error('❌ handleSendMedia: No previewMediaUri');
+  const handleSendMedia = async (mediaFiles: MediaFile[], captions: Record<string, string>) => {
+    if (mediaFiles.length === 0 || !user) {
       Alert.alert('שגיאה', 'לא נמצא קובץ מדיה');
       return;
     }
 
-    console.log('📤 handleSendMedia: Starting upload', {
-      uri: previewMediaUri,
-      type: previewMediaType,
-      groupId,
-      caption: caption.substring(0, 20),
-    });
+    const MAX_SIZE: Record<string, number> = {
+      image: 10 * 1024 * 1024,
+      video: 100 * 1024 * 1024,
+      audio: 50 * 1024 * 1024,
+      document: 50 * 1024 * 1024,
+    };
+
+    for (const file of mediaFiles) {
+      const limit = MAX_SIZE[file.type] ?? 50 * 1024 * 1024;
+      if (file.size && file.size > limit) {
+        Alert.alert('שגיאה', `הקובץ ${file.name || ''} גדול מדי (מקסימום ${Math.round(limit / 1024 / 1024)}MB)`);
+        return;
+      }
+    }
+
+    setShowMediaPreview(false);
+    setSelectedMedia([]);
+
+    const tempId = `temp-media-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Get first caption (used for all media in group)
+    const firstCaption = Object.values(captions).find(c => c.trim()) || '';
+
+    // Single media - send as IMAGE/VIDEO
+    if (mediaFiles.length === 1) {
+      const mediaFile = mediaFiles[0];
+
+      let messageType: ChatMessageType;
+      switch (mediaFile.type) {
+        case 'image': messageType = ChatMessageType.IMAGE; break;
+        case 'video': messageType = ChatMessageType.VIDEO; break;
+        case 'audio': messageType = ChatMessageType.AUDIO; break;
+        default: messageType = ChatMessageType.IMAGE;
+      }
+
+      const optimisticMessage: ChatMessage = {
+        id: tempId,
+        group_id: groupId,
+        sender_id: user.id,
+        content: firstCaption.trim(),
+        message_type: messageType,
+        media_url: undefined,
+        local_media_uri: mediaFile.uri,
+        is_uploading: true,
+        upload_progress: 0,
+        is_sending: true,
+        is_forwarded: false,
+        mentioned_users: [],
+        is_edited: false,
+        is_deleted: false,
+        deleted_for_everyone: false,
+        is_silent: false,
+        is_system_message: false,
+        created_at: new Date().toISOString(),
+        reactions_count: 0,
+        read_by_count: 0,
+        sender: {
+          id: user.id,
+          display_name: user.display_name || 'אני',
+          profile_picture: user.profile_picture,
+          is_online: true,
+        },
+      };
+
+      addOptimisticMediaMessage(optimisticMessage);
+
+      setIsUploading(true);
+      (async () => {
+        try {
+          const onProgress = (progress: { progress: number }) => {
+            updateOptimisticMessage(tempId, { upload_progress: progress.progress });
+          };
+
+          let uploadResult: { url: string | null; error: any };
+          if (mediaFile.type === 'image') {
+            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress);
+          } else if (mediaFile.type === 'video') {
+            uploadResult = await chatMediaService.uploadVideo(mediaFile.uri, groupId, onProgress);
+          } else {
+            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress);
+          }
+
+          if (uploadResult.error || !uploadResult.url) {
+            updateOptimisticMessage(tempId, {
+              is_uploading: false,
+              is_sending: false,
+              send_error: uploadResult.error?.message || 'שגיאה בהעלאה'
+            });
+            return;
+          }
+
+          updateOptimisticMessage(tempId, { media_url: uploadResult.url, is_uploading: false, local_media_uri: undefined });
+
+          const metadata: Record<string, any> = { existing_optimistic_id: tempId };
+          if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
+            metadata.media_thumbnail_url = uploadResult.thumbnail_url;
+          }
+
+          await onSendMessage(firstCaption.trim(), uploadResult.url, messageType, metadata);
+
+        } catch (error: any) {
+          updateOptimisticMessage(tempId, {
+            is_uploading: false,
+            is_sending: false,
+            send_error: error?.message || 'שגיאה בהעלאה'
+          });
+        } finally {
+          setIsUploading(false);
+        }
+      })();
+      return;
+    }
+
+    // Multiple media - send each as a separate message (like WhatsApp)
+    // This avoids the MEDIA_GROUP type that's not in the database constraint
+
+    // Create optimistic messages for each media file
+    const optimisticIds: string[] = [];
+
+    for (let i = 0; i < mediaFiles.length; i++) {
+      const mediaFile = mediaFiles[i];
+      const itemTempId = `temp-media-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`;
+      optimisticIds.push(itemTempId);
+
+      let messageType: ChatMessageType;
+      switch (mediaFile.type) {
+        case 'image': messageType = ChatMessageType.IMAGE; break;
+        case 'video': messageType = ChatMessageType.VIDEO; break;
+        case 'audio': messageType = ChatMessageType.AUDIO; break;
+        default: messageType = ChatMessageType.IMAGE;
+      }
+
+      const optimisticMessage: ChatMessage = {
+        id: itemTempId,
+        group_id: groupId,
+        sender_id: user.id,
+        content: i === 0 ? firstCaption.trim() : '', // Only first message gets caption
+        message_type: messageType,
+        media_url: undefined,
+        local_media_uri: mediaFile.uri,
+        is_uploading: true,
+        upload_progress: 0,
+        is_sending: true,
+        is_forwarded: false,
+        mentioned_users: [],
+        is_edited: false,
+        is_deleted: false,
+        deleted_for_everyone: false,
+        is_silent: false,
+        is_system_message: false,
+        created_at: new Date(Date.now() + i).toISOString(), // Slight offset to maintain order
+        reactions_count: 0,
+        read_by_count: 0,
+        sender: {
+          id: user.id,
+          display_name: user.display_name || 'אני',
+          profile_picture: user.profile_picture,
+          is_online: true,
+        },
+      };
+
+      addOptimisticMediaMessage(optimisticMessage);
+    }
 
     setIsUploading(true);
-    setShowMediaPreview(false);
+    (async () => {
+      const uploadPromises = mediaFiles.map(async (mediaFile, index) => {
+        const itemTempId = optimisticIds[index];
 
-    try {
-      if (previewMediaType === 'image') {
-        const uploadResult = await chatMediaService.uploadImage(
-          previewMediaUri,
-          groupId,
-          (progress) => {
-            console.log('📤 Image upload progress:', progress.progress);
-          }
-        );
+        try {
+          const onProgress = (progress: { progress: number }) => {
+            updateOptimisticMessage(itemTempId, { upload_progress: progress.progress });
+          };
 
-        if (uploadResult.error) {
-          const errorMessage = uploadResult.error.message || 'שגיאה בהעלאת התמונה';
-          console.error('❌ Image upload error:', uploadResult.error);
-          
-          // בדיקה אם זו שגיאת רשת
-          if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
-            Alert.alert(
-              'בעיית חיבור',
-              'לא הצלחנו להעלות את התמונה. אנא בדוק:\n\n1. שהמכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה שוב בעוד כמה רגעים',
-              [
-                { text: 'ביטול', style: 'cancel', onPress: () => setShowMediaPreview(false) },
-                { text: 'נסה שוב', onPress: () => setShowMediaPreview(true) }
-              ]
-            );
+          let uploadResult: { url: string | null; error: any; thumbnail_url?: string | null;[key: string]: any };
+          if (mediaFile.type === 'image') {
+            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress);
+          } else if (mediaFile.type === 'video') {
+            uploadResult = await chatMediaService.uploadVideo(mediaFile.uri, groupId, onProgress);
           } else {
-            Alert.alert('שגיאה', errorMessage);
-            setShowMediaPreview(true); // חזור ל-preview אם יש שגיאה
+            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress);
           }
-        } else if (uploadResult.url) {
-          await onSendMessage(caption.trim(), uploadResult.url, ChatMessageType.IMAGE);
-          setPreviewMediaUri(''); // נקה אחרי שליחה מוצלחת
-        } else {
-          Alert.alert('שגיאה', 'לא התקבל URL לתמונה');
-          setShowMediaPreview(true);
-        }
-      } else if (previewMediaType === 'video') {
-        const uploadResult = await chatMediaService.uploadVideo(
-          previewMediaUri,
-          groupId,
-          (progress) => {
-            console.log('📤 Video upload progress:', progress.progress);
-          }
-        );
 
-        if (uploadResult.error) {
-          const errorMessage = uploadResult.error.message || 'שגיאה בהעלאת הסרטון';
-          console.error('❌ Video upload error:', uploadResult.error);
-          
-          // בדיקה אם זו שגיאת רשת
-          if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
-            Alert.alert(
-              'בעיית חיבור',
-              'לא הצלחנו להעלות את הסרטון. אנא בדוק:\n\n1. שהמכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה שוב בעוד כמה רגעים',
-              [
-                { text: 'ביטול', style: 'cancel', onPress: () => setShowMediaPreview(false) },
-                { text: 'נסה שוב', onPress: () => setShowMediaPreview(true) }
-              ]
-            );
-          } else {
-            Alert.alert('שגיאה', errorMessage);
-            setShowMediaPreview(true); // חזור ל-preview אם יש שגיאה
+          if (uploadResult.error || !uploadResult.url) {
+            updateOptimisticMessage(itemTempId, {
+              is_uploading: false,
+              is_sending: false,
+              send_error: uploadResult.error?.message || 'שגיאה בהעלאה'
+            });
+            return null;
           }
-        } else if (uploadResult.url) {
-          await onSendMessage(caption.trim(), uploadResult.url, ChatMessageType.VIDEO);
-          setPreviewMediaUri(''); // נקה אחרי שליחה מוצלחת
-        } else {
-          Alert.alert('שגיאה', 'לא התקבל URL לסרטון');
-          setShowMediaPreview(true);
+
+          // עדכון במקום הסרה – מונע flicker
+          updateOptimisticMessage(itemTempId, { media_url: uploadResult.url, is_uploading: false, local_media_uri: undefined });
+
+          let messageType: ChatMessageType;
+          switch (mediaFile.type) {
+            case 'image': messageType = ChatMessageType.IMAGE; break;
+            case 'video': messageType = ChatMessageType.VIDEO; break;
+            case 'audio': messageType = ChatMessageType.AUDIO; break;
+            default: messageType = ChatMessageType.IMAGE;
+          }
+
+          const metadata: Record<string, any> = { existing_optimistic_id: itemTempId };
+          if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
+            metadata.media_thumbnail_url = uploadResult.thumbnail_url;
+          }
+
+          await onSendMessage(
+            index === 0 ? firstCaption.trim() : '', // Only first message gets caption
+            uploadResult.url,
+            messageType,
+            metadata
+          );
+
+          return uploadResult.url;
+
+        } catch (error: any) {
+          updateOptimisticMessage(itemTempId, {
+            is_uploading: false,
+            is_sending: false,
+            send_error: error?.message || 'שגיאה בהעלאה'
+          });
+          return null;
         }
-      }
-    } catch (error: any) {
-      console.error('❌ Unexpected error uploading media:', error);
-      const errorMessage = error?.message || 'לא הצלחנו להעלות את המדיה';
-      
-      // בדיקה אם זו שגיאת רשת
-      if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
-        Alert.alert(
-          'בעיית חיבור',
-          'לא הצלחנו להעלות את המדיה. אנא בדוק:\n\n1. שהמכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה שוב בעוד כמה רגעים',
-          [
-            { text: 'ביטול', style: 'cancel', onPress: () => setShowMediaPreview(false) },
-            { text: 'נסה שוב', onPress: () => setShowMediaPreview(true) }
-          ]
-        );
-      } else {
-        Alert.alert('שגיאה', errorMessage);
-        setShowMediaPreview(true); // חזור ל-preview אם יש שגיאה
-      }
-    } finally {
+      });
+
+      await Promise.all(uploadPromises);
       setIsUploading(false);
-    }
+    })();
   };
 
   // ============================================
@@ -311,26 +513,46 @@ export default function ChatInput({
 
   const handlePickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+      const { status: currentStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+
+      if (currentStatus !== 'granted') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+          return;
+        }
+      }
+
+      // ⚡ quality 0.8 = החזרה מהירה מהמערכת + תמונה יפה
+      let result;
+      try {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          allowsMultipleSelection: true,
+          selectionLimit: 10,
+          quality: 0.8,
+          exif: false,
+        });
+      } catch (launchError) {
+        Alert.alert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: MediaType.Images,
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        setPreviewMediaUri(asset.uri);
-        setPreviewMediaType('image');
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const mediaFiles: MediaFile[] = result.assets.map((asset, index) => ({
+          id: `${Date.now()}_${index}`,
+          uri: asset.uri,
+          type: 'image' as const,
+          name: asset.fileName || `image_${index + 1}.jpg`,
+          size: asset.fileSize,
+          width: asset.width,
+          height: asset.height,
+        }));
+        // ⚡ Show preview IMMEDIATELY
+        setSelectedMedia(mediaFiles);
         setShowMediaPreview(true);
       }
     } catch (error) {
-      console.error('❌ Error picking image:', error);
       Alert.alert('שגיאה', 'לא הצלחנו לבחור תמונה');
     }
   };
@@ -341,26 +563,38 @@ export default function ChatInput({
 
   const handleTakePhoto = async () => {
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה למצלמה');
-        return;
+      // Check permission status first (fast) - only request if not determined
+      const { status: currentStatus } = await ImagePicker.getCameraPermissionsAsync();
+
+      if (currentStatus !== 'granted') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה למצלמה');
+          return;
+        }
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: MediaType.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.8,
+        exif: false,
       });
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        setPreviewMediaUri(asset.uri);
-        setPreviewMediaType('image');
+        const mediaFile: MediaFile = {
+          id: Date.now().toString(),
+          uri: asset.uri,
+          type: 'image',
+          name: asset.fileName || 'photo.jpg',
+          size: asset.fileSize,
+        };
+        // Set media and show preview immediately
+        setSelectedMedia([mediaFile]);
         setShowMediaPreview(true);
       }
     } catch (error) {
-      console.error('❌ Error taking photo:', error);
       Alert.alert('שגיאה', 'לא הצלחנו לצלם תמונה');
     }
   };
@@ -373,34 +607,91 @@ export default function ChatInput({
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
-        copyToCacheDirectory: true,
+        copyToCacheDirectory: false, // ⚡ מהיר יותר – לא להעתיק, להשתמש ב-URI המקורי
       });
 
-      if (!result.canceled && result.assets[0]) {
-        setIsUploading(true);
+      if (!result.canceled && result.assets[0] && user) {
         const asset = result.assets[0];
-        
-        const uploadResult = await chatMediaService.uploadDocument(
-          asset.uri,
-          asset.name || 'document',
-          groupId,
-          (progress) => {
-            console.log('📤 Document upload progress:', progress.progress);
-          }
-        );
+        const fileName = asset.name || 'document';
+        const fileSize = asset.size || 0;
+        const tempId = `temp-doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        if (uploadResult.error) {
-          Alert.alert('שגיאה', uploadResult.error.message);
-        } else if (uploadResult.url) {
-          await onSendMessage('', uploadResult.url, ChatMessageType.DOCUMENT);
-        }
-        
-        setIsUploading(false);
+        // Create optimistic message immediately
+        const optimisticMessage: ChatMessage = {
+          id: tempId,
+          group_id: groupId,
+          sender_id: user.id,
+          content: '',
+          message_type: ChatMessageType.DOCUMENT,
+          media_url: undefined,
+          local_media_uri: asset.uri,
+          media_file_name: fileName,
+          media_size: fileSize,
+          is_uploading: true,
+          upload_progress: 0,
+          is_sending: true,
+          is_forwarded: false,
+          mentioned_users: [],
+          is_edited: false,
+          is_deleted: false,
+          deleted_for_everyone: false,
+          is_silent: false,
+          is_system_message: false,
+          created_at: new Date().toISOString(),
+          reactions_count: 0,
+          read_by_count: 0,
+          sender: {
+            id: user.id,
+            display_name: user.display_name || 'אני',
+            profile_picture: user.profile_picture,
+            is_online: true,
+          },
+        };
+
+        // Add optimistic message immediately - user sees it right away!
+        addOptimisticMediaMessage(optimisticMessage);
+
+        setIsUploading(true);
+        (async () => {
+          try {
+            const uploadResult = await chatMediaService.uploadDocument(
+              asset.uri,
+              fileName,
+              groupId,
+              (progress) => {
+                updateOptimisticMessage(tempId, { upload_progress: progress.progress });
+              }
+            );
+
+            if (uploadResult.error || !uploadResult.url) {
+              updateOptimisticMessage(tempId, {
+                is_uploading: false,
+                is_sending: false,
+                send_error: uploadResult.error?.message || 'שגיאה בהעלאה'
+              });
+              return;
+            }
+
+            updateOptimisticMessage(tempId, { media_url: uploadResult.url, is_uploading: false, local_media_uri: undefined });
+
+            await onSendMessage('', uploadResult.url, ChatMessageType.DOCUMENT, {
+              existing_optimistic_id: tempId,
+              media_file_name: fileName,
+              media_size: fileSize,
+            });
+          } catch (error: any) {
+            updateOptimisticMessage(tempId, {
+              is_uploading: false,
+              is_sending: false,
+              send_error: error?.message || 'שגיאה בהעלאה'
+            });
+          } finally {
+            setIsUploading(false);
+          }
+        })();
       }
     } catch (error) {
-      console.error('❌ Error picking document:', error);
       Alert.alert('שגיאה', 'לא הצלחנו לבחור מסמך');
-      setIsUploading(false);
     }
   };
 
@@ -408,13 +699,11 @@ export default function ChatInput({
   // ============================================
   const handleCreatePoll = () => {
     setMediaPickerVisible(false);
-    setTimeout(() => {
-      setPollCreationVisible(true);
-    }, 200);
+    // ⚡ ללא השהייה – פתיחה מיידית
+    setPollCreationVisible(true);
   };
 
-  const handlePollCreated = (poll: any) => {
-    console.log('✅ Poll created:', poll);
+  const handlePollCreated = (_poll: any) => {
     // הסקר יוצג אוטומטית בצ'אט דרך PollService.createPollMessage
     setPollCreationVisible(false);
   };
@@ -423,9 +712,7 @@ export default function ChatInput({
   // ============================================
   const handleStartAudioRecording = async () => {
     setMediaPickerVisible(false);
-    setTimeout(async () => {
-      await startRecording();
-    }, 200);
+    requestAnimationFrame(() => startRecording());
   };
 
   // ============================================
@@ -433,15 +720,11 @@ export default function ChatInput({
   // ============================================
 
   const startRecording = async () => {
-    // בדוק אם כבר בתהליך התחלת הקלטה
     if (isStartingRecordingRef.current) {
-      console.log('⚠️ Recording start already in progress');
       return;
     }
 
-    // בדוק אם כבר מקליטים
     if (isRecording || isPaused) {
-      console.log('⚠️ Recording already in progress');
       return;
     }
 
@@ -453,27 +736,23 @@ export default function ChatInput({
         try {
           await recordingRef.current.stopAndUnloadAsync();
         } catch (error) {
-          // התעלם משגיאות בניקוי - אולי ההקלטה כבר נעצרה
-          console.log('⚠️ Error cleaning up previous recording:', error);
+          logger.error('ChatInput', 'Recording error', error);
         }
         recordingRef.current = null;
       }
-      
+
       // נקה גם sound אם יש
       if (soundRef.current) {
         try {
           await soundRef.current.unloadAsync();
         } catch (error) {
-          // התעלם משגיאות בניקוי
+          logger.error('ChatInput', 'Recording error', error);
         }
         soundRef.current = null;
       }
-      
-      // המתן קצת כדי לוודא שהניקוי הסתיים
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       const { status } = await Audio.requestPermissionsAsync();
-      
+
       if (status !== 'granted') {
         Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה למיקרופון');
         isStartingRecordingRef.current = false;
@@ -485,9 +764,6 @@ export default function ChatInput({
         playsInSilentModeIOS: true,
       });
 
-      // המתן עוד קצת כדי לוודא שהניקוי הסתיים לחלוטין
-      await new Promise(resolve => setTimeout(resolve, 300));
-
       // יצירת recording חדש
       const recording = new Audio.Recording();
       await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
@@ -497,10 +773,11 @@ export default function ChatInput({
       setIsRecording(true);
       setRecordingDuration(0);
       setAudioLevel(0);
+      setWaveformSamples([]); // איפוס ה-waveform data
       timelineProgress.setValue(0); // איפוס הטיימליין
 
-      // Start pulse animation for recording dot
-      const pulseAnimation = Animated.loop(
+      pulseAnimationRef.current?.stop();
+      const pulseAnim = Animated.loop(
         Animated.sequence([
           Animated.timing(recordingDotOpacity, {
             toValue: 0.3,
@@ -514,9 +791,9 @@ export default function ChatInput({
           }),
         ])
       );
-      pulseAnimation.start();
+      pulseAnimationRef.current = pulseAnim;
+      pulseAnim.start();
 
-      // Start timer
       recordingTimerRef.current = setInterval(() => {
         setRecordingDuration(prev => {
           const newDuration = prev + 1;
@@ -527,7 +804,8 @@ export default function ChatInput({
         });
       }, 1000);
 
-      // עדכן waveforms כל 50ms בזמן אמת (מהיר יותר)
+      // עדכן waveforms כל 50ms בזמן אמת
+      // גם מציג את האנימציה וגם שומר samples עבור ההודעה
       waveformIntervalRef.current = setInterval(async () => {
         try {
           if (recordingRef.current) {
@@ -536,51 +814,70 @@ export default function ChatInput({
               // קבל metering data אם זמין
               const metering = (status as any).metering;
               let normalizedValue: number;
-              
+
               if (metering !== undefined && typeof metering === 'number') {
-                // נרמול - metering בדרך כלל בין -60 ל-0 dB
-                // טווח רגישות: -50 עד 0 dB = 0.2 עד 1.0 (יותר רגיש)
-                normalizedValue = Math.max(0.2, Math.min(1, (metering + 50) / 50));
+                // נרמול רגיש יותר - metering בדרך כלל בין -60 ל-0 dB
+                // טווח רגישות: -35 עד 0 dB (רגיש יותר לקולות חלשים)
+                // ואז עקומת power לעשות את ההבדלים יותר בולטים
+                const clamped = Math.max(-35, Math.min(0, metering));
+                const linear = (clamped + 35) / 35; // 0 to 1
+                // Apply power curve to make differences more visible
+                normalizedValue = Math.pow(linear, 0.7); // 0.7 power = more sensitive
+                // Ensure minimum of 0.15 and max of 1.0
+                normalizedValue = 0.15 + normalizedValue * 0.85;
               } else {
                 // אם אין metering, צור ערכים אקראיים עם וריאציה
-                const base = 0.3;
-                const variation = Math.random() * 0.7;
+                const base = 0.25;
+                const variation = Math.random() * 0.75;
                 normalizedValue = base + variation;
               }
-              
+
+              // עדכון רמת הקול לאנימציה חיה
               setAudioLevel(normalizedValue);
+
+              // שמירת sample עבור ה-waveform של ההודעה (מקסימום 100 samples)
+              setWaveformSamples(prev => {
+                if (prev.length < 100) {
+                  return [...prev, normalizedValue];
+                }
+                // אם יש יותר מ-100, החלף כל sample שני
+                const newSamples = [...prev];
+                newSamples[Math.floor(Math.random() * 100)] = normalizedValue;
+                return newSamples;
+              });
             }
           }
         } catch (error) {
-          console.log('⚠️ Error getting waveform data:', error);
+          logger.error('ChatInput', 'Recording error', error);
         }
-      }, 50); // מהיר יותר - 50ms במקום 100ms
-      
+      }, 50);
+
       isStartingRecordingRef.current = false; // איפוס ה-flag אחרי הצלחה
     } catch (error) {
-      console.error('❌ Error starting recording:', error);
       Alert.alert('שגיאה', 'לא הצלחנו להתחיל הקלטה');
       isStartingRecordingRef.current = false; // איפוס ה-flag גם במקרה של שגיאה
-      
+
       // נקה את recordingRef אם יש
       if (recordingRef.current) {
         try {
           await recordingRef.current.stopAndUnloadAsync();
         } catch (cleanupError) {
-          // התעלם משגיאות
+          logger.error('ChatInput', 'Recording error', cleanupError);
         }
         recordingRef.current = null;
       }
     }
   };
 
-  const stopRecording = async () => {
+  // השהיית הקלטה (pause) - ממשיך מאיפה שעצרנו
+  const pauseRecording = async () => {
     try {
       if (!recordingRef.current) {
-        setIsPaused(true);
-        setIsRecording(false);
         return;
       }
+
+      // Pause the recording
+      await recordingRef.current.pauseAsync();
 
       // Stop timer
       if (recordingTimerRef.current) {
@@ -594,6 +891,125 @@ export default function ChatInput({
         waveformIntervalRef.current = null;
       }
 
+      setIsRecording(false);
+      setIsPaused(true);
+      setAudioLevel(0);
+
+      pulseAnimationRef.current?.stop();
+      pulseAnimationRef.current = null;
+      recordingDotOpacity.setValue(1);
+    } catch (error) {
+      logger.error('ChatInput', 'Recording error', error);
+    }
+  };
+
+  // המשך הקלטה אחרי pause
+  const resumeRecording = async () => {
+    try {
+      if (!recordingRef.current) {
+        // אם אין הקלטה פעילה, התחל מחדש
+        await startRecording();
+        return;
+      }
+
+      // Resume the recording
+      await recordingRef.current.startAsync();
+
+      setIsRecording(true);
+      setIsPaused(false);
+
+      pulseAnimationRef.current?.stop();
+      const pulseAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(recordingDotOpacity, {
+            toValue: 0.3,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(recordingDotOpacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseAnimationRef.current = pulseAnim;
+      pulseAnim.start();
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => {
+          const newDuration = prev + 1;
+          const progress = Math.min(newDuration / MAX_RECORDING_DURATION, 1);
+          timelineProgress.setValue(progress);
+          return newDuration;
+        });
+      }, 1000);
+
+      // Restart waveform updates
+      waveformIntervalRef.current = setInterval(async () => {
+        try {
+          if (recordingRef.current) {
+            const status = await recordingRef.current.getStatusAsync();
+            if (status.isRecording) {
+              const metering = (status as any).metering;
+              let normalizedValue: number;
+
+              if (metering !== undefined && typeof metering === 'number') {
+                const clamped = Math.max(-35, Math.min(0, metering));
+                const linear = (clamped + 35) / 35;
+                normalizedValue = Math.pow(linear, 0.7);
+                normalizedValue = 0.15 + normalizedValue * 0.85;
+              } else {
+                const base = 0.25;
+                const variation = Math.random() * 0.75;
+                normalizedValue = base + variation;
+              }
+
+              setAudioLevel(normalizedValue);
+
+              setWaveformSamples(prev => {
+                if (prev.length < 100) {
+                  return [...prev, normalizedValue];
+                }
+                const newSamples = [...prev];
+                newSamples[Math.floor(Math.random() * 100)] = normalizedValue;
+                return newSamples;
+              });
+            }
+          }
+        } catch (error) {
+          logger.error('ChatInput', 'Recording error', error);
+        }
+      }, 50);
+    } catch (error) {
+      logger.error('ChatInput', 'Recording error', error);
+      Alert.alert('שגיאה', 'לא הצלחנו להמשיך את ההקלטה');
+    }
+  };
+
+  // סיום הקלטה ושמירה לשליחה
+  const stopRecording = async () => {
+    try {
+      pulseAnimationRef.current?.stop();
+      pulseAnimationRef.current = null;
+      recordingDotOpacity.setValue(1);
+
+      if (!recordingRef.current) {
+        setIsPaused(true);
+        setIsRecording(false);
+        return;
+      }
+
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+
+      if (waveformIntervalRef.current) {
+        clearInterval(waveformIntervalRef.current);
+        waveformIntervalRef.current = null;
+      }
+
       const status = await recordingRef.current.getStatusAsync();
       const uri = recordingRef.current.getURI();
       await recordingRef.current.stopAndUnloadAsync();
@@ -601,10 +1017,10 @@ export default function ChatInput({
       setIsRecording(false);
       setIsPaused(true);
       setAudioLevel(0);
-      
+
       // Stop pulse animation
       recordingDotOpacity.setValue(1);
-      
+
       if (uri) {
         setRecordedAudioUri(uri);
         // הזמן נשאר כמו שהוא - לא מאפסים
@@ -612,7 +1028,7 @@ export default function ChatInput({
         timelineProgress.setValue(0);
       }
     } catch (error) {
-      console.error('❌ Error stopping recording:', error);
+      logger.error('ChatInput', 'Recording error', error);
       setIsRecording(false);
       setIsPaused(true);
     }
@@ -621,7 +1037,7 @@ export default function ChatInput({
   // שמיעת ההקלטה (preview)
   const playPreview = async () => {
     if (!recordedAudioUri) return;
-    
+
     try {
       // עצור שמיעה קודמת אם יש
       if (soundRef.current) {
@@ -634,11 +1050,11 @@ export default function ChatInput({
         { uri: recordedAudioUri },
         { shouldPlay: true }
       );
-      
+
       soundRef.current = sound;
       setIsPlayingPreview(true);
       setPreviewPosition(0);
-      
+
       // קבל את אורך ההקלטה
       const status = await sound.getStatusAsync();
       if (status.isLoaded) {
@@ -653,13 +1069,13 @@ export default function ChatInput({
             const position = status.positionMillis || 0;
             const duration = status.durationMillis || previewDuration;
             setPreviewPosition(position);
-            
+
             // עדכן את הטיימליין
             if (duration > 0) {
               const progress = position / duration;
               timelineProgress.setValue(progress);
             }
-            
+
             // אם הסתיימה השמיעה
             if (status.didJustFinish) {
               setIsPlayingPreview(false);
@@ -701,7 +1117,7 @@ export default function ChatInput({
         }
       });
     } catch (error) {
-      console.error('Error playing preview:', error);
+      logger.error('ChatInput', 'Playback error', error);
       Alert.alert('שגיאה', 'לא ניתן להפעיל את ההקלטה');
     }
   };
@@ -720,78 +1136,390 @@ export default function ChatInput({
 
   // שליחת ההקלטה
   const sendRecordedAudio = async () => {
-    if (!recordedAudioUri) return;
+    if (!recordedAudioUri || !user) return;
 
-    setIsUploading(true);
-    try {
-      const uploadResult = await chatMediaService.uploadAudio(
-        recordedAudioUri,
-        groupId,
-        recordingDuration,
-        (progress) => {
-          console.log('📤 Audio upload progress:', progress.progress);
-        }
-      );
+    const tempId = `temp-audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const audioUri = recordedAudioUri;
+    const duration = recordingDuration;
+    const waveform = normalizeWaveformSamples(waveformSamples, 20);
 
-      if (uploadResult.error) {
-        Alert.alert('שגיאה', uploadResult.error.message);
-      } else if (uploadResult.url) {
-        await onSendMessage('', uploadResult.url, ChatMessageType.AUDIO);
-        // נקה את ההקלטה
-        if (soundRef.current) {
-          await soundRef.current.unloadAsync();
-          soundRef.current = null;
-        }
-        if (previewPositionInterval.current) {
-          clearInterval(previewPositionInterval.current);
-          previewPositionInterval.current = null;
-        }
-        setRecordedAudioUri(null);
-        setRecordingDuration(0);
-        setIsPaused(false);
-        setIsPlayingPreview(false);
-        setPreviewPosition(0);
-      }
-    } catch (error) {
-      console.error('❌ Error uploading audio:', error);
-      Alert.alert('שגיאה', 'לא הצלחנו להעלות את ההקלטה');
-    } finally {
-      setIsUploading(false);
-    }
-  };
+    // Create optimistic message immediately
+    const optimisticMessage: ChatMessage = {
+      id: tempId,
+      group_id: groupId,
+      sender_id: user.id,
+      content: '',
+      message_type: ChatMessageType.AUDIO,
+      media_url: undefined,
+      local_media_uri: audioUri,
+      media_duration: duration,
+      is_uploading: true,
+      upload_progress: 0,
+      is_sending: true,
+      is_forwarded: false,
+      mentioned_users: [],
+      is_edited: false,
+      is_deleted: false,
+      deleted_for_everyone: false,
+      is_silent: false,
+      is_system_message: false,
+      created_at: new Date().toISOString(),
+      reactions_count: 0,
+      read_by_count: 0,
+      sender: {
+        id: user.id,
+        display_name: user.display_name || 'אני',
+        profile_picture: user.profile_picture,
+        is_online: true,
+      },
+    };
 
-  const cancelRecording = () => {
-    // Stop waveform updates
-    if (waveformIntervalRef.current) {
-      clearInterval(waveformIntervalRef.current);
-      waveformIntervalRef.current = null;
-    }
-    // Stop pulse animation
-    recordingDotOpacity.setValue(1);
-    
-    // עצור שמיעה אם יש
+    // Add optimistic message immediately - user sees it right away!
+    addOptimisticMediaMessage(optimisticMessage);
+
+    // נקה את ההקלטה מיד כדי שה-UI יתעדכן
     if (soundRef.current) {
-      soundRef.current.unloadAsync().catch(() => {});
+      soundRef.current.unloadAsync().catch((error) => { logger.error('ChatInput', 'Playback error', error); });
       soundRef.current = null;
     }
     if (previewPositionInterval.current) {
       clearInterval(previewPositionInterval.current);
       previewPositionInterval.current = null;
     }
-    
-      setRecordedAudioUri(null);
-      setRecordingDuration(0);
-      setIsRecording(false);
-      setIsPaused(false);
-      setIsPlayingPreview(false);
-      setPreviewPosition(0);
-      timelineProgress.setValue(0); // איפוס הטיימליין
-    
+    setRecordedAudioUri(null);
+    setRecordingDuration(0);
+    setWaveformSamples([]);
+    setIsPaused(false);
+    setIsPlayingPreview(false);
+    setPreviewPosition(0);
+
+    setIsUploading(true);
+    (async () => {
+      try {
+        const uploadResult = await chatMediaService.uploadAudio(
+          audioUri,
+          groupId,
+          duration,
+          (progress) => {
+            updateOptimisticMessage(tempId, { upload_progress: progress.progress });
+          }
+        );
+
+        if (uploadResult.error || !uploadResult.url) {
+          updateOptimisticMessage(tempId, {
+            is_uploading: false,
+            is_sending: false,
+            send_error: uploadResult.error?.message || 'שגיאה בהעלאה'
+          });
+          return;
+        }
+
+        updateOptimisticMessage(tempId, { media_url: uploadResult.url, is_uploading: false, local_media_uri: undefined });
+
+        await onSendMessage('', uploadResult.url, ChatMessageType.AUDIO, {
+          existing_optimistic_id: tempId,
+          waveformData: waveform,
+          media_duration: duration,
+        });
+      } catch (error: any) {
+        updateOptimisticMessage(tempId, {
+          is_uploading: false,
+          is_sending: false,
+          send_error: error?.message || 'שגיאה בהעלאה'
+        });
+      } finally {
+        setIsUploading(false);
+      }
+    })();
+  };
+
+  // פונקציה לנרמול ה-waveform samples למספר קבוע
+  // לוקח את המקסימום מכל חלון כדי לשמר את הפיקים
+  const normalizeWaveformSamples = (samples: number[], targetCount: number): number[] => {
+    if (samples.length === 0) return Array(targetCount).fill(0.3);
+    if (samples.length <= targetCount) {
+      // Pad with existing values if not enough
+      const padded = [...samples];
+      while (padded.length < targetCount) {
+        padded.push(samples[padded.length % samples.length]);
+      }
+      return padded;
+    }
+
+    const result: number[] = [];
+    const windowSize = samples.length / targetCount;
+
+    for (let i = 0; i < targetCount; i++) {
+      const start = Math.floor(i * windowSize);
+      const end = Math.floor((i + 1) * windowSize);
+
+      // Take the maximum value in this window to preserve peaks
+      let maxValue = 0;
+      for (let j = start; j < end && j < samples.length; j++) {
+        maxValue = Math.max(maxValue, samples[j]);
+      }
+      result.push(maxValue);
+    }
+
+    // Enhance contrast - find min/max and stretch
+    const minVal = Math.min(...result);
+    const maxVal = Math.max(...result);
+    const range = maxVal - minVal;
+
+    if (range > 0.1) {
+      // Stretch to 0.2-1.0 range for better visibility
+      return result.map(v => 0.2 + ((v - minVal) / range) * 0.8);
+    }
+
+    return result;
+  };
+
+  const cancelRecording = () => {
+    if (waveformIntervalRef.current) {
+      clearInterval(waveformIntervalRef.current);
+      waveformIntervalRef.current = null;
+    }
+    pulseAnimationRef.current?.stop();
+    pulseAnimationRef.current = null;
+    recordingDotOpacity.setValue(1);
+
+    // עצור שמיעה אם יש
+    if (soundRef.current) {
+      soundRef.current.unloadAsync().catch((error) => { logger.error('ChatInput', 'Playback error', error); });
+      soundRef.current = null;
+    }
+    if (previewPositionInterval.current) {
+      clearInterval(previewPositionInterval.current);
+      previewPositionInterval.current = null;
+    }
+
+    setRecordedAudioUri(null);
+    setRecordingDuration(0);
+    setIsRecording(false);
+    setIsPaused(false);
+    setIsPlayingPreview(false);
+    setPreviewPosition(0);
+    setIsLocked(false);
+    setIsHoldRecording(false);
+    isLockedRef.current = false;
+    holdRecordingRef.current = false;
+    timelineProgress.setValue(0);
+
     if (recordingRef.current) {
-      recordingRef.current.stopAndUnloadAsync().catch(() => {});
+      recordingRef.current.stopAndUnloadAsync().catch((error) => { logger.error('ChatInput', 'Recording error', error); });
       recordingRef.current = null;
     }
   };
+
+  // ============================================
+  // Hold-to-Record: stop + send immediately
+  // ============================================
+
+  const stopAndSendRecording = async () => {
+    try {
+      pulseAnimationRef.current?.stop();
+      pulseAnimationRef.current = null;
+      recordingDotOpacity.setValue(1);
+
+      if (!recordingRef.current) return;
+
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+      if (waveformIntervalRef.current) {
+        clearInterval(waveformIntervalRef.current);
+        waveformIntervalRef.current = null;
+      }
+
+      const uri = recordingRef.current.getURI();
+      const duration = recordingDuration;
+      const samples = [...waveformSamples];
+      await recordingRef.current.stopAndUnloadAsync();
+      recordingRef.current = null;
+
+      setIsRecording(false);
+      setIsPaused(false);
+      setIsHoldRecording(false);
+      holdRecordingRef.current = false;
+      setAudioLevel(0);
+      setRecordingDuration(0);
+      setWaveformSamples([]);
+      timelineProgress.setValue(0);
+
+      if (uri && duration >= 1 && user) {
+        const tempId = `temp-${Date.now()}`;
+        const optimisticMessage = {
+          id: tempId,
+          group_id: groupId,
+          content: JSON.stringify({ duration, waveformData: samples }),
+          message_type: ChatMessageType.AUDIO,
+          sender_id: user.id,
+          is_uploading: true,
+          upload_progress: 0,
+          is_sending: true,
+          is_forwarded: false,
+          mentioned_users: [],
+          is_edited: false,
+          is_deleted: false,
+          deleted_for_everyone: false,
+          is_silent: false,
+          is_system_message: false,
+          created_at: new Date().toISOString(),
+          reactions_count: 0,
+          read_by_count: 0,
+          sender: {
+            id: user.id,
+            display_name: user.display_name || 'אני',
+            profile_picture: user.profile_picture,
+            is_online: true,
+          },
+        };
+        addOptimisticMediaMessage(optimisticMessage);
+
+        setIsUploading(true);
+        (async () => {
+          try {
+            const uploadResult = await chatMediaService.uploadAudio(
+              uri, groupId, duration,
+              (progress) => updateOptimisticMessage(tempId, { upload_progress: progress.progress })
+            );
+            if (uploadResult.error || !uploadResult.url) {
+              updateOptimisticMessage(tempId, { is_uploading: false, is_sending: false, send_error: uploadResult.error?.message || 'שגיאה בהעלאה' });
+            } else {
+              await onSendMessage(
+                JSON.stringify({ duration, waveformData: samples }),
+                uploadResult.url,
+                ChatMessageType.AUDIO,
+                { waveformData: samples, media_duration: duration, existing_optimistic_id: tempId }
+              );
+            }
+          } catch (e) {
+            logger.error('ChatInput', 'Hold-to-record send error', e);
+            updateOptimisticMessage(tempId, { is_uploading: false, is_sending: false, send_error: 'שגיאה בשליחה' });
+          } finally {
+            setIsUploading(false);
+          }
+        })();
+      }
+    } catch (error) {
+      logger.error('ChatInput', 'stopAndSendRecording error', error);
+      setIsRecording(false);
+      setIsHoldRecording(false);
+      holdRecordingRef.current = false;
+    }
+  };
+
+  // Keep callback refs in sync (runs every render, no deps needed)
+  useEffect(() => {
+    startRecordingRef.current = startRecording;
+    cancelRecordingRef.current = cancelRecording;
+    stopAndSendRecordingRef.current = stopAndSendRecording;
+    isRecordingRef.current = isRecording;
+    isPausedRef.current = isPaused;
+    disabledRef.current = disabled;
+    isUploadingRef.current = isUploading;
+    textRef.current = text;
+  });
+
+  // ============================================
+  // PanResponder for hold-to-record gesture
+  // ============================================
+
+  const micPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_e, gs) => Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
+
+      onPanResponderGrant: () => {
+        if (isRecordingRef.current || isPausedRef.current || isLockedRef.current || disabledRef.current || isUploadingRef.current || textRef.current.trim().length > 0) return;
+
+        holdRecordingRef.current = true;
+        isLockedRef.current = false;
+        setIsHoldRecording(true);
+        setIsLocked(false);
+        slideCancelAnim.setValue(0);
+        lockSlideAnim.setValue(0);
+        trashScaleAnim.setValue(0);
+
+        Animated.spring(micScaleAnim, { toValue: 1.8, friction: 5, tension: 300, useNativeDriver: true }).start();
+
+        startRecordingRef.current();
+      },
+
+      onPanResponderMove: (_evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+        if (!holdRecordingRef.current || isLockedRef.current) return;
+
+        const { dx, dy } = gestureState;
+
+        // Slide left to cancel: dx < 0 means finger moved left
+        const cancelProgress = Math.min(Math.max(Math.abs(dx) / 120, 0), 1);
+        if (dx < 0) {
+          slideCancelAnim.setValue(cancelProgress);
+          if (cancelProgress > 0.3) {
+            Animated.spring(trashScaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }).start();
+          } else {
+            trashScaleAnim.setValue(0);
+          }
+        } else {
+          slideCancelAnim.setValue(0);
+          trashScaleAnim.setValue(0);
+        }
+
+        // Slide up to lock: dy < 0 means finger moved up
+        if (dy < 0) {
+          const lockProgress = Math.min(Math.abs(dy) / 80, 1);
+          lockSlideAnim.setValue(lockProgress);
+        } else {
+          lockSlideAnim.setValue(0);
+        }
+      },
+
+      onPanResponderRelease: (_evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+        if (!holdRecordingRef.current) return;
+
+        const { dx, dy } = gestureState;
+
+        Animated.spring(micScaleAnim, { toValue: 1, friction: 5, tension: 300, useNativeDriver: true }).start();
+        slideCancelAnim.setValue(0);
+        lockSlideAnim.setValue(0);
+        trashScaleAnim.setValue(0);
+
+        // Check cancel: slid left far enough (dx < -84)
+        if (dx < -84) {
+          holdRecordingRef.current = false;
+          setIsHoldRecording(false);
+          cancelRecordingRef.current();
+          return;
+        }
+
+        // Check lock: slid up far enough (dy < -56)
+        if (dy < -56) {
+          holdRecordingRef.current = false;
+          isLockedRef.current = true;
+          setIsHoldRecording(false);
+          setIsLocked(true);
+          return;
+        }
+
+        // Normal release = stop and send
+        holdRecordingRef.current = false;
+        setIsHoldRecording(false);
+        stopAndSendRecordingRef.current();
+      },
+
+      onPanResponderTerminate: () => {
+        if (!holdRecordingRef.current) return;
+        Animated.spring(micScaleAnim, { toValue: 1, friction: 5, tension: 300, useNativeDriver: true }).start();
+        slideCancelAnim.setValue(0);
+        lockSlideAnim.setValue(0);
+        trashScaleAnim.setValue(0);
+        holdRecordingRef.current = false;
+        setIsHoldRecording(false);
+        cancelRecordingRef.current();
+      },
+    })
+  ).current;
 
   // ============================================
   // Show Attachment Options
@@ -799,32 +1527,51 @@ export default function ChatInput({
 
   const handlePickVideo = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+      const { status: currentStatus } = await ImagePicker.getMediaLibraryPermissionsAsync();
+
+      if (currentStatus !== 'granted') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('הרשאה נדרשת', 'אנא אפשר גישה לגלריה');
+          return;
+        }
+      }
+
+      let result;
+      try {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['videos'],
+          allowsMultipleSelection: true,
+          selectionLimit: 5,
+          quality: 0.9,
+          videoQuality: 1,
+        });
+      } catch (launchError) {
+        Alert.alert('שגיאה', 'לא הצלחנו לפתוח את הגלריה');
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: MediaType.Videos,
-        allowsEditing: false,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        setPreviewMediaUri(asset.uri);
-        setPreviewMediaType('video');
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const mediaFiles: MediaFile[] = result.assets.map((asset, index) => ({
+          id: `${Date.now()}_${index}`,
+          uri: asset.uri,
+          type: 'video' as const,
+          name: asset.fileName || `video_${index + 1}.mp4`,
+          size: asset.fileSize,
+          duration: asset.duration ?? undefined,
+          width: asset.width,
+          height: asset.height,
+        }));
+        // ⚡ Show preview IMMEDIATELY
+        setSelectedMedia(mediaFiles);
         setShowMediaPreview(true);
       }
     } catch (error) {
-      console.error('❌ Error picking video:', error);
       Alert.alert('שגיאה', 'לא הצלחנו לבחור סרטון');
     }
   };
 
   const showAttachmentOptions = () => {
-    console.log('📱 ChatInput: showAttachmentOptions called, setting mediaPickerVisible to true');
     setMediaPickerVisible(true);
   };
 
@@ -838,19 +1585,15 @@ export default function ChatInput({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // ============================================
-  // Cleanup
-  // ============================================
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current.stopAndUnloadAsync().catch((error) => { logger.error('ChatInput', 'Recording error', error); });
         recordingRef.current = null;
       }
       if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current.unloadAsync().catch((error) => { logger.error('ChatInput', 'Playback error', error); });
         soundRef.current = null;
       }
       if (recordingTimerRef.current) {
@@ -865,31 +1608,8 @@ export default function ChatInput({
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-      }
-      if (waveformIntervalRef.current) {
-        clearInterval(waveformIntervalRef.current);
-      }
-      if (previewPositionInterval.current) {
-        clearInterval(previewPositionInterval.current);
-      }
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
-        recordingRef.current = null;
-      }
-      if (soundRef.current) {
-        soundRef.current.unloadAsync().catch(() => {});
-        soundRef.current = null;
-      }
+      pulseAnimationRef.current?.stop();
+      pulseAnimationRef.current = null;
     };
   }, []);
 
@@ -907,215 +1627,293 @@ export default function ChatInput({
             <Text style={styles.replyLabel}>↩️ תשובה ל-{replyTo.senderName}</Text>
             <Text style={styles.replyText} numberOfLines={1}>{replyTo.content || '📎 מדיה'}</Text>
           </View>
-          <TouchableOpacity 
-            onPress={onCancelReply} 
+          <TouchableOpacity
+            onPress={() => onCancelReply?.()}
             style={styles.cancelReply}
             activeOpacity={0.7}
           >
-            <Ionicons name="close" size={20} color="rgba(255, 255, 255, 0.5)" />
+            <Ionicons name="close" size={20} color={DesignTokens.colors.text.tertiary} />
           </TouchableOpacity>
         </View>
       ) : null}
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        <View style={styles.container}>
-        {/* Input Container */}
-        <View style={styles.inputContainer}>
-          {/* Attachment Button */}
-          {!isRecording && !(isPaused && recordedAudioUri) && (
-            <TouchableOpacity 
-              onPress={showAttachmentOptions} 
+      <View style={styles.container}>
+        {/* Input Container - glass pill */}
+        <UICard
+          variant="blur"
+          padding="none"
+          style={styles.inputCardOuter}
+          contentContainerStyle={styles.inputCardContent}
+        >
+          {/* Attachment Button - hidden during recording */}
+          {!isRecording && !isPaused && !isHoldRecording && (
+            <TouchableOpacity
+              onPress={showAttachmentOptions}
               style={styles.iconButton}
               disabled={disabled || isUploading}
             >
-              <Image 
-                source={require('../../assets/icons/ico-32-plus.png')} 
-                style={iconImageStyle} 
+              <Image
+                source={require('../../assets/icons/ico-32-plus.png')}
+                style={iconImageStyle}
                 resizeMode="contain"
               />
             </TouchableOpacity>
           )}
 
           {/* Text Input or Recording UI */}
-          {isRecording ? (
-            <View style={styles.recordingContainerActive}>
-              {/* Blur background for glass effect */}
-              {Platform.OS === 'ios' ? (
-                <BlurView
-                  intensity={30}
-                  tint="dark"
-                  style={StyleSheet.absoluteFill}
+          {isHoldRecording && isRecording && !isLocked ? (
+            /* Hold-to-record active overlay */
+            <View style={styles.holdRecordingContent}>
+              <Animated.View style={[styles.timerContainer, {
+                opacity: slideCancelAnim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 0.3, 0] }),
+              }]}>
+                <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
+                <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
+              </Animated.View>
+
+              <View style={styles.slideCancelContainer}>
+                <Animated.View style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: 6,
+                  opacity: slideCancelAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.5, 0] }),
+                }}>
+                  <Animated.View style={{
+                    transform: [{
+                      translateX: slideCancelAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 40] })
+                    }],
+                  }}>
+                    <Ionicons name="chevron-back" size={16} color={DesignTokens.colors.text.tertiary} />
+                  </Animated.View>
+                  <Text style={styles.slideCancelText}>החלק לביטול</Text>
+                </Animated.View>
+
+                <Animated.View style={[styles.trashIconFloat, {
+                  opacity: trashScaleAnim,
+                  transform: [{ scale: trashScaleAnim }],
+                }]}>
+                  <Ionicons name="trash" size={20} color={DesignTokens.colors.text.danger} />
+                </Animated.View>
+              </View>
+
+              <Animated.View style={[styles.lockIndicator, {
+                opacity: lockSlideAnim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.5, 0.8, 1] }),
+                transform: [{
+                  translateY: lockSlideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -8] }),
+                }],
+              }]}>
+                <Ionicons
+                  name="lock-open-outline"
+                  size={14}
+                  color={DesignTokens.colors.text.secondary}
                 />
-              ) : (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20, 20, 20, 0.4)' }]} />
-              )}
-              {/* Border for glass effect */}
-              <View style={styles.glassBorder} />
-              
-              {/* Content */}
-              <View style={styles.recordingContent}>
-                {/* Timer - fixed width, won't shrink */}
-                <View style={styles.timerContainer}>
-                  <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
+              </Animated.View>
+            </View>
+          ) : (isRecording || (isPaused && !recordedAudioUri)) ? (
+            /* Locked recording or non-hold recording */
+            <View style={styles.recordingContent}>
+              <View style={styles.timerContainer}>
+                <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
+                {isRecording ? (
                   <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
-                </View>
-                
-                {/* Waveform - takes remaining space but respects timer */}
-                <View style={styles.waveformWrapper}>
-                  <VoiceWaveform isRecording={isRecording} audioLevel={audioLevel} />
-                </View>
+                ) : (
+                  <View style={[styles.recordingDot, { backgroundColor: '#888' }]} />
+                )}
+              </View>
+
+              <View style={styles.waveformWrapper}>
+                <VoiceWaveform isRecording={isRecording} audioLevel={audioLevel} />
               </View>
             </View>
           ) : isPaused && recordedAudioUri ? (
-            <View style={styles.recordingContainer}>
-              {/* Blur background for glass effect */}
-              {Platform.OS === 'ios' ? (
-                <BlurView
-                  intensity={30}
-                  tint="dark"
-                  style={StyleSheet.absoluteFill}
-                />
-              ) : (
-                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20, 20, 20, 0.4)' }]} />
-              )}
-              {/* Border for glass effect */}
-              <View style={styles.glassBorder} />
-              
-              {/* Content */}
-              <View style={styles.timerAndControlsContainer}>
-                <View style={styles.timerContainer}>
-                  <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
-                  {isPlayingPreview && (
-                    <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
-                  )}
-                </View>
-                
-                {/* Waveforms with Progress */}
-                <VoiceWaveformWithProgress 
-                  progress={timelineProgress}
-                  duration={previewDuration}
-                  isPlaying={isPlayingPreview}
-                />
-                
-                {/* Play/Pause Button inside the container */}
-                <TouchableOpacity 
-                  onPress={isPlayingPreview ? pausePreview : playPreview} 
-                  style={styles.playButtonInside}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons 
-                    name={isPlayingPreview ? "pause-circle" : "play-circle"} 
-                    size={28} 
-                    color={DesignTokens?.colors?.primary?.main || '#05d157'} 
-                  />
-                </TouchableOpacity>
+            /* יש הקלטה מוכנה - preview עם play button */
+            <View style={styles.recordingContent}>
+              {/* Timer */}
+              <View style={styles.timerContainer}>
+                <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
+                {isPlayingPreview && (
+                  <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
+                )}
               </View>
-            </View>
-          ) : (
-            <TextInput
-              ref={textInputRef}
-              style={styles.textInput}
-              placeholder={isUploading ? 'מעלה...' : 'הקלד הודעה...'}
-              placeholderTextColor={DesignTokens?.colors?.text?.secondary || '#888'}
-              value={text}
-              onChangeText={(newText) => {
-                console.log('🔍 TextInput onChangeText called, newText length:', newText.length);
-                handleTextChange(newText);
-              }}
-              multiline
-              numberOfLines={2}
-              maxLength={4000}
-              editable={!disabled && !isUploading}
-              onFocus={() => {
-                console.log('🔍 TextInput focused, disabled:', disabled, 'isUploading:', isUploading, 'editable:', !disabled && !isUploading);
-              }}
-              onBlur={() => {
-                console.log('🔍 TextInput blurred');
-              }}
-              onPressIn={() => {
-                console.log('🔍 TextInput onPressIn');
-              }}
-            />
-          )}
 
-          {/* Send/Voice Button */}
-          {text.trim().length > 0 ? (
-            <TouchableOpacity 
-              onPress={handleSend} 
-              style={styles.sendButton}
-              // לא נחסום לפי canSend כדי לא ליפול על לוגיקה; בדיקה נעשית בתוך handleSend
-              disabled={disabled || isUploading}
-            >
-              <Ionicons name="send" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          ) : (isRecording || isPaused) ? (
-            <View style={styles.recordingButtons}>
-              <TouchableOpacity 
-                onPress={cancelRecording} 
-                style={styles.cancelButton}
+              {/* Waveforms with Progress */}
+              <VoiceWaveformWithProgress
+                progress={timelineProgress}
+                duration={previewDuration}
+                isPlaying={isPlayingPreview}
+                waveformData={waveformSamples}
+              />
+
+              {/* Play/Pause Button */}
+              <TouchableOpacity
+                onPress={isPlayingPreview ? pausePreview : playPreview}
+                style={styles.playButtonInside}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle" size={32} color="#FF3B30" />
+                <Ionicons
+                  name={isPlayingPreview ? "pause" : "play"}
+                  size={18}
+                  color={DesignTokens.colors.primary.main}
+                />
               </TouchableOpacity>
-              {isPaused ? (
-                <TouchableOpacity 
-                  onPress={sendRecordedAudio} 
-                  style={styles.sendButton}
-                  disabled={isUploading}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="send" size={24} color="#FFFFFF" />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity 
-                  onPress={stopRecording} 
-                  style={styles.stopButton}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="stop-circle" size={32} color={DesignTokens?.colors?.primary?.main || '#05d157'} />
-                </TouchableOpacity>
-              )}
             </View>
           ) : (
-            <TouchableOpacity 
-              onPress={startRecording} 
-              style={styles.voiceButton}
-              disabled={disabled || isUploading}
-            >
-              <Image 
-                source={require('../../assets/icons/ico-32-mic.png')} 
-                style={iconImageStyle} 
-                resizeMode="contain"
+            <>
+              <TextInput
+                ref={textInputRef}
+                style={styles.textInput}
+                placeholder={isUploading ? 'מעלה...' : 'הקלד הודעה...'}
+                placeholderTextColor={DesignTokens.colors.text.secondary}
+                value={text}
+                onChangeText={handleTextChange}
+                multiline
+                numberOfLines={2}
+                maxLength={10000}
+                editable={!disabled && !isUploading}
+                blurOnSubmit={false}
               />
-            </TouchableOpacity>
+              {/* L2: character counter – only shown when approaching the limit */}
+              {text.length > 8000 && (
+                <Text style={[
+                  styles.charCounter,
+                  text.length > 9500 && styles.charCounterDanger,
+                ]}>
+                  {10000 - text.length}
+                </Text>
+              )}
+            </>
           )}
-        </View>
+        </UICard>
 
-        {/* Uploading Indicator */}
-        {isUploading && (
-          <View style={styles.uploadingContainer}>
-            <Text style={styles.uploadingText}>מעלה קובץ...</Text>
+        {/* Send/Voice Button - OUTSIDE the input container */}
+        {isLocked ? (
+          /* Locked mode - pause/resume, delete, send buttons */
+          <View style={styles.recordingButtons}>
+            {isRecording ? (
+              <TouchableOpacity onPress={pauseRecording} style={styles.pauseResumeButton} activeOpacity={0.7}>
+                <Ionicons name="pause" size={20} color={DesignTokens.colors.text.primary} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={resumeRecording} style={styles.pauseResumeButton} activeOpacity={0.7}>
+                <Ionicons name="mic" size={20} color={DesignTokens.colors.text.primary} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton} activeOpacity={0.7}>
+              <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.text.danger} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setIsLocked(false);
+                isLockedRef.current = false;
+                if (recordedAudioUri) {
+                  sendRecordedAudio();
+                } else {
+                  stopAndSendRecording();
+                }
+              }}
+              style={styles.sendButton}
+              disabled={isUploading}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            {/* PanResponder hitbox - stays mounted throughout the entire gesture */}
+            <Animated.View
+              {...micPanResponder.panHandlers}
+              pointerEvents={(isHoldRecording || (!isRecording && !isPaused && text.trim().length === 0 && !isUploading && !disabled)) ? 'auto' : 'none'}
+              style={{
+                position: 'absolute',
+                width: 60,
+                height: 60,
+                zIndex: 10,
+                transform: [{ scale: micScaleAnim }],
+              }}
+            />
+
+            {/* Microphone icon - visible when no text */}
+            {!isHoldRecording && (
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  opacity: iconAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
+                  transform: [
+                    { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.5], extrapolate: 'clamp' }) },
+                    { rotate: iconAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-30deg'], extrapolate: 'clamp' }) },
+                  ],
+                }}
+              >
+                <View style={styles.voiceButton}>
+                  <Ionicons name="mic-outline" size={26} color={DesignTokens.colors.text.inverse} />
+                </View>
+              </Animated.View>
+            )}
+
+            {/* Send icon - visible when text entered */}
+            {!isHoldRecording && (
+              <Animated.View
+                pointerEvents={text.trim().length > 0 ? 'auto' : 'none'}
+                style={{
+                  position: 'absolute',
+                  opacity: iconAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
+                  transform: [
+                    { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1], extrapolate: 'clamp' }) },
+                    { rotate: iconAnim.interpolate({ inputRange: [0, 1], outputRange: ['30deg', '0deg'], extrapolate: 'clamp' }) },
+                  ],
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => {
+                    Animated.sequence([
+                      Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
+                      Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
+                    ]).start();
+                    handleSend();
+                  }}
+                  style={styles.sendButton}
+                  disabled={disabled || isUploading || text.trim().length === 0}
+                  activeOpacity={1}
+                >
+                  <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
+                    <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
+                  </Animated.View>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
+
+            {/* Pulsing mic during hold recording */}
+            {isHoldRecording && (
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  transform: [{ scale: micScaleAnim }],
+                }}
+              >
+                <View style={[styles.voiceButton, { backgroundColor: DesignTokens.colors.text.danger, borderRadius: 22 }]}>
+                  <Ionicons name="mic" size={26} color={DesignTokens.colors.text.primary} />
+                </View>
+              </Animated.View>
+            )}
           </View>
         )}
-        </View>
-      </KeyboardAvoidingView>
 
-      {/* Media Preview Modal - מחוץ ל-KeyboardAvoidingView כדי שיוצג נכון */}
-      {showMediaPreview && (
+        {/* Uploading indicator removed – upload progress is shown on the optimistic message itself */}
+      </View>
+
+      {/* Media Preview Modal */}
+      {showMediaPreview && selectedMedia.length > 0 && (
         <MediaPreviewModal
           visible={showMediaPreview}
-          mediaUri={previewMediaUri}
-          mediaType={previewMediaType}
-          onSend={handleSendMedia}
-          onCancel={() => {
-            console.log('🔍 MediaPreviewModal cancelled');
+          onClose={() => {
             setShowMediaPreview(false);
-            setPreviewMediaUri('');
+            setSelectedMedia([]);
           }}
-          isUploading={isUploading}
+          onSend={handleSendMedia}
+          mediaFiles={selectedMedia}
         />
       )}
 
@@ -1138,6 +1936,15 @@ export default function ChatInput({
         chatId={groupId}
         onPollCreated={handlePollCreated}
       />
+
+      {/* Mention Picker */}
+      <MentionPicker
+        visible={showMentionPicker && !isRecording}
+        onClose={closeMentionPicker}
+        onSelectUser={handleMentionSelect}
+        groupId={groupId}
+        searchQuery={mentionSearchQuery}
+      />
     </>
   );
 }
@@ -1146,47 +1953,28 @@ export default function ChatInput({
 // Styles - Modern Design from Reference
 // ============================================
 
-// Design Colors
-const COLORS = {
-  background: {
-    primary: '#0a0a0a',
-    secondary: '#1a1a1a',
-    tertiary: '#2a2a2a',
-  },
-  border: '#2a2a2a',
-  text: {
-    primary: '#FFFFFF',
-    secondary: '#9CA3AF',
-    tertiary: '#6B7280',
-  },
-  accent: '#3B82F6',
-  accentDark: '#2563EB',
-  success: '#22C55E',
-  danger: '#EF4444',
-};
-
 const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create({
-  // Container - bg-[#1a1a1a] border-t border-[#2a2a2a] px-4 py-3
   container: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'transparent',
-    paddingTop: 0,
-    // לא מוסיפים רווח לפי safe-area כאן – ה-safe למטה נשאר ריק מחוץ לאזור הכתיבה
-    paddingBottom: 0,
+    paddingTop: tokens.spacing.sm,
+    paddingBottom: tokens.spacing.xs,
+    gap: tokens.spacing.sm,
   },
-  
-  // Reply Preview - Simple clean card above input
+
   replyPreviewContainer: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: 'rgba(30, 50, 40, 0.9)',
-    marginHorizontal: 12,
-    marginBottom: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    backgroundColor: tokens.colors.border.divider,
+    marginHorizontal: tokens.spacing.xs,
+    marginBottom: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.sm + 2,
+    paddingHorizontal: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.lg,
     borderLeftWidth: 0,
     borderRightWidth: 3,
-    borderRightColor: COLORS.accent,
+    borderRightColor: tokens.colors.primary.main,
   },
   replyAccentBar: {
     // לא בשימוש יותר - הגבול בצד ימין
@@ -1197,147 +1985,114 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     marginRight: 8,
   },
   replyLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.accent,
+    fontSize: tokens.typography.label.size,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.primary.main,
     marginBottom: 2,
     textAlign: 'right',
   },
   replyText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
   cancelReply: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: tokens.colors.border.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cancelReplyText: {
     fontSize: 18,
-    color: COLORS.text.secondary,
+    color: tokens.colors.text.secondary,
   },
-  
-  // Input Container - flex items-center gap-2
-  inputContainer: {
+
+  inputCardOuter: {
+    flex: 1,
+    borderRadius: tokens.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  inputCardContent: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 10,
-    paddingVertical: 7, // עוד נגיעה קטנה בגובה הכללי
-    gap: 4,
+    paddingHorizontal: tokens.spacing.sm + 2,
+    paddingVertical: tokens.spacing.sm,
+    gap: tokens.spacing.xs,
   },
-  
-  // Icon Button - p-2 hover:bg-[#2a2a2a] rounded-full
   iconButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 50,
+    borderRadius: 20,
   },
-  
-  // Text Input - bg-[#2a2a2a] rounded-full px-4 py-2.5
   textInput: {
     flex: 1,
-    minHeight: 40,      // עוד טיפה גובה לכדור
-    maxHeight: 90,
-    // יותר שקוף כדי להרגיש "זכוכית" כמו הכרטיסים
-    backgroundColor: 'rgba(6, 18, 12, 0.35)',
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 9, // מעט יותר גובה פנימי
-    fontSize: 15,
-    color: COLORS.text.primary,
+    minHeight: 44,
+    maxHeight: 100,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.primary,
     textAlignVertical: 'center',
     textAlign: 'right',
   },
-  
-  // Recording Container - Glass design (preview)
-  recordingContainer: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    borderRadius: 50,
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    minHeight: 50,
-    overflow: 'hidden',
-    position: 'relative',
+  charCounter: {
+    position: 'absolute',
+    bottom: 4,
+    left: 8,
+    fontSize: tokens.typography.fontSize.xs,
+    color: tokens.colors.text.tertiary,
   },
-  recordingContainerActive: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    borderRadius: 50,
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    minWidth: 0,
-    overflow: 'hidden',
-    position: 'relative',
+  charCounterDanger: {
+    color: tokens.colors.text.danger,
+    fontWeight: tokens.typography.fontWeight.semibold,
   },
-  glassBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 50,
-  },
+
+  // Recording Content - ישירות בתוך inputContainer (ללא בועה נוספת)
   recordingContent: {
     flex: 1,
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 12,
-    position: 'relative',
-    zIndex: 1,
+    gap: 10,
+    minHeight: 40,
   },
   waveformWrapper: {
     flex: 1,
-    minWidth: 0, // מאפשר להתכווץ
-    marginLeft: 4, // רווח קטן מהטיימר
-  },
-  timerAndControlsContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
     minWidth: 0,
-    position: 'relative',
-    zIndex: 1,
+    height: 24,
   },
   playButtonInside: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: tokens.borderRadius.md,
+    backgroundColor: tokens.colors.border.primary,
   },
   timerContainer: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 6,
-    paddingLeft: 4,
+    gap: 8,
     flexShrink: 0,
-    minWidth: 65,
   },
   recordingDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.danger,
-    shadowColor: COLORS.danger,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: tokens.colors.text.danger,
+    shadowColor: tokens.colors.text.danger,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
-    shadowRadius: 4,
+    shadowRadius: 3,
   },
   recordingTime: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.text.primary,
-    minWidth: 60,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
   },
@@ -1354,7 +2109,7 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: tokens.colors.background.secondary,
     borderRadius: 1,
   },
   timelineDot: {
@@ -1362,71 +2117,98 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.accent,
+    backgroundColor: tokens.colors.primary.main,
     marginRight: -3,
     top: -1.5,
   },
-  
-  // Send Button - p-2.5 bg-blue-600 rounded-full
+
   sendButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17, // חוזר לקוטר נוח לאייקון 24 ויותר ממורכז
-    // צבע "כרטיס" כמו הטאבים ב-MainTabs.tsx (זכוכית כהה)
-    backgroundColor: 'rgba(15, 15, 15, 0.5)',
-    shadowColor: '#000000',
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: tokens.colors.bubbleMe,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  // Voice Button - p-2 hover:bg-[#2a2a2a] rounded-full
   voiceButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 50,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: tokens.colors.bubbleMe,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
+  // Recording Buttons
   recordingButtons: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
+    gap: 10,
   },
-  playButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
+  pauseResumeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: tokens.colors.border.hover,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   cancelButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 59, 48, 0.15)',
-  },
-  stopButton: {
+    backgroundColor: tokens.colors.border.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(5, 209, 87, 0.15)',
   },
-  
+
+  // Hold-to-record UI
+  holdRecordingContent: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 40,
+    paddingHorizontal: 4,
+  },
+  slideCancelContainer: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  slideCancelText: {
+    fontSize: tokens.typography.label.size,
+    color: tokens.colors.text.tertiary,
+    fontWeight: tokens.typography.fontWeight.medium,
+  },
+  trashIconFloat: {
+    position: 'absolute',
+    left: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockIndicator: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: tokens.colors.border.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   uploadingContainer: {
     padding: 12,
     alignItems: 'center',
   },
   uploadingText: {
-    fontSize: 14,
-    color: COLORS.text.secondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
   },
 });
 

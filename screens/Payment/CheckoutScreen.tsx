@@ -100,8 +100,6 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         userName: user.display_name || user.email || 'משתמש'
       };
 
-      console.log('🔄 יצירת בקשת תשלום:', paymentRequest);
-
       const paymentResponse = await paymentService.createPaymentRequest(paymentRequest);
 
       if (paymentResponse.success && paymentResponse.paymentUrl) {
@@ -135,7 +133,6 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       }
       
     } catch (error) {
-      console.error('❌ שגיאה בתשלום:', error);
       Alert.alert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
@@ -169,7 +166,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
     return (
       <View style={{
-        backgroundColor: '#1C1C1E',
+        backgroundColor: '#141F14',
         borderRadius: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
@@ -191,7 +188,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             width: 50,
             height: 50,
             borderRadius: 15,
-            backgroundColor: selectedPlan === 'premium' ? '#00E654' : 'rgba(255, 255, 255, 0.05)',
+            backgroundColor: selectedPlan === 'premium' ? '#00C805' : 'rgba(255, 255, 255, 0.05)',
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: 16
@@ -283,7 +280,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
   const renderSecurityFeatures = () => (
     <View style={{
-      backgroundColor: '#1C1C1E',
+      backgroundColor: '#141F14',
       borderRadius: 16,
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.1)',
@@ -345,7 +342,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
   const renderPaymentSummary = () => (
     <View style={{
-      backgroundColor: '#1C1C1E',
+      backgroundColor: '#141F14',
       borderRadius: 16,
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.1)',
@@ -406,7 +403,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       
       <View style={{ 
         height: 1, 
-        backgroundColor: '#333333', 
+        backgroundColor: '#1A2B1A', 
         marginVertical: 12 
       }} />
       
@@ -441,7 +438,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           paddingTop: 60,
           paddingBottom: 20,
           paddingHorizontal: 24,
-          backgroundColor: '#1C1C1E',
+          backgroundColor: '#141F14',
           borderBottomWidth: 1,
           borderBottomColor: 'rgba(255,255,255,0.1)'
         }}
@@ -486,7 +483,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#00E654"
+            tintColor="#00C805"
           />
         }
       >

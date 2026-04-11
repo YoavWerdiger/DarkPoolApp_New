@@ -9,7 +9,7 @@ import Animated, {
   Extrapolate,
   runOnJS,
 } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { useDesignTokens } from '../DesignTokens';
@@ -18,10 +18,11 @@ import { createStyles } from './BottomSheet.styles';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DEFAULT_SNAP_POINTS = [0.5];
+// ⚡ Snappier – פתיחה מהירה יותר (stiffness גבוה = תגובה מהירה)
 const SPRING_CONFIG = {
-  damping: 20,
-  stiffness: 90,
-  mass: 0.5,
+  damping: 24,
+  stiffness: 280,
+  mass: 0.4,
 };
 const CLOSE_THRESHOLD = 120;
 const VELOCITY_THRESHOLD = 800;
@@ -58,7 +59,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   }, [minAllowedY]);
   
   const handleCloseWithAnimation = useCallback(() => {
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 }, (finished) => {
+    // ⚡ OPTIMISTIC: סגירה מהירה
+    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 100 }, (finished) => {
       'worklet';
       if (finished && onClose) {
         runOnJS(onClose)();
@@ -89,13 +91,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       translateY.value = SCREEN_HEIGHT;
       currentSnapIndex.value = 0;
       
-      const timeoutId = setTimeout(() => {
-        translateY.value = withSpring(targetY, SPRING_CONFIG);
-      }, 50);
-      
-      return () => clearTimeout(timeoutId);
+      // ⚡ OPTIMISTIC: פותחים מיד בלי delay
+      translateY.value = withSpring(targetY, SPRING_CONFIG);
     } else if (!isOpen) {
-      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 });
+      // ⚡ OPTIMISTIC: סגירה מהירה יותר
+      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 100 });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -172,7 +172,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           (currentY > SCREEN_HEIGHT * 0.7 && velocity >= 0); // קרוב לסגור
 
         if (shouldClose) {
-          translateY.value = withTiming(SCREEN_HEIGHT, { duration: 250 }, (finished) => {
+          // ⚡ OPTIMISTIC: סגירה מהירה
+          translateY.value = withTiming(SCREEN_HEIGHT, { duration: 100 }, (finished) => {
             'worklet';
             if (finished && onClose) {
               runOnJS(onClose)();
@@ -235,32 +236,23 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         <Animated.View style={[styles.backdrop, backdropStyle]} />
       </Pressable>
 
-      <GestureDetector gesture={panGesture}>
-        <Animated.View 
-          style={[
-            styles.container, 
-            sheetStyle,
-          ]}
-        >
-          {/* Blur Background - כמו ב-MainTabs */}
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={40}
-              tint="dark"
-              style={[
-                StyleSheet.absoluteFill,
-                {
-                  backgroundColor: 'rgba(15, 15, 15, 0.5)',
-                }
-              ]}
-            />
+      <Animated.View 
+        style={[
+          styles.container, 
+          sheetStyle,
+        ]}
+      >
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={50}
+            tint="systemChromeMaterialDark"
+            style={StyleSheet.absoluteFill}
+          />
           ) : (
             <View
               style={[
                 StyleSheet.absoluteFill,
-                {
-                  backgroundColor: 'rgba(20, 20, 20, 0.7)',
-                },
+                { backgroundColor: 'rgba(25, 25, 25, 0.92)' },
               ]}
             />
           )}
@@ -275,19 +267,31 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
               }
             ]}
           >
-            {showHandle && (
-              <View
-                style={[
-                  styles.handle,
-                  { backgroundColor: tokens.colors.border.active }
-                ]}
-              />
-            )}
+            {/* Handle area for pan gesture - can be dragged */}
+          <GestureDetector gesture={panGesture}>
+            <View 
+              style={{ 
+                width: '100%', 
+                alignItems: 'center', 
+                paddingVertical: 16,
+                minHeight: 44, // גודל מינימלי לנגיעה
+              }}
+              hitSlop={{ top: 20, bottom: 20, left: 0, right: 0 }}
+            >
+              {showHandle && (
+                <View
+                  style={[
+                    styles.handle,
+                    { backgroundColor: tokens.colors.border.active }
+                  ]}
+                />
+              )}
+            </View>
+          </GestureDetector>
 
             {children}
           </View>
         </Animated.View>
-      </GestureDetector>
     </View>
   );
 
@@ -317,7 +321,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       statusBarTranslucent
       onRequestClose={handleCloseWithAnimation}
     >
-      {content}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        {content}
+      </GestureHandlerRootView>
     </Modal>
   );
 };

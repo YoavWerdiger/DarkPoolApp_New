@@ -49,7 +49,6 @@ export class NewsService {
   // קבלת חדשות עם פילטרים
   async getNews(filters: NewsFilters = {}): Promise<NewsArticle[]> {
     try {
-      console.log('📰 NewsService: Fetching news with filters:', filters);
 
       let query = supabase
         .from('app_news_clean')
@@ -88,14 +87,11 @@ export class NewsService {
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ NewsService: Error fetching news:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully fetched news:', data?.length || 0, 'articles');
       return data || [];
     } catch (error) {
-      console.error('❌ NewsService: Exception in getNews:', error);
       throw error;
     }
   }
@@ -103,7 +99,6 @@ export class NewsService {
   // קבלת חדשות מומלצות/חשובות
   async getFeaturedNews(limit: number = 5): Promise<NewsArticle[]> {
     try {
-      console.log('⭐ NewsService: Fetching featured news');
 
       const { data, error } = await supabase
         .from('app_news_clean')
@@ -113,14 +108,11 @@ export class NewsService {
         .limit(limit);
 
       if (error) {
-        console.error('❌ NewsService: Error fetching featured news:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully fetched featured news:', data?.length || 0, 'articles');
       return data || [];
     } catch (error) {
-      console.error('❌ NewsService: Exception in getFeaturedNews:', error);
       throw error;
     }
   }
@@ -128,7 +120,6 @@ export class NewsService {
   // קבלת חדשות לפי קטגוריה
   async getNewsByCategory(category: string, limit: number = 20): Promise<NewsArticle[]> {
     try {
-      console.log('📂 NewsService: Fetching news by category:', category);
 
       const { data, error } = await supabase
         .from('app_news_clean')
@@ -138,14 +129,11 @@ export class NewsService {
         .limit(limit);
 
       if (error) {
-        console.error('❌ NewsService: Error fetching news by category:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully fetched category news:', data?.length || 0, 'articles');
       return data || [];
     } catch (error) {
-      console.error('❌ NewsService: Exception in getNewsByCategory:', error);
       throw error;
     }
   }
@@ -153,7 +141,6 @@ export class NewsService {
   // קבלת קטגוריות זמינות
   async getCategories(): Promise<string[]> {
     try {
-      console.log('📂 NewsService: Fetching available categories');
 
       const { data, error } = await supabase
         .from('app_news_clean')
@@ -161,17 +148,14 @@ export class NewsService {
         .not('category', 'is', null);
 
       if (error) {
-        console.error('❌ NewsService: Error fetching categories:', error);
         throw error;
       }
 
       // הסרת כפילויות ומיון
       const categories = [...new Set(data?.map(item => item.category).filter(Boolean))].sort();
       
-      console.log('✅ NewsService: Successfully fetched categories:', categories.length, 'categories');
       return categories;
     } catch (error) {
-      console.error('❌ NewsService: Exception in getCategories:', error);
       throw error;
     }
   }
@@ -179,7 +163,6 @@ export class NewsService {
   // קבלת מקורות זמינים
   async getSources(): Promise<string[]> {
     try {
-      console.log('📰 NewsService: Fetching available sources');
 
       const { data, error } = await supabase
         .from('app_news_clean')
@@ -187,17 +170,14 @@ export class NewsService {
         .not('source', 'is', null);
 
       if (error) {
-        console.error('❌ NewsService: Error fetching sources:', error);
         throw error;
       }
 
       // הסרת כפילויות ומיון
       const sources = [...new Set(data?.map(item => item.source).filter(Boolean))].sort();
       
-      console.log('✅ NewsService: Successfully fetched sources:', sources.length, 'sources');
       return sources;
     } catch (error) {
-      console.error('❌ NewsService: Exception in getSources:', error);
       throw error;
     }
   }
@@ -205,7 +185,6 @@ export class NewsService {
   // חיפוש חדשות
   async searchNews(query: string, limit: number = 20): Promise<NewsArticle[]> {
     try {
-      console.log('🔍 NewsService: Searching news for:', query);
 
       const { data, error } = await supabase
         .from('app_news_clean')
@@ -215,21 +194,17 @@ export class NewsService {
         .limit(limit);
 
       if (error) {
-        console.error('❌ NewsService: Error searching news:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully searched news:', data?.length || 0, 'results');
       return data || [];
     } catch (error) {
-      console.error('❌ NewsService: Exception in searchNews:', error);
       throw error;
     }
   }
 
   // הגדרת realtime subscription לעדכונים חדשים
   subscribeToNewsUpdates(callback: (newArticle: NewsArticle) => void): () => void {
-    console.log('🔄 NewsService: Setting up realtime subscription for news updates');
 
     // ביטול subscription קיים אם קיים
     if (this.realtimeSubscription) {
@@ -246,7 +221,6 @@ export class NewsService {
           table: 'app_news_clean'
         },
         (payload) => {
-          console.log('📰 NewsService: New article received via realtime:', payload.new);
           callback(payload.new as NewsArticle);
         }
       )
@@ -254,7 +228,6 @@ export class NewsService {
 
     // פונקציה לביטול ה-subscription
     return () => {
-      console.log('🔄 NewsService: Unsubscribing from news updates');
       if (this.realtimeSubscription) {
         this.realtimeSubscription.unsubscribe();
         this.realtimeSubscription = null;
@@ -269,7 +242,6 @@ export class NewsService {
     filters: NewsFilters = {}
   ): Promise<{ articles: NewsArticle[]; hasMore: boolean; total: number }> {
     try {
-      console.log('📰 NewsService: Fetching news with pagination:', { page, limit, filters });
 
       const offset = (page - 1) * limit;
       
@@ -287,11 +259,6 @@ export class NewsService {
 
       const hasMore = offset + articles.length < (count || 0);
 
-      console.log('✅ NewsService: Pagination result:', {
-        articlesCount: articles.length,
-        hasMore,
-        total: count || 0
-      });
 
       return {
         articles,
@@ -299,7 +266,6 @@ export class NewsService {
         total: count || 0
       };
     } catch (error) {
-      console.error('❌ NewsService: Exception in getNewsWithPagination:', error);
       throw error;
     }
   }
@@ -307,27 +273,22 @@ export class NewsService {
   // עדכון מספר צפיות
   async incrementViewCount(articleId: string): Promise<void> {
     try {
-      console.log('👁️ NewsService: Incrementing view count for article:', articleId);
 
       const { error } = await supabase.rpc('increment_news_view_count', {
         article_id: articleId
       });
 
       if (error) {
-        console.error('❌ NewsService: Error incrementing view count:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully incremented view count');
     } catch (error) {
-      console.error('❌ NewsService: Exception in incrementViewCount:', error);
       throw error;
     }
   }
 
   // ניקוי משאבים
   cleanup(): void {
-    console.log('🧹 NewsService: Cleaning up resources');
     if (this.realtimeSubscription) {
       this.realtimeSubscription.unsubscribe();
       this.realtimeSubscription = null;
@@ -340,10 +301,8 @@ export const newsService = NewsService.getInstance();
 
 // פונקציות עזר
 export const formatNewsDate = (dateString: string): string => {
-  console.log('🕐 formatNewsDate: Input dateString:', dateString);
   
   if (!dateString) {
-    console.log('⚠️ formatNewsDate: Empty dateString, returning "תאריך לא זמין"');
     return 'תאריך לא זמין';
   }
 
@@ -360,19 +319,15 @@ export const formatNewsDate = (dateString: string): string => {
       } else { // במילישניות
         date = new Date(timestamp);
       }
-      console.log('🕐 formatNewsDate: Parsed as Unix timestamp:', date);
     } else {
       date = new Date(dateString);
-      console.log('🕐 formatNewsDate: Parsed as date string:', date);
     }
 
     // בדיקה אם התאריך תקין
     if (isNaN(date.getTime()) || date.getTime() < 0) {
-      console.log('❌ formatNewsDate: Invalid date, returning "תאריך לא זמין"');
       return 'תאריך לא זמין';
     }
   } catch (error) {
-    console.log('❌ formatNewsDate: Error parsing date, returning "תאריך לא זמין":', error);
     return 'תאריך לא זמין';
   }
 
@@ -388,14 +343,9 @@ export const formatNewsDate = (dateString: string): string => {
       minute: '2-digit'
     });
     
-    console.log('🕐 formatNewsDate: Formatted date (Israel timezone):', {
-      originalDate: dateString,
-      formatted: formatted
-    });
     
     return formatted;
   } catch (error) {
-    console.log('❌ formatNewsDate: Error formatting with timezone, using fallback:', error);
     // נפילה - תצוגה פשוטה
     return date.toLocaleDateString('he-IL', {
       year: 'numeric',

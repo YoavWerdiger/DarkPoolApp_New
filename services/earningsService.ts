@@ -146,8 +146,6 @@ export class EarningsService {
    */
   static async getAll(limit: number = 5000): Promise<EarningsReport[]> {
     try {
-      console.log('🔄 EarningsService.getAll(): Starting fetch...');
-      console.log(`📊 Limit: ${limit}`);
       
       // טווח דינמי - 3 חודשים אחורה + 6 חודשים קדימה
       const today = new Date();
@@ -159,70 +157,67 @@ export class EarningsService {
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
       
-      console.log(`📅 Date range: ${startDateStr} to ${endDateStr}`);
       
       const queryStartTime = Date.now();
-      const { data, error } = await supabase
-        .from('earnings_calendar')
-        .select('*')
-        .like('code', '%.US') // רק מניירות אמריקאיות
-        .gte('report_date', startDateStr) // מ-3 חודשים אחורה
-        .lte('report_date', endDateStr) // עד 6 חודשים קדימה
-        .gte('importance', 3) // רק דיווחים עם importance מ-3 ומעלה
-        .order('report_date', { ascending: false }) // מהחדש לישן
-        .limit(limit);
+      // מציגים את כל הדיווחים (ללא סינון importance) כדי שיהיו יותר רשומות
+      const maxAttempts = 3;
+      let data: EarningsReport[] | null = null;
+      let error: { code?: string; message?: string; details?: string } | null = null;
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          const result = await supabase
+            .from('earnings_calendar')
+            .select('*')
+            .like('code', '%.US')
+            .gte('report_date', startDateStr)
+            .lte('report_date', endDateStr)
+            .order('report_date', { ascending: false })
+            .limit(limit);
+          data = result.data as EarningsReport[] | null;
+          error = result.error;
+          if (!result.error) break;
+          if (attempt < maxAttempts) {
+            await new Promise(r => setTimeout(r, 1500));
+          }
+        } catch (err) {
+          const isNetworkError = err instanceof Error && (
+            err.message === 'Network request failed' || String(err.message).includes('Network request failed')
+          );
+          if (isNetworkError && attempt < maxAttempts) {
+            await new Promise(r => setTimeout(r, 1500));
+          } else {
+            throw err;
+          }
+        }
+      }
 
       const queryTime = Date.now() - queryStartTime;
-      console.log(`⏱️ Database query completed in ${queryTime}ms`);
 
       if (error) {
-        console.error('❌ EarningsService.getAll(): Database error:', error);
-        console.error('❌ Error code:', error.code);
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error details:', error.details);
         throw error;
       }
       
-      console.log(`📊 Raw data from database: ${(data || []).length} reports`);
       
       if ((data || []).length > 0) {
-        console.log('📋 Sample raw report:', {
-          id: data![0].id,
-          code: data![0].code,
-          report_date: data![0].report_date,
-          before_after_market: data![0].before_after_market
-        });
       }
       
       // החזרת כל הנתונים ללא סינון
-      console.log(`📊 Total reports from database: ${(data || []).length} reports`);
-      console.log(`📅 Date range: ${startDateStr} to ${endDateStr}`);
       
       if ((data || []).length > 0) {
         const dates = (data || []).map(r => r.report_date).filter((v, i, a) => a.indexOf(v) === i).sort();
-        console.log(`📅 Available dates: ${dates.length} unique dates`);
-        console.log(`📅 First date: ${dates[0]}, Last date: ${dates[dates.length - 1]}`);
         
         // פירוט כמה דיווחים יש לכל תאריך (5 הראשונים)
         const dateCounts = dates.slice(0, 5).map(date => {
           const count = (data || []).filter(r => r.report_date === date).length;
           return `${date}: ${count} reports`;
         });
-        console.log(`📊 Reports per date (first 5):`, dateCounts);
       } else {
-        console.warn(`⚠️ No reports found in date range ${startDateStr} to ${endDateStr}`);
-        console.warn(`⚠️ This might mean the sync function hasn't run or there's a data issue`);
       }
       
-      console.log('✅ EarningsService.getAll(): Completed successfully');
       return data || [];
     } catch (error) {
-      console.error('❌ EarningsService.getAll(): ===== Error =====');
-      console.error('❌ Error type:', typeof error);
-      console.error('❌ Error:', error);
       if (error instanceof Error) {
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error stack:', error.stack);
       }
       return [];
     }
@@ -236,7 +231,6 @@ export class EarningsService {
       const allReports = await this.getAll(limit);
       return this.filterUpcoming(allReports);
     } catch (error) {
-      console.error('❌ Error fetching upcoming earnings:', error);
       return [];
     }
   }
@@ -249,7 +243,6 @@ export class EarningsService {
       const allReports = await this.getAll();
       return this.filterByDate(allReports, date);
     } catch (error) {
-      console.error('❌ Error fetching earnings by date:', error);
       return [];
     }
   }
@@ -268,7 +261,6 @@ export class EarningsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings by symbol:', error);
       return [];
     }
   }
@@ -289,7 +281,6 @@ export class EarningsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings by date range:', error);
       return [];
     }
   }
@@ -302,7 +293,6 @@ export class EarningsService {
       const today = new Date().toISOString().split('T')[0];
       return await this.getByDate(today);
     } catch (error) {
-      console.error('❌ Error fetching today earnings:', error);
       return [];
     }
   }
@@ -315,7 +305,6 @@ export class EarningsService {
       const allReports = await this.getAll();
       return this.filterThisWeek(allReports);
     } catch (error) {
-      console.error('❌ Error fetching this week earnings:', error);
       return [];
     }
   }
@@ -328,7 +317,6 @@ export class EarningsService {
       const allReports = await this.getAll();
       return this.filterNextWeek(allReports);
     } catch (error) {
-      console.error('❌ Error fetching next week earnings:', error);
       return [];
     }
   }
@@ -354,7 +342,6 @@ export class EarningsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings by category:', error);
       return [];
     }
   }
@@ -381,7 +368,6 @@ export class EarningsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching upcoming earnings by category:', error);
       return [];
     }
   }
@@ -391,11 +377,9 @@ export class EarningsService {
    */
   static async refreshData() {
     try {
-      const supabaseUrl = 'https://wpmrtczbfcijoocguime.supabase.co';
-      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDczNTEsImV4cCI6MjA2Njc4MzM1MX0.YHfniy3w94LVODC54xb7Us-Daw_pRx2WWFOoR-59kGQ';
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-      console.log('🔄 EarningsService.refreshData(): Calling Edge Function...');
-      console.log('🔄 Function URL:', `${supabaseUrl}/functions/v1/daily-earnings-sync-v2`);
       
       const response = await fetch(`${supabaseUrl}/functions/v1/daily-earnings-sync-v2`, {
         method: 'POST',
@@ -405,18 +389,13 @@ export class EarningsService {
         }
       });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Edge Function returned error status:', response.status);
-        console.error('❌ Error response body:', errorText);
         
         // ניסיון לפרסר את השגיאה כ-JSON
         try {
           const errorJson = JSON.parse(errorText);
-          console.error('❌ Parsed error:', errorJson);
           return {
             success: false,
             message: errorJson.error || errorJson.message || `Function error: ${response.status}`,
@@ -432,8 +411,6 @@ export class EarningsService {
       }
 
       const result = await response.json();
-      console.log(`✅ EarningsService.refreshData(): Edge Function completed successfully`);
-      console.log('📊 Result:', result);
 
       return {
         success: true,
@@ -441,12 +418,7 @@ export class EarningsService {
         data: result
       };
     } catch (error) {
-      console.error('❌ EarningsService.refreshData(): ===== Exception =====');
-      console.error('❌ Error type:', typeof error);
-      console.error('❌ Error:', error);
       if (error instanceof Error) {
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error stack:', error.stack);
       }
       return {
         success: false,

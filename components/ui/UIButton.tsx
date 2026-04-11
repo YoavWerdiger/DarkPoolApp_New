@@ -3,7 +3,7 @@ import { Pressable, Text, View, ActivityIndicator, ViewStyle, TextStyle } from '
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 
-export type UIButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
+export type UIButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'hairline';
 export type UIButtonSize = 'sm' | 'md' | 'lg';
 
 export interface UIButtonProps {
@@ -38,47 +38,45 @@ const UIButton: React.FC<UIButtonProps> = ({
   const DesignTokens = useDesignTokens();
   const { colors, typography, spacing, borderRadius, shadows } = DesignTokens;
 
-  // Variant Styles
   const getVariantStyles = (): { container: ViewStyle; text: TextStyle } => {
     switch (variant) {
       case 'primary':
         return {
           container: {
             backgroundColor: colors.primary.main,
-            ...shadows.md,
+            borderRadius: borderRadius.md,
+            ...shadows.green,
           },
           text: {
             color: colors.text.inverse,
-            fontWeight: typography.fontWeight.semibold,
+            fontWeight: typography.button.weight,
           },
         };
-      
       case 'secondary':
         return {
           container: {
-            backgroundColor: colors.background.elevated,
+            backgroundColor: colors.glass?.card?.bg ?? 'rgba(255,255,255,0.05)',
             borderWidth: 1,
-            borderColor: colors.border.primary,
-            ...shadows.sm,
+            borderColor: colors.glass?.card?.border ?? 'rgba(255,255,255,0.10)',
+            borderRadius: borderRadius.md,
           },
           text: {
             color: colors.text.primary,
-            fontWeight: typography.fontWeight.medium,
+            fontWeight: typography.fontWeight.semibold,
           },
         };
-      
       case 'danger':
         return {
           container: {
             backgroundColor: colors.danger.main,
+            borderRadius: borderRadius.md,
             ...shadows.md,
           },
           text: {
-            color: colors.text.primary,
-            fontWeight: typography.fontWeight.semibold,
+            color: '#FFFFFF',
+            fontWeight: typography.fontWeight.bold,
           },
         };
-      
       case 'ghost':
         return {
           container: {
@@ -86,79 +84,80 @@ const UIButton: React.FC<UIButtonProps> = ({
           },
           text: {
             color: colors.primary.main,
-            fontWeight: typography.fontWeight.medium,
+            fontWeight: typography.fontWeight.semibold,
           },
         };
-      
       case 'outline':
         return {
           container: {
             backgroundColor: 'transparent',
-            borderWidth: 1,
+            borderWidth: 1.5,
             borderColor: colors.primary.main,
+            borderRadius: borderRadius.md,
           },
           text: {
             color: colors.primary.main,
+            fontWeight: typography.fontWeight.semibold,
+          },
+        };
+      case 'hairline':
+        return {
+          container: {
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderColor: colors.border.hover,
+            borderRadius: borderRadius.md,
+          },
+          text: {
+            color: colors.text.primary,
             fontWeight: typography.fontWeight.medium,
           },
         };
-      
       default:
         return {
           container: {
             backgroundColor: colors.primary.main,
+            borderRadius: borderRadius.md,
             ...shadows.md,
           },
           text: {
             color: colors.text.inverse,
-            fontWeight: typography.fontWeight.semibold,
+            fontWeight: typography.fontWeight.bold,
           },
         };
     }
   };
 
-  // Size Styles
   const getSizeStyles = (): { container: ViewStyle; text: TextStyle; icon: number } => {
     switch (size) {
       case 'sm':
         return {
           container: {
-            paddingHorizontal: spacing.md,
+            paddingHorizontal: spacing.lg,
             paddingVertical: spacing.sm,
-            borderRadius: borderRadius.md,
-            minHeight: 36,
+            minHeight: 40,
           },
-          text: {
-            fontSize: typography.fontSize.sm,
-          },
+          text: { fontSize: typography.caption.size },
           icon: 16,
         };
-      
       case 'lg':
         return {
           container: {
             paddingHorizontal: spacing['2xl'],
             paddingVertical: spacing.lg,
-            borderRadius: borderRadius.xl,
             minHeight: 56,
           },
-          text: {
-            fontSize: typography.fontSize.lg,
-          },
+          text: { fontSize: typography.body.size },
           icon: 24,
         };
-      
-      default: // md
+      default:
         return {
           container: {
             paddingHorizontal: spacing.xl,
             paddingVertical: spacing.md,
-            borderRadius: borderRadius.lg,
-            minHeight: 48,
+            minHeight: 52,
           },
-          text: {
-            fontSize: typography.fontSize.base,
-          },
+          text: { fontSize: typography.button.size },
           icon: 20,
         };
     }
@@ -239,8 +238,8 @@ const UIButton: React.FC<UIButtonProps> = ({
       style={({ pressed }) => [
         containerStyle,
         pressed && {
-          opacity: 0.8,
-          transform: [{ scale: 0.98 }],
+          opacity: 0.92,
+          transform: [{ scale: 0.985 }],
         },
       ]}
       onPress={disabled || loading ? undefined : onPress}

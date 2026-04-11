@@ -10,13 +10,13 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { learningProgressService } from '../../services/learningProgressService';
 import { useAuth } from '../../context/AuthContext';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
-import { ArrowRight, FileText, Copy } from 'lucide-react-native';
+import { ArrowRight, FileText, Copy, ArrowLeft } from 'lucide-react-native';
 import UICard from '../../components/ui/UICard';
 import * as Clipboard from 'expo-clipboard';
 
@@ -39,7 +39,7 @@ export const MyNotesScreen: React.FC = () => {
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
-  
+
   const [notes, setNotes] = useState<NoteWithDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -54,7 +54,6 @@ export const MyNotesScreen: React.FC = () => {
       const userNotes = await learningProgressService.getAllUserNotes(user.id);
       setNotes(userNotes);
     } catch (error) {
-      console.error('Error loading notes:', error);
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -71,10 +70,10 @@ export const MyNotesScreen: React.FC = () => {
   }, [loadNotes]);
 
   const handleNotePress = useCallback((note: NoteWithDetails) => {
-    navigation.navigate('LearningScreen' as never, { 
+    navigation.navigate('LearningScreen' as any, {
       courseId: note.course_id,
-      lessonId: note.lesson_id 
-    } as never);
+      lessonId: note.lesson_id
+    } as any);
   }, [navigation]);
 
   const handleCopyNote = useCallback(async (note: NoteWithDetails, e: any) => {
@@ -83,13 +82,12 @@ export const MyNotesScreen: React.FC = () => {
       await Clipboard.setStringAsync(note.notes_content);
       Alert.alert('הועתק', 'ההערה הועתקה ללוח');
     } catch (error) {
-      console.error('Error copying note:', error);
       Alert.alert('שגיאה', 'לא ניתן להעתיק את ההערה');
     }
   }, []);
 
   const renderNote = useCallback(({ item }: { item: NoteWithDetails }) => {
-    const notePreview = item.notes_content.length > 150 
+    const notePreview = item.notes_content.length > 150
       ? item.notes_content.substring(0, 150) + '...'
       : item.notes_content;
 
@@ -186,15 +184,15 @@ export const MyNotesScreen: React.FC = () => {
           renderItem={renderNote}
           keyExtractor={(item, index) => item.id || `note-${index}`}
           contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={renderEmptyState}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={DesignTokens.colors.primary.main}
-          />
-        }
-        showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmptyState}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={DesignTokens.colors.primary.main}
+            />
+          }
+          showsVerticalScrollIndicator={false}
         />
       </View>
     </View>
@@ -202,8 +200,14 @@ export const MyNotesScreen: React.FC = () => {
 };
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  gradientContainer: {
+  container: {
     flex: 1,
+  },
+  safeArea: {
+    // edges handled by component
+  },
+  safeAreaContent: {
+    paddingHorizontal: tokens.spacing.lg,
   },
   safeAreaContainer: {
     flex: 1,

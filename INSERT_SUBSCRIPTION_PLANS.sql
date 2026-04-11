@@ -36,3 +36,4 @@ SELECT 'Subscription plans added' as status,
 FROM subscription_plans 
 WHERE id IN ('plus_monthly', 'premium_monthly', 'elite_yearly')
 ORDER BY price;
+

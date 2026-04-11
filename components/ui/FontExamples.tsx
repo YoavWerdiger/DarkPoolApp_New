@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Assistant-ExtraBold',
     fontSize: 16,
     fontWeight: '800',
-    color: '#00E654',
+    color: '#00C805',
     marginBottom: 16,
     textAlign: 'right',
     writingDirection: 'rtl',
@@ -101,7 +101,7 @@ export const AssistantFontStyles = {
     fontFamily: 'Assistant-ExtraBold',
     fontSize: 16,
     fontWeight: '800',
-    color: '#00E654',
+    color: '#00C805',
     textAlign: 'right' as const,
   },
   

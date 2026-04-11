@@ -92,8 +92,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     setLoading(true);
     
     try {
-      console.log('🔄 יצירת בקשת תשלום ישירה עם LowProfile iframe');
-
       // יצירת בקשת תשלום ל-CardCom LowProfile
       const paymentResponse = await paymentService.createPaymentRequest({
         amount: plan.price,
@@ -107,7 +105,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       });
 
       if (paymentResponse.success && paymentResponse.paymentUrl) {
-        console.log('✅ URL של iframe התשלום התקבל, פותח iframe...');
         setPaymentUrl(paymentResponse.paymentUrl);
         setShowIframe(true);
       } else {
@@ -115,7 +112,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       }
       
     } catch (error) {
-      console.error('❌ שגיאה בתשלום:', error);
       Alert.alert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
@@ -145,8 +141,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   const handleWebViewMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      console.log('🔄 הודעה מ-iframe:', data);
-      
       if (data.type === 'payment_success') {
         Alert.alert(
           'תשלום הושלם בהצלחה!',
@@ -180,7 +174,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         setShowIframe(false);
       }
     } catch (error) {
-      console.error('❌ שגיאה בעיבוד הודעה מ-iframe:', error);
     }
   };
 
@@ -205,8 +198,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     try {
       const userId = fromRegistration ? null : (user?.id || null);
 
-      console.log('🔄 יצירת בקשת תשלום עם LowProfile iframe');
-
       // יצירת בקשת תשלום ל-CardCom LowProfile - יעביר למילוי פרטי כרטיס ב-iframe
       const paymentResponse = await paymentService.createPaymentRequest({
         amount: plan.price,
@@ -220,7 +211,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       });
 
       if (paymentResponse.success && paymentResponse.paymentUrl) {
-        console.log('✅ URL של iframe התשלום התקבל, פותח iframe...');
         // הצגת iframe תשלום של CardCom בתוך האפליקציה
         setPaymentUrl(paymentResponse.paymentUrl);
         setShowIframe(true);
@@ -229,7 +219,6 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       }
       
     } catch (error) {
-      console.error('❌ שגיאה בתשלום:', error);
       Alert.alert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
@@ -261,11 +250,11 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
 
     return (
       <View style={{
-        backgroundColor: '#1A1A1A',
+        backgroundColor: '#141F14',
         borderRadius: 20,
         padding: 20,
         marginBottom: 20,
-        shadowColor: selectedPlan === 'premium' ? '#00E654' : '#000000',
+        shadowColor: selectedPlan === 'premium' ? '#00C805' : '#000000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -280,7 +269,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             width: 50,
             height: 50,
             borderRadius: 15,
-            backgroundColor: selectedPlan === 'premium' ? '#00E654' : '#333333',
+            backgroundColor: selectedPlan === 'premium' ? '#00C805' : '#333333',
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: 16
@@ -398,7 +387,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               width: 40,
               height: 40,
               borderRadius: 20,
-              backgroundColor: '#1A1A1A',
+              backgroundColor: '#141F14',
               alignItems: 'center',
               justifyContent: 'center',
               marginRight: 16
@@ -426,12 +415,9 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           onNavigationStateChange={(navState) => {
             // בדיקה אם זה redirect מ-Cardcom
             const url = navState.url;
-            console.log('🔄 WebView navigation:', url);
-            
             // אם זה redirect ל-success או failed URL
             if (url.includes('smart-action') || url.includes('rapid-responder')) {
               // Webhook יטפל בזה, אבל נוכל לבדוק את התוצאה
-              console.log('🔄 Cardcom redirect detected:', url);
             }
           }}
           javaScriptEnabled={true}
@@ -512,7 +498,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       >
         {/* Header */}
         <LinearGradient
-          colors={['#00E65420', '#00E65410', 'transparent']}
+          colors={['rgba(0, 200, 5, 0.12)', 'rgba(0, 200, 5, 0.06)', 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -567,7 +553,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
 
           {/* Personal Details Section */}
           <View style={{
-            backgroundColor: '#1A1A1A',
+            backgroundColor: '#141F14',
             borderRadius: 20,
             padding: 20,
             marginBottom: 20
@@ -652,7 +638,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
 
           {/* Payment Summary */}
           <View style={{
-            backgroundColor: '#1A1A1A',
+            backgroundColor: '#141F14',
             borderRadius: 16,
             padding: 20,
             marginBottom: 20
@@ -711,7 +697,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             
             <View style={{ 
               height: 1, 
-              backgroundColor: '#333333', 
+              backgroundColor: '#1A2B1A', 
               marginVertical: 12 
             }} />
             

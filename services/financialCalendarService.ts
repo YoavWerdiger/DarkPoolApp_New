@@ -117,7 +117,6 @@ export class EarningsReportsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings reports:', error);
       return [];
     }
   }
@@ -139,7 +138,6 @@ export class EarningsReportsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching upcoming earnings:', error);
       return [];
     }
   }
@@ -158,7 +156,6 @@ export class EarningsReportsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings by date:', error);
       return [];
     }
   }
@@ -177,7 +174,6 @@ export class EarningsReportsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings by symbol:', error);
       return [];
     }
   }
@@ -197,7 +193,6 @@ export class EarningsReportsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings by date range:', error);
       return [];
     }
   }
@@ -210,7 +205,6 @@ export class EarningsReportsService {
       const today = new Date().toISOString().split('T')[0];
       return await this.getByDate(today);
     } catch (error) {
-      console.error('❌ Error fetching today earnings:', error);
       return [];
     }
   }
@@ -231,7 +225,6 @@ export class EarningsReportsService {
 
       return await this.getByDateRange(startDate, endDate);
     } catch (error) {
-      console.error('❌ Error fetching this week earnings:', error);
       return [];
     }
   }
@@ -256,7 +249,6 @@ export class EarningsTrendsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings trends:', error);
       return [];
     }
   }
@@ -275,7 +267,6 @@ export class EarningsTrendsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings trends by symbol:', error);
       return [];
     }
   }
@@ -294,7 +285,6 @@ export class EarningsTrendsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching earnings trends by period:', error);
       return [];
     }
   }
@@ -319,7 +309,6 @@ export class IPOsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching IPOs:', error);
       return [];
     }
   }
@@ -340,7 +329,6 @@ export class IPOsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching upcoming IPOs:', error);
       return [];
     }
   }
@@ -359,7 +347,6 @@ export class IPOsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching IPOs by status:', error);
       return [];
     }
   }
@@ -384,7 +371,6 @@ export class SplitsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching splits:', error);
       return [];
     }
   }
@@ -405,7 +391,6 @@ export class SplitsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching upcoming splits:', error);
       return [];
     }
   }
@@ -424,7 +409,6 @@ export class SplitsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching regular splits:', error);
       return [];
     }
   }
@@ -443,7 +427,6 @@ export class SplitsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching reverse splits:', error);
       return [];
     }
   }
@@ -468,7 +451,6 @@ export class DividendsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching dividends:', error);
       return [];
     }
   }
@@ -489,7 +471,6 @@ export class DividendsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching upcoming dividends:', error);
       return [];
     }
   }
@@ -508,7 +489,6 @@ export class DividendsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching dividends by symbol:', error);
       return [];
     }
   }
@@ -528,7 +508,6 @@ export class DividendsService {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('❌ Error fetching dividends by date range:', error);
       return [];
     }
   }
@@ -567,7 +546,6 @@ export class FinancialCalendarService {
         totalCount: earnings.length + trends.length + ipos.length + splits.length + dividends.length
       };
     } catch (error) {
-      console.error('❌ Error loading all financial calendar data:', error);
       return {
         earnings: [],
         trends: [],
@@ -584,8 +562,8 @@ export class FinancialCalendarService {
    */
   static async refreshAll() {
     try {
-      const supabaseUrl = 'https://wpmrtczbfcijoocguime.supabase.co';
-      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ1MjE4MjAsImV4cCI6MjA1MDA5NzgyMH0.JQwC3xJv8zJQwC3xJv8zJQwC3xJv8zJQwC3xJv8zJ';
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+      const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
       const functions = [
         'daily-earnings-sync',
@@ -610,15 +588,12 @@ export class FinancialCalendarService {
       const successful = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter(r => r.status === 'rejected').length;
 
-      console.log(`✅ Refresh completed: ${successful} successful, ${failed} failed`);
-
       return {
         success: successful > 0,
         successful,
         failed
       };
     } catch (error) {
-      console.error('❌ Error refreshing financial calendar:', error);
       return {
         success: false,
         successful: 0,

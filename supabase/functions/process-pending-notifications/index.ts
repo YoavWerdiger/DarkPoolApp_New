@@ -1,7 +1,31 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
+
+// 🔑 Expo Access Token נדרש לשליחת התראות ל-production builds
+const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || '';
+
+async function ensureNotificationImageUrl(
+  supabase: ReturnType<typeof createClient>,
+  rawUrl: string | null | undefined
+): Promise<string | null> {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+  const trimmed = rawUrl.trim();
+  if (!trimmed.startsWith('https://')) return null;
+  try {
+    const url = new URL(trimmed);
+    const match = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)/);
+    if (match && url.hostname.includes('supabase')) {
+      const [, bucket, path] = match;
+      const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(decodeURIComponent(path), 3600);
+      if (signed?.signedUrl) return signed.signedUrl;
+    }
+    return trimmed;
+  } catch {
+    return trimmed;
+  }
+}
 
 serve(async (req) => {
   try {
@@ -138,41 +162,37 @@ serve(async (req) => {
 
         console.log(`✅ Found ${deviceTokens.length} active device token(s) for user ${userId}`);
 
-        // יצירת הודעות push לכל התראה
+        // יצירת הודעות push לכל התראה (תמונת ההתראה – signed URL כדי שלא יוצג ריבוע אפור)
         const messages = [];
         for (const notification of notifications) {
+          const notificationData = notification.data || {};
+          const rawImageUrl = notificationData.imageUrl || null;
+          const imageUrl = rawImageUrl ? await ensureNotificationImageUrl(supabase, rawImageUrl) : null;
+
           for (const token of deviceTokens) {
-            // יצירת הודעת push עם כל הפרטים מהחדשה
-            const notificationData = notification.data || {};
-            const imageUrl = notificationData.imageUrl || null;
-            
             messages.push({
               to: token.expo_push_token,
-              sound: notification.notification_type === 'news' ? 'default' : 'default',
+              sound: 'default',
               title: notification.title,
               body: notification.body,
-              subtitle: 'DarkPool', // שם האפליקציה
+              subtitle: 'DarkPool',
               data: {
                 ...notificationData,
                 appName: 'DarkPool',
-                // אם יש תמונה, נכלול אותה ב-data
                 ...(imageUrl ? { image: imageUrl } : {}),
               },
               priority: 'high',
               channelId: 'default',
-              // Android specific
+              icon: 'ic_notification',
+              ...(imageUrl ? { richContent: { image: imageUrl } } : {}),
               android: {
                 channelId: 'default',
                 priority: 'high',
-                smallIcon: 'ic_notification', // שם ה-icon (צריך להיות ב-res/drawable)
-                // אם יש תמונה, נכלול אותה
                 ...(imageUrl ? { imageUrl: imageUrl } : {}),
               },
-              // iOS specific
               ios: {
                 sound: 'default',
                 badge: 1,
-                // אם יש תמונה, נכלול אותה
                 ...(imageUrl ? { attachments: [{ url: imageUrl }] } : {}),
               },
             });
@@ -183,13 +203,26 @@ serve(async (req) => {
         console.log(`📤 Sending ${messages.length} messages to Expo Push API for user ${userId}`);
         console.log(`📤 Messages preview:`, messages.map(m => ({ to: m.to.substring(0, 30) + '...', title: m.title, subtitle: m.subtitle })));
         
+        // 🔑 Access Token נדרש עבור production builds
+        const headers: Record<string, string> = {
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        };
+        
+        if (EXPO_ACCESS_TOKEN) {
+          headers['Authorization'] = `Bearer ${EXPO_ACCESS_TOKEN}`;
+          console.log('🔑 Using Expo Access Token for authentication');
+        } else {
+          console.error('❌ EXPO_ACCESS_TOKEN is not set! Pending notifications will not be delivered.');
+          console.error('💡 Set in: Supabase Dashboard > Edge Functions > Secrets');
+          totalFailed += notifications.length;
+          continue; // לא מסמנים כנשלח – יישלחו כשנוסיף את הטוקן
+        }
+        
         const response = await fetch(EXPO_PUSH_API_URL, {
           method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Accept-Encoding': 'gzip, deflate',
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify(messages),
         });
 

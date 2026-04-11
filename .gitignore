@@ -31,7 +31,17 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+.env.production
 
 # typescript
 *.tsbuildinfo
+
+# Firebase / FCM service account key (never commit)
+*firebase*adminsdk*.json
+*-service-account*.json
+google-service-account-key.json
+
+# Swift PM (חבילת צ׳אט נייטיבית)
+packages/DarkPoolChatSwift/.build/

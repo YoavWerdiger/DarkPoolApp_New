@@ -26,17 +26,13 @@ class FearAndGreedService {
   private cacheTimeout = 60 * 60 * 1000; // 1 שעה (המדד מתעדכן פעם ביום)
 
   private constructor() {
-    // מפתח API מ-RapidAPI
-    // אפשר להגדיר ב-.env כ-EXPO_PUBLIC_RAPIDAPI_KEY
-    // או להגדיר ישירות כאן (לא מומלץ ל-production)
-    // מפתח מהתמונה - להחליף במפתח שלך אם צריך
-    const fallbackKey = '1728faf808msh542edbc5ac19c5dp1ac7a7jsna9780db906e3';
-    this.apiKey = (process.env.EXPO_PUBLIC_RAPIDAPI_KEY || fallbackKey).trim();
+    const key = process.env.EXPO_PUBLIC_RAPIDAPI_KEY;
+    if (!key) {
+    }
+    this.apiKey = (key ?? '').trim();
     
     if (!this.apiKey) {
-      console.warn('⚠️ FearAndGreedService: No RapidAPI key found. Set EXPO_PUBLIC_RAPIDAPI_KEY in your .env file');
     } else {
-      console.log('✅ FearAndGreedService: RapidAPI key configured');
     }
   }
 
@@ -50,17 +46,14 @@ class FearAndGreedService {
   // בדיקה אם יש נתונים ב-cache
   private getCachedData(): FearAndGreedResponse | null {
     if (this.cache && Date.now() - this.cache.timestamp < this.cacheTimeout) {
-      console.log('📦 FearAndGreedService: Cache hit');
       return this.cache.data;
     }
-    console.log('❌ FearAndGreedService: Cache miss');
     return null;
   }
 
   // שמירה ב-cache
   private setCachedData(data: FearAndGreedResponse): void {
     this.cache = { data, timestamp: Date.now() };
-    console.log('💾 FearAndGreedService: Cached data');
   }
 
   // שליפת מדד הפחד והתאווה
@@ -76,7 +69,6 @@ class FearAndGreedService {
         throw new Error('RapidAPI key is not configured');
       }
 
-      console.log('🌐 FearAndGreedService: Fetching Fear and Greed Index from API');
 
       const response = await fetch(`${this.baseUrl}/v1/fgi`, {
         method: 'GET',
@@ -97,7 +89,6 @@ class FearAndGreedService {
       }
 
       const rawData = await response.json();
-      console.log('📊 FearAndGreedService: Raw API response:', JSON.stringify(rawData, null, 2));
       
       // המרת הנתונים לפורמט אחיד
       let data: FearAndGreedResponse;
@@ -201,31 +192,22 @@ class FearAndGreedService {
       }
       // פורמט לא צפוי - נזרוק שגיאה עם פרטים
       else {
-        console.error('❌ FearAndGreedService: Unexpected API response format:', rawData);
         throw new Error(`Unexpected API response format. Received: ${JSON.stringify(rawData).substring(0, 200)}`);
       }
       
       // וידוא שהערך תקין (0-100)
       if (data.fgi.now.value < 0 || data.fgi.now.value > 100) {
-        console.warn('⚠️ FearAndGreedService: Value out of range, normalizing:', data.fgi.now.value);
         data.fgi.now.value = Math.max(0, Math.min(100, data.fgi.now.value));
       }
 
       // שמירה ב-cache
       this.setCachedData(data);
 
-      console.log('✅ FearAndGreedService: Successfully fetched Fear and Greed Index', {
-        value: data.fgi.now.value,
-        classification: data.fgi.now.valueClassification,
-        timestamp: new Date(data.fgi.now.timestamp * 1000).toISOString(),
-      });
       return data;
     } catch (error: any) {
-      console.error('❌ FearAndGreedService: Error fetching Fear and Greed Index:', error);
       
       // אם יש cache ישן, נחזיר אותו במקום לזרוק שגיאה
       if (this.cache?.data) {
-        console.log('📦 FearAndGreedService: Returning cached data due to error');
         return this.cache.data;
       }
       
@@ -239,7 +221,6 @@ class FearAndGreedService {
       const data = await this.getFearAndGreedIndex();
       return data.fgi.now;
     } catch (error) {
-      console.error('❌ FearAndGreedService: Error getting current value, returning fallback:', error);
       // החזרת ערך fallback במקרה של שגיאה
       return {
         value: 50,

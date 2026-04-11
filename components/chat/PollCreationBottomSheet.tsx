@@ -144,9 +144,10 @@ export default function PollCreationBottomSheet({
         onPollCreated(poll);
         resetForm();
         onClose();
+      } else {
+        Alert.alert('שגיאה', 'לא ניתן ליצור את הסקר, נסה שוב');
       }
     } catch (error: any) {
-      console.error('❌ Error creating poll:', error);
       Alert.alert('שגיאה', error?.message || 'לא ניתן ליצור את הסקר');
     } finally {
       setIsCreating(false);

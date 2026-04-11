@@ -4,18 +4,29 @@
 // הצגת הודעה בודדת בצ'אט
 // ============================================
 
-import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useRef, useEffect, memo } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Animated, Easing, Linking, Alert } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import MediaViewer from './MediaViewer';
-import { useAuth } from '../../context/AuthContext';
-import { PollService, PollWithVotes } from '../../services/pollService';
-import { supabase } from '../../lib/supabase';
-import PollVotesBottomSheet from './PollVotesBottomSheet';
+import MediaGridBubble from './MediaGridBubble';
+import * as WebBrowser from 'expo-web-browser';
+import { logger } from '../../utils/logger';
+import {
+  getChatMediaDisplayUri,
+  invalidateChatMediaPathCache,
+  chatMediaStoragePathFromRef,
+} from '../../services/chat/chatSignedMediaUrl';
+
+type ResolvedMessageMedia = {
+  main: string | null;
+  thumb: string | null;
+  audio: string | null;
+  doc: string | null;
+};
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -29,26 +40,80 @@ interface ChatMessageProps {
   onReactionDetailsPress?: (message: ChatMessageType) => void;
   onAvatarPress?: () => void;
   onJumpToMessage?: (messageId: string) => void;
+  isHighlighted?: boolean;
 }
+
+
+// פונקציה לרנדור טקסט עם תיוגים (@mentions)
+const renderTextWithMentions = (
+  text: string,
+  baseStyle: any,
+  mentionStyle: any
+): React.ReactNode[] => {
+  if (!text) return [];
+
+  // חיפוש של @שם משתמש בטקסט
+  const mentionRegex = /@[\u0590-\u05FFa-zA-Z0-9_]+/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  let keyIndex = 0;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    // טקסט לפני ה-mention
+    if (match.index > lastIndex) {
+      parts.push(
+        <Text key={`text-${keyIndex++}`} style={baseStyle}>
+          {text.slice(lastIndex, match.index)}
+        </Text>
+      );
+    }
+
+    // ה-mention עצמו
+    parts.push(
+      <Text key={`mention-${keyIndex++}`} style={[baseStyle, mentionStyle]}>
+        {match[0]}
+      </Text>
+    );
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // טקסט אחרי ה-mention האחרון
+  if (lastIndex < text.length) {
+    parts.push(
+      <Text key={`text-${keyIndex++}`} style={baseStyle}>
+        {text.slice(lastIndex)}
+      </Text>
+    );
+  }
+
+  // אם אין mentions - החזר טקסט רגיל
+  if (parts.length === 0) {
+    return [<Text key="full-text" style={baseStyle}>{text}</Text>];
+  }
+
+  return parts;
+};
 
 // פונקציה לזיהוי כיוון טקסט (RTL/LTR)
 const detectTextDirection = (text: string): 'right' | 'left' | 'auto' => {
   if (!text) return 'auto';
-  
+
   // בדיקה אם יש תווים עבריים
   const hebrewRegex = /[\u0590-\u05FF]/;
   const hasHebrew = hebrewRegex.test(text);
-  
+
   // בדיקה אם יש תווים אנגליים/לטיניים
   const latinRegex = /[A-Za-z]/;
   const hasLatin = latinRegex.test(text);
-  
+
   // אם יש עברית - RTL
   if (hasHebrew) return 'right';
-  
+
   // אם יש רק לטיני - LTR
   if (hasLatin && !hasHebrew) return 'left';
-  
+
   // אחרת - auto
   return 'auto';
 };
@@ -73,16 +138,16 @@ const getUserColor = (userId: string) => {
     '#FB8C00', // כתום
     '#F4511E', // כתום עמוק
   ];
-  
+
   let hash = 0;
   for (let i = 0; i < userId.length; i++) {
     hash = userId.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   return colors[Math.abs(hash) % colors.length];
 };
 
-export default function ChatMessage({
+function ChatMessage({
   message,
   isMe,
   showAvatar = true,
@@ -94,18 +159,146 @@ export default function ChatMessage({
   onReactionDetailsPress,
   onAvatarPress,
   onJumpToMessage,
+  isHighlighted = false,
 }: ChatMessageProps) {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
-  const { user } = useAuth();
   const [showMediaViewer, setShowMediaViewer] = useState(false);
-  const [pollData, setPollData] = useState<PollWithVotes | null>(null);
-  const [pollLoading, setPollLoading] = useState(false);
-  const [pollVoting, setPollVoting] = useState(false);
-  const [pollSelectedOptionIds, setPollSelectedOptionIds] = useState<string[]>([]);
-  const [resolvedPollId, setResolvedPollId] = useState<string | null>(null);
-  const [showVotesSheet, setShowVotesSheet] = useState(false);
-  
+
+  const [resolvedMedia, setResolvedMedia] = useState<ResolvedMessageMedia>(() => ({
+    main: message.local_media_uri || message.media_url || null,
+    thumb: message.media_thumbnail_url || null,
+    audio: message.media_url || null,
+    doc: message.media_url || null,
+  }));
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      if (message.local_media_uri) {
+        let thumbResolved =
+          message.media_thumbnail_url || message.local_media_uri;
+        if (
+          message.media_thumbnail_url &&
+          !message.media_thumbnail_url.startsWith('file:') &&
+          !message.media_thumbnail_url.startsWith('content:')
+        ) {
+          thumbResolved =
+            (await getChatMediaDisplayUri(message.media_thumbnail_url)) ||
+            message.media_thumbnail_url;
+        }
+        const audioU =
+          message.message_type === MessageType.AUDIO && message.media_url
+            ? (await getChatMediaDisplayUri(message.media_url)) || message.media_url
+            : null;
+        const docU =
+          message.message_type === MessageType.DOCUMENT && message.media_url
+            ? (await getChatMediaDisplayUri(message.media_url)) || message.media_url
+            : null;
+        if (!cancelled) {
+          setResolvedMedia({
+            main: message.local_media_uri!,
+            thumb: thumbResolved,
+            audio: audioU,
+            doc: docU,
+          });
+        }
+        return;
+      }
+
+      const main = message.media_url
+        ? (await getChatMediaDisplayUri(message.media_url)) || message.media_url
+        : null;
+      const thumb = message.media_thumbnail_url
+        ? (await getChatMediaDisplayUri(message.media_thumbnail_url)) ||
+          message.media_thumbnail_url
+        : null;
+      const audio =
+        message.message_type === MessageType.AUDIO && message.media_url
+          ? (await getChatMediaDisplayUri(message.media_url)) || message.media_url
+          : null;
+      const doc =
+        message.message_type === MessageType.DOCUMENT && message.media_url
+          ? (await getChatMediaDisplayUri(message.media_url)) || message.media_url
+          : null;
+
+      if (!cancelled) {
+        setResolvedMedia({ main, thumb, audio, doc });
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    message.id,
+    message.media_url,
+    message.media_thumbnail_url,
+    message.local_media_uri,
+    message.message_type,
+    message.media_urls,
+  ]);
+
+  // הודעות אופטימיסטיות (שלחנו) – מוצגות מיידית.
+  // הודעות שלי שזה עתה אושרו מהשרת – גם כן מיידית (מניעת "היעלמות" כשמעדכנים מ-temp ל-real).
+  // הודעות חדשות מאחרים בלבד – אנימציית fade-in.
+  const isSendingOrUploading = !!message.is_sending || !!message.is_uploading;
+  const isNewMessage = useRef(
+    !isMe && !isSendingOrUploading && Date.now() - new Date(message.created_at).getTime() < 8000
+  ).current;
+  const fadeAnim = useRef(new Animated.Value(isNewMessage ? 0 : 1)).current;
+  const slideAnim = useRef(new Animated.Value(isNewMessage ? 10 : 0)).current;
+  const hasAnimated = useRef(false);
+  useEffect(() => {
+    if (!isNewMessage || hasAnimated.current) return;
+    hasAnimated.current = true;
+    fadeAnim.setValue(0);
+    slideAnim.setValue(10);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+
+  // פתיחת מסמך
+  const openDocument = async () => {
+    const docUri =
+      resolvedMedia.doc ||
+      (message.media_url
+        ? (await getChatMediaDisplayUri(message.media_url)) || message.media_url
+        : null);
+    if (!docUri) {
+      Alert.alert('שגיאה', 'לא נמצא קישור למסמך');
+      return;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(docUri);
+      if (supported) {
+        await WebBrowser.openBrowserAsync(docUri);
+      } else {
+        await Linking.openURL(docUri);
+      }
+    } catch (error) {
+      logger.error('ChatMessage', 'Document open error', error);
+      Alert.alert('שגיאה', 'לא ניתן לפתוח את המסמך');
+    }
+  };
+
   // צבע שם השולח
   const senderColor = useMemo(() => {
     if (message.sender_id) {
@@ -114,17 +307,11 @@ export default function ChatMessage({
     return DesignTokens.colors.text.secondary;
   }, [message.sender_id, DesignTokens]);
 
-  
-  // Audio playback state
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
 
   // הודעת מערכת
   if (message.is_system_message) {
     return (
-      <View key={`system-message-${message.id}`} style={styles.systemMessageContainer}>
+      <View key={`system-message-${message.id}`} style={styles.systemMessageContainer} accessibilityRole="text" accessibilityLabel={`System message: ${getSystemMessageText(message)}`}>
         <View key={`system-line-1-${message.id}`} style={styles.systemMessageLine} />
         <Text key={`system-text-${message.id}`} style={styles.systemMessageText}>
           {getSystemMessageText(message)}
@@ -137,7 +324,7 @@ export default function ChatMessage({
   // הודעה מחוקה
   if (message.is_deleted) {
     return (
-      <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}>
+      <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]} accessibilityRole="text" accessibilityLabel="Deleted message">
         <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, styles.deletedBubble]}>
           <Text style={[styles.messageText, styles.deletedText]}>
             🚫 הודעה זו נמחקה
@@ -148,329 +335,19 @@ export default function ChatMessage({
   }
 
   const timeText = format(new Date(message.created_at), 'HH:mm');
-  const pollId = (message as any)?.system_message_data?.poll_id as string | undefined;
-  const pollMeta = (message as any)?.system_message_data as
-    | { poll_id?: string; multiple_choice?: boolean; options?: Array<{ id: string; text: string }> }
-    | undefined;
-  const effectivePollId = pollId || resolvedPollId || undefined;
+  const isSending = !!message.is_sending;
 
-  // אם זו הודעת סקר ישנה בלי poll_id, ננסה לשחזר אותו ע"י התאמה ל-polls
-  useEffect(() => {
-    let cancelled = false;
-    const resolve = async () => {
-      if (message.message_type !== MessageType.POLL) return;
-      if (pollId) return;
-      if (resolvedPollId) return;
-      if (!message.content) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('polls')
-          .select('id')
-          .eq('chat_id', message.group_id)
-          .eq('creator_id', message.sender_id)
-          .eq('question', message.content)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (error) return;
-        const found = Array.isArray(data) ? data[0] : null;
-        if (!cancelled && found?.id) {
-          setResolvedPollId(found.id);
-        }
-      } catch {
-        // ignore
-      }
-    };
-
-    resolve();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.id, message.message_type, pollId, resolvedPollId, message.group_id, message.sender_id, message.content]);
-
-  // Reset poll UI when message changes
-  useEffect(() => {
-    if (message.message_type !== MessageType.POLL) return;
-    setPollData(null);
-    setPollSelectedOptionIds([]);
-    setResolvedPollId(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.id]);
-
-  // טעינת נתוני הסקר ברקע (כדי להציג אופציות/תוצאות בבועה)
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      if (message.message_type !== MessageType.POLL) return;
-      if (!effectivePollId) return;
-      if (pollData) return;
-      try {
-        setPollLoading(true);
-        const loaded = await PollService.getPollResults(effectivePollId, user?.id);
-        if (!cancelled) setPollData(loaded);
-      } catch {
-        // שקט: נציג UI מבוסס מטא-דאטה/0 עד שייפתח המודאל
-      } finally {
-        if (!cancelled) setPollLoading(false);
-      }
-    };
-    run();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.message_type, effectivePollId, user?.id]);
-
-  const refreshPoll = async () => {
-    if (!effectivePollId) return;
-    try {
-      setPollLoading(true);
-      const loaded = await PollService.getPollResults(effectivePollId, user?.id);
-      setPollData(loaded);
-    } catch (e) {
-      console.error('❌ Error loading poll:', e);
-    } finally {
-      setPollLoading(false);
-    }
-  };
-
-  const submitPollVote = async () => {
-    if (!effectivePollId || !user?.id) return;
-
-    const multipleChoice = !!(pollData?.multiple_choice ?? pollMeta?.multiple_choice);
-    const isLocked = !!pollData?.is_locked;
-    const userVotes = pollData?.user_votes || [];
-    const canVote = !isLocked && userVotes.length === 0;
-
-    if (!canVote) return;
-    if (pollSelectedOptionIds.length === 0) return;
-    if (!multipleChoice && pollSelectedOptionIds.length > 1) return;
-
-    try {
-      setPollVoting(true);
-      await PollService.votePoll(effectivePollId, pollSelectedOptionIds, user.id);
-      await refreshPoll();
-      setPollSelectedOptionIds([]);
-    } catch (e) {
-      console.error('❌ Vote failed:', e);
-    } finally {
-      setPollVoting(false);
-    }
-  };
-
-  const renderPollBubble = () => {
-    const colors = DesignTokens.colors;
-    const t = DesignTokens.typography;
-    const s = DesignTokens.spacing;
-    const r = DesignTokens.borderRadius;
-
-    const optionsFromMeta = Array.isArray(pollMeta?.options) ? pollMeta?.options : [];
-    const options = pollData?.options?.length
-      ? pollData.options.map(o => ({ id: o.id, text: o.text }))
-      : optionsFromMeta;
-
-    const isLocked = !!pollData?.is_locked;
-    const multipleChoice = !!(pollData?.multiple_choice ?? pollMeta?.multiple_choice);
-    const userVotes = pollData?.user_votes || [];
-    const hasVoted = userVotes.length > 0;
-    const canVote = !!user?.id && !isLocked && !hasVoted;
-    const totalVotes = pollData?.total_votes ?? pollData?.options?.reduce((sum, o) => sum + (o.votes_count || 0), 0) ?? 0;
-
-    // שומרים על אותו סטייל של בועות הצ'אט (טקסט לבן)
-    // כדי שלא ייראה "כרטיס בתוך כרטיס".
-    const textMain = '#FFFFFF';
-    const textSub = colors.text.secondary;
-    const dimOpacity = 0.85;
-    const fontFamily = t.fontFamily.system[0];
-
-    const getOptionVotesCount = (optionId: string) => {
-      const found = pollData?.options?.find(o => o.id === optionId);
-      return found?.votes_count ?? 0;
-    };
-
-    const getOptionPercent = (optionId: string) => {
-      if (!pollData) return 0;
-      const votes = getOptionVotesCount(optionId);
-      if (!totalVotes) return 0;
-      return Math.max(0, Math.min(100, Math.round((votes / totalVotes) * 100)));
-    };
-
-    const isSelected = (optionId: string) => {
-      // אחרי הצבעה — הדגשה לפי ההצבעה בפועל
-      if (hasVoted) return userVotes.includes(optionId);
-      // לפני הצבעה — לפי הבחירה המקומית
-      return pollSelectedOptionIds.includes(optionId);
-    };
-
-    const toggleSelect = (optionId: string) => {
-      if (!canVote) return;
-      if (multipleChoice) {
-        setPollSelectedOptionIds(prev => (prev.includes(optionId) ? prev.filter(id => id !== optionId) : [...prev, optionId]));
-      } else {
-        setPollSelectedOptionIds([optionId]);
-      }
-    };
-
-    const canSubmit = canVote && pollSelectedOptionIds.length > 0 && !(multipleChoice === false && pollSelectedOptionIds.length > 1);
-    const voteLabel = isLocked ? 'נעול' : hasVoted ? 'הצבעת' : 'הצבע';
-
-    return (
-      <View style={styles.pollContainer}>
-        <Text style={[styles.pollHint, { color: textSub, opacity: dimOpacity, fontFamily }]}>
-          {multipleChoice ? 'בחירה מרובה' : 'בחירה יחידה'}
-          {isLocked ? ' · נעול' : ''}
-        </Text>
-
-        <Text style={[styles.pollQuestion, { color: textMain, fontFamily }]} numberOfLines={6}>
-          {pollData?.question || message.content || 'סקר'}
-        </Text>
-
-        <View style={{ gap: s.sm }}>
-          {!effectivePollId || options.length === 0 ? (
-            <View style={[styles.pollEmptyState, { borderColor: colors.border.primary }]}>
-              <Text style={[styles.pollEmptyText, { color: textSub, opacity: dimOpacity, fontFamily }]}>
-                {pollLoading
-                  ? 'טוען אופציות…'
-                  : !effectivePollId
-                    ? 'טוען סקר…'
-                    : 'לא נטענו אופציות'}
-              </Text>
-              {pollLoading ? (
-                <ActivityIndicator color={colors.primary.main} style={{ marginTop: s.xs }} />
-              ) : (
-                <TouchableOpacity onPress={refreshPoll} activeOpacity={0.85} style={{ marginTop: s.xs }}>
-                  <Text style={{ color: colors.primary.main, fontWeight: t.fontWeight.bold as any, fontFamily }}>
-                    רענן
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ) : (
-            options.map(opt => {
-              const votesCount = getOptionVotesCount(opt.id);
-              const percent = getOptionPercent(opt.id);
-              const selected = isSelected(opt.id);
-              const leftIcon = multipleChoice
-                ? selected
-                  ? 'checkbox'
-                  : 'checkbox-outline'
-                : selected
-                ? 'radio-button-on'
-                : 'radio-button-off';
-
-              const borderCol = selected
-                ? colors.border.active
-                : isMe
-                  ? 'rgba(255,255,255,0.22)'
-                  : colors.border.primary;
-              const trackBg = 'rgba(255,255,255,0.12)';
-              const fillBg = colors.primary.main;
-              const selectedBg = selected ? 'rgba(5, 209, 87, 0.16)' : 'transparent';
-
-              return (
-                <TouchableOpacity
-                  key={`poll-opt-${message.id}-${opt.id}`}
-                  onPress={() => toggleSelect(opt.id)}
-                  activeOpacity={0.85}
-                  disabled={!effectivePollId || !canVote}
-                  style={[
-                    styles.pollOption,
-                    {
-                      borderColor: borderCol,
-                      backgroundColor: selectedBg,
-                      opacity: canVote ? 1 : 0.85,
-                    },
-                  ]}
-                >
-                  <View style={styles.pollOptionRow}>
-                    <Ionicons
-                      name={leftIcon as any}
-                      size={18}
-                      color={selected ? colors.primary.main : textSub}
-                    />
-                    <Text style={[styles.pollOptionText, { color: textMain, fontFamily }]} numberOfLines={2}>
-                      {opt.text}
-                    </Text>
-
-                    {!!pollData && (
-                      <Text style={[styles.pollOptionCount, { color: textSub, opacity: dimOpacity, fontFamily }]}>
-                        {votesCount}
-                      </Text>
-                    )}
-                  </View>
-
-                  {!!pollData && (
-                    <View style={[styles.pollBarTrack, { backgroundColor: trackBg }]}>
-                      <View style={[styles.pollBarFill, { width: `${percent}%`, backgroundColor: fillBg }]} />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </View>
-
-        {/* Vote count at top (if exists) */}
-        {!!pollData && totalVotes > 0 && (
-          <Text style={[styles.pollVotesCount, { color: textSub, opacity: dimOpacity, fontFamily }]}>
-            {totalVotes} הצבעות
-          </Text>
-        )}
-
-        {/* Divider and View Votes button (if has votes) */}
-        {totalVotes > 0 && (
-          <>
-            <View style={styles.pollDivider} />
-            <TouchableOpacity
-              onPress={() => setShowVotesSheet(true)}
-              activeOpacity={0.85}
-              style={styles.pollViewVotesBtn}
-            >
-              <Text style={[styles.pollViewVotesText, { fontFamily }]}>הצג הצבעות</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {/* Vote button - only show if user hasn't voted yet */}
-        {!hasVoted && (
-          <TouchableOpacity
-            onPress={submitPollVote}
-            activeOpacity={0.85}
-            disabled={!canSubmit || pollVoting || isLocked}
-            style={[
-              styles.pollVoteBtn,
-              {
-                borderColor: colors.border.active,
-                backgroundColor: isMe ? 'rgba(255,255,255,0.10)' : 'rgba(5, 209, 87, 0.18)',
-                opacity: canSubmit && !pollVoting && !isLocked ? 1 : 0.55,
-                marginTop: totalVotes > 0 ? s.sm : s.md,
-              },
-            ]}
-          >
-            {pollVoting ? (
-              <ActivityIndicator color={colors.primary.main} />
-            ) : (
-              <Text
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: t.fontSize.sm,
-                  fontWeight: t.fontWeight.black as any,
-                  fontFamily,
-                }}
-              >
-                {voteLabel}
-              </Text>
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  };
+  // הודעות שלי – תמיד opacity 1 (מונע היעלמות כשמחליפים מ-temp ל-real)
+  const effectiveOpacity = isMe ? 1 : fadeAnim;
+  const effectiveTranslateY = isMe ? 0 : slideAnim;
 
   return (
-    <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}>
+    <Animated.View style={[
+      styles.messageContainer,
+      isMe ? styles.myMessage : styles.theirMessage,
+      isHighlighted && styles.highlightedMessage,
+      { opacity: effectiveOpacity, transform: [{ translateY: effectiveTranslateY }] },
+    ]}>
       {/* Avatar */}
       {!isMe && showAvatar && (
         <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
@@ -488,7 +365,7 @@ export default function ChatMessage({
 
       {/* Message Content */}
       <View style={[
-        styles.messageContent, 
+        styles.messageContent,
         isMe && styles.messageContentMe,
         message.message_type === MessageType.AUDIO && styles.audioMessageContent
       ]}>
@@ -497,55 +374,47 @@ export default function ChatMessage({
           activeOpacity={0.7}
           onPress={onPress}
           onLongPress={onLongPress}
+          accessibilityRole="button"
+          accessibilityLabel={`${isMe ? 'Your message' : (message.sender?.display_name || 'Message')}: ${message.content || message.message_type}`}
+          accessibilityHint="Long press for message options"
           style={[
-            styles.bubble, 
+            styles.bubble,
             isMe ? styles.myBubble : styles.theirBubble,
-            (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) && styles.mediaBubble,
+            (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO || message.message_type === MessageType.MEDIA_GROUP) && styles.mediaBubble,
+            message.reply_to && { minWidth: 200 },
           ]}
         >
-          {/* Sender Name - בתוך הבועה */}
+          {/* Sender Name - בתוך הבועה – צבע ייחודי לכל משתמש */}
           {!isMe && showSenderName && (
-            <Text style={[styles.senderNameInside, { color: DesignTokens.colors.text.primary }]}>
+            <Text style={[styles.senderNameInside, { color: senderColor }]}>
               {message.sender?.display_name || 'משתמש'}
             </Text>
           )}
 
           {/* Reply To - בועה קטנה בתוך הבועה הגדולה */}
-          {(() => {
-            // לוגים לבדיקה
-            if (message.reply_to_message_id || message.reply_to) {
-              console.log('🔍 ChatMessage Reply Debug:', {
-                messageId: message.id,
-                reply_to_message_id: message.reply_to_message_id,
-                reply_to: message.reply_to,
-                hasReplyTo: !!message.reply_to,
-              });
-            }
-            
-            return message.reply_to ? (
-              <TouchableOpacity 
-                key={`reply-${message.id}-${message.reply_to.message_id}`}
-                style={[styles.replyContainer, isMe ? styles.replyContainerMe : styles.replyContainerThem]}
-                onPress={() => {
-                  // גלול להודעה המקורית
-                  if (message.reply_to?.message_id && onJumpToMessage) {
-                    onJumpToMessage(message.reply_to.message_id);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <View key={`reply-bar-${message.id}`} style={styles.replyBar} />
-                <View key={`reply-content-${message.id}`} style={styles.replyContent}>
-                  <Text key={`reply-name-${message.id}`} style={[styles.replyName, { textAlign: 'right' }]}>
-                    {String(message.reply_to.sender_name || 'משתמש')}
-                  </Text>
-                  <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: 'right' }]} numberOfLines={1}>
-                    {String(message.reply_to.content || getMediaTypeText(message.reply_to.message_type))}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ) : null;
-          })()}
+          {message.reply_to && (
+            <TouchableOpacity
+              key={`reply-${message.id}-${message.reply_to.message_id}`}
+              style={[styles.replyContainer, isMe ? styles.replyContainerMe : styles.replyContainerThem]}
+              onPress={() => {
+                // גלול להודעה המקורית
+                if (message.reply_to?.message_id && onJumpToMessage) {
+                  onJumpToMessage(message.reply_to.message_id);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <View key={`reply-bar-${message.id}`} style={styles.replyBar} />
+              <View key={`reply-content-${message.id}`} style={styles.replyContent}>
+                <Text key={`reply-name-${message.id}`} style={[styles.replyName, { textAlign: 'right' }]}>
+                  {String(message.reply_to.sender_name || 'משתמש')}
+                </Text>
+                <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: 'right' }]} numberOfLines={1}>
+                  {String(message.reply_to.content || getMediaTypeText(message.reply_to.message_type))}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
           {/* Forwarded Tag */}
           {message.is_forwarded && (
@@ -555,57 +424,83 @@ export default function ChatMessage({
           )}
 
           {/* Media Content */}
-          {renderMediaContent(message, styles, isMe, () => {
-            if (message.media_url && (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO)) {
-              setShowMediaViewer(true);
+          {renderMediaContent(message, resolvedMedia, styles, isMe, DesignTokens, () => {
+            // Only open viewer for uploaded media, not during upload
+            if ((message.media_url || message.local_media_uri) && !message.is_uploading) {
+              if (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) {
+                setShowMediaViewer(true);
+              } else if (message.message_type === MessageType.DOCUMENT) {
+                openDocument();
+              }
             }
           })}
 
           {/* Text Content */}
-          {message.content && message.message_type !== MessageType.POLL && (
-            <Text 
-              style={[
-                styles.messageText, 
-                isMe ? styles.myMessageText : styles.theirMessageText,
-                message.media_url && styles.messageTextWithMedia, // padding נוסף כשיש גם מדיה
-                { textAlign: detectTextDirection(message.content) }
-              ]}
-            >
-              {message.content}
-            </Text>
-          )}
+          {message.content && (() => {
+            if (message.message_type === MessageType.AUDIO) return null;
 
-          {/* Poll bubble (DesignTokens) */}
-          {message.message_type === MessageType.POLL && renderPollBubble()}
+            let displayContent = message.content;
+
+            // Only render if there's content to show
+            if (!displayContent) return null;
+
+            const textStyle = [
+              styles.messageText,
+              isMe ? styles.myMessageText : styles.theirMessageText,
+              message.media_url && styles.messageTextWithMedia,
+              { textAlign: detectTextDirection(displayContent) }
+            ];
+            const mentionStyle = {
+              color: isMe ? DesignTokens.colors.text.inverse : DesignTokens.colors.primary.main,
+              fontWeight: DesignTokens.typography.fontWeight.semibold,
+            };
+
+            return (
+              <Text style={textStyle}>
+                {renderTextWithMentions(displayContent, textStyle, mentionStyle)}
+              </Text>
+            );
+          })()}
 
           {/* Metadata */}
           <View style={styles.metadata}>
-            <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText]}>{timeText}</Text>
-            {message.is_edited && (
-              <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}> · נערך</Text>
+            {message.send_error ? (
+              <Text style={styles.sendErrorText}>⚠ שגיאה · לחץ לחיצה ארוכה לנסות שוב</Text>
+            ) : (
+              <View style={styles.metadataRow}>
+                {message.is_edited && (
+                  <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>נערך · </Text>
+                )}
+                <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText]}>{timeText}</Text>
+                {isMe && isSending && (
+                  <ActivityIndicator size={10} color={DesignTokens.colors.text.tertiary} style={styles.statusIcon} />
+                )}
+              </View>
             )}
           </View>
         </TouchableOpacity>
 
-        {/* Reactions - בועה אחת עם כל האימוג'ים */}
+        {/* Reactions - חופפות על הבועה, עד 3 ואז +X */}
         {message.reactions && message.reactions.length > 0 && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.reactionsContainer, { alignSelf: isMe ? 'flex-end' : 'flex-start' }]}
             onPress={() => onReactionDetailsPress?.(message)}
+            activeOpacity={0.7}
           >
-            <View style={styles.singleReactionBubble}>
+            <View style={styles.reactionBubble}>
+              {/* הצג עד 3 אימוג'ים */}
               {message.reactions.slice(0, 3).map((reaction, index) => (
-                <View key={`${message.id}-reaction-${reaction.emoji}-${index}`} style={styles.reactionItem}>
-                  <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
-                  {reaction.count > 1 && (
-                    <Text style={styles.reactionCount}>{reaction.count}</Text>
-                  )}
-                </View>
-              ))}
-              {message.reactions.length > 3 && (
-                <Text style={styles.moreReactionsText}>
-                  +{message.reactions.slice(3).reduce((sum, r) => sum + r.count, 0)}
+                <Text key={`${message.id}-emoji-${index}`} style={styles.reactionEmoji}>
+                  {reaction.emoji}
                 </Text>
+              ))}
+              {/* מספר כולל של ריאקציות */}
+              <Text style={styles.reactionCount}>
+                {message.reactions.reduce((sum, r) => sum + (r.count || 0), 0)}
+              </Text>
+              {/* אם יש יותר מ-3 סוגי ריאקציות, הצג +X */}
+              {message.reactions.length > 3 && (
+                <Text style={styles.reactionMore}>+{message.reactions.length - 3}</Text>
               )}
             </View>
           </TouchableOpacity>
@@ -617,24 +512,15 @@ export default function ChatMessage({
       {(message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) && message.media_url && (
         <MediaViewer
           visible={showMediaViewer}
-          mediaUrl={message.media_url}
+          mediaUrl={resolvedMedia.main || message.media_url}
           mediaType={message.message_type === MessageType.IMAGE ? 'image' : 'video'}
           caption={message.content || undefined}
           onClose={() => setShowMediaViewer(false)}
+          onReply={onReply ? () => { setShowMediaViewer(false); onReply(); } : undefined}
         />
       )}
 
-      {/* Poll Votes BottomSheet */}
-      {message.message_type === MessageType.POLL && effectivePollId && pollData && (
-        <PollVotesBottomSheet
-          visible={showVotesSheet}
-          onClose={() => setShowVotesSheet(false)}
-          pollId={effectivePollId}
-          pollOptions={pollData.options}
-          pollQuestion={pollData.question || message.content || 'סקר'}
-        />
-      )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -644,61 +530,138 @@ export default function ChatMessage({
 
 function renderMediaContent(
   message: ChatMessageType,
+  resolved: ResolvedMessageMedia,
   styles: any,
   isMe: boolean,
+  tokens: ReturnType<typeof useDesignTokens>,
   onMediaPress?: () => void
 ) {
-  if (!message.media_url) return null;
+  const imageUri =
+    message.local_media_uri || resolved.main || message.media_url;
+
+  // MEDIA_GROUP uses media_urls/local_media_urls instead
+  const hasMediaGroup = message.message_type === MessageType.MEDIA_GROUP &&
+    ((message.media_urls && message.media_urls.length > 0) ||
+      (message.local_media_urls && message.local_media_urls.length > 0));
+
+  if (!imageUri && !hasMediaGroup && message.message_type !== MessageType.AUDIO && message.message_type !== MessageType.DOCUMENT) return null;
 
   switch (message.message_type) {
-    case MessageType.IMAGE:
+    case MessageType.IMAGE: {
+      // Use real dimensions when available, fallback to 4:3
+      const imgW = message.media_width;
+      const imgH = message.media_height;
+      const aspectRatio = imgW && imgH ? imgW / imgH : 4 / 3;
       return (
-        <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9}>
-          <Image
-            source={{ uri: message.media_thumbnail_url || message.media_url }}
-            style={styles.mediaImage}
-            resizeMode="cover"
-          />
+        <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9} disabled={message.is_uploading}>
+          <View>
+            <Image
+              source={{ uri: resolved.thumb || message.media_thumbnail_url || imageUri }}
+              style={[styles.mediaImage, { aspectRatio }, message.is_uploading && { opacity: 0.7 }]}
+              resizeMode="cover"
+            />
+            {message.is_uploading && (
+              <View style={[styles.uploadOverlay, { aspectRatio }]}>
+                <ActivityIndicator size="large" color={tokens.colors.primary.main} />
+                {message.upload_progress !== undefined && message.upload_progress > 0 && (
+                  <Text style={styles.uploadProgress}>{Math.round(message.upload_progress)}%</Text>
+                )}
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
       );
+    }
 
     case MessageType.VIDEO:
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9}>
           <View style={styles.mediaVideo}>
-            {message.media_thumbnail_url && (
+            {/* Thumbnail או placeholder */}
+            {resolved.thumb || message.media_thumbnail_url ? (
               <Image
-                source={{ uri: message.media_thumbnail_url }}
+                source={{ uri: resolved.thumb || message.media_thumbnail_url || '' }}
                 style={styles.mediaImage}
                 resizeMode="cover"
               />
+            ) : (
+              <View style={styles.videoPlaceholder}>
+                <Ionicons name="videocam" size={40} color={tokens.colors.text.tertiary} />
+              </View>
             )}
-            <View style={styles.playButton}>
-              <Ionicons name="play" size={32} color="#FFFFFF" />
+
+            {/* Overlay כהה */}
+            <View style={styles.videoOverlay} />
+
+            {/* כפתור Play */}
+            <View style={styles.playButtonContainer}>
+              <View style={styles.playButton}>
+                <Ionicons name="play" size={28} color={tokens.colors.text.primary} style={{ marginLeft: 3 }} />
+              </View>
             </View>
+
+            {/* משך הסרטון */}
+            {message.media_duration && message.media_duration > 0 && (
+              <View style={styles.videoDuration}>
+                <Text style={styles.videoDurationText}>
+                  {formatDuration(message.media_duration)}
+                </Text>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
       );
 
-    case MessageType.AUDIO:
+    case MessageType.AUDIO: {
+      let audioDuration = message.media_duration || 0;
+      if (audioDuration === 0 && message.content) {
+        try {
+          const parsed = JSON.parse(message.content);
+          if (parsed.duration) audioDuration = parsed.duration;
+        } catch { /* not JSON */ }
+      }
       return (
         <AudioPlayer
-          audioUrl={message.media_url || ''}
-          duration={message.media_duration || 0}
+          audioUrl={resolved.audio || message.media_url || ''}
+          duration={audioDuration}
           isMe={isMe}
           styles={styles}
           message={message}
+          tokens={tokens}
         />
       );
+    }
 
     case MessageType.DOCUMENT:
+      // חילוץ שם קובץ מה-URL אם חסר
+      const fileName = message.media_file_name || extractFileNameFromUrl(message.media_url) || 'מסמך';
+      const fileExtension = getFileExtension(fileName);
+      // הצג גודל אם קיים, אחרת הצג את סוג הקובץ
+      const fileSizeText = message.media_size
+        ? formatFileSize(message.media_size)
+        : (fileExtension !== 'קובץ' ? fileExtension : '');
+
       return (
-        <View style={styles.mediaDocument}>
-          <Text style={styles.documentIcon}>📎</Text>
-          <Text style={styles.documentName} numberOfLines={1}>
-            {message.media_file_name || 'מסמך'}
-          </Text>
+        <View style={styles.documentRow}>
+          <Ionicons name="document-text-outline" size={28} color={tokens.colors.text.primary} />
+          <View style={styles.documentTextContainer}>
+            <Text style={styles.documentName} numberOfLines={1}>{fileName}</Text>
+            {fileSizeText ? <Text style={styles.documentSize}>{fileSizeText}</Text> : null}
+          </View>
+          <TouchableOpacity onPress={onMediaPress} style={styles.downloadButton}>
+            <Ionicons name="download-outline" size={22} color={tokens.colors.text.primary} />
+          </TouchableOpacity>
         </View>
+      );
+
+    case MessageType.MEDIA_GROUP:
+      return (
+        <MediaGridBubble
+          mediaItems={message.media_urls || []}
+          localMediaItems={message.local_media_urls}
+          isUploading={message.is_uploading}
+          maxWidth={240}
+        />
       );
 
     default:
@@ -708,7 +671,7 @@ function renderMediaContent(
 
 function getSystemMessageText(message: ChatMessageType): string {
   const data = message.system_message_data || {};
-  
+
   switch (message.system_message_type) {
     case 'group_created':
       return 'הקבוצה נוצרה';
@@ -737,7 +700,7 @@ function getSystemMessageText(message: ChatMessageType): string {
 
 function getMediaTypeText(type?: MessageType | string | null): string {
   if (!type) return 'מדיה';
-  
+
   switch (type) {
     case MessageType.IMAGE:
       return '📷 תמונה';
@@ -747,6 +710,8 @@ function getMediaTypeText(type?: MessageType | string | null): string {
       return '🎤 הודעה קולית';
     case MessageType.DOCUMENT:
       return '📎 מסמך';
+    case MessageType.MEDIA_GROUP:
+      return '🖼️ אלבום';
     default:
       return 'מדיה';
   }
@@ -758,6 +723,107 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+// פורמט גודל קובץ
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+}
+
+// קבלת סיומת קובץ
+function getFileExtension(fileName: string): string {
+  if (!fileName) return 'קובץ';
+  const parts = fileName.split('.');
+  if (parts.length > 1) {
+    const ext = parts.pop()?.toUpperCase();
+    return ext || 'קובץ';
+  }
+  return 'קובץ';
+}
+
+// חילוץ שם קובץ מ-URL
+function extractFileNameFromUrl(url?: string): string | null {
+  if (!url) return null;
+  try {
+    // נסה לחלץ את שם הקובץ מה-URL
+    const urlParts = url.split('/');
+    const lastPart = urlParts[urlParts.length - 1];
+    // הסר query params
+    const fileName = lastPart.split('?')[0];
+    // decode URI
+    return decodeURIComponent(fileName) || null;
+  } catch (error) {
+    logger.error('ChatMessage', 'File name extraction from URL error', error);
+    return null;
+  }
+}
+
+// קבלת צבע לפי סוג קובץ
+function getDocumentColor(extension: string): string {
+  const ext = extension.toUpperCase();
+  switch (ext) {
+    case 'PDF':
+      return '#FF4444';
+    case 'DOC':
+    case 'DOCX':
+      return '#2B579A';
+    case 'XLS':
+    case 'XLSX':
+      return '#217346';
+    case 'PPT':
+    case 'PPTX':
+      return '#D24726';
+    case 'TXT':
+      return '#6B7280';
+    case 'ZIP':
+    case 'RAR':
+    case '7Z':
+      return '#F59E0B';
+    case 'MP3':
+    case 'WAV':
+    case 'AAC':
+      return '#8B5CF6';
+    default:
+      return '#FF6B6B';
+  }
+}
+
+// קבלת אייקון לפי סוג קובץ
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+function getDocumentIcon(extension: string): IoniconsName {
+  const ext = extension.toUpperCase();
+  switch (ext) {
+    case 'PDF':
+      return 'document-text';
+    case 'DOC':
+    case 'DOCX':
+    case 'TXT':
+      return 'document-text';
+    case 'XLS':
+    case 'XLSX':
+      return 'grid';
+    case 'PPT':
+    case 'PPTX':
+      return 'easel';
+    case 'ZIP':
+    case 'RAR':
+    case '7Z':
+      return 'archive';
+    case 'MP3':
+    case 'WAV':
+    case 'AAC':
+      return 'musical-notes';
+    case 'JPG':
+    case 'JPEG':
+    case 'PNG':
+    case 'GIF':
+      return 'image';
+    default:
+      return 'document';
+  }
+}
+
 // ============================================
 // Audio Player Component
 // ============================================
@@ -767,10 +833,13 @@ interface AudioPlayerProps {
   isMe: boolean;
   styles: any;
   message: ChatMessageType;
+  tokens: ReturnType<typeof useDesignTokens>;
 }
 
-function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerProps) {
+function AudioPlayer({ audioUrl, duration, isMe, styles, message, tokens }: AudioPlayerProps) {
   const soundRef = useRef<Audio.Sound | null>(null);
+  /** URI אחרי ניסיון חידוש חתימה (מפחית 400 כשהטוקן בקאש פג) */
+  const currentUriRef = useRef(audioUrl);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [actualDuration, setActualDuration] = useState(duration);
@@ -778,13 +847,41 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
   const positionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const waveformContainerRef = useRef<View | null>(null);
 
+  useEffect(() => {
+    currentUriRef.current = audioUrl;
+  }, [audioUrl]);
+
+  useEffect(() => {
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      allowsRecordingIOS: false,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+    }).catch(() => {});
+  }, []);
+
+  const createSoundWithSignedUrlRetry = async (initialUri: string) => {
+    try {
+      return await Audio.Sound.createAsync({ uri: initialUri });
+    } catch (first) {
+      const ref = message.media_url;
+      if (!ref) throw first;
+      const path = chatMediaStoragePathFromRef(ref);
+      if (path) invalidateChatMediaPathCache(path);
+      const fresh = await getChatMediaDisplayUri(ref);
+      if (!fresh || fresh === initialUri) throw first;
+      currentUriRef.current = fresh;
+      return await Audio.Sound.createAsync({ uri: fresh });
+    }
+  };
+
   // Load audio duration on mount
   useEffect(() => {
     if (!audioUrl) return;
 
     const loadDuration = async () => {
       try {
-        const { sound } = await Audio.Sound.createAsync({ uri: audioUrl });
+        const { sound } = await createSoundWithSignedUrlRetry(currentUriRef.current);
         const status = await sound.getStatusAsync();
         if (status.isLoaded && status.durationMillis && status.durationMillis > 0) {
           const durationInSeconds = status.durationMillis / 1000;
@@ -792,8 +889,7 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
         }
         await sound.unloadAsync();
       } catch (error) {
-        console.log('⚠️ Error loading audio duration:', error);
-        // אם נכשל, נשתמש ב-duration prop אם הוא קיים
+        logger.error('ChatMessage', 'Audio playback error', error);
         if (duration > 0) {
           setActualDuration(duration);
         }
@@ -815,12 +911,12 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
               const posMillis = status.positionMillis || 0;
               const posSeconds = posMillis / 1000;
               setPosition(posSeconds);
-              
+
               // אם ה-duration לא נטען עדיין, ננסה לטעון אותו
               if (actualDuration === 0 && status.durationMillis && status.durationMillis > 0) {
                 setActualDuration(status.durationMillis / 1000);
               }
-              
+
               if (status.didJustFinish) {
                 setIsPlaying(false);
                 setPosition(0);
@@ -829,7 +925,7 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
                   try {
                     await soundRef.current.setPositionAsync(0);
                   } catch (e) {
-                    console.log('⚠️ Error resetting position:', e);
+                    logger.error('ChatMessage', 'Audio playback error', e);
                   }
                 }
               } else if (!status.isPlaying && isPlaying) {
@@ -838,7 +934,7 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
             }
           }
         } catch (error) {
-          console.log('⚠️ Error updating position:', error);
+          logger.error('ChatMessage', 'Audio playback error', error);
         }
       }, 50); // עדכון כל 50ms במקום 100ms לחלקות טובה יותר
     } else {
@@ -872,18 +968,17 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
     try {
       if (!soundRef.current) {
         // Load and play
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: audioUrl },
-          { shouldPlay: true, rate: playbackRate },
-          (status) => {
-            if (status.isLoaded) {
-              if (status.didJustFinish) {
-                setIsPlaying(false);
-                setPosition(0);
-              }
+        const { sound } = await createSoundWithSignedUrlRetry(currentUriRef.current);
+        await sound.setRateAsync(playbackRate, true);
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) {
+            if (status.didJustFinish) {
+              setIsPlaying(false);
+              setPosition(0);
             }
           }
-        );
+        });
+        await sound.playAsync();
         soundRef.current = sound;
         setIsPlaying(true);
         const status = await sound.getStatusAsync();
@@ -914,7 +1009,7 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
         }
       }
     } catch (error) {
-      console.error('❌ Error toggling audio:', error);
+      logger.error('ChatMessage', 'Audio playback error', error);
     }
   };
 
@@ -923,7 +1018,7 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
     const currentIndex = rates.indexOf(playbackRate);
     const nextRate = rates[(currentIndex + 1) % rates.length];
     setPlaybackRate(nextRate);
-    
+
     if (soundRef.current) {
       try {
         const status = await soundRef.current.getStatusAsync();
@@ -936,7 +1031,7 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
           }
         }
       } catch (error) {
-        console.error('❌ Error setting playback rate:', error);
+        logger.error('ChatMessage', 'Audio playback error', error);
       }
     }
   };
@@ -945,40 +1040,57 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
   const progress = actualDuration > 0 ? Math.min(100, Math.max(0, (position / actualDuration) * 100)) : 0;
   // שימוש ב-actualDuration אם הוא קיים ויותר מ-0, אחרת ב-duration prop
   const displayDuration = (actualDuration > 0) ? actualDuration : (duration > 0 ? duration : 0);
-  // יצירת waveformData - שימוש בנתונים אמיתיים אם קיימים, אחרת placeholder יפה יותר
+  // יצירת waveformData - שימוש בנתונים אמיתיים אם קיימים, אחרת placeholder
   const waveformData = useMemo(() => {
-    const FIXED_BARS_COUNT = 25; // יותר bars לתצוגה חלקה יותר
-    
-    // בדיקה אם יש waveformData אמיתי ב-metadata
-    const realWaveformData = (message as any)?.metadata?.waveformData;
+    const FIXED_BARS_COUNT = 20;
+
+    // Try to get waveform from metadata first
+    let realWaveformData = message.metadata?.waveformData;
+
+    if (!realWaveformData && message.content) {
+      try {
+        const parsed = JSON.parse(message.content);
+        realWaveformData = parsed.waveformData || parsed.waveform;
+      } catch {
+        // Not JSON content
+      }
+    }
+
     if (realWaveformData && Array.isArray(realWaveformData) && realWaveformData.length > 0) {
-      // נרמל את הנתונים
-      const normalizedData = [];
+      // נרמל את הנתונים ל-20 bars קבועים
+      const normalizedData: number[] = [];
       const step = realWaveformData.length / FIXED_BARS_COUNT;
+
       for (let i = 0; i < FIXED_BARS_COUNT; i++) {
         const index = Math.floor(i * step);
         const value = realWaveformData[index] || 0.3;
-        // נרמל בין 0.25 ל-1.0
-        normalizedData.push(Math.max(0.25, Math.min(1.0, value)));
+        normalizedData.push(value);
       }
-      return normalizedData;
+
+      // Enhance contrast - stretch values to fill 0.15-1.0 range
+      const minVal = Math.min(...normalizedData);
+      const maxVal = Math.max(...normalizedData);
+      const range = maxVal - minVal;
+
+      if (range > 0.05) {
+        // Stretch to show more variation
+        return normalizedData.map(v => 0.15 + ((v - minVal) / range) * 0.85);
+      }
+
+      // If range is too small, add some artificial variation
+      return normalizedData.map((v, i) => {
+        const variation = Math.sin(i * 0.5) * 0.2;
+        return Math.max(0.2, Math.min(1.0, v + variation));
+      });
     }
-    
-    // אם אין נתונים אמיתיים, יצירת waveform יפה יותר
-    // סוג של "הר" באמצע עם וריאציות
+
+    // אם אין נתונים אמיתיים, יצירת placeholder דטרמיניסטי
     const seed = audioUrl ? audioUrl.length : 0;
     const data = [];
     for (let i = 0; i < FIXED_BARS_COUNT; i++) {
-      // יצירת צורת גל יפה - גבוה יותר באמצע
-      const centerPosition = Math.abs(i - FIXED_BARS_COUNT / 2) / (FIXED_BARS_COUNT / 2);
-      const baseHeight = 1 - centerPosition * 0.5; // גבוה יותר במרכז
-      
-      // הוספת וריאציה אקראית אבל דטרמיניסטית
-      const pseudoRandom = Math.sin((seed + i) * 12.9898 + i * 0.5) * 43758.5453;
-      const variation = ((pseudoRandom % 1) + 1) / 2 * 0.4; // וריאציה של עד 40%
-      
-      const finalValue = Math.max(0.25, Math.min(1.0, baseHeight * 0.7 + variation));
-      data.push(finalValue);
+      const pseudoRandom = Math.sin((seed + i) * 12.9898) * 43758.5453;
+      const normalized = (pseudoRandom % 1 + 1) / 2;
+      data.push(0.2 + normalized * 0.8);
     }
     return data;
   }, [audioUrl, message]);
@@ -992,7 +1104,7 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
         style={styles.audioPlayButton}
       >
         <Image
-          source={isPlaying 
+          source={isPlaying
             ? require('../../assets/icons/ico-24-pause.png')
             : require('../../assets/icons/ico-24-play.png')
           }
@@ -1014,18 +1126,10 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
             style={styles.audioWaveformBars}
           >
             {waveformData.map((value: number, index: number) => {
-              const barHeight = Math.max(6, value * 24);
+              const barHeight = Math.max(4, value * 18); // bars יותר גדולים
               const audioUrlHash = audioUrl ? audioUrl.substring(audioUrl.length - 10) : 'no-url';
               const uniqueKey = `${audioUrlHash}-waveform-${index}-${value.toFixed(4)}`;
-              
-              // חישוב האם הפס הזה כבר "נוגן" לפי ה-progress (משמאל לימין)
-              const barProgress = (index / waveformData.length) * 100;
-              const isPlayed = barProgress <= progress;
-              
-              // צבעים - ירוק לנוגן, אפור לא נוגן
-              const playedColor = '#0FB96E'; // ירוק
-              const unplayedColor = 'rgba(255, 255, 255, 0.3)'; // לבן שקוף
-              
+
               return (
                 <View
                   key={uniqueKey}
@@ -1033,21 +1137,22 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
                     styles.audioWaveformBar,
                     {
                       height: barHeight,
-                      backgroundColor: isPlayed ? playedColor : unplayedColor,
+                      backgroundColor: isMe ? tokens.colors.text.primary : tokens.colors.text.secondary,
+                      opacity: isMe ? 0.85 : 0.75,
                     }
                   ]}
                 />
               );
             })}
           </View>
-          
-          {/* Progress Indicator (Circle) - זז משמאל לימין */}
+
+          {/* Progress Indicator (Blue Dot) - רק זה זז */}
           <View
             style={[
               styles.audioProgressIndicator,
               {
-                left: `${progress}%`,
-                backgroundColor: '#0FB96E' // ירוק
+                right: `${100 - progress}%`,
+                backgroundColor: tokens.colors.accent.main,
               }
             ]}
           />
@@ -1071,34 +1176,36 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message }: AudioPlayerP
   );
 }
 
+export default memo(ChatMessage, (prevProps, nextProps) => {
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.is_edited === nextProps.message.is_edited &&
+    prevProps.message.is_deleted === nextProps.message.is_deleted &&
+    prevProps.message.media_url === nextProps.message.media_url &&
+    prevProps.message.is_sending === nextProps.message.is_sending &&
+    prevProps.message.send_error === nextProps.message.send_error &&
+    prevProps.message.upload_progress === nextProps.message.upload_progress &&
+    prevProps.message.reactions?.length === nextProps.message.reactions?.length &&
+    prevProps.message.reactions === nextProps.message.reactions &&
+    prevProps.isMe === nextProps.isMe &&
+    prevProps.showAvatar === nextProps.showAvatar &&
+    prevProps.showSenderName === nextProps.showSenderName &&
+    prevProps.isHighlighted === nextProps.isHighlighted &&
+    true
+  );
+});
+
 // ============================================
 // Styles - Modern Design from Reference
 // ============================================
 
-// Design Colors (from reference)
-const MSG_COLORS = {
-  background: {
-    primary: 'rgba(0, 10, 4, 1)',
-    secondary: 'rgba(6, 18, 12, 0.9)',
-    tertiary: 'rgba(10, 24, 16, 0.9)',
-  },
-  border: 'rgba(255, 255, 255, 0.06)',
-  text: {
-    primary: '#FFFFFF',
-    secondary: 'rgba(209, 213, 219, 0.9)',
-    tertiary: 'rgba(148, 163, 184, 0.9)',
-  },
-  accent: '#0FB96E',      // primary green
-  accentDark: '#0A8F55',  // darker green
-  success: '#22C55E',
-  danger: '#EF4444',
-};
-
 const createStyles = (tokens: any) => StyleSheet.create({
+  /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות, בלי padding כפול מהרשימה */
   messageContainer: {
     flexDirection: 'row',
     marginVertical: 3,
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
     alignItems: 'flex-end',
   },
   myMessage: {
@@ -1107,29 +1214,34 @@ const createStyles = (tokens: any) => StyleSheet.create({
   theirMessage: {
     justifyContent: 'flex-start',
   },
-  
+  highlightedMessage: {
+    backgroundColor: tokens.colors.primary.dim,
+    borderRadius: tokens.borderRadius.md,
+    marginHorizontal: 2,
+  },
+
   avatarContainer: {
-    marginRight: 8,
+    marginRight: 6,
     marginBottom: 2,
   },
   avatar: {
     width: 32,
-    height: 30,
+    height: 32,
     borderRadius: 16,
   },
   avatarPlaceholder: {
-    backgroundColor: MSG_COLORS.accent,
+    backgroundColor: tokens.colors.border.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.semibold,
   },
-  
+
   messageContent: {
-    maxWidth: '75%',
+    maxWidth: '82%',
     alignItems: 'flex-start',
   },
   messageContentMe: {
@@ -1138,17 +1250,17 @@ const createStyles = (tokens: any) => StyleSheet.create({
   audioMessageContent: {
     maxWidth: '90%', // בועת אודיו צריכה יותר מקום לכל הרכיבים
   },
-  
+
   senderNameInside: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: tokens.typography.label.size,
+    fontWeight: tokens.typography.fontWeight.semibold,
     marginTop: 0,
     marginBottom: 4,
     textAlign: 'right',
     alignSelf: 'flex-end',
     width: '100%',
   },
-  
+
   replyContainer: {
     flexDirection: 'row-reverse',
     borderRadius: 8,
@@ -1156,10 +1268,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingRight: 6,
     marginBottom: 6,
     marginTop: 2,
-    overflow: 'hidden',
+    overflow: 'visible',
     borderWidth: 0,
     minHeight: 50,
-    width: '100%',
   },
   replyContainerMe: {
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
@@ -1169,7 +1280,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   replyBar: {
     width: 3,
-    backgroundColor: MSG_COLORS.accent,
+    backgroundColor: tokens.colors.primary.main,
     borderRadius: 1.5,
     marginLeft: 8,
     flexShrink: 0,
@@ -1177,114 +1288,141 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   replyContent: {
     flex: 1,
-    minWidth: 0,
     justifyContent: 'center',
   },
   replyName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: MSG_COLORS.accent,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.primary.main,
     marginBottom: 3,
     textAlign: 'right',
   },
   replyText: {
-    fontSize: 11,
-    color: MSG_COLORS.text.secondary,
+    fontSize: tokens.typography.fontSize.xs,
+    color: tokens.colors.text.secondary,
     opacity: 0.9,
   },
-  
-  // Bubble - px-4 py-2.5 rounded-2xl
+
   bubble: {
-    borderRadius: 16,
-    paddingVertical: 6,
+    borderRadius: tokens.borderRadius.lg,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     maxWidth: '100%',
   },
   mediaBubble: {
-    paddingVertical: 4,
-    paddingHorizontal: 4,
+    paddingVertical: tokens.spacing.xs,
+    paddingHorizontal: tokens.spacing.xs,
   },
-  // Sent - glassy green bubble (matches app primary)
   myBubble: {
-    backgroundColor: 'rgba(15, 185, 110, 0.25)',
+    backgroundColor: tokens.colors.bubbleMe,
     borderBottomRightRadius: 4,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderBottomLeftRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(15, 185, 110, 0.4)',
-    shadowColor: 'rgba(15, 185, 110, 0.3)',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
+    borderTopLeftRadius: tokens.borderRadius.lg,
+    borderTopRightRadius: tokens.borderRadius.lg,
+    borderBottomLeftRadius: tokens.borderRadius.lg,
   },
-  // Received - glassy dark bubble
   theirBubble: {
-    backgroundColor: 'rgba(6, 18, 12, 0.8)',
+    backgroundColor: tokens.colors.bubbleOther,
     borderBottomLeftRadius: 4,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    borderBottomRightRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    borderTopLeftRadius: tokens.borderRadius.lg,
+    borderTopRightRadius: tokens.borderRadius.lg,
+    borderBottomRightRadius: tokens.borderRadius.lg,
   },
   deletedBubble: {
     opacity: 0.6,
   },
-  
+
   forwardedTag: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
   },
   forwardedText: {
-    fontSize: 11,
+    fontSize: tokens.typography.fontSize.xs,
     fontStyle: 'italic',
-    color: MSG_COLORS.text.secondary,
+    color: tokens.colors.text.secondary,
     opacity: 0.7,
   },
-  
+
   mediaImage: {
     width: '100%',
     maxWidth: 240,
-    aspectRatio: 1,
-    borderRadius: 12,
+    // aspectRatio set dynamically from media dimensions
+    borderRadius: tokens.borderRadius.md,
     marginBottom: 4,
     overflow: 'hidden',
     alignSelf: 'flex-start',
+  },
+  uploadOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 4,
+    backgroundColor: tokens.colors.background.overlay,
+    borderRadius: tokens.borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadProgress: {
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    marginTop: 8,
   },
   mediaVideo: {
     position: 'relative',
     width: '100%',
     maxWidth: 240,
     aspectRatio: 1,
-    borderRadius: 12,
+    borderRadius: tokens.borderRadius.md,
     marginBottom: 4,
     overflow: 'hidden',
     alignSelf: 'flex-start',
   },
+  videoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  playButtonContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   playButton: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -25 }, { translateY: -25 }],
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  videoDuration: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  videoDurationText: {
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.medium,
   },
   playIcon: {
     fontSize: 24,
   },
-  
+
   mediaAudio: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -1303,73 +1441,69 @@ const createStyles = (tokens: any) => StyleSheet.create({
   audioPlayButton: {
     width: 32, // הגדלתי מ-28 ל-32
     height: 32, // הגדלתי מ-28 ל-32
-    borderRadius: 16,
+    borderRadius: tokens.borderRadius.md,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
   },
   audioPlayIcon: {
-    width: 24,
-    height: 24,
-    tintColor: '#FFFFFF', // לבן לנראות טובה יותר
+    width: 24, // הגדלתי מ-20 ל-24
+    height: 24, // הגדלתי מ-20 ל-24
+    tintColor: tokens.colors.text.primary,
+    opacity: 0.9,
   },
   audioTimeCurrent: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.medium,
     width: 30, // רוחב קבוע
     textAlign: 'right',
     flexShrink: 0,
   },
   audioWaveformWrapper: {
-    width: 130, // רוחב קצת יותר גדול
-    height: 32, // גובה יותר גדול
+    width: 110, // רוחב קבוע ל-waveform - כל ההקלטות יהיו באותו אורך
+    height: 28,
     flexShrink: 0, // לא להתכווץ
-    paddingHorizontal: 6,
+    paddingHorizontal: 5, // הוספתי padding משני הצדדים כדי שהנקודה לא תיחתך
   },
   audioWaveformContainer: {
     position: 'relative',
     width: '100%',
     height: '100%',
     justifyContent: 'center',
-    overflow: 'visible',
+    overflow: 'visible', // שיניתי ל-visible כדי שהנקודה לא תיחתך
   },
   audioWaveformBars: {
-    flexDirection: 'row', // משמאל לימין כמו שזמן זורם
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 2,
     height: '100%',
   },
   audioWaveformBar: {
-    width: 3, // רוחב מותאם
-    borderRadius: 2,
+    width: 3.5, // קצת יותר רחב
+    borderRadius: 1.75,
   },
   audioProgressIndicator: {
     position: 'absolute',
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginLeft: -6, // מרכוז הנקודה
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: -5, // מיקום מדויק כדי שהנקודה תהיה במרכז ה-bar
     top: '50%',
-    marginTop: -6,
+    marginTop: -5,
     zIndex: 10,
-    // צל לנקודה
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 3,
   },
   audioTimeTotal: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.medium,
     width: 30, // רוחב קבוע
     textAlign: 'right',
     flexShrink: 0,
   },
   audioSpeedButton: {
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    borderRadius: 6,
+    backgroundColor: tokens.colors.border.hover,
+    borderRadius: tokens.borderRadius.xs,
     paddingHorizontal: 6,
     paddingVertical: 4,
     width: 40, // רוחב קבוע
@@ -1378,50 +1512,68 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flexShrink: 0,
   },
   audioSpeedText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.primary,
   },
   myAudioTime: {
-    color: 'rgba(255, 255, 255, 0.9)', // לבן להודעות שלי
+    color: tokens.colors.text.primary,
+    opacity: 0.9,
   },
   theirAudioTime: {
-    color: 'rgba(255, 255, 255, 0.85)', // לבן גם להודעות של אחרים
+    color: tokens.colors.text.secondary,
   },
   audioDuration: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: tokens.typography.label.size,
+    fontWeight: tokens.typography.fontWeight.medium,
     minWidth: 40,
     textAlign: 'left',
   },
   myAudioDuration: {
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
   },
   theirAudioDuration: {
-    color: MSG_COLORS.text.primary,
+    color: tokens.colors.text.primary,
   },
-  
-  mediaDocument: {
+
+  // Document - פשוט בתוך הבועה הקיימת
+  documentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    minWidth: 150,
+    justifyContent: 'flex-start',
+    gap: 14,
+    minWidth: 200,
+    paddingVertical: 6,
   },
-  documentIcon: {
-    fontSize: 24,
+  documentTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 4,
   },
   documentName: {
-    fontSize: 14,
-    flex: 1,
-    color: MSG_COLORS.text.primary,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.medium,
+    color: tokens.colors.text.primary,
   },
-  
+  documentSize: {
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
+  },
+  downloadButton: {
+    width: 36,
+    height: 36,
+    borderRadius: tokens.borderRadius.md,
+    backgroundColor: tokens.colors.border.hover,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   messageText: {
-    fontSize: 15,
-    lineHeight: 22,
+    fontSize: tokens.typography.body.size,
+    lineHeight: Math.round(tokens.typography.body.size * tokens.typography.lineHeight.normal),
     marginTop: 0,
     marginBottom: 0,
-    color: '#FFFFFF',
+    color: tokens.colors.text.primary,
   },
   messageTextWithMedia: {
     marginTop: 8,
@@ -1429,20 +1581,20 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   // Both sent and received have white text
   myMessageText: {
-    color: '#FFFFFF', // text-white
+    color: tokens.colors.text.inverse,
   },
   theirMessageText: {
-    color: '#FFFFFF', // text-white
+    color: tokens.colors.text.primary,
   },
   deletedText: {
     fontStyle: 'italic',
     opacity: 0.6,
   },
-  
+
   metadata: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 4,
     gap: 4,
     justifyContent: 'flex-start',
   },
@@ -1452,190 +1604,92 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   // text-xs text-gray-500
   timeText: {
-    fontSize: 11,
+    fontSize: tokens.typography.fontSize.xs,
     opacity: 0.8,
   },
   myTimeText: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: tokens.colors.text.inverse,
+    opacity: 0.85,
   },
   theirTimeText: {
-    color: MSG_COLORS.text.tertiary,
+    color: tokens.colors.text.tertiary,
   },
-  
-  // Reactions - בועה אחת לכל האימוג'ים
+
+  metadataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  statusIcon: {
+    marginLeft: 2,
+    opacity: 0.8,
+  },
+  sendErrorText: {
+    fontSize: tokens.typography.fontSize.xs,
+    color: tokens.colors.text.danger,
+    fontStyle: 'italic',
+  },
+  // Reactions - bg-[#2a2a2a] border border-[#3a3a3a] rounded-full
   reactionsContainer: {
-    marginTop: -6,
-    marginBottom: 4,
-    paddingHorizontal: 4,
-  },
-  singleReactionBubble: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: MSG_COLORS.background.tertiary,
-    borderRadius: 14,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: '#3a3a3a',
-  },
-  reactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: tokens.spacing.xs,
+    marginTop: tokens.spacing.xs,
+    marginBottom: tokens.spacing.xs,
+    paddingHorizontal: tokens.spacing.xs,
   },
   reactionBubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: MSG_COLORS.background.tertiary,
-    borderRadius: 50,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    gap: 4,
+    backgroundColor: tokens.colors.selection.subtle,
+    borderRadius: tokens.borderRadius.full,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    gap: tokens.spacing.xs,
     borderWidth: 1,
-    borderColor: '#3a3a3a',
-  },
-  moreReactionsText: {
-    color: MSG_COLORS.text.secondary,
-    fontSize: 11,
-    fontWeight: '600',
-    marginLeft: 2,
+    borderColor: tokens.colors.border.primary,
   },
   myReaction: {
-    backgroundColor: MSG_COLORS.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderWidth: 1,
-    borderColor: MSG_COLORS.accent,
+    borderColor: tokens.colors.primary.main,
   },
   reactionEmoji: {
-    fontSize: 14,
+    fontSize: tokens.typography.fontSize.sm,
   },
   reactionCount: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: MSG_COLORS.text.secondary,
-    marginLeft: 1,
-    marginRight: 4,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.medium,
+    color: tokens.colors.text.secondary,
   },
-  
+  reactionMore: {
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.medium,
+    color: tokens.colors.text.secondary,
+    marginLeft: 2,
+  },
+
   systemMessageContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 16,
-    paddingHorizontal: 16,
+    marginVertical: tokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.md,
   },
   systemMessageLine: {
     flex: 1,
-    height: 1,
-    backgroundColor: MSG_COLORS.text.tertiary,
-    opacity: 0.3,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: tokens.colors.border.divider,
   },
   systemMessageText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: MSG_COLORS.text.secondary,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.medium,
+    color: tokens.colors.text.tertiary,
     paddingHorizontal: 12,
     paddingVertical: 4,
     textAlign: 'center',
-    backgroundColor: MSG_COLORS.background.tertiary,
-    borderRadius: 12,
+    backgroundColor: tokens.colors.border.divider,
+    borderRadius: tokens.borderRadius.lg,
     overflow: 'hidden',
-  },
-
-  // Poll (DesignTokens)
-  pollContainer: {
-    marginTop: 2,
-    paddingTop: 2,
-  },
-  pollHint: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    textAlign: 'right',
-    marginBottom: tokens.spacing.sm,
-  },
-  pollQuestion: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.extrabold,
-    lineHeight: 22,
-    marginBottom: tokens.spacing.md,
-    textAlign: 'right',
-  },
-  pollEmptyState: {
-    borderWidth: 1,
-    borderRadius: tokens.borderRadius.md,
-    paddingVertical: tokens.spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pollEmptyText: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    textAlign: 'center',
-  },
-  pollOption: {
-    borderWidth: 1,
-    borderRadius: tokens.borderRadius.md,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-  },
-  pollOptionRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: tokens.spacing.sm,
-  },
-  pollOptionText: {
-    flex: 1,
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.bold,
-    textAlign: 'right',
-  },
-  pollOptionCount: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.extrabold,
-    minWidth: 22,
-    textAlign: 'left',
-  },
-  pollBarTrack: {
-    marginTop: 8,
-    height: 3,
-    borderRadius: tokens.borderRadius.full,
-    overflow: 'hidden',
-  },
-  pollBarFill: {
-    height: '100%',
-    borderRadius: tokens.borderRadius.full,
-  },
-  pollVotesCount: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    textAlign: 'right',
-    marginTop: tokens.spacing.sm,
-    marginBottom: tokens.spacing.xs,
-  },
-  pollDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    marginVertical: tokens.spacing.sm,
-  },
-  pollViewVotesBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  pollViewVotesText: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.primary.main,
-  },
-  pollVoteBtn: {
-    minWidth: 84,
-    borderWidth: 1,
-    borderRadius: tokens.borderRadius.md,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-end',
   },
 });
 

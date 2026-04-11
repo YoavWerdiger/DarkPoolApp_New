@@ -163,7 +163,10 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY') || 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC'
+    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY')
+    if (!benzingaApiKey) {
+      throw new Error('BENZINGA_API_KEY not configured')
+    }
     
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration')
@@ -330,6 +333,7 @@ serve(async (req) => {
     })
   }
 })
+
 
 
 

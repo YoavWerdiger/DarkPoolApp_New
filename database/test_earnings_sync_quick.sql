@@ -19,3 +19,4 @@ SELECT * FROM trigger_earnings_sync(
 
 
 
+

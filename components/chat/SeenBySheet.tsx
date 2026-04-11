@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { User, X, EyeOff } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
+import { logger } from '../../utils/logger';
 
 interface SeenByUser {
   id: string;
@@ -37,23 +38,13 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    console.log('🔍 SeenBySheet: useEffect triggered:', {
-      visible,
-      messageId
-    });
-    
     if (visible) {
-      console.log('🎯 SeenBySheet: Modal is now visible, processing...');
       if (messageId) {
-        console.log('📊 SeenBySheet: Found messageId, loading viewers...');
         loadUsers();
       } else {
-        console.log('⚠️ SeenBySheet: Visible but no messageId - showing empty state');
-        setUsers([]); // וודא שusers ריק
-        setLoading(false); // וודא שלא מציג loading
+        setUsers([]);
+        setLoading(false);
       }
-    } else {
-      console.log('🚫 SeenBySheet: Modal is now hidden');
     }
   }, [visible, messageId]);
 
@@ -62,32 +53,22 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
     
     setLoading(true);
     try {
-      console.log('🎯 SeenBySheet: Loading message viewers using new function...');
-      
-      // Use the new getMessageViewers function
       const { data: viewersData, error: viewersError } = await supabase
         .rpc('get_message_viewers', { message_uuid: messageId });
-      
-      console.log('🔍 SeenBySheet: Viewers data:', viewersData);
-      console.log('🔍 SeenBySheet: Viewers error:', viewersError);
 
       if (viewersData && viewersData.length > 0) {
-        console.log('✅ SeenBySheet: Successfully loaded viewers from new function');
         const usersWithTimestamp: SeenByUser[] = viewersData.map(viewer => ({
           id: viewer.user_id,
           full_name: viewer.full_name || 'משתמש',
           profile_picture: viewer.profile_picture,
           read_at: viewer.viewed_at || messageTimestamp,
         }));
-        
-        console.log('📋 SeenBySheet: Final users with timestamp:', usersWithTimestamp);
         setUsers(usersWithTimestamp);
       } else {
-        console.log('⚠️ SeenBySheet: No viewers found, showing empty state');
         setUsers([]);
       }
     } catch (error) {
-      console.error('❌ SeenBySheet: Error loading viewers:', error);
+      logger.error('SeenBySheet', 'Failed to load seen-by users', error);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -153,14 +134,9 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
     </View>
   );
 
-  console.log('🔍 SeenBySheet: Rendering component, visible:', visible);
-  
   if (!visible) {
-    console.log('🚫 SeenBySheet: Not visible, returning null');
     return null;
   }
-  
-  console.log('✅ SeenBySheet: Component is visible, rendering Modal');
 
   return (
     <Modal
@@ -168,8 +144,6 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
       transparent={true}
       animationType="fade"
       onRequestClose={onClose}
-      onShow={() => console.log('🎭 SeenBySheet: Modal onShow triggered')}
-      onDismiss={() => console.log('🚫 SeenBySheet: Modal onDismiss triggered')}
     >
       <View className="flex-1 bg-black/80 justify-center items-center px-6">
         {/* Backdrop */}

@@ -1,6 +1,30 @@
 import { supabase } from './supabase';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as base64js from 'base64-js';
+import { logger } from '../utils/logger';
+
+const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
+
+export interface MediaFile {
+  id: string;
+  uri: string;
+  type: 'image' | 'video' | 'audio' | 'document';
+  name?: string;
+  size?: number;
+  duration?: number;
+  thumbnail_url?: string;
+  waveformData?: number[];
+}
+
+export interface MediaMetadata {
+  file_name?: string;
+  file_size?: number;
+  content_type?: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  [key: string]: any;
+}
 
 export interface LessonMedia {
   id?: string;
@@ -30,13 +54,13 @@ class MediaService {
         .single();
 
       if (error) {
-        console.error('Error saving lesson media:', error);
+        logger.error('MediaService', 'Error saving lesson media', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in saveLessonMedia:', error);
+      logger.error('MediaService', 'Error in saveLessonMedia', error);
       return null;
     }
   }
@@ -53,13 +77,13 @@ class MediaService {
         .single();
 
       if (error) {
-        console.error('Error getting lesson media:', error);
+        logger.error('MediaService', 'Error getting lesson media', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getLessonMedia:', error);
+      logger.error('MediaService', 'Error in getLessonMedia', error);
       return null;
     }
   }
@@ -75,13 +99,13 @@ class MediaService {
         .order('lesson_id');
 
       if (error) {
-        console.error('Error getting course media:', error);
+        logger.error('MediaService', 'Error getting course media', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getCourseMedia:', error);
+      logger.error('MediaService', 'Error in getCourseMedia', error);
       return [];
     }
   }
@@ -97,13 +121,13 @@ class MediaService {
         .single();
 
       if (error) {
-        console.error('Error updating lesson media:', error);
+        logger.error('MediaService', 'Error updating lesson media', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in updateLessonMedia:', error);
+      logger.error('MediaService', 'Error in updateLessonMedia', error);
       return null;
     }
   }
@@ -112,10 +136,10 @@ class MediaService {
   async updateLessonDuration(courseId: string, lessonId: string, durationSeconds: number): Promise<boolean> {
     try {
       const durationMinutes = Math.round(durationSeconds / 60);
-      
+
       const { error } = await supabase
         .from('lesson_media_links')
-        .update({ 
+        .update({
           duration_minutes: durationMinutes,
           updated_at: new Date().toISOString()
         })
@@ -123,14 +147,14 @@ class MediaService {
         .eq('lesson_id', lessonId);
 
       if (error) {
-        console.error('Error updating lesson duration:', error);
+        logger.error('MediaService', 'Error updating lesson duration', error);
         return false;
       }
 
-      console.log('✅ Updated lesson duration:', { courseId, lessonId, durationMinutes });
+      
       return true;
     } catch (error) {
-      console.error('Error in updateLessonDuration:', error);
+      logger.error('MediaService', 'Error in updateLessonDuration', error);
       return false;
     }
   }
@@ -144,13 +168,13 @@ class MediaService {
         .eq('id', mediaId);
 
       if (error) {
-        console.error('Error deleting lesson media:', error);
+        logger.error('MediaService', 'Error deleting lesson media', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in deleteLessonMedia:', error);
+      logger.error('MediaService', 'Error in deleteLessonMedia', error);
       return false;
     }
   }
@@ -266,7 +290,7 @@ class MediaService {
 
       return true;
     } catch (error) {
-      console.error('Error in createWhalesCourseMedia:', error);
+      logger.error('MediaService', 'Error in createWhalesCourseMedia', error);
       return false;
     }
   }
@@ -286,7 +310,7 @@ class MediaService {
       const youtubeId = youtubeIdMatch ? youtubeIdMatch[1] : null;
 
       if (!youtubeId) {
-        console.error('Invalid YouTube URL:', youtubeUrl);
+        logger.error('MediaService', 'Invalid YouTube URL');
         return null;
       }
 
@@ -304,7 +328,7 @@ class MediaService {
 
       return await this.saveLessonMedia(media);
     } catch (error) {
-      console.error('Error in createDavidTrainingLessonMedia:', error);
+      logger.error('MediaService', 'Error in createDavidTrainingLessonMedia', error);
       return null;
     }
   }
@@ -317,58 +341,43 @@ class MediaService {
     error?: string;
   }> {
     try {
-      console.log('📤 MediaService: Uploading media:', { uri, type });
-      
-      // יצירת שם קובץ ייחודי
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+
+      if (!fileInfo.exists) {
+        return { success: false, error: 'File does not exist' };
+      }
+
+      if (fileInfo.size && fileInfo.size > MAX_UPLOAD_SIZE) {
+        return { success: false, error: `File too large (max ${MAX_UPLOAD_SIZE / 1024 / 1024}MB)` };
+      }
+
       const timestamp = Date.now();
       const fileExtension = uri.split('.').pop() || 'bin';
       const fileName = `${type}_${timestamp}.${fileExtension}`;
       const filePath = `chat-media/${fileName}`;
-      
-      console.log('📁 MediaService: File path:', filePath);
-      
-      // קריאת הקובץ כ-ArrayBuffer
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      console.log('📁 MediaService: File info:', fileInfo);
-      
-      if (!fileInfo.exists) {
-        throw new Error('File does not exist');
-      }
-      
-      console.log('📁 MediaService: Reading file as Base64...');
+
       const fileData = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      
-      console.log('📁 MediaService: File data length:', fileData.length);
-      
-      // המרה מ-Base64 ל-ArrayBuffer
+
       const bytes = base64js.toByteArray(fileData);
-      console.log('📁 MediaService: Bytes length:', bytes.length);
-      
-      // העלאה ל-Supabase Storage
-      console.log('📤 MediaService: Uploading to Supabase Storage...');
-      const { data, error } = await supabase.storage
+
+      const { error } = await supabase.storage
         .from('app-media')
         .upload(filePath, bytes, {
           contentType: this.getMimeType(type, fileExtension),
           upsert: false
         });
-      
+
       if (error) {
-        console.error('❌ MediaService: Upload error:', error);
+        logger.error('MediaService', 'Upload error', error);
         return { success: false, error: error.message };
       }
-      
-      console.log('✅ MediaService: Upload successful, data:', data);
-      
-      // קבלת URL ציבורי
+
       const { data: urlData } = supabase.storage
         .from('app-media')
         .getPublicUrl(filePath);
-      
-      console.log('✅ MediaService: Media uploaded successfully:', urlData.publicUrl);
-      
+
       return {
         success: true,
         url: urlData.publicUrl,
@@ -379,14 +388,14 @@ class MediaService {
         }
       };
     } catch (error) {
-      console.error('❌ MediaService: Upload error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      logger.error('MediaService', 'Upload error', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
-  
+
   private getMimeType(type: string, extension: string): string {
     const mimeTypes: Record<string, Record<string, string>> = {
       image: {
@@ -415,7 +424,7 @@ class MediaService {
         txt: 'text/plain'
       }
     };
-    
+
     return mimeTypes[type]?.[extension.toLowerCase()] || 'application/octet-stream';
   }
 }

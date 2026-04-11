@@ -4,8 +4,23 @@
 // ניהול State גלובלי של מערכת הצ'אט
 // ============================================
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
+import * as Clipboard from 'expo-clipboard';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const SMOOTH_INSERT = {
+  duration: 220,
+  create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+  update: { type: LayoutAnimation.Types.easeInEaseOut },
+};
+
 import {
   ChatGroup,
   ChatMessage,
@@ -20,6 +35,7 @@ import {
   chatMessageService,
   chatRealtimeService,
 } from '../services/chat';
+import { stopRateLimitCleanup } from '../services/chat/chatValidation';
 import { supabase } from '../services/supabase';
 import { Audio } from 'expo-av';
 
@@ -33,6 +49,9 @@ interface InitialUnreadInfo {
   lastReadMessageId: string | null;
 }
 
+/** מצב חיבור Realtime לצ'אט — לבאנרים ו-SLA למשתמש */
+export type ChatRealtimeConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'offline';
+
 interface ChatContextType {
   // State
   groups: ChatGroup[];
@@ -42,17 +61,22 @@ interface ChatContextType {
   isLoadingGroups: boolean;
   isLoadingMessages: boolean;
   isSendingMessage: boolean;
-  
+
+  /** true רק כשהערוץ הראשי מחובר (התנהגות קיימת) */
+  isConnected: boolean;
+  /** מפורט יותר מ-isConnected — לטקסטים שונים (מתחבר / מנסה שוב / אין חיבור) */
+  realtimeConnectionState: ChatRealtimeConnectionState;
+
   // Unread info when entering chat
   initialUnreadInfo: InitialUnreadInfo | null;
-  
+
   // Group Actions
   loadGroups: () => Promise<void>;
   selectGroup: (groupId: string) => Promise<void>;
   createGroup: (input: CreateChatGroupInput) => Promise<{ success: boolean; groupId?: string; error?: string }>;
   updateGroup: (groupId: string, input: UpdateChatGroupInput) => Promise<{ success: boolean; error?: string }>;
   leaveGroup: (groupId: string) => Promise<{ success: boolean; error?: string }>;
-  
+
   // Message Actions
   sendMessage: (input: SendChatMessageInput) => Promise<{ success: boolean; error?: string }>;
   loadMoreMessages: () => Promise<void>;
@@ -64,16 +88,18 @@ interface ChatContextType {
   removeReaction: (messageId: string, emoji: string) => Promise<void>;
   starMessage: (messageId: string, groupId: string) => Promise<void>;
   unstarMessage: (messageId: string) => Promise<void>;
-  
+
   // Typing
   setTyping: (groupId: string, isTyping: boolean) => Promise<void>;
-  
+
+  // Optimistic Media
+  addOptimisticMediaMessage: (message: ChatMessage) => void;
+  updateOptimisticMessage: (tempId: string, updates: Partial<ChatMessage>) => void;
+  removeOptimisticMessage: (tempId: string) => void;
+
   // Read Receipts
   markAsRead: (groupId: string, messageIds: string[]) => Promise<void>;
-  
-  // Realtime
-  isConnected: boolean;
-  
+
   // Unread
   totalUnreadCount: number;
 }
@@ -86,7 +112,7 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  
+
   // State
   const [groups, setGroups] = useState<ChatGroup[]>([]);
   const [currentGroup, setCurrentGroup] = useState<ChatGroupWithDetails | null>(null);
@@ -95,263 +121,359 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [realtimeConnectionState, setRealtimeConnectionState] =
+    useState<ChatRealtimeConnectionState>('connecting');
+  const isConnected = realtimeConnectionState === 'connected';
   const [initialUnreadInfo, setInitialUnreadInfo] = useState<InitialUnreadInfo | null>(null);
-  
+
   // Refs
+  const messagesRef = useRef<ChatMessage[]>([]);
   const messagesOffset = useRef(0);
   const hasMoreMessages = useRef(true);
   const currentGroupId = useRef<string | null>(null);
   const notificationSound = useRef<Audio.Sound | null>(null);
-  const personalDeletedIds = useRef<Set<string>>(new Set()); // הודעות שנמחקו אישית
-  
-  // ============================================
-  // Load notification sound
-  // ============================================
-  
-  useEffect(() => {
-    // קובץ הסאונד אופציונלי - אם לא קיים פשוט לא יהיה סאונד
-    async function loadSound() {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          require('../assets/sounds/notification.mp3')
-        );
-        notificationSound.current = sound;
-          } catch (error) {
-        console.log('⚠️ Could not load notification sound:', error);
-      }
-    }
-    
-    loadSound();
+  const personalDeletedIds = useRef<Set<string>>(new Set());
+  // C1: version counter to abort stale selectGroup calls
+  const selectVersion = useRef(0);
+  // C3: track IDs already processed to prevent triple-source duplicates
+  const processedMessageIds = useRef<Set<string>>(new Set());
+  // C4: ref-based lock to prevent concurrent loadMoreMessages calls
+  const isLoadingMoreRef = useRef(false);
+  const isLoadingAroundRef = useRef(false);
+  // L4: תור הודעות offline – נשמרות כשאין חיבור ונשלחות כשהחיבור חוזר
+  const offlineQueueRef = useRef<SendChatMessageInput[]>([]);
+  const isFlushing = useRef(false);
 
+  // Keep messagesRef in sync with state
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Read Receipts (debounced - batches calls within 500ms)
+  const pendingReadRef = useRef<{ groupId: string; messageIds: Set<string> } | null>(null);
+  const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushMarkAsRead = useCallback(async () => {
+    const pending = pendingReadRef.current;
+    pendingReadRef.current = null;
+    if (!user || !pending || pending.messageIds.size === 0) return;
+    try {
+      await chatMessageService.markMessagesAsRead(
+        { group_id: pending.groupId, message_ids: Array.from(pending.messageIds) },
+        user.id
+      );
+      setGroups(prev => prev.map(g =>
+        g.id === pending.groupId ? { ...g, unread_count: 0 } : g
+      ));
+    } catch (error) {
+      logger.error('ChatContext', 'Error marking as read', error);
+    }
+  }, [user]);
+
+  const markAsRead = useCallback(async (groupId: string, messageIds: string[]) => {
+    if (!user || messageIds.length === 0) return;
+
+    if (pendingReadRef.current?.groupId === groupId) {
+      messageIds.forEach(id => pendingReadRef.current!.messageIds.add(id));
+    } else {
+      if (pendingReadRef.current) {
+        await flushMarkAsRead();
+      }
+      pendingReadRef.current = { groupId, messageIds: new Set(messageIds) };
+    }
+
+    if (readTimerRef.current) clearTimeout(readTimerRef.current);
+    readTimerRef.current = setTimeout(flushMarkAsRead, 500);
+  }, [user, flushMarkAsRead]);
+
+  // Typing
+  const setTyping = useCallback(async (groupId: string, isTyping: boolean) => {
+    if (!user) return;
+    try {
+      await chatRealtimeService.setTypingStatus({ group_id: groupId, is_typing: isTyping }, user.id);
+    } catch (error) {
+      logger.error('ChatContext', 'Error sending typing status', error);
+    }
+  }, [user]);
+
+  // ============================================
+  // צליל התראה (אופציונלי) — אין קובץ mp3 ב-repo; כשתוסיף assets/sounds/notification.mp3 אפשר לטעון כאן עם Audio.Sound.createAsync(require(...))
+  // ============================================
+
+  useEffect(() => {
     return () => {
       notificationSound.current?.unloadAsync();
     };
   }, []);
-  
+
   // ============================================
   // Load groups
   // ============================================
-  
+
   const loadGroups = useCallback(async () => {
     if (!user) return;
-    
+
     setIsLoadingGroups(true);
     try {
       const { data, error } = await chatGroupService.getChatGroups(user.id);
       if (data) {
         setGroups(data);
       } else {
-        console.error('❌ Error loading groups:', error);
+        logger.error('ChatContext', 'Error loading groups', error);
       }
     } finally {
       setIsLoadingGroups(false);
     }
   }, [user]);
-  
+
+  // ============================================
+  // Shared helper: fetch reply_to data for a message (cached)
+  // ============================================
+  const replyToCacheRef = useRef<Map<string, ChatMessage['reply_to']>>(new Map());
+
+  const fetchReplyToData = useCallback(async (replyToMessageId: string): Promise<ChatMessage['reply_to'] | undefined> => {
+    const cached = replyToCacheRef.current.get(replyToMessageId);
+    if (cached) return cached;
+
+    try {
+      const { data: replyToMessage } = await supabase
+        .from('chat_messages')
+        .select(`
+          id,
+          content,
+          message_type,
+          media_url,
+          sender_id,
+          sender:users!chat_messages_sender_id_fkey (
+            id,
+            display_name
+          )
+        `)
+        .eq('id', replyToMessageId)
+        .single();
+
+      if (replyToMessage) {
+        const sender = Array.isArray(replyToMessage.sender)
+          ? replyToMessage.sender[0]
+          : replyToMessage.sender;
+        const result = {
+          message_id: replyToMessage.id,
+          content: replyToMessage.content,
+          message_type: replyToMessage.message_type,
+          media_url: replyToMessage.media_url,
+          sender_id: replyToMessage.sender_id,
+          sender_name: sender?.display_name || 'משתמש',
+        };
+        replyToCacheRef.current.set(replyToMessageId, result);
+        if (replyToCacheRef.current.size > 500) {
+          const firstKey = replyToCacheRef.current.keys().next().value;
+          if (firstKey) replyToCacheRef.current.delete(firstKey);
+        }
+        return result;
+      }
+    } catch (error) {
+      logger.error('ChatContext', 'Error loading reply_to message', error);
+    }
+    return undefined;
+  }, []);
+
   // ============================================
   // Select group
   // ============================================
-  
+
   const selectGroup = useCallback(async (groupId: string) => {
     if (!user) return;
-    
+
+    // Unsubscribe from previous group to prevent memory leak
+    if (currentGroupId.current && currentGroupId.current !== groupId) {
+      chatRealtimeService.unsubscribeFromGroup(currentGroupId.current);
+    }
+
+    // C2: bump version so any prior in-flight selectGroup call detects it's stale
+    const version = ++selectVersion.current;
+    processedMessageIds.current.clear();
+
+    // שימור הודעות אופטימיסטיות (בשליחה) לפני איפוס – מונע "היעלמות" כשחוזרים למסך
+    const optimisticsToKeep =
+      currentGroupId.current === groupId
+        ? messagesRef.current.filter(
+            (m) =>
+              m.id.startsWith('temp-') &&
+              m.sender_id === user.id &&
+              (m.is_sending || m.is_uploading)
+          )
+        : [];
+
     currentGroupId.current = groupId;
     setIsLoadingMessages(true);
     setMessages([]);
+    setTypingUsers([]);
     messagesOffset.current = 0;
     hasMoreMessages.current = true;
-    setInitialUnreadInfo(null); // איפוס
-    
+    setInitialUnreadInfo(null);
+
+    // משתנים שישמשו גם מחוץ ל-blocks
+    let savedUnreadCount = 0;
+    let savedLastReadMessageId: string | null = null;
+
     try {
       // Load group details
-      const { data: groupData } = await chatGroupService.getChatGroupDetails(groupId, user.id);
+      const { data: groupData, error: groupError } = await chatGroupService.getChatGroupDetails(groupId, user.id);
+      if (selectVersion.current !== version) return;
+      if (groupError) {
+        logger.error('ChatContext', 'Failed to load group details', groupError);
+      }
       if (groupData) {
         setCurrentGroup(groupData);
-        
+
         // שמירת מידע על הודעות לא נקראות לפני איפוס
-        const unreadCount = groupData.unread_count || 0;
-        const lastReadMessageId = groupData.last_read_message_id || null;
-        
-        console.log('📊 Initial unread info for group:', groupId);
-        console.log('📊   - unread_count:', unreadCount);
-        console.log('📊   - last_read_message_id:', lastReadMessageId ? lastReadMessageId.slice(0, 8) + '...' : 'null');
-        console.log('📊   - is_member:', !!groupData.my_role);
-        
-        if (unreadCount > 0) {
+        savedUnreadCount = groupData.unread_count || 0;
+        savedLastReadMessageId = groupData.last_read_message_id || null;
+
+        if (savedUnreadCount > 0) {
           setInitialUnreadInfo({
-            count: unreadCount,
-            lastReadMessageId: lastReadMessageId,
+            count: savedUnreadCount,
+            lastReadMessageId: savedLastReadMessageId,
           });
-          console.log('✅ Set initialUnreadInfo:', { count: unreadCount, lastReadMessageId: lastReadMessageId?.slice(0, 8) + '...' });
-        } else {
-          console.log('⚠️ No unread messages, initialUnreadInfo not set');
         }
       }
-      
+
       // Load messages
       const { data: messagesData } = await chatMessageService.getChatMessages(
         groupId,
         user.id,
         { limit: 50, offset: 0 }
       );
-      
+
+      if (selectVersion.current !== version) return; // C2: stale call, abort
       if (messagesData) {
-        setMessages(messagesData.messages);
-        messagesOffset.current = messagesData.messages.length;
+        // מיזוג הודעות אופטימיסטיות – התאמה אחד-לאחד (מונע איבוד הודעות שנשלחו במקביל)
+        const usedApiIndices = new Set();
+        const stillPending = optimisticsToKeep.filter((opt) => {
+          const optTime = new Date(opt.created_at).getTime();
+          const matchIdx = messagesData.messages.findIndex((api, idx) => {
+            if (usedApiIndices.has(idx)) return false;
+            if (api.sender_id !== user.id) return false;
+            if (Math.abs(new Date(api.created_at).getTime() - optTime) >= 15000) return false;
+            const contentMatch = api.content === opt.content;
+            const emptyContent = !(api.content || '').trim() && !(opt.content || '').trim();
+            const typeMatch = api.message_type === opt.message_type && emptyContent;
+            return contentMatch || typeMatch;
+          });
+          if (matchIdx !== -1) {
+            usedApiIndices.add(matchIdx);
+            return false;
+          }
+          return true;
+        });
+        const merged = stillPending.length > 0 ? [...stillPending, ...messagesData.messages] : messagesData.messages;
+
+        setMessages(merged);
+        messagesOffset.current = merged.length;
         hasMoreMessages.current = messagesData.has_more;
-        
-        
+
+        // ✅ ספירה אמיתית של הודעות לא נקראות (לא סומכים על unread_count מהשרת)
+        if (savedLastReadMessageId && messagesData.messages.length > 0) {
+          const lastReadIndex = messagesData.messages.findIndex(m => m.id === savedLastReadMessageId);
+          if (lastReadIndex !== -1) {
+            // ספירת הודעות שנוצרו אחרי ההודעה האחרונה שנקראה (ולא שלי)
+            const actualUnreadCount = messagesData.messages
+              .slice(0, lastReadIndex) // הודעות אחרי lastReadMessageId (FlatList inverted)
+              .filter(m => m.sender_id !== user.id) // לא הודעות שלי
+              .length;
+            
+            if (actualUnreadCount > 0 && actualUnreadCount !== savedUnreadCount) {
+              logger.debug('ChatContext', `Correcting unread count: server=${savedUnreadCount}, actual=${actualUnreadCount}`);
+              setInitialUnreadInfo({
+                count: actualUnreadCount,
+                lastReadMessageId: savedLastReadMessageId,
+              });
+            }
+          }
+        }
+
         // סימון הצ'אט כנקרא - תמיד! לא משנה מה הסטטוס של ההודעות
+        // ⚠️ messages[0] היא ההודעה הכי חדשה (FlatList inverted)
         if (messagesData.messages.length > 0) {
-          const lastMessageId = messagesData.messages[messagesData.messages.length - 1].id;
-          console.log('📖 Marking chat as read on enter, last message:', lastMessageId);
-          await chatMessageService.markChatAsRead(groupId, user.id, lastMessageId);
-          
+          const newestMessageId = messagesData.messages[0].id;
+          await chatMessageService.markChatAsRead(groupId, user.id, newestMessageId);
+
           // עדכון מקומי
-          setGroups(prev => prev.map(g => 
+          setGroups(prev => prev.map(g =>
             g.id === groupId ? { ...g, unread_count: 0, mentioned_count: 0 } : g
           ));
         }
       }
-      
+
+      if (selectVersion.current !== version) return; // C2: stale call, abort before subscribing
+
+      // M5: start typing cleanup only when actively in a chat room
+      chatRealtimeService.startTypingCleanup();
+
       // Subscribe to realtime updates
       chatRealtimeService.subscribeToGroup(groupId, user.id, {
         onMessage: async (message, eventType) => {
-          // #region agent log
-          const logData5 = {location:'ChatContext.tsx:220',message:'Realtime message received',data:{eventType,messageId:message.id,senderId:message.sender_id,isMyMessage:message.sender_id===user.id,hasReplyTo:!!message.reply_to_message_id,groupId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
-          console.log('🔍 DEBUG [C]:', JSON.stringify(logData5));
-          fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData5)}).catch(()=>{});
-          // #endregion
           if (eventType === 'INSERT') {
             // New message - מילוי reply_to אם יש
             let enrichedMessage = message;
             if (message.reply_to_message_id && !message.reply_to) {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:224',message:'Enriching reply_to for realtime message',data:{messageId:message.id,replyToId:message.reply_to_message_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-              // #endregion
-              try {
-                const { data: replyToMessage } = await supabase
-                  .from('chat_messages')
-                  .select(`
-                    id,
-      content,
-                    message_type,
-                    media_url,
-                    sender_id,
-                    sender:users!chat_messages_sender_id_fkey (
-                      id,
-                      display_name
-                    )
-                  `)
-                  .eq('id', message.reply_to_message_id)
-                  .single();
-                
-                if (replyToMessage) {
-                  const sender = Array.isArray(replyToMessage.sender) 
-                    ? replyToMessage.sender[0] 
-                    : replyToMessage.sender;
-                  enrichedMessage = {
-                    ...message,
-                    reply_to: {
-                      message_id: replyToMessage.id,
-                      content: replyToMessage.content,
-                      message_type: replyToMessage.message_type,
-                      media_url: replyToMessage.media_url,
-                      sender_id: replyToMessage.sender_id,
-                      sender_name: sender?.display_name || 'משתמש',
-                    },
-                  };
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:257',message:'Enriched reply_to successfully',data:{messageId:enrichedMessage.id,hasReplyTo:!!enrichedMessage.reply_to},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                  // #endregion
-                  console.log('📎 Enriched message with reply_to:', enrichedMessage.id);
-                }
-              } catch (error) {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:260',message:'Error enriching reply_to',data:{error:error instanceof Error?error.message:'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-                // #endregion
-                console.error('❌ Error loading reply_to message:', error);
+              const replyTo = await fetchReplyToData(message.reply_to_message_id);
+              if (replyTo) {
+                enrichedMessage = { ...message, reply_to: replyTo };
               }
             }
-            
-            // אם זו הודעה שלי, נחפש optimistic message ונחליף אותו
-            // אחרת, נוסיף הודעה חדשה
-            if (enrichedMessage.sender_id === user.id) {
-              // זו הודעה שלי - נחפש optimistic message ונחליף אותו
+
+            // C3: if server response already processed this message, skip realtime duplicate
+            if (processedMessageIds.current.has(enrichedMessage.id)) {
+              // Still update the message in-place (e.g., updated reply_to) but don't duplicate
+              setMessages(prev => prev.map(m => m.id === enrichedMessage.id ? { ...m, ...enrichedMessage } : m));
+            } else if (enrichedMessage.sender_id === user.id) {
+              // My message – find and replace its optimistic placeholder
+              processedMessageIds.current.add(enrichedMessage.id);
               setMessages(prev => {
-                // נחפש optimistic message (מתחיל ב-temp-)
-                // נחפש לפי reply_to_message_id קודם, ואז לפי תוכן וזמן
                 const optimisticIndex = prev.findIndex(m => {
                   if (!m.id.startsWith('temp-') || m.sender_id !== user.id) return false;
-                  
-                  // אם יש reply_to_message_id, נבדוק לפי זה
+
                   if (enrichedMessage.reply_to_message_id && m.reply_to_message_id) {
                     return m.reply_to_message_id === enrichedMessage.reply_to_message_id &&
-                           Math.abs(new Date(m.created_at).getTime() - new Date(enrichedMessage.created_at).getTime()) < 10000; // 10 שניות
+                      Math.abs(new Date(m.created_at).getTime() - new Date(enrichedMessage.created_at).getTime()) < 10000;
                   }
-                  
-                  // אחרת נבדוק לפי תוכן וזמן
+
                   return m.content === enrichedMessage.content &&
-                         Math.abs(new Date(m.created_at).getTime() - new Date(enrichedMessage.created_at).getTime()) < 10000; // 10 שניות
+                    Math.abs(new Date(m.created_at).getTime() - new Date(enrichedMessage.created_at).getTime()) < 10000;
                 });
-                
+
                 if (optimisticIndex !== -1) {
-                  // מצאנו optimistic message - נחליף אותו עם reply_to מה-optimistic אם יש
                   const optimisticMsg = prev[optimisticIndex];
                   const finalMessage = {
                     ...enrichedMessage,
-                    // שמור את reply_to מה-optimistic אם יש, אחרת מה-enriched
                     reply_to: optimisticMsg.reply_to || enrichedMessage.reply_to,
                   };
-                  // #region agent log
-                  const logData6 = {location:'ChatContext.tsx:306',message:'Realtime replacing optimistic',data:{tempId:optimisticMsg.id,realId:enrichedMessage.id,hasReplyTo:!!finalMessage.reply_to,replyToFromOptimistic:!!optimisticMsg.reply_to,replyToFromEnriched:!!enrichedMessage.reply_to},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-                  console.log('🔍 DEBUG [B]:', JSON.stringify(logData6));
-                  fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData6)}).catch(()=>{});
-                  // #endregion
-                  console.log('🔄 Replacing optimistic message with real one, preserving reply_to:', finalMessage.reply_to);
                   return prev.map((m, idx) => idx === optimisticIndex ? finalMessage : m);
                 } else {
-                  // לא מצאנו optimistic message - נבדוק אם ההודעה כבר קיימת
                   const existingIndex = prev.findIndex(m => m.id === enrichedMessage.id);
                   if (existingIndex !== -1) {
-                    // ההודעה כבר קיימת - נחליף אותה
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:315',message:'Realtime message already exists, replacing',data:{messageId:enrichedMessage.id,existingIndex},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-                    // #endregion
                     return prev.map((m, idx) => idx === existingIndex ? enrichedMessage : m);
                   }
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:297',message:'Realtime adding new message (no optimistic)',data:{messageId:enrichedMessage.id,hasReplyTo:!!enrichedMessage.reply_to},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                  // #endregion
-                  console.log('➕ Adding new message (no optimistic found), enriched reply_to:', enrichedMessage.reply_to);
-                  return [...prev, enrichedMessage];
+                  return [enrichedMessage, ...prev];
                 }
               });
             } else {
-              // זו הודעה של מישהו אחר - נבדוק אם היא כבר קיימת לפני הוספה
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:303',message:'Realtime adding other user message',data:{messageId:enrichedMessage.id,hasReplyTo:!!enrichedMessage.reply_to},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-              // #endregion
+              // Someone else's message
+              processedMessageIds.current.add(enrichedMessage.id);
               setMessages(prev => {
-                // בדיקה אם ההודעה כבר קיימת
                 const existingIndex = prev.findIndex(m => m.id === enrichedMessage.id);
                 if (existingIndex !== -1) {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:328',message:'Other user message already exists, replacing',data:{messageId:enrichedMessage.id,existingIndex},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-                  // #endregion
                   return prev.map((m, idx) => idx === existingIndex ? enrichedMessage : m);
                 }
-                // הוספה בתחילת המערך כי המערך בסדר יורד (חדשה לישנה)
+                LayoutAnimation.configureNext(SMOOTH_INSERT);
                 return [enrichedMessage, ...prev];
               });
             }
-            
+
             // Play sound if not from me
             if (enrichedMessage.sender_id !== user.id) {
               notificationSound.current?.replayAsync();
             }
-            
+
             // Auto mark as read
             if (currentGroupId.current === groupId) {
               markAsRead(groupId, [enrichedMessage.id]);
@@ -360,77 +482,68 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             // Updated message - מילוי reply_to אם יש
             let enrichedMessage = message;
             if (message.reply_to_message_id && !message.reply_to) {
-              try {
-                const { data: replyToMessage } = await supabase
-                  .from('chat_messages')
-                  .select(`
-                    id,
-        content,
-                    message_type,
-                    media_url,
-                    sender_id,
-                    sender:users!chat_messages_sender_id_fkey (
-                      id,
-                      display_name
-                    )
-                  `)
-                  .eq('id', message.reply_to_message_id)
-                  .single();
-                
-                if (replyToMessage) {
-                  const sender = Array.isArray(replyToMessage.sender) 
-                    ? replyToMessage.sender[0] 
-                    : replyToMessage.sender;
-                  enrichedMessage = {
-                    ...message,
-                    reply_to: {
-                      message_id: replyToMessage.id,
-                      content: replyToMessage.content,
-                      message_type: replyToMessage.message_type,
-                      media_url: replyToMessage.media_url,
-                      sender_id: replyToMessage.sender_id,
-                      sender_name: sender?.display_name || 'משתמש',
-                    },
-                  };
-      }
-    } catch (error) {
-                console.error('❌ Error loading reply_to message:', error);
+              const replyTo = await fetchReplyToData(message.reply_to_message_id);
+              if (replyTo) {
+                enrichedMessage = { ...message, reply_to: replyTo };
               }
             }
-            
-            setMessages(prev => prev.map(m => m.id === enrichedMessage.id ? enrichedMessage : m));
+
+            // עדכון ההודעה אבל שמירה על הריאקציות המקומיות (optimistic)
+            setMessages(prev => prev.map(m => {
+              if (m.id === enrichedMessage.id) {
+                // שמור על הריאקציות המקומיות - הן עודכנו אופטימיסטית
+                return {
+                  ...enrichedMessage,
+                  reactions: m.reactions,
+                  reactions_count: m.reactions_count,
+                };
+              }
+              return m;
+            }));
           } else if (eventType === 'DELETE') {
             // Deleted message
             setMessages(prev => prev.filter(m => m.id !== message.id));
           }
         },
         onReaction: async (reaction, eventType) => {
-          // עדכון ריאקציות בהודעה
-          console.log('👍 Reaction event received:', eventType, reaction.emoji, 'for message', reaction.message_id);
+          // התעלם לחלוטין מ-real-time events של הריאקציות שלי - נטפל בהן אופטימיסטית בלבד
+          if (reaction.user_id === user.id) {
+            logger.debug('ChatContext', 'Skipping own reaction event - handled optimistically');
+            return;
+          }
+          
+          logger.debug('ChatContext', `Processing other user reaction: ${eventType} ${reaction.emoji}`);
           
           setMessages(prev => prev.map(m => {
             if (m.id === reaction.message_id) {
               const currentReactions = m.reactions || [];
               const reactionGroup = currentReactions.find(r => r.emoji === reaction.emoji);
-              
+
               if (eventType === 'INSERT') {
+                // בדיקה אם המשתמש כבר קיים בריאקציה (בדיקה נוספת)
+                const userAlreadyReacted = reactionGroup?.users?.some(u => u.id === reaction.user_id);
+                if (userAlreadyReacted) {
+                  // כבר קיים, לא צריך לעדכן שוב
+                  return m;
+                }
+
                 // הוספת ריאקציה
                 if (reactionGroup) {
                   // אם יש כבר ריאקציה עם האימוג'י הזה
                   return {
                     ...m,
-                    reactions: currentReactions.map(r => 
+                    reactions: currentReactions.map(r =>
                       r.emoji === reaction.emoji
-                        ? { 
-                            ...r, 
-                            count: r.count + 1, 
-                            reacted_by_me: r.reacted_by_me || reaction.user_id === user.id,
-                            users: [...r.users, {
-                              id: reaction.user_id,
-                              name: reaction.user?.display_name || 'משתמש',
-                              profile_picture: reaction.user?.profile_picture,
-                            }]
-                          }
+                        ? {
+                          ...r,
+                          count: r.count + 1,
+                          reacted_by_me: r.reacted_by_me || reaction.user_id === user.id,
+                          users: [...r.users, {
+                            id: reaction.user_id,
+                            name: reaction.user?.display_name || 'משתמש',
+                            profile_picture: reaction.user?.profile_picture,
+                          }]
+                        }
                         : r
                     ),
                     reactions_count: (m.reactions_count || 0) + 1
@@ -457,25 +570,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 }
               } else {
                 // DELETE - הסרת ריאקציה
+                // בדיקה נוספת אם המשתמש עדיין קיים
+                const userExistsInReaction = reactionGroup?.users?.some(u => u.id === reaction.user_id);
+                if (!userExistsInReaction) {
+                  // המשתמש לא קיים, לא צריך לעדכן
+                  return m;
+                }
+
                 if (reactionGroup && reactionGroup.count > 1) {
                   // עדיין יש ריאקציות אחרות עם האימוג'י הזה
                   return {
                     ...m,
-                    reactions: currentReactions.map(r => 
+                    reactions: currentReactions.map(r =>
                       r.emoji === reaction.emoji
-                        ? { 
-                            ...r, 
-                            count: r.count - 1, 
-                            reacted_by_me: r.reacted_by_me && reaction.user_id !== user.id,
-                            users: r.users.filter(u => u.id !== reaction.user_id)
-                          }
+                        ? {
+                          ...r,
+                          count: r.count - 1,
+                          reacted_by_me: r.reacted_by_me && reaction.user_id !== user.id,
+                          users: r.users.filter(u => u.id !== reaction.user_id)
+                        }
                         : r
                     ),
                     reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
                   };
                 } else {
                   // הסרת הריאקציה האחרונה עם האימוג'י הזה
-            return {
+                  return {
                     ...m,
                     reactions: currentReactions.filter(r => r.emoji !== reaction.emoji),
                     reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
@@ -487,223 +607,226 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           }));
         },
         onTyping: (indicators) => {
-          setTypingUsers(indicators);
+          setTypingUsers(indicators.map(i => ({
+            ...i,
+            userName: i.user?.display_name
+          })));
         },
-        onMember: (data, eventType) => {
-          // Member added/removed/updated
-          if (currentGroup) {
-            // Reload group details
-            chatGroupService.getChatGroupDetails(groupId, user.id).then(({ data }) => {
-              if (data) {
-                setCurrentGroup(data);
-              }
-            });
-          }
+        onMember: (_data, _eventType) => {
+          chatGroupService.getChatGroupDetails(groupId, user.id).then(({ data: groupDetails, error: detailsError }) => {
+            if (detailsError) {
+              logger.error('ChatContext', 'onMember: failed to reload group details', detailsError);
+            }
+            if (groupDetails && currentGroupId.current === groupId) {
+              setCurrentGroup(groupDetails);
+            }
+          });
         },
         onGroup: (data) => {
-          // Group updated
-          if (currentGroup) {
-            setCurrentGroup({ ...currentGroup, ...data });
-          }
+          // Use functional update to avoid stale closure on currentGroup
+          setCurrentGroup(prev => prev ? { ...prev, ...data } : prev);
         },
       });
-      
-      setIsConnected(true);
     } catch (error) {
-      console.error('❌ Error selecting group:', error);
+      logger.error('ChatContext', 'Error selecting group', error);
     } finally {
       setIsLoadingMessages(false);
     }
   }, [user]);
-  
+
   // ============================================
   // Load more messages
   // ============================================
-  
+
+  const MAX_MESSAGES_IN_MEMORY = 500;
+
   const loadMoreMessages = useCallback(async () => {
-    if (!user || !currentGroupId.current || !hasMoreMessages.current || isLoadingMessages) {
+    // C4: ref-based lock prevents concurrent calls (state updates are async)
+    if (!user || !currentGroupId.current || !hasMoreMessages.current || isLoadingMoreRef.current) {
       return;
     }
 
+    isLoadingMoreRef.current = true;
     setIsLoadingMessages(true);
     try {
+      const oldestMessage = messagesRef.current[messagesRef.current.length - 1];
+      const cursor = oldestMessage?.created_at;
+
       const { data } = await chatMessageService.getChatMessages(
         currentGroupId.current,
         user.id,
-        { limit: 50, offset: messagesOffset.current }
+        { limit: 50, before: cursor }
       );
-      
+
       if (data) {
         setMessages(prev => {
-          // נסיר הודעות כפולות - נשמור רק את ההודעות החדשות שלא קיימות
           const existingIds = new Set(prev.map(m => m.id));
           const newMessages = data.messages.filter(m => !existingIds.has(m.id));
-          // #region agent log
-          if (newMessages.length !== data.messages.length) {
-            fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:518',message:'Filtered duplicate messages in loadMoreMessages',data:{totalMessages:data.messages.length,newMessages:newMessages.length,filtered:data.messages.length-newMessages.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
+          const combined = [...prev, ...newMessages];
+          // C4: sliding window – trim oldest messages (end of array) when history grows too large.
+          // In inverted FlatList index 0 = newest, so slice from the start keeps the newest.
+          if (combined.length > MAX_MESSAGES_IN_MEMORY) {
+            return combined.slice(0, MAX_MESSAGES_IN_MEMORY);
           }
-          // #endregion
-          // הודעות ישנות יותר בסוף המערך (מוצגות בראש עם inverted)
-          return [...prev, ...newMessages];
+          return combined;
         });
-        messagesOffset.current += data.messages.length;
         hasMoreMessages.current = data.has_more;
       }
     } finally {
+      isLoadingMoreRef.current = false;
       setIsLoadingMessages(false);
     }
-  }, [user, isLoadingMessages]);
+  }, [user]);
 
-  // טעינת הודעות סביב הודעה מסוימת (לפני ואחרי)
   const loadMessagesAround = useCallback(async (messageId: string) => {
     if (!user || !currentGroupId.current) {
       return { success: false, error: 'לא מחובר או אין קבוצה נבחרת' };
     }
 
+    if (isLoadingAroundRef.current) {
+      return { success: false, error: 'טעינה בתהליך' };
+    }
+    isLoadingAroundRef.current = true;
+
     try {
-      // נטען את ההודעה מהמסד הנתונים
-      const { data: messageData, error: messageError } = await supabase
+      // L5: cursor-based – מצא את created_at של ההודעה ואז טען 50 לפני ו-50 אחרי
+      const { data: anchor, error: anchorError } = await supabase
         .from('chat_messages')
         .select('created_at')
         .eq('id', messageId)
         .eq('group_id', currentGroupId.current)
         .single();
 
-      if (messageError || !messageData) {
-        console.error('❌ Error loading message:', messageError);
+      if (anchorError || !anchor) {
         return { success: false, error: 'הודעה לא נמצאה' };
       }
 
-      const messageDate = new Date(messageData.created_at);
-      const beforeDate = new Date(messageDate.getTime() - 7 * 24 * 60 * 60 * 1000); // שבוע לפני
-      const afterDate = new Date(messageDate.getTime() + 7 * 24 * 60 * 60 * 1000); // שבוע אחרי
+      const anchorTs = anchor.created_at;
 
-      // נטען הודעות סביב ההודעה
-      const { data } = await chatMessageService.getChatMessages(
+      // שאילתה A: הודעות ישנות יותר (כולל ה-anchor עצמה)
+      const olderPromise = chatMessageService.getChatMessages(
         currentGroupId.current,
         user.id,
-        { limit: 200, offset: 0 },
-        {
-          date_from: beforeDate.toISOString(),
-          date_to: afterDate.toISOString(),
-        }
+        { limit: 50, before: new Date(new Date(anchorTs).getTime() + 1).toISOString() }
       );
 
-      if (data && data.messages.length > 0) {
-        console.log('✅ Loaded', data.messages.length, 'messages around target message');
-        
-        // נמיזג את ההודעות עם ההודעות הקיימות
+      // שאילתה B: הודעות חדשות יותר
+      const newerPromise = chatMessageService.getChatMessages(
+        currentGroupId.current,
+        user.id,
+        { limit: 50, after: anchorTs }
+      );
+
+      const [{ data: older }, { data: newer }] = await Promise.all([olderPromise, newerPromise]);
+
+      const combined = [
+        ...(newer?.messages || []),
+        ...(older?.messages || []),
+      ];
+
+      if (combined.length > 0) {
         setMessages(prev => {
           const existingIds = new Set(prev.map(m => m.id));
-          const newMessages = data.messages.filter(m => !existingIds.has(m.id));
-          
-          if (newMessages.length > 0) {
-            // נמיין את כל ההודעות לפי תאריך (מהחדש לישן) עבור FlatList inverted
-            const allMessages = [...prev, ...newMessages].sort((a, b) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
-            return allMessages;
-          }
-          
-          return prev;
+          const fresh = combined.filter(m => !existingIds.has(m.id));
+          if (fresh.length === 0) return prev;
+
+          const all = [...prev, ...fresh].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          messagesOffset.current = all.length;
+          return all;
         });
-        
+
         return { success: true };
       }
 
       return { success: false, error: 'לא נמצאו הודעות' };
     } catch (error: any) {
-      console.error('❌ Error loading messages around:', error);
+      logger.error('ChatContext', 'Error loading messages around', error);
       return { success: false, error: error.message };
+    } finally {
+      isLoadingAroundRef.current = false;
     }
   }, [user]);
-  
+
   // ============================================
   // Create group
   // ============================================
-  
+
   const createGroup = useCallback(async (input: CreateChatGroupInput) => {
     if (!user) return { success: false, error: 'לא מחובר' };
-    
+
     const { data, error } = await chatGroupService.createChatGroup(input, user.id);
-    
+
     if (data) {
       // Add to groups list
       setGroups(prev => [data, ...prev]);
       return { success: true, groupId: data.id };
     }
-    
+
     return { success: false, error: error?.message };
   }, [user]);
-  
+
   // ============================================
   // Update group
   // ============================================
-  
+
   const updateGroup = useCallback(async (groupId: string, input: UpdateChatGroupInput) => {
     if (!user) return { success: false, error: 'לא מחובר' };
-    
+
     const { data, error } = await chatGroupService.updateChatGroup(groupId, input, user.id);
-    
+
     if (data) {
       // Update in groups list
       setGroups(prev => prev.map(g => g.id === groupId ? { ...g, ...data } : g));
-      
+
       // Update current group if selected
       if (currentGroup?.id === groupId) {
         setCurrentGroup({ ...currentGroup, ...data });
       }
-      
+
       return { success: true };
     }
-    
+
     return { success: false, error: error?.message };
   }, [user, currentGroup]);
-  
-  // ============================================
-  // Leave group
-  // ============================================
-  
+
+
+
   const leaveGroup = useCallback(async (groupId: string) => {
     if (!user) return { success: false, error: 'לא מחובר' };
-    
+
     const { error } = await chatGroupService.removeGroupMember(groupId, user.id, user.id);
-    
+
     if (!error) {
       // Remove from groups list
       setGroups(prev => prev.filter(g => g.id !== groupId));
-      
+
       // Clear current group if selected
       if (currentGroup?.id === groupId) {
         setCurrentGroup(null);
         setMessages([]);
         chatRealtimeService.unsubscribeFromGroup(groupId);
       }
-      
+
       return { success: true };
     }
-    
+
     return { success: false, error: error.message };
   }, [user, currentGroup]);
-  
+
   // ============================================
   // Send message
   // ============================================
-  
+
   const sendMessage = useCallback(async (input: SendChatMessageInput) => {
-    // #region agent log
-    const logData = {location:'ChatContext.tsx:638',message:'sendMessage called',data:{userId:user?.id,groupId:input.group_id,content:input.content?.substring(0,50),messageType:input.message_type,replyTo:input.reply_to_message_id,hasMentions:!!input.mentioned_users?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-    console.log('🔍 DEBUG [A]:', JSON.stringify(logData));
-    fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData)}).catch(()=>{});
-    // #endregion
     if (!user) return { success: false, error: 'לא מחובר' };
-    
+
     setIsSendingMessage(true);
-    
-    // מציאת הודעת המקור עבור reply_to
+
     let replyToData: ChatMessage['reply_to'] | undefined;
     if (input.reply_to_message_id) {
-      const originalMessage = messages.find(m => m.id === input.reply_to_message_id);
+      const originalMessage = messagesRef.current.find(m => m.id === input.reply_to_message_id);
       if (originalMessage) {
         replyToData = {
           message_id: originalMessage.id,
@@ -713,68 +836,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           sender_id: originalMessage.sender_id,
           sender_name: originalMessage.sender?.display_name || 'משתמש',
         };
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:648',message:'Found reply_to in local messages',data:{replyToId:replyToData.message_id,replyToContent:replyToData.content?.substring(0,30)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        console.log('📎 Found reply_to message for optimistic update:', replyToData);
       } else {
-        // אם לא מצאנו את ההודעה, נטען אותה
-        try {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:658',message:'Loading reply_to from DB',data:{replyToId:input.reply_to_message_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-          const { data: replyToMessage } = await supabase
-            .from('chat_messages')
-            .select(`
-              id,
-              content,
-              message_type,
-              media_url,
-              sender_id,
-              sender:users!chat_messages_sender_id_fkey (
-                id,
-                display_name
-              )
-            `)
-            .eq('id', input.reply_to_message_id)
-            .single();
-          
-          if (replyToMessage) {
-            const sender = Array.isArray(replyToMessage.sender) 
-              ? replyToMessage.sender[0] 
-              : replyToMessage.sender;
-            replyToData = {
-              message_id: replyToMessage.id,
-              content: replyToMessage.content,
-              message_type: replyToMessage.message_type,
-              media_url: replyToMessage.media_url,
-              sender_id: replyToMessage.sender_id,
-              sender_name: sender?.display_name || 'משתמש',
-            };
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:688',message:'Loaded reply_to from DB',data:{replyToId:replyToData.message_id,replyToContent:replyToData.content?.substring(0,30)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
-            console.log('📎 Loaded reply_to message from DB for optimistic update:', replyToData);
-          }
-    } catch (error) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:691',message:'Error loading reply_to',data:{error:error instanceof Error?error.message:'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-          console.error('❌ Error loading reply_to message:', error);
-        }
+        replyToData = await fetchReplyToData(input.reply_to_message_id);
       }
     }
-    
-    // Optimistic UI - add message immediately
+
+    // הודעה אופטימיסטית – או חדשה או עדכון לקיימת (מדיה - כבר נוספה ב-ChatInput)
+    const tempId = input.existing_optimistic_id ?? `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const optimisticMessage: ChatMessage = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       group_id: input.group_id,
       sender_id: user.id,
-      content: input.content,
+      content: input.content || '',
       message_type: input.message_type,
       media_url: input.media_url,
-      media_thumbnail_url: input.media_thumbnail_url,
+      media_thumbnail_url: input.media_thumbnail_url || input.metadata?.media_thumbnail_url,
       media_type: input.media_type,
+      media_file_name: input.media_file_name || input.metadata?.media_file_name,
+      media_size: input.media_size || input.metadata?.media_size,
+      media_duration: input.media_duration || input.metadata?.media_duration,
+      media_urls: input.media_urls || input.metadata?.media_urls,
       reply_to_message_id: input.reply_to_message_id,
       reply_to: replyToData,
       is_forwarded: false,
@@ -794,223 +875,182 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         is_online: true,
       },
       is_sending: true,
+      is_uploading: false,
+      local_media_uri: undefined,
+      metadata: input.metadata,
     };
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ChatContext.tsx:727',message:'Adding optimistic message',data:{tempId:optimisticMessage.id,hasReplyTo:!!optimisticMessage.reply_to,replyToId:optimisticMessage.reply_to_message_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-    console.log('📤 Sending optimistic message with reply_to:', optimisticMessage.reply_to);
-    setMessages(prev => {
-      // הוספה בתחילת המערך כי המערך בסדר יורד (חדשה לישנה) עבור FlatList inverted
-      const updated = [optimisticMessage, ...prev];
-      console.log('📤 Added optimistic message, total messages:', updated.length, 'first ID:', updated[0]?.id);
-      return updated;
-    });
-    
+
+    if (input.existing_optimistic_id) {
+      // מדיה – עדכן את ההודעה הקיימת (לא להסיר ולהוסיף – מונע flicker)
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, ...optimisticMessage } : m
+      ));
+    } else {
+      LayoutAnimation.configureNext(SMOOTH_INSERT);
+      setMessages(prev => [optimisticMessage, ...prev]);
+    }
+
     try {
-      // #region agent log
-      const logData1 = {location:'ChatContext.tsx:773',message:'Calling sendChatMessage service',data:{tempId:optimisticMessage.id,groupId:input.group_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-      console.log('🔍 DEBUG [A]:', JSON.stringify(logData1));
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData1)}).catch(()=>{});
-      // #endregion
       const { data, error } = await chatMessageService.sendChatMessage(input, user.id);
-      
-      // #region agent log
-      const logData2 = {location:'ChatContext.tsx:778',message:'sendChatMessage response',data:{hasData:!!data,hasError:!!error,messageId:data?.id,errorCode:error?.code,hasReplyTo:!!data?.reply_to,errorMessage:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-      console.log('🔍 DEBUG [A]:', JSON.stringify(logData2));
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData2)}).catch(()=>{});
-      // #endregion
+
       if (data) {
-        // Replace optimistic message with real one, preserving reply_to if missing
-        // או הוסף אם ההודעה כבר הגיעה דרך realtime
+        processedMessageIds.current.add(data.id);
+
+        const finalMessage: ChatMessage = {
+          ...data,
+          reply_to: data.reply_to || replyToData,
+        };
+
+        // החלף את האופטימיסטי בהודעה האמיתית
         setMessages(prev => {
-          // בדוק אם ההודעה כבר קיימת (הגיעה דרך realtime)
-          const existingIndex = prev.findIndex(m => m.id === data.id);
-          if (existingIndex !== -1) {
-            // ההודעה כבר קיימת - עדכן אותה עם reply_to אם חסר
-            const existingMsg = prev[existingIndex];
-            const finalMessage = {
-              ...data,
-              reply_to: data.reply_to || existingMsg.reply_to || optimisticMessage.reply_to,
-            };
-            // #region agent log
-            const logData3 = {location:'ChatContext.tsx:790',message:'Updating existing message from sendMessage response',data:{messageId:data.id,hasReplyTo:!!finalMessage.reply_to,replyToFromData:!!data.reply_to,replyToFromExisting:!!existingMsg.reply_to},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-            console.log('🔍 DEBUG [B]:', JSON.stringify(logData3));
-            fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
-            // #endregion
-            // יוצר array חדש כדי לוודא ש-React מזהה את השינוי
-            const updated = [...prev];
-            updated[existingIndex] = finalMessage;
-            return updated;
+          const realAlready = prev.findIndex(m => m.id === data.id);
+          if (realAlready !== -1) {
+            // realtime הספיק – עדכן in-place והסר אופטימיסטי
+            return prev
+              .filter(m => m.id !== tempId)
+              .map(m => m.id === data.id ? finalMessage : m);
           }
-          
-          // אם לא קיימת, נחפש optimistic message ונחליף אותו
-          const optimisticIndex = prev.findIndex(m => m.id === optimisticMessage.id);
-          if (optimisticIndex !== -1) {
-            // שמור את reply_to מה-optimistic אם ההודעה האמיתית לא מכילה אותו
-            const finalMessage = {
-              ...data,
-              reply_to: data.reply_to || optimisticMessage.reply_to,
-            };
-            // #region agent log
-            const logData3 = {location:'ChatContext.tsx:790',message:'Replacing optimistic with real',data:{tempId:optimisticMessage.id,realId:data.id,hasReplyTo:!!finalMessage.reply_to,replyToFromData:!!data.reply_to,replyToFromOptimistic:!!optimisticMessage.reply_to},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-            console.log('🔍 DEBUG [B]:', JSON.stringify(logData3));
-            fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
-            // #endregion
-            // יוצר array חדש כדי לוודא ש-React מזהה את השינוי
-            const updated = [...prev];
-            updated[optimisticIndex] = finalMessage;
-            console.log('🔄 Updated messages array after replacing optimistic:', {
-              oldId: optimisticMessage.id,
-              newId: finalMessage.id,
-              totalMessages: updated.length,
-              lastMessageId: updated[updated.length - 1]?.id,
-              optimisticIndex,
-              hasSender: !!finalMessage.sender,
-              messageContent: finalMessage.content?.substring(0, 20),
-            });
-            console.log('📝 Final message structure:', {
-              id: finalMessage.id,
-              hasSender: !!finalMessage.sender,
-              senderId: finalMessage.sender_id,
-              content: finalMessage.content?.substring(0, 30),
-            });
-            return updated;
-          }
-          
-          // אם לא מצאנו גם optimistic וגם לא קיימת - נוסיף את ההודעה בתחילת המערך
-          // #region agent log
-          const logData3 = {location:'ChatContext.tsx:790',message:'Adding message from sendMessage response (no optimistic found)',data:{messageId:data.id,hasReplyTo:!!data.reply_to},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
-          console.log('🔍 DEBUG [B]:', JSON.stringify(logData3));
-          fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData3)}).catch(()=>{});
-          // #endregion
-          return [data, ...prev];
+          // החלפה רגילה של אופטימיסטי
+          return prev.map(m => m.id === tempId ? finalMessage : m);
         });
-        
-        // Update group last message
-        setGroups(prev => prev.map(g => 
-          g.id === input.group_id 
-            ? { 
-                ...g, 
-                last_message_at: data.created_at,
-                last_message_preview: data.content || '📎 מדיה',
-                messages_count: g.messages_count + 1,
-              }
+
+        setGroups(prev => prev.map(g =>
+          g.id === input.group_id
+            ? {
+              ...g,
+              last_message_at: data.created_at,
+              last_message_preview: data.content || '📎 מדיה',
+              messages_count: g.messages_count + 1,
+            }
             : g
         ));
-        
+
         return { success: true };
       } else {
-        // Remove optimistic message on error
-        // #region agent log
-        const logData4 = {location:'ChatContext.tsx:815',message:'Error sending message, removing optimistic',data:{tempId:optimisticMessage.id,errorCode:error?.code,errorMessage:error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-        console.log('🔍 DEBUG [A]:', JSON.stringify(logData4));
-        console.error('❌ Error sending message:', error?.message || error?.code || 'Unknown error', error);
-        fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData4)}).catch(()=>{});
-        // #endregion
-        setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
-        return { success: false, error: error?.message || 'שגיאה בשליחת הודעה' };
+        const errMsg = error?.message || '';
+        const isNetworkError = !isConnected ||
+          errMsg.toLowerCase().includes('network') ||
+          errMsg.toLowerCase().includes('fetch') ||
+          errMsg.toLowerCase().includes('timeout') ||
+          error?.code === 'NETWORK_ERROR';
+
+        if (isNetworkError) {
+          // L4: שמור בתור offline + הצג error על האופטימיסטי
+          offlineQueueRef.current.push({ ...input, sender_id: user.id });
+          setMessages(prev => prev.map(m =>
+            m.id === tempId ? { ...m, is_sending: false, send_error: 'ממתין לחיבור...' } : m
+          ));
+          return { success: false, error: 'אין חיבור – ההודעה תישלח כשהחיבור יחזור', queued: true } as any;
+        }
+
+        // שגיאה רגילה – סמן על האופטימיסטי ואפשר retry
+        logger.error('ChatContext', `Error sending message: ${errMsg || error?.code || 'Unknown'}`);
+        setMessages(prev => prev.map(m =>
+          m.id === tempId ? { ...m, is_sending: false, send_error: errMsg || 'שגיאה בשליחת הודעה' } : m
+        ));
+        return { success: false, error: errMsg || 'שגיאה בשליחת הודעה' };
       }
     } finally {
       setIsSendingMessage(false);
     }
-  }, [user, messages]);
-  
+  }, [user, isConnected]);
+
   // ============================================
   // Edit message
   // ============================================
-  
-  const editMessage = useCallback(async (messageId: string, content: string) => {
+
+  const editMessage = useCallback(async (messageId: string, content: string, mentions?: any[]) => {
     if (!user) return { success: false, error: 'לא מחובר' };
-    
+
+    const mentionedUserIds = mentions?.map((m: any) => m.id).filter(Boolean);
     const { data, error } = await chatMessageService.editChatMessage(
-      { message_id: messageId, content },
+      { message_id: messageId, content, mentioned_users: mentionedUserIds },
       user.id
     );
-    
+
     if (data) {
       setMessages(prev => prev.map(m => m.id === messageId ? data : m));
       return { success: true };
     }
-    
+
     return { success: false, error: error?.message };
   }, [user]);
-  
+
   // ============================================
   // Delete message
   // ============================================
-  
+
   const deleteMessage = useCallback(async (messageId: string, deleteForEveryone: boolean) => {
     if (!user) return { success: false, error: 'לא מחובר' };
-    
+
     const { error } = await chatMessageService.deleteChatMessage(
       { message_id: messageId, delete_for_everyone: deleteForEveryone },
       user.id
     );
-    
+
     if (!error) {
       // הסרת ההודעה מה-state המקומי - גם במחיקה אישית וגם במחיקה לכולם
       setMessages(prev => prev.filter(m => m.id !== messageId));
-      
+
       // אם זו מחיקה אישית, נוסיף את ה-ID ל-Set של הודעות שנמחקו אישית
       if (!deleteForEveryone) {
         personalDeletedIds.current.add(messageId);
       }
-      
+
       return { success: true };
     }
-    
+
     return { success: false, error: error.message };
   }, [user]);
-  
+
   // ============================================
   // Forward message
   // ============================================
-  
+
   const forwardMessage = useCallback(async (messageId: string, groupIds: string[]) => {
     if (!user) return { success: false, error: 'לא מחובר' };
-    
+
     const { errors } = await chatMessageService.forwardChatMessage(
       { message_id: messageId, to_group_ids: groupIds },
       user.id
     );
-    
-    if (!errors) {
+
+    if (!errors || errors.size === 0) {
       return { success: true };
     }
-    
+
     return { success: false, error: 'שגיאה בהעברת ההודעה' };
   }, [user]);
-  
+
   // ============================================
   // Reactions
   // ============================================
-  
+
   const addReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user) return;
-    
+
     // עדכון אופטימיסטי
     setMessages(prev => prev.map(m => {
       if (m.id === messageId) {
         const currentReactions = m.reactions || [];
         const reactionGroup = currentReactions.find(r => r.emoji === emoji);
-        
+
         if (reactionGroup) {
           // אם יש כבר ריאקציה עם האימוג'י הזה
           return {
             ...m,
-            reactions: currentReactions.map(r => 
+            reactions: currentReactions.map(r =>
               r.emoji === emoji
-                ? { 
-                    ...r, 
-                    count: r.count + 1, 
-                    reacted_by_me: true,
-                    users: [...r.users, {
-                      id: user.id,
-                      name: user.display_name || 'אני',
-                      profile_picture: user.profile_picture,
-                    }]
-                  }
+                ? {
+                  ...r,
+                  count: r.count + 1,
+                  reacted_by_me: true,
+                  users: [...r.users, {
+                    id: user.id,
+                    name: user.display_name || 'אני',
+                    profile_picture: user.profile_picture,
+                  }]
+                }
                 : r
             ),
             reactions_count: (m.reactions_count || 0) + 1
@@ -1038,32 +1078,43 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       return m;
     }));
-    
-    // שליחה לשרת
-    await chatMessageService.addReaction({ message_id: messageId, emoji }, user.id);
+
+    const { error } = await chatMessageService.addReaction({ message_id: messageId, emoji }, user.id);
+    if (error) {
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        const reactions = (m.reactions || []).map(r => {
+          if (r.emoji !== emoji) return r;
+          const filtered = r.users.filter(u => u.id !== user.id);
+          return { ...r, count: r.count - 1, reacted_by_me: false, users: filtered };
+        }).filter(r => r.count > 0);
+        return { ...m, reactions, reactions_count: Math.max(0, (m.reactions_count || 0) - 1) };
+      }));
+      logger.error('ChatContext', 'addReaction failed, rolled back', error);
+    }
   }, [user]);
-  
+
   const removeReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user) return;
-    
+
     // עדכון אופטימיסטי
     setMessages(prev => prev.map(m => {
       if (m.id === messageId) {
         const currentReactions = m.reactions || [];
         const reactionGroup = currentReactions.find(r => r.emoji === emoji);
-        
+
         if (reactionGroup && reactionGroup.count > 1) {
           // עדיין יש ריאקציות אחרות עם האימוג'י הזה
           return {
             ...m,
-            reactions: currentReactions.map(r => 
+            reactions: currentReactions.map(r =>
               r.emoji === emoji
-                ? { 
-                    ...r, 
-                    count: r.count - 1, 
-                    reacted_by_me: false,
-                    users: r.users.filter(u => u.id !== user.id)
-                  }
+                ? {
+                  ...r,
+                  count: r.count - 1,
+                  reacted_by_me: false,
+                  users: r.users.filter(u => u.id !== user.id)
+                }
                 : r
             ),
             reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
@@ -1079,147 +1130,231 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       return m;
     }));
-    
-    // שליחה לשרת
-    await chatMessageService.removeReaction({ message_id: messageId, emoji }, user.id);
+
+    const { error } = await chatMessageService.removeReaction({ message_id: messageId, emoji }, user.id);
+    if (error) {
+      setMessages(prev => prev.map(m => {
+        if (m.id !== messageId) return m;
+        const reactions = m.reactions || [];
+        const existing = reactions.find(r => r.emoji === emoji);
+        if (existing) {
+          return { ...m, reactions: reactions.map(r => r.emoji === emoji
+            ? { ...r, count: r.count + 1, reacted_by_me: true, users: [...r.users, { id: user.id, name: user.display_name || 'אני', profile_picture: user.profile_picture }] }
+            : r), reactions_count: (m.reactions_count || 0) + 1 };
+        }
+        return { ...m, reactions: [...reactions, { emoji, count: 1, reacted_by_me: true, users: [{ id: user.id, name: user.display_name || 'אני', profile_picture: user.profile_picture }] }], reactions_count: (m.reactions_count || 0) + 1 };
+      }));
+      logger.error('ChatContext', 'removeReaction failed, rolled back', error);
+    }
   }, [user]);
-  
+
   // ============================================
   // Star message
   // ============================================
-  
+
   const starMessage = useCallback(async (messageId: string, groupId: string) => {
     if (!user) return;
-    await chatMessageService.starMessage(messageId, groupId, user.id);
-    
-    // Update message in list
-    setMessages(prev => prev.map(m => 
+    setMessages(prev => prev.map(m =>
       m.id === messageId ? { ...m, is_starred_by_me: true } : m
     ));
-  }, [user]);
-  
-  const unstarMessage = useCallback(async (messageId: string) => {
-    if (!user) return;
-    await chatMessageService.unstarMessage(messageId, user.id);
-    
-    // Update message in list
-    setMessages(prev => prev.map(m => 
-      m.id === messageId ? { ...m, is_starred_by_me: false } : m
-    ));
-  }, [user]);
-  
-  // ============================================
-  // Typing
-  // ============================================
-  
-  const setTyping = useCallback(async (groupId: string, isTyping: boolean) => {
-    if (!user) return;
-    
-    try {
-      const result = await chatRealtimeService.setTypingStatus({ group_id: groupId, is_typing: isTyping }, user.id);
-      // בדיקה אם יש error בתוצאה
-      if (result.error) {
-        // רק עבור התחלת הקלדה נדווח - עבור סיום הקלדה זה לא קריטי
-        if (isTyping) {
-          console.warn('⚠️ Warning: Could not set typing status (usually harmless):', result.error.message);
-        }
-      }
-    } catch (error: any) {
-      // לא נדווח כעל error חמור - יכול להיות בעיית רשת זמנית
-      console.warn('⚠️ Warning: Exception while updating typing status (usually harmless):', error?.message || error);
+    const { error } = await chatMessageService.starMessage(messageId, groupId, user.id);
+    if (error) {
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, is_starred_by_me: false } : m
+      ));
+      logger.error('ChatContext', 'starMessage failed', error);
     }
   }, [user]);
-  
-  // ============================================
-  // Mark as read
-  // ============================================
-  
-  const markAsRead = useCallback(async (groupId: string, messageIds: string[]) => {
-    if (!user || messageIds.length === 0) return;
-    
-    await chatMessageService.markMessagesAsRead(
-      { group_id: groupId, message_ids: messageIds },
-      user.id
-    );
-    
-    // Update group unread count
-    setGroups(prev => prev.map(g => 
-      g.id === groupId ? { ...g, unread_count: 0 } : g
+
+  const unstarMessage = useCallback(async (messageId: string) => {
+    if (!user) return;
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, is_starred_by_me: false } : m
     ));
+    const { error } = await chatMessageService.unstarMessage(messageId, user.id);
+    if (error) {
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, is_starred_by_me: true } : m
+      ));
+      logger.error('ChatContext', 'unstarMessage failed', error);
+    }
   }, [user]);
-  
+
+
+
   // ============================================
   // Calculate total unread
   // ============================================
-  
-  const totalUnreadCount = groups.reduce((sum, g) => sum + (g.unread_count || 0), 0);
-  
+
+  const totalUnreadCount = useMemo(() => groups.reduce((sum, g) => sum + (g.unread_count || 0), 0), [groups]);
+
   // ============================================
   // Effects
   // ============================================
-  
-  // Load groups on mount
+
+  // Load groups on mount + Realtime + Fallback polling
   useEffect(() => {
-    if (user) {
-      loadGroups();
-      
-      // Update online status
-      chatRealtimeService.updateOnlineStatus(user.id, true);
-      
-      // Start typing cleanup
-      chatRealtimeService.startTypingCleanup();
-      
-      // Subscribe to all user groups for notifications
-      chatRealtimeService.subscribeToAllUserGroups(
-        user.id,
-        (groupId, message) => {
-          // New message in a group
-          setGroups(prev => prev.map(g => 
+    if (!user) {
+      return;
+    }
+
+    // טעינת קבוצות ראשונית
+    loadGroups();
+
+    setRealtimeConnectionState('connecting');
+
+    // Wire connection status — באנרים נפרדים ל"מנסה שוב" מול "נותקנו"
+    chatRealtimeService.onConnectionStatusChange((status) => {
+      if (status === 'CONNECTED') {
+        setRealtimeConnectionState('connected');
+      } else if (status === 'RECONNECTING') {
+        setRealtimeConnectionState('reconnecting');
+      } else {
+        setRealtimeConnectionState('offline');
+      }
+
+      // L4: flush offline queue when connection is restored
+      if (status === 'CONNECTED' && offlineQueueRef.current.length > 0 && !isFlushing.current) {
+        isFlushing.current = true;
+        const flush = async () => {
+          let failCount = 0;
+          while (offlineQueueRef.current.length > 0) {
+            const next = offlineQueueRef.current[0];
+            try {
+              const { data, error } = await chatMessageService.sendChatMessage(next, next.sender_id!);
+              if (data) {
+                offlineQueueRef.current.shift();
+                processedMessageIds.current.add(data.id);
+                if (data.group_id === currentGroupId.current) {
+                  setMessages(prev => {
+                    if (prev.some(m => m.id === data.id)) return prev;
+                    return [{ ...data }, ...prev];
+                  });
+                }
+                failCount = 0;
+              } else if (error) {
+                failCount++;
+                if (failCount >= 3) {
+                  offlineQueueRef.current.shift();
+                  logger.error('ChatContext', 'Dropping message after 3 failed attempts', error);
+                  failCount = 0;
+                } else {
+                  await new Promise(r => setTimeout(r, 1000 * failCount));
+                }
+              }
+            } catch (e) {
+              failCount++;
+              logger.error('ChatContext', 'Offline queue flush error', e);
+              if (failCount >= 3) {
+                offlineQueueRef.current.shift();
+                failCount = 0;
+              } else {
+                await new Promise(r => setTimeout(r, 1000 * failCount));
+              }
+            }
+          }
+          isFlushing.current = false;
+        };
+        flush();
+      }
+    });
+
+    // M5: typing cleanup only starts when the user actually enters a chat (in selectGroup)
+    chatRealtimeService.updateOnlineStatus(user.id, true);
+
+    // הרשמה לכל הקבוצות של המשתמש דרך Realtime בלבד
+    logger.debug('ChatContext', `Setting up realtime subscription for user: ${user.id}`);
+    chatRealtimeService.subscribeToAllUserGroups(
+      user.id,
+      (groupId, message) => {
+        // הודעה חדשה בקבוצה - עדכון last_message בלבד, unread_count מגיע מהשרת
+        logger.debug('ChatContext', `onNewMessage: group=${groupId} msg=${message.id}`);
+        setGroups(prev => {
+          return prev.map(g =>
             g.id === groupId
               ? {
-                  ...g,
-                  last_message_at: message.created_at,
-                  last_message_preview: message.content || '📎 מדיה',
-                  unread_count: (g.unread_count || 0) + 1,
-                }
+                ...g,
+                last_message_at: message.created_at,
+                last_message_preview: message.content || '📎 מדיה',
+              }
               : g
-          ));
+          );
+        });
+
+        // Sound is played only in subscribeToGroup for the active chat.
+        // Here we only update the groups list preview.
+      },
+      (groupId, data) => {
+        // עדכון קבוצות (כולל unread_count מהשרת)
+        logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
+        setGroups(prev => prev.map(g => {
+          if (g.id !== groupId) return g;
           
-          // Play notification sound
-          notificationSound.current?.replayAsync();
-        },
-        (groupId, data) => {
-          // Group updated
-          setGroups(prev => prev.map(g => 
-            g.id === groupId ? { ...g, ...data } : g
-          ));
-        }
-      );
-    }
-    
-    return () => {
-      if (user) {
-        chatRealtimeService.updateOnlineStatus(user.id, false);
-        chatRealtimeService.stopTypingCleanup();
-        chatRealtimeService.unsubscribeAll();
+          const newUnread = data.unread_count ?? g.unread_count;
+          const newMentioned = data.mentioned_count ?? g.mentioned_count;
+          
+          // אם אין שינוי אמיתי, לא מעדכנים
+          if (newUnread === g.unread_count && 
+              newMentioned === g.mentioned_count &&
+              !data.last_message_at && !data.name && !data.avatar_url) {
+            return g;
+          }
+          
+          return { ...g, ...data };
+        }));
       }
+    );
+
+    return () => {
+      chatRealtimeService.updateOnlineStatus(user.id, false);
+      chatRealtimeService.stopTypingCleanup();
+      chatRealtimeService.unsubscribeAll();
+      chatRealtimeService.onConnectionStatusChange(null);
+      setRealtimeConnectionState('connecting');
     };
   }, [user, loadGroups]);
-  
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (currentGroupId.current) {
         chatRealtimeService.unsubscribeFromGroup(currentGroupId.current);
       }
+      chatRealtimeService.stopTypingCleanup();
+      chatRealtimeService.onConnectionStatusChange(null);
+      stopRateLimitCleanup();
+      if (readTimerRef.current) {
+        clearTimeout(readTimerRef.current);
+        readTimerRef.current = null;
+      }
+      pendingReadRef.current = null;
     };
   }, []);
-  
+
+  // ============================================
+  // Optimistic Media Functions
+  // ============================================
+
+  const addOptimisticMediaMessage = useCallback((message: ChatMessage) => {
+    LayoutAnimation.configureNext(SMOOTH_INSERT);
+    setMessages(prev => [message, ...prev]);
+  }, []);
+
+  const updateOptimisticMessage = useCallback((tempId: string, updates: Partial<ChatMessage>) => {
+    setMessages(prev => prev.map(m => 
+      m.id === tempId ? { ...m, ...updates } : m
+    ));
+  }, []);
+
+  const removeOptimisticMessage = useCallback((tempId: string) => {
+    setMessages(prev => prev.filter(m => m.id !== tempId));
+  }, []);
+
   // ============================================
   // Context value
   // ============================================
 
-  const value: ChatContextType = {
+  const value = useMemo<ChatContextType>(() => ({
     groups,
     currentGroup,
     messages,
@@ -1246,10 +1381,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setTyping,
     markAsRead,
     isConnected,
+    realtimeConnectionState,
     totalUnreadCount,
-  };
+    addOptimisticMediaMessage,
+    updateOptimisticMessage,
+    removeOptimisticMessage,
+  }), [
+    groups, currentGroup, messages, typingUsers,
+    isLoadingGroups, isLoadingMessages, isSendingMessage,
+    initialUnreadInfo, isConnected, realtimeConnectionState, totalUnreadCount,
+    loadGroups, selectGroup, createGroup, updateGroup, leaveGroup,
+    sendMessage, loadMoreMessages, loadMessagesAround, editMessage,
+    deleteMessage, forwardMessage, addReaction, removeReaction,
+    starMessage, unstarMessage, setTyping, markAsRead,
+    addOptimisticMediaMessage, updateOptimisticMessage, removeOptimisticMessage,
+  ]);
 
-    return (
+  return (
     <ChatContext.Provider value={value}>
       {children}
     </ChatContext.Provider>

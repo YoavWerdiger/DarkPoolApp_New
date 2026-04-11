@@ -8,6 +8,7 @@ import RegistrationPaymentScreen from '../screens/Auth/RegistrationPaymentScreen
 import RegistrationSummaryScreen from '../screens/Auth/RegistrationSummaryScreen';
 import RegistrationIntroScreen from '../screens/Auth/RegistrationIntroScreen';
 import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
+import { useDesignTokens } from '../components/ui/DesignTokens';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,11 +23,11 @@ interface OnboardingNavigatorProps {
 }
 
 const OnboardingNavigator = ({ route }: OnboardingNavigatorProps) => {
+  const DesignTokens = useDesignTokens();
+  
   // בדיקה אם צריך לדלג על שלבי פרטים אישיים (להרשמה עם Google)
   const skipToIntro = route?.params?.skipToIntro ?? false;
   const initialRoute = skipToIntro ? 'RegistrationIntro' : 'RegistrationDetails';
-  
-  console.log('🔄 OnboardingNavigator: skipToIntro =', skipToIntro, ', initialRoute =', initialRoute);
   
   return (
     <Stack.Navigator 
@@ -35,7 +36,10 @@ const OnboardingNavigator = ({ route }: OnboardingNavigatorProps) => {
         animation: 'slide_from_left',
         gestureDirection: 'horizontal',
         gestureEnabled: true,
-        animationDuration: 400
+        animationDuration: 400,
+        contentStyle: {
+          backgroundColor: DesignTokens.colors.background.primary,
+        },
       }} 
       initialRouteName={initialRoute}
     >

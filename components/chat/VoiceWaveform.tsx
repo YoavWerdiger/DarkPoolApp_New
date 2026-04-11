@@ -1,9 +1,10 @@
 // ============================================
 // Voice Waveform - גלי קול בזמן הקלטה
+// רץ ברציפות, מתרחב מהאמצע לפי רמת הקול
 // ============================================
 
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import React, { useEffect, useRef, useState, memo } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 
 interface VoiceWaveformProps {
@@ -11,119 +12,98 @@ interface VoiceWaveformProps {
   audioLevel?: number; // 0-1
 }
 
-const BARS_COUNT = 30; // מספר פסים
+const BARS_COUNT = 28;
+const UPDATE_INTERVAL = 100; // ms – reduced from 45ms to lower CPU usage
 
 export default function VoiceWaveform({ isRecording, audioLevel = 0 }: VoiceWaveformProps) {
   const DesignTokens = useDesignTokens();
-  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const barColor = DesignTokens.colors.primary.main;
   
-  // אנימציות לכל פס
-  const barAnimations = useRef(
-    Array.from({ length: BARS_COUNT }, () => new Animated.Value(0.2))
-  ).current;
-
+  // מערך ערכים - מתעדכן ב-interval קבוע
+  const [barValues, setBarValues] = useState<number[]>(() => 
+    Array(BARS_COUNT).fill(0.1)
+  );
+  
+  // שמירת ה-audioLevel האחרון ב-ref כדי לגשת אליו מה-interval
+  const audioLevelRef = useRef(audioLevel);
+  audioLevelRef.current = audioLevel;
+  
   useEffect(() => {
     if (!isRecording) {
-      // עצירה - כל הפסים חוזרים למינימום
-      Animated.parallel(
-        barAnimations.map(anim =>
-          Animated.timing(anim, {
-            toValue: 0.2,
-            duration: 200,
-            useNativeDriver: false,
-          })
-        )
-      ).start();
+      // איפוס
+      setBarValues(Array(BARS_COUNT).fill(0.1));
       return;
     }
-
-    // הקלטה - אנימציות דינמיות לפי audioLevel
-    let animationFrame: number;
-    let lastUpdate = Date.now();
     
-    const animateWaves = () => {
-      if (!isRecording) return;
-      
-      const now = Date.now();
-      const deltaTime = (now - lastUpdate) / 1000; // seconds
-      lastUpdate = now;
-      
-      const baseLevel = Math.max(0.2, Math.min(1, audioLevel || 0.2));
-      
-      Animated.parallel(
-        barAnimations.map((anim, index) => {
-          // כל פס מקבל גובה שונה בהתבסס על audioLevel
-          // וריאציה בין הפסים - כל פס קצת שונה עם תנועה דינמית
-          const phase = (index / BARS_COUNT) * Math.PI * 2;
-          const timePhase = now * 0.003; // מהיר יותר
-          const variation = (Math.sin(phase + timePhase) + 1) / 2; // 0-1
-          
-          // גובה בסיסי + וריאציה דינמית
-          const minHeight = 0.2;
-          const maxHeight = 0.2 + (baseLevel * 0.8);
-          const targetHeight = minHeight + (maxHeight - minHeight) * (0.4 + variation * 0.6);
-          
-          return Animated.timing(anim, {
-            toValue: Math.max(0.2, Math.min(1, targetHeight)),
-            duration: 50, // מהיר מאוד - מגיב מיד
-            useNativeDriver: false,
-          });
-        })
-      ).start();
-      
-      animationFrame = requestAnimationFrame(animateWaves);
-    };
-
-    animateWaves();
+    // interval שרץ כל הזמן ומזיז את ה-bars
+    const interval = setInterval(() => {
+      setBarValues(prev => {
+        const newValues = [...prev];
+        // הזזה שמאלה
+        for (let i = 0; i < BARS_COUNT - 1; i++) {
+          newValues[i] = newValues[i + 1];
+        }
+        // הוספת ערך חדש מימין - הערך הנוכחי של audioLevel עם הגברה
+        const currentLevel = audioLevelRef.current;
+        // הגברת הרגישות - כפול 1.5 והוספת רעש קל לטבעיות
+        const amplified = (currentLevel || 0.1) * 1.5;
+        const noise = Math.random() * 0.1;
+        newValues[BARS_COUNT - 1] = Math.max(0.1, Math.min(1, amplified + noise));
+        return newValues;
+      });
+    }, UPDATE_INTERVAL);
     
-    return () => {
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
-      }
-    };
-  }, [isRecording, audioLevel]);
-
+    return () => clearInterval(interval);
+  }, [isRecording]);
+  
   return (
     <View style={styles.container}>
-      {barAnimations.map((anim, index) => {
-        const height = anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [4, 32],
-        });
-
-        return (
-          <Animated.View
-            key={index}
-            style={[
-              styles.bar,
-              {
-                height,
-                opacity: anim,
-              },
-            ]}
-          />
-        );
-      })}
+      {barValues.map((value, index) => (
+        <Bar key={index} value={value} color={barColor} />
+      ))}
     </View>
   );
 }
 
-const createStyles = (tokens: any) => StyleSheet.create({
+// קומפוננטת Bar פשוטה - גובה ישיר בלי אנימציה מורכבת
+const Bar = memo(({ value, color }: { value: number; color: string }) => {
+  const height = 3 + value * 18; // 3-21px
+  
+  return (
+    <View style={styles.barWrapper}>
+      <View
+        style={[
+          styles.bar,
+          { 
+            backgroundColor: color,
+            height,
+            opacity: 0.5 + value * 0.5,
+          },
+        ]}
+      />
+    </View>
+  );
+});
+
+const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-start',
     flex: 1,
-    minWidth: 0, // מאפשר להתכווץ
-    height: 40,
-    paddingHorizontal: 4,
+    minWidth: 0,
+    height: 24,
+  },
+  barWrapper: {
+    width: 3,
+    marginRight: 2,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   bar: {
-    width: 3,
-    backgroundColor: tokens.colors.primary.main,
-    borderRadius: 1.5,
-    minHeight: 4,
-    maxHeight: 32,
+    width: 2.5,
+    borderRadius: 1.25,
   },
 });
 

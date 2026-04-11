@@ -103,7 +103,7 @@ export const CourseDetailScreen: React.FC = () => {
     return (
       <View style={{ flex: 1 }}>
         <LinearGradient
-          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+          colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
           locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
@@ -123,7 +123,7 @@ export const CourseDetailScreen: React.FC = () => {
     return (
       <View style={{ flex: 1 }}>
         <LinearGradient
-          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+          colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
           locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
@@ -148,7 +148,7 @@ export const CourseDetailScreen: React.FC = () => {
     <View style={{ flex: 1 }}>
       {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
       <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
         locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -532,14 +532,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: tokens.spacing.sm,
   },
   tag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.sm,
     borderRadius: tokens.borderRadius.lg,
   },
   tagText: {
     fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
+    color: tokens.colors.text.primary,
   },
   enrollButton: {
     backgroundColor: tokens.colors.primary.main,

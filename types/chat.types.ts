@@ -14,6 +14,18 @@ export enum ChatMessageType {
   DOCUMENT = 'document',
   SYSTEM = 'system',
   POLL = 'poll',
+  MEDIA_GROUP = 'media_group', // Multiple media items in one message
+}
+
+// Media item for MEDIA_GROUP messages
+export interface MediaGroupItem {
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+  thumbnail_url?: string;
+  width?: number;
+  height?: number;
+  duration?: number; // for videos
 }
 
 export enum ChatMemberRole {
@@ -66,7 +78,7 @@ export interface ChatGroup {
   last_message_at?: string;
   last_message_preview?: string;
   settings: ChatGroupSettings;
-  
+
   // מטא-דאטה מחושבת (לא מהדאטאבייס)
   unread_count?: number;
   mentioned_count?: number;
@@ -87,7 +99,7 @@ export interface ChatGroupMember {
   last_read_at?: string;
   unread_count: number;
   mentioned_count: number;
-  
+
   // מטא-דאטה מתוך users
   user?: {
     id: string;
@@ -146,11 +158,11 @@ export interface ChatMessage {
   id: string;
   group_id: string;
   sender_id: string;
-  
-  // תוכן
+
   content?: string;
   message_type: ChatMessageType;
-  
+  type?: ChatMessageType;
+
   // מדיה
   media_url?: string;
   media_thumbnail_url?: string;
@@ -161,17 +173,21 @@ export interface ChatMessage {
   media_height?: number;
   media_file_name?: string;
   
+  // מדיה מרובה (לסוג MEDIA_GROUP)
+  media_urls?: MediaGroupItem[];
+  local_media_urls?: { id: string; uri: string; type: 'image' | 'video' }[]; // For optimistic UI
+
   // השבה
   reply_to_message_id?: string;
-  
+
   // העברה
   forwarded_from_group_id?: string;
   forwarded_from_message_id?: string;
   is_forwarded: boolean;
-  
+
   // תיוג
   mentioned_users: string[];
-  
+
   // סטטוס
   is_edited: boolean;
   edited_at?: string;
@@ -179,19 +195,19 @@ export interface ChatMessage {
   deleted_at?: string;
   deleted_for_everyone: boolean;
   is_silent: boolean;
-  
+
   // הודעת מערכת
   is_system_message: boolean;
   system_message_type?: SystemMessageType;
   system_message_data?: SystemMessageData;
-  
+
   // זמנים
   created_at: string;
-  
+
   // מטא-דאטה
   reactions_count: number;
   read_by_count: number;
-  
+
   // מטא-דאטה מחושבת (לא מהדאטאבייס)
   sender?: {
     id: string;
@@ -206,6 +222,18 @@ export interface ChatMessage {
   is_read_by_me?: boolean;
   is_sending?: boolean; // לאופטימיסטי UI
   send_error?: string; // אם נכשל
+  
+  // Optimistic media upload
+  local_media_uri?: string;
+  upload_progress?: number;
+  is_uploading?: boolean;
+
+  metadata?: {
+    waveformData?: number[];
+    media_urls?: MediaGroupItem[];
+    mentioned_users?: string[];
+    [key: string]: any;
+  };
 }
 
 // ============================================
@@ -218,7 +246,7 @@ export interface ChatReaction {
   user_id: string;
   emoji: string;
   created_at: string;
-  
+
   // מטא-דאטה
   user?: {
     id: string;
@@ -248,7 +276,7 @@ export interface ChatStarredMessage {
   user_id: string;
   group_id: string;
   starred_at: string;
-  
+
   // מטא-דאטה
   message?: ChatMessage;
 }
@@ -263,7 +291,7 @@ export interface ChatMessageRead {
   user_id: string;
   group_id: string;
   read_at: string;
-  
+
   // מטא-דאטה
   user?: {
     id: string;
@@ -280,8 +308,9 @@ export interface ChatTypingIndicator {
   id: string;
   group_id: string;
   user_id: string;
+  userName?: string; // Aliased from user.display_name for compatibility
   started_typing_at: string;
-  
+
   // מטא-דאטה
   user?: {
     id: string;
@@ -351,6 +380,7 @@ export interface UpdateChatGroupInput {
 export interface SendChatMessageInput {
   group_id: string;
   content?: string;
+  sender_id?: string; // L4: נשמר בתור offline כדי לדעת מי שלח
   message_type: ChatMessageType;
   media_url?: string;
   media_thumbnail_url?: string;
@@ -360,14 +390,22 @@ export interface SendChatMessageInput {
   media_width?: number;
   media_height?: number;
   media_file_name?: string;
+  media_urls?: MediaGroupItem[]; // For MEDIA_GROUP messages
   reply_to_message_id?: string;
   mentioned_users?: string[];
   is_silent?: boolean;
+  /** לעדכון הודעה אופטימיסטית קיימת (מדיה) – מונע flicker בעת מעבר upload→send */
+  existing_optimistic_id?: string;
+  metadata?: {
+    waveformData?: number[];
+    [key: string]: any;
+  };
 }
 
 export interface EditChatMessageInput {
   message_id: string;
   content: string;
+  mentioned_users?: string[];
 }
 
 export interface DeleteChatMessageInput {
@@ -449,8 +487,8 @@ export interface ChatRealtimeEvent {
 export interface ChatPaginationParams {
   limit?: number;
   offset?: number;
-  before?: string; // message ID
-  after?: string; // message ID
+  before?: string; // created_at cursor (ISO timestamp) for loading older messages
+  after?: string;  // created_at cursor (ISO timestamp) for loading newer messages
 }
 
 export interface ChatMessageFilters {

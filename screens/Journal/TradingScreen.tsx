@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
@@ -32,13 +32,13 @@ export default function TradingScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        style={styles.gradientContainer}
-      />
+      <ScreenGradientBackground style={styles.gradientContainer} />
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
+        <View style={styles.screenHeader}>
+          <Text style={styles.screenTitle}>יומן מסחר</Text>
+          <Text style={styles.screenSubtitle}>מעקב טריידים ולוח שנה</Text>
+        </View>
         {/* Tabs */}
         <View style={styles.tabsContainer}>
           <UICard variant="blur" padding="none" style={styles.tabsCard}>
@@ -92,13 +92,32 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   safeAreaContainer: {
     flex: 1,
   },
+  screenHeader: {
+    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.lg,
+    paddingBottom: tokens.spacing.sm,
+  },
+  screenTitle: {
+    fontSize: tokens.typography.displayXs.size,
+    fontWeight: tokens.typography.displayXs.weight as any,
+    letterSpacing: tokens.typography.displayXs.letterSpacing,
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
+  },
+  screenSubtitle: {
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.body.weight as any,
+    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    color: tokens.colors.text.secondary,
+    textAlign: 'right',
+    marginTop: tokens.spacing.xs,
+  },
   tabsContainer: {
-    paddingHorizontal: tokens.spacing.lg,
+    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.lg,
     paddingTop: tokens.spacing.md,
     marginBottom: tokens.spacing.md,
   },
   tabsCard: {
-    borderRadius: 30,
+    borderRadius: tokens.borderRadius['3xl'],
     overflow: 'hidden',
     alignSelf: 'center',
     width: '100%',
@@ -111,7 +130,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   tab: {
     flex: 1,
     height: 44,
-    borderRadius: 26,
+    borderRadius: tokens.borderRadius['3xl'],
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
@@ -126,11 +145,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 26,
-    backgroundColor: `${tokens.colors.primary.main}14`,
+    borderRadius: tokens.borderRadius['3xl'],
+    backgroundColor: tokens.colors.background.cardSolid,
   },
   tabText: {
-    fontSize: tokens.typography.fontSize.sm,
+    fontSize: tokens.typography.bodySmall.size,
     fontWeight: tokens.typography.fontWeight.medium as any,
     color: tokens.colors.text.secondary,
   },

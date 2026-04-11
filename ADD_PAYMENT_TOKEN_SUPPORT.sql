@@ -19,3 +19,4 @@ COMMENT ON COLUMN user_subscriptions.cardcom_token IS 'Cardcom Token ל-recurrin
 COMMENT ON COLUMN user_subscriptions.cardcom_token_exp_date IS 'תאריך תפוגה של ה-Token';
 COMMENT ON COLUMN user_subscriptions.card_last4_digits IS '4 ספרות אחרונות של הכרטיס';
 COMMENT ON COLUMN user_subscriptions.card_brand IS 'מותג הכרטיס (Visa, Mastercard, etc.)';
+

@@ -24,7 +24,7 @@ export const GradientHeader: React.FC<GradientHeaderProps> = ({
 }) => {
   return (
     <LinearGradient
-      colors={["#00E65420", "#00E65410", "transparent"]}
+      colors={["rgba(0, 200, 5, 0.12)", "rgba(0, 200, 5, 0.06)", "transparent"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{
@@ -32,7 +32,7 @@ export const GradientHeader: React.FC<GradientHeaderProps> = ({
         paddingBottom: 20,
         paddingHorizontal: 20,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0, 230, 84, 0.2)'
+        borderBottomColor: 'rgba(0, 200, 5, 0.2)'
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>

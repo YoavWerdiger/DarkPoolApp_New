@@ -56,3 +56,4 @@ WHERE report_date BETWEEN (NOW() AT TIME ZONE 'America/New_York')::DATE
 
 
 
+

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { ChatMessageType } from '../types/chat.types';
+import { logger } from '../utils/logger';
 
 export interface PollOption {
   id: string;
@@ -70,10 +71,9 @@ export class PollService {
 
       const { error } = await supabase.from('channels').insert(payload);
       if (error) {
-        console.warn('⚠️ Could not create legacy channel for group (non-fatal):', error);
+        logger.error('PollService', 'Failed to create legacy channel', error);
       }
     } catch (e) {
-      console.warn('⚠️ ensureLegacyChannelForGroup failed (non-fatal):', e);
     }
   }
 
@@ -88,10 +88,6 @@ export class PollService {
     multipleChoice: boolean = false
   ): Promise<Poll | null> {
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pollService.ts:38',message:'createPoll called',data:{groupId,userId,questionLength:question.length,optionsCount:options.length,multipleChoice},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
       // בדיקה שה-groupId קיים ב-chat_groups
       const { data: groupExists, error: groupCheckError } = await supabase
         .from('chat_groups')
@@ -99,12 +95,7 @@ export class PollService {
         .eq('id', groupId)
         .single();
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pollService.ts:47',message:'Group existence check',data:{groupId,groupExists:!!groupExists,groupCheckError:groupCheckError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-
       if (groupCheckError || !groupExists) {
-        console.error('❌ Group does not exist:', groupId, groupCheckError);
         throw new Error(`הקבוצה ${groupId} לא קיימת במערכת`);
       }
 
@@ -114,10 +105,6 @@ export class PollService {
         text,
         votes_count: 0
       }));
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pollService.ts:65',message:'Inserting poll to DB',data:{groupId,userId,questionLength:question.length,optionsCount:pollOptions.length,multipleChoice},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
 
       const { data, error } = await supabase
         .from('polls')
@@ -131,10 +118,6 @@ export class PollService {
         .select()
         .single();
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'pollService.ts:80',message:'Poll insert result',data:{success:!error,error:error?.message,errorCode:error?.code,pollId:data?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-
       if (error) {
         // אם ה-FK עדיין מצביע ל-channels, ננסה ליצור legacy channel ואז ננסה שוב פעם אחת
         const isLegacyChannelsFk =
@@ -143,7 +126,6 @@ export class PollService {
           (error.message.includes('polls_chat_id_fkey') || error.message.includes('channels'));
 
         if (isLegacyChannelsFk) {
-          console.warn('⚠️ Poll FK points to channels; attempting workaround by creating legacy channel...');
           await this.ensureLegacyChannelForGroup(groupId, userId);
 
           const { data: retryData, error: retryError } = await supabase
@@ -159,30 +141,24 @@ export class PollService {
             .single();
 
           if (retryError) {
-            console.error('❌ Error creating poll (after retry):', retryError);
             // הודעה ברורה למפתח כדי שיריץ את המיגרציה
             throw new Error(
               'לא ניתן ליצור סקר כי ה-DB עדיין מצביע ל-channels. יש להריץ את `database/migrate_polls_to_chat_groups.sql` ב-Supabase ואז לנסות שוב.'
             );
           }
 
-          console.log('✅ Poll created successfully (after legacy channel workaround):', retryData);
           await this.createPollMessage(retryData.id, groupId, userId, retryData.question, pollOptions, multipleChoice);
           return retryData;
         }
 
-        console.error('❌ Error creating poll:', error);
         throw error;
       }
 
-      console.log('✅ Poll created successfully:', data);
-      
       // צור הודעה בצ'אט עבור הסקר (במערכת החדשה)
       await this.createPollMessage(data.id, groupId, userId, data.question, pollOptions, multipleChoice);
       
       return data;
     } catch (error) {
-      console.error('❌ Exception in createPoll:', error);
       throw error;
     }
   }
@@ -204,7 +180,6 @@ export class PollService {
         .single();
 
       if (pollError) {
-        console.error('❌ Error fetching poll:', pollError);
         throw pollError;
       }
 
@@ -212,12 +187,23 @@ export class PollService {
         throw new Error('הסקר נעול ולא ניתן להצביע');
       }
 
-      // בדוק אם זה single choice ויש יותר מתשובה אחת
       if (!poll.multiple_choice && optionIds.length > 1) {
         throw new Error('סקר זה מאפשר רק תשובה אחת');
       }
 
-      // מחק הצבעות קודמות של המשתמש בסקר זה
+      const { data: fullPoll } = await supabase
+        .from('polls')
+        .select('options')
+        .eq('id', pollId)
+        .single();
+
+      if (fullPoll?.options) {
+        const validOptionIds = new Set((fullPoll.options as PollOption[]).map(o => o.id));
+        const invalidIds = optionIds.filter(id => !validOptionIds.has(id));
+        if (invalidIds.length > 0) {
+          throw new Error('אפשרויות הצבעה לא תקינות');
+        }
+      }
       const { error: deleteError } = await supabase
         .from('poll_votes')
         .delete()
@@ -225,7 +211,6 @@ export class PollService {
         .eq('user_id', userId);
 
       if (deleteError) {
-        console.error('❌ Error deleting previous votes:', deleteError);
         throw deleteError;
       }
 
@@ -241,17 +226,14 @@ export class PollService {
         .insert(votes);
 
       if (insertError) {
-        console.error('❌ Error inserting votes:', insertError);
         throw insertError;
       }
 
       // עדכן את מספר ההצבעות ב-options
       await this.updatePollVoteCounts(pollId);
 
-      console.log('✅ Vote recorded successfully');
       return true;
     } catch (error) {
-      console.error('❌ Exception in votePoll:', error);
       throw error;
     }
   }
@@ -269,7 +251,6 @@ export class PollService {
         .single();
 
       if (pollError) {
-        console.error('❌ Error fetching poll:', pollError);
         throw pollError;
       }
 
@@ -283,14 +264,13 @@ export class PollService {
           .eq('user_id', userId);
 
         if (votesError) {
-          console.error('❌ Error fetching user votes:', votesError);
+          logger.error('PollService', 'Failed to fetch user votes', votesError);
         } else {
           userVotes = votes.map(v => v.option_id);
         }
       }
 
-      // חישוב סך ההצבעות
-      const totalVotes = poll.options.reduce((sum, option) => sum + option.votes_count, 0);
+      const totalVotes = (poll.options || []).reduce((sum: number, option: PollOption) => sum + (option.votes_count || 0), 0);
 
       const pollWithVotes: PollWithVotes = {
         ...poll,
@@ -298,10 +278,8 @@ export class PollService {
         total_votes: totalVotes
       };
 
-      console.log('✅ Poll results fetched successfully');
       return pollWithVotes;
     } catch (error) {
-      console.error('❌ Exception in getPollResults:', error);
       throw error;
     }
   }
@@ -319,7 +297,6 @@ export class PollService {
         .single();
 
       if (pollError) {
-        console.error('❌ Error fetching poll:', pollError);
         throw pollError;
       }
 
@@ -333,14 +310,11 @@ export class PollService {
         .eq('id', pollId);
 
       if (updateError) {
-        console.error('❌ Error locking poll:', updateError);
         throw updateError;
       }
 
-      console.log('✅ Poll locked successfully');
       return true;
     } catch (error) {
-      console.error('❌ Exception in lockPoll:', error);
       throw error;
     }
   }
@@ -357,23 +331,42 @@ export class PollService {
         .order('created_at', { ascending: false });
 
       if (pollsError) {
-        console.error('❌ Error fetching chat polls:', pollsError);
         throw pollsError;
       }
 
-      // הוסף מידע על הצבעות המשתמש לכל סקר
-      const pollsWithVotes: PollWithVotes[] = [];
-      for (const poll of polls) {
-        const pollWithVotes = await this.getPollResults(poll.id, userId);
-        if (pollWithVotes) {
-          pollsWithVotes.push(pollWithVotes);
+      if (!polls || polls.length === 0) return [];
+
+      // Batch: fetch all user votes for these polls in one query
+      const pollIds = polls.map(p => p.id);
+      let userVotesMap = new Map<string, string[]>();
+
+      if (userId) {
+        const { data: allVotes } = await supabase
+          .from('poll_votes')
+          .select('poll_id, option_id')
+          .in('poll_id', pollIds)
+          .eq('user_id', userId);
+
+        if (allVotes) {
+          for (const vote of allVotes) {
+            const existing = userVotesMap.get(vote.poll_id) || [];
+            existing.push(vote.option_id);
+            userVotesMap.set(vote.poll_id, existing);
+          }
         }
       }
 
-      console.log('✅ Chat polls fetched successfully');
-      return pollsWithVotes;
+      return polls.map(poll => {
+        const totalVotes = (poll.options || []).reduce(
+          (sum: number, opt: PollOption) => sum + (opt.votes_count || 0), 0
+        );
+        return {
+          ...poll,
+          user_votes: userVotesMap.get(poll.id) || [],
+          total_votes: totalVotes,
+        };
+      });
     } catch (error) {
-      console.error('❌ Exception in getChatPolls:', error);
       throw error;
     }
   }
@@ -383,52 +376,47 @@ export class PollService {
    */
   private static async updatePollVoteCounts(pollId: string): Promise<void> {
     try {
-      // קבלת סך ההצבעות לכל אפשרות
       const { data: voteCounts, error: countError } = await supabase
         .from('poll_votes')
         .select('option_id')
         .eq('poll_id', pollId);
 
       if (countError) {
-        console.error('❌ Error counting votes:', countError);
+        logger.error('PollService', 'Failed to fetch vote counts', countError);
         return;
       }
 
-      // חישוב מספר ההצבעות לכל אפשרות
       const optionVoteCounts: Record<string, number> = {};
-      voteCounts?.forEach(vote => {
+      (voteCounts || []).forEach(vote => {
         optionVoteCounts[vote.option_id] = (optionVoteCounts[vote.option_id] || 0) + 1;
       });
 
-      // קבלת הסקר הנוכחי
       const { data: poll, error: pollError } = await supabase
         .from('polls')
         .select('options')
         .eq('id', pollId)
         .single();
 
-      if (pollError) {
-        console.error('❌ Error fetching poll for update:', pollError);
+      if (pollError || !poll) {
+        logger.error('PollService', 'Failed to fetch poll for vote count update', pollError);
         return;
       }
 
-      // עדכון מספר ההצבעות
-      const updatedOptions = poll.options.map((option: PollOption) => ({
+      const updatedOptions = (poll.options || []).map((option: PollOption) => ({
         ...option,
         votes_count: optionVoteCounts[option.id] || 0
       }));
 
-      // שמירת העדכון
       const { error: updateError } = await supabase
         .from('polls')
         .update({ options: updatedOptions })
         .eq('id', pollId);
 
       if (updateError) {
-        console.error('❌ Error updating poll vote counts:', updateError);
+        logger.error('PollService', 'Failed to update poll vote counts', updateError);
       }
     } catch (error) {
-      console.error('❌ Exception in updatePollVoteCounts:', error);
+      logger.error('PollService', 'updatePollVoteCounts unexpected error', error);
     }
   }
 
@@ -445,7 +433,6 @@ export class PollService {
         .single();
 
       if (pollError) {
-        console.error('❌ Error fetching poll:', pollError);
         throw pollError;
       }
 
@@ -460,14 +447,11 @@ export class PollService {
         .eq('id', pollId);
 
       if (deleteError) {
-        console.error('❌ Error deleting poll:', deleteError);
         throw deleteError;
       }
 
-      console.log('✅ Poll deleted successfully');
       return true;
     } catch (error) {
-      console.error('❌ Exception in deletePoll:', error);
       throw error;
     }
   }
@@ -484,7 +468,6 @@ export class PollService {
         .eq('poll_id', pollId);
 
       if (votesError) {
-        console.error('❌ Error fetching poll votes:', votesError);
         throw votesError;
       }
 
@@ -502,7 +485,6 @@ export class PollService {
         .in('id', userIds);
 
       if (usersError) {
-        console.error('❌ Error fetching users:', usersError);
         throw usersError;
       }
 
@@ -531,10 +513,8 @@ export class PollService {
         }
       });
 
-      console.log('✅ Poll voters fetched successfully', votersByOption);
       return votersByOption;
     } catch (error) {
-      console.error('❌ Exception in getPollVoters:', error);
       throw error;
     }
   }
@@ -568,14 +548,10 @@ export class PollService {
         });
 
       if (error) {
-        console.error('❌ Error creating poll message:', error);
-        // לא זורק שגיאה כי הסקר כבר נוצר בהצלחה
-      } else {
-        console.log('✅ Poll message created successfully');
+        logger.error('PollService', 'Failed to create poll message in chat', error);
       }
     } catch (error) {
-      console.error('❌ Exception in createPollMessage:', error);
-      // לא זורק שגיאה כי הסקר כבר נוצר בהצלחה
+      logger.error('PollService', 'createPollMessage unexpected error', error);
     }
   }
 }

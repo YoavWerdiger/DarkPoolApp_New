@@ -19,3 +19,4 @@ UPDATE public.chat_groups SET name = 'מסחר פניסטוקס - סיכון ג�
 
 
 
+

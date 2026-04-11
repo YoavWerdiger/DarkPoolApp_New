@@ -118,14 +118,12 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
       animationType="none"
       statusBarTranslucent={true}
       onRequestClose={() => {
-        console.log('📱 UIBottomSheet: onRequestClose called');
         onClose();
       }}
     >
       <View style={{ flex: 1 }}>
         {/* Backdrop */}
         <TouchableWithoutFeedback onPress={closeOnBackdropPress ? () => {
-          console.log('👆 UIBottomSheet: Backdrop pressed');
           onClose();
         } : undefined}>
           <Animated.View
@@ -135,7 +133,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: tokens.colors.backdrop,
+              backgroundColor: 'rgba(0,0,0,0.7)',
               opacity: fadeAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, backdropOpacity],
@@ -151,17 +149,17 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
             bottom: 0,
             left: 0,
             right: 0,
-            backgroundColor: tokens.colors.background.secondary,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
+            backgroundColor: tokens.colors.background.sheet,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
             minHeight: 200,
             maxHeight: maxHeightValue,
             paddingBottom: insets.bottom,
-            shadowColor: tokens.colors.overlay,
-            shadowOffset: { width: 0, height: -4 },
-            shadowOpacity: 0.2,
-            shadowRadius: 12,
-            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: -6 },
+            shadowOpacity: 0.22,
+            shadowRadius: 16,
+            elevation: 10,
             transform: [{ translateY }],
           }}
         >
@@ -173,9 +171,9 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
             >
               <View style={{
                 width: 40,
-                height: 4,
-                backgroundColor: tokens.colors.border.active,
-                borderRadius: 2,
+                height: 5,
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                borderRadius: 2.5,
               }} />
             </View>
           )}

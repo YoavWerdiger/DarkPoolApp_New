@@ -180,8 +180,6 @@ export default function SplitsTab() {
 
   const loadSplits = useCallback(async () => {
     try {
-      console.log('✂️ Loading splits from Supabase');
-      
       const { data, error } = await supabase
         .from('splits_calendar')
         .select('*')
@@ -189,16 +187,13 @@ export default function SplitsTab() {
         .limit(100);
       
       if (error) {
-        console.error('❌ Supabase error:', error);
         return;
       }
       
       if (data) {
-        console.log(`✅ Loaded ${data.length} splits`);
         setSplits(data);
       }
     } catch (error) {
-      console.error('❌ Error loading splits:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

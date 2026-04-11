@@ -86,3 +86,4 @@ await paymentService.createRecurringPayment(userId, planId);
 - `auto_renew = true`
 - יש `cardcom_token`
 - קורא ל-`createRecurringPayment()`
+

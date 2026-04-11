@@ -106,7 +106,10 @@ class BenzingaService {
   private baseUrl = 'https://api.benzinga.com/api/v2';
 
   constructor() {
-    this.apiKey = process.env.EXPO_PUBLIC_BENZINGA_API_KEY || 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC';
+    const key = process.env.EXPO_PUBLIC_BENZINGA_API_KEY;
+    if (!key) {
+    }
+    this.apiKey = key ?? '';
   }
 
   /**
@@ -213,7 +216,6 @@ class BenzingaService {
         url.searchParams.append('page', currentPage.toString());
         url.searchParams.append('pagesize', pageSize.toString());
 
-        console.log(`📡 Calling Benzinga API (page ${currentPage})...`);
         const response = await fetch(url.toString());
 
         if (!response.ok) {
@@ -223,7 +225,84 @@ class BenzingaService {
           throw new Error(`Benzinga API Error: ${response.status} ${response.statusText}`);
         }
 
-        const data: BenzingaEarningsResponse = await response.json();
+        // בדיקת content-type לפני פרסור
+        const contentType = response.headers.get('content-type') || '';
+        let data: BenzingaEarningsResponse;
+
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const responseText = await response.text();
+
+          // נסיון בסיסי לפרסר XML של earnings (במידה וה‑API מחזיר XML במקום JSON)
+          if (
+            contentType.includes('application/xml') ||
+            contentType.includes('text/xml') ||
+            responseText.trim().startsWith('<?xml')
+          ) {
+            try {
+              const items: any[] = [];
+              const itemRegex = /<item>(.*?)<\/item>/gs;
+              const matches = responseText.matchAll(itemRegex);
+
+              for (const match of matches) {
+                const itemXml = match[1];
+                const getTag = (tag: string) => {
+                  const m = itemXml.match(new RegExp(`<${tag}>(.*?)<\\/${tag}>`));
+                  return m ? m[1] : '';
+                };
+
+                const id = getTag('id') || '';
+                const date = getTag('date');
+                const ticker = getTag('ticker');
+
+                if (!id || !date || !ticker) {
+                  continue;
+                }
+
+                const earning: BenzingaEarnings = {
+                  id,
+                  date,
+                  date_confirmed: getTag('date_confirmed') || date,
+                  time: getTag('time') || '00:00:00',
+                  ticker,
+                  exchange: getTag('exchange') || '',
+                  name: getTag('name') || ticker,
+                  currency: getTag('currency') || 'USD',
+                  period: getTag('period') || '',
+                  period_year: parseInt(getTag('period_year') || String(new Date(date).getFullYear()), 10) || new Date(date).getFullYear(),
+                  eps_type: getTag('eps_type') || '',
+                  eps: getTag('eps') || '',
+                  eps_est: getTag('eps_est') || '',
+                  eps_prior: getTag('eps_prior') || '',
+                  eps_surprise: getTag('eps_surprise') || '',
+                  eps_surprise_percent: getTag('eps_surprise_percent') || '',
+                  revenue_type: getTag('revenue_type') || '',
+                  revenue: getTag('revenue') || '',
+                  revenue_est: getTag('revenue_est') || '',
+                  revenue_prior: getTag('revenue_prior') || '',
+                  revenue_surprise: getTag('revenue_surprise') || '',
+                  revenue_surprise_percent: getTag('revenue_surprise_percent') || '',
+                  importance: parseInt(getTag('importance') || '0', 10) || 0,
+                  notes: getTag('notes') || '',
+                  updated: parseInt(getTag('updated') || '0', 10) || 0,
+                };
+
+                items.push(earning);
+              }
+
+              if (!items.length) {
+                throw new Error('No earnings items found in Benzinga XML');
+              }
+
+              data = { earnings: items };
+            } catch (xmlError) {
+              throw new Error('Benzinga earnings API returned XML that could not be parsed');
+            }
+          } else {
+            throw new Error(`Benzinga earnings API returned unexpected content type: ${contentType}`);
+          }
+        }
 
         if (data.earnings && Array.isArray(data.earnings)) {
           allEarnings.push(...data.earnings);
@@ -248,7 +327,6 @@ class BenzingaService {
         }
       }
 
-      console.log(`📊 Received ${allEarnings.length} earnings from Benzinga`);
 
       // המרה לפורמט EODHD
       const convertedEarnings = allEarnings.map(earning => this.convertToEODHDFormat(earning));
@@ -260,7 +338,6 @@ class BenzingaService {
         return dateB.getTime() - dateA.getTime(); // מהחדש לישן
       });
     } catch (error) {
-      console.error('Error fetching earnings calendar from Benzinga:', error);
       throw error;
     }
   }
@@ -278,13 +355,11 @@ class BenzingaService {
       const response = await fetch(url.toString());
 
       if (response.status === 401) {
-        console.log('❌ Benzinga API: 401 Unauthorized - API key invalid');
         return false;
       }
 
       return response.ok;
     } catch (error) {
-      console.error('Benzinga API not available:', error);
       return false;
     }
   }
@@ -351,7 +426,6 @@ class BenzingaService {
           url.searchParams.append('parameters[updated]', params.updated.toString());
         }
 
-        console.log(`📡 Calling Benzinga Economics API (page ${currentPage})...`);
         const response = await fetch(url.toString());
 
         if (!response.ok) {
@@ -361,7 +435,75 @@ class BenzingaService {
           throw new Error(`Benzinga Economics API Error: ${response.status} ${response.statusText}`);
         }
 
-        const data: BenzingaEconomicsResponse = await response.json();
+        // בדיקת content-type לפני פרסור
+        const contentType = response.headers.get('content-type') || '';
+        let data: BenzingaEconomicsResponse;
+
+        if (contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const responseText = await response.text();
+
+          if (
+            contentType.includes('application/xml') ||
+            contentType.includes('text/xml') ||
+            responseText.trim().startsWith('<?xml')
+          ) {
+            try {
+              const items: BenzingaEconomicEvent[] = [];
+              const itemRegex = /<item>(.*?)<\/item>/gs;
+
+              for (const match of responseText.matchAll(itemRegex)) {
+                const itemXml = match[1];
+                const getTag = (tag: string) => {
+                  const m = itemXml.match(new RegExp(`<${tag}>(.*?)<\\/${tag}>`));
+                  return m ? m[1] : '';
+                };
+
+                const id = getTag('id') || '';
+                const date = getTag('date');
+                const time = getTag('time') || '00:00:00';
+
+                if (!id || !date) {
+                  continue;
+                }
+
+                const event: BenzingaEconomicEvent = {
+                  id,
+                  date,
+                  time,
+                  country: getTag('country') || 'US',
+                  event_name: getTag('event_name') || '',
+                  event_period: getTag('event_period') || '',
+                  period_year:
+                    parseInt(getTag('period_year') || String(new Date(date).getFullYear()), 10) ||
+                    new Date(date).getFullYear(),
+                  actual: getTag('actual') || '',
+                  actual_t: getTag('actual_t') || '',
+                  consensus: getTag('consensus') || '',
+                  consensus_t: getTag('consensus_t') || '',
+                  prior: getTag('prior') || '',
+                  prior_t: getTag('prior_t') || '',
+                  importance: parseInt(getTag('importance') || '0', 10) || 0,
+                  updated: parseInt(getTag('updated') || '0', 10) || 0,
+                  description: getTag('description') || '',
+                };
+
+                items.push(event);
+              }
+
+              if (!items.length) {
+                throw new Error('No economics items found in Benzinga XML');
+              }
+
+              data = { economics: items };
+            } catch (xmlError) {
+              throw new Error('Benzinga Economics API returned XML that could not be parsed');
+            }
+          } else {
+            throw new Error(`Benzinga Economics API returned unexpected content type: ${contentType}`);
+          }
+        }
 
         if (data.economics && Array.isArray(data.economics) && data.economics.length > 0) {
           allEvents.push(...data.economics);
@@ -386,10 +528,8 @@ class BenzingaService {
         }
       }
 
-      console.log(`📊 Received ${allEvents.length} economic events from Benzinga`);
       return allEvents;
     } catch (error) {
-      console.error('Error fetching economic calendar from Benzinga:', error);
       throw error;
     }
   }
@@ -504,7 +644,6 @@ class BenzingaService {
           url.searchParams.append('updatedSince', params.updatedSince.toString());
         }
 
-        console.log(`📡 Calling Benzinga News API (page ${currentPage})...`);
         const response = await fetch(url.toString());
 
         if (!response.ok) {
@@ -539,10 +678,8 @@ class BenzingaService {
         }
       }
 
-      console.log(`📰 Received ${allNews.length} news articles from Benzinga`);
       return allNews;
     } catch (error) {
-      console.error('Error fetching news from Benzinga:', error);
       throw error;
     }
   }

@@ -13,7 +13,7 @@ interface ChatTypingIndicatorProps {
   typingUsers: TypingUser[];
 }
 
-export default function ChatTypingIndicator({ typingUsers }: ChatTypingIndicatorProps) {
+function ChatTypingIndicator({ typingUsers }: ChatTypingIndicatorProps) {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
@@ -63,9 +63,9 @@ export default function ChatTypingIndicator({ typingUsers }: ChatTypingIndicator
   // יצירת טקסט "מקליד..."
   const typingText =
     typingUsers.length === 1
-      ? `${typingUsers[0].user?.display_name || 'מישהו'} מקליד...`
+      ? `${typingUsers[0].user?.display_name ?? 'מישהו'} מקליד...`
       : typingUsers.length === 2
-      ? `${typingUsers[0].user?.display_name} ו-${typingUsers[1].user?.display_name} מקלידים...`
+      ? `${typingUsers[0].user?.display_name ?? 'מישהו'} ו-${typingUsers[1].user?.display_name ?? 'מישהו'} מקלידים...`
       : `${typingUsers.length} משתמשים מקלידים...`;
 
   return (
@@ -103,27 +103,27 @@ export default function ChatTypingIndicator({ typingUsers }: ChatTypingIndicator
 
 const createStyles = (tokens: any) => StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
   },
   bubble: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: tokens.colors.background.secondary,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: tokens.borderRadius.lg,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
     alignSelf: 'flex-start',
-    gap: 8,
+    gap: tokens.spacing.sm,
   },
   text: {
-    fontSize: 14,
+    fontSize: tokens.typography.bodySmall.size,
     color: tokens.colors.text.secondary,
     fontStyle: 'italic',
   },
   dots: {
     flexDirection: 'row',
-    gap: 4,
+    gap: tokens.spacing.xs,
   },
   dot: {
     width: 6,
@@ -132,6 +132,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.text.secondary,
   },
 });
+
 
 
 

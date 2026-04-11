@@ -13,12 +13,14 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { logger } from '../../utils/logger';
 
 interface PinnedMessage {
   id: string;
@@ -37,6 +39,7 @@ export default function ChatGroupPinnedMessagesScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { user } = useAuth();
+  useLockParentDrawerWhileFocused();
 
   const { groupId } = route.params as { groupId: string };
 
@@ -54,13 +57,14 @@ export default function ChatGroupPinnedMessagesScreen() {
         .rpc('get_pinned_messages', { channel_uuid: groupId });
 
       if (error) {
-        console.error('❌ Error loading pinned messages:', error);
+        Alert.alert('שגיאה', 'לא ניתן לטעון הודעות מוצמדות');
         return;
       }
 
       setPinnedMessages(data || []);
-    } catch (error) {
-      console.error('❌ Exception loading pinned messages:', error);
+    } catch (error: any) {
+      logger.error('PinnedMessages', 'Failed to load pinned messages', error);
+      Alert.alert('שגיאה', 'לא ניתן לטעון הודעות מוצמדות');
     } finally {
       setLoading(false);
     }
@@ -81,7 +85,6 @@ export default function ChatGroupPinnedMessagesScreen() {
         .eq('message_id', messageId);
 
       if (error) {
-        console.error('❌ Error unpinning message:', error);
         Alert.alert('שגיאה', 'לא ניתן להסיר את ההצמדה');
         return;
       }
@@ -89,7 +92,6 @@ export default function ChatGroupPinnedMessagesScreen() {
       await loadPinnedMessages();
       Alert.alert('הצלחה', 'ההודעה הוסרה מההצמדה');
     } catch (error) {
-      console.error('❌ Exception unpinning message:', error);
       Alert.alert('שגיאה', 'שגיאה בהסרת ההצמדה');
     }
   };
@@ -114,22 +116,9 @@ export default function ChatGroupPinnedMessagesScreen() {
   };
 
   return (
-    <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-      style={{ flex: 1 }}
-    >
+    <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {/* Header */}
-        <View style={styles.headerCard}>
-          <View style={styles.headerRow}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.secondary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>הודעות מוצמדות</Text>
-            <View style={{ width: 32 }} />
-          </View>
-        </View>
+        <ChatSubScreenHeader title="הודעות מוצמדות" onBack={handleBack} />
 
         <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
           {loading ? (
@@ -151,7 +140,7 @@ export default function ChatGroupPinnedMessagesScreen() {
                     <Ionicons
                       name={msg.message_type === 'image' ? 'image' : msg.message_type === 'video' ? 'videocam' : 'chatbubble'}
                       size={18}
-                      color={DesignTokens.colors.accent.main}
+                      color={DesignTokens.colors.primary.main}
                     />
                     <Text style={styles.pinnedByText}>{msg.pinned_by_name}</Text>
                   </View>
@@ -176,7 +165,7 @@ export default function ChatGroupPinnedMessagesScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </ChatScreenShell>
   );
 }
 
@@ -185,32 +174,6 @@ const createStyles = (tokens: any) =>
     safeArea: {
       flex: 1,
       backgroundColor: 'transparent',
-    },
-    headerCard: {
-      marginHorizontal: 0,
-      marginTop: 0,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomLeftRadius: tokens.borderRadius['2xl'],
-      borderBottomRightRadius: tokens.borderRadius['2xl'],
-      backgroundColor: 'rgba(10, 24, 16, 0.9)',
-      borderBottomWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.08)',
-    },
-    headerRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    backButton: {
-      padding: 6,
-    },
-    headerTitle: {
-      flex: 1,
-      textAlign: 'center',
-      fontSize: 18,
-      fontWeight: '700',
-      color: tokens.colors.text.primary,
     },
     contentContainer: {
       paddingHorizontal: 16,

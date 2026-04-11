@@ -1,16 +1,49 @@
-import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { ReactionSummary } from '../../services/supabase';
 
 interface MessageReactionsProps {
   reactions: ReactionSummary[];
   onReactionDetails: () => void;
-  isMe?: boolean; // האם זו הודעה של המשתמש
+  isMe?: boolean;
+  currentUserId?: string;
 }
 
-export default function MessageReactions({ reactions, onReactionDetails, isMe = false }: MessageReactionsProps) {
+function MessageReactions({ reactions, onReactionDetails, isMe = false, currentUserId }: MessageReactionsProps) {
   const DesignTokens = useDesignTokens();
+  
+  // אנימציות - מתחילים מ-1 כדי שריאקציות קיימות יופיעו מיד
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const prevReactionsCount = useRef(reactions?.length || 0);
+  const isFirstRender = useRef(true);
+  
+  // אנימציה כשיש ריאקציות חדשות
+  useEffect(() => {
+    const currentCount = reactions?.length || 0;
+    
+    // דלג על render ראשון - לא צריך אנימציה
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      prevReactionsCount.current = currentCount;
+      return;
+    }
+    
+    // אם השתנה מספר הריאקציות - הפעל אנימציה קלה
+    if (currentCount > 0 && currentCount !== prevReactionsCount.current) {
+      // אנימציית "pop" קלה
+      scaleAnim.setValue(0.8);
+      
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 5,
+        tension: 150,
+        useNativeDriver: true,
+      }).start();
+    }
+    
+    prevReactionsCount.current = currentCount;
+  }, [reactions]);
   
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -30,19 +63,19 @@ export default function MessageReactions({ reactions, onReactionDetails, isMe = 
     singleBubble: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 14,
+      paddingHorizontal: DesignTokens.spacing.sm,
+      paddingVertical: DesignTokens.spacing.xs,
+      borderRadius: DesignTokens.borderRadius.lg,
       backgroundColor: DesignTokens.colors.background.secondary,
       minHeight: 28,
       gap: 2,
     },
     emoji: {
-      fontSize: 14,
+      fontSize: DesignTokens.typography.bodySmall.size,
     },
     count: {
       color: DesignTokens.colors.text.secondary,
-      fontSize: 11,
+      fontSize: DesignTokens.typography.fontSize.xs,
       fontWeight: '500' as any,
       marginLeft: 1,
       marginRight: 4,
@@ -60,13 +93,10 @@ export default function MessageReactions({ reactions, onReactionDetails, isMe = 
   // עד 3 אימוג'ים שונים
   const displayReactions = reactions.slice(0, 3);
   
-  // אם יש יותר מ-3 סוגי אימוג'ים, נחשב כמה ריאקציות נוספות יש
-  const additionalReactionsCount = reactions.length > 3 
-    ? reactions.slice(3).reduce((sum, r) => sum + r.count, 0)
-    : 0;
+  // אם יש יותר מ-3 סוגי אימוג'ים, מציגים "+N" סוגים נוספים
+  const additionalReactionsCount = Math.max(0, reactions.length - 3);
 
   const handlePress = () => {
-    console.log('🎯 MessageReactions: Pressed, calling onReactionDetails');
     onReactionDetails();
   };
 
@@ -78,23 +108,43 @@ export default function MessageReactions({ reactions, onReactionDetails, isMe = 
         isMe ? styles.containerMe : styles.containerOther
       ]}
     >
-      {/* בועה אחת עם כל האימוג'ים */}
-      <View style={styles.singleBubble}>
+      {/* בועה אחת עם כל האימוג'ים - עם אנימציה */}
+      <Animated.View 
+        style={[
+          styles.singleBubble,
+          {
+            transform: [{ scale: scaleAnim }],
+          }
+        ]}
+      >
         {/* האימוג'ים - עם מספר אם יש יותר מ-1 */}
-        {displayReactions.map((reaction, index) => (
-          <View key={`${reaction.emoji}-${index}`} style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.emoji}>{reaction.emoji}</Text>
-            {reaction.count > 1 && (
-              <Text style={styles.count}>{reaction.count}</Text>
-            )}
-          </View>
-        ))}
+        {displayReactions.map((reaction, index) => {
+          const reactedByMe = currentUserId
+            ? reaction.user_ids?.includes(currentUserId)
+            : false;
+          return (
+            <View
+              key={`${reaction.emoji}-${index}`}
+              style={[
+                { flexDirection: 'row', alignItems: 'center', borderRadius: DesignTokens.borderRadius.sm, paddingHorizontal: DesignTokens.spacing.micro },
+                reactedByMe && { backgroundColor: DesignTokens.colors.primary.dim },
+              ]}
+            >
+              <Text style={styles.emoji}>{reaction.emoji}</Text>
+              {reaction.count > 1 && (
+                <Text style={[styles.count, reactedByMe && { color: DesignTokens.colors.primary.main }]}>{reaction.count}</Text>
+              )}
+            </View>
+          );
+        })}
         
         {/* +X אם יש יותר מ-3 סוגי אימוג'ים */}
         {additionalReactionsCount > 0 && (
           <Text style={styles.moreText}>+{additionalReactionsCount}</Text>
         )}
-      </View>
+      </Animated.View>
     </Pressable>
   );
 }
+
+export default React.memo(MessageReactions);

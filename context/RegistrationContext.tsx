@@ -102,7 +102,6 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     fullName: string; 
     profileImage: string | null 
   }) => {
-    console.log('🔄 RegistrationContext: Setting Google user data:', userData);
     setData(prev => ({
       ...prev,
       fullName: userData.fullName,
@@ -116,7 +115,6 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   
   // איפוס נתוני הרשמה
   const resetData = useCallback(() => {
-    console.log('🔄 RegistrationContext: Resetting registration data');
     setData(defaultData);
   }, []);
   

@@ -81,17 +81,14 @@ class FinnhubService {
   private getCachedData(key: string): any | null {
     const cached = this.cache.get(key);
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-      console.log(`📦 FinnhubService: Cache hit for ${key}`);
       return cached.data;
     }
-    console.log(`❌ FinnhubService: Cache miss for ${key}`);
     return null;
   }
 
   // שמירה ב-cache
   private setCachedData(key: string, data: any): void {
     this.cache.set(key, { data, timestamp: Date.now() });
-    console.log(`💾 FinnhubService: Cached data for ${key}`);
   }
 
   // בקשה כללית ל-API
@@ -113,7 +110,6 @@ class FinnhubService {
     });
 
     try {
-      console.log(`🌐 FinnhubService: Making request to ${url.pathname}`);
       const response = await fetch(url.toString());
       
       if (!response.ok) {
@@ -127,7 +123,6 @@ class FinnhubService {
       this.setCachedData(cacheKey, data);
       return data;
     } catch (error) {
-      console.error('❌ FinnhubService: Request failed:', error);
       throw error;
     }
   }
@@ -141,7 +136,6 @@ class FinnhubService {
    */
   async getEconomicCalendar(from?: string, to?: string): Promise<FinnhubEconomicEvent[]> {
     try {
-      console.log('📅 FinnhubService: Fetching economic calendar');
       
       const params: Record<string, string> = {};
       if (from) params.from = from;
@@ -152,10 +146,8 @@ class FinnhubService {
         params
       );
 
-      console.log(`✅ FinnhubService: Retrieved ${response.economicCalendar?.length || 0} economic events`);
       return response.economicCalendar || [];
     } catch (error) {
-      console.error('❌ FinnhubService: Error fetching economic calendar:', error);
       return [];
     }
   }
@@ -322,17 +314,14 @@ class FinnhubService {
    */
   async getMarketNews(category: string = 'general', minId: number = 0): Promise<FinnhubMarketNews[]> {
     try {
-      console.log(`📰 FinnhubService: Fetching market news - category: ${category}`);
       
       const response = await this.makeRequest<FinnhubMarketNews[]>('news', {
         category,
         minId
       });
 
-      console.log(`✅ FinnhubService: Retrieved ${response?.length || 0} news articles`);
       return response || [];
     } catch (error) {
-      console.error('❌ FinnhubService: Error fetching market news:', error);
       return [];
     }
   }
@@ -346,7 +335,6 @@ class FinnhubService {
     to: string
   ): Promise<FinnhubCompanyNews[]> {
     try {
-      console.log(`📰 FinnhubService: Fetching company news for ${symbol}`);
       
       const response = await this.makeRequest<FinnhubCompanyNews[]>('company-news', {
         symbol,
@@ -354,10 +342,8 @@ class FinnhubService {
         to
       });
 
-      console.log(`✅ FinnhubService: Retrieved ${response?.length || 0} company news articles`);
       return response || [];
     } catch (error) {
-      console.error('❌ FinnhubService: Error fetching company news:', error);
       return [];
     }
   }
@@ -369,17 +355,14 @@ class FinnhubService {
    */
   async checkApiAvailability(): Promise<boolean> {
     try {
-      console.log('🔍 FinnhubService: Checking API availability');
       
       // בדיקה פשוטה - קבלת חדשות כלליות
       const news = await this.makeRequest<any>('news', { category: 'general' });
       
       const isAvailable = Array.isArray(news) && news.length > 0;
-      console.log(`✅ FinnhubService: API is ${isAvailable ? 'available' : 'unavailable'}`);
       
       return isAvailable;
     } catch (error) {
-      console.error('❌ FinnhubService: API not available:', error);
       return false;
     }
   }
@@ -388,7 +371,6 @@ class FinnhubService {
    * ניקוי cache
    */
   clearCache(): void {
-    console.log('🧹 FinnhubService: Clearing cache');
     this.cache.clear();
   }
 

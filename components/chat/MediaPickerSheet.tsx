@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 
@@ -26,6 +27,7 @@ export default function MediaPickerSheet({
   onPoll,
 }: MediaPickerSheetProps) {
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
 
   const options = [
     {
@@ -120,13 +122,13 @@ export default function MediaPickerSheet({
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
-      snapPoints={[0.34]}
+      snapPoints={[0.38]}
       showHandle={true}
       enablePanDownToClose={true}
       useModal={true}
       backdropOpacity={0.15}
     >
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>צרף קובץ</Text>
@@ -139,8 +141,9 @@ export default function MediaPickerSheet({
               key={option.id}
               style={styles.optionItem}
               onPress={() => {
+                // ⚡ פעולה קודם – מתחיל לפתוח picker/מצלמה מיד, sheet נסגר במקביל
+                option.action();
                 onClose();
-                setTimeout(option.action, 200);
               }}
               activeOpacity={0.7}
             >

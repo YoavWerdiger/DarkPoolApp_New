@@ -13,6 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { X, Trash2 } from 'lucide-react-native';
 import { PollService } from '../../services/pollService';
+import { useAuth } from '../../context/AuthContext';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface PollCreationModalProps {
   visible: boolean;
@@ -27,8 +29,10 @@ export default function PollCreationModal({
   chatId,
   onPollCreated
 }: PollCreationModalProps) {
+  const { user } = useAuth();
+  const DesignTokens = useDesignTokens();
   const [question, setQuestion] = useState('');
-  const [options, setOptions] = useState(['', '']); // מינימום 2 אפשרויות
+  const [options, setOptions] = useState(['', '']);
   const [multipleChoice, setMultipleChoice] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -79,6 +83,7 @@ export default function PollCreationModal({
         chatId,
         question.trim(),
         options.map(opt => opt.trim()),
+        user?.id || '',
         multipleChoice
       );
 
@@ -89,7 +94,6 @@ export default function PollCreationModal({
         onClose();
       }
     } catch (error: any) {
-      console.error('❌ Error creating poll:', error);
       Alert.alert('שגיאה', error.message || 'לא ניתן ליצור את הסקר');
     } finally {
       setIsCreating(false);
@@ -157,7 +161,7 @@ export default function PollCreationModal({
                 onChangeText={setQuestion}
                 placeholder="הזן את השאלה שלך..."
                 placeholderTextColor="#666"
-                className="bg-[#111111] border border-[#333] rounded-xl px-4 py-3 text-white text-lg"
+                className="bg-[#141F14] border border-[#1A2B1A] rounded-xl px-4 py-3 text-white text-lg"
                 multiline
                 numberOfLines={3}
                 textAlign="right"
@@ -168,13 +172,13 @@ export default function PollCreationModal({
             <View className="mb-6">
               <TouchableOpacity
                 onPress={() => setMultipleChoice(!multipleChoice)}
-                className="flex-row items-center justify-center bg-[#111111] border border-[#333] rounded-xl px-4 py-3"
+                className="flex-row items-center justify-center bg-[#141F14] border border-[#1A2B1A] rounded-xl px-4 py-3"
               >
                 <View className="flex-row items-center">
                   <Ionicons
                     name={multipleChoice ? 'checkbox' : 'radio-button-off'}
                     size={24}
-                    color={multipleChoice ? '#00E654' : '#666'}
+                    color={multipleChoice ? DesignTokens.colors.primary.main : DesignTokens.colors.text.tertiary}
                   />
                   <Text className="text-white text-lg mr-3">
                     {multipleChoice ? 'בחירה מרובה' : 'בחירה יחידה'}
@@ -208,7 +212,7 @@ export default function PollCreationModal({
                       onChangeText={(text) => updateOption(index, text)}
                       placeholder={`אפשרות ${index + 1}`}
                       placeholderTextColor="#666"
-                      className="bg-[#111111] border border-[#333] rounded-xl px-4 py-3 text-white text-lg"
+                      className="bg-[#141F14] border border-[#1A2B1A] rounded-xl px-4 py-3 text-white text-lg"
                       textAlign="right"
                     />
                   </View>
@@ -231,7 +235,7 @@ export default function PollCreationModal({
             {/* Preview */}
             <View className="mb-6">
               <Text className="text-white font-bold text-lg mb-3 text-right">תצוגה מקדימה</Text>
-              <View className="bg-[#111111] border border-[#333] rounded-xl p-4">
+              <View className="bg-[#141F14] border border-[#1A2B1A] rounded-xl p-4">
                 <Text className="text-white font-bold text-lg mb-3 text-right">
                   {question || 'שאלת הסקר תופיע כאן'}
                 </Text>
@@ -243,7 +247,7 @@ export default function PollCreationModal({
                         <Ionicons
                           name={multipleChoice ? 'checkbox-outline' : 'radio-button-off'}
                           size={20}
-                          color="#00E654"
+                          color={DesignTokens.colors.primary.main}
                           style={{ marginRight: 8 }}
                         />
                         <Text className="text-white text-base">{option}</Text>

@@ -74,7 +74,6 @@ export default function SettingsScreen({ navigation }: any) {
       }
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading settings:', error);
       setIsLoading(false);
     }
   };
@@ -95,7 +94,6 @@ export default function SettingsScreen({ navigation }: any) {
     try {
       await AsyncStorage.setItem('appSettings', JSON.stringify(newSettings));
     } catch (error) {
-      console.error('Error saving settings:', error);
     }
   };
 
@@ -125,7 +123,6 @@ export default function SettingsScreen({ navigation }: any) {
               
               Alert.alert('הצלחה', 'המטמון נוקה בהצלחה');
             } catch (error) {
-              console.error('Error clearing cache:', error);
               Alert.alert('שגיאה', 'שגיאה בניקוי המטמון');
             }
           }
@@ -165,7 +162,6 @@ export default function SettingsScreen({ navigation }: any) {
           Alert.alert('בוטל', 'אימות ביומטרי בוטל');
         }
       } catch (error) {
-        console.error('Error with biometric auth:', error);
         Alert.alert('שגיאה', 'שגיאה בהפעלת אימות ביומטרי');
       }
     } else {
@@ -254,40 +250,28 @@ export default function SettingsScreen({ navigation }: any) {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1 }}>
-        <LinearGradient
-          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
-          </View>
-        </RNSafeAreaView>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
+        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+        <Text style={{ 
+          color: DesignTokens.colors.text.secondary, 
+          fontSize: DesignTokens.typography.body.size,
+          fontWeight: DesignTokens.typography.body.weight as any,
+          lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
+          marginTop: DesignTokens.spacing.lg 
+        }}>טוען...</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }} edges={['top']}>
         {/* Header עם blur */}
         <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
           <UICard 
             variant="blur"
             padding="sm"
+            style={{ borderRadius: DesignTokens.borderRadius.lg }}
           >
             <View style={{
               flexDirection: 'row',
@@ -298,8 +282,9 @@ export default function SettingsScreen({ navigation }: any) {
               <Text style={{
                 flex: 1,
                 textAlign: 'center',
-                fontSize: DesignTokens.typography.fontSize.lg,
-                fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                fontSize: DesignTokens.typography.titleSmall.size,
+                fontWeight: DesignTokens.typography.titleSmall.weight as any,
+                letterSpacing: DesignTokens.typography.titleSmall.letterSpacing,
                 color: DesignTokens.colors.text.primary,
                 marginLeft: 36
               }}>
@@ -315,7 +300,7 @@ export default function SettingsScreen({ navigation }: any) {
                   justifyContent: 'center',
                   alignItems: 'center',
                   borderRadius: 18,
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                  backgroundColor: DesignTokens.colors.selection.subtle
                 }}
               >
                 <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
@@ -324,7 +309,7 @@ export default function SettingsScreen({ navigation }: any) {
           </UICard>
         </View>
 
-        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <View style={{ flex: 1 }}>
           <ScrollView 
             style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
@@ -334,14 +319,14 @@ export default function SettingsScreen({ navigation }: any) {
               <View key={sectionIndex} style={{ marginBottom: DesignTokens.spacing.lg }}>
                 {/* Section Title */}
                 <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.xs,
+                  fontSize: DesignTokens.typography.caption.size,
                   fontWeight: DesignTokens.typography.fontWeight.bold as any,
                   color: DesignTokens.colors.text.tertiary,
                   marginBottom: DesignTokens.spacing.sm,
-                  marginRight: 4,
+                  marginRight: DesignTokens.spacing.xs,
                   textAlign: 'right',
                   textTransform: 'uppercase',
-                  letterSpacing: 0.5
+                  letterSpacing: DesignTokens.typography.letterSpacing.wide
                 }}>
                   {section.title}
                 </Text>
@@ -350,6 +335,7 @@ export default function SettingsScreen({ navigation }: any) {
                 <UICard 
                   variant="blur"
                   padding="none"
+                  style={{ borderRadius: DesignTokens.borderRadius.lg }}
                 >
                 {section.items.map((item, itemIndex) => (
                   <View key={item.id}>
@@ -360,9 +346,9 @@ export default function SettingsScreen({ navigation }: any) {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        paddingTop: 16,
-                        paddingBottom: itemIndex < section.items.length - 1 ? 12 : 16,
-                        paddingHorizontal: 16,
+                        paddingTop: DesignTokens.spacing.lg,
+                        paddingBottom: itemIndex < section.items.length - 1 ? DesignTokens.spacing.md : DesignTokens.spacing.lg,
+                        paddingHorizontal: DesignTokens.spacing.lg,
                       }}
                     >
                     {/* Switch/Chevron - שמאל */}
@@ -376,23 +362,26 @@ export default function SettingsScreen({ navigation }: any) {
                         style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                       />
                     ) : (
-                      <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
+                      <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                     )}
 
                     {/* Text Content - מרכז */}
-                    <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                    <View style={{ flex: 1, marginLeft: DesignTokens.spacing.md, marginRight: DesignTokens.spacing.md }}>
                       <Text style={{
-                        fontSize: 16,
-                        fontWeight: '600',
-                        color: item.danger ? DesignTokens.colors.danger.main : theme.textPrimary,
-                        marginBottom: 2,
+                        fontSize: DesignTokens.typography.body.size,
+                        fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                        lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
+                        color: item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary,
+                        marginBottom: DesignTokens.spacing.xs / 2,
                         textAlign: 'right'
                       }}>
                         {item.title}
                       </Text>
                       <Text style={{
-                        fontSize: 13,
-                        color: theme.textTertiary,
+                        fontSize: DesignTokens.typography.bodySmall.size,
+                        fontWeight: DesignTokens.typography.bodySmall.weight as any,
+                        lineHeight: DesignTokens.typography.bodySmall.size * DesignTokens.typography.bodySmall.lineHeight,
+                        color: DesignTokens.colors.text.tertiary,
                         textAlign: 'right'
                       }}>
                         {item.subtitle}
@@ -403,8 +392,8 @@ export default function SettingsScreen({ navigation }: any) {
                     <View style={{
                       width: 36,
                       height: 36,
-                      borderRadius: 8,
-                      backgroundColor: item.danger ? 'rgba(239, 68, 68, 0.1)' : 'rgba(0, 230, 84, 0.1)',
+                      borderRadius: DesignTokens.borderRadius.sm,
+                      backgroundColor: item.danger ? `${DesignTokens.colors.danger.main}1A` : `${DesignTokens.colors.primary.main}1A`,
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
@@ -418,7 +407,7 @@ export default function SettingsScreen({ navigation }: any) {
                   {itemIndex < section.items.length - 1 && (
                     <View style={{
                       height: 1,
-                      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                      backgroundColor: DesignTokens.colors.border.divider,
                     }} />
                   )}
                 </View>
@@ -435,7 +424,8 @@ export default function SettingsScreen({ navigation }: any) {
             }}>
               <Text style={{ 
                 color: DesignTokens.colors.text.tertiary, 
-                fontSize: DesignTokens.typography.fontSize.sm
+                fontSize: DesignTokens.typography.caption.size,
+                fontWeight: DesignTokens.typography.caption.weight as any,
               }}>
                 DarkPool App · גרסה 1.0.0
               </Text>

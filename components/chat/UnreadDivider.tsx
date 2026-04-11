@@ -13,9 +13,6 @@ const UnreadDivider: React.FC<UnreadDividerProps> = ({
 }) => {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
-  
-  console.log('🟢 UnreadDivider: Rendering with count:', unreadCount);
-  
   const fadeAnim = useRef(new Animated.Value(1)).current;
   
   useEffect(() => {
@@ -32,7 +29,6 @@ const UnreadDivider: React.FC<UnreadDividerProps> = ({
   }, [fadeAnim]);
   
   if (unreadCount <= 0) {
-    console.log('🔴 UnreadDivider: Not rendering - count is', unreadCount);
     return null;
   }
 
@@ -61,8 +57,8 @@ const UnreadDivider: React.FC<UnreadDividerProps> = ({
 
 const createStyles = (tokens: any) => StyleSheet.create({
   container: {
-    marginVertical: 12,
-    marginHorizontal: 16,
+    marginVertical: 10,
+    marginHorizontal: 10,
   },
   content: {
     flexDirection: 'row',
@@ -83,7 +79,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginHorizontal: 12,
   },
   text: {
-    color: '#FFFFFF',
+    color: tokens.colors.text.inverse,
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',

@@ -1,11 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MediaFile } from './mediaService';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../config/publicEnv';
 
-const supabaseUrl = 'https://wpmrtczbfcijoocguime.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDczNTEsImV4cCI6MjA2Njc4MzM1MX0.YHfniy3w94LVODC54xb7Us-Daw_pRx2WWFOoR-59kGQ';
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     storage: AsyncStorage,
     autoRefreshToken: true,
@@ -20,7 +18,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   realtime: {
     params: {
-      eventsPerSecond: 10,
+      eventsPerSecond: 40,
     },
   },
 });
@@ -43,7 +41,7 @@ export interface Message {
   created_at: string;
   updated_at?: string;
   sender?: { full_name?: string };
-  status?: 'sent' | 'delivered' | 'read';
+  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
   read_by?: string[];
   mentions?: Array<{ user_id: string; start: number; end: number; display: string }>;
   // שדות נוספים שרואים במסד הנתונים
@@ -54,6 +52,7 @@ export interface Message {
   file_size?: number;
   forwarded_from_message_id?: string;
   is_deleted?: boolean;
+  is_edited?: boolean;
   media_type?: string;
   media_url?: string;
   // שדות חדשים לריאקציות
@@ -109,10 +108,4 @@ export interface ReactionSummary {
   user_names: string[];
 }
 
-// טיפוס חדש לפירוט ריאקציות
-export interface ReactionDetail {
-  emoji: string;
-  count: number;
-  user_ids: string[];
-  user_names: string[];
-} 
+export type ReactionDetail = ReactionSummary;

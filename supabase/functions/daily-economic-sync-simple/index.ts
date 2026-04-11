@@ -2,9 +2,9 @@
 // שולף אירועי מאקרו כלכליים 3 חודשים קדימה + 3 חודשים אחורה
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
-const EODHD_API_KEY = '68e3c3af900997.85677801'
+const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
 const EODHD_BASE_URL = 'https://eodhd.com/api'
 
 interface EconomicEvent {
@@ -279,12 +279,17 @@ serve(async (req) => {
     const response = await fetch(url)
     
     if (response.ok) {
-      const data = await response.json()
-      
-      if (Array.isArray(data)) {
-        console.log(`📊 Fetched ${data.length} events`)
-        
-        data.forEach((event: any) => {
+      const raw = await response.json()
+      // EODHD יכול להחזיר מערך ישיר או אובייקט עם מערך (למשל { data: [...] })
+      const data = Array.isArray(raw)
+        ? raw
+        : (raw?.data ?? raw?.events ?? raw?.results ?? [])
+      const eventsArray = Array.isArray(data) ? data : []
+
+      if (eventsArray.length > 0) {
+        console.log(`📊 Fetched ${eventsArray.length} events`)
+
+        eventsArray.forEach((event: any) => {
           try {
             // חילוץ תאריך ושעה נכון מ-EODHD API
             const { date: parsedDate, time: parsedTime } = parseEventDateTime(event.date || '');
@@ -320,6 +325,8 @@ serve(async (req) => {
             console.error('❌ Error processing event:', event, error);
           }
         })
+      } else {
+        console.log('📊 EODHD returned no array (or empty). Keys:', typeof raw === 'object' && raw ? Object.keys(raw) : 'not object')
       }
     }
     

@@ -20,15 +20,9 @@ import {
   LearningError
 } from '../types/learning';
 
-console.log('🎓 LearningService: Imports loaded successfully');
-console.log('🎓 LearningService: LearningError class:', LearningError);
-console.log('🎓 LearningService: supabase client:', supabase);
-
 export class LearningService {
   // Course queries
   static async fetchCourses(params: CourseListParams = {}): Promise<CourseListResponse> {
-    console.log('🎓 LearningService.fetchCourses: Called with params:', params);
-    
     const {
       page = 1,
       limit = 20,
@@ -37,17 +31,11 @@ export class LearningService {
       sort_order = 'desc'
     } = params;
 
-    console.log('🎓 LearningService.fetchCourses: Building query...');
-    
     try {
       let query = supabase
         .from('courses')
         .select('*')
         .eq('is_active', true);
-
-      console.log('🎓 LearningService.fetchCourses: Query object created successfully');
-
-    console.log('🎓 LearningService.fetchCourses: Query built, applying filters...');
 
     // Apply filters
     if (filters.search) {
@@ -80,18 +68,9 @@ export class LearningService {
     const to = from + limit - 1;
     query = query.range(from, to);
 
-    console.log('🎓 LearningService.fetchCourses: Executing query...');
-    
     const { data, error, count } = await query;
 
-    console.log('🎓 LearningService.fetchCourses: Query result:', {
-      data: data?.length || 0,
-      error: error?.message,
-      count
-    });
-
     if (error) {
-      console.error('🎓 LearningService.fetchCourses: Query error:', error);
       throw new LearningError({
         code: 'FETCH_COURSES_ERROR',
         message: error.message,
@@ -100,14 +79,11 @@ export class LearningService {
     }
 
     // Get user enrollments and progress for each course
-    console.log('🎓 LearningService.fetchCourses: Getting user...');
     const { data: { user } } = await supabase.auth.getUser();
-    console.log('🎓 LearningService.fetchCourses: User:', user?.id ? 'authenticated' : 'not authenticated');
-    
+
     let coursesWithProgress: CourseWithProgress[] = [];
 
     if (user) {
-      console.log('🎓 LearningService.fetchCourses: User authenticated, getting enrollments and progress...');
       const courseIds = data?.map(c => c.id) || [];
       
       // Get enrollments (using user_course_progress as enrollment indicator)
@@ -238,17 +214,8 @@ export class LearningService {
       has_more: (count || 0) > page * limit
     };
 
-    console.log('🎓 LearningService.fetchCourses: Final result:', {
-      coursesCount: result.courses.length,
-      total: result.total,
-      page: result.page,
-      limit: result.limit,
-      hasMore: result.has_more
-    });
-
     return result;
     } catch (error) {
-      console.error('🎓 LearningService.fetchCourses: Unexpected error:', error);
       throw new LearningError({
         code: 'UNEXPECTED_ERROR',
         message: error?.message || 'Unexpected error in fetchCourses',
@@ -299,18 +266,8 @@ export class LearningService {
         .in('lesson_id', lessonIds)
         .eq('is_active', true);
       
-      if (mediaError) {
-        console.error('❌ Error fetching media links:', mediaError);
-      }
-      
       if (mediaLinks) {
-        console.log(`📊 Fetched ${mediaLinks.length} media links for course ${courseId}`);
-        mediaLinks.forEach(m => {
-          console.log(`📊 Media for lesson ${m.lesson_id}: duration_minutes = ${m.duration_minutes}`);
-        });
         mediaMap = new Map(mediaLinks.map(m => [m.lesson_id, m]));
-      } else {
-        console.log(`⚠️ No media links found for course ${courseId}`);
       }
     }
 
@@ -358,11 +315,8 @@ export class LearningService {
           let durationMinutes = media?.duration_minutes;
           if ((!durationMinutes || durationMinutes === 0) && progressData?.total_duration_seconds) {
             durationMinutes = Math.round(progressData.total_duration_seconds / 60);
-            console.log(`📊 Lesson ${lesson.id}: Using duration from progress: ${durationMinutes} minutes`);
           }
-          
-          console.log(`📊 Lesson ${lesson.id}: duration_minutes from media = ${media?.duration_minutes}, from progress = ${progressData?.total_duration_seconds ? Math.round(progressData.total_duration_seconds / 60) : 'N/A'}, final = ${durationMinutes}`);
-          
+
           const formatDuration = (minutes?: number) => {
             if (!minutes || minutes === 0) return '00:00';
             const totalSeconds = minutes * 60;
@@ -377,10 +331,9 @@ export class LearningService {
               return `${mins}:${secs.toString().padStart(2, '0')}`;
             }
           };
-          
+
           const formattedDuration = formatDuration(durationMinutes);
-          console.log(`📊 Lesson ${lesson.id}: formatted duration = ${formattedDuration}`);
-          
+
           return {
             ...lesson,
             duration: formattedDuration,
@@ -398,9 +351,7 @@ export class LearningService {
       lessonsWithProgress = lessonsData?.map(lesson => {
         const media = mediaMap.get(lesson.id);
         const durationMinutes = media?.duration_minutes;
-        
-        console.log(`📊 Lesson ${lesson.id}: duration_minutes from media = ${durationMinutes}`);
-        
+
         const formatDuration = (minutes?: number) => {
           if (!minutes || minutes === 0) return '00:00';
           const totalSeconds = minutes * 60;
@@ -415,10 +366,9 @@ export class LearningService {
             return `${mins}:${secs.toString().padStart(2, '0')}`;
           }
         };
-        
+
         const formattedDuration = formatDuration(durationMinutes);
-        console.log(`📊 Lesson ${lesson.id}: formatted duration = ${formattedDuration}`);
-        
+
         return {
           ...lesson,
           duration: formattedDuration,
@@ -475,6 +425,14 @@ export class LearningService {
       });
     }
 
+    // Get media link for this lesson
+    const { data: mediaLink, error: mediaError } = await supabase
+      .from('lesson_media_links')
+      .select('*')
+      .eq('lesson_id', lessonId)
+      .eq('is_active', true)
+      .single();
+
     // Get user progress
     const { data: { user } } = await supabase.auth.getUser();
     let progress: LessonProgress | undefined;
@@ -497,9 +455,27 @@ export class LearningService {
       }
     }
 
+    // יצירת block עבור וידאו אם יש media link
+    const blocks = [];
+    if (mediaLink) {
+      blocks.push({
+        id: `video-${lessonId}`,
+        lesson_id: lessonId,
+        type: 'video' as const,
+        sort_index: 0,
+        video_key: mediaLink.storage_path || mediaLink.video_key || mediaLink.url,
+        video_poster_url: mediaLink.thumbnail_url || data.thumbnail_url || null,
+        text_md: null,
+        pdf_url: null,
+        quiz_json: null,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      });
+    }
+
     return {
       ...data,
-      blocks: [],
+      blocks,
       progress
     };
   }

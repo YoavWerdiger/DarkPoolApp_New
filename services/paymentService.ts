@@ -1,24 +1,22 @@
 import { supabase } from '../lib/supabase';
 
-// CardCom API Configuration - פרטי החברה האמיתיים (API v11)
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+
 export const CARDCOM_CONFIG = {
-  terminalNumber: 147763, // מסוף 147763 - סניף מרכזי
-  apiName: 'y5N7Nh1YfRIrqaa1TFzY', // שם משתמש ממשקים מעודכן
-  apiPassword: 'IQWEk245ICRSmSJHJ3Ya', // סיסמת משתמש ממשקים מעודכנת
+  terminalNumber: Number(process.env.EXPO_PUBLIC_CARDCOM_TERMINAL) || 0,
+  apiName: process.env.EXPO_PUBLIC_CARDCOM_API_NAME ?? '',
+  apiPassword: process.env.EXPO_PUBLIC_CARDCOM_API_PASSWORD ?? '',
   baseUrl: 'https://secure.cardcom.solutions/api/v11',
-  successUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-action',
-  errorUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-action',
-  callbackUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/rapid-responder'
+  successUrl: `${supabaseUrl}/functions/v1/smart-action`,
+  errorUrl: `${supabaseUrl}/functions/v1/smart-action`,
+  callbackUrl: `${supabaseUrl}/functions/v1/rapid-responder`,
 };
 
-// בדיקת תקינות המפתח
 export const validateCardcomConfig = () => {
-  console.log('🔍 CardCom Config Validation:');
-  console.log('  Terminal Number:', CARDCOM_CONFIG.terminalNumber);
-  console.log('  API Name:', CARDCOM_CONFIG.apiName);
-  console.log('  API Password:', CARDCOM_CONFIG.apiPassword ? '***' + CARDCOM_CONFIG.apiPassword.slice(-4) : 'MISSING');
-  console.log('  Base URL:', CARDCOM_CONFIG.baseUrl);
-  console.log('  Full Endpoint:', `${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`);
+  if (!CARDCOM_CONFIG.terminalNumber || !CARDCOM_CONFIG.apiName || !CARDCOM_CONFIG.apiPassword) {
+    return false;
+  }
+  return true;
 };
 
 // Subscription Plans Configuration - מסלולים חיים
@@ -208,8 +206,6 @@ class PaymentService {
     try {
       // בדיקת תקינות הקונפיגורציה
       validateCardcomConfig();
-      
-      console.log('🔄 PaymentService: Creating payment request with LowProfile API:', request);
 
       // יצירת מזהה עסקה ייחודי
       const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -259,14 +255,7 @@ class PaymentService {
       if (request.isRecurring) {
         // אפשר להוסיף פרמטרים נוספים ל-RecurringPayments אם נדרש
         // (צריך לבדוק עם Cardcom מה הפרמטרים המדויקים)
-        console.log('🔄 PaymentService: Setting up recurring payment with BillGold');
       }
-
-      console.log('🔄 PaymentService: Sending request to CardCom LowProfile API');
-      console.log('🔄 PaymentService: API Name:', CARDCOM_CONFIG.apiName);
-      console.log('🔄 PaymentService: Terminal:', CARDCOM_CONFIG.terminalNumber);
-      console.log('🔄 PaymentService: Full URL:', `${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`);
-      console.log('🔄 PaymentService: Request Data:', JSON.stringify(paymentData, null, 2));
 
       // שליחת בקשת תשלום ל-CardCom LowProfile API
       const response = await fetch(`${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`, {
@@ -278,12 +267,7 @@ class PaymentService {
         body: JSON.stringify(paymentData)
       });
 
-      console.log('🔄 PaymentService: Response status:', response.status);
-      console.log('🔄 PaymentService: Response headers:', Object.fromEntries(response.headers.entries()));
-
       const result = await response.json();
-
-      console.log('🔄 PaymentService: CardCom LowProfile API response:', result);
 
       if (result.ResponseCode === 0) {
         // שמירת פרטי העסקה במסד הנתונים
@@ -297,22 +281,18 @@ class PaymentService {
           paymentUrl: result.Url
         });
 
-        console.log('✅ PaymentService: Payment request created successfully');
-
         return {
           success: true,
           transactionId: transactionId,
           paymentUrl: result.Url
         };
       } else {
-        console.error('❌ PaymentService: CardCom LowProfile API error:', result);
         return {
           success: false,
           error: result.Description || 'שגיאה ביצירת בקשת התשלום'
         };
       }
     } catch (error) {
-      console.error('❌ PaymentService: Error creating payment request:', error);
       return {
         success: false,
         error: 'שגיאה ביצירת בקשת התשלום'
@@ -325,8 +305,6 @@ class PaymentService {
    */
   async processPaymentCallback(callback: PaymentCallback): Promise<boolean> {
     try {
-      console.log('🔄 PaymentService: Processing payment callback:', callback);
-
       // עדכון סטטוס העסקה
       const { error: updateError } = await supabase
         .from('payment_transactions')
@@ -337,7 +315,6 @@ class PaymentService {
         .eq('id', callback.transactionId);
 
       if (updateError) {
-        console.error('❌ PaymentService: Error updating transaction:', updateError);
         return false;
       }
 
@@ -346,10 +323,8 @@ class PaymentService {
         await this.updateUserSubscription(callback.userId, callback.planId);
       }
 
-      console.log('✅ PaymentService: Payment callback processed successfully');
       return true;
     } catch (error) {
-      console.error('❌ PaymentService: Error processing payment callback:', error);
       return false;
     }
   }
@@ -368,8 +343,6 @@ class PaymentService {
     paymentUrl: string;
   }) {
     try {
-      console.log('🔄 PaymentService: Preparing transaction data:', JSON.stringify(transaction, null, 2));
-
       // ניסיון 1: Edge Function (מומלץ)
       try {
         const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -389,19 +362,15 @@ class PaymentService {
         });
 
         if (error) {
-          console.error('❌ PaymentService: Edge function error:', error);
           throw error;
         }
 
         if (data && !data.success) {
-          console.error('❌ PaymentService: Edge function returned error:', data);
           throw new Error(JSON.stringify(data));
         }
 
-        console.log('✅ PaymentService: Transaction saved via Edge Function');
         return;
       } catch (edgeFunctionError) {
-        console.warn('⚠️ PaymentService: Edge Function failed, trying direct insert...', edgeFunctionError);
         
         // ניסיון 2: הכנסה ישירה (fallback)
         const { error: directError } = await supabase
@@ -420,14 +389,10 @@ class PaymentService {
           });
 
         if (directError) {
-          console.error('❌ PaymentService: Direct insert also failed:', directError);
           throw directError;
         }
-
-        console.log('✅ PaymentService: Transaction saved via direct insert');
       }
     } catch (error) {
-      console.error('❌ PaymentService: All save attempts failed:', error);
       throw error;
     }
   }
@@ -437,8 +402,6 @@ class PaymentService {
    */
   private async updateUserSubscription(userId: string, planId: string) {
     try {
-      console.log('🔄 PaymentService: Updating user subscription:', { userId, planId });
-
       const plan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
       if (!plan) {
         throw new Error('Plan not found');
@@ -468,7 +431,6 @@ class PaymentService {
         .eq('id', userId);
 
       if (userError) {
-        console.error('❌ PaymentService: Error updating user:', userError);
         throw userError;
       }
 
@@ -485,13 +447,9 @@ class PaymentService {
         });
 
       if (subscriptionError) {
-        console.error('❌ PaymentService: Error creating subscription:', subscriptionError);
         throw subscriptionError;
       }
-
-      console.log('✅ PaymentService: User subscription updated successfully');
     } catch (error) {
-      console.error('❌ PaymentService: Error updating user subscription:', error);
       throw error;
     }
   }
@@ -521,13 +479,11 @@ class PaymentService {
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-        console.error('❌ PaymentService: Error getting subscription:', error);
         throw error;
       }
 
       return data;
     } catch (error) {
-      console.error('❌ PaymentService: Error getting current subscription:', error);
       return null;
     }
   }
@@ -545,13 +501,11 @@ class PaymentService {
         .limit(10);
 
       if (error) {
-        console.error('❌ PaymentService: Error getting payment history:', error);
         throw error;
       }
 
       return data || [];
     } catch (error) {
-      console.error('❌ PaymentService: Error getting payment history:', error);
       return [];
     }
   }
@@ -561,8 +515,6 @@ class PaymentService {
    */
   async cancelSubscription(userId: string) {
     try {
-      console.log('🔄 PaymentService: Cancelling subscription for user:', userId);
-
       // עדכון סטטוס המנוי
       const { error } = await supabase
         .from('user_subscriptions')
@@ -574,7 +526,6 @@ class PaymentService {
         .eq('status', 'active');
 
       if (error) {
-        console.error('❌ PaymentService: Error cancelling subscription:', error);
         throw error;
       }
 
@@ -589,14 +540,11 @@ class PaymentService {
         .eq('id', userId);
 
       if (userError) {
-        console.error('❌ PaymentService: Error updating user after cancellation:', userError);
         throw userError;
       }
 
-      console.log('✅ PaymentService: Subscription cancelled successfully');
       return true;
     } catch (error) {
-      console.error('❌ PaymentService: Error cancelling subscription:', error);
       return false;
     }
   }
@@ -607,8 +555,6 @@ class PaymentService {
    */
   async createRecurringPayment(userId: string, planId: string): Promise<PaymentResponse> {
     try {
-      console.log('🔄 PaymentService: Creating recurring payment with Token:', { userId, planId });
-
       // קבלת פרטי המנוי עם Token
       const { data: subscription, error: subError } = await supabase
         .from('user_subscriptions')
@@ -662,8 +608,6 @@ class PaymentService {
         ]
       };
 
-      console.log('🔄 PaymentService: Sending recurring payment request to CardCom Transaction API');
-
       const response = await fetch(`${CARDCOM_CONFIG.baseUrl}/Transactions/Transaction`, {
         method: 'POST',
         headers: {
@@ -674,7 +618,6 @@ class PaymentService {
       });
 
       const result = await response.json();
-      console.log('🔄 PaymentService: CardCom Transaction API response:', result);
 
       if (result.ResponseCode === 0) {
         // שמירת העסקה
@@ -708,8 +651,6 @@ class PaymentService {
           .eq('user_id', userId)
           .eq('plan_id', planId);
 
-        console.log('✅ PaymentService: Recurring payment created successfully');
-
         return {
           success: true,
           transactionId: transactionId
@@ -718,7 +659,6 @@ class PaymentService {
         throw new Error(result.Description || 'שגיאה ביצירת תשלום חוזר');
       }
     } catch (error) {
-      console.error('❌ PaymentService: Error creating recurring payment:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'שגיאה ביצירת תשלום חוזר'

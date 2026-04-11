@@ -19,7 +19,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   onEnroll,
   hideBadges = false
 }) => {
-  console.log('🎓 CourseCard: Rendering course:', course.title);
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   
@@ -43,7 +42,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
     <TouchableOpacity
       onPress={() => onPress(course)}
       activeOpacity={0.7}
-      style={{ marginBottom: DesignTokens.spacing.lg }}
     >
       <UICard variant="blur" padding="none" style={styles.container}>
         {/* Cover Image - Full Width */}
@@ -162,11 +160,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     overflow: 'hidden',
+    borderRadius: tokens.borderRadius['2xl'],
+    marginBottom: tokens.spacing.lg,
   },
   coverContainer: {
     position: 'relative',
-    height: 160,
+    height: 180,
     width: '100%',
+    borderTopLeftRadius: tokens.borderRadius['2xl'],
+    borderTopRightRadius: tokens.borderRadius['2xl'],
+    overflow: 'hidden',
   },
   coverImage: {
     width: '100%',
@@ -311,14 +314,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     gap: tokens.spacing.xs,
   },
   tag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: tokens.spacing.sm,
     paddingVertical: tokens.spacing.xs,
     borderRadius: tokens.borderRadius.sm,
   },
   tagText: {
     fontSize: tokens.typography.fontSize.xs,
-    color: tokens.colors.text.secondary,
+    color: tokens.colors.text.primary,
   },
   footer: {
     flexDirection: 'row',

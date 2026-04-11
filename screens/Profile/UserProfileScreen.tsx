@@ -24,7 +24,8 @@ import {
   LogOut,
   Shield,
   Info,
-  MessageSquare
+  MessageSquare,
+  X
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -70,7 +71,6 @@ export default function UserProfileScreen({ navigation }: any) {
         setProfileData(data);
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
     }
   };
 
@@ -169,7 +169,9 @@ export default function UserProfileScreen({ navigation }: any) {
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
           <Text style={{ 
             color: DesignTokens.colors.text.secondary, 
-            fontSize: DesignTokens.typography.fontSize.base, 
+            fontSize: DesignTokens.typography.body.size,
+            fontWeight: DesignTokens.typography.body.weight as any,
+            lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
             marginTop: DesignTokens.spacing.lg 
           }}>
             טוען פרופיל...
@@ -185,15 +187,18 @@ export default function UserProfileScreen({ navigation }: any) {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: DesignTokens.spacing.xl }}>
           <Text style={{ 
             color: DesignTokens.colors.text.primary, 
-            fontSize: DesignTokens.typography.fontSize.xl, 
-            fontWeight: DesignTokens.typography.fontWeight.semibold as any, 
+            fontSize: DesignTokens.typography.titleSmall.size,
+            fontWeight: DesignTokens.typography.titleSmall.weight as any,
+            letterSpacing: DesignTokens.typography.titleSmall.letterSpacing,
             marginBottom: DesignTokens.spacing.sm 
           }}>
             לא מחובר
           </Text>
           <Text style={{ 
             color: DesignTokens.colors.text.secondary, 
-            fontSize: DesignTokens.typography.fontSize.base, 
+            fontSize: DesignTokens.typography.body.size,
+            fontWeight: DesignTokens.typography.body.weight as any,
+            lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
             textAlign: 'center' 
           }}>
             יש להתחבר לאפליקציה
@@ -215,37 +220,62 @@ export default function UserProfileScreen({ navigation }: any) {
     return 'ינואר 2024';
   };
 
+  // פונקציה לחזרה לקהילה
+  const handleBackToCommunity = () => {
+    try {
+      // נסה דרך parent navigator לחזור ל-Main
+      const parent = navigation.getParent();
+      if (parent) {
+        (parent as any).navigate('Main');
+      } else {
+        // אם אין parent, נסה לנווט ישירות
+        (navigation as any).navigate('Main');
+      }
+    } catch (error) {
+      // Fallback: נסה goBack
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+      }
+    }
+  };
+
   return (
-    <View style={{ flex: 1 }}>
-      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי - אזור ירוק רחב יותר בגובה */}
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }} edges={['top']}>
+        <View style={{ flex: 1 }}>
           <ScrollView 
             style={{ flex: 1 }} 
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: DesignTokens.spacing['3xl'] }}
           >
-          {/* Profile Header Card - עם blur כמו MainTabs, צמוד למעלה, פינות תחתונות מעוגלות */}
+          {/* Profile Header Card - עם blur, מעוגל מכל הצדדים */}
           <UICard 
             variant="blur"
             padding="md"
             style={{
-              marginHorizontal: 0,
-              marginTop: 0,
+              marginHorizontal: DesignTokens.spacing.md,
+              marginTop: DesignTokens.spacing.sm,
               paddingTop: 10,
               paddingBottom: DesignTokens.spacing.md,
-              borderTopLeftRadius: 0,
-              borderTopRightRadius: 0,
-              borderBottomLeftRadius: DesignTokens.borderRadius['2xl'],
-              borderBottomRightRadius: DesignTokens.borderRadius['2xl'],
+              borderRadius: DesignTokens.borderRadius.lg,
+              position: 'relative',
             }}
           >
+          {/* כפתור חזרה לקהילה - בפינה הימנית העליונה של הכרטיס */}
+          <TouchableOpacity
+            onPress={handleBackToCommunity}
+            style={{
+              position: 'absolute',
+              top: 10,
+              right: 10,
+              padding: 8,
+              borderRadius: 999,
+              backgroundColor: DesignTokens.colors.selection.subtle,
+              zIndex: 10,
+            }}
+          >
+            <X size={22} color={DesignTokens.colors.text.secondary} />
+          </TouchableOpacity>
           {/* Container עם פריסה מרכזית - תמונה במרכז, טקסט מתחת */}
           <View style={{
             alignItems: 'center',
@@ -277,23 +307,24 @@ export default function UserProfileScreen({ navigation }: any) {
             <View style={{ alignItems: 'center' }}>
               {/* Name */}
               <Text style={{
-                fontSize: DesignTokens.typography.fontSize.xl,
-                fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                fontSize: DesignTokens.typography.titleSmall.size,
+                fontWeight: DesignTokens.typography.titleSmall.weight as any,
+                letterSpacing: DesignTokens.typography.titleSmall.letterSpacing,
                 color: DesignTokens.colors.text.primary,
                 marginBottom: DesignTokens.spacing.xs,
                 textAlign: 'center',
-                letterSpacing: DesignTokens.typography.letterSpacing.tight,
               }}>
                 {displayName}
               </Text>
 
               {/* Email */}
               <Text style={{
-                fontSize: DesignTokens.typography.fontSize.sm,
+                fontSize: DesignTokens.typography.bodySmall.size,
+                fontWeight: DesignTokens.typography.bodySmall.weight as any,
+                lineHeight: DesignTokens.typography.bodySmall.size * DesignTokens.typography.bodySmall.lineHeight,
                 color: DesignTokens.colors.text.secondary,
                 textAlign: 'center',
                 marginBottom: DesignTokens.spacing.sm,
-                fontWeight: DesignTokens.typography.fontWeight.medium as any,
               } as any}>
                 {email}
               </Text>
@@ -307,7 +338,8 @@ export default function UserProfileScreen({ navigation }: any) {
               }}>
                 {/* Member Since */}
                 <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.xs,
+                  fontSize: DesignTokens.typography.caption.size,
+                  fontWeight: DesignTokens.typography.caption.weight as any,
                   color: DesignTokens.colors.text.tertiary,
                   textAlign: 'center',
                 }}>
@@ -318,13 +350,13 @@ export default function UserProfileScreen({ navigation }: any) {
                 <View style={{
                   width: 1,
                   height: 12,
-                  backgroundColor: DesignTokens.colors.text.tertiary,
-                  opacity: 0.3,
+                  backgroundColor: DesignTokens.colors.border.divider,
                 }} />
                 
                 {/* Subscription Plan */}
                 <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.xs,
+                  fontSize: DesignTokens.typography.caption.size,
+                  fontWeight: DesignTokens.typography.caption.weight as any,
                   color: DesignTokens.colors.text.tertiary,
                   textAlign: 'center',
                 }}>
@@ -343,18 +375,25 @@ export default function UserProfileScreen({ navigation }: any) {
           padding="none"
           style={{
             marginBottom: DesignTokens.spacing.lg,
+            borderRadius: DesignTokens.borderRadius.lg,
           }}
         >
             {mainMenuItems.map((item, index) => (
               <View key={item.id}>
+                {index > 0 && (
+                  <View style={{
+                    height: 1,
+                    backgroundColor: DesignTokens.colors.border.divider,
+                    marginHorizontal: DesignTokens.spacing.lg,
+                  }} />
+                )}
                 <TouchableOpacity
                   onPress={item.onPress}
                   activeOpacity={0.7}
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    paddingTop: DesignTokens.spacing.lg,
-                    paddingBottom: index < mainMenuItems.length - 1 ? DesignTokens.spacing.md : DesignTokens.spacing.lg,
+                    paddingVertical: DesignTokens.spacing.lg,
                     paddingHorizontal: DesignTokens.spacing.lg,
                   }}
                 >
@@ -364,8 +403,9 @@ export default function UserProfileScreen({ navigation }: any) {
                 {/* Text Content - מרכז */}
                 <View style={{ flex: 1, marginLeft: DesignTokens.spacing.md, marginRight: DesignTokens.spacing.md }}>
                   <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontSize: DesignTokens.typography.body.size,
                     fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
                     color: DesignTokens.colors.text.primary,
                     marginBottom: DesignTokens.spacing.xs / 2,
                     textAlign: 'right'
@@ -374,7 +414,9 @@ export default function UserProfileScreen({ navigation }: any) {
                   </Text>
                   {item.subtitle && (
                     <Text style={{
-                      fontSize: DesignTokens.typography.fontSize.sm,
+                      fontSize: DesignTokens.typography.bodySmall.size,
+                      fontWeight: DesignTokens.typography.bodySmall.weight as any,
+                      lineHeight: DesignTokens.typography.bodySmall.size * DesignTokens.typography.bodySmall.lineHeight,
                       color: DesignTokens.colors.text.tertiary,
                       textAlign: 'right'
                     }}>
@@ -389,8 +431,8 @@ export default function UserProfileScreen({ navigation }: any) {
                   height: 40,
                   borderRadius: DesignTokens.borderRadius.md,
                   backgroundColor: `${DesignTokens.colors.primary.main}20`,
-                  borderWidth: 1,
-                  borderColor: DesignTokens.glassmorphism.primaryBorder.subtle,
+                  borderWidth: DesignTokens.layout.borderWidth.normal,
+                  borderColor: DesignTokens.colors.border.primary,
                   alignItems: 'center',
                   justifyContent: 'center',
                   ...DesignTokens.shadows.xs,
@@ -405,7 +447,7 @@ export default function UserProfileScreen({ navigation }: any) {
               {index < mainMenuItems.length - 1 && (
                 <View style={{
                   height: 1,
-                  backgroundColor: DesignTokens.glassmorphism.border.dark.subtle,
+                  backgroundColor: DesignTokens.colors.border.divider,
                   marginLeft: DesignTokens.spacing.lg,
                   marginRight: DesignTokens.spacing.lg,
                 }} />
@@ -420,6 +462,7 @@ export default function UserProfileScreen({ navigation }: any) {
           padding="none"
           style={{
             marginBottom: DesignTokens.spacing.lg,
+            borderRadius: DesignTokens.borderRadius.lg,
           }}
         >
             {secondaryMenuItems.map((item, index) => (
@@ -441,8 +484,9 @@ export default function UserProfileScreen({ navigation }: any) {
                 {/* Text Content - מרכז */}
                 <View style={{ flex: 1, marginLeft: DesignTokens.spacing.md, marginRight: DesignTokens.spacing.md }}>
                   <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.base,
+                    fontSize: DesignTokens.typography.body.size,
                     fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                    lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
                     color: DesignTokens.colors.text.primary,
                     marginBottom: DesignTokens.spacing.xs / 2,
                     textAlign: 'right'
@@ -451,7 +495,9 @@ export default function UserProfileScreen({ navigation }: any) {
                   </Text>
                   {item.subtitle && (
                     <Text style={{
-                      fontSize: DesignTokens.typography.fontSize.sm,
+                      fontSize: DesignTokens.typography.bodySmall.size,
+                      fontWeight: DesignTokens.typography.bodySmall.weight as any,
+                      lineHeight: DesignTokens.typography.bodySmall.size * DesignTokens.typography.bodySmall.lineHeight,
                       color: DesignTokens.colors.text.tertiary,
                       textAlign: 'right'
                     }}>
@@ -466,8 +512,8 @@ export default function UserProfileScreen({ navigation }: any) {
                   height: 40,
                   borderRadius: DesignTokens.borderRadius.md,
                   backgroundColor: `${DesignTokens.colors.primary.main}20`,
-                  borderWidth: 1,
-                  borderColor: DesignTokens.glassmorphism.primaryBorder.subtle,
+                  borderWidth: DesignTokens.layout.borderWidth.normal,
+                  borderColor: DesignTokens.colors.border.primary,
                   alignItems: 'center',
                   justifyContent: 'center',
                   ...DesignTokens.shadows.xs,
@@ -482,7 +528,7 @@ export default function UserProfileScreen({ navigation }: any) {
               {index < secondaryMenuItems.length - 1 && (
                 <View style={{
                   height: 1,
-                  backgroundColor: DesignTokens.glassmorphism.border.dark.subtle,
+                  backgroundColor: DesignTokens.colors.border.divider,
                   marginLeft: DesignTokens.spacing.lg,
                   marginRight: DesignTokens.spacing.lg,
                 }} />
@@ -505,17 +551,13 @@ export default function UserProfileScreen({ navigation }: any) {
                   style: 'destructive',
                   onPress: async () => {
                     try {
-                      console.log('🔄 UserProfileScreen: Signing out...');
                       const { error } = await signOut();
                       if (error) {
-                        console.error('❌ UserProfileScreen: Error signing out:', error);
                         Alert.alert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
                       } else {
-                        console.log('✅ UserProfileScreen: Signed out successfully');
                         // הניווט יתבצע אוטומטית דרך AuthContext
                       }
                     } catch (error) {
-                      console.error('❌ UserProfileScreen: Exception signing out:', error);
                       Alert.alert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
                     }
                   }
@@ -535,13 +577,15 @@ export default function UserProfileScreen({ navigation }: any) {
             style={{
               alignItems: 'center',
               justifyContent: 'center',
-              borderWidth: 1,
+              borderRadius: DesignTokens.borderRadius.lg,
+              borderWidth: DesignTokens.layout.borderWidth.normal,
               borderColor: `${DesignTokens.colors.danger.main}40`,
             }}
           >
             <Text style={{
-              fontSize: DesignTokens.typography.fontSize.base,
+              fontSize: DesignTokens.typography.body.size,
               fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+              lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
               color: DesignTokens.colors.danger.main
             }}>
               התנתקות

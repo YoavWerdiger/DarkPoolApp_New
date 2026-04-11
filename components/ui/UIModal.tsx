@@ -99,14 +99,14 @@ const UIModal: React.FC<UIModalProps> = ({
   };
 
   const defaultContentStyle: ViewStyle = {
-    backgroundColor: colors.background.elevated,
-    borderRadius: 20,
-    padding: 24,
+    backgroundColor: colors.background.sheet,
+    borderRadius: 24,
+    padding: 20,
     maxWidth: '90%',
     maxHeight: '80%',
     ...shadows.lg,
     borderWidth: 0.5,
-    borderColor: colors.border.primary,
+    borderColor: colors.border.default,
   };
 
   const combinedContentStyle: ViewStyle = {

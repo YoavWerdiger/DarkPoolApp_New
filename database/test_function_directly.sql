@@ -101,3 +101,4 @@ WHERE report_date = ((NOW() AT TIME ZONE 'America/New_York')::DATE + INTERVAL '3
 
 
 
+

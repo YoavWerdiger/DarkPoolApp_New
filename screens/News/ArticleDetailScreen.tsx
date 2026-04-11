@@ -54,7 +54,6 @@ export default function ArticleDetailScreen() {
 
       await Share.share(shareContent);
     } catch (error) {
-      console.error('❌ ArticleDetail: Error sharing:', error);
       Alert.alert('שגיאה', 'לא ניתן לשתף את הכתבה');
     }
   };
@@ -70,7 +69,6 @@ export default function ArticleDetailScreen() {
           Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
         }
       } catch (error) {
-        console.error('❌ ArticleDetail: Error opening URL:', error);
         Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
       }
     }

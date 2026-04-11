@@ -30,7 +30,7 @@ interface IPO {
 const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
   const getDealTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
-      case 'priced': return 'DesignTokens.colors.success.main';
+      case 'priced': return DesignTokens.colors.success.main;
       case 'expected': return '#F59E0B';
       case 'filed': return '#3B82F6';
       case 'amended': return '#8B5CF6';
@@ -47,6 +47,8 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       default: return type;
     }
   };
+
+  const DesignTokens = useDesignTokens();
 
   const formatDate = (dateStr: string | null): string => {
     if (!dateStr) return 'לא ידוע';
@@ -79,10 +81,10 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       {/* Header - Company Name & Status */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text 
-            style={{ 
-              fontSize: 18, 
-              fontWeight: '700', 
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: '700',
               color: DesignTokens.colors.text.primary,
               textAlign: 'right'
             }}
@@ -104,12 +106,12 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
             )}
           </View>
         </View>
-        
-        <View 
-          style={{ 
-            paddingHorizontal: 12, 
-            paddingVertical: 6, 
-            borderRadius: 14, 
+
+        <View
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 14,
             backgroundColor: `${getDealTypeColor(ipo.deal_type)}20`,
             marginLeft: 8
           }}
@@ -137,16 +139,17 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       {(hasPricing || ipo.shares > 0) && (
         <View style={{ flexDirection: 'row-reverse', marginTop: 8 }}>
           {hasPricing && (
-              <DollarSign size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginBottom: 4 }} />
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>
+            <View style={{ flex: 1 }}>
+              <DollarSign size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginBottom: 4, alignSelf: 'flex-end' }} />
+              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'right' }}>
                 {ipo.offer_price > 0 ? 'מחיר הצעה' : 'טווח מחירים'}
               </Text>
               {ipo.offer_price > 0 ? (
-                <Text style={{ fontSize: 17, fontWeight: '700', color: 'DesignTokens.colors.success.main' }}>
+                <Text style={{ fontSize: 17, fontWeight: '700', color: DesignTokens.colors.success.main, textAlign: 'right' }}>
                   ${ipo.offer_price.toFixed(2)}
                 </Text>
               ) : (
-                <Text style={{ fontSize: 15, fontWeight: '700', color: DesignTokens.colors.text.primary }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
                   ${ipo.price_from.toFixed(2)} - ${ipo.price_to.toFixed(2)}
                 </Text>
               )}
@@ -154,10 +157,11 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
           )}
 
           {ipo.shares > 0 && (
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'right' }}>
                 מניות
               </Text>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: DesignTokens.colors.text.primary }}>
+              <Text style={{ fontSize: 17, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
                 {formatShares(ipo.shares)}
               </Text>
             </View>
@@ -185,31 +189,27 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 };
 
 export default function IPOsTab() {
+  const DesignTokens = useDesignTokens();
   const [ipos, setIpos] = useState<IPO[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadIPOs = useCallback(async () => {
     try {
-      console.log('🚀 Loading IPOs from Supabase');
-      
       const { data, error } = await supabase
         .from('ipos_calendar')
         .select('*')
         .order('start_date', { ascending: true })
         .limit(100);
-      
+
       if (error) {
-        console.error('❌ Supabase error:', error);
         return;
       }
-      
+
       if (data) {
-        console.log(`✅ Loaded ${data.length} IPOs`);
         setIpos(data);
       }
     } catch (error) {
-      console.error('❌ Error loading IPOs:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -240,7 +240,7 @@ export default function IPOsTab() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-        <ActivityIndicator size="large" color="DesignTokens.colors.success.main" />
+        <ActivityIndicator size="large" color={DesignTokens.colors.success.main} />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען הנפקות...
         </Text>
@@ -258,8 +258,8 @@ export default function IPOsTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="DesignTokens.colors.success.main"
-            colors={['DesignTokens.colors.success.main']}
+            tintColor={DesignTokens.colors.success.main}
+            colors={[DesignTokens.colors.success.main]}
           />
         }
         ListEmptyComponent={renderEmptyState}

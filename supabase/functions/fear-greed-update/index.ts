@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,7 +7,7 @@ const corsHeaders = {
 }
 
 // RapidAPI configuration
-const RAPIDAPI_KEY = Deno.env.get('RAPIDAPI_KEY') || '1728faf808msh542edbc5ac19c5dp1ac7a7jsna9780db906e3';
+const RAPIDAPI_KEY = Deno.env.get('RAPIDAPI_KEY') ?? '';
 const RAPIDAPI_BASE_URL = 'https://fear-and-greed-index.p.rapidapi.com';
 
 serve(async (req) => {

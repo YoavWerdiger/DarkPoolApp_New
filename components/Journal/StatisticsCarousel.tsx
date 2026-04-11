@@ -261,8 +261,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     statCard: {
       width: '100%',
-      minHeight: 140,
-      paddingVertical: tokens.spacing.md,
+      minHeight: 160,
+      paddingVertical: tokens.spacing.lg,
     },
     cardContent: {
       width: '100%',
@@ -289,11 +289,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: tokens.typography.fontWeight.medium as any,
     },
     statValue: {
-      fontSize: 32,
+      fontSize: 42,
       fontWeight: tokens.typography.fontWeight.bold as any,
       color: tokens.colors.text.primary,
       textAlign: 'center',
-      letterSpacing: -0.5,
+      letterSpacing: -1,
     },
     statValueNegative: {
       color: tokens.colors.text.danger,
@@ -317,4 +317,5 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderRadius: 4,
     },
   });
+
 

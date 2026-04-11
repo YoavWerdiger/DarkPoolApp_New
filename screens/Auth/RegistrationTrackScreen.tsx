@@ -1,18 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Dimensions, KeyboardAvoidingView, Platform, ImageBackground } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ImageBackground,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRegistration } from '../../context/RegistrationContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRegistration } from '../../context/RegistrationContext';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { SUPABASE_URL } from '../../config/publicEnv';
 
 const { width, height } = Dimensions.get('window');
 
-// המרת תוכניות המנוי לפורמט לתצוגה (ללא תוספות ותשלומים חד פעמיים)
 const getDisplayPlans = () => {
-  return Object.values(SUBSCRIPTION_PLANS)
-    .filter(plan => !plan.isAddon && !plan.isOneTime && plan.id !== 'free')
+  const plans = Object.values(SUBSCRIPTION_PLANS)
+    .filter(plan => !plan.isAddon && !plan.isOneTime)
     .map(plan => ({
       id: plan.id,
       name: plan.name,
@@ -22,97 +31,47 @@ const getDisplayPlans = () => {
       features: plan.features,
       excludedFeatures: plan.excludedFeatures || [],
       popular: plan.popular,
-      color: plan.color
+      color: plan.color,
     }));
+  return plans.sort((a, b) => {
+    if (a.id === 'free') return -1;
+    if (b.id === 'free') return 1;
+    return a.price - b.price;
+  });
 };
 
-// Step Indicators Component
-const StepIndicators = ({ current, total }: { current: number; total: number }) => (
-  <View style={{ paddingHorizontal: 24, paddingTop: 16, alignItems: 'center' }}>
-    <View style={{
-      flexDirection: 'row',
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 8
-    }}>
-      {Array.from({ length: total }).map((_, index) => (
+const ProgressBar = ({ current, total }: { current: number; total: number }) => (
+  <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 4 }}>
+    <View style={{ flexDirection: 'row', gap: 6 }}>
+      {Array.from({ length: total }).map((_, i) => (
         <View
-          key={index}
+          key={i}
           style={{
-            width: index + 1 === current ? 28 : 10,
-            height: 10,
-            borderRadius: 5,
-            backgroundColor: index + 1 <= current 
-              ? DesignTokens.colors.primary.main 
-              : 'rgba(255,255,255,0.15)'
+            flex: 1,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor:
+              i < current
+                ? DesignTokens.colors.primary.main
+                : 'rgba(255,255,255,0.12)',
           }}
         />
       ))}
     </View>
-    <Text style={{
-      color: DesignTokens.colors.text.tertiary,
-      fontSize: 12,
-      fontWeight: '500',
-      textAlign: 'center',
-      marginTop: 10
-    }}>
-      שלב {current} מתוך {total}
-    </Text>
   </View>
 );
 
 const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
-  const [selectedTrack, setSelectedTrack] = useState(data.trackId || null);
-  
+  const [selectedTrack, setSelectedTrack] = useState<string | null>(data.trackId || null);
   const tracks = getDisplayPlans();
 
-  // Create subtle background pattern
-  const createBackgroundPattern = () => {
-    const patterns = [];
-    for (let i = 0; i < 15; i++) {
-      patterns.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.05 + 0.02
-      });
-    }
-    return patterns;
-  };
-
-  const backgroundPattern = createBackgroundPattern();
-
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
-  const handleNext = () => {
-    if (!selectedTrack) return;
-    
-    const track = tracks.find(t => t.id === selectedTrack);
-    
-    setData({ 
-      ...data, 
-      trackId: selectedTrack,
-      trackName: track?.name,
-      trackPrice: track?.price
-    });
-    
-    // לאחר בחירת מסלול - עובר לתשלום ב-Cardcom
-    navigation.navigate('CreditCardCheckout', {
-      planId: selectedTrack,
-      trackName: track?.name,
-      trackPrice: track?.price,
-      fromRegistration: true
-    });
-  };
+  useEffect(() => {
+    // placeholder
+  }, []);
 
   const formatPrice = (price: number, period: string) => {
     if (price === 0) return 'חינם';
-    if (period === 'yearly') {
-      return `₪${price}`;
-    }
     return `₪${price}`;
   };
 
@@ -125,333 +84,345 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
     }
   };
 
+  const handleNext = () => {
+    if (!selectedTrack) return;
+    const track = tracks.find(t => t.id === selectedTrack);
+
+    if (selectedTrack === 'free') {
+      setData({ ...data, trackId: '1', trackName: track?.name, trackPrice: 0, accountType: 'free' });
+      navigation.navigate('RegistrationSummary');
+      return;
+    }
+
+    setData({
+      ...data,
+      trackId: '1',
+      trackName: track?.name,
+      trackPrice: track?.price,
+      accountType: selectedTrack,
+    });
+    navigation.navigate('CreditCardCheckout', {
+      planId: selectedTrack,
+      trackName: track?.name,
+      trackPrice: track?.price,
+      fromRegistration: true,
+    });
+  };
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
     >
       <LinearGradient
-        colors={['#000000', '#0d1b0d', '#1a2d1a', '#000000']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={['#0A0E0A', '#0F1A0F', '#142014', '#0A0E0A']}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
         style={{ flex: 1 }}
       >
-        {/* Subtle Background Pattern */}
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-          {backgroundPattern.map((dot, index) => (
-            <View
-              key={index}
-              style={{
-                position: 'absolute',
-                left: dot.x,
-                top: dot.y,
-                width: dot.size,
-                height: dot.size,
-                backgroundColor: DesignTokens.colors.primary.main,
-                opacity: dot.opacity,
-                borderRadius: dot.size / 2
-              }}
-            />
-          ))}
-        </View>
-
-        {/* Gradient Overlay */}
+        {/* Depth overlay */}
         <LinearGradient
-          colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.35)']}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
 
-        {/* Transparent Background Image */}
-        <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          justifyContent: 'center',
-          alignItems: 'center',
-          opacity: 0.15
-        }}>
+        {/* Bull & Bear background */}
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', opacity: 0.22 }}>
           <ImageBackground
-            source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
-            style={{
-              width: width,
-              height: height,
-              resizeMode: 'contain'
-            }}
-            imageStyle={{
-              opacity: 0.3
-            }}
+            source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
+            style={{ width: width * 1.6, height: height * 1.6 }}
+            imageStyle={{ resizeMode: 'contain' }}
           />
         </View>
 
+        {/* Animated candlestick chart */}
+
         <SafeAreaView style={{ flex: 1 }}>
-          {/* Step Indicators */}
-          <StepIndicators current={4} total={5} />
-          
-          <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 10 }}>
-            {/* Back Button */}
+          <ProgressBar current={4} total={5} />
+
+          {/* Back */}
+          <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
             <TouchableOpacity
-              onPress={handleBack}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.75}
               style={{
-                flexDirection: 'row',
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255,255,255,0.07)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.08)',
                 alignItems: 'center',
+                justifyContent: 'center',
                 alignSelf: 'flex-end',
-                marginBottom: 16
               }}
             >
-              <Text style={{
-                color: DesignTokens.colors.text.secondary,
-                fontSize: 16,
-                marginLeft: 4
-              }}>
-                חזרה
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
+              <Ionicons name="chevron-forward" size={22} color="#fff" />
             </TouchableOpacity>
-            
-            {/* Header Section */}
-            <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <Text style={{ 
-                fontSize: 32, 
-                fontWeight: '800', 
-                color: DesignTokens.colors.text.primary, 
-                marginBottom: 8,
-                letterSpacing: -0.8,
-                textAlign: 'center'
-              }}>
-                בחר מסלול
-              </Text>
-              
-              <Text style={{ 
-                fontSize: 16, 
-                color: DesignTokens.colors.text.secondary, 
-                fontWeight: '400',
-                letterSpacing: 0.3,
-                textAlign: 'center',
-                lineHeight: 22
-              }}>
-                בחר את המסלול המתאים ביותר עבורך
-              </Text>
-              
-              <View style={{
-                width: 60,
-                height: 2,
-                backgroundColor: DesignTokens.colors.primary.main,
-                marginTop: 16,
-                borderRadius: 1
-              }} />
-            </View>
+          </View>
 
-            {/* Tracks List */}
-            <FlatList
-              data={tracks}
-              keyExtractor={item => item.id}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 20 }}
-              renderItem={({ item }) => (
+          {/* Header */}
+          <View style={{ paddingHorizontal: 24, paddingTop: 12, marginBottom: 20 }}>
+            <Text
+              style={{
+                fontSize: 30,
+                fontWeight: '800',
+                color: '#fff',
+                marginBottom: 8,
+                letterSpacing: -0.5,
+                textAlign: 'right',
+              }}
+            >
+              בחר מסלול
+            </Text>
+            <Text
+              style={{
+                fontSize: 15,
+                color: 'rgba(255,255,255,0.55)',
+                textAlign: 'right',
+                lineHeight: 22,
+              }}
+            >
+              בחר את המסלול המתאים ביותר עבורך
+            </Text>
+          </View>
+
+          {/* Plans list */}
+          <FlatList
+            data={tracks}
+            keyExtractor={item => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 16 }}
+            renderItem={({ item }) => {
+              const isSelected = selectedTrack === item.id;
+              const isFree = item.id === 'free';
+
+              return (
                 <TouchableOpacity
                   onPress={() => setSelectedTrack(item.id)}
                   activeOpacity={0.8}
                   style={{
-                    backgroundColor: selectedTrack === item.id 
-                      ? 'rgba(0, 230, 84, 0.15)' 
-                      : '#181818',
-                    borderRadius: 16,
-                    padding: 20,
-                    marginBottom: 16,
-                    borderWidth: selectedTrack === item.id ? 2 : 1,
-                    borderColor: selectedTrack === item.id 
-                      ? DesignTokens.colors.primary.main 
-                      : 'rgba(255, 255, 255, 0.1)',
-                    shadowColor: selectedTrack === item.id 
-                      ? DesignTokens.colors.primary.main 
-                      : '#000',
-                    shadowOpacity: selectedTrack === item.id ? 0.3 : 0.1,
-                    shadowRadius: 12,
-                    shadowOffset: { width: 0, height: 4 },
-                    elevation: selectedTrack === item.id ? 8 : 2
+                    borderRadius: 20,
+                    marginBottom: 14,
+                    overflow: 'hidden',
+                    borderWidth: isSelected ? 1.5 : 1,
+                    borderColor: isSelected
+                      ? DesignTokens.colors.primary.main
+                      : 'rgba(255,255,255,0.08)',
+                    shadowColor: isSelected ? DesignTokens.colors.primary.main : '#000',
+                    shadowOffset: { width: 0, height: isSelected ? 6 : 2 },
+                    shadowOpacity: isSelected ? 0.25 : 0.08,
+                    shadowRadius: isSelected ? 16 : 6,
+                    elevation: isSelected ? 8 : 2,
                   }}
                 >
-                  {/* Popular Badge */}
-                  {item.popular && (
-                    <View style={{
-                      position: 'absolute',
-                      top: -10,
-                      right: 16,
-                      backgroundColor: DesignTokens.colors.primary.main,
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      borderRadius: 12
-                    }}>
-                      <Text style={{ color: '#000', fontSize: 12, fontWeight: '700' }}>
-                        פופולרי
-                      </Text>
-                    </View>
-                  )}
-                  
-                  {/* Header Row */}
-                  <View style={{ 
-                    flexDirection: 'row', 
-                    alignItems: 'center', 
-                    marginBottom: 12,
-                    marginTop: item.popular ? 8 : 0
-                  }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ 
-                        color: DesignTokens.colors.text.primary, 
-                        fontWeight: '700', 
-                        fontSize: 18, 
-                        textAlign: 'right',
-                        marginBottom: 4
-                      }}>
-                        {item.name}
-                      </Text>
-                      <Text style={{ 
-                        color: DesignTokens.colors.primary.main, 
-                        fontWeight: '800', 
-                        fontSize: 24, 
-                        textAlign: 'right'
-                      }}>
-                        {formatPrice(item.price, item.period)}
-                        <Text style={{ 
-                          color: DesignTokens.colors.text.tertiary, 
-                          fontWeight: '400', 
-                          fontSize: 14 
-                        }}>
-                          {formatPeriod(item.period)}
-                        </Text>
-                      </Text>
-                    </View>
-                    
-                    {selectedTrack === item.id && (
-                      <View style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: 14,
-                        backgroundColor: DesignTokens.colors.primary.main,
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Ionicons name="checkmark" size={18} color="#000" />
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Description */}
-                  {item.description && (
-                    <Text style={{ 
-                      color: DesignTokens.colors.text.secondary, 
-                      fontSize: 14, 
-                      textAlign: 'right',
-                      marginBottom: 12,
-                      lineHeight: 20
-                    }}>
-                      {item.description}
-                    </Text>
-                  )}
-
-                  {/* Features */}
-                  <View style={{ gap: 6 }}>
-                    {item.features.slice(0, 6).map((feature, index) => (
-                      <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons 
-                          name="checkmark-circle" 
-                          size={16} 
-                          color={DesignTokens.colors.primary.main} 
-                          style={{ marginLeft: 8 }} 
-                        />
-                        <Text style={{ 
-                          color: DesignTokens.colors.text.secondary, 
-                          fontSize: 13, 
-                          textAlign: 'right',
-                          flex: 1
-                        }}>
-                          {feature}
+                  <LinearGradient
+                    colors={
+                      isSelected
+                        ? ['rgba(0,230,84,0.12)', 'rgba(0,230,84,0.04)']
+                        : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.02)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{ padding: 20 }}
+                  >
+                    {/* Popular badge */}
+                    {item.popular && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: 14,
+                          left: 14,
+                          backgroundColor: DesignTokens.colors.primary.main,
+                          borderRadius: 20,
+                          paddingHorizontal: 12,
+                          paddingVertical: 4,
+                        }}
+                      >
+                        <Text style={{ color: '#000', fontSize: 11, fontWeight: '700' }}>
+                          פופולרי ⭐
                         </Text>
                       </View>
-                    ))}
-                    {item.features.length > 6 && (
-                      <Text style={{ 
-                        color: DesignTokens.colors.primary.main, 
-                        fontSize: 12, 
-                        textAlign: 'right',
-                        fontWeight: '600'
-                      }}>
-                        + עוד {item.features.length - 6} תכונות
-                      </Text>
                     )}
-                  </View>
-                  
-                  {/* Excluded Features */}
-                  {item.excludedFeatures && item.excludedFeatures.length > 0 && (
-                    <View style={{ marginTop: 8, gap: 4 }}>
-                      {item.excludedFeatures.slice(0, 2).map((feature, index) => (
-                        <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <Ionicons 
-                            name="close-circle" 
-                            size={14} 
-                            color="rgba(255, 255, 255, 0.3)" 
-                            style={{ marginLeft: 8 }} 
-                          />
-                          <Text style={{ 
-                            color: 'rgba(255, 255, 255, 0.4)', 
-                            fontSize: 12, 
+
+                    {/* Header row */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        marginBottom: 10,
+                        marginTop: item.popular ? 24 : 0,
+                      }}
+                    >
+                      {/* Left: checkmark */}
+                      <View
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 13,
+                          backgroundColor: isSelected
+                            ? DesignTokens.colors.primary.main
+                            : 'rgba(255,255,255,0.08)',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderWidth: isSelected ? 0 : 1,
+                          borderColor: 'rgba(255,255,255,0.15)',
+                          marginTop: 2,
+                        }}
+                      >
+                        {isSelected && (
+                          <Ionicons name="checkmark" size={16} color="#000" />
+                        )}
+                      </View>
+
+                      {/* Right: name + price */}
+                      <View style={{ flex: 1, alignItems: 'flex-end', marginRight: 8 }}>
+                        <Text
+                          style={{
+                            color: '#fff',
+                            fontWeight: '700',
+                            fontSize: 17,
                             textAlign: 'right',
-                            flex: 1,
-                            textDecorationLine: 'line-through'
-                          }}>
+                            marginBottom: 2,
+                          }}
+                        >
+                          {item.name}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                          <Text
+                            style={{
+                              color: 'rgba(255,255,255,0.4)',
+                              fontSize: 14,
+                              fontWeight: '400',
+                            }}
+                          >
+                            {item.price > 0 ? formatPeriod(item.period) : ''}
+                          </Text>
+                          <Text
+                            style={{
+                              color: isFree
+                                ? DesignTokens.colors.primary.main
+                                : '#fff',
+                              fontWeight: '800',
+                              fontSize: 22,
+                              marginRight: 4,
+                            }}
+                          >
+                            {formatPrice(item.price, item.period)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Description */}
+                    {item.description && (
+                      <Text
+                        style={{
+                          color: 'rgba(255,255,255,0.5)',
+                          fontSize: 13,
+                          textAlign: 'right',
+                          marginBottom: 12,
+                          lineHeight: 19,
+                        }}
+                      >
+                        {item.description}
+                      </Text>
+                    )}
+
+                    {/* Divider */}
+                    <View
+                      style={{
+                        height: 1,
+                        backgroundColor: 'rgba(255,255,255,0.06)',
+                        marginBottom: 12,
+                      }}
+                    />
+
+                    {/* Features */}
+                    <View style={{ gap: 7 }}>
+                      {item.features.slice(0, 5).map((feature, i) => (
+                        <View
+                          key={i}
+                          style={{ flexDirection: 'row', alignItems: 'center' }}
+                        >
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={15}
+                            color={DesignTokens.colors.primary.main}
+                            style={{ marginLeft: 8 }}
+                          />
+                          <Text
+                            style={{
+                              color: 'rgba(255,255,255,0.7)',
+                              fontSize: 13,
+                              textAlign: 'right',
+                              flex: 1,
+                            }}
+                          >
                             {feature}
                           </Text>
                         </View>
                       ))}
+                      {item.features.length > 5 && (
+                        <Text
+                          style={{
+                            color: DesignTokens.colors.primary.main,
+                            fontSize: 12,
+                            textAlign: 'right',
+                            fontWeight: '600',
+                            marginTop: 2,
+                          }}
+                        >
+                          + עוד {item.features.length - 5} יתרונות
+                        </Text>
+                      )}
                     </View>
-                  )}
+                  </LinearGradient>
                 </TouchableOpacity>
-              )}
-            />
+              );
+            }}
+          />
 
-            {/* Next Button */}
-            <View style={{ paddingBottom: 20 }}>
-              <LinearGradient
-                colors={selectedTrack 
-                  ? ['#00E654', '#00B84A', '#008F3A'] 
-                  : ['#333', '#333', '#333']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  borderRadius: 14,
-                  shadowColor: selectedTrack ? DesignTokens.colors.primary.main : 'transparent',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: selectedTrack ? 0.4 : 0,
-                  shadowRadius: 12,
-                  elevation: selectedTrack ? 8 : 0
-                }}
+          {/* CTA */}
+          <View style={{ paddingHorizontal: 24, paddingBottom: 20 }}>
+            <LinearGradient
+              colors={
+                selectedTrack
+                  ? ['#00C805', '#00A004', '#008F03']
+                  : ['#2A2A2A', '#2A2A2A']
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{
+                borderRadius: 30,
+                shadowColor: selectedTrack ? DesignTokens.colors.primary.main : 'transparent',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: selectedTrack ? 0.35 : 0,
+                shadowRadius: 16,
+                elevation: selectedTrack ? 8 : 0,
+              }}
+            >
+              <TouchableOpacity
+                onPress={handleNext}
+                disabled={!selectedTrack}
+                activeOpacity={0.85}
+                style={{ paddingVertical: 17, alignItems: 'center' }}
               >
-                <TouchableOpacity
-                  onPress={handleNext}
-                  disabled={!selectedTrack}
+                <Text
                   style={{
-                    paddingVertical: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: selectedTrack ? 1 : 0.5
+                    color: selectedTrack ? '#000' : 'rgba(255,255,255,0.25)',
+                    fontSize: 16,
+                    fontWeight: '700',
+                    letterSpacing: 0.3,
                   }}
                 >
-                  <Text style={{ 
-                    color: selectedTrack ? '#000' : '#888', 
-                    fontSize: 16, 
-                    fontWeight: '700',
-                    letterSpacing: 0.5,
-                    textTransform: 'uppercase'
-                  }}>
-                    המשך לתשלום
-                  </Text>
-                </TouchableOpacity>
-              </LinearGradient>
-            </View>
+                  {selectedTrack === 'free' ? 'התחל בחינם' : 'המשך לתשלום'}
+                </Text>
+              </TouchableOpacity>
+            </LinearGradient>
           </View>
         </SafeAreaView>
       </LinearGradient>

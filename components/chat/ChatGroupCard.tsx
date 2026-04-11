@@ -7,6 +7,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
 import { ChatGroup } from '../../types/chat.types';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
@@ -17,21 +18,20 @@ interface ChatGroupCardProps {
   onLongPress?: () => void;
 }
 
-export default function ChatGroupCard({ group, onPress, onLongPress }: ChatGroupCardProps) {
+function ChatGroupCard({ group, onPress, onLongPress }: ChatGroupCardProps) {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
   const hasUnread = (group.unread_count || 0) > 0;
-  // console.log(`Card for ${group.name}: unread=${group.unread_count}, hasUnread=${hasUnread}`);
-
   const hasMentions = (group.mentioned_count || 0) > 0;
 
-  const timeText = group.last_message_at
-    ? formatDistanceToNow(new Date(group.last_message_at), {
-        addSuffix: false,
-        locale: he,
-      })
-    : '';
+  const timeText = useMemo(() => {
+    if (!group.last_message_at) return '';
+    return formatDistanceToNow(new Date(group.last_message_at), {
+      addSuffix: false,
+      locale: he,
+    });
+  }, [group.last_message_at]);
 
   return (
     <TouchableOpacity
@@ -84,7 +84,7 @@ export default function ChatGroupCard({ group, onPress, onLongPress }: ChatGroup
             )}
             {hasUnread && (
               <View style={[styles.badge, hasMentions && styles.mentionBadge]}>
-                <Text style={styles.badgeText}>
+                <Text style={[styles.badgeText, hasMentions && styles.badgeTextOnMention]}>
                   {group.unread_count! > 99 ? '99+' : group.unread_count}
                 </Text>
               </View>
@@ -103,33 +103,34 @@ export default function ChatGroupCard({ group, onPress, onLongPress }: ChatGroup
 const createStyles = (tokens: any) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: 16,
+    paddingVertical: tokens.spacing.base ?? 16,
+    paddingHorizontal: tokens.spacing.lg ?? 20,
     backgroundColor: tokens.colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.background.secondary,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: tokens.colors.border.divider,
     alignItems: 'center',
   },
   
   avatarContainer: {
-    marginRight: 12,
+    marginRight: tokens.spacing.md + 2,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
   },
   avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: tokens.colors.accent.main,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: tokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize['3xl'],
+    fontWeight: tokens.typography.fontWeight.semibold,
+    color: tokens.colors.text.inverse,
   },
   
   content: {
@@ -141,20 +142,20 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: tokens.spacing.xs + 2,
   },
   name: {
     flex: 1,
-    fontSize: 17,
-    fontWeight: '500',
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.medium,
     color: tokens.colors.text.primary,
-    textAlign: 'left', // ברירת מחדל, אבל ב-RTL זה יתהפך לימין
+    textAlign: 'right',
   },
   nameUnread: {
     fontWeight: '700',
   },
   time: {
-    fontSize: 13,
+    fontSize: tokens.typography.label.size,
     color: tokens.colors.text.secondary,
     marginLeft: 8,
   },
@@ -170,10 +171,10 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   lastMessage: {
     flex: 1,
-    fontSize: 15,
+    fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
     marginRight: 8, // רווח מה-Badge
-    textAlign: 'left',
+    textAlign: 'right',
   },
   lastMessageUnread: {
     color: tokens.colors.text.primary,
@@ -187,35 +188,38 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   
   badge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: tokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 6,
   },
   mentionBadge: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: tokens.colors.text.danger,
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.text.inverse,
+  },
+  badgeTextOnMention: {
+    color: tokens.colors.text.primary,
   },
   
   mentionIndicator: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: '#FF3B30',
+    backgroundColor: tokens.colors.text.danger,
     justifyContent: 'center',
     alignItems: 'center',
   },
   mentionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.bold,
+    color: tokens.colors.text.primary,
   },
 });
 

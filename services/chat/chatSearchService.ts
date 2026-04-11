@@ -1,8 +1,6 @@
 // ============================================
 // Chat Search Service
 // ============================================
-// חיפוש הודעות, קבוצות וחברים
-// ============================================
 
 import { supabase } from '../../lib/supabase';
 import {
@@ -13,6 +11,21 @@ import {
   ChatError,
 } from '../../types/chat.types';
 
+function sanitizeSearchTerm(term: string): string {
+  if (!term || typeof term !== 'string') return '';
+  const trimmed = term.trim();
+  if (trimmed.length < 2 || trimmed.length > 200) return '';
+  return trimmed.replace(/[%_\\]/g, '\\$&').replace(/[,()]/g, '');
+}
+
+function clampLimit(limit: number, max: number = 100): number {
+  return Math.max(1, Math.min(limit, max));
+}
+
+function validateUUID(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 // ============================================
 // חיפוש הודעות בקבוצה
 // ============================================
@@ -20,12 +33,28 @@ import {
 export async function searchMessagesInGroup(
   groupId: string,
   searchTerm: string,
-  limit: number = 50
+  limit: number = 50,
+  userId?: string
 ): Promise<{ data: ChatMessage[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching messages in group ${groupId}:`, searchTerm);
+    if (!groupId || !validateUUID(groupId)) {
+      return { data: null, error: { code: 'INVALID_INPUT', message: 'Invalid group ID' } };
+    }
+    const safe = sanitizeSearchTerm(searchTerm);
+    if (!safe) return { data: [], error: null };
+    const safeLimit = clampLimit(limit);
 
-    // חיפוש טקסט
+    // Verify membership if userId provided
+    if (userId) {
+      const { data: membership } = await supabase
+        .from('chat_group_members')
+        .select('id')
+        .eq('group_id', groupId)
+        .eq('user_id', userId)
+        .single();
+      if (!membership) return { data: null, error: { code: 'UNAUTHORIZED', message: 'Not a group member' } };
+    }
+
     const { data, error } = await supabase
       .from('chat_messages')
       .select(`
@@ -38,20 +67,14 @@ export async function searchMessagesInGroup(
       `)
       .eq('group_id', groupId)
       .eq('is_deleted', false)
-      .ilike('content', `%${searchTerm}%`)
+      .ilike('content', `%${safe}%`)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(safeLimit);
 
-    if (error) {
-      console.error('❌ Error searching messages:', error);
-      return { data: null, error: { code: 'SEARCH_ERROR', message: error.message } };
-    }
-
-    console.log(`✅ Found ${data.length} messages`);
+    if (error) return { data: null, error: { code: 'SEARCH_ERROR', message: 'Search failed' } };
     return { data: data as any, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching messages:', error);
-    return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
+    return { data: null, error: { code: 'UNEXPECTED_ERROR', message: 'Search failed' } };
   }
 }
 
@@ -65,26 +88,24 @@ export async function searchMessagesInAllGroups(
   limit: number = 50
 ): Promise<{ data: ChatSearchResult[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching messages for user ${userId}:`, searchTerm);
+    if (!userId || !validateUUID(userId)) {
+      return { data: null, error: { code: 'INVALID_INPUT', message: 'Invalid user ID' } };
+    }
+    const safe = sanitizeSearchTerm(searchTerm);
+    if (!safe) return { data: [], error: null };
+    const safeLimit = clampLimit(limit);
 
-    // קבלת כל הקבוצות של המשתמש
-    const { data: groups, error: groupsError } = await supabase
+    const { data: memberRows, error: memberError } = await supabase
       .from('chat_group_members')
       .select('group_id')
       .eq('user_id', userId);
 
-    if (groupsError) {
-      console.error('❌ Error fetching groups:', groupsError);
-      return { data: null, error: { code: 'FETCH_GROUPS_ERROR', message: groupsError.message } };
-    }
-
-    const groupIds = groups.map(g => g.group_id);
-
-    if (groupIds.length === 0) {
+    if (memberError || !memberRows?.length) {
       return { data: [], error: null };
     }
 
-    // חיפוש בכל הקבוצות
+    const groupIds = memberRows.map(r => r.group_id);
+
     const { data: messages, error: messagesError } = await supabase
       .from('chat_messages')
       .select(`
@@ -94,7 +115,7 @@ export async function searchMessagesInAllGroups(
           display_name,
           profile_picture
         ),
-        chat_groups!inner (
+        chat_groups (
           id,
           name,
           avatar_url
@@ -102,22 +123,19 @@ export async function searchMessagesInAllGroups(
       `)
       .in('group_id', groupIds)
       .eq('is_deleted', false)
-      .ilike('content', `%${searchTerm}%`)
+      .ilike('content', `%${safe}%`)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(safeLimit);
 
     if (messagesError) {
-      console.error('❌ Error searching messages:', messagesError);
-      return { data: null, error: { code: 'SEARCH_ERROR', message: messagesError.message } };
+      return { data: null, error: { code: 'SEARCH_ERROR', message: 'Search failed' } };
     }
 
-    // המרה לפורמט ChatSearchResult
-    const results: ChatSearchResult[] = (messages as any[]).map(msg => {
-      // חילוץ highlight
+    const results: ChatSearchResult[] = ((messages || []) as any[]).map(msg => {
       const content = msg.content || '';
-      const index = content.toLowerCase().indexOf(searchTerm.toLowerCase());
+      const index = content.toLowerCase().indexOf(safe.toLowerCase());
       const start = Math.max(0, index - 50);
-      const end = Math.min(content.length, index + searchTerm.length + 50);
+      const end = Math.min(content.length, index + safe.length + 50);
       const highlight = content.substring(start, end);
 
       return {
@@ -127,10 +145,8 @@ export async function searchMessagesInAllGroups(
       };
     });
 
-    console.log(`✅ Found ${results.length} messages across all groups`);
     return { data: results, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching messages:', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -145,9 +161,9 @@ export async function searchGroups(
   limit: number = 20
 ): Promise<{ data: ChatGroup[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching groups:`, searchTerm);
+    const safe = sanitizeSearchTerm(searchTerm);
+    if (!safe) return { data: [], error: null };
 
-    // חיפוש רק בקבוצות שהמשתמש חבר בהן
     const { data, error } = await supabase
       .from('chat_group_members')
       .select(`
@@ -167,21 +183,17 @@ export async function searchGroups(
         )
       `)
       .eq('user_id', userId)
-      .ilike('chat_groups.name', `%${searchTerm}%`)
+      .ilike('chat_groups.name', `%${safe}%`)
       .order('chat_groups.name')
-      .limit(limit);
+      .limit(clampLimit(limit));
 
     if (error) {
-      console.error('❌ Error searching groups:', error);
       return { data: null, error: { code: 'SEARCH_ERROR', message: error.message } };
     }
 
-    const groups = (data as any[]).map(item => item.chat_groups);
-
-    console.log(`✅ Found ${groups.length} groups`);
+    const groups = ((data || []) as any[]).map(item => item.chat_groups);
     return { data: groups, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching groups:', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -196,30 +208,28 @@ export async function searchUsers(
   limit: number = 20
 ): Promise<{ data: any[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching users:`, searchTerm);
+    const safe = sanitizeSearchTerm(searchTerm);
+    if (!safe) return { data: [], error: null };
 
     let query = supabase
       .from('users')
-      .select('id, display_name, full_name, email, profile_picture, is_online, last_active')
-      .or(`display_name.ilike.%${searchTerm}%,full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+      .select('id, display_name, full_name, profile_picture, is_online, last_active')
+      .or(`display_name.ilike.%${safe}%,full_name.ilike.%${safe}%`)
       .order('display_name')
-      .limit(limit);
+      .limit(clampLimit(limit));
 
-    if (excludeUserIds && excludeUserIds.length > 0) {
-      query = query.not('id', 'in', `(${excludeUserIds.join(',')})`);
+    const validExcludeIds = excludeUserIds?.filter(id => validateUUID(id)) ?? [];
+    if (validExcludeIds.length > 0) {
+      query = query.not('id', 'in', `(${validExcludeIds.join(',')})`);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error('❌ Error searching users:', error);
       return { data: null, error: { code: 'SEARCH_ERROR', message: error.message } };
     }
-
-    console.log(`✅ Found ${data.length} users`);
     return { data, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching users:', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -234,7 +244,11 @@ export async function searchGroupMembers(
   limit: number = 50
 ): Promise<{ data: ChatGroupMember[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching members in group ${groupId}:`, searchTerm);
+    if (!groupId || !validateUUID(groupId)) {
+      return { data: null, error: { code: 'INVALID_INPUT', message: 'Invalid group ID' } };
+    }
+    const safe = sanitizeSearchTerm(searchTerm);
+    if (!safe) return { data: [], error: null };
 
     const { data, error } = await supabase
       .from('chat_group_members')
@@ -245,24 +259,20 @@ export async function searchGroupMembers(
           display_name,
           full_name,
           profile_picture,
-          email,
           is_online,
           last_active
         )
       `)
       .eq('group_id', groupId)
-      .or(`user.display_name.ilike.%${searchTerm}%,user.full_name.ilike.%${searchTerm}%`)
-      .limit(limit);
+      .or(`user.display_name.ilike.%${safe}%,user.full_name.ilike.%${safe}%`)
+      .limit(clampLimit(limit));
 
     if (error) {
-      console.error('❌ Error searching group members:', error);
       return { data: null, error: { code: 'SEARCH_ERROR', message: error.message } };
     }
 
-    console.log(`✅ Found ${data.length} members`);
     return { data: data as any, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching group members:', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -277,7 +287,9 @@ export async function searchMessagesBySender(
   limit: number = 50
 ): Promise<{ data: ChatMessage[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching messages by sender ${senderId} in group ${groupId}`);
+    if (!groupId || !validateUUID(groupId) || !senderId || !validateUUID(senderId)) {
+      return { data: null, error: { code: 'INVALID_INPUT', message: 'Invalid group or sender ID' } };
+    }
 
     const { data, error } = await supabase
       .from('chat_messages')
@@ -293,17 +305,14 @@ export async function searchMessagesBySender(
       .eq('sender_id', senderId)
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(clampLimit(limit));
 
     if (error) {
-      console.error('❌ Error searching messages by sender:', error);
       return { data: null, error: { code: 'SEARCH_ERROR', message: error.message } };
     }
 
-    console.log(`✅ Found ${data.length} messages`);
     return { data: data as any, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching messages by sender:', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -318,7 +327,9 @@ export async function searchMediaMessages(
   limit: number = 50
 ): Promise<{ data: ChatMessage[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching media messages in group ${groupId}`);
+    if (!groupId || !validateUUID(groupId)) {
+      return { data: null, error: { code: 'INVALID_INPUT', message: 'Invalid group ID' } };
+    }
 
     let query = supabase
       .from('chat_messages')
@@ -340,17 +351,14 @@ export async function searchMediaMessages(
 
     const { data, error } = await query
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(clampLimit(limit));
 
     if (error) {
-      console.error('❌ Error searching media messages:', error);
       return { data: null, error: { code: 'SEARCH_ERROR', message: error.message } };
     }
 
-    console.log(`✅ Found ${data.length} media messages`);
     return { data: data as any, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching media messages:', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -365,7 +373,9 @@ export async function searchMentions(
   limit: number = 50
 ): Promise<{ data: ChatMessage[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching mentions for user ${userId} in group ${groupId}`);
+    if (!groupId || !validateUUID(groupId) || !userId || !validateUUID(userId)) {
+      return { data: null, error: { code: 'INVALID_INPUT', message: 'Invalid group or user ID' } };
+    }
 
     const { data, error } = await supabase
       .from('chat_messages')
@@ -381,17 +391,14 @@ export async function searchMentions(
       .eq('is_deleted', false)
       .contains('mentioned_users', [userId])
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(clampLimit(limit));
 
     if (error) {
-      console.error('❌ Error searching mentions:', error);
       return { data: null, error: { code: 'SEARCH_ERROR', message: error.message } };
     }
 
-    console.log(`✅ Found ${data.length} mentions`);
     return { data: data as any, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching mentions:', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -407,7 +414,9 @@ export async function searchMessagesByDate(
   limit: number = 100
 ): Promise<{ data: ChatMessage[] | null; error: ChatError | null }> {
   try {
-    console.log(`🔍 Searching messages by date in group ${groupId}`);
+    if (!groupId || !validateUUID(groupId)) {
+      return { data: null, error: { code: 'INVALID_INPUT', message: 'Invalid group ID' } };
+    }
 
     const { data, error } = await supabase
       .from('chat_messages')
@@ -424,17 +433,14 @@ export async function searchMessagesByDate(
       .gte('created_at', fromDate)
       .lte('created_at', toDate)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(clampLimit(limit));
 
     if (error) {
-      console.error('❌ Error searching messages by date:', error);
       return { data: null, error: { code: 'SEARCH_ERROR', message: error.message } };
     }
 
-    console.log(`✅ Found ${data.length} messages`);
     return { data: data as any, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error searching messages by date:', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -454,6 +460,7 @@ export const chatSearchService = {
   searchMentions,
   searchMessagesByDate,
 };
+
 
 
 

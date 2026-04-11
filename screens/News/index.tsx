@@ -3,23 +3,33 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator
+  ActivityIndicator,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { LinearGradient } from 'expo-linear-gradient';
 import UICard from '../../components/ui/UICard';
 
 // קומפוננטים פנימיים
 import BreakingNewsTab from './BreakingNewsTab';
 import EconomicCalendarTab from './EconomicCalendarTab';
 import EarningsReportsTab from './EarningsReportsTab';
-import IndicesTab from './IndicesTab';
+
+type ErrorBoundaryProps = {
+  children: ReactNode;
+  errorStyles: {
+    container: ViewStyle;
+    title: TextStyle;
+    message: TextStyle;
+  };
+};
 
 // Error Boundary Component
-class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean; error: Error | null }> {
-  constructor(props: { children: ReactNode }) {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, { hasError: boolean; error: Error | null }> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -29,17 +39,17 @@ class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError:
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('❌ NewsScreen Error:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
+      const { errorStyles } = this.props;
       return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#121212' }}>
-          <Text style={{ color: '#FFFFFF', fontSize: 18, marginBottom: 10 }}>
+        <View style={errorStyles.container}>
+          <Text style={errorStyles.title}>
             שגיאה בטעינת המסך
           </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center' }}>
+          <Text style={errorStyles.message}>
             {this.state.error?.message || 'שגיאה לא ידועה'}
           </Text>
         </View>
@@ -50,32 +60,38 @@ class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError:
   }
 }
 
-export default function NewsScreen() {
-  console.log('📰 NewsScreen: Component mounted/rendering...');
+export default function NewsScreen({ route }: { route?: any }) {
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
-  const [activeTab, setActiveTab] = useState<'indices' | 'breaking' | 'calendar' | 'earnings'>('indices');
+
+  // deep-link מהתראה: route.params?.tab יכול להיות 'breaking' | 'calendar' | 'earnings'
+  const initialTab: 'breaking' | 'calendar' | 'earnings' =
+    route?.params?.tab === 'calendar' ? 'calendar'
+    : route?.params?.tab === 'earnings' ? 'earnings'
+    : 'breaking';
+
+  const [activeTab, setActiveTab] = useState<'breaking' | 'calendar' | 'earnings'>(initialTab);
   const [isReady, setIsReady] = useState(false);
+
+  // כשמגיע param חדש מהתראה (המסך כבר פתוח ב-background), עדכן את הטאב
+  useEffect(() => {
+    if (!route?.params?.tab) return;
+    const incoming = route.params.tab;
+    if (incoming === 'calendar' || incoming === 'earnings' || incoming === 'breaking') {
+      setActiveTab(incoming);
+    }
+  }, [route?.params?.tab]);
   
   useEffect(() => {
-    console.log('📰 NewsScreen: useEffect - Component mounted');
     // דיליי קטן כדי לוודא שהמסך נטען
     setTimeout(() => {
       setIsReady(true);
-      console.log('📰 NewsScreen: Component is ready');
     }, 100);
     return () => {
-      console.log('📰 NewsScreen: useEffect - Component unmounted');
     };
   }, []);
 
   const tabs = [
-    {
-      id: 'indices' as const,
-      title: 'מדדים',
-      icon: 'stats-chart',
-      component: IndicesTab
-    },
     {
       id: 'breaking' as const,
       title: 'חדשות מתפרצות',
@@ -98,15 +114,9 @@ export default function NewsScreen() {
 
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || BreakingNewsTab;
 
-  console.log('📰 NewsScreen: About to render, activeTab:', activeTab, 'isReady:', isReady);
-  
   return (
     <View style={{ flex: 1 }}>
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        style={styles.gradientContainer}
-      />
+      <ScreenGradientBackground style={styles.gradientContainer} />
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         {/* כותרת */}
@@ -129,7 +139,6 @@ export default function NewsScreen() {
                   <TouchableOpacity
                     key={`tab-${tab.id}-${index}`}
                     onPress={() => {
-                      console.log(`📰 NewsScreen: Switching to tab ${tab.id}`);
                       setActiveTab(tab.id);
                     }}
                     activeOpacity={0.7}
@@ -159,7 +168,7 @@ export default function NewsScreen() {
               <Text style={styles.loadingText}>טוען...</Text>
             </View>
           ) : (
-            <ErrorBoundary>
+            <ErrorBoundary errorStyles={styles.errorBoundary}>
               <ActiveComponent />
             </ErrorBoundary>
           )}
@@ -182,28 +191,28 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
     },
     headerContainer: {
-      paddingHorizontal: tokens.spacing.lg,
+      paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
       paddingTop: tokens.spacing.lg,
     },
     headerTitle: {
-      fontSize: tokens.typography.fontSize['2xl'],
+      fontSize: tokens.typography.displayXs.size,
       fontWeight: tokens.typography.fontWeight.bold as any,
       color: tokens.colors.text.primary,
       textAlign: 'right',
     },
     headerSubtitle: {
-      fontSize: tokens.typography.fontSize.base,
+      fontSize: tokens.typography.body.size,
       color: tokens.colors.text.secondary,
       textAlign: 'right',
       marginTop: tokens.spacing.xs,
     },
     tabsContainer: {
-      paddingHorizontal: tokens.spacing.lg,
+      paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
       paddingTop: tokens.spacing.md,
       marginBottom: tokens.spacing.md,
     },
     tabsCard: {
-      borderRadius: 30,
+      borderRadius: tokens.borderRadius['3xl'],
       overflow: 'hidden',
       alignSelf: 'center',
       width: '100%',
@@ -211,12 +220,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     tabs: {
       flexDirection: 'row',
-      padding: 4,
+      padding: tokens.spacing.xs,
     },
     tab: {
       flex: 1,
       height: 44,
-      borderRadius: 26,
+      borderRadius: tokens.borderRadius['3xl'],
       backgroundColor: 'transparent',
       alignItems: 'center',
       justifyContent: 'center',
@@ -229,11 +238,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       left: 0,
       right: 0,
       bottom: 0,
-      borderRadius: 26,
-      backgroundColor: `${tokens.colors.primary.main}14`,
+      borderRadius: tokens.borderRadius['3xl'],
+      backgroundColor: tokens.colors.background.cardSolid,
     },
     tabText: {
-      fontSize: 14,
+      fontSize: tokens.typography.bodySmall.size,
       fontWeight: tokens.typography.fontWeight.medium as any,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
@@ -253,7 +262,28 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     loadingText: {
       marginTop: tokens.spacing.md,
-      fontSize: tokens.typography.fontSize.base,
+      fontSize: tokens.typography.body.size,
       color: tokens.colors.text.secondary,
+    },
+    errorBoundary: {
+      container: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: tokens.spacing.xl,
+        backgroundColor: tokens.colors.background.primary,
+      },
+      title: {
+        color: tokens.colors.text.primary,
+        fontSize: tokens.typography.titleSmall.size,
+        fontWeight: tokens.typography.fontWeight.semibold as any,
+        marginBottom: tokens.spacing.sm,
+        textAlign: 'center',
+      },
+      message: {
+        color: tokens.colors.text.secondary,
+        fontSize: tokens.typography.bodySmall.size,
+        textAlign: 'center',
+      },
     },
   } as const);

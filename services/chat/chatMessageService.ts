@@ -32,56 +32,44 @@ import {
   validateUserId,
   sanitizeMessageContent,
   sanitizeFileName,
+  validateEmoji,
 } from './chatValidation';
 import { retryWithBackoff } from './chatRetry';
+import { logger } from '../../utils/logger';
 
 // ============================================
 // שליחת הודעה חדשה
 // ============================================
 
 export async function sendChatMessage(
-  input: SendChatMessageInput,
+  inputRaw: SendChatMessageInput,
   userId: string
 ): Promise<{ data: ChatMessage | null; error: ChatError | null }> {
-  // #region agent log
-  const logData7 = {location:'chatMessageService.ts:47',message:'sendChatMessage called',data:{userId,groupId:input.group_id,content:input.content?.substring(0,50),messageType:input.message_type,replyTo:input.reply_to_message_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-  console.log('🔍 DEBUG [A]:', JSON.stringify(logData7));
-  fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData7)}).catch(()=>{});
-  // #endregion
   try {
+    const input = { ...inputRaw };
+
     // ============================================
     // Validation
     // ============================================
     
-    // Validate user ID
     const userIdValidation = validateUserId(userId);
     if (!userIdValidation.valid) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:54',message:'User ID validation failed',data:{error:userIdValidation.error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return { data: null, error: userIdValidation.error! };
     }
 
-    // Validate group ID
     const groupIdValidation = validateGroupId(input.group_id);
     if (!groupIdValidation.valid) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:60',message:'Group ID validation failed',data:{error:groupIdValidation.error?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return { data: null, error: groupIdValidation.error! };
     }
 
-    // Validate message content (if text message)
     if (input.message_type === 'text' && input.content) {
       const contentValidation = validateMessageContent(input.content);
       if (!contentValidation.valid) {
         return { data: null, error: contentValidation.error! };
       }
-      // Sanitize content
       input.content = sanitizeMessageContent(input.content);
     }
 
-    // Validate media (if media message)
     const isMediaMessage = ['image', 'video', 'audio', 'document'].includes(input.message_type);
     if (isMediaMessage) {
       if (input.media_type) {
@@ -103,7 +91,6 @@ export async function sendChatMessage(
         if (!fileNameValidation.valid) {
           return { data: null, error: fileNameValidation.error! };
         }
-        // Sanitize file name
         input.media_file_name = sanitizeFileName(input.media_file_name);
       }
     }
@@ -129,18 +116,12 @@ export async function sendChatMessage(
       .single();
 
     if (!membership) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:121',message:'User not member of group',data:{userId,groupId:input.group_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return { data: null, error: { code: 'NOT_MEMBER', message: 'אינך חבר בקבוצה זו' } };
     }
 
     // בדיקה אם רק אדמינים יכולים לשלוח
     const groupSettings = (membership as any).chat_groups?.settings;
     if (groupSettings?.onlyAdminsCanSend && membership.role !== 'admin') {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:127',message:'Permission denied - only admins',data:{userId,groupId:input.group_id,role:membership.role},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return { data: null, error: { code: 'PERMISSION_DENIED', message: 'רק אדמינים יכולים לשלוח הודעות' } };
     }
 
@@ -152,18 +133,35 @@ export async function sendChatMessage(
     let messageError: any = null;
 
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:138',message:'Inserting message to DB',data:{groupId:input.group_id,userId,hasReplyTo:!!input.reply_to_message_id,replyToId:input.reply_to_message_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       const result = await retryWithBackoff(async () => {
-        // Ensure created_at is set explicitly to current UTC time
-        const now = new Date().toISOString();
+        
+        // Workaround: Store waveform data in content field for audio messages
+        // Format: {"waveform": [...], "caption": "optional"}
+        let contentToStore = input.content;
+        if (input.message_type === 'audio' && input.metadata?.waveformData) {
+          const audioContent = {
+            waveform: input.metadata.waveformData,
+            caption: input.content || '',
+          };
+          contentToStore = JSON.stringify(audioContent);
+        }
+        
+        // Workaround: Store media_urls in content field for MEDIA_GROUP messages
+        // Format: {"media_urls": [...], "caption": "optional"}
+        if (input.message_type === 'media_group' && input.media_urls) {
+          const mediaGroupContent = {
+            media_urls: input.media_urls,
+            caption: input.content || '',
+          };
+          contentToStore = JSON.stringify(mediaGroupContent);
+        }
+        
         const { data: insertData, error: insertError } = await supabase
           .from('chat_messages')
           .insert({
             group_id: input.group_id,
             sender_id: userId,
-            content: input.content,
+            content: contentToStore,
             message_type: input.message_type,
             media_url: input.media_url,
             media_thumbnail_url: input.media_thumbnail_url,
@@ -176,7 +174,9 @@ export async function sendChatMessage(
             reply_to_message_id: input.reply_to_message_id,
             mentioned_users: input.mentioned_users || [],
             is_silent: input.is_silent || false,
-            created_at: now, // Set explicitly to ensure correct time
+            // Note: metadata column needs to be added to Supabase first
+            // metadata: input.metadata || null,
+            // M7: let the DB set created_at via DEFAULT now() so server clock is authoritative
           })
           .select(`
             *,
@@ -206,20 +206,12 @@ export async function sendChatMessage(
         messageData.sender = messageData.sender[0];
       }
       
-      // #region agent log
-      const logData8 = {location:'chatMessageService.ts:171',message:'Message inserted successfully',data:{messageId:messageData.id,hasReplyTo:!!messageData.reply_to_message_id,replyToId:messageData.reply_to_message_id,hasReplyToData:!!messageData.reply_to,hasSender:!!messageData.sender},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
-      console.log('🔍 DEBUG [A]:', JSON.stringify(logData8));
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(logData8)}).catch(()=>{});
-      // #endregion
     } catch (error: any) {
       messageError = error;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:173',message:'Error inserting message',data:{error:error.message,errorCode:error.code},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
     }
 
     if (messageError || !messageData) {
-      console.error('❌ Error sending message:', messageError);
+      logger.error('ChatMessage', 'Error sending message', messageError);
       return { 
         data: null, 
         error: { 
@@ -235,9 +227,6 @@ export async function sendChatMessage(
     
     if (messageData.reply_to_message_id && !messageData.reply_to) {
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:203',message:'Loading reply_to data',data:{messageId:messageData.id,replyToId:messageData.reply_to_message_id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         const { data: replyToMessage } = await supabase
           .from('chat_messages')
           .select(`
@@ -269,38 +258,18 @@ export async function sendChatMessage(
               sender_name: sender?.display_name || 'משתמש',
             },
           };
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:228',message:'Loaded reply_to data successfully',data:{messageId:messageData.id,hasReplyTo:!!messageData.reply_to},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-          console.log('📎 Loaded reply_to data for message:', messageData.id);
         }
-      } catch (error: any) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:231',message:'Error loading reply_to data',data:{error:error.message,messageId:messageData.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        console.error('❌ Error loading reply_to data:', error);
-        // Continue without reply_to data - not critical
+      } catch (e) {
+        logger.warn('ChatMessage', 'Failed to enrich reply_to data', e);
       }
     }
 
-    // ============================================
-    // Update Unread Counts
-    // ============================================
-    
-    // Don't await - fire and forget to not block the response
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:192',message:'Updating unread counts',data:{groupId:input.group_id,userId,hasMentions:!!input.mentioned_users?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
-    updateUnreadCounts(input.group_id, userId, input.mentioned_users).catch(err => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/8b9bfe71-986e-4e14-a9ec-fee0bc691e64',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'chatMessageService.ts:194',message:'Error updating unread counts',data:{error:err.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-      console.error('❌ Error updating unread counts:', err);
-    });
+    // עדכון unread_count: טריגר DB (database/chat_realtime_and_triggers.sql) מעדכן אוטומטית.
+    // אם הטריגר לא הור בפרויקט, הרץ את chat_realtime_and_triggers.sql ב-Supabase.
 
     return { data: messageData, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error sending message:', error);
+    logger.error('ChatMessage', 'Unexpected error sending message', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -317,9 +286,7 @@ export async function getChatMessages(
 ): Promise<{ data: ChatMessagesResponse | null; error: ChatError | null }> {
   try {
     const limit = params?.limit || 50;
-    const offset = params?.offset || 0;
 
-    // בניית השאילתה הבסיסית
     let query = supabase
       .from('chat_messages')
       .select(`
@@ -334,7 +301,6 @@ export async function getChatMessages(
       .eq('group_id', groupId)
       .eq('is_deleted', false);
 
-    // פילטרים
     if (filters?.message_type && filters.message_type.length > 0) {
       query = query.in('message_type', filters.message_type);
     }
@@ -351,61 +317,54 @@ export async function getChatMessages(
       query = query.lte('created_at', filters.date_to);
     }
 
-    // מיון וקבלת הנתונים
+    // Cursor-based pagination: use before_cursor for loading older messages
+    if (params?.before) {
+      query = query.lt('created_at', params.before);
+    }
+    if (params?.after) {
+      query = query.gt('created_at', params.after);
+    }
+
+    // Fallback to offset for backward compatibility
+    const offset = params?.offset || 0;
+
     const { data, error, count } = await query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('❌ Error fetching messages:', error);
       return { data: null, error: { code: 'FETCH_MESSAGES_ERROR', message: error.message } };
     }
 
-    // קבלת ריאקציות לכל ההודעות
     const messageIds = data.map(m => m.id);
-    const { data: reactions } = await supabase
-      .from('chat_message_reactions')
-      .select(`
-        *,
-        user:users (
-          id,
-          display_name,
-          profile_picture
-        )
-      `)
-      .in('message_id', messageIds);
 
-    // קבלת הודעות מועדפות של המשתמש
-    const { data: starred } = await supabase
-      .from('chat_starred_messages')
-      .select('message_id')
-      .eq('user_id', userId)
-      .in('message_id', messageIds);
+    // Run all supplementary queries in parallel instead of sequentially (~5x faster)
+    const [reactionsResult, starredResult, readResult, deletionsResult] = await Promise.all([
+      supabase
+        .from('chat_message_reactions')
+        .select(`*, user:users (id, display_name, profile_picture)`)
+        .in('message_id', messageIds),
+      supabase
+        .from('chat_starred_messages')
+        .select('message_id')
+        .eq('user_id', userId)
+        .in('message_id', messageIds),
+      supabase
+        .from('chat_message_reads')
+        .select('message_id')
+        .eq('user_id', userId)
+        .in('message_id', messageIds),
+      supabase
+        .from('chat_message_personal_deletions')
+        .select('message_id')
+        .eq('user_id', userId)
+        .in('message_id', messageIds),
+    ]);
 
-    const starredIds = new Set(starred?.map(s => s.message_id) || []);
-
-    // קבלת אישורי קריאה של המשתמש
-    const { data: readReceipts } = await supabase
-      .from('chat_message_reads')
-      .select('message_id')
-      .eq('user_id', userId)
-      .in('message_id', messageIds);
-
-    const readIds = new Set(readReceipts?.map(r => r.message_id) || []);
-
-    // קבלת הודעות שנמחקו אישית על ידי המשתמש
-    const { data: personalDeletions, error: personalDeletionsError } = await supabase
-      .from('chat_message_personal_deletions')
-      .select('message_id')
-      .eq('user_id', userId)
-      .in('message_id', messageIds);
-
-    if (personalDeletionsError) {
-      console.error('❌ Error fetching personal deletions:', personalDeletionsError);
-    }
-
-    const deletedIds = new Set(personalDeletions?.map(d => d.message_id) || []);
-    console.log(`🗑️ Personal deletions for user ${userId.slice(0, 8)}...: ${deletedIds.size} messages`);
+    const reactions = reactionsResult.data;
+    const starredIds = new Set(starredResult.data?.map(s => s.message_id) || []);
+    const readIds = new Set(readResult.data?.map(r => r.message_id) || []);
+    const deletedIds = new Set(deletionsResult.data?.map(d => d.message_id) || []);
 
     // ארגון הריאקציות לפי הודעה
     const reactionsMap = new Map<string, any[]>();
@@ -450,13 +409,10 @@ export async function getChatMessages(
         });
       });
       
-      console.log(`📎 Loaded ${replyToMessagesMap.size} reply-to messages`);
     }
 
     // המרת הנתונים לפורמט הנכון - סינון הודעות שנמחקו אישית
-    const totalMessages = data.length;
     const filteredMessages = data.filter((msg: any) => !deletedIds.has(msg.id));
-    console.log(`🗑️ Filtered messages: ${totalMessages} total, ${filteredMessages.length} after filtering personal deletions`);
     
     const messages: ChatMessage[] = filteredMessages
       .map((msg: any) => {
@@ -464,13 +420,16 @@ export async function getChatMessages(
       
       // קיבוץ ריאקציות לפי אימוג'י
       const reactionGroups = messageReactions.reduce((acc, r) => {
+        const user = Array.isArray(r.user) ? r.user[0] : r.user;
+        if (!user?.id) return acc;
+
         const existing = acc.find((g: any) => g.emoji === r.emoji);
         if (existing) {
           existing.count++;
           existing.users.push({
-            id: r.user.id,
-            name: r.user.display_name,
-            profile_picture: r.user.profile_picture,
+            id: user.id,
+            name: user.display_name,
+            profile_picture: user.profile_picture,
           });
           if (r.user_id === userId) {
             existing.reacted_by_me = true;
@@ -480,9 +439,9 @@ export async function getChatMessages(
             emoji: r.emoji,
             count: 1,
             users: [{
-              id: r.user.id,
-              name: r.user.display_name,
-              profile_picture: r.user.profile_picture,
+              id: user.id,
+              name: user.display_name,
+              profile_picture: user.profile_picture,
             }],
             reacted_by_me: r.user_id === userId,
           });
@@ -495,8 +454,25 @@ export async function getChatMessages(
         ? replyToMessagesMap.get(msg.reply_to_message_id)
         : undefined;
 
+      // Parse media_urls from content for MEDIA_GROUP messages
+      let media_urls = undefined;
+      let parsedContent = msg.content;
+      if (msg.message_type === 'media_group' && msg.content) {
+        try {
+          const parsed = JSON.parse(msg.content);
+          if (parsed.media_urls) {
+            media_urls = parsed.media_urls;
+            parsedContent = parsed.caption || '';
+          }
+        } catch {
+          // Not JSON - keep as is
+        }
+      }
+
       return {
         ...msg,
+        content: parsedContent,
+        media_urls,
         reply_to: replyTo,
         reactions: reactionGroups,
         is_starred_by_me: starredIds.has(msg.id),
@@ -511,10 +487,9 @@ export async function getChatMessages(
       total_count: count || 0,
     };
 
-    console.log(`✅ Fetched ${messages.length} messages from group ${groupId}`);
     return { data: response, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error fetching messages:', error);
+    logger.error('ChatMessage', 'Error fetching messages', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -552,27 +527,38 @@ export async function editChatMessage(
       return { data: null, error: { code: 'EDIT_TIME_EXPIRED', message: 'ניתן לערוך הודעה רק עד 48 שעות' } };
     }
 
-    // עדכון
+    // Validate and sanitize edited content (same as send)
+    if (input.content) {
+      const contentValidation = validateMessageContent(input.content);
+      if (!contentValidation.valid) {
+        return { data: null, error: contentValidation.error || { code: 'VALIDATION_ERROR', message: 'תוכן לא תקין' } };
+      }
+      input.content = sanitizeMessageContent(input.content);
+    }
+
+    const updatePayload: Record<string, any> = {
+      content: input.content,
+      is_edited: true,
+      edited_at: new Date().toISOString(),
+    };
+    if (input.mentioned_users !== undefined) {
+      updatePayload.mentioned_users = input.mentioned_users;
+    }
+
     const { data, error } = await supabase
       .from('chat_messages')
-      .update({
-        content: input.content,
-        is_edited: true,
-        edited_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq('id', input.message_id)
       .select()
       .single();
 
     if (error) {
-      console.error('❌ Error editing message:', error);
       return { data: null, error: { code: 'EDIT_MESSAGE_ERROR', message: error.message } };
     }
 
-    console.log('✅ Message edited successfully:', input.message_id);
     return { data, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error editing message:', error);
+    logger.error('ChatMessage', 'Error editing message', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -628,15 +614,10 @@ export async function deleteChatMessage(
         .eq('id', input.message_id);
 
       if (error) {
-        console.error('❌ Error deleting message for everyone:', error);
+        logger.error('ChatMessage', 'Error deleting message for everyone', error);
         return { error: { code: 'DELETE_MESSAGE_ERROR', message: error.message } };
       }
     } else {
-      // מחיקה אישית - נשמור בטבלת מחיקות אישיות
-      // נשתמש ב-group_id שכבר יש לנו מה-message שקיבלנו קודם
-      console.log('🗑️ Personal deletion - message.group_id:', message.group_id);
-      
-      // הוספה לטבלת מחיקות אישיות
       const { data: deletionData, error: deleteError } = await supabase
         .from('chat_message_personal_deletions')
         .insert({
@@ -650,21 +631,15 @@ export async function deleteChatMessage(
       if (deleteError) {
         // אם כבר קיים, זה OK (idempotent)
         if (deleteError.code !== '23505') {
-          console.error('❌ Error creating personal deletion:', deleteError);
-          console.error('❌ Delete error details:', JSON.stringify(deleteError, null, 2));
+          logger.error('ChatMessage', 'Error creating personal deletion', deleteError);
           return { error: { code: 'DELETE_MESSAGE_ERROR', message: deleteError.message } };
-        } else {
-          console.log('✅ Personal deletion already exists (idempotent)');
         }
-      } else {
-        console.log('✅ Personal deletion created successfully:', deletionData);
       }
     }
 
-    console.log('✅ Message deleted successfully:', input.message_id);
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error deleting message:', error);
+    logger.error('ChatMessage', 'Error deleting message', error);
     return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -736,14 +711,12 @@ export async function forwardChatMessage(
     }
 
     if (errors.size > 0) {
-      console.log(`⚠️ Forwarded with ${errors.size} errors`);
       return { errors };
     }
 
-    console.log('✅ Message forwarded successfully to all groups');
     return { errors: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error forwarding message:', error);
+    logger.error('ChatMessage', 'Error forwarding message', error);
     const errors = new Map<string, ChatError>();
     input.to_group_ids.forEach(groupId => 
       errors.set(groupId, { code: 'UNEXPECTED_ERROR', message: error.message })
@@ -761,6 +734,11 @@ export async function addReaction(
   userId: string
 ): Promise<{ error: ChatError | null }> {
   try {
+    const emojiValidation = validateEmoji(input.emoji);
+    if (!emojiValidation.valid) {
+      return { error: emojiValidation.error! };
+    }
+
     const { error } = await supabase
       .from('chat_message_reactions')
       .insert({
@@ -771,18 +749,14 @@ export async function addReaction(
 
     if (error) {
       // אם כבר קיים, זה OK
-      if (error.code === '23505') {
-        console.log('✅ Reaction already exists');
-        return { error: null };
-      }
-      console.error('❌ Error adding reaction:', error);
+      if (error.code === '23505') return { error: null };
+      logger.error('ChatMessage', 'Error adding reaction', error);
       return { error: { code: 'ADD_REACTION_ERROR', message: error.message } };
     }
 
-    console.log('✅ Reaction added successfully');
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error adding reaction:', error);
+    logger.error('ChatMessage', 'Error adding reaction', error);
     return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -804,14 +778,13 @@ export async function removeReaction(
       .eq('emoji', input.emoji);
 
     if (error) {
-      console.error('❌ Error removing reaction:', error);
+      logger.error('ChatMessage', 'Error removing reaction', error);
       return { error: { code: 'REMOVE_REACTION_ERROR', message: error.message } };
     }
 
-    console.log('✅ Reaction removed successfully');
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error removing reaction:', error);
+    logger.error('ChatMessage', 'Error removing reaction', error);
     return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -825,12 +798,6 @@ export async function markMessagesAsRead(
   userId: string
 ): Promise<{ error: ChatError | null }> {
   try {
-    console.log('📖 markMessagesAsRead called:', { 
-      groupId: input.group_id, 
-      userId, 
-      messageCount: input.message_ids.length 
-    });
-
     // הוספת אישורי קריאה
     const reads = input.message_ids.map(messageId => ({
       message_id: messageId,
@@ -843,8 +810,8 @@ export async function markMessagesAsRead(
       .upsert(reads, { onConflict: 'message_id,user_id' });
 
     if (readError) {
-      console.error('❌ Error marking messages as read:', readError);
-      // לא נכשיל את כל התהליך, נמשיך לעדכן את chat_group_members
+      logger.error('ChatMessage', 'Error marking messages as read', readError);
+      return { error: { code: 'MARK_READ_ERROR', message: readError.message } };
     }
 
     // עדכון last_read בחברות
@@ -862,17 +829,14 @@ export async function markMessagesAsRead(
         .eq('user_id', userId);
 
       if (updateError) {
-        console.error('❌ Error updating chat_group_members:', updateError);
+        logger.error('ChatMessage', 'Error updating chat_group_members', updateError);
         return { error: { code: 'UPDATE_MEMBER_ERROR', message: updateError.message } };
       }
-      
-      console.log('✅ Updated last_read_message_id:', lastMessageId, 'and reset unread_count to 0');
     }
 
-    console.log(`✅ Marked ${input.message_ids.length} messages as read`);
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error marking messages as read:', error);
+    logger.error('ChatMessage', 'Error marking messages as read', error);
     return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -887,9 +851,6 @@ export async function markChatAsRead(
   lastMessageId?: string
 ): Promise<{ error: ChatError | null }> {
   try {
-    console.log('📖 markChatAsRead called:', { groupId, userId, lastMessageId });
-
-    // אם לא נשלח lastMessageId, נמצא את ההודעה האחרונה
     let messageIdToMark = lastMessageId;
     if (!messageIdToMark) {
       const { data: lastMessage } = await supabase
@@ -905,44 +866,16 @@ export async function markChatAsRead(
     }
 
     if (!messageIdToMark) {
-      console.log('📖 No messages in chat, nothing to mark as read');
       return { error: null };
     }
 
-    // עדכון chat_group_members - ננסה קודם עם RPC function שמעקף RLS
-    try {
-      const { error: rpcError } = await supabase.rpc('reset_unread_count', {
-        p_group_id: groupId,
-        p_user_id: userId,
-        p_last_read_message_id: messageIdToMark,
-      });
-      
-      if (rpcError) {
-        console.warn('⚠️ RPC reset_unread_count failed, trying direct update:', rpcError);
-        // Fallback: עדכון ישיר
-        const { error: updateError } = await supabase
-          .from('chat_group_members')
-          .update({
-            last_read_message_id: messageIdToMark,
-            last_read_at: new Date().toISOString(),
-            unread_count: 0,
-            mentioned_count: 0,
-          })
-          .eq('group_id', groupId)
-          .eq('user_id', userId);
-
-        if (updateError) {
-          console.error('❌ Error updating chat_group_members:', updateError);
-          console.error('❌ Update error details:', JSON.stringify(updateError, null, 2));
-          console.error('❌ Update params:', { groupId, userId, lastMessageId: messageIdToMark });
-          return { error: { code: 'UPDATE_MEMBER_ERROR', message: updateError.message } };
-        }
-      } else {
-        console.log('✅ Successfully reset unread count using RPC function');
-      }
-    } catch (rpcException: any) {
-      console.error('❌ Exception calling RPC reset_unread_count:', rpcException);
-      // Fallback: עדכון ישיר
+    const { error: rpcError } = await supabase.rpc('reset_unread_count', {
+      p_group_id: groupId,
+      p_user_id: userId,
+      p_last_read_message_id: messageIdToMark,
+    });
+    
+    if (rpcError) {
       const { error: updateError } = await supabase
         .from('chat_group_members')
         .update({
@@ -955,16 +888,14 @@ export async function markChatAsRead(
         .eq('user_id', userId);
 
       if (updateError) {
-        console.error('❌ Error updating chat_group_members:', updateError);
-        console.error('❌ Update error details:', JSON.stringify(updateError, null, 2));
+        logger.error('ChatMessage', 'Error marking chat as read', updateError);
         return { error: { code: 'UPDATE_MEMBER_ERROR', message: updateError.message } };
       }
     }
 
-    console.log('✅ Chat marked as read:', { groupId, userId, lastMessageId: messageIdToMark });
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error marking chat as read:', error);
+    logger.error('ChatMessage', 'Error marking chat as read', error);
     return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -988,18 +919,14 @@ export async function starMessage(
       });
 
     if (error) {
-      if (error.code === '23505') {
-        console.log('✅ Message already starred');
-        return { error: null };
-      }
-      console.error('❌ Error starring message:', error);
+      if (error.code === '23505') return { error: null };
+      logger.error('ChatMessage', 'Error starring message', error);
       return { error: { code: 'STAR_MESSAGE_ERROR', message: error.message } };
     }
 
-    console.log('✅ Message starred successfully');
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error starring message:', error);
+    logger.error('ChatMessage', 'Error starring message', error);
     return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -1020,14 +947,13 @@ export async function unstarMessage(
       .eq('user_id', userId);
 
     if (error) {
-      console.error('❌ Error unstarring message:', error);
+      logger.error('ChatMessage', 'Error unstarring message', error);
       return { error: { code: 'UNSTAR_MESSAGE_ERROR', message: error.message } };
     }
 
-    console.log('✅ Message unstarred successfully');
     return { error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error unstarring message:', error);
+    logger.error('ChatMessage', 'Error unstarring message', error);
     return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }
@@ -1038,9 +964,13 @@ export async function unstarMessage(
 
 export async function getStarredMessages(
   userId: string,
-  groupId?: string
+  groupId?: string,
+  options?: { limit?: number; offset?: number }
 ): Promise<{ data: ChatStarredMessage[] | null; error: ChatError | null }> {
   try {
+    const limit = Math.min(options?.limit ?? 50, 100);
+    const offset = options?.offset ?? 0;
+
     let query = supabase
       .from('chat_starred_messages')
       .select(`
@@ -1060,7 +990,8 @@ export async function getStarredMessages(
         )
       `)
       .eq('user_id', userId)
-      .order('starred_at', { ascending: false });
+      .order('starred_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (groupId) {
       query = query.eq('group_id', groupId);
@@ -1069,178 +1000,14 @@ export async function getStarredMessages(
     const { data, error } = await query;
 
     if (error) {
-      console.error('❌ Error fetching starred messages:', error);
+      logger.error('ChatMessage', 'Error fetching starred messages', error);
       return { data: null, error: { code: 'FETCH_STARRED_ERROR', message: error.message } };
     }
 
-    console.log(`✅ Fetched ${data.length} starred messages`);
     return { data: data as any, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error fetching starred messages:', error);
+    logger.error('ChatMessage', 'Error fetching starred messages', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
-  }
-}
-
-// ============================================
-// פונקציות עזר
-// ============================================
-
-async function updateUnreadCounts(
-  groupId: string,
-  senderId: string,
-  mentionedUsers?: string[]
-): Promise<void> {
-  try {
-    console.log('📊 updateUnreadCounts called:', { groupId, senderId });
-    
-    // ננסה להשתמש ב-RPC function שמעקף את ה-RLS
-    // זה יעבוד גם אם יש בעיה ב-RLS policies
-    try {
-      console.log('📊 Attempting to call RPC increment_unread_count...');
-      console.log('📊 RPC params:', { p_group_id: groupId, p_exclude_user_id: senderId });
-      const { data: rpcData, error: rpcError } = await supabase.rpc('increment_unread_count', {
-        p_group_id: groupId,
-        p_exclude_user_id: senderId,
-      });
-      
-      console.log('📊 RPC response:', { data: rpcData, error: rpcError });
-      
-      if (rpcError) {
-        console.warn('⚠️ RPC increment_unread_count failed, trying manual update:', rpcError);
-        console.warn('⚠️ RPC error code:', rpcError.code);
-        console.warn('⚠️ RPC error message:', rpcError.message);
-        console.warn('⚠️ RPC error details:', JSON.stringify(rpcError, null, 2));
-        // Fallback: עדכון ידני
-        const { data: members, error: fetchError } = await supabase
-          .from('chat_group_members')
-          .select('user_id, unread_count')
-          .eq('group_id', groupId)
-          .neq('user_id', senderId);
-
-        if (fetchError) {
-          console.error('❌ Error fetching members for unread count update:', fetchError);
-          console.error('❌ Fetch error details:', JSON.stringify(fetchError, null, 2));
-          return;
-        }
-
-        console.log('📊 Members to update (excluding sender):', members?.length || 0);
-        if (members && members.length > 0) {
-          members.forEach(m => {
-            console.log(`📊   - Member ${m.user_id.slice(0, 8)}...: current unread_count=${m.unread_count || 0}`);
-          });
-          
-          // עדכון כל משתמש בנפרד
-          for (const member of members) {
-            const newCount = (member.unread_count || 0) + 1;
-            console.log(`📊 Attempting to update unread_count for ${member.user_id.slice(0, 8)}... from ${member.unread_count || 0} to ${newCount}`);
-            
-            const { error: updateError } = await supabase
-              .from('chat_group_members')
-              .update({ unread_count: newCount })
-              .eq('group_id', groupId)
-              .eq('user_id', member.user_id);
-              
-            if (updateError) {
-              console.error('❌ Error updating unread count for user:', member.user_id, updateError);
-              console.error('❌ Update error details:', JSON.stringify(updateError, null, 2));
-            } else {
-              console.log('✅ Updated unread count for user:', member.user_id.slice(0, 8) + '...', 'new count:', newCount);
-            }
-          }
-        } else {
-          console.warn('⚠️ No members found to update unread count for group:', groupId);
-          console.warn('⚠️ This could mean:');
-          console.warn('   1. The sender is the only member in the group');
-          console.warn('   2. RLS policies are blocking access to other members');
-          console.warn('   3. Other members are not actually in the group');
-          
-          // בוא נבדוק כמה חברים יש בקבוצה בכלל
-          const { data: allMembers, error: allMembersError } = await supabase
-            .from('chat_group_members')
-            .select('user_id, unread_count')
-            .eq('group_id', groupId);
-          
-          if (allMembersError) {
-            console.error('❌ Error fetching all members:', allMembersError);
-          } else {
-            console.log('📊 All members in group (including sender):', allMembers?.length || 0);
-            allMembers?.forEach(m => {
-              const isSender = m.user_id === senderId;
-              console.log(`📊   - ${isSender ? '[SENDER]' : ''} Member ${m.user_id.slice(0, 8)}...: unread_count=${m.unread_count || 0}`);
-            });
-          }
-        }
-      } else {
-        console.log('✅ Successfully updated unread counts using RPC function');
-        console.log('📊 RPC updated', rpcData || 0, 'members');
-        // אם ה-RPC הצליח, אין צורך ב-fallback
-        return;
-      }
-    } catch (rpcException: any) {
-      console.error('❌ Exception calling RPC increment_unread_count:', rpcException);
-      // Fallback: עדכון ידני
-      const { data: members, error: fetchError } = await supabase
-        .from('chat_group_members')
-        .select('user_id, unread_count')
-        .eq('group_id', groupId)
-        .neq('user_id', senderId);
-
-      if (fetchError) {
-        console.error('❌ Error fetching members for unread count update:', fetchError);
-        return;
-      }
-
-      if (members && members.length > 0) {
-        for (const member of members) {
-          const newCount = (member.unread_count || 0) + 1;
-          const { error: updateError } = await supabase
-            .from('chat_group_members')
-            .update({ unread_count: newCount })
-            .eq('group_id', groupId)
-            .eq('user_id', member.user_id);
-            
-          if (updateError) {
-            console.error('❌ Error updating unread count for user:', member.user_id, updateError);
-          } else {
-            console.log('✅ Updated unread count for user:', member.user_id.slice(0, 8) + '...', 'new count:', newCount);
-          }
-        }
-      }
-    }
-
-    // עדכון mentioned_count למי שתויג
-    if (mentionedUsers && mentionedUsers.length > 0) {
-      // קריאת הערכים הנוכחיים
-      const { data: mentionedMembers, error: fetchMentionedError } = await supabase
-        .from('chat_group_members')
-        .select('user_id, mentioned_count')
-        .eq('group_id', groupId)
-        .in('user_id', mentionedUsers);
-
-      if (fetchMentionedError) {
-        console.error('❌ Error fetching mentioned members for count update:', fetchMentionedError);
-        return;
-      }
-
-      if (mentionedMembers && mentionedMembers.length > 0) {
-        // עדכון כל משתמש בנפרד
-        const updatePromises = mentionedMembers.map(member =>
-          supabase
-            .from('chat_group_members')
-            .update({ mentioned_count: (member.mentioned_count || 0) + 1 })
-            .eq('group_id', groupId)
-            .eq('user_id', member.user_id)
-        );
-
-        const results = await Promise.all(updatePromises);
-        const errors = results.filter(r => r.error);
-        if (errors.length > 0) {
-          console.error('❌ Some mentioned count updates failed:', errors);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('⚠️ Warning: Error updating unread counts:', error);
   }
 }
 
@@ -1266,30 +1033,35 @@ export async function getMessageReactionDetails(
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('❌ Error fetching reaction details:', error);
+      logger.error('ChatMessage', 'Error fetching reaction details', error);
       return { data: null, error: { code: 'FETCH_REACTIONS_ERROR', message: error.message } };
     }
 
     // קיבוץ ריאקציות לפי אימוג'י
     const reactionGroups = reactions?.reduce((acc, r) => {
+      const user = Array.isArray(r.user) ? r.user[0] : r.user;
+      if (!user?.id) return acc;
+
       const existing = acc.find((g: any) => g.emoji === r.emoji);
       if (existing) {
         existing.count++;
         existing.users.push({
-          id: r.user.id,
-          name: r.user.display_name,
-          profile_picture: r.user.profile_picture,
+          id: user.id,
+          name: user.display_name,
+          profile_picture: user.profile_picture,
+          reacted_at: r.created_at,
         });
       } else {
         acc.push({
           emoji: r.emoji,
           count: 1,
           users: [{
-            id: r.user.id,
-            name: r.user.display_name,
-            profile_picture: r.user.profile_picture,
+            id: user.id,
+            name: user.display_name,
+            profile_picture: user.profile_picture,
+            reacted_at: r.created_at,
           }],
-          reacted_by_me: false, // לא רלוונטי כאן
+          reacted_by_me: false,
         });
       }
       return acc;
@@ -1297,7 +1069,7 @@ export async function getMessageReactionDetails(
 
     return { data: reactionGroups, error: null };
   } catch (error: any) {
-    console.error('❌ Unexpected error fetching reaction details:', error);
+    logger.error('ChatMessage', 'Error fetching reaction details', error);
     return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
   }
 }

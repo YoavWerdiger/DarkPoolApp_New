@@ -6,9 +6,14 @@ import {
   FlatList,
   Image,
   TouchableOpacity,
-  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  KeyboardEvent,
+  Platform,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { logger } from '../../utils/logger';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface User {
   id: string;
@@ -21,7 +26,7 @@ interface MentionPickerProps {
   visible: boolean;
   onSelectUser: (user: { id: string; display: string }) => void;
   onClose: () => void;
-  channelId: string;
+  groupId: string;
   searchQuery: string;
 }
 
@@ -29,112 +34,90 @@ const MentionPicker: React.FC<MentionPickerProps> = ({
   visible,
   onSelectUser,
   onClose,
-  channelId,
+  groupId,
   searchQuery,
 }) => {
+  const DesignTokens = useDesignTokens();
+  const styles = useMemo(() => createMentionStyles(DesignTokens), [DesignTokens]);
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    if (visible && channelId) {
-      loadChannelMembers();
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height);
+    const onHide = () => setKeyboardHeight(0);
+
+    const sub1 = Keyboard.addListener(showEvent, onShow);
+    const sub2 = Keyboard.addListener(hideEvent, onHide);
+    return () => { sub1.remove(); sub2.remove(); };
+  }, []);
+
+  useEffect(() => {
+    if (visible && groupId) {
+      loadGroupMembers();
     }
-  }, [visible, channelId]);
+  }, [visible, groupId]);
 
-  useEffect(() => {
-    setSearchText(searchQuery);
-  }, [searchQuery]);
-
-  const loadChannelMembers = async () => {
-    if (!channelId) return;
-
+  const loadGroupMembers = async () => {
+    if (!groupId) return;
+    setLoading(true);
     try {
-      console.log('🔄 MentionPicker: Loading channel members for chat:', channelId);
-
-      // שלוף חברי הערוץ עם הנתונים המלאים
       const { data: membersData, error: membersError } = await supabase
-        .from('channel_members')
-        .select('user_id, role, user_data')
-        .eq('channel_id', channelId);
+        .from('chat_group_members')
+        .select(`
+          user_id,
+          role,
+          users:user_id (
+            id,
+            full_name,
+            display_name,
+            profile_picture
+          )
+        `)
+        .eq('group_id', groupId);
 
       if (membersError) {
-        console.error('❌ MentionPicker: Error loading channel members:', membersError);
+        setLoading(false);
         return;
       }
 
-      console.log('✅ MentionPicker: Channel members loaded:', membersData?.length || 0);
-      console.log('📋 MentionPicker: First few members:', membersData?.slice(0, 3));
-
       if (membersData && membersData.length > 0) {
-        // המר את הנתונים לפורמט הנכון
-        const formattedMembers = membersData.map(member => ({
-          id: member.user_id,
-          full_name: member.user_data?.full_name || `User ${member.user_id.slice(0, 8)}`,
-          profile_picture: member.user_data?.profile_picture || null,
-          phone: member.user_data?.phone || null,
-          display_name: member.user_data?.display_name || member.user_data?.full_name || `User ${member.user_id.slice(0, 8)}`,
-          role: member.role
-        }));
-
-        console.log('🔗 MentionPicker: Formatted members data:', formattedMembers.slice(0, 2));
+        const formattedMembers = membersData.map(member => {
+          const userData = member.users as any;
+          return {
+            id: member.user_id,
+            full_name: userData?.full_name || null,
+            profile_picture: userData?.profile_picture || null,
+            display_name: userData?.display_name || userData?.full_name || `User ${member.user_id.slice(0, 8)}`,
+          };
+        });
         setMembers(formattedMembers);
       } else {
-        console.log('⚠️ MentionPicker: No channel members found');
         setMembers([]);
       }
     } catch (error) {
-      console.error('❌ MentionPicker: Exception in loadChannelMembers:', error);
+      logger.error('MentionPicker', 'Failed to load members', error);
       setMembers([]);
-    }
-  };
-
-  // פונקציה נפרדת לפתרון החלופי
-  const loadFallbackMembers = async (altMemberData: any) => {
-    try {
-      console.log('🔍 MentionPicker: Loading fallback members from channel_members...');
-
-      const { data: fallbackMemberData, error: fallbackError } = await supabase
-        .from('channel_members')
-        .select('user_id, role, joined_at')
-        .eq('channel_id', channelId);
-
-      if (fallbackError) {
-        console.error('❌ MentionPicker: Fallback approach failed:', fallbackError);
-        return;
-      }
-
-      // יצירת אובייקטים פשוטים עם המידע שיש לנו
-      const fallbackMembers = fallbackMemberData.map(member => ({
-        id: member.user_id,
-        full_name: `User ${member.user_id.slice(0, 8)} (${member.role || 'member'})`,
-        display_name: `User ${member.user_id.slice(0, 8)}`,
-        profile_picture: null
-      }));
-
-      console.log('🔍 MentionPicker: Using fallback members:', fallbackMembers.length);
-      setMembers(fallbackMembers);
-    } catch (error) {
-      console.error('❌ MentionPicker: Error in fallback approach:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const filteredMembers = useMemo(() => {
-    if (!searchText) return members;
-
-    const query = searchText.toLowerCase().replace('@', '');
+    if (!searchQuery) return members;
+    const query = searchQuery.toLowerCase().replace('@', '');
     return members.filter(member => {
-      const name = (member.full_name || member.display_name || '').toLowerCase();
+      const name = (member.display_name || member.full_name || '').toLowerCase();
       return name.includes(query);
     });
-  }, [members, searchText]);
+  }, [members, searchQuery]);
 
   const handleSelectUser = (member: User) => {
     const displayName = member.display_name || member.full_name || 'משתמש';
-    onSelectUser({
-      id: member.id,
-      display: `@${displayName}`,
-    });
+    onSelectUser({ id: member.id, display: `@${displayName}` });
     onClose();
   };
 
@@ -162,159 +145,128 @@ const MentionPicker: React.FC<MentionPickerProps> = ({
 
   if (!visible) return null;
 
+  // Position the picker just above the keyboard
+  const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 8 : 80;
+
   return (
-    <View style={styles.container}>
-      <View style={styles.picker}>
-        <View style={styles.header}>
-          <Text style={styles.title}>בחר משתמש</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
-          </TouchableOpacity>
-        </View>
+    // Full-screen backdrop to dismiss on outside tap
+    <TouchableWithoutFeedback onPress={onClose}>
+      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <TouchableWithoutFeedback>
+          <View style={[styles.container, { bottom: bottomOffset }]}>
+            <View style={styles.picker}>
+              <View style={styles.header}>
+                <Text style={styles.title}>בחר משתמש</Text>
+                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                  <Text style={styles.closeText}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="חפש משתמש..."
-            placeholderTextColor="#9CA3AF"
-            value={searchText}
-            onChangeText={setSearchText}
-            autoFocus
-          />
-        </View>
-
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>טוען...</Text>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>טוען...</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={filteredMembers}
+                  renderItem={renderMember}
+                  keyExtractor={(item) => item.id}
+                  showsVerticalScrollIndicator={true}
+                  contentContainerStyle={styles.listContainer}
+                  keyboardShouldPersistTaps="handled"
+                  style={styles.list}
+                />
+              )}
+            </View>
           </View>
-        ) : (
-          <FlatList
-            data={filteredMembers}
-            renderItem={renderMember}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={styles.listContainer}
-            keyboardShouldPersistTaps="handled"
-            style={styles.list}
-          />
-        )}
+        </TouchableWithoutFeedback>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  container: {
-    position: 'absolute',
-    bottom: 120, // מעל ל-MessageInputBar - הגדלתי מ-80 ל-120
-    left: 20,
-    right: 20,
-    zIndex: 1000,
-  },
-  picker: {
-    backgroundColor: '#1F1F1F',
-    borderRadius: 16,
-    maxHeight: 300, // גובה קבוע
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
+const createMentionStyles = (tokens: any) =>
+  StyleSheet.create({
+    container: {
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      zIndex: 1000,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#2A2A2A',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  closeText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  searchContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  searchInput: {
-    backgroundColor: '#2A2A2A',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    color: '#FFFFFF',
-    fontSize: 16,
-    textAlign: 'right',
-  },
-  loadingContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#9CA3AF',
-    fontSize: 16,
-  },
-  listContainer: {
-    paddingBottom: 16,
-  },
-  list: {
-    maxHeight: 200, // גובה מקסימלי לרשימה
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 12,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-});
+    picker: {
+      backgroundColor: tokens.colors.background.elevated2,
+      borderRadius: tokens.borderRadius.lg,
+      maxHeight: 300,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: tokens.colors.border.subtle,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 8,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: tokens.spacing.base,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: tokens.colors.border.divider,
+    },
+    title: {
+      color: tokens.colors.text.primary,
+      fontSize: tokens.typography.fontSize.base,
+      fontWeight: '600',
+    },
+    closeButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: tokens.colors.background.input,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    closeText: {
+      color: tokens.colors.text.primary,
+      fontSize: tokens.typography.fontSize.sm,
+    },
+    loadingContainer: {
+      padding: 40,
+      alignItems: 'center',
+    },
+    loadingText: {
+      color: tokens.colors.text.tertiary,
+      fontSize: tokens.typography.fontSize.base,
+    },
+    listContainer: {
+      paddingBottom: tokens.spacing.base,
+    },
+    list: {
+      maxHeight: 220,
+    },
+    memberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: tokens.spacing.base,
+      paddingVertical: tokens.spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: tokens.colors.border.divider,
+    },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 12,
+    },
+    memberInfo: {
+      flex: 1,
+    },
+    memberName: {
+      color: tokens.colors.text.primary,
+      fontSize: tokens.typography.fontSize.base,
+      fontWeight: '500',
+      textAlign: 'right',
+    },
+  });
 
 export default MentionPicker;

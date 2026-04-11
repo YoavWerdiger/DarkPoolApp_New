@@ -134,12 +134,9 @@ export default function LikedArticlesScreen({ navigation }: any) {
   // טעינת החדשות שאהב המשתמש
   const loadLikedArticles = useCallback(async () => {
     try {
-      console.log('❤️ LikedArticlesScreen: Loading liked articles');
       const articles = await LikedArticlesService.getLikedArticles();
       setLikedArticles(articles);
-      console.log(`✅ LikedArticlesScreen: Loaded ${articles.length} liked articles`);
     } catch (error) {
-      console.error('❌ LikedArticlesScreen: Error loading liked articles:', error);
       Alert.alert('שגיאה', 'לא ניתן לטעון את החדשות שאהבת');
     } finally {
       setLoading(false);
@@ -158,7 +155,6 @@ export default function LikedArticlesScreen({ navigation }: any) {
         Alert.alert('שגיאה', 'לא ניתן להסיר את האהבתי');
       }
     } catch (error) {
-      console.error('❌ LikedArticlesScreen: Error unliking article:', error);
       Alert.alert('שגיאה', 'בעיה בהסרת האהבתי');
     }
   }, []);
@@ -171,7 +167,6 @@ export default function LikedArticlesScreen({ navigation }: any) {
 
   // בחירת חדשה
   const handleArticlePress = useCallback((article: LikedArticle) => {
-    console.log('❤️ LikedArticlesScreen: Article pressed:', article.article_title);
     // TODO: פתיחת מסך פרטי הכתבה
   }, []);
 

@@ -56,7 +56,6 @@ const hexToRgba = (hex: string, alpha = 1) => {
     const b = value & 255;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   } catch (error) {
-    console.warn('hexToRgba: failed to parse color', hex);
     return hex;
   }
 };
@@ -318,22 +317,21 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             overflow: 'hidden',
           }}
         >
-          {/* Glass effect background - works on both iOS and Android */}
           {Platform.OS === 'ios' ? (
             <BlurView
-              intensity={40}
-              tint="dark"
+              intensity={80}
+              tint="systemChromeMaterialDark"
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(20, 20, 20, 0.85)' }]} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(25, 25, 25, 0.92)' }]} />
           )}
-          {/* Glass border overlay */}
           <View style={[
             StyleSheet.absoluteFill,
             {
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 0.5,
+              borderColor: 'rgba(255, 255, 255, 0.12)',
+              borderTopColor: 'rgba(255, 255, 255, 0.20)',
               borderRadius: DesignTokens.borderRadius['2xl'],
             }
           ]} />
@@ -559,7 +557,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
     <View style={{ flex: 1 }}>
       {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
       <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
         locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
@@ -607,7 +605,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           </UICard>
         </View>
 
-      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+      <View style={{ flex: 1 }}>
         <Animated.ScrollView 
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
@@ -811,7 +809,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: '#05d157',
+                    backgroundColor: '#00C805',
                     transform: [{ scale }],
                     opacity,
                   }}

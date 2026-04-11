@@ -34,7 +34,6 @@ export class FundamentalsService {
    */
   static async getQuarterlyFinancials(symbol: string): Promise<QuarterlyFinancials[]> {
     try {
-      console.log(`📊 Fetching quarterly financials for ${symbol}...`);
       
       const response = await fetch(
         `${EODHD_BASE_URL}/fundamentals/${symbol}?api_token=${EODHD_API_KEY}&fmt=json&filter=Financials::Income_Statement::quarterly`
@@ -61,11 +60,9 @@ export class FundamentalsService {
         }))
         .sort((a, b) => b.date.localeCompare(a.date)); // מהחדש לישן
 
-      console.log(`✅ Fetched ${financials.length} quarterly records for ${symbol}`);
       return financials;
       
     } catch (error) {
-      console.error(`❌ Error fetching fundamentals for ${symbol}:`, error);
       return [];
     }
   }
@@ -91,7 +88,6 @@ export class FundamentalsService {
       return closest || null;
       
     } catch (error) {
-      console.error(`❌ Error fetching quarter financials:`, error);
       return null;
     }
   }
@@ -104,7 +100,6 @@ export class FundamentalsService {
       const financials = await this.getQuarterlyFinancials(symbol);
       return financials.slice(0, 4);
     } catch (error) {
-      console.error(`❌ Error fetching last four quarters:`, error);
       return [];
     }
   }

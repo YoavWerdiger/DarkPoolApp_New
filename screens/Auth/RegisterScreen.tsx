@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import { AuthService } from '../../services/authService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
+import { SUPABASE_URL } from '../../config/publicEnv';
 
 export default function RegisterScreen({ navigation }: any) {
   const [fullName, setFullName] = useState('');
@@ -20,9 +21,7 @@ export default function RegisterScreen({ navigation }: any) {
   // הוסף את המשתמש לערוצים הקיימים כשהמשתמש משתנה
   useEffect(() => {
     if (user?.id) {
-      console.log('🔄 RegisterScreen: User signed up, adding to default channels:', user.id);
       addUserToDefaultChannels(user.id).catch(err => {
-        console.error('❌ RegisterScreen: Error adding user to default channels:', err);
       });
     }
   }, [user]);
@@ -150,7 +149,7 @@ export default function RegisterScreen({ navigation }: any) {
             opacity: 0.22
           }}>
             <ImageBackground
-              source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
+              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
               resizeMode="contain"
               style={{
                 width: width,
@@ -483,12 +482,10 @@ export async function addUserToDefaultChannels(userId: string) {
           .single();
           
         if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
-          console.error('❌ Error checking existing membership for channel:', channel.id, checkError);
           continue;
         }
         
         if (existingMember) {
-          console.log('ℹ️ User is already a member of channel:', channel.id);
           continue;
         }
         
@@ -499,13 +496,10 @@ export async function addUserToDefaultChannels(userId: string) {
         });
         
         if (insertError) {
-          console.error('❌ Error adding user to channel:', channel.id, insertError);
         } else {
-          console.log('✅ User added to channel:', channel.id);
         }
       }
     }
   } catch (error) {
-    console.error('❌ Error in addUserToDefaultChannels:', error);
   }
 }

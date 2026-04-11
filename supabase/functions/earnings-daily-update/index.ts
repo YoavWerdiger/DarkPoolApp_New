@@ -2,7 +2,7 @@
 // מעדכן את כל דיווחי הרווחים של היום
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 import { prepareEarningsRecord } from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
@@ -20,7 +20,10 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY') || 'bz.UKZEVEBSS33KJXCKAPG6BDBAA3Z7SFRC'
+    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY')
+    if (!benzingaApiKey) {
+      return new Response(JSON.stringify({ error: 'BENZINGA_API_KEY not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration')

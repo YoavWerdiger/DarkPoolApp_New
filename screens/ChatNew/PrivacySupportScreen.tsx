@@ -13,15 +13,17 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 
 export default function PrivacySupportScreen() {
   const navigation = useNavigation();
   const DesignTokens = useDesignTokens();
+  useLockParentDrawerWhileFocused();
 
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
@@ -30,23 +32,27 @@ export default function PrivacySupportScreen() {
   };
 
   const handleContactSupport = () => {
-    // TODO: Open support email or chat
-    Alert.alert('תמיכה', 'יצירת קשר עם התמיכה: support@darkpool.co.il');
-    Linking.openURL('mailto:support@darkpool.co.il').catch(() => {});
+    Linking.openURL('mailto:support@darkpool.co.il').catch(() =>
+      Alert.alert('שגיאה', 'לא ניתן לפתוח את דוא"ל התמיכה')
+    );
   };
 
   const handlePrivacyPolicy = () => {
-    // TODO: Open privacy policy URL
-    Linking.openURL('https://darkpool.co.il/privacy').catch(() => {
-      Alert.alert('מדיניות פרטיות', 'הקישור יפתח כאן');
-    });
+    Linking.openURL('https://darkpool.co.il/privacy').catch(() =>
+      Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור')
+    );
   };
 
   const handleTermsOfService = () => {
-    // TODO: Open terms URL
-    Linking.openURL('https://darkpool.co.il/terms').catch(() => {
-      Alert.alert('תנאי שירות', 'הקישור יפתח כאן');
-    });
+    Linking.openURL('https://darkpool.co.il/terms').catch(() =>
+      Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור')
+    );
+  };
+
+  const handleFAQ = () => {
+    Linking.openURL('https://darkpool.co.il/faq').catch(() =>
+      Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור')
+    );
   };
 
   const handleReportIssue = () => {
@@ -54,40 +60,16 @@ export default function PrivacySupportScreen() {
       'דיווח על בעיה',
       'איך תרצה לדווח?',
       [
-        { text: 'דוא"ל', onPress: () => Linking.openURL('mailto:report@darkpool.co.il').catch(() => {}) },
+        { text: 'דוא"ל', onPress: () => Linking.openURL('mailto:report@darkpool.co.il').catch(() => Alert.alert('שגיאה', 'לא ניתן לפתוח אפליקציית דוא"ל')) },
         { text: 'ביטול', style: 'cancel' },
       ]
     );
   };
 
   return (
-    <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-      style={{ flex: 1 }}
-    >
+    <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {/* Header */}
-        <UICard
-          variant="blur"
-          padding="md"
-          style={{
-            marginHorizontal: 0,
-            marginTop: 0,
-            borderTopLeftRadius: 0,
-            borderTopRightRadius: 0,
-            borderBottomLeftRadius: DesignTokens.borderRadius['2xl'],
-            borderBottomRightRadius: DesignTokens.borderRadius['2xl'],
-          }}
-        >
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-              <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.secondary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>פרטיות ותמיכה</Text>
-            <View style={{ width: 32 }} />
-          </View>
-        </UICard>
+        <ChatSubScreenHeader title="פרטיות ותמיכה" onBack={handleBack} />
 
         <ScrollView
           style={styles.scrollView}
@@ -133,7 +115,7 @@ export default function PrivacySupportScreen() {
               <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
             <View style={styles.separator} />
-            <TouchableOpacity style={styles.optionRow}>
+            <TouchableOpacity style={styles.optionRow} onPress={handleFAQ}>
               <View style={styles.optionLeft}>
                 <Ionicons name="help-circle-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.optionText}>שאלות נפוצות</Text>
@@ -154,10 +136,23 @@ export default function PrivacySupportScreen() {
               <Text style={styles.infoLabel}>DarkPool</Text>
               <Text style={styles.infoValue}>© 2024 כל הזכויות שמורות</Text>
             </View>
+            <View style={styles.separator} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>אייקונים</Text>
+              <Text style={[styles.infoValue, { fontSize: DesignTokens.typography.fontSize.xs }]}>
+                <Text>Icons by </Text>
+                <Text 
+                  style={{ color: DesignTokens.colors.primary.main }}
+                  onPress={() => Linking.openURL('https://lordicon.com/').catch(() => {})}
+                >
+                  Lordicon.com
+                </Text>
+              </Text>
+            </View>
           </UICard>
         </ScrollView>
       </SafeAreaView>
-    </LinearGradient>
+    </ChatScreenShell>
   );
 }
 
@@ -165,21 +160,6 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: 'transparent',
-  },
-  header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    padding: 8,
-    borderRadius: 50,
-  },
-  headerTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
@@ -231,4 +211,6 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     color: DesignTokens.colors.text.primary,
   },
 });
+
+
 

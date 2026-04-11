@@ -129,7 +129,7 @@ export const MyLearningScreen: React.FC = () => {
   if (error) {
     return (
       <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
         locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
         style={styles.gradientContainer}
       >
@@ -151,7 +151,7 @@ export const MyLearningScreen: React.FC = () => {
 
   return (
     <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
+      colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
       locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
       style={styles.gradientContainer}
     >

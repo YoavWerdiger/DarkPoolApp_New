@@ -34,6 +34,7 @@ import { supabase } from '../../lib/supabase';
 import { NotificationService } from '../../services/notificationService';
 import { Linking, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface NotificationSettings {
   notifications: boolean;
@@ -104,7 +105,6 @@ export default function NotificationsScreen({ navigation }: any) {
         await saveSettingsToDatabase(newSettings);
       }
     } catch (error) {
-      console.error('Error checking notification permissions:', error);
     }
   };
 
@@ -162,7 +162,6 @@ export default function NotificationsScreen({ navigation }: any) {
 
       setLoading(false);
     } catch (error) {
-      console.error('Error loading settings:', error);
       setLoading(false);
     }
   };
@@ -189,54 +188,39 @@ export default function NotificationsScreen({ navigation }: any) {
         });
 
       if (error) {
-        console.error('Error saving settings to database:', error);
       } else {
-        console.log('✅ Settings saved to database');
       }
     } catch (error) {
-      console.error('Error in saveSettingsToDatabase:', error);
     }
   };
 
   const handleToggle = async (key: keyof NotificationSettings) => {
-    console.log('🔵 NotificationsScreen: handleToggle called with key:', key);
-    console.log('🔵 NotificationsScreen: Current settings:', JSON.stringify(settings, null, 2));
-    
     const newValue = !settings[key];
-    console.log(`🔄 NotificationsScreen: Toggling ${key} from ${settings[key]} to ${newValue}`);
-    
     // עדכן את המצב מיד (לפני כל בדיקות הרשאות)
     const newSettings = {
       ...settings,
       [key]: newValue
     };
     
-    console.log('🔵 NotificationsScreen: Setting new settings:', JSON.stringify(newSettings, null, 2));
     setSettings(newSettings);
+
+    if (key === 'vibration') {
+      HapticFeedback.setEnabled(newValue as boolean);
+    }
     
     // אם זה כפתור "התראות כלליות" ומפעילים אותו, צריך לבקש הרשאות
     if (key === 'notifications' && newValue) {
-      console.log('🔔 NotificationsScreen: Requesting notification permissions...');
-      
       // בדוק את הסטטוס הנוכחי לפני שאנחנו מבקשים
       const { status: currentStatus } = await Notifications.getPermissionsAsync();
-      console.log('🔔 NotificationsScreen: Current permission status:', currentStatus);
-      
       // אם ההרשאות כבר ניתנו, נציג הודעה וננסה לשלוף את הטוקן
       if (currentStatus === 'granted') {
-        console.log('✅ NotificationsScreen: Permissions already granted, attempting to get token...');
-        
         // ננסה לשלוף את הטוקן ישירות
         const token = await NotificationService.getPushTokenDirectly();
         if (token) {
-          console.log('✅ NotificationsScreen: Got push token directly:', token.substring(0, 20) + '...');
         } else {
-          console.log('⚠️ NotificationsScreen: Could not get push token directly, trying registerDeviceToken...');
         }
         
         const registered = await NotificationService.registerDeviceToken();
-        console.log(`📊 NotificationsScreen: registerDeviceToken returned: ${registered}`);
-        
         const isSimulator = !require('expo-device').Device.isDevice;
         if (registered) {
           Alert.alert(
@@ -258,11 +242,8 @@ export default function NotificationsScreen({ navigation }: any) {
       
       // אם ההרשאות לא ניתנו, נבקש אותן
       const hasPermission = await NotificationService.requestPermissions(true);
-      console.log('🔔 NotificationsScreen: Permission result:', hasPermission);
-      
       if (!hasPermission) {
         // המשתמש לא נתן הרשאות - נחזיר למצב כבוי
-        console.log('❌ NotificationsScreen: Permissions denied, reverting switch');
         const revertedSettings = {
           ...newSettings,
           [key]: false
@@ -277,13 +258,11 @@ export default function NotificationsScreen({ navigation }: any) {
               text: 'ביטול',
               style: 'cancel',
               onPress: () => {
-                console.log('❌ NotificationsScreen: User cancelled permission request');
               }
             },
             {
               text: 'פתח הגדרות',
               onPress: () => {
-                console.log('🔵 NotificationsScreen: Opening device settings...');
                 // פתח את מסך ההגדרות של המכשיר
                 if (Platform.OS === 'ios') {
                   Linking.openURL('app-settings:');
@@ -299,36 +278,26 @@ export default function NotificationsScreen({ navigation }: any) {
         try {
           await AsyncStorage.setItem('notificationSettings', JSON.stringify(revertedSettings));
           await saveSettingsToDatabase(revertedSettings);
-          console.log('✅ NotificationsScreen: Reverted settings saved');
         } catch (error) {
-          console.error('❌ NotificationsScreen: Error saving reverted settings:', error);
         }
         return;
       }
       
       // אם יש הרשאות, נשמור את ה-token במסד הנתונים
-      console.log('✅ NotificationsScreen: Permissions granted, registering device token...');
-      
       // ננסה לשלוף את הטוקן ישירות
       const token = await NotificationService.getPushTokenDirectly();
       if (token) {
-        console.log('✅ NotificationsScreen: Got push token directly:', token.substring(0, 20) + '...');
       } else {
-        console.log('⚠️ NotificationsScreen: Could not get push token directly, trying registerDeviceToken...');
       }
       
       const registered = await NotificationService.registerDeviceToken();
-      console.log(`📊 NotificationsScreen: registerDeviceToken returned: ${registered}`);
-      
       if (registered) {
-        console.log('✅ NotificationsScreen: Device token registered successfully, showing success alert');
         Alert.alert(
           'התראות הופעלו',
           'תקבל התראות על אירועים חשובים באפליקציה.',
           [{ text: 'אישור' }]
         );
       } else {
-        console.log('⚠️ NotificationsScreen: Device token registration failed, showing warning alert');
         // אם זה סימולטור, נסביר למשתמש
         const isSimulator = !require('expo-device').Device.isDevice;
         Alert.alert(
@@ -347,9 +316,7 @@ export default function NotificationsScreen({ navigation }: any) {
       
       // שמור גם במסד הנתונים (להתראות server-side)
       await saveSettingsToDatabase(newSettings);
-      console.log(`✅ NotificationsScreen: Settings saved for ${key}: ${newValue}`);
     } catch (error) {
-      console.error('❌ NotificationsScreen: Error saving settings:', error);
     }
   };
 
@@ -365,7 +332,6 @@ export default function NotificationsScreen({ navigation }: any) {
       await AsyncStorage.setItem('notificationSettings', JSON.stringify(newSettings));
       await saveSettingsToDatabase(newSettings);
     } catch (error) {
-      console.error('Error saving sound settings:', error);
     }
   };
 
@@ -426,34 +392,15 @@ export default function NotificationsScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={{ flex: 1 }}>
-        <LinearGradient
-          colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-            <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען הגדרות...</Text>
-          </View>
-        </RNSafeAreaView>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+        <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען הגדרות...</Text>
       </View>
     );
   }
 
   return (
     <View style={{ flex: 1 }}>
-      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header עם blur */}
         <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
@@ -496,7 +443,7 @@ export default function NotificationsScreen({ navigation }: any) {
           </UICard>
         </View>
 
-        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <View style={{ flex: 1 }}>
           <ScrollView 
             style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
@@ -537,7 +484,6 @@ export default function NotificationsScreen({ navigation }: any) {
                   key={`switch-${option.key}-${settings[option.key]}`}
                   value={settings[option.key] ?? false}
                   onValueChange={(value) => {
-                    console.log('🔵 NotificationsScreen: Switch onValueChange called:', option.key, 'value:', value);
                     handleToggle(option.key);
                   }}
                   trackColor={{ false: 'rgba(255, 255, 255, 0.15)', true: DesignTokens.colors.primary.main }}
@@ -625,7 +571,6 @@ export default function NotificationsScreen({ navigation }: any) {
                   key={`switch-${option.key}-${settings[option.key]}`}
                   value={settings[option.key] ?? false}
                   onValueChange={(value) => {
-                    console.log('🔵 NotificationsScreen: Switch onValueChange called:', option.key, 'value:', value);
                     handleToggle(option.key);
                   }}
                   trackColor={{ false: 'rgba(255, 255, 255, 0.15)', true: DesignTokens.colors.primary.main }}

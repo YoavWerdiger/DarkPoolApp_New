@@ -2,9 +2,9 @@
 // שולף אירועי יומן כלכלי מ-EODHD
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
-const EODHD_API_KEY = '68e3c3af900997.85677801'
+const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
 
 // תרגום כותרות לעברית
 function translateTitle(eventType: string): string {

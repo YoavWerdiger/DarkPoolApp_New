@@ -3,16 +3,12 @@ import { View, Text, Alert, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MediaMetadata } from '../../services/mediaService';
 import * as ImagePicker from 'expo-image-picker';
+import { logger } from '../../utils/logger';
 import * as DocumentPicker from 'expo-document-picker';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 
-// עבור תאימות עם Expo Go - שימוש ב-MediaTypeOptions עדיין
-const MediaType = ImagePicker.MediaType || (ImagePicker as any).MediaTypeOptions || {
-  Images: 'images',
-  Videos: 'videos',
-  All: 'all',
-};
+// ImagePicker media types - using new array format for Expo SDK 52+
 
 interface MediaPickerProps {
   visible: boolean;
@@ -50,14 +46,13 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
           break;
       }
     } catch (error) {
-      console.error('Error in media action:', error);
+      logger.error('MediaPicker', 'handleAction failed', error);
     }
   };
 
   // צילום תמונה
   const handleCameraCapture = async () => {
     try {
-      console.log('📷 MediaPicker: Starting camera capture...');
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('אישור נדרש', 'אנא אשר גישה למצלמה');
@@ -65,22 +60,18 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: MediaType.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.8,
       });
 
-      console.log('📷 MediaPicker: Camera result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
-      
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
-        console.log('📷 MediaPicker: Calling onMediaSelected with uri:', uri);
         onMediaSelected('image', uri);
         // סגירת ה-BottomSheet - ה-MessageInputBar יטפל ב-state שלו בנפרד
         onClose();
       }
     } catch (error) {
-      console.error('Error taking photo:', error);
       Alert.alert('שגיאה', 'שגיאה בצילום התמונה');
     }
   };
@@ -88,7 +79,6 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // בחירת תמונה מהגלריה
   const handleGalleryPick = async () => {
     try {
-      console.log('🖼️ MediaPicker: Starting gallery pick...');
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('אישור נדרש', 'אנא אשר גישה לגלריה');
@@ -96,21 +86,17 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: MediaType.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.8,
       });
 
-      console.log('🖼️ MediaPicker: Gallery result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
-
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
-        console.log('🖼️ MediaPicker: Calling onMediaSelected with uri:', uri);
         onMediaSelected('image', uri);
         onClose();
       }
     } catch (error) {
-      console.error('Error picking from gallery:', error);
       Alert.alert('שגיאה', 'שגיאה בבחירת התמונה');
     }
   };
@@ -118,7 +104,6 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // צילום וידאו
   const handleVideoCapture = async () => {
     try {
-      console.log('🎬 MediaPicker: Starting video capture...');
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('אישור נדרש', 'אנא אשר גישה למצלמה');
@@ -126,22 +111,18 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: MediaType.Videos,
+        mediaTypes: ['videos'],
         allowsEditing: true,
         aspect: [16, 9],
         quality: 0.8,
       });
 
-      console.log('🎬 MediaPicker: Video result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
-
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
-        console.log('🎬 MediaPicker: Calling onMediaSelected with uri:', uri);
         onMediaSelected('video', uri);
         onClose();
       }
     } catch (error) {
-      console.error('Error taking video:', error);
       Alert.alert('שגיאה', 'שגיאה בצילום הוידאו');
     }
   };
@@ -149,22 +130,17 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // בחירת קובץ
   const handleDocumentPick = async () => {
     try {
-      console.log('📄 MediaPicker: Starting document pick...');
       const result = await DocumentPicker.getDocumentAsync({
         type: '*/*',
         copyToCacheDirectory: true,
       });
 
-      console.log('📄 MediaPicker: Document result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
-
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
-        console.log('📄 MediaPicker: Calling onMediaSelected with uri:', uri);
         onMediaSelected('document', uri);
         onClose();
       }
     } catch (error) {
-      console.error('Error picking document:', error);
       Alert.alert('שגיאה', 'שגיאה בבחירת הקובץ');
     }
   };
@@ -172,22 +148,17 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   // בחירת קובץ אודיו
   const handleAudioFilePick = async () => {
     try {
-      console.log('🎵 MediaPicker: Starting audio pick...');
       const result = await DocumentPicker.getDocumentAsync({
         type: 'audio/*',
         copyToCacheDirectory: true,
       });
 
-      console.log('🎵 MediaPicker: Audio result:', { canceled: result.canceled, hasAssets: !!result.assets?.length });
-
       if (!result.canceled && result.assets[0]) {
         const uri = result.assets[0].uri;
-        console.log('🎵 MediaPicker: Calling onMediaSelected with uri:', uri);
         onMediaSelected('audio', uri);
         onClose();
       }
     } catch (error) {
-      console.error('Error picking audio file:', error);
       Alert.alert('שגיאה', 'לא ניתן לבחור קובץ אודיו');
     }
   };

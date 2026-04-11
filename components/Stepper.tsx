@@ -22,21 +22,21 @@ const Stepper: React.FC<StepperProps> = ({ steps, currentStep }) => {
                   width: 32,
                   height: 32,
                   borderRadius: 16,
-                  backgroundColor: isActive ? '#00E654' : isCompleted ? '#222' : '#181818',
+                  backgroundColor: isActive ? '#00C805' : isCompleted ? '#142014' : '#0F1A0F',
                   borderWidth: isActive ? 2 : 1,
-                  borderColor: isActive ? '#00E654' : isCompleted ? '#00E654' : '#444',
+                  borderColor: isActive ? '#00C805' : isCompleted ? '#00C805' : 'rgba(255,255,255,0.15)',
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginBottom: 4,
                 }}
               >
                 {step.icon ? (
-                  <CheckCircle2 size={18} color={isActive ? '#111' : isCompleted ? '#00E654' : '#fff'} strokeWidth={2} />
+                  <CheckCircle2 size={18} color={isActive ? '#0A0E0A' : isCompleted ? '#00C805' : '#fff'} strokeWidth={2} />
                 ) : (
-                  <Text style={{ color: isActive ? '#111' : isCompleted ? '#00E654' : '#fff', fontWeight: 'bold', fontSize: 16 }}>{idx + 1}</Text>
+                  <Text style={{ color: isActive ? '#0A0E0A' : isCompleted ? '#00C805' : '#fff', fontWeight: 'bold', fontSize: 16 }}>{idx + 1}</Text>
                 )}
               </View>
-              <Text style={{ color: isActive ? '#00E654' : '#fff', fontSize: 12, textAlign: 'center', maxWidth: 60 }} numberOfLines={2}>
+              <Text style={{ color: isActive ? '#00C805' : '#fff', fontSize: 12, textAlign: 'center', maxWidth: 60 }} numberOfLines={2}>
                 {step.label}
               </Text>
             </View>
@@ -45,7 +45,7 @@ const Stepper: React.FC<StepperProps> = ({ steps, currentStep }) => {
                 style={{
                   flex: 1,
                   height: 3,
-                  backgroundColor: idx < currentStep ? '#00E654' : '#333',
+                  backgroundColor: idx < currentStep ? '#00C805' : '#1A2B1A',
                   marginHorizontal: 2,
                   marginTop: -18,
                   borderRadius: 2,

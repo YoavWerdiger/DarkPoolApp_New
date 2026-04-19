@@ -1,164 +1,230 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../services/supabase';
-import UICard from '../../components/ui/UICard';
 import TradesListTab from './TradesListTab';
 import CalendarTab from './CalendarTab';
+import JournalDataTab from './JournalDataTab';
+import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
+import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import type { JournalStackParamList } from '../../navigation/JournalStack';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+
+const HEADER_HP = 20;
+
+type JournalTab = 'trades' | 'calendar' | 'performance';
+
+const JOURNAL_SEGMENTS: {
+  id: JournalTab;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { id: 'trades', label: 'רשימת טריידים', icon: 'list-outline' },
+  { id: 'calendar', label: 'לוח שנה', icon: 'calendar-outline' },
+  { id: 'performance', label: 'ביצועים', icon: 'bar-chart-outline' },
+];
+
+type Nav = NativeStackNavigationProp<JournalStackParamList, 'JournalMain'>;
 
 export default function TradingScreen() {
   const DesignTokens = useDesignTokens();
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'trades' | 'calendar'>('trades');
-  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const navigation = useNavigation<Nav>();
+  const mainTabsHeight = useMainTabsHeight();
+  const [activeTab, setActiveTab] = useState<JournalTab>('trades');
 
-  const tabs = [
-    {
-      id: 'trades' as const,
-      title: 'רשימת טריידים',
-      icon: 'list',
-    },
-    {
-      id: 'calendar' as const,
-      title: 'לוח שנה',
-      icon: 'calendar',
-    },
-  ];
+  const showAddTradeFab = activeTab === 'trades' || activeTab === 'calendar';
+
+  const openMainDrawer = useCallback(() => {
+    void triggerDrawerMenuHaptic();
+    try {
+      dispatchOpenMainDrawer(navigation as unknown as DrawerParentNavigation);
+    } catch {
+      /* noop */
+    }
+  }, [navigation]);
+
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        screenRoot: {
+          flex: 1,
+          backgroundColor: '#0A0E0A',
+        },
+        safeAreaContainer: {
+          flex: 1,
+          backgroundColor: 'transparent',
+        },
+        appHeader: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          paddingHorizontal: HEADER_HP,
+          paddingVertical: 14,
+        },
+        appHeaderActions: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          minWidth: 72,
+        },
+        headerMenuBtn: {
+          width: 46,
+          height: 46,
+          borderRadius: 23,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: DesignTokens.colors.background.secondary,
+          borderWidth: 1,
+          borderColor: DesignTokens.colors.border.strong,
+          shadowColor: '#000',
+          shadowOpacity: 0.28,
+          shadowRadius: 8,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 6,
+        },
+        appHeaderTitle: {
+          fontSize: 22,
+          fontWeight: '700',
+          color: DesignTokens.colors.text.primary,
+          letterSpacing: -0.3,
+        },
+        appHeaderTitleCenter: {
+          flex: 1,
+          textAlign: 'center',
+        },
+        segmentRow: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
+          paddingHorizontal: HEADER_HP,
+          paddingTop: 4,
+          paddingBottom: 12,
+        },
+        segmentPill: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          backgroundColor: DesignTokens.colors.background.tertiary,
+          borderRadius: 20,
+          paddingHorizontal: 14,
+          paddingVertical: 8,
+          gap: 6,
+        },
+        segmentPillActive: {
+          backgroundColor: 'rgba(0, 200, 5, 0.12)',
+        },
+        segmentPillText: {
+          fontSize: 13,
+          fontWeight: '500',
+          color: DesignTokens.colors.text.secondary,
+        },
+        segmentPillTextActive: {
+          color: DesignTokens.colors.primary.main,
+          fontWeight: '600',
+        },
+        tabContent: {
+          flex: 1,
+          minHeight: 0,
+        },
+        fabWrap: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          alignItems: 'center',
+          paddingBottom: mainTabsHeight,
+          zIndex: 40,
+        },
+        fabBtn: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: 22,
+          paddingVertical: 14,
+          borderRadius: 28,
+          backgroundColor: DesignTokens.colors.primary.main,
+          ...DesignTokens.shadows.md,
+        },
+        fabBtnText: {
+          fontSize: 16,
+          fontWeight: '700',
+          color: DesignTokens.colors.text.inverse,
+        },
+      }),
+    [DesignTokens, mainTabsHeight]
+  );
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScreenGradientBackground style={styles.gradientContainer} />
+    <View style={styles.screenRoot}>
+      <ChatSessionBackdrop />
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-        <View style={styles.screenHeader}>
-          <Text style={styles.screenTitle}>יומן מסחר</Text>
-          <Text style={styles.screenSubtitle}>מעקב טריידים ולוח שנה</Text>
-        </View>
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
-          <UICard variant="blur" padding="none" style={styles.tabsCard}>
-            <View style={styles.tabs}>
-            {tabs.map((tab) => {
-              const isActive = activeTab === tab.id;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  onPress={() => setActiveTab(tab.id)}
-                  activeOpacity={0.7}
-                  style={styles.tab}
-                >
-                  {isActive && <View style={styles.tabActiveIndicator} />}
-                  <Ionicons 
-                    name={tab.icon as any} 
-                    size={20} 
-                    color={isActive ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary} 
-                  />
-                  <Text style={[
-                    styles.tabText,
-                    isActive && styles.tabTextActive
-                  ]}>
-                    {tab.title}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-            </View>
-          </UICard>
+        <View style={styles.appHeader}>
+          <View style={styles.appHeaderActions}>
+            <TouchableOpacity
+              style={styles.headerMenuBtn}
+              onPress={openMainDrawer}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="תפריט ראשי"
+            >
+              <Ionicons name="menu" size={28} color={DesignTokens.colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]} numberOfLines={1}>
+            יומן מסחר
+          </Text>
+          <View style={styles.appHeaderActions} />
         </View>
 
-        {/* Content */}
+        <View style={styles.segmentRow} accessibilityRole="tablist">
+          {JOURNAL_SEGMENTS.map((seg) => {
+            const active = activeTab === seg.id;
+            return (
+              <TouchableOpacity
+                key={seg.id}
+                style={[styles.segmentPill, active && styles.segmentPillActive]}
+                onPress={() => setActiveTab(seg.id)}
+                activeOpacity={0.85}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${seg.label}`}
+              >
+                <Ionicons
+                  name={seg.icon}
+                  size={16}
+                  color={active ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary}
+                />
+                <Text style={[styles.segmentPillText, active && styles.segmentPillTextActive]}>{seg.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         <View style={styles.tabContent}>
           {activeTab === 'trades' && <TradesListTab />}
           {activeTab === 'calendar' && <CalendarTab />}
+          {activeTab === 'performance' && <JournalDataTab />}
         </View>
+
+        {showAddTradeFab ? (
+          <View style={styles.fabWrap} pointerEvents="box-none">
+            <TouchableOpacity
+              style={styles.fabBtn}
+              onPress={() => navigation.navigate('AddTrade')}
+              activeOpacity={0.88}
+              accessibilityRole="button"
+              accessibilityLabel="הוסף טרייד"
+            >
+              <Ionicons name="add" size={26} color={DesignTokens.colors.text.inverse} />
+              <Text style={styles.fabBtnText}>הוסף טרייד</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </RNSafeAreaView>
     </View>
   );
 }
-
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  gradientContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  safeAreaContainer: {
-    flex: 1,
-  },
-  screenHeader: {
-    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.lg,
-    paddingBottom: tokens.spacing.sm,
-  },
-  screenTitle: {
-    fontSize: tokens.typography.displayXs.size,
-    fontWeight: tokens.typography.displayXs.weight as any,
-    letterSpacing: tokens.typography.displayXs.letterSpacing,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-  },
-  screenSubtitle: {
-    fontSize: tokens.typography.body.size,
-    fontWeight: tokens.typography.body.weight as any,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-    marginTop: tokens.spacing.xs,
-  },
-  tabsContainer: {
-    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.lg,
-    paddingTop: tokens.spacing.md,
-    marginBottom: tokens.spacing.md,
-  },
-  tabsCard: {
-    borderRadius: tokens.borderRadius['3xl'],
-    overflow: 'hidden',
-    alignSelf: 'center',
-    width: '100%',
-    maxWidth: 400,
-  },
-  tabs: {
-    flexDirection: 'row',
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    height: 44,
-    borderRadius: tokens.borderRadius['3xl'],
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 6,
-    marginHorizontal: 2,
-    position: 'relative',
-  },
-  tabActiveIndicator: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: tokens.borderRadius['3xl'],
-    backgroundColor: tokens.colors.background.cardSolid,
-  },
-  tabText: {
-    fontSize: tokens.typography.bodySmall.size,
-    fontWeight: tokens.typography.fontWeight.medium as any,
-    color: tokens.colors.text.secondary,
-  },
-  tabTextActive: {
-    color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-  },
-  tabContent: {
-    flex: 1,
-  },
-});
-

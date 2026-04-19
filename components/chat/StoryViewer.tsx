@@ -1,18 +1,7 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  StyleSheet,
-  Dimensions,
-  Modal,
-  StatusBar,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, Image, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, Dimensions, Modal, StatusBar, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
@@ -278,7 +267,7 @@ export default function StoryViewer({
   const handleDeleteStory = useCallback(() => {
     if (!currentStory || !user?.id) return;
     cancelAnimation(progress);
-    Alert.alert('מחיקת סטטוס', 'האם למחוק את הסטטוס?', [
+    legacyAlert('מחיקת סטטוס', 'האם למחוק את הסטטוס?', [
       { text: 'ביטול', style: 'cancel' },
       {
         text: 'מחק',
@@ -301,7 +290,7 @@ export default function StoryViewer({
               setMediaReady(false);
             }
           } catch {
-            Alert.alert('שגיאה', 'לא הצלחנו למחוק');
+            legacyAlert('שגיאה', 'לא הצלחנו למחוק');
           }
         },
       },
@@ -563,7 +552,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   progressRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     marginBottom: 12,
   },
 
@@ -617,11 +606,11 @@ const styles = StyleSheet.create({
     paddingTop: 50,
   },
   bottomActions: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
   },
   actionBtn: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 16,

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type TextStyle } from 'react-native';
 import { DesignTokens } from './DesignTokens';
 
 /**
@@ -44,8 +44,8 @@ const styles = StyleSheet.create({
   
   // דוגמה 1: עם DesignTokens
   example1: {
-    fontFamily: DesignTokens.typography.fontFamily.assistant,
-    fontWeight: DesignTokens.typography.fontWeight.extrabold,
+    fontFamily: DesignTokens.typography.fontFamily.assistant[0],
+    fontWeight: DesignTokens.typography.fontWeight.extrabold as TextStyle['fontWeight'],
     fontSize: DesignTokens.typography.fontSize['2xl'],
     color: '#FFFFFF',
     marginBottom: 16,

@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from 'react';
-import { 
-  Modal, 
-  View, 
-  Text, 
-  Pressable, 
-  Animated, 
+import {
+  Modal,
+  View,
+  Text,
+  Pressable,
+  Animated,
+  StyleSheet,
   ViewStyle,
   TextStyle,
-  StatusBar 
+  StatusBar,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
@@ -28,6 +30,8 @@ export interface UIAlertProps {
   buttons?: UIAlertButton[];
   onClose?: () => void;
   showIcon?: boolean;
+  /** ברירת מחדל false — דיאלוג גלובלי יכול להפעיל לסגירה מהירה */
+  closeOnBackdropPress?: boolean;
 }
 
 const UIAlert: React.FC<UIAlertProps> = ({
@@ -38,42 +42,22 @@ const UIAlert: React.FC<UIAlertProps> = ({
   buttons = [{ text: 'אישור', style: 'default' }],
   onClose,
   showIcon = true,
+  closeOnBackdropPress = false,
 }) => {
   const DesignTokens = useDesignTokens();
   const { colors, typography, spacing, borderRadius, shadows } = DesignTokens;
   
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
+    if (!visible) return;
+    scaleAnim.setValue(0.92);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
   }, [visible]);
 
   const getTypeConfig = () => {
@@ -116,13 +100,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
     }
   };
 
-  const backdropStyle: ViewStyle = {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing['2xl'],
-  };
+  const rtlCard: ViewStyle = I18nManager.isRTL ? { direction: 'rtl' } : {};
 
   const containerStyle: ViewStyle = {
     backgroundColor: typeConfig.backgroundColor,
@@ -133,6 +111,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
     ...shadows.lg,
     borderWidth: 0.5,
     borderColor: colors.border.default,
+    ...rtlCard,
   };
 
   const titleStyle: TextStyle = {
@@ -140,6 +119,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
     fontWeight: typography.fontWeight.semibold,
     color: colors.text.primary,
     textAlign: 'center',
+    writingDirection: 'rtl',
     marginBottom: message ? spacing.sm : 0,
   };
 
@@ -147,6 +127,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
     fontSize: typography.fontSize.base,
     color: colors.text.secondary,
     textAlign: 'center',
+    writingDirection: 'rtl',
     lineHeight: typography.lineHeight.normal * typography.fontSize.base,
     marginBottom: spacing.lg,
   };
@@ -214,64 +195,57 @@ const UIAlert: React.FC<UIAlertProps> = ({
     }
   };
 
-  if (!visible) return null;
-
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       statusBarTranslucent={true}
       onRequestClose={onClose}
     >
       <StatusBar backgroundColor="rgba(0,0,0,0.6)" barStyle="light-content" />
-      
-      <Animated.View style={[backdropStyle, { opacity: fadeAnim }]}>
-        <Animated.View 
+
+      <View style={{ flex: 1 }}>
+        <Pressable
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.overlay }]}
+          onPress={closeOnBackdropPress ? onClose : undefined}
+        />
+        <View
           style={[
-            containerStyle,
-            {
-              transform: [{ scale: scaleAnim }],
-              opacity: fadeAnim,
-            }
+            StyleSheet.absoluteFillObject,
+            { justifyContent: 'center', alignItems: 'center', padding: spacing['2xl'] },
           ]}
+          pointerEvents="box-none"
         >
-          {/* Icon */}
-          {showIcon && (
-            <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-              <Ionicons 
-                name={typeConfig.icon} 
-                size={48} 
-                color={typeConfig.iconColor} 
-              />
-            </View>
-          )}
+          <View>
+            <Animated.View
+              style={[containerStyle, { transform: [{ scale: scaleAnim }] }]}
+            >
+              {showIcon && (
+                <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
+                  <Ionicons name={typeConfig.icon} size={48} color={typeConfig.iconColor} />
+                </View>
+              )}
 
-          {/* Title */}
-          <Text style={titleStyle}>{title}</Text>
+              <Text style={titleStyle}>{title}</Text>
 
-          {/* Message */}
-          {message && <Text style={messageStyle}>{message}</Text>}
+              {message && <Text style={messageStyle}>{message}</Text>}
 
-          {/* Buttons */}
-          <View style={buttonContainerStyle}>
-            {buttons.map((button, index) => (
-              <Pressable
-                key={index}
-                style={({ pressed }) => [
-                  getButtonStyle(button, index),
-                  pressed && { opacity: 0.8 }
-                ]}
-                onPress={() => handleButtonPress(button)}
-              >
-                <Text style={getButtonTextStyle(button)}>
-                  {button.text}
-                </Text>
-              </Pressable>
-            ))}
+              <View style={buttonContainerStyle}>
+                {buttons.map((button, index) => (
+                  <Pressable
+                    key={index}
+                    style={({ pressed }) => [getButtonStyle(button, index), pressed && { opacity: 0.8 }]}
+                    onPress={() => handleButtonPress(button)}
+                  >
+                    <Text style={getButtonTextStyle(button)}>{button.text}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Animated.View>
           </View>
-        </Animated.View>
-      </Animated.View>
+        </View>
+      </View>
     </Modal>
   );
 };

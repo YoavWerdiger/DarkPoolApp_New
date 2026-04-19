@@ -277,7 +277,7 @@ export default function ChatSearchBottomSheet({
 const createStyles = (tokens: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent', // שקוף - ה-BlurView מספק את הרקע
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
@@ -348,10 +348,13 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   resultsList: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   resultsListContent: {
+    flexGrow: 1,
     paddingHorizontal: tokens.spacing.md,
     paddingVertical: tokens.spacing.sm,
+    paddingBottom: tokens.spacing.lg,
   },
   resultItem: {
     paddingVertical: tokens.spacing.md,

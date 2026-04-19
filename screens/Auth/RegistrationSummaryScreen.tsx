@@ -1,19 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
-  ImageBackground,
-  ScrollView,
-} from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, ScrollView } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -160,7 +147,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             password:        data.password,
             display_name:    data.fullName,
             full_name:       data.fullName,
-            profile_picture: data.profileImage,
+            profile_picture: data.profileImage ?? undefined,
             phone:           data.phone,
             track_id:        data.trackId || '1',
             account_type:    data.accountType,
@@ -173,7 +160,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
         }
       }
 
-      if (signUpError) { setLoading(false); Alert.alert('שגיאה בהרשמה', signUpError); return; }
+      if (signUpError) { setLoading(false); legacyAlert('שגיאה בהרשמה', signUpError); return; }
 
       if (user) {
         try { await AsyncStorage.removeItem('explicit_logout'); } catch {}
@@ -183,7 +170,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
         const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
         const planName     = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
 
-        Alert.alert(
+        legacyAlert(
           'הרשמה הושלמה בהצלחה! 🎉',
           `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}.`,
           [{
@@ -192,11 +179,11 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
           }]
         );
       } else {
-        Alert.alert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
+        legacyAlert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
       }
     } catch {
       setLoading(false);
-      Alert.alert('שגיאה', 'אירעה שגיאה בעת השלמת ההרשמה');
+      legacyAlert('שגיאה', 'אירעה שגיאה בעת השלמת ההרשמה');
     }
   };
 

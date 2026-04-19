@@ -222,6 +222,8 @@ const staticTokens = {
       mono: ['SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'monospace'],
     },
     fontSize: {
+      micro: 9,
+      '2xs': 10,
       xs: 11,
       sm: 12,
       base: 16,
@@ -264,7 +266,7 @@ const staticTokens = {
       bold: '700',
       extrabold: '800',
       black: '900',
-    },
+    } as const,
     lineHeight: {
       tight: 1.15,
       normal: 1.4,
@@ -282,6 +284,7 @@ const staticTokens = {
   },
 
   spacing: {
+    micro: 2,
     '2xs': 2,
     xs: 4,
     sm: 8,
@@ -460,10 +463,10 @@ const staticTokens = {
 
   glassmorphism: {
     blurIntensity: {
-      subtle: 20,
-      light: 24,
-      medium: 30,
-      strong: 40,
+      subtle: 32,
+      light: 48,
+      medium: 62,
+      strong: 80,
     },
     blurTint: {
       dark: 'systemChromeMaterialDark' as const,
@@ -525,6 +528,13 @@ const staticTokens = {
       shadowRadius: 24,
       elevation: 8,
     },
+  },
+
+  /** כמו OnboardingInput — מילוי שקוף + מסגרת, ללא BlurView */
+  onboardingInputSurface: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
 };
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
 import { View, Pressable, Dimensions, Modal, StyleSheet, Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -12,6 +12,7 @@ import Animated, {
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../../../context/ThemeContext';
 import { useDesignTokens } from '../DesignTokens';
 import { BottomSheetProps } from './BottomSheet.types';
 import { createStyles } from './BottomSheet.styles';
@@ -39,7 +40,15 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   useModal = true,
 }) => {
   const tokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
+  /** באנדרואיד לפעמים insets.bottom=0 למרות סרגל ניווט/מחוות — מגנים על ריפוד תחתון */
+  const contentPaddingBottom = useMemo(() => {
+    const minBottom = Platform.OS === 'android' ? 24 : 20;
+    const safeBottom = Math.max(insets.bottom, minBottom);
+    const extra = Platform.OS === 'android' ? 12 : 20;
+    return safeBottom + extra;
+  }, [insets.bottom]);
   const translateY = useSharedValue(SCREEN_HEIGHT); // מתחיל ב-SCREEN_HEIGHT (מחוץ למסך למטה)
   const startY = useSharedValue(0);
   const currentSnapIndex = useSharedValue(0);
@@ -222,15 +231,19 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     };
   }, [snapValues, minAllowedY]);
 
-  const styles = createStyles(
-    tokens.colors.background.secondary,
-    tokens.colors.overlay || 'rgba(0,0,0,0.6)'
-  );
+  const styles = createStyles(tokens.colors.overlay || 'rgba(0,0,0,0.6)');
+
+  /** שכבת זכוכית מעל הטשטוש — כמו UICard */
+  const glassTintOverlay =
+    isDarkMode
+      ? tokens.glassmorphism.cardBackground.dark.medium
+      : tokens.glassmorphism.cardBackground.light.medium;
 
   const content = (
-    <View style={{ flex: 1 }}>
-      <Pressable 
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
+    <Fragment>
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        android_ripple={{ color: 'transparent' }}
         onPress={handleCloseWithAnimation}
       >
         <Animated.View style={[styles.backdrop, backdropStyle]} />
@@ -241,30 +254,38 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           styles.container, 
           sheetStyle,
         ]}
+        collapsable={false}
       >
         {Platform.OS === 'ios' ? (
           <BlurView
-            intensity={50}
-            tint="systemChromeMaterialDark"
+            intensity={tokens.glassmorphism.blurIntensity.medium}
+            tint={tokens.glassmorphism.blurTint.default}
             style={StyleSheet.absoluteFill}
           />
-          ) : (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: 'rgba(25, 25, 25, 0.92)' },
-              ]}
-            />
-          )}
+        ) : (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: isDarkMode
+                  ? 'rgba(22, 32, 24, 0.72)'
+                  : 'rgba(245, 245, 247, 0.88)',
+              },
+            ]}
+          />
+        )}
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: glassTintOverlay },
+          ]}
+        />
 
           <View 
             style={[
               styles.content,
-              { 
-                paddingBottom: Platform.OS === 'ios' 
-                  ? Math.max(insets.bottom, 20) + 20 
-                  : insets.bottom + 20 
-              }
+              { paddingBottom: contentPaddingBottom },
             ]}
           >
             {/* Handle area for pan gesture - can be dragged */}
@@ -292,7 +313,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             {children}
           </View>
         </Animated.View>
-    </View>
+    </Fragment>
   );
 
   if (!useModal) {
@@ -319,9 +340,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       transparent
       animationType="none"
       statusBarTranslucent
+      presentationStyle="overFullScreen"
       onRequestClose={handleCloseWithAnimation}
     >
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={styles.modalRoot}>
         {content}
       </GestureHandlerRootView>
     </Modal>

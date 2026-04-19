@@ -1,18 +1,8 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  Switch, 
-  Alert,
-  TouchableOpacity,
-  ActivityIndicator,
-  SafeAreaView,
-  StyleSheet
-} from 'react-native';
+import { View, Text, ScrollView, Switch, TouchableOpacity, ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
 import { 
   Moon, 
-  ArrowRight,
   Smartphone,
   Lock,
   Database,
@@ -32,6 +22,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import * as LocalAuthentication from 'expo-local-authentication';
 
@@ -97,9 +88,8 @@ export default function SettingsScreen({ navigation }: any) {
     }
   };
 
-
   const handleClearCache = () => {
-    Alert.alert(
+    legacyAlert(
       'נקה מטמון',
       'האם אתה בטוח שברצונך למחוק את כל הנתונים הזמניים? פעולה זו לא תמחק את המידע האישי שלך.',
       [
@@ -121,9 +111,9 @@ export default function SettingsScreen({ navigation }: any) {
                 await AsyncStorage.multiRemove(cacheKeys);
               }
               
-              Alert.alert('הצלחה', 'המטמון נוקה בהצלחה');
+              legacyAlert('הצלחה', 'המטמון נוקה בהצלחה');
             } catch (error) {
-              Alert.alert('שגיאה', 'שגיאה בניקוי המטמון');
+              legacyAlert('שגיאה', 'שגיאה בניקוי המטמון');
             }
           }
         }
@@ -138,13 +128,13 @@ export default function SettingsScreen({ navigation }: any) {
         const compatible = await LocalAuthentication.hasHardwareAsync();
         
         if (!compatible) {
-          Alert.alert('שגיאה', 'המכשיר שלך לא תומך באימות ביומטרי');
+          legacyAlert('שגיאה', 'המכשיר שלך לא תומך באימות ביומטרי');
           return;
         }
 
         const enrolled = await LocalAuthentication.isEnrolledAsync();
         if (!enrolled) {
-          Alert.alert('שגיאה', 'לא הוגדר אימות ביומטרי במכשיר. אנא הגדר Face ID או Touch ID בהגדרות המכשיר');
+          legacyAlert('שגיאה', 'לא הוגדר אימות ביומטרי במכשיר. אנא הגדר Face ID או Touch ID בהגדרות המכשיר');
           return;
         }
 
@@ -157,12 +147,12 @@ export default function SettingsScreen({ navigation }: any) {
 
         if (result.success) {
           handleToggle('biometricAuth', true);
-          Alert.alert('הצלחה', 'אימות ביומטרי הופעל בהצלחה');
+          legacyAlert('הצלחה', 'אימות ביומטרי הופעל בהצלחה');
         } else {
-          Alert.alert('בוטל', 'אימות ביומטרי בוטל');
+          legacyAlert('בוטל', 'אימות ביומטרי בוטל');
         }
       } catch (error) {
-        Alert.alert('שגיאה', 'שגיאה בהפעלת אימות ביומטרי');
+        legacyAlert('שגיאה', 'שגיאה בהפעלת אימות ביומטרי');
       }
     } else {
       handleToggle('biometricAuth', false);
@@ -240,23 +230,22 @@ export default function SettingsScreen({ navigation }: any) {
           icon: Info,
           type: 'action' as const,
           onPress: () => {
-            Alert.alert('אודות', 'DarkPool App\nגרסה 1.0.0\n\n© 2025 DarkPool');
+            legacyAlert('אודות', 'DarkPool App\nגרסה 1.0.0\n\n© 2025 DarkPool');
           }
         }
       ]
     }
   ];
 
-
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
         <Text style={{ 
           color: DesignTokens.colors.text.secondary, 
           fontSize: DesignTokens.typography.body.size,
           fontWeight: DesignTokens.typography.body.weight as any,
-          lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
+          lineHeight: DesignTokens.typography.body.lineHeight,
           marginTop: DesignTokens.spacing.lg 
         }}>טוען...</Text>
       </View>
@@ -264,49 +253,10 @@ export default function SettingsScreen({ navigation }: any) {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }} edges={['top']}>
-        {/* Header עם blur */}
-        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <UICard 
-            variant="blur"
-            padding="sm"
-            style={{ borderRadius: DesignTokens.borderRadius.lg }}
-          >
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: DesignTokens.spacing.md,
-              minHeight: 44,
-            }}>
-              <Text style={{
-                flex: 1,
-                textAlign: 'center',
-                fontSize: DesignTokens.typography.titleSmall.size,
-                fontWeight: DesignTokens.typography.titleSmall.weight as any,
-                letterSpacing: DesignTokens.typography.titleSmall.letterSpacing,
-                color: DesignTokens.colors.text.primary,
-                marginLeft: 36
-              }}>
-                הגדרות
-              </Text>
-
-              <TouchableOpacity 
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-                style={{
-                  width: 36,
-                  height: 36,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderRadius: 18,
-                  backgroundColor: DesignTokens.colors.selection.subtle
-                }}
-              >
-                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          </UICard>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <ChatSubScreenHeader title="הגדרות" onBack={() => navigation.goBack()} />
         </View>
 
         <View style={{ flex: 1 }}>
@@ -333,7 +283,7 @@ export default function SettingsScreen({ navigation }: any) {
 
                 {/* Section Items עם blur */}
                 <UICard 
-                  variant="blur"
+                  variant="inputGlass"
                   padding="none"
                   style={{ borderRadius: DesignTokens.borderRadius.lg }}
                 >
@@ -370,8 +320,8 @@ export default function SettingsScreen({ navigation }: any) {
                       <Text style={{
                         fontSize: DesignTokens.typography.body.size,
                         fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                        lineHeight: DesignTokens.typography.body.size * DesignTokens.typography.body.lineHeight,
-                        color: item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary,
+                        lineHeight: DesignTokens.typography.body.lineHeight,
+                        color: 'danger' in item && item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary,
                         marginBottom: DesignTokens.spacing.xs / 2,
                         textAlign: 'right'
                       }}>
@@ -380,7 +330,7 @@ export default function SettingsScreen({ navigation }: any) {
                       <Text style={{
                         fontSize: DesignTokens.typography.bodySmall.size,
                         fontWeight: DesignTokens.typography.bodySmall.weight as any,
-                        lineHeight: DesignTokens.typography.bodySmall.size * DesignTokens.typography.bodySmall.lineHeight,
+                        lineHeight: DesignTokens.typography.bodySmall.lineHeight,
                         color: DesignTokens.colors.text.tertiary,
                         textAlign: 'right'
                       }}>
@@ -393,13 +343,13 @@ export default function SettingsScreen({ navigation }: any) {
                       width: 36,
                       height: 36,
                       borderRadius: DesignTokens.borderRadius.sm,
-                      backgroundColor: item.danger ? `${DesignTokens.colors.danger.main}1A` : `${DesignTokens.colors.primary.main}1A`,
+                      backgroundColor: 'danger' in item && item.danger ? `${DesignTokens.colors.danger.main}1A` : `${DesignTokens.colors.primary.main}1A`,
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
                       <item.icon 
                         size={20} 
-                        color={item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.primary.main} 
+                        color={'danger' in item && item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.primary.main} 
                         strokeWidth={2} 
                       />
                     </View>

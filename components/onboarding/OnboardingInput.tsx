@@ -40,16 +40,18 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
     }).start();
   };
 
+  const surface = DesignTokens.onboardingInputSurface;
+
   const borderColor = error
     ? '#F85149'
     : borderAnim.interpolate({
         inputRange: [0, 1],
-        outputRange: ['rgba(255,255,255,0.1)', DesignTokens.colors.primary.main],
+        outputRange: [surface.borderColor, DesignTokens.colors.primary.main],
       });
 
   const bgColor = borderAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['rgba(255,255,255,0.05)', 'rgba(0,230,84,0.06)'],
+    outputRange: [surface.backgroundColor, 'rgba(0,230,84,0.06)'],
   });
 
   return (
@@ -71,7 +73,7 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
         style={{
           backgroundColor: bgColor,
           borderRadius: 16,
-          borderWidth: 1.5,
+          borderWidth: surface.borderWidth,
           borderColor,
           paddingHorizontal: 16,
           paddingVertical: multiline ? 12 : 0,

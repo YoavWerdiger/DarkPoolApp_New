@@ -163,7 +163,7 @@ const createStyles = (tokens: any) => {
       backgroundColor: 'transparent',
     },
     header: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: tokens.spacing.md,
       paddingVertical: tokens.spacing.sm,
@@ -218,8 +218,10 @@ const createStyles = (tokens: any) => {
     },
     scroll: {
       flex: 1,
+      backgroundColor: 'transparent',
     },
     scrollContent: {
+      flexGrow: 1,
       paddingHorizontal: tokens.spacing.md,
       paddingVertical: tokens.spacing.md,
       paddingBottom: tokens.spacing.xl,
@@ -239,7 +241,7 @@ const createStyles = (tokens: any) => {
       padding: tokens.spacing.md,
     },
     optionHeader: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: tokens.spacing.md,
@@ -276,7 +278,7 @@ const createStyles = (tokens: any) => {
       gap: 10,
     },
     voterRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       gap: tokens.spacing.sm,
       paddingVertical: 8,

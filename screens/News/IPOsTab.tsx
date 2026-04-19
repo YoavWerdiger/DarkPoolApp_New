@@ -79,7 +79,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
       }}
     >
       {/* Header - Company Name & Status */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flex: 1 }}>
           <Text
             style={{
@@ -92,7 +92,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
           >
             {ipo.name || ipo.code}
           </Text>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
               {ipo.code}
             </Text>
@@ -124,7 +124,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 
       {/* Date Info */}
       {ipo.start_date && (
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
           <Calendar size={14} color="#3B82F6" strokeWidth={2} style={{ marginLeft: 8 }} />
           <Text style={{ fontSize: 13, color: DesignTokens.colors.text.primary, fontWeight: '600' }}>
             תאריך מסחר ראשון:
@@ -137,7 +137,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 
       {/* Pricing & Shares */}
       {(hasPricing || ipo.shares > 0) && (
-        <View style={{ flexDirection: 'row-reverse', marginTop: 8 }}>
+        <View style={{ flexDirection: 'row', marginTop: 8 }}>
           {hasPricing && (
             <View style={{ flex: 1 }}>
               <DollarSign size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginBottom: 4, alignSelf: 'flex-end' }} />
@@ -171,7 +171,7 @@ const IPOCard: React.FC<{ ipo: IPO }> = ({ ipo }) => {
 
       {/* Filing Dates */}
       {(ipo.filing_date || ipo.amended_date) && (
-        <View style={{ flexDirection: 'row-reverse', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
+        <View style={{ flexDirection: 'row', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
           {ipo.filing_date && (
             <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginLeft: 12 }}>
               הוגש: {formatDate(ipo.filing_date)}

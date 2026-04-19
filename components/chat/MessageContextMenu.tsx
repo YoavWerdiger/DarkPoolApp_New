@@ -77,7 +77,7 @@ export default function MessageContextMenu({
     {
       id: 'star',
       title: isStarred ? 'הסר כוכב' : 'סמן בכוכב',
-      icon: isStarred ? 'star' : 'star-outline' as const,
+      icon: (isStarred ? 'star' : 'star-outline') as keyof typeof Ionicons.glyphMap,
       onPress: isStarred ? onUnstar : onStar,
       color: isStarred ? '#fbbf24' : '#ffffff'
     },

@@ -163,7 +163,10 @@ class ScheduledUpdatesService {
 
       return { success: true, message: `Cache updated for ${indicator}` };
     } catch (error) {
-      return { success: false, message: `Failed to update for ${indicator}: ${error.message}` };
+      return {
+        success: false,
+        message: `Failed to update for ${indicator}: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
   }
 }

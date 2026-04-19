@@ -2,16 +2,10 @@
 // AddStoryBottomSheet – הוספת סטטוס (תמונה)
 // ============================================
 
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
 import { chatPalette } from './chatDesignTokens';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
@@ -35,7 +29,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('אישור נדרש', 'אנא אשר גישה לגלריה');
+        legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
         return;
       }
 
@@ -51,7 +45,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
       setIsUploading(true);
       const { url, error } = await uploadStoryImage(result.assets[0].uri, user.id);
       if (error || !url) {
-        Alert.alert('שגיאה', error || 'לא הצלחנו להעלות את התמונה');
+        legacyAlert('שגיאה', error || 'לא הצלחנו להעלות את התמונה');
         return;
       }
 
@@ -60,7 +54,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
       onClose();
     } catch (e) {
       logger.error('AddStoryBottomSheet', 'handlePickImage failed', e);
-      Alert.alert('שגיאה', 'משהו השתבש');
+      legacyAlert('שגיאה', 'משהו השתבש');
     } finally {
       setIsUploading(false);
     }
@@ -72,7 +66,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('אישור נדרש', 'אנא אשר גישה למצלמה');
+        legacyAlert('אישור נדרש', 'אנא אשר גישה למצלמה');
         return;
       }
 
@@ -88,7 +82,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
       setIsUploading(true);
       const { url, error } = await uploadStoryImage(result.assets[0].uri, user.id);
       if (error || !url) {
-        Alert.alert('שגיאה', error || 'לא הצלחנו להעלות את התמונה');
+        legacyAlert('שגיאה', error || 'לא הצלחנו להעלות את התמונה');
         return;
       }
 
@@ -97,7 +91,7 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
       onClose();
     } catch (e) {
       logger.error('AddStoryBottomSheet', 'handleTakePhoto failed', e);
-      Alert.alert('שגיאה', 'משהו השתבש');
+      legacyAlert('שגיאה', 'משהו השתבש');
     } finally {
       setIsUploading(false);
     }
@@ -134,7 +128,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   option: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,

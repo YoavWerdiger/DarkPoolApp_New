@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import UserProfileScreen from '../screens/Profile/UserProfileScreen';
 import EditProfileScreen from '../screens/Profile/EditProfileScreen';
@@ -8,16 +9,28 @@ import SubscriptionScreen from '../screens/Profile/SubscriptionScreen';
 import SubscriptionPlansScreen from '../screens/Profile/SubscriptionPlansScreen';
 import CheckoutScreen from '../screens/Payment/CheckoutScreen';
 import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
-import { withVideoBackground } from '../components/VideoBackground';
+import { ChatSessionBackdrop } from '../components/chat/ChatSessionBackdrop';
 
-const ProfileMainScreen = withVideoBackground(UserProfileScreen);
-const EditProfileWithVideo = withVideoBackground(EditProfileScreen);
-const NotificationsWithVideo = withVideoBackground(NotificationsScreen);
-const SettingsWithVideo = withVideoBackground(SettingsScreen);
-const SubscriptionWithVideo = withVideoBackground(SubscriptionScreen);
-const SubscriptionPlansWithVideo = withVideoBackground(SubscriptionPlansScreen);
-const CheckoutWithVideo = withVideoBackground(CheckoutScreen as any);
-const CreditCardCheckoutWithVideo = withVideoBackground(CreditCardCheckoutScreen as any);
+/** אותו רקע כמו מערכת הצ'אט — גרדיאנט + שור ודוב */
+function withProfileChatShell<P extends object>(ScreenComponent: React.ComponentType<P>): React.FC<P> {
+  return function WrappedScreen(props: P) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+        <ChatSessionBackdrop />
+        <ScreenComponent {...props} />
+      </View>
+    );
+  };
+}
+
+const ProfileMainScreen = withProfileChatShell(UserProfileScreen);
+const EditProfileWithShell = withProfileChatShell(EditProfileScreen);
+const NotificationsWithShell = withProfileChatShell(NotificationsScreen);
+const SettingsWithShell = withProfileChatShell(SettingsScreen);
+const SubscriptionWithShell = withProfileChatShell(SubscriptionScreen);
+const SubscriptionPlansWithShell = withProfileChatShell(SubscriptionPlansScreen);
+const CheckoutWithShell = withProfileChatShell(CheckoutScreen as any);
+const CreditCardCheckoutWithShell = withProfileChatShell(CreditCardCheckoutScreen as any);
 
 const Stack = createNativeStackNavigator();
 
@@ -33,13 +46,13 @@ export default function ProfileStack() {
       }}
     >
       <Stack.Screen name="ProfileMain" component={ProfileMainScreen} />
-      <Stack.Screen name="EditProfile" component={EditProfileWithVideo} />
-      <Stack.Screen name="Notifications" component={NotificationsWithVideo} />
-      <Stack.Screen name="Settings" component={SettingsWithVideo} />
-      <Stack.Screen name="Subscription" component={SubscriptionWithVideo} />
-      <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansWithVideo} />
-      <Stack.Screen name="Checkout" component={CheckoutWithVideo} />
-      <Stack.Screen name="CreditCardCheckout" component={CreditCardCheckoutWithVideo} />
+      <Stack.Screen name="EditProfile" component={EditProfileWithShell} />
+      <Stack.Screen name="Notifications" component={NotificationsWithShell} />
+      <Stack.Screen name="Settings" component={SettingsWithShell} />
+      <Stack.Screen name="Subscription" component={SubscriptionWithShell} />
+      <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansWithShell} />
+      <Stack.Screen name="Checkout" component={CheckoutWithShell} />
+      <Stack.Screen name="CreditCardCheckout" component={CreditCardCheckoutWithShell} />
     </Stack.Navigator>
   );
 }

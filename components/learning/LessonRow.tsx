@@ -61,8 +61,8 @@ export const LessonRow: React.FC<LessonRowProps> = ({
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
       backgroundColor: DesignTokens.colors.background.secondary,
-      borderRadius: DesignTokens.borderRadius.lg,
-      marginBottom: 16,
+      borderRadius: DesignTokens.borderRadius['2xl'],
+      marginBottom: DesignTokens.spacing.lg,
       overflow: 'hidden',
     },
     lockedContainer: {
@@ -70,7 +70,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
     },
     lessonThumbnail: {
       position: 'relative',
-      height: 120,
+      height: 132,
       backgroundColor: '#000000',
       overflow: 'hidden',
     },
@@ -87,12 +87,34 @@ export const LessonRow: React.FC<LessonRowProps> = ({
       color: DesignTokens.colors.text.primary,
       fontSize: 24,
     },
+    lessonNumberOnThumb: {
+      position: 'absolute',
+      top: DesignTokens.spacing.md,
+      left: DesignTokens.spacing.md,
+      zIndex: 2,
+      minWidth: 30,
+      height: 28,
+      paddingHorizontal: DesignTokens.spacing.sm,
+      borderRadius: 14,
+      backgroundColor: DesignTokens.colors.primary.main,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.35)',
+      ...DesignTokens.shadows.xs,
+    },
+    lessonNumberOnThumbText: {
+      color: DesignTokens.colors.text.inverse,
+      fontWeight: '800',
+      fontSize: 14,
+      lineHeight: 17,
+    },
     durationBadge: {
       position: 'absolute',
-      bottom: 8,
-      right: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      bottom: DesignTokens.spacing.md,
+      right: DesignTokens.spacing.md,
+      paddingHorizontal: DesignTokens.spacing.sm,
+      paddingVertical: DesignTokens.spacing.xs,
       borderRadius: DesignTokens.borderRadius.sm,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
@@ -106,10 +128,10 @@ export const LessonRow: React.FC<LessonRowProps> = ({
     },
     completedBadge: {
       position: 'absolute',
-      top: 8,
-      left: 8,
-      borderRadius: 12,
-      padding: 4,
+      top: DesignTokens.spacing.md,
+      right: DesignTokens.spacing.md,
+      borderRadius: DesignTokens.borderRadius.md,
+      padding: DesignTokens.spacing.xs,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.2,
@@ -117,45 +139,34 @@ export const LessonRow: React.FC<LessonRowProps> = ({
       elevation: 2,
     },
     lessonContent: {
-      flex: 1,
-      padding: 16,
+      paddingHorizontal: DesignTokens.spacing.lg,
+      paddingTop: DesignTokens.spacing.lg,
+      paddingBottom: DesignTokens.spacing.lg,
+      width: '100%',
     },
-    lessonCardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 8,
+    lessonCardTextCol: {
+      width: '100%',
+      alignItems: 'stretch',
     },
     lessonCardTitle: {
-      flex: 1,
-      fontSize: 16,
+      fontSize: DesignTokens.typography.titleXs.size,
       fontWeight: '600',
       color: DesignTokens.colors.text.primary,
       textAlign: 'right',
-      letterSpacing: 0.2,
-      marginRight: 12,
+      letterSpacing: 0.15,
+      lineHeight: Math.round(DesignTokens.typography.titleXs.size * 1.35),
+      writingDirection: 'rtl',
     },
     lockedText: {
       color: DesignTokens.colors.text.tertiary,
     },
-    lessonNumber: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: DesignTokens.colors.primary.main,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    lessonNumberText: {
-      color: DesignTokens.colors.background.primary,
-      fontWeight: '600',
-      fontSize: 14,
-    },
     lessonDescription: {
-      fontSize: 14,
-      color: DesignTokens.colors.text.tertiary,
-      lineHeight: 20,
+      marginTop: DesignTokens.spacing.xs,
+      fontSize: DesignTokens.typography.bodySmall.size,
+      color: DesignTokens.colors.text.secondary,
+      lineHeight: Math.round(DesignTokens.typography.bodySmall.size * 1.45),
       textAlign: 'right',
+      writingDirection: 'rtl',
     },
   }), [DesignTokens]);
 
@@ -185,6 +196,9 @@ export const LessonRow: React.FC<LessonRowProps> = ({
             <Text style={styles.thumbnailPlaceholderText}>🎥</Text>
           </View>
         )}
+        <View style={styles.lessonNumberOnThumb} accessibilityLabel={`שיעור ${index + 1}`}>
+          <Text style={styles.lessonNumberOnThumbText}>{index + 1}</Text>
+        </View>
         <View style={[
           styles.durationBadge,
           {
@@ -212,25 +226,19 @@ export const LessonRow: React.FC<LessonRowProps> = ({
       
       {/* Content */}
       <View style={styles.lessonContent}>
-        <View style={styles.lessonCardHeader}>
-          <Text 
-            style={[
-              styles.lessonCardTitle,
-              isLockedForUser && styles.lockedText
-            ]}
+        <View style={styles.lessonCardTextCol}>
+          <Text
+            style={[styles.lessonCardTitle, isLockedForUser && styles.lockedText]}
             numberOfLines={2}
           >
             {lesson.title}
           </Text>
-          <View style={styles.lessonNumber}>
-            <Text style={styles.lessonNumberText}>{index + 1}</Text>
-          </View>
+          {lesson.description ? (
+            <Text style={styles.lessonDescription} numberOfLines={2}>
+              {lesson.description}
+            </Text>
+          ) : null}
         </View>
-        {lesson.description && (
-          <Text style={styles.lessonDescription} numberOfLines={2}>
-            {lesson.description}
-          </Text>
-        )}
       </View>
     </TouchableOpacity>
   );

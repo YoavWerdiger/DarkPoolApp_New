@@ -1,0 +1,127 @@
+import React, { useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import UICard from '../../../components/ui/UICard';
+import { useDesignTokens } from '../../../components/ui/DesignTokens';
+
+export type SectionItem = {
+  id: string;
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+};
+
+type Props = {
+  sections: SectionItem[];
+  activeId: string;
+  onSelect: (id: string) => void;
+  /** לנגישות — ברירת מחדל לשווקים */
+  accessibilityGroupLabel?: string;
+};
+
+function chunkPairs<T>(arr: T[]): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < arr.length; i += 2) {
+    rows.push(arr.slice(i, i + 2));
+  }
+  return rows;
+}
+
+/**
+ * בחירת אזור — רשת עמודות זוגיות (שורה אחת ל־2 פריטים, 2×2 ל־4 וכו'), ממורכזת.
+ */
+export function MarketsSectionGrid({
+  sections,
+  activeId,
+  onSelect,
+  accessibilityGroupLabel = 'שווקים',
+}: Props) {
+  const t = useDesignTokens();
+  const rows = useMemo(() => chunkPairs(sections), [sections]);
+
+  const renderTile = (item: SectionItem) => {
+    const active = activeId === item.id;
+    return (
+      <TouchableOpacity
+        key={item.id}
+        onPress={() => onSelect(item.id)}
+        activeOpacity={0.82}
+        style={styles.tileWrap}
+        accessibilityRole="button"
+        accessibilityState={{ selected: active }}
+        accessibilityLabel={`${accessibilityGroupLabel}: ${item.title}`}
+      >
+        <UICard
+          variant="blur"
+          padding="md"
+          style={[
+            styles.card,
+            {
+              borderWidth: active ? 2 : 1,
+              borderColor: active ? t.colors.primary.main : t.colors.border.primary,
+              backgroundColor: active ? 'rgba(0, 200, 5, 0.08)' : undefined,
+            },
+          ]}
+        >
+          <Ionicons
+            name={item.icon}
+            size={26}
+            color={active ? t.colors.primary.main : t.colors.text.secondary}
+          />
+          <Text
+            style={[
+              styles.label,
+              {
+                color: active ? t.colors.text.primary : t.colors.text.secondary,
+                fontWeight: active
+                  ? (t.typography.fontWeight.semibold as '600')
+                  : (t.typography.fontWeight.medium as '500'),
+              },
+            ]}
+            numberOfLines={2}
+          >
+            {item.title}
+          </Text>
+        </UICard>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={styles.outer}>
+      {rows.map((row, idx) => (
+        <View key={idx} style={styles.row}>
+          {row.map(renderTile)}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  outer: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    gap: 10,
+  },
+  row: {
+    flexDirection: 'row-reverse',
+    gap: 10,
+  },
+  tileWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  card: {
+    minHeight: 92,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 18,
+  },
+  label: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+});

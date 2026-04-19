@@ -48,7 +48,7 @@ const OnboardingNavigator = ({ route }: OnboardingNavigatorProps) => {
       <Stack.Screen name="RegistrationIntro" component={RegistrationIntroScreen} />
       <Stack.Screen name="RegistrationTrack" component={RegistrationTrackScreen} />
       {/* RegistrationPayment removed - going directly to Cardcom */}
-      <Stack.Screen name="CreditCardCheckout" component={CreditCardCheckoutScreen} />
+      <Stack.Screen name="CreditCardCheckout" component={CreditCardCheckoutScreen as any} />
       <Stack.Screen name="RegistrationSummary" component={RegistrationSummaryScreen} />
     </Stack.Navigator>
   );

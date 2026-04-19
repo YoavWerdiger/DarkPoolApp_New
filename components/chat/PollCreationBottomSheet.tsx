@@ -1,16 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Trash2 } from 'lucide-react-native';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
@@ -63,7 +53,7 @@ export default function PollCreationBottomSheet({
 
   const handleClose = () => {
     if (question.trim() || options.some((opt) => opt.trim())) {
-      Alert.alert('ביטול יצירת סקר', 'האם אתה בטוח שברצונך לבטל? כל הנתונים יימחקו.', [
+      legacyAlert('ביטול יצירת סקר', 'האם אתה בטוח שברצונך לבטל? כל הנתונים יימחקו.', [
         { text: 'המשך עריכה', style: 'cancel' },
         {
           text: 'בטל',
@@ -99,22 +89,22 @@ export default function PollCreationBottomSheet({
 
   const validateForm = (): boolean => {
     if (!trimmedQuestion) {
-      Alert.alert('שגיאה', 'יש להזין שאלה לסקר');
+      legacyAlert('שגיאה', 'יש להזין שאלה לסקר');
       return false;
     }
 
     if (!hasEnoughOptions) {
-      Alert.alert('שגיאה', `יש צורך לפחות ב-${MIN_OPTIONS} אפשרויות`);
+      legacyAlert('שגיאה', `יש צורך לפחות ב-${MIN_OPTIONS} אפשרויות`);
       return false;
     }
 
     if (hasEmptyOption) {
-      Alert.alert('שגיאה', 'יש למלא את כל האפשרויות');
+      legacyAlert('שגיאה', 'יש למלא את כל האפשרויות');
       return false;
     }
 
     if (hasDuplicateOptions) {
-      Alert.alert('שגיאה', 'יש אפשרויות כפולות. אנא שנה כדי שכל האפשרויות יהיו שונות.');
+      legacyAlert('שגיאה', 'יש אפשרויות כפולות. אנא שנה כדי שכל האפשרויות יהיו שונות.');
       return false;
     }
 
@@ -126,7 +116,7 @@ export default function PollCreationBottomSheet({
     if (!validateForm()) return;
 
     if (!user?.id) {
-      Alert.alert('שגיאה', 'לא ניתן ליצור סקר - משתמש לא מזוהה');
+      legacyAlert('שגיאה', 'לא ניתן ליצור סקר - משתמש לא מזוהה');
       return;
     }
 
@@ -145,10 +135,10 @@ export default function PollCreationBottomSheet({
         resetForm();
         onClose();
       } else {
-        Alert.alert('שגיאה', 'לא ניתן ליצור את הסקר, נסה שוב');
+        legacyAlert('שגיאה', 'לא ניתן ליצור את הסקר, נסה שוב');
       }
     } catch (error: any) {
-      Alert.alert('שגיאה', error?.message || 'לא ניתן ליצור את הסקר');
+      legacyAlert('שגיאה', error?.message || 'לא ניתן ליצור את הסקר');
     } finally {
       setIsCreating(false);
     }
@@ -352,7 +342,7 @@ const createStyles = (tokens: any) => {
     },
 
     header: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: tokens.spacing.md,
       paddingVertical: tokens.spacing.sm,
@@ -402,8 +392,10 @@ const createStyles = (tokens: any) => {
 
     scroll: {
       flex: 1,
+      backgroundColor: 'transparent',
     },
     scrollContent: {
+      flexGrow: 1,
       paddingHorizontal: tokens.spacing.md,
       paddingVertical: tokens.spacing.md,
       paddingBottom: tokens.spacing.xl,
@@ -418,7 +410,7 @@ const createStyles = (tokens: any) => {
       padding: tokens.spacing.md,
     },
     cardHeaderRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: tokens.spacing.sm,
@@ -451,7 +443,7 @@ const createStyles = (tokens: any) => {
       gap: 10,
     },
     optionRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
     },
@@ -493,7 +485,7 @@ const createStyles = (tokens: any) => {
     },
 
     addOptionRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
       borderWidth: 1,
@@ -534,7 +526,7 @@ const createStyles = (tokens: any) => {
     },
 
     segmented: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       borderWidth: 1,
       borderColor: borderColor,
       borderRadius: 14,
@@ -594,7 +586,7 @@ const createStyles = (tokens: any) => {
       color: tokens.colors.text.secondary,
     },
     primaryButtonContent: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
     },

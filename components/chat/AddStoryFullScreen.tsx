@@ -1,24 +1,7 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  Image,
-  Dimensions,
-  StatusBar,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  FlatList,
-  Animated,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -645,7 +628,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     if (!user?.id) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('אישור נדרש', 'אנא אשר גישה לגלריה');
+      legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -744,7 +727,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       logger.debug('AddStoryFullScreen', `Upload result: url=${url}, error=${error}`);
 
       if (error || !url) {
-        Alert.alert('שגיאה', error || 'לא הצלחנו להעלות');
+        legacyAlert('שגיאה', error || 'לא הצלחנו להעלות');
         setPhase('preview');
         return;
       }
@@ -760,7 +743,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       onClose();
     } catch (e: any) {
       logger.error('AddStoryFullScreen', 'Share failed', e);
-      Alert.alert('שגיאה', e?.message || 'משהו השתבש');
+      legacyAlert('שגיאה', e?.message || 'משהו השתבש');
       setPhase('preview');
     } finally {
       setIsUploading(false);
@@ -781,7 +764,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       onAdded();
       onClose();
     } catch (e: any) {
-      Alert.alert('שגיאה', e?.message || 'משהו השתבש');
+      legacyAlert('שגיאה', e?.message || 'משהו השתבש');
       setMode('text');
       setPhase('capture');
     } finally {

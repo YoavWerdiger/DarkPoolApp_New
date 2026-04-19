@@ -14,7 +14,7 @@ export default function ReactionBar({ onReaction, currentReaction }: ReactionBar
   
   const styles = useMemo(() => StyleSheet.create({
     row: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       backgroundColor: DesignTokens.colors.background.elevated,
       paddingHorizontal: DesignTokens.spacing.md,
       paddingVertical: DesignTokens.spacing.sm,

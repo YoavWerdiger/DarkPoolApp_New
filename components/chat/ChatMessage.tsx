@@ -4,8 +4,18 @@
 // הצגת הודעה בודדת בצ'אט
 // ============================================
 
-import React, { useMemo, useState, useRef, useEffect, memo } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Animated, Easing, Linking, Alert } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
+import React, { useMemo, useState, useRef, useEffect, useCallback, memo } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Animated, Easing, Linking, Platform } from 'react-native';
+import { Gesture, GestureDetector, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
+import Reanimated, {
+  Easing as ReanimatedEasing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { format } from 'date-fns';
@@ -42,7 +52,6 @@ interface ChatMessageProps {
   onJumpToMessage?: (messageId: string) => void;
   isHighlighted?: boolean;
 }
-
 
 // פונקציה לרנדור טקסט עם תיוגים (@mentions)
 const renderTextWithMentions = (
@@ -146,6 +155,12 @@ const getUserColor = (userId: string) => {
 
   return colors[Math.abs(hash) % colors.length];
 };
+
+/** החלקה לריפליי (וואטסאפ): me = שמאלה, other = ימינה */
+const REPLY_SWIPE_MAX = 72;
+const REPLY_SWIPE_THRESHOLD = 44;
+/** חזרה רכה אחרי שחרור — ease-out ארוך במקום spring קשיח */
+const REPLY_SWIPE_RESET_MS = 360;
 
 function ChatMessage({
   message,
@@ -273,6 +288,55 @@ function ChatMessage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const swipeTranslateX = useSharedValue(0);
+
+  const triggerReplySwipe = useCallback(() => {
+    if (!onReply) return;
+    onReply();
+    if (Platform.OS !== 'web') {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {
+        /* noop */
+      }
+    }
+  }, [onReply]);
+
+  const replyPanGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(!!onReply)
+        .failOffsetY([-14, 14])
+        .activeOffsetX([-16, 16])
+        .onUpdate((e) => {
+          'worklet';
+          const tx = e.translationX;
+          if (isMe) {
+            swipeTranslateX.value = tx > 0 ? 0 : Math.max(-REPLY_SWIPE_MAX, tx);
+          } else {
+            swipeTranslateX.value = tx < 0 ? 0 : Math.min(REPLY_SWIPE_MAX, tx);
+          }
+        })
+        .onEnd(() => {
+          'worklet';
+          const v = swipeTranslateX.value;
+          const crossed = isMe
+            ? v <= -REPLY_SWIPE_THRESHOLD
+            : v >= REPLY_SWIPE_THRESHOLD;
+          if (crossed) {
+            runOnJS(triggerReplySwipe)();
+          }
+          swipeTranslateX.value = withTiming(0, {
+            duration: REPLY_SWIPE_RESET_MS,
+            easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
+          });
+        }),
+    [isMe, onReply, triggerReplySwipe]
+  );
+
+  const swipeReplyAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: swipeTranslateX.value }],
+  }));
 
   // פתיחת מסמך
   const openDocument = async () => {
@@ -282,7 +346,7 @@ function ChatMessage({
         ? (await getChatMediaDisplayUri(message.media_url)) || message.media_url
         : null);
     if (!docUri) {
-      Alert.alert('שגיאה', 'לא נמצא קישור למסמך');
+      legacyAlert('שגיאה', 'לא נמצא קישור למסמך');
       return;
     }
 
@@ -295,7 +359,7 @@ function ChatMessage({
       }
     } catch (error) {
       logger.error('ChatMessage', 'Document open error', error);
-      Alert.alert('שגיאה', 'לא ניתן לפתוח את המסמך');
+      legacyAlert('שגיאה', 'לא ניתן לפתוח את המסמך');
     }
   };
 
@@ -306,7 +370,6 @@ function ChatMessage({
     }
     return DesignTokens.colors.text.secondary;
   }, [message.sender_id, DesignTokens]);
-
 
   // הודעת מערכת
   if (message.is_system_message) {
@@ -349,7 +412,7 @@ function ChatMessage({
       { opacity: effectiveOpacity, transform: [{ translateY: effectiveTranslateY }] },
     ]}>
       {/* Avatar */}
-      {!isMe && showAvatar && (
+      {!isMe && (showAvatar ? (
         <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
           {message.sender?.profile_picture ? (
             <Image source={{ uri: message.sender.profile_picture }} style={styles.avatar} />
@@ -361,22 +424,30 @@ function ChatMessage({
             </View>
           )}
         </TouchableOpacity>
-      )}
+      ) : (
+        <View style={styles.avatarSpacer} />
+      ))}
 
-      {/* Message Content */}
-      <View style={[
-        styles.messageContent,
-        isMe && styles.messageContentMe,
-        message.message_type === MessageType.AUDIO && styles.audioMessageContent
-      ]}>
-        {/* Bubble */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={onPress}
-          onLongPress={onLongPress}
-          accessibilityRole="button"
-          accessibilityLabel={`${isMe ? 'Your message' : (message.sender?.display_name || 'Message')}: ${message.content || message.message_type}`}
-          accessibilityHint="Long press for message options"
+      {/* Message Content — החלקה אופקית לריפליי; View נייטיבי עוטף לפי דרישת RNGH (מניעת NativeViewGestureHandler error) */}
+      <GestureDetector gesture={replyPanGesture}>
+        <View
+          collapsable={false}
+          style={[
+            styles.gestureSwipeWrapper,
+            isMe ? styles.gestureSwipeWrapperMe : styles.gestureSwipeWrapperThem,
+            message.message_type === MessageType.AUDIO && styles.gestureSwipeWrapperAudio,
+          ]}
+        >
+        <Reanimated.View
+          style={[
+            styles.messageContent,
+            isMe && styles.messageContentMe,
+            message.message_type === MessageType.AUDIO && styles.audioMessageContent,
+            swipeReplyAnimatedStyle,
+          ]}
+        >
+        {/* Bubble — ריפליי וגוף ההודעה מופרדים: מקונן Touchable רגיל חוסם לחיצה על הריפליי + RNGH משתלב עם Pan */}
+        <View
           style={[
             styles.bubble,
             isMe ? styles.myBubble : styles.theirBubble,
@@ -384,24 +455,16 @@ function ChatMessage({
             message.reply_to && { minWidth: 200 },
           ]}
         >
-          {/* Sender Name - בתוך הבועה – צבע ייחודי לכל משתמש */}
-          {!isMe && showSenderName && (
-            <Text style={[styles.senderNameInside, { color: senderColor }]}>
-              {message.sender?.display_name || 'משתמש'}
-            </Text>
-          )}
-
-          {/* Reply To - בועה קטנה בתוך הבועה הגדולה */}
           {message.reply_to && (
-            <TouchableOpacity
+            <GHTouchableOpacity
               key={`reply-${message.id}-${message.reply_to.message_id}`}
               style={[styles.replyContainer, isMe ? styles.replyContainerMe : styles.replyContainerThem]}
               onPress={() => {
-                // גלול להודעה המקורית
                 if (message.reply_to?.message_id && onJumpToMessage) {
                   onJumpToMessage(message.reply_to.message_id);
                 }
               }}
+              onLongPress={onLongPress}
               activeOpacity={0.7}
             >
               <View key={`reply-bar-${message.id}`} style={styles.replyBar} />
@@ -410,10 +473,26 @@ function ChatMessage({
                   {String(message.reply_to.sender_name || 'משתמש')}
                 </Text>
                 <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: 'right' }]} numberOfLines={1}>
-                  {String(message.reply_to.content || getMediaTypeText(message.reply_to.message_type))}
+                  {getReplyPreviewText(message.reply_to)}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </GHTouchableOpacity>
+          )}
+
+          <GHTouchableOpacity
+            activeOpacity={0.7}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            accessibilityRole="button"
+            accessibilityLabel={`${isMe ? 'Your message' : (message.sender?.display_name || 'Message')}: ${message.content || message.message_type}`}
+            accessibilityHint="לחיצה ארוכה לתפריט; החלקה אופקית לתשובה"
+            style={message.reply_to ? styles.bubbleBodyTouchable : undefined}
+          >
+          {/* Sender Name - בתוך הבועה – צבע ייחודי לכל משתמש */}
+          {!isMe && showSenderName && (
+            <Text style={[styles.senderNameInside, { color: senderColor }]}>
+              {message.sender?.display_name || 'משתמש'}
+            </Text>
           )}
 
           {/* Forwarded Tag */}
@@ -424,7 +503,13 @@ function ChatMessage({
           )}
 
           {/* Media Content */}
-          {renderMediaContent(message, resolvedMedia, styles, isMe, DesignTokens, () => {
+          {renderMediaContent(
+            message,
+            resolvedMedia,
+            styles,
+            isMe,
+            DesignTokens,
+            () => {
             // Only open viewer for uploaded media, not during upload
             if ((message.media_url || message.local_media_uri) && !message.is_uploading) {
               if (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) {
@@ -433,7 +518,11 @@ function ChatMessage({
                 openDocument();
               }
             }
-          })}
+          },
+            message.message_type === MessageType.AUDIO
+              ? { sentTimeText: timeText, isEdited: !!message.is_edited, isSending }
+              : undefined,
+          )}
 
           {/* Text Content */}
           {message.content && (() => {
@@ -462,7 +551,8 @@ function ChatMessage({
             );
           })()}
 
-          {/* Metadata */}
+          {/* Metadata — לאודיו: זמן שליחה בשורה אחת עם מיקום/אורך בתוך AudioPlayer */}
+          {(message.send_error || message.message_type !== MessageType.AUDIO) && (
           <View style={styles.metadata}>
             {message.send_error ? (
               <Text style={styles.sendErrorText}>⚠ שגיאה · לחץ לחיצה ארוכה לנסות שוב</Text>
@@ -478,11 +568,13 @@ function ChatMessage({
               </View>
             )}
           </View>
-        </TouchableOpacity>
+          )}
+          </GHTouchableOpacity>
+        </View>
 
         {/* Reactions - חופפות על הבועה, עד 3 ואז +X */}
         {message.reactions && message.reactions.length > 0 && (
-          <TouchableOpacity
+          <GHTouchableOpacity
             style={[styles.reactionsContainer, { alignSelf: isMe ? 'flex-end' : 'flex-start' }]}
             onPress={() => onReactionDetailsPress?.(message)}
             activeOpacity={0.7}
@@ -503,9 +595,11 @@ function ChatMessage({
                 <Text style={styles.reactionMore}>+{message.reactions.length - 3}</Text>
               )}
             </View>
-          </TouchableOpacity>
+          </GHTouchableOpacity>
         )}
-      </View>
+        </Reanimated.View>
+        </View>
+      </GestureDetector>
 
       {/* Spacer for avatar on my messages */}
       {/* Media Viewer */}
@@ -528,13 +622,16 @@ function ChatMessage({
 // Helper Functions
 // ============================================
 
+type AudioBubbleMeta = { sentTimeText: string; isEdited: boolean; isSending: boolean };
+
 function renderMediaContent(
   message: ChatMessageType,
   resolved: ResolvedMessageMedia,
   styles: any,
   isMe: boolean,
   tokens: ReturnType<typeof useDesignTokens>,
-  onMediaPress?: () => void
+  onMediaPress?: () => void,
+  audioMeta?: AudioBubbleMeta
 ) {
   const imageUri =
     message.local_media_uri || resolved.main || message.media_url;
@@ -628,6 +725,9 @@ function renderMediaContent(
           styles={styles}
           message={message}
           tokens={tokens}
+          sentTimeText={audioMeta?.sentTimeText ?? ''}
+          isEdited={audioMeta?.isEdited ?? false}
+          isSending={isMe && (audioMeta?.isSending ?? false)}
         />
       );
     }
@@ -715,6 +815,32 @@ function getMediaTypeText(type?: MessageType | string | null): string {
     default:
       return 'מדיה';
   }
+}
+
+/** תצוגת ריפליי — לא מציגים JSON של waveform מתוך תוכן אודיו */
+function getReplyPreviewText(reply: {
+  content?: string | null;
+  message_type?: MessageType | string | null;
+}): string {
+  const type = reply.message_type as MessageType | undefined;
+  if (type === MessageType.AUDIO) {
+    return getMediaTypeText(MessageType.AUDIO);
+  }
+  const raw = reply.content?.trim();
+  if (raw) {
+    if (raw.startsWith('{')) {
+      try {
+        const p = JSON.parse(raw) as Record<string, unknown>;
+        if (p.waveform != null || p.waveformData != null || typeof p.duration === 'number') {
+          return getMediaTypeText(MessageType.AUDIO);
+        }
+      } catch {
+        /* לא JSON תקין */
+      }
+    }
+    return raw;
+  }
+  return getMediaTypeText(type);
 }
 
 function formatDuration(seconds: number): string {
@@ -834,9 +960,22 @@ interface AudioPlayerProps {
   styles: any;
   message: ChatMessageType;
   tokens: ReturnType<typeof useDesignTokens>;
+  sentTimeText: string;
+  isEdited: boolean;
+  isSending: boolean;
 }
 
-function AudioPlayer({ audioUrl, duration, isMe, styles, message, tokens }: AudioPlayerProps) {
+function AudioPlayer({
+  audioUrl,
+  duration,
+  isMe,
+  styles,
+  message,
+  tokens,
+  sentTimeText,
+  isEdited,
+  isSending,
+}: AudioPlayerProps) {
   const soundRef = useRef<Audio.Sound | null>(null);
   /** URI אחרי ניסיון חידוש חתימה (מפחית 400 כשהטוקן בקאש פג) */
   const currentUriRef = useRef(audioUrl);
@@ -1096,82 +1235,105 @@ function AudioPlayer({ audioUrl, duration, isMe, styles, message, tokens }: Audi
   }, [audioUrl, message]);
 
   return (
-    <View style={[styles.mediaAudio, isMe && styles.mediaAudioMe]}>
-      {/* Play/Pause Button */}
-      <TouchableOpacity
-        onPress={togglePlayPause}
-        activeOpacity={0.7}
-        style={styles.audioPlayButton}
-      >
-        <Image
-          source={isPlaying
-            ? require('../../assets/icons/ico-24-pause.png')
-            : require('../../assets/icons/ico-24-play.png')
-          }
-          style={styles.audioPlayIcon}
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
-
-      {/* Total Duration - האורך הכולל קודם */}
-      <Text style={[styles.audioTimeTotal, isMe ? styles.myAudioTime : styles.theirAudioTime]}>
-        {formatDuration(displayDuration)}
-      </Text>
-
-      {/* Waveform Container with Progress Indicator */}
-      <View style={styles.audioWaveformWrapper}>
-        <View style={styles.audioWaveformContainer}>
-          <View
-            ref={waveformContainerRef}
-            style={styles.audioWaveformBars}
-          >
-            {waveformData.map((value: number, index: number) => {
-              const barHeight = Math.max(4, value * 18); // bars יותר גדולים
-              const audioUrlHash = audioUrl ? audioUrl.substring(audioUrl.length - 10) : 'no-url';
-              const uniqueKey = `${audioUrlHash}-waveform-${index}-${value.toFixed(4)}`;
-
-              return (
-                <View
-                  key={uniqueKey}
-                  style={[
-                    styles.audioWaveformBar,
-                    {
-                      height: barHeight,
-                      backgroundColor: isMe ? tokens.colors.text.primary : tokens.colors.text.secondary,
-                      opacity: isMe ? 0.85 : 0.75,
-                    }
-                  ]}
-                />
-              );
-            })}
-          </View>
-
-          {/* Progress Indicator (Blue Dot) - רק זה זז */}
-          <View
-            style={[
-              styles.audioProgressIndicator,
-              {
-                right: `${100 - progress}%`,
-                backgroundColor: tokens.colors.accent.main,
-              }
-            ]}
+    <View style={styles.mediaAudio}>
+      {/* שורה אחת: פליי + waves + מהירות — alignItems:center לגובה הגלים בלבד */}
+      <View style={styles.mediaAudioControlsRow}>
+        <TouchableOpacity
+          onPress={togglePlayPause}
+          activeOpacity={0.7}
+          style={styles.audioPlayButton}
+        >
+          <Image
+            source={isPlaying
+              ? require('../../assets/icons/ico-24-pause.png')
+              : require('../../assets/icons/ico-24-play.png')
+            }
+            style={styles.audioPlayIcon}
+            resizeMode="contain"
           />
+        </TouchableOpacity>
+
+        <View style={styles.audioWaveformFlex}>
+          <View style={styles.audioWaveformWrapper}>
+            <View style={styles.audioWaveformContainer}>
+              <View style={styles.audioWaveformClip}>
+                <View
+                  ref={waveformContainerRef}
+                  style={styles.audioWaveformBars}
+                >
+                  {waveformData.map((value: number, index: number) => {
+                    const barHeight = Math.max(3, value * 16);
+                    const audioUrlHash = audioUrl ? audioUrl.substring(audioUrl.length - 10) : 'no-url';
+                    const uniqueKey = `${audioUrlHash}-waveform-${index}-${value.toFixed(4)}`;
+                    const barColor = isMe
+                      ? 'rgba(255,255,255,0.88)'
+                      : 'rgba(255,255,255,0.55)';
+
+                    return (
+                      <View
+                        key={uniqueKey}
+                        style={[
+                          styles.audioWaveformBar,
+                          {
+                            height: barHeight,
+                            backgroundColor: barColor,
+                          }
+                        ]}
+                      />
+                    );
+                  })}
+                </View>
+              </View>
+              <View
+                style={[
+                  styles.audioProgressIndicator,
+                  {
+                    left: `${Math.min(96, Math.max(4, progress))}%`,
+                    backgroundColor: tokens.colors.accent.main,
+                  }
+                ]}
+              />
+            </View>
+          </View>
         </View>
+
+        <TouchableOpacity
+          onPress={togglePlaybackRate}
+          style={styles.audioSpeedButton}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.audioSpeedText}>{playbackRate.toFixed(1)}x</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Current Time - הזמן הנוכחי אחרי ה-waveform */}
-      <Text style={[styles.audioTimeCurrent, isMe ? styles.myAudioTime : styles.theirAudioTime]}>
-        {formatDuration(position)}
-      </Text>
-
-      {/* Speed Button */}
-      <TouchableOpacity
-        onPress={togglePlaybackRate}
-        style={styles.audioSpeedButton}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.audioSpeedText}>{playbackRate.toFixed(1)}x</Text>
-      </TouchableOpacity>
+      <View style={styles.audioMetadataMerged}>
+        <View style={styles.audioMetadataLeft}>
+          {isEdited && (
+            <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>
+              נערך ·{' '}
+            </Text>
+          )}
+          <Text
+            style={[
+              styles.timeText,
+              isMe ? styles.myTimeText : styles.theirTimeText,
+              styles.audioPlaybackTimeText,
+            ]}
+          >
+            {formatDuration(position)} / {formatDuration(displayDuration)}
+          </Text>
+        </View>
+        <View style={styles.audioMetadataRight}>
+          {isSending && (
+            <ActivityIndicator size={10} color={tokens.colors.text.tertiary} style={styles.statusIcon} />
+          )}
+          {!!sentTimeText && (
+            <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.audioSentTimeText]}>
+              {sentTimeText}
+            </Text>
+          )}
+        </View>
+      </View>
     </View>
   );
 }
@@ -1204,7 +1366,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות, בלי padding כפול מהרשימה */
   messageContainer: {
     flexDirection: 'row',
-    marginVertical: 3,
+    marginVertical: 2,
     paddingHorizontal: 0,
     alignItems: 'flex-end',
   },
@@ -1224,10 +1386,16 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginRight: 6,
     marginBottom: 2,
   },
+  avatarSpacer: {
+    width: 26,
+    height: 26,
+    marginRight: 6,
+    marginBottom: 2,
+  },
   avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   avatarPlaceholder: {
     backgroundColor: tokens.colors.border.primary,
@@ -1240,15 +1408,34 @@ const createStyles = (tokens: any) => StyleSheet.create({
     fontWeight: tokens.typography.fontWeight.semibold,
   },
 
+  /** עוטף GestureDetector — View נייטיבי; יישור כמו messageContent */
+  gestureSwipeWrapper: {
+    maxWidth: '80%',
+    minWidth: 0,
+  },
+  gestureSwipeWrapperMe: {
+    alignSelf: 'flex-end',
+  },
+  gestureSwipeWrapperThem: {
+    alignSelf: 'flex-start',
+  },
+  /** אודיו: קצת מעל רוחב בועה רגילה, בלי למלא כמעט את המסך */
+  gestureSwipeWrapperAudio: {
+    maxWidth: '78%',
+    minWidth: 210,
+  },
   messageContent: {
-    maxWidth: '82%',
+    maxWidth: '100%',
     alignItems: 'flex-start',
   },
   messageContentMe: {
     alignItems: 'flex-end',
   },
   audioMessageContent: {
-    maxWidth: '90%', // בועת אודיו צריכה יותר מקום לכל הרכיבים
+    minWidth: 200,
+    maxWidth: 280,
+    width: '100%',
+    alignSelf: 'stretch',
   },
 
   senderNameInside: {
@@ -1304,28 +1491,32 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
 
   bubble: {
-    borderRadius: tokens.borderRadius.lg,
-    paddingVertical: 8,
+    borderRadius: 16,
+    paddingVertical: 6,
     paddingHorizontal: 10,
     maxWidth: '100%',
+  },
+  /** כשיש ריפליי — גוף ההודעה מתחת לרצועת הריפליי */
+  bubbleBodyTouchable: {
+    alignSelf: 'stretch',
   },
   mediaBubble: {
     paddingVertical: tokens.spacing.xs,
     paddingHorizontal: tokens.spacing.xs,
   },
   myBubble: {
-    backgroundColor: tokens.colors.bubbleMe,
+    backgroundColor: 'rgba(0, 200, 5, 0.24)',
     borderBottomRightRadius: 4,
-    borderTopLeftRadius: tokens.borderRadius.lg,
-    borderTopRightRadius: tokens.borderRadius.lg,
-    borderBottomLeftRadius: tokens.borderRadius.lg,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   theirBubble: {
-    backgroundColor: tokens.colors.bubbleOther,
+    backgroundColor: 'rgba(255, 255, 255, 0.09)',
     borderBottomLeftRadius: 4,
-    borderTopLeftRadius: tokens.borderRadius.lg,
-    borderTopRightRadius: tokens.borderRadius.lg,
-    borderBottomRightRadius: tokens.borderRadius.lg,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
   },
   deletedBubble: {
     opacity: 0.6,
@@ -1424,61 +1615,104 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
 
   mediaAudio: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 3,
-    paddingVertical: 6,
-    paddingHorizontal: 6,
-    borderRadius: 0,
-    alignSelf: 'flex-start',
+    flexDirection: 'column',
+    direction: 'ltr',
+    alignSelf: 'stretch',
     width: '100%',
-    maxWidth: '98%',
+    maxWidth: 280,
+    minWidth: 200,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+    gap: 0,
     backgroundColor: 'transparent',
   },
-  mediaAudioMe: {
-    alignSelf: 'flex-end', // מיושר לימין עבור הודעות שלי
+  audioMetadataMerged: {
+    width: '100%',
+    flexDirection: 'row',
+    direction: 'ltr',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
+  },
+  audioMetadataLeft: {
+    flexDirection: 'row',
+    direction: 'ltr',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 3,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  audioMetadataRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    flexShrink: 0,
+    marginLeft: 8,
+  },
+  audioPlaybackTimeText: {
+    textAlign: 'left',
+    writingDirection: 'ltr',
+  },
+  audioSentTimeText: {
+    textAlign: 'right',
+  },
+  mediaAudioControlsRow: {
+    flexDirection: 'row',
+    direction: 'ltr',
+    alignItems: 'center',
+    width: '100%',
+    minHeight: 28,
+    gap: 6,
+  },
+  audioWaveformFlex: {
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 88,
+    maxWidth: 158,
+    justifyContent: 'center',
   },
   audioPlayButton: {
-    width: 32, // הגדלתי מ-28 ל-32
-    height: 32, // הגדלתי מ-28 ל-32
-    borderRadius: tokens.borderRadius.md,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
   },
   audioPlayIcon: {
-    width: 24, // הגדלתי מ-20 ל-24
-    height: 24, // הגדלתי מ-20 ל-24
+    width: 20,
+    height: 20,
     tintColor: tokens.colors.text.primary,
     opacity: 0.9,
   },
-  audioTimeCurrent: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.medium,
-    width: 30, // רוחב קבוע
-    textAlign: 'right',
-    flexShrink: 0,
-  },
   audioWaveformWrapper: {
-    width: 110, // רוחב קבוע ל-waveform - כל ההקלטות יהיו באותו אורך
-    height: 28,
-    flexShrink: 0, // לא להתכווץ
-    paddingHorizontal: 5, // הוספתי padding משני הצדדים כדי שהנקודה לא תיחתך
+    width: '100%',
+    height: 26,
+    flexShrink: 0,
   },
   audioWaveformContainer: {
     position: 'relative',
     width: '100%',
     height: '100%',
     justifyContent: 'center',
-    overflow: 'visible', // שיניתי ל-visible כדי שהנקודה לא תיחתך
+  },
+  audioWaveformClip: {
+    width: '100%',
+    height: '100%',
+    overflow: 'hidden',
+    borderRadius: 4,
+    justifyContent: 'center',
   },
   audioWaveformBars: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
+    justifyContent: 'space-between',
     height: '100%',
+    width: '100%',
+    paddingHorizontal: 4,
   },
   audioWaveformBar: {
     width: 3.5, // קצת יותר רחב
@@ -1489,24 +1723,18 @@ const createStyles = (tokens: any) => StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: -5, // מיקום מדויק כדי שהנקודה תהיה במרכז ה-bar
+    marginLeft: -5,
     top: '50%',
     marginTop: -5,
-    zIndex: 10,
-  },
-  audioTimeTotal: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.medium,
-    width: 30, // רוחב קבוע
-    textAlign: 'right',
-    flexShrink: 0,
+    zIndex: 2,
+    pointerEvents: 'none',
   },
   audioSpeedButton: {
     backgroundColor: tokens.colors.border.hover,
-    borderRadius: tokens.borderRadius.xs,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    width: 40, // רוחב קבוע
+    borderRadius: tokens.borderRadius.full,
+    paddingHorizontal: 7,
+    height: 28,
+    minWidth: 42,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1569,8 +1797,8 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
 
   messageText: {
-    fontSize: tokens.typography.body.size,
-    lineHeight: Math.round(tokens.typography.body.size * tokens.typography.lineHeight.normal),
+    fontSize: tokens.typography.body.size - 1,
+    lineHeight: Math.round((tokens.typography.body.size - 1) * tokens.typography.lineHeight.normal),
     marginTop: 0,
     marginBottom: 0,
     color: tokens.colors.text.primary,
@@ -1581,7 +1809,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   // Both sent and received have white text
   myMessageText: {
-    color: tokens.colors.text.inverse,
+    color: tokens.colors.text.primary,
   },
   theirMessageText: {
     color: tokens.colors.text.primary,
@@ -1608,8 +1836,8 @@ const createStyles = (tokens: any) => StyleSheet.create({
     opacity: 0.8,
   },
   myTimeText: {
-    color: tokens.colors.text.inverse,
-    opacity: 0.85,
+    color: tokens.colors.text.tertiary,
+    opacity: 1,
   },
   theirTimeText: {
     color: tokens.colors.text.tertiary,

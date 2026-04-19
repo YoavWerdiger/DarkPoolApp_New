@@ -1,15 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, StyleSheet, TextInput } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
+import React, { useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, TextInput } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
-import AddTradeModal from './AddTradeModal';
 import ShareTradeModal from './ShareTradeModal';
 import ExportTradeImage from '../../components/Journal/ExportTradeImage';
-import StatisticsCarousel, { StatisticItem } from '../../components/Journal/StatisticsCarousel';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
+
+function TradeSymbolLogo({
+  symbol,
+  size,
+  fallbackColor,
+  backgroundColor,
+}: {
+  symbol: string;
+  size: number;
+  fallbackColor: string;
+  backgroundColor: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const uri = !failed ? brandfetchTickerLogoUri(symbol) : null;
+  const initials = symbol.trim().slice(0, 4).toUpperCase() || '—';
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor,
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {uri ? (
+        <Image
+          source={{ uri }}
+          style={{ width: size, height: size }}
+          contentFit="cover"
+          transition={160}
+          cachePolicy="memory-disk"
+          recyclingKey={symbol}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Text
+          style={{
+            fontSize: Math.max(11, size * 0.26),
+            fontWeight: '700',
+            color: fallbackColor,
+          }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          {initials}
+        </Text>
+      )}
+    </View>
+  );
+}
 
 export interface Trade {
   id: string;
@@ -35,22 +92,18 @@ export default function TradesListTab() {
   const mainTabsHeight = useMainTabsHeight();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDirection, setFilterDirection] = useState<'all' | 'long' | 'short'>('all');
   const [filterPnl, setFilterPnl] = useState<'all' | 'profit' | 'loss'>('all');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const styles = React.useMemo(() => createStyles(DesignTokens, mainTabsHeight), [DesignTokens, mainTabsHeight]);
 
-  useEffect(() => {
-    if (user) {
-      loadTrades();
-    }
-  }, [user]);
+  const filtersActive = filterDirection !== 'all' || filterPnl !== 'all';
 
-  const loadTrades = async () => {
+  const loadTrades = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -64,14 +117,20 @@ export default function TradesListTab() {
       if (error) throw error;
       setTrades(data || []);
     } catch (error: any) {
-      Alert.alert('שגיאה', 'לא ניתן לטעון את הטריידים');
+      legacyAlert('שגיאה', 'לא ניתן לטעון את הטריידים');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadTrades();
+    }, [loadTrades])
+  );
 
   const handleDeleteTrade = async (tradeId: string) => {
-    Alert.alert(
+    legacyAlert(
       'מחיקת טרייד',
       'האם אתה בטוח שברצונך למחוק את הטרייד הזה?',
       [
@@ -90,7 +149,7 @@ export default function TradesListTab() {
               if (error) throw error;
               loadTrades();
             } catch (error: any) {
-              Alert.alert('שגיאה', 'לא ניתן למחוק את הטרייד');
+              legacyAlert('שגיאה', 'לא ניתן למחוק את הטרייד');
             }
           },
         },
@@ -150,14 +209,24 @@ export default function TradesListTab() {
     const returnPercentage = calculateReturnPercentage();
 
     return (
-      <UICard variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.md }}>
+      <UICard variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.sm }}>
         <View style={styles.tradeHeader}>
-          <View style={styles.tradeSymbolContainer}>
-            <Text style={styles.tradeSymbol}>{item.symbol}</Text>
-            <View style={[styles.directionBadge, { backgroundColor: `${directionColor}20` }]}>
-              <Text style={[styles.directionText, { color: directionColor }]}>
-                {directionText}
+          <View style={styles.tradeHeaderMain}>
+            <TradeSymbolLogo
+              symbol={item.symbol}
+              size={48}
+              fallbackColor={DesignTokens.colors.text.primary}
+              backgroundColor="rgba(255,255,255,0.08)"
+            />
+            <View style={styles.tradeSymbolContainer}>
+              <Text style={styles.tradeSymbol} numberOfLines={1}>
+                {item.symbol}
               </Text>
+              <View style={[styles.directionBadge, { backgroundColor: `${directionColor}20` }]}>
+                <Text style={[styles.directionText, { color: directionColor }]}>
+                  {directionText}
+                </Text>
+              </View>
             </View>
           </View>
           <View style={styles.headerActions}>
@@ -214,27 +283,29 @@ export default function TradesListTab() {
         </View>
 
         <View style={styles.tradeFooter}>
-          <View style={styles.footerRow}>
-            <View style={styles.pnlRow}>
-              <Text style={styles.pnlLabel}>
-                {isProfit ? 'רווח ממוצע:' : 'הפסד ממוצע:'}
-              </Text>
-              <Text style={[
+          <View style={styles.footerPnlRow}>
+            <Text style={styles.pnlLabel}>
+              {isProfit ? 'רווח נטו' : 'הפסד נטו'}
+            </Text>
+            <Text
+              style={[
                 styles.pnlText,
-                isProfit ? styles.pnlTextProfit : styles.pnlTextLoss
-              ]}>
-                <Text style={[
-                  styles.pnlText,
-                  isProfit ? styles.pnlTextProfit : styles.pnlTextLoss
-                ]}>$</Text>
-                {formatCurrencyWithColor(item.pnl)}
-              </Text>
-            </View>
-            <Text style={[
-              styles.returnText,
-              isProfit ? styles.returnTextProfit : styles.returnTextLoss
-            ]}>
-              ({returnPercentage > 0 ? '+' : ''}{returnPercentage.toFixed(2)}%)
+                isProfit ? styles.pnlTextProfit : styles.pnlTextLoss,
+              ]}
+            >
+              ${formatCurrencyWithColor(item.pnl)}
+            </Text>
+          </View>
+          <View style={styles.footerReturnRow}>
+            <Text style={styles.returnLabel}>תשואה</Text>
+            <Text
+              style={[
+                styles.returnValue,
+                returnPercentage >= 0 ? styles.returnValueProfit : styles.returnValueLoss,
+              ]}
+            >
+              {returnPercentage >= 0 ? '+' : ''}
+              {returnPercentage.toFixed(2)}%
             </Text>
           </View>
         </View>
@@ -244,7 +315,7 @@ export default function TradesListTab() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, styles.rtlRoot]}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
         <Text style={styles.loadingText}>טוען טריידים...</Text>
       </View>
@@ -271,63 +342,8 @@ export default function TradesListTab() {
     return true;
   });
 
-  const totalPnl = filteredTrades.reduce((sum, trade) => sum + trade.pnl, 0);
-  const isTotalProfit = totalPnl >= 0;
-
-  // חישוב סטטיסטיקות
-  const calculateAveragePnl = () => {
-    if (filteredTrades.length === 0) return 0;
-    const totalPnl = filteredTrades.reduce((sum, trade) => sum + trade.pnl, 0);
-    return totalPnl / filteredTrades.length;
-  };
-
-  const calculateWinRate = () => {
-    if (filteredTrades.length === 0) return 0;
-    const winningTrades = filteredTrades.filter(trade => trade.pnl > 0).length;
-    return Math.round((winningTrades / filteredTrades.length) * 100);
-  };
-
-  // הכנת נתונים לקרוסלה
-  const statistics: StatisticItem[] = trades.length > 0 ? [
-    {
-      id: 'total-trades',
-      title: 'סה"כ טריידים',
-      value: filteredTrades.length,
-      icon: 'list',
-      color: DesignTokens.colors.primary.main,
-      subtitle: `${filteredTrades.length} עסקאות`,
-    },
-    {
-      id: 'total-pnl',
-      title: 'P&L כולל',
-      value: `$${formatCurrencyWithColor(totalPnl)}`,
-      icon: isTotalProfit ? 'trending-up' : 'trending-down',
-      color: isTotalProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
-      subtitle: isTotalProfit ? 'רווח כולל' : 'הפסד כולל',
-    },
-    {
-      id: 'average-pnl',
-      title: calculateAveragePnl() >= 0 ? 'רווח ממוצע' : 'הפסד ממוצע',
-      value: `$${formatCurrencyWithColor(calculateAveragePnl())}`,
-      icon: calculateAveragePnl() >= 0 ? 'trending-up' : 'trending-down',
-      color: calculateAveragePnl() >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
-      subtitle: 'לעסקה',
-    },
-    {
-      id: 'win-rate',
-      title: 'Win Rate',
-      value: `${calculateWinRate()}%`,
-      icon: 'trophy',
-      color: DesignTokens.colors.primary.main,
-      subtitle: `${filteredTrades.filter(t => t.pnl > 0).length} מתוך ${filteredTrades.length}`,
-    },
-  ] : [];
-
   return (
-    <View style={styles.container}>
-      {/* Statistics Carousel */}
-      {statistics.length > 0 && <StatisticsCarousel statistics={statistics} />}
-
+    <View style={[styles.container, styles.rtlRoot]}>
       {/* Search Bar */}
       <View style={styles.searchCard}>
         <UICard variant="blur" padding="sm" style={styles.searchCardInner}>
@@ -350,59 +366,85 @@ export default function TradesListTab() {
         </UICard>
       </View>
 
-      {/* Filter Buttons - Compact */}
-      <View style={styles.filtersContainer}>
-        <View style={styles.filterButtonsRow}>
-          <TouchableOpacity
-            style={[styles.filterButton, filterDirection === 'all' && styles.filterButtonActive]}
-            onPress={() => setFilterDirection('all')}
-          >
-            <Text style={[styles.filterButtonText, filterDirection === 'all' && styles.filterButtonTextActive]}>
-              הכל
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filterDirection === 'long' && styles.filterButtonActive]}
-            onPress={() => setFilterDirection('long')}
-          >
-            <Text style={[styles.filterButtonText, filterDirection === 'long' && styles.filterButtonTextActive]}>
-              Long
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filterDirection === 'short' && styles.filterButtonActive]}
-            onPress={() => setFilterDirection('short')}
-          >
-            <Text style={[styles.filterButtonText, filterDirection === 'short' && styles.filterButtonTextActive]}>
-              Short
-            </Text>
-          </TouchableOpacity>
-          <View style={styles.filterDivider} />
-          <TouchableOpacity
-            style={[styles.filterButton, filterPnl === 'all' && styles.filterButtonActive]}
-            onPress={() => setFilterPnl('all')}
-          >
-            <Text style={[styles.filterButtonText, filterPnl === 'all' && styles.filterButtonTextActive]}>
-              הכל
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filterPnl === 'profit' && styles.filterButtonActive]}
-            onPress={() => setFilterPnl('profit')}
-          >
-            <Text style={[styles.filterButtonText, filterPnl === 'profit' && styles.filterButtonTextActive]}>
-              רווח
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterButton, filterPnl === 'loss' && styles.filterButtonActive]}
-            onPress={() => setFilterPnl('loss')}
-          >
-            <Text style={[styles.filterButtonText, filterPnl === 'loss' && styles.filterButtonTextActive]}>
-              הפסד
-            </Text>
-          </TouchableOpacity>
-        </View>
+      {/* פילטרים — רק אייקון; פתיחה/סגירה, בלי טקסט וללא יישור לשני קצוות */}
+      <View style={styles.filtersOuter}>
+        <TouchableOpacity
+          style={styles.filtersIconButton}
+          onPress={() => setFiltersOpen((v) => !v)}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={filtersOpen ? 'סגור פילטרים' : 'פתח פילטרים'}
+          accessibilityState={{ expanded: filtersOpen }}
+        >
+          <Ionicons
+            name={filtersOpen ? 'close' : 'options-outline'}
+            size={24}
+            color={
+              filtersOpen || filtersActive
+                ? DesignTokens.colors.primary.main
+                : DesignTokens.colors.text.secondary
+            }
+          />
+        </TouchableOpacity>
+
+        {filtersOpen ? (
+          <View style={styles.filtersPanel}>
+              <Text style={styles.filterSectionLabel}>כיוון</Text>
+              <View style={styles.filterButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.filterButton, filterDirection === 'all' && styles.filterButtonActive]}
+                  onPress={() => setFilterDirection('all')}
+                >
+                  <Text style={[styles.filterButtonText, filterDirection === 'all' && styles.filterButtonTextActive]}>
+                    הכל
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterButton, filterDirection === 'long' && styles.filterButtonActive]}
+                  onPress={() => setFilterDirection('long')}
+                >
+                  <Text style={[styles.filterButtonText, filterDirection === 'long' && styles.filterButtonTextActive]}>
+                    Long
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterButton, filterDirection === 'short' && styles.filterButtonActive]}
+                  onPress={() => setFilterDirection('short')}
+                >
+                  <Text style={[styles.filterButtonText, filterDirection === 'short' && styles.filterButtonTextActive]}>
+                    Short
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={[styles.filterSectionLabel, styles.filterSectionLabelSecond]}>תוצאה</Text>
+              <View style={styles.filterButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.filterButton, filterPnl === 'all' && styles.filterButtonActive]}
+                  onPress={() => setFilterPnl('all')}
+                >
+                  <Text style={[styles.filterButtonText, filterPnl === 'all' && styles.filterButtonTextActive]}>
+                    הכל
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterButton, filterPnl === 'profit' && styles.filterButtonActive]}
+                  onPress={() => setFilterPnl('profit')}
+                >
+                  <Text style={[styles.filterButtonText, filterPnl === 'profit' && styles.filterButtonTextActive]}>
+                    רווח
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterButton, filterPnl === 'loss' && styles.filterButtonActive]}
+                  onPress={() => setFilterPnl('loss')}
+                >
+                  <Text style={[styles.filterButtonText, filterPnl === 'loss' && styles.filterButtonTextActive]}>
+                    הפסד
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
       </View>
 
       {/* Trades List */}
@@ -413,38 +455,16 @@ export default function TradesListTab() {
           <Text style={styles.emptySubtext}>הוסף טרייד ראשון כדי להתחיל</Text>
         </View>
       ) : (
-        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <View style={styles.listWrap}>
           <FlatList
             data={filteredTrades}
             renderItem={renderTrade}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: mainTabsHeight + 100 }]}
             showsVerticalScrollIndicator={true}
-            scrollEnabled={true}
           />
         </View>
       )}
-
-      {/* Add Trade FAB — ממורכז כדי שלא יחפוף לשורת החיפוש */}
-      <View style={styles.fabWrap} pointerEvents="box-none">
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => setShowAddModal(true)}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="add" size={32} color={DesignTokens.colors.text.inverse} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Add Trade Modal */}
-      <AddTradeModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSuccess={() => {
-          setShowAddModal(false);
-          loadTrades();
-        }}
-      />
 
       {/* Share Trade Modal */}
       <ShareTradeModal
@@ -476,22 +496,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     flex: 1,
     position: 'relative',
   },
-  fabWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: mainTabsHeight + 20,
-    alignItems: 'center',
-    zIndex: 50,
-  },
-  fab: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: tokens.colors.primary.main,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...tokens.shadows.md,
+  rtlRoot: {
+    direction: 'rtl',
   },
   loadingContainer: {
     flex: 1,
@@ -506,22 +512,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     color: tokens.colors.text.secondary,
   },
   searchCard: {
-    marginHorizontal: tokens.spacing.lg,
-    marginTop: tokens.spacing.md,
-    marginBottom: tokens.spacing.sm,
+    marginHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
+    marginTop: tokens.spacing.sm,
+    marginBottom: tokens.spacing.xs,
   },
   searchCardInner: {
     borderRadius: tokens.borderRadius.lg,
     minHeight: 44,
   },
   searchContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.xs,
     paddingVertical: tokens.spacing.xs,
   },
   searchIcon: {
-    marginLeft: tokens.spacing.xs,
+    marginHorizontal: tokens.spacing.xs,
   },
   searchInput: {
     flex: 1,
@@ -533,9 +539,32 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   clearButton: {
     padding: tokens.spacing.xs,
   },
-  filtersContainer: {
-    marginHorizontal: tokens.spacing.lg,
+  filtersOuter: {
+    alignSelf: 'stretch',
+    marginHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
     marginBottom: tokens.spacing.sm,
+    backgroundColor: 'transparent',
+    alignItems: 'flex-start',
+  },
+  filtersIconButton: {
+    padding: 6,
+    backgroundColor: 'transparent',
+  },
+  filtersPanel: {
+    paddingTop: tokens.spacing.sm,
+    paddingBottom: tokens.spacing.xs,
+    backgroundColor: 'transparent',
+  },
+  filterSectionLabel: {
+    fontSize: tokens.typography.fontSize.xs,
+    fontWeight: tokens.typography.fontWeight.medium as any,
+    color: tokens.colors.text.tertiary,
+    textAlign: 'right',
+    writingDirection: 'rtl' as any,
+    marginBottom: 4,
+  },
+  filterSectionLabelSecond: {
+    marginTop: tokens.spacing.sm,
   },
   filterButtonsRow: {
     flexDirection: 'row-reverse',
@@ -547,19 +576,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     paddingHorizontal: tokens.spacing.sm,
     paddingVertical: 6,
     borderRadius: tokens.borderRadius.lg,
-    backgroundColor: tokens.colors.glass.card.bg,
+    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: tokens.colors.border.primary,
     minWidth: 50,
   },
-  filterDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: tokens.colors.border.primary,
-    marginHorizontal: tokens.spacing.xs,
-  },
   filterButtonActive: {
-    backgroundColor: tokens.colors.background.cardSolid,
+    backgroundColor: 'rgba(0, 200, 5, 0.08)',
     borderColor: tokens.colors.primary.main,
   },
   filterButtonText: {
@@ -581,7 +604,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     borderRadius: tokens.borderRadius.lg,
   },
   summaryRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginVertical: tokens.spacing.xs,
@@ -609,39 +632,51 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   summaryLoss: {
     color: tokens.colors.text.danger,
   },
+  listWrap: {
+    flex: 1,
+    minHeight: 0,
+  },
   listContent: {
-    paddingHorizontal: tokens.spacing.lg,
-    paddingBottom: 56 + 24 + 16, // כפתור (56) + מרחק מהתחתית (24) + padding נוסף (16)
-    paddingTop: tokens.spacing.sm,
+    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
+    paddingTop: tokens.spacing.xs,
   },
   tradeHeader: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: tokens.spacing.sm,
+    marginBottom: tokens.spacing.xs,
   },
-  tradeSymbolContainer: {
-    flexDirection: 'row-reverse',
+  tradeHeaderMain: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.sm,
+    flex: 1,
+    minWidth: 0,
+  },
+  tradeSymbolContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: tokens.spacing.sm,
+    flex: 1,
+    minWidth: 0,
   },
   tradeSymbol: {
     fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    fontWeight: '800' as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
   },
   directionBadge: {
-    paddingHorizontal: tokens.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: tokens.borderRadius.sm,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
   directionText: {
     fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    fontWeight: '800' as any,
   },
   headerActions: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.sm,
   },
@@ -652,55 +687,67 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     padding: tokens.spacing.xs,
   },
   tradeDetails: {
-    gap: tokens.spacing.xs,
-    marginBottom: tokens.spacing.sm,
+    gap: 4,
+    marginBottom: tokens.spacing.xs,
   },
   tradeRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
   },
   tradeLabel: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
+    fontWeight: '700' as any,
+    flexShrink: 0,
   },
   tradePrice: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.medium as any,
-    textAlign: 'right',
+    fontWeight: '800' as any,
+    textAlign: 'left',
+    writingDirection: 'ltr',
+    flex: 1,
   },
   tradeValue: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.primary,
-    fontWeight: tokens.typography.fontWeight.medium as any,
-    textAlign: 'right',
+    fontWeight: '800' as any,
+    textAlign: 'left',
+    writingDirection: 'ltr',
+    flex: 1,
   },
   tradeFooter: {
     marginTop: tokens.spacing.sm,
     paddingTop: tokens.spacing.sm,
     borderTopWidth: 1,
     borderTopColor: tokens.colors.border.primary,
+    gap: 0,
   },
-  footerRow: {
-    flexDirection: 'row-reverse',
+  footerPnlRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
   },
-  pnlRow: {
-    flexDirection: 'row-reverse',
+  footerReturnRow: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    flex: 1,
+    width: '100%',
+    marginTop: 14,
   },
   pnlLabel: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
+    fontWeight: '700' as any,
+    flexShrink: 0,
   },
   pnlContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.xs,
   },
@@ -712,8 +759,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   },
   pnlText: {
     fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    textAlign: 'right',
+    fontWeight: '800' as any,
+    textAlign: 'left',
+    writingDirection: 'ltr',
+    flex: 1,
   },
   pnlTextProfit: {
     color: tokens.colors.primary.main,
@@ -721,15 +770,24 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   pnlTextLoss: {
     color: tokens.colors.text.danger,
   },
-  returnText: {
+  returnLabel: {
     fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    fontWeight: '700' as any,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
+    flexShrink: 0,
   },
-  returnTextProfit: {
+  returnValue: {
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: '800' as any,
+    textAlign: 'left',
+    writingDirection: 'ltr',
+    flex: 1,
+  },
+  returnValueProfit: {
     color: tokens.colors.primary.main,
   },
-  returnTextLoss: {
+  returnValueLoss: {
     color: tokens.colors.text.danger,
   },
   notesContainer: {
@@ -751,7 +809,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     alignItems: 'center',
     paddingHorizontal: tokens.spacing.xl,
     paddingTop: tokens.spacing['3xl'],
-    paddingBottom: mainTabsHeight + 88,
+    paddingBottom: mainTabsHeight + 100,
     gap: tokens.spacing.md,
   },
   emptyText: {

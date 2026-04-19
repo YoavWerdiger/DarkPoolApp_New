@@ -255,7 +255,7 @@ export async function uploadStoryVideo(uri: string, userId: string): Promise<{ u
   try {
     logger.debug('StoriesService', `uploadStoryVideo: ${uri.substring(0, 80)}`);
 
-    const fileInfo = await FileSystem.getInfoAsync(uri, { size: true });
+    const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) return { url: null, error: 'הקובץ לא נמצא' };
     const maxBytes = 20 * 1024 * 1024;
     if ((fileInfo as any).size > maxBytes) {

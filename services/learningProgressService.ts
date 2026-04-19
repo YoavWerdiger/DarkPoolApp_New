@@ -246,11 +246,12 @@ class LearningProgressService {
     totalWatchTime: number; // בדקות
   }> {
     try {
-      // מספר קורסים שהמשתמש נרשם אליהם
-      const { count: enrolledCount } = await supabase
+      // מספר קורסים שהמשתמש נרשם אליהם (ייחודי לפי course_id)
+      const { data: enrollRowsForCount } = await supabase
         .from('user_course_progress')
-        .select('DISTINCT course_id', { count: 'exact', head: true })
+        .select('course_id')
         .eq('user_id', userId);
+      const enrolledCount = new Set((enrollRowsForCount ?? []).map((r) => r.course_id)).size;
 
       // מספר שיעורים שהושלמו
       const { count: completedCount } = await supabase
@@ -276,10 +277,10 @@ class LearningProgressService {
       // מספר שיעורים כולל בקורסים שהמשתמש נרשם אליהם
       const { data: enrolledCourses } = await supabase
         .from('user_course_progress')
-        .select('DISTINCT course_id')
+        .select('course_id')
         .eq('user_id', userId);
 
-      const courseIds = enrolledCourses?.map(c => c.course_id) || [];
+      const courseIds = [...new Set((enrolledCourses ?? []).map((c) => c.course_id))];
       let totalLessons = 0;
       
       if (courseIds.length > 0) {

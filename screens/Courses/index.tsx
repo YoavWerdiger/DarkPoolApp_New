@@ -1,3 +1,1 @@
-import { CoursesScreen } from '../Learning';
-
-export default CoursesScreen; 
+export { CoursesScreen as default } from '../Learning/CoursesScreen'; 

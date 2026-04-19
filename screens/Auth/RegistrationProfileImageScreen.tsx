@@ -1,5 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useRegistration } from '../../context/RegistrationContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,7 +41,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
 
   const pickImageFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('אין הרשאה', 'יש לאפשר גישה לגלריה'); return; }
+    if (status !== 'granted') { legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -54,7 +55,7 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') { Alert.alert('אין הרשאה', 'יש לאפשר גישה למצלמה'); return; }
+    if (status !== 'granted') { legacyAlert('אין הרשאה', 'יש לאפשר גישה למצלמה'); return; }
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [1, 1],

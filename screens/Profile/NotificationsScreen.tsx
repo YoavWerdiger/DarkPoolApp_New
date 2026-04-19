@@ -1,18 +1,8 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Switch, TouchableOpacity, ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
 import { 
-  View, 
-  Text, 
-  ScrollView, 
-  Switch, 
-  Alert,
-  TouchableOpacity,
-  ActivityIndicator,
-  SafeAreaView,
-  StyleSheet
-} from 'react-native';
-import { 
-  Bell, 
-  ArrowRight,
+  Bell,
   Volume2,
   Smartphone,
   MessageSquare,
@@ -29,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { supabase } from '../../lib/supabase';
 import { NotificationService } from '../../services/notificationService';
@@ -107,7 +98,6 @@ export default function NotificationsScreen({ navigation }: any) {
     } catch (error) {
     }
   };
-
 
   const loadSettings = async () => {
     try {
@@ -223,13 +213,13 @@ export default function NotificationsScreen({ navigation }: any) {
         const registered = await NotificationService.registerDeviceToken();
         const isSimulator = !require('expo-device').Device.isDevice;
         if (registered) {
-          Alert.alert(
+          legacyAlert(
             'התראות הופעלו',
             'תקבל התראות על אירועים חשובים באפליקציה.',
             [{ text: 'אישור' }]
           );
         } else {
-          Alert.alert(
+          legacyAlert(
             'התראות הופעלו',
             isSimulator 
               ? 'ההרשאות כבר ניתנו. הערה: התראות Push לא עובדות בסימולטור - נסה במכשיר אמיתי כדי לבדוק push notifications.'
@@ -250,7 +240,7 @@ export default function NotificationsScreen({ navigation }: any) {
         };
         setSettings(revertedSettings);
         
-        Alert.alert(
+        legacyAlert(
           'הרשאות התראות נדרשות',
           'כדי לקבל התראות, אנא אפשר גישה להתראות בהגדרות המכשיר.',
           [
@@ -292,7 +282,7 @@ export default function NotificationsScreen({ navigation }: any) {
       
       const registered = await NotificationService.registerDeviceToken();
       if (registered) {
-        Alert.alert(
+        legacyAlert(
           'התראות הופעלו',
           'תקבל התראות על אירועים חשובים באפליקציה.',
           [{ text: 'אישור' }]
@@ -300,7 +290,7 @@ export default function NotificationsScreen({ navigation }: any) {
       } else {
         // אם זה סימולטור, נסביר למשתמש
         const isSimulator = !require('expo-device').Device.isDevice;
-        Alert.alert(
+        legacyAlert(
           'התראות הופעלו',
           isSimulator 
             ? 'ההרשאות ניתנו. הערה: התראות Push לא עובדות בסימולטור - נסה במכשיר אמיתי.'
@@ -400,47 +390,10 @@ export default function NotificationsScreen({ navigation }: any) {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Header עם blur */}
-        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <UICard 
-            variant="blur"
-            padding="sm"
-          >
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: DesignTokens.spacing.md,
-              minHeight: 44,
-            }}>
-              <Text style={{
-                flex: 1,
-                textAlign: 'center',
-                fontSize: DesignTokens.typography.fontSize.lg,
-                fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                color: DesignTokens.colors.text.primary,
-                marginLeft: 36
-              }}>
-                התראות
-              </Text>
-
-              <TouchableOpacity 
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-                style={{
-                  width: 36,
-                  height: 36,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderRadius: 18,
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                }}
-              >
-                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          </UICard>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <ChatSubScreenHeader title="התראות" onBack={() => navigation.goBack()} />
         </View>
 
         <View style={{ flex: 1 }}>
@@ -462,10 +415,10 @@ export default function NotificationsScreen({ navigation }: any) {
               התראות מערכת
             </Text>
 
-            <UICard 
-              variant="blur"
+            <UICard
+              variant="inputGlass"
               padding="none"
-              style={{ marginBottom: DesignTokens.spacing.lg }}
+              style={{ marginBottom: DesignTokens.spacing.lg, borderRadius: DesignTokens.borderRadius.lg }}
             >
             {systemNotificationOptions.map((option, index) => (
               <View key={option.id}>
@@ -482,12 +435,12 @@ export default function NotificationsScreen({ navigation }: any) {
                 {/* Switch - שמאל */}
                 <Switch
                   key={`switch-${option.key}-${settings[option.key]}`}
-                  value={settings[option.key] ?? false}
+                  value={settings[option.key] === true}
                   onValueChange={(value) => {
                     handleToggle(option.key);
                   }}
                   trackColor={{ false: 'rgba(255, 255, 255, 0.15)', true: DesignTokens.colors.primary.main }}
-                  thumbColor={settings[option.key] ? DesignTokens.colors.text.primary : 'rgba(255, 255, 255, 0.5)'}
+                  thumbColor={settings[option.key] === true ? DesignTokens.colors.text.primary : 'rgba(255, 255, 255, 0.5)'}
                   ios_backgroundColor="rgba(255, 255, 255, 0.15)"
                   style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                   disabled={false}
@@ -549,10 +502,10 @@ export default function NotificationsScreen({ navigation }: any) {
               התראות חדשות
             </Text>
 
-            <UICard 
-              variant="blur"
+            <UICard
+              variant="inputGlass"
               padding="none"
-              style={{ marginBottom: DesignTokens.spacing.lg }}
+              style={{ marginBottom: DesignTokens.spacing.lg, borderRadius: DesignTokens.borderRadius.lg }}
             >
             {newsNotificationOptions.map((option, index) => (
               <View key={option.id}>
@@ -569,12 +522,12 @@ export default function NotificationsScreen({ navigation }: any) {
                 {/* Switch - שמאל */}
                 <Switch
                   key={`switch-${option.key}-${settings[option.key]}`}
-                  value={settings[option.key] ?? false}
+                  value={settings[option.key] === true}
                   onValueChange={(value) => {
                     handleToggle(option.key);
                   }}
                   trackColor={{ false: 'rgba(255, 255, 255, 0.15)', true: DesignTokens.colors.primary.main }}
-                  thumbColor={settings[option.key] ? DesignTokens.colors.text.primary : 'rgba(255, 255, 255, 0.5)'}
+                  thumbColor={settings[option.key] === true ? DesignTokens.colors.text.primary : 'rgba(255, 255, 255, 0.5)'}
                   ios_backgroundColor="rgba(255, 255, 255, 0.15)"
                   style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                   disabled={false}
@@ -636,10 +589,10 @@ export default function NotificationsScreen({ navigation }: any) {
               צלילים
             </Text>
 
-            <UICard 
-              variant="blur"
+            <UICard
+              variant="inputGlass"
               padding="none"
-              style={{ marginBottom: DesignTokens.spacing.lg }}
+              style={{ marginBottom: DesignTokens.spacing.lg, borderRadius: DesignTokens.borderRadius.lg }}
             >
             {/* צליל לחדשות */}
             <TouchableOpacity

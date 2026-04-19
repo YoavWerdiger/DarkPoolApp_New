@@ -479,7 +479,7 @@ export default function MediaMessageRenderer({
               {...panResponder.panHandlers}
               style={{
                 height: 24, // הוגדל מ-20 ל-24 כדי לתת יותר מקום ל-waveforms
-                flexDirection: 'row-reverse',
+                flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 2,
@@ -519,7 +519,7 @@ export default function MediaMessageRenderer({
               })()}
             </View>
             {/* זמן נוכחי / סה"כ */}
-            <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 4 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
               <Text style={{ 
                 color: isMe ? '#000000' : DesignTokens.colors.text.tertiary, 
                 fontSize: 10, 

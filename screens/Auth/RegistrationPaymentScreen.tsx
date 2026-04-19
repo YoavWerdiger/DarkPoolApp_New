@@ -1,11 +1,13 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, Alert, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, Linking } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
+import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { SUPABASE_URL } from '../../config/publicEnv';
 
 const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
@@ -27,7 +29,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   const handlePayment = async () => {
     // במהלך הרישום, המשתמש עדיין לא מחובר, אז נדלג על הבדיקה הזו
     // if (!user) {
-    //   Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
+    //   legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
     //   return;
     // }
 
@@ -55,7 +57,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
       });
       
     } catch (error) {
-      Alert.alert(
+      legacyAlert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
       );
@@ -97,12 +99,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <LinearGradient
-          colors={['#000000', '#0d1b0d', '#1a2d1a', '#000000']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ flex: 1 }}
-        >
+        <ScreenChrome>
           {/* Subtle Background Pattern */}
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {backgroundPattern.map((dot, index) => (
@@ -200,7 +197,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   key={plan.id}
                   onPress={() => setSelectedPlan(plan.id)}
                   style={{
-                    backgroundColor: selectedPlan === plan.id ? 'rgba(0, 230, 84, 0.1)' : '#181818',
+                    backgroundColor: selectedPlan === plan.id ? DesignTokens.colors.primary.dim : DesignTokens.colors.background.cardSolid,
                     borderRadius: 16,
                     padding: 20,
                     position: 'relative'
@@ -256,12 +253,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       width: 24,
                       height: 24,
                       borderRadius: 12,
-                      backgroundColor: selectedPlan === plan.id ? '#00C805' : 'transparent',
+                      backgroundColor: selectedPlan === plan.id ? DesignTokens.colors.primary.main : 'transparent',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
                       {selectedPlan === plan.id && (
-                        <Ionicons name="checkmark" size={16} color="#000000" />
+                        <Ionicons name="checkmark" size={16} color={DesignTokens.colors.text.inverse} />
                       )}
                     </View>
                   </View>
@@ -313,10 +310,10 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     }}
         >
           {loading ? (
-                      <ActivityIndicator color="#000000" size="small" />
+                      <ActivityIndicator color={DesignTokens.colors.text.inverse} size="small" />
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="card" size={20} color="#000000" style={{ marginLeft: 8 }} />
+                        <Ionicons name="card" size={20} color={DesignTokens.colors.text.inverse} style={{ marginLeft: 8 }} />
                         <Text style={{ 
                           color: DesignTokens.colors.background.primary, 
                           fontSize: 16, 
@@ -372,7 +369,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 <TouchableOpacity
                   onPress={handleSkipPayment}
                   style={{
-                    backgroundColor: '#141F14',
+                    backgroundColor: DesignTokens.colors.background.cardSolid,
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: 'center',
@@ -392,7 +389,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               )}
             </View>
     </View>
-        </LinearGradient>
+        </ScreenChrome>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );

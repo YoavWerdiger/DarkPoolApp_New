@@ -32,3 +32,9 @@ export const chatScreenGradientColors = [...DesignTokens.gradients.screen] as re
 export const chatScreenGradientLocations = [0, 0.22, 0.42, 0.55, 0.78, 1] as const;
 export const chatScreenGradientStart = DesignTokens.gradients.screenStart;
 export const chatScreenGradientEnd = DesignTokens.gradients.screenEnd;
+
+/** מסגרת זכוכית עדינה ל־UICard blur — כמו רשימת צ'אטים / מגירה */
+export const chatGlassCardOutline = {
+  borderWidth: 1,
+  borderColor: chatPalette.glassBorder,
+} as const;

@@ -1,21 +1,11 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  TouchableOpacity,
-  Alert,
-  Share,
-  Linking,
-  ActivityIndicator,
-  Dimensions
-} from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, Share, Linking, ActivityIndicator, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { useDesignTokens } from '../../components/ui/DesignTokens';
+import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import { NewsArticle, newsService, formatNewsDate, getNewsCategoryColor, getNewsCategoryIcon } from '../../services/newsService';
 
 type RootStackParamList = {
@@ -54,7 +44,7 @@ export default function ArticleDetailScreen() {
 
       await Share.share(shareContent);
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לשתף את הכתבה');
+      legacyAlert('שגיאה', 'לא ניתן לשתף את הכתבה');
     }
   };
 
@@ -66,10 +56,10 @@ export default function ArticleDetailScreen() {
         if (supported) {
           await Linking.openURL(article.source_url);
         } else {
-          Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
+          legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור');
         }
       } catch (error) {
-        Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
+        legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור');
       }
     }
   };
@@ -78,7 +68,7 @@ export default function ArticleDetailScreen() {
   const handleBookmark = () => {
     setIsBookmarked(!isBookmarked);
     // TODO: שמירה במסד הנתונים
-    Alert.alert(
+    legacyAlert(
       isBookmarked ? 'הוסר מהמועדפים' : 'נוסף למועדפים',
       isBookmarked ? 'הכתבה הוסרה מהרשימה שלך' : 'הכתבה נוספה למועדפים שלך'
     );

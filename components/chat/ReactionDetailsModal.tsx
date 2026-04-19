@@ -94,7 +94,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
       textAlign: 'center',
     },
     tabsContainer: {
-      flexDirection: 'row-reverse', // RTL
+      flexDirection: 'row', // RTL
       backgroundColor: DesignTokens.colors.background.secondary,
       borderRadius: 30,
       padding: 4,
@@ -135,7 +135,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
       minHeight: 200,
     },
     userRow: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: 14,
       paddingHorizontal: DesignTokens.spacing.sm,

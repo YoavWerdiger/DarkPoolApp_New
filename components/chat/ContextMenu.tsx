@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   optionTouchable: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'transparent',
   },

@@ -1,14 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -16,7 +8,8 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { learningProgressService } from '../../services/learningProgressService';
 import { useAuth } from '../../context/AuthContext';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
-import { ArrowRight, FileText, Copy, ArrowLeft } from 'lucide-react-native';
+import { FileText, Copy } from 'lucide-react-native';
+import { AcademySubScreenBar } from '../../components/learning';
 import UICard from '../../components/ui/UICard';
 import * as Clipboard from 'expo-clipboard';
 
@@ -70,19 +63,19 @@ export const MyNotesScreen: React.FC = () => {
   }, [loadNotes]);
 
   const handleNotePress = useCallback((note: NoteWithDetails) => {
-    navigation.navigate('LearningScreen' as any, {
+    (navigation as { navigate: (n: string, p: object) => void }).navigate('LearningScreen', {
       courseId: note.course_id,
-      lessonId: note.lesson_id
-    } as any);
+      lessonId: note.lesson_id,
+    });
   }, [navigation]);
 
   const handleCopyNote = useCallback(async (note: NoteWithDetails, e: any) => {
     e.stopPropagation();
     try {
       await Clipboard.setStringAsync(note.notes_content);
-      Alert.alert('הועתק', 'ההערה הועתקה ללוח');
+      legacyAlert('הועתק', 'ההערה הועתקה ללוח');
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן להעתיק את ההערה');
+      legacyAlert('שגיאה', 'לא ניתן להעתיק את ההערה');
     }
   }, []);
 
@@ -160,20 +153,11 @@ export const MyNotesScreen: React.FC = () => {
       {/* Header */}
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={styles.safeAreaContent}>
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <ArrowLeft size={24} color={DesignTokens.colors.text.primary} />
-            </TouchableOpacity>
-            <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>ההערות שלי</Text>
-              <Text style={styles.headerSubtitle}>
-                {notes.length} הערות
-              </Text>
-            </View>
-          </View>
+          <AcademySubScreenBar
+            onBackPress={() => navigation.goBack()}
+            title="ההערות שלי"
+            subtitle={`${notes.length} הערות`}
+          />
         </View>
       </SafeAreaView>
 
@@ -206,9 +190,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   safeArea: {
     // edges handled by component
   },
-  safeAreaContent: {
-    paddingHorizontal: tokens.spacing.lg,
-  },
+  safeAreaContent: {},
   safeAreaContainer: {
     flex: 1,
   },
@@ -222,35 +204,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.base,
     color: tokens.colors.text.secondary,
   },
-  header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    paddingVertical: tokens.spacing.md,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: tokens.borderRadius.full,
-    backgroundColor: tokens.colors.background.primary,
-  },
-  headerContent: {
-    flex: 1,
-    marginRight: tokens.spacing.md,
-  },
-  headerTitle: {
-    fontSize: tokens.typography.fontSize['2xl'],
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-    marginBottom: 2,
-  },
-  headerSubtitle: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-  },
   listContainer: {
     paddingHorizontal: tokens.spacing.lg,
     paddingTop: tokens.spacing.md,
@@ -260,7 +213,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flex: 1,
   },
   noteHeader: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: tokens.spacing.xs,
   },

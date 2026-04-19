@@ -1,5 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
-import { View, Text, FlatList, RefreshControl, ActivityIndicator, Alert, Pressable, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -73,7 +74,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
       {/* תוכן מימין */}
       <View style={{ flex: 1, alignItems: 'flex-end', marginRight: 12 }}>
         {/* שורה עליונה - זמן וכותרת (RTL: זמן משמאל, כותרת מימין) */}
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
           <Text 
             style={{ 
               fontSize: 18, 
@@ -325,19 +326,18 @@ export default function EconomicCalendarTab() {
     filterEventsByDate();
   }, [filterEventsByDate]);
 
-
   // פונקציה לגלילה לאירוע הקרוב ביותר לזמן הנוכחי
   const scrollToClosestEvent = useCallback(() => {
     // בדיקה ראשונית
     if (dailyEvents.length === 0) {
-      Alert.alert('אין אירועים', 'אין אירועים להיום');
+      legacyAlert('אין אירועים', 'אין אירועים להיום');
       return;
     }
 
     // רק אם התאריך הנבחר הוא היום
     const isToday = selectedDate.toDateString() === new Date().toDateString();
     if (!isToday) {
-      Alert.alert('רק להיום', 'גלילה לכעת אפשרית רק בתאריך היום');
+      legacyAlert('רק להיום', 'גלילה לכעת אפשרית רק בתאריך היום');
       return;
     }
 
@@ -362,7 +362,7 @@ export default function EconomicCalendarTab() {
     const event = dailyEvents[closestIndex];
     
     // הצגת Alert עם מידע על האירוע הנבחר
-    Alert.alert(
+    legacyAlert(
       `גולל לאירוע #${closestIndex + 1}`,
       `${translateEconomicEventNameSmart(event?.title || '')}\nשעה: ${event?.time}`,
       [
@@ -376,7 +376,6 @@ export default function EconomicCalendarTab() {
       ]
     );
   }, [dailyEvents, selectedDate]);
-
 
   // טעינת אירועים מ-Supabase Database – קודם טווח קצר (היום והלאה), אחר כך עבר
   const loadFromDatabase = async (): Promise<EconEvent[]> => {
@@ -478,7 +477,7 @@ export default function EconomicCalendarTab() {
       setEvents(loadedEvents);
       filterEvents(loadedEvents, selectedImportance);
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לטעון את האירועים הכלכליים');
+      legacyAlert('שגיאה', 'לא ניתן לטעון את האירועים הכלכליים');
       setEvents([]);
       setFilteredEvents([]);
     } finally {
@@ -561,7 +560,7 @@ export default function EconomicCalendarTab() {
     
     message += explanation;
     
-    Alert.alert(
+    legacyAlert(
       translatedTitle,
       message,
       [{ text: 'סגור', style: 'cancel' }]

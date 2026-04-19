@@ -1,14 +1,10 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, FlatList, Dimensions, StyleSheet, Animated } from 'react-native';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, FlatList, StyleSheet, Animated, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH - 64; // רוחב המסך פחות margins (הקטנתי מ-48 ל-64)
-const CARD_SPACING = 12;
-const SNAP_INTERVAL = CARD_WIDTH + CARD_SPACING;
-const AUTO_SCROLL_INTERVAL = 3000; // 3 שניות
+const AUTO_SCROLL_MS = 3500;
 const RTL_FLIP = { transform: [{ scaleX: -1 }] };
 
 export interface StatisticItem {
@@ -26,87 +22,107 @@ interface StatisticsCarouselProps {
 
 export default function StatisticsCarousel({ statistics }: StatisticsCarouselProps) {
   const DesignTokens = useDesignTokens();
-  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const { width: screenW } = useWindowDimensions();
+
+  const layout = useMemo(() => {
+    /** כרטיס צר יותר — רואים קצת מהבא, גלילה נוחה */
+    const cardWidth = Math.min(screenW * 0.68, 260);
+    const cardSpacing = 8;
+    const snapInterval = cardWidth + cardSpacing;
+    const sidePad = Math.max(0, (screenW - cardWidth) / 2);
+    return { cardWidth, cardSpacing, snapInterval, sidePad };
+  }, [screenW]);
+
+  const styles = useMemo(() => createStyles(DesignTokens, layout), [DesignTokens, layout]);
+
   const flatListRef = useRef<FlatList>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
+  const currentIndexRef = useRef(0);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const autoScrollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoScrollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isUserScrollingRef = useRef(false);
 
-  const handleScrollEnd = (event: any) => {
-    // עם RTL_FLIP, contentOffset.x הוא שלילי
-    const offsetX = Math.abs(event.nativeEvent.contentOffset.x);
-    const index = Math.round(offsetX / SNAP_INTERVAL);
-    const clampedIndex = Math.max(0, Math.min(index, statistics.length - 1));
-    setCurrentIndex(clampedIndex);
-    isUserScrollingRef.current = false;
-    startAutoScroll();
-  };
-
-  const scrollToNext = () => {
-    if (statistics.length <= 1 || isUserScrollingRef.current) return;
-    
-    const nextIndex = (currentIndex + 1) % statistics.length;
-    setCurrentIndex(nextIndex);
-    
-    flatListRef.current?.scrollToIndex({
-      index: nextIndex,
-      animated: true,
-    });
-  };
-
-  const startAutoScroll = () => {
-    if (autoScrollTimerRef.current) {
-      clearInterval(autoScrollTimerRef.current);
-    }
-    
-    if (statistics.length <= 1) return;
-    
-    autoScrollTimerRef.current = setInterval(() => {
-      if (!isUserScrollingRef.current) {
-        scrollToNext();
-      }
-    }, AUTO_SCROLL_INTERVAL);
-  };
-
-  const stopAutoScroll = () => {
+  const stopAutoScroll = useCallback(() => {
     if (autoScrollTimerRef.current) {
       clearInterval(autoScrollTimerRef.current);
       autoScrollTimerRef.current = null;
     }
-  };
+  }, []);
 
+  const syncIndexFromOffset = useCallback(
+    (offsetX: number) => {
+      const { snapInterval } = layout;
+      if (snapInterval <= 0) return;
+      const idx = Math.round(Math.abs(offsetX) / snapInterval);
+      const clamped = Math.max(0, Math.min(idx, statistics.length - 1));
+      if (clamped !== currentIndexRef.current) {
+        currentIndexRef.current = clamped;
+        setCurrentIndex(clamped);
+      }
+    },
+    [layout.snapInterval, statistics.length]
+  );
+
+  const scrollToNext = useCallback(() => {
+    if (statistics.length <= 1 || isUserScrollingRef.current) return;
+    const next = (currentIndexRef.current + 1) % statistics.length;
+    currentIndexRef.current = next;
+    setCurrentIndex(next);
+    flatListRef.current?.scrollToIndex({ index: next, animated: true, viewPosition: 0.5 });
+  }, [statistics.length, layout.snapInterval]);
+
+  const startAutoScroll = useCallback(() => {
+    stopAutoScroll();
+    if (statistics.length <= 1) return;
+    autoScrollTimerRef.current = setInterval(() => {
+      if (!isUserScrollingRef.current) {
+        scrollToNext();
+      }
+    }, AUTO_SCROLL_MS);
+  }, [statistics.length, scrollToNext, stopAutoScroll]);
+
+  /** רק כשמספר הכרטיסיות משתנה — לא כל רינדור (המערך מתחדש כל פעם מההורה) */
   useEffect(() => {
+    currentIndexRef.current = 0;
+    setCurrentIndex(0);
+    stopAutoScroll();
     if (statistics.length > 1) {
       startAutoScroll();
     }
-    return () => {
-      stopAutoScroll();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, statistics.length]);
+    return () => stopAutoScroll();
+  }, [statistics.length, startAutoScroll, stopAutoScroll]);
 
-  const handleScrollBeginDrag = () => {
+  const handleScrollEnd = useCallback(
+    (event: { nativeEvent: { contentOffset: { x: number } } }) => {
+      syncIndexFromOffset(event.nativeEvent.contentOffset.x);
+      isUserScrollingRef.current = false;
+      startAutoScroll();
+    },
+    [syncIndexFromOffset, startAutoScroll]
+  );
+
+  const handleScrollBeginDrag = useCallback(() => {
     isUserScrollingRef.current = true;
     stopAutoScroll();
-  };
+  }, [stopAutoScroll]);
 
   const renderStatCard = ({ item, index }: { item: StatisticItem; index: number }) => {
+    const { snapInterval } = layout;
     const inputRange = [
-      (index - 1) * SNAP_INTERVAL,
-      index * SNAP_INTERVAL,
-      (index + 1) * SNAP_INTERVAL,
+      (index - 1) * snapInterval,
+      index * snapInterval,
+      (index + 1) * snapInterval,
     ];
 
     const scale = scrollX.interpolate({
       inputRange,
-      outputRange: [0.9, 1, 0.9],
+      outputRange: [0.94, 1, 0.94],
       extrapolate: 'clamp',
     });
 
     const opacity = scrollX.interpolate({
       inputRange,
-      outputRange: [0.6, 1, 0.6],
+      outputRange: [0.72, 1, 0.72],
       extrapolate: 'clamp',
     });
 
@@ -124,25 +140,32 @@ export default function StatisticsCarousel({ statistics }: StatisticsCarouselPro
           },
         ]}
       >
-        <UICard variant="blur" padding="lg" style={styles.statCard}>
+        <UICard variant="blur" padding="sm" style={styles.statCard}>
           <View style={styles.cardContent}>
-            <View style={[styles.iconContainer, { backgroundColor: `${cardColor}20` }]}>
-              <Ionicons name={item.icon} size={28} color={cardColor} />
+            <View style={[styles.iconContainer, { backgroundColor: `${cardColor}18` }]}>
+              <Ionicons name={item.icon} size={20} color={cardColor} />
             </View>
-            
+
             <View style={styles.contentContainer}>
-              <Text style={styles.statTitle}>{item.title}</Text>
+              <Text style={styles.statTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
               <Text
                 style={[
                   styles.statValue,
                   typeof item.value === 'number' && !isPositive && styles.statValueNegative,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.65}
               >
                 {item.value}
               </Text>
-              {item.subtitle && (
-                <Text style={styles.statSubtitle}>{item.subtitle}</Text>
-              )}
+              {item.subtitle ? (
+                <Text style={styles.statSubtitle} numberOfLines={1}>
+                  {item.subtitle}
+                </Text>
+              ) : null}
             </View>
           </View>
         </UICard>
@@ -154,6 +177,8 @@ export default function StatisticsCarousel({ statistics }: StatisticsCarouselPro
     return null;
   }
 
+  const { snapInterval, sidePad } = layout;
+
   return (
     <View style={styles.container}>
       <Animated.FlatList
@@ -161,161 +186,138 @@ export default function StatisticsCarousel({ statistics }: StatisticsCarouselPro
         data={statistics}
         keyExtractor={(item) => item.id}
         horizontal
+        nestedScrollEnabled
         showsHorizontalScrollIndicator={false}
-        snapToInterval={SNAP_INTERVAL}
+        snapToInterval={snapInterval}
+        snapToAlignment="center"
         decelerationRate="fast"
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { 
-            useNativeDriver: false,
-            listener: (event: any) => {
-              // עם RTL_FLIP, contentOffset.x הוא שלילי
-              const offsetX = Math.abs(event.nativeEvent.contentOffset.x);
-              const index = Math.round(offsetX / SNAP_INTERVAL);
-              const clampedIndex = Math.max(0, Math.min(index, statistics.length - 1));
-              if (clampedIndex !== currentIndex) {
-                setCurrentIndex(clampedIndex);
-              }
-            }
-          }
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+          useNativeDriver: false,
+          listener: (event: { nativeEvent: { contentOffset: { x: number } } }) => {
+            syncIndexFromOffset(event.nativeEvent.contentOffset.x);
+          },
+        })}
         onMomentumScrollEnd={handleScrollEnd}
         onScrollEndDrag={handleScrollEnd}
         onScrollBeginDrag={handleScrollBeginDrag}
         scrollEventThrottle={16}
-        pagingEnabled={false}
         renderItem={renderStatCard}
         onScrollToIndexFailed={(info) => {
-          const wait = new Promise(resolve => setTimeout(resolve, 500));
-          wait.then(() => {
-            flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+          const fallback = layout.snapInterval * info.index;
+          flatListRef.current?.scrollToOffset({ offset: fallback, animated: false });
+          requestAnimationFrame(() => {
+            flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
           });
         }}
-        getItemLayout={(data, index) => ({
-          length: SNAP_INTERVAL,
-          offset: SNAP_INTERVAL * index,
+        getItemLayout={(_, index) => ({
+          length: snapInterval,
+          offset: snapInterval * index,
           index,
         })}
         style={[RTL_FLIP, { flexGrow: 0 }]}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingHorizontal: sidePad }]}
       />
 
-      {/* Page Indicators */}
-      {statistics.length > 1 && (
+      {statistics.length > 1 ? (
         <View style={styles.indicatorsContainer}>
           {statistics.map((_, index) => {
-            const inputRange = [
-              (index - 1) * SNAP_INTERVAL,
-              index * SNAP_INTERVAL,
-              (index + 1) * SNAP_INTERVAL,
-            ];
-
-            const scale = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.8, 1.2, 0.8],
-              extrapolate: 'clamp',
-            });
-
-            const opacity = scrollX.interpolate({
-              inputRange,
-              outputRange: [0.4, 1, 0.4],
-              extrapolate: 'clamp',
-            });
-
             const isActive = currentIndex === index;
-
             return (
-              <Animated.View
+              <View
                 key={index}
                 style={[
                   styles.indicator,
-                  {
-                    transform: [{ scale: isActive ? 1.2 : 0.8 }],
-                    opacity: isActive ? 1 : 0.4,
-                    backgroundColor: isActive
-                      ? DesignTokens.colors.primary.main
-                      : 'rgba(255, 255, 255, 0.3)',
-                  },
+                  isActive ? styles.indicatorActive : styles.indicatorInactive,
+                  { backgroundColor: isActive ? DesignTokens.colors.primary.main : 'rgba(255,255,255,0.28)' },
                 ]}
               />
             );
           })}
         </View>
-      )}
+      ) : null}
     </View>
   );
 }
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
+const createStyles = (
+  tokens: ReturnType<typeof useDesignTokens>,
+  layout: { cardWidth: number; cardSpacing: number; snapInterval: number; sidePad: number }
+) =>
   StyleSheet.create({
     container: {
-      marginVertical: tokens.spacing.md,
+      marginTop: tokens.spacing.sm,
+      marginBottom: tokens.spacing.xs,
     },
     listContent: {
-      paddingHorizontal: (SCREEN_WIDTH - CARD_WIDTH) / 2,
-      paddingVertical: tokens.spacing.sm,
+      paddingVertical: tokens.spacing.xs,
     },
     cardContainer: {
-      width: CARD_WIDTH,
-      marginHorizontal: CARD_SPACING / 2,
+      width: layout.cardWidth,
+      marginHorizontal: layout.cardSpacing / 2,
     },
     statCard: {
       width: '100%',
-      minHeight: 160,
-      paddingVertical: tokens.spacing.lg,
+      minHeight: 96,
+      paddingVertical: tokens.spacing.xs,
     },
     cardContent: {
       width: '100%',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: tokens.spacing.sm,
+      gap: 4,
     },
     iconContainer: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       alignItems: 'center',
       justifyContent: 'center',
       alignSelf: 'center',
     },
     contentContainer: {
       alignItems: 'center',
-      gap: tokens.spacing.xs,
+      gap: 2,
+      maxWidth: '100%',
     },
     statTitle: {
-      fontSize: tokens.typography.fontSize.base,
+      fontSize: tokens.typography.fontSize.sm,
       color: tokens.colors.text.secondary,
       textAlign: 'center',
       fontWeight: tokens.typography.fontWeight.medium as any,
+      lineHeight: 18,
     },
     statValue: {
-      fontSize: 42,
+      fontSize: 26,
       fontWeight: tokens.typography.fontWeight.bold as any,
       color: tokens.colors.text.primary,
       textAlign: 'center',
-      letterSpacing: -1,
+      letterSpacing: -0.5,
     },
     statValueNegative: {
       color: tokens.colors.text.danger,
     },
     statSubtitle: {
-      fontSize: tokens.typography.fontSize.sm,
+      fontSize: tokens.typography.fontSize.xs,
       color: tokens.colors.text.tertiary,
       textAlign: 'center',
-      marginTop: tokens.spacing.xs,
+      marginTop: 2,
     },
     indicatorsContainer: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       justifyContent: 'center',
       alignItems: 'center',
-      marginTop: tokens.spacing.md,
-      gap: 8,
+      marginTop: tokens.spacing.sm,
+      gap: 6,
     },
     indicator: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+    },
+    indicatorActive: {
+      transform: [{ scale: 1.15 }],
+    },
+    indicatorInactive: {
+      opacity: 0.55,
     },
   });
-
-

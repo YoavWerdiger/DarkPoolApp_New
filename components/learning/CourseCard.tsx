@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { CourseWithProgress, AccessLevel } from '../../types/learning';
+import { Ionicons } from '@expo/vector-icons';
+import { CourseWithProgress } from '../../types/learning';
 import { ProgressRing } from './ProgressRing';
 import { AccessBadge } from './AccessBadge';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -43,7 +44,11 @@ export const CourseCard: React.FC<CourseCardProps> = ({
       onPress={() => onPress(course)}
       activeOpacity={0.7}
     >
-      <UICard variant="blur" padding="none" style={styles.container}>
+      <UICard
+        variant="blur"
+        padding="none"
+        style={[styles.container, { borderColor: `${DesignTokens.colors.primary.main}18` }]}
+      >
         {/* Cover Image - Full Width */}
         <View style={styles.coverContainer}>
           {course.cover_url ? (
@@ -54,7 +59,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             />
           ) : (
             <View style={styles.coverPlaceholder}>
-              <Text style={styles.coverPlaceholderText}>📚</Text>
+              <Ionicons name="school-outline" size={48} color={DesignTokens.colors.text.tertiary} />
             </View>
           )}
           
@@ -135,7 +140,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
                 </Text>
               </View>
               <Text style={styles.progressText}>
-                {completedLessons} מתוך {totalLessons} שיעורים הושלמו
+                {completedLessons}/{totalLessons} שיעורים הושלמו
               </Text>
             </View>
           )}
@@ -162,6 +167,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     overflow: 'hidden',
     borderRadius: tokens.borderRadius['2xl'],
     marginBottom: tokens.spacing.lg,
+    borderWidth: 1,
   },
   coverContainer: {
     position: 'relative',
@@ -181,9 +187,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  coverPlaceholderText: {
-    fontSize: tokens.typography.fontSize['3xl'],
   },
   progressContainer: {
     position: 'absolute',
@@ -242,7 +245,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   title: {
     fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    fontWeight: '800' as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     lineHeight: 28,
@@ -309,7 +312,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: tokens.borderRadius.full,
   },
   tagsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: tokens.spacing.xs,
   },

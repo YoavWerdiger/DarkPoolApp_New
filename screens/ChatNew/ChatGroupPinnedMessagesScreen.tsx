@@ -2,16 +2,9 @@
 // Chat Group Pinned Messages Screen
 // ============================================
 
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
@@ -57,14 +50,14 @@ export default function ChatGroupPinnedMessagesScreen() {
         .rpc('get_pinned_messages', { channel_uuid: groupId });
 
       if (error) {
-        Alert.alert('שגיאה', 'לא ניתן לטעון הודעות מוצמדות');
+        legacyAlert('שגיאה', 'לא ניתן לטעון הודעות מוצמדות');
         return;
       }
 
       setPinnedMessages(data || []);
     } catch (error: any) {
       logger.error('PinnedMessages', 'Failed to load pinned messages', error);
-      Alert.alert('שגיאה', 'לא ניתן לטעון הודעות מוצמדות');
+      legacyAlert('שגיאה', 'לא ניתן לטעון הודעות מוצמדות');
     } finally {
       setLoading(false);
     }
@@ -85,14 +78,14 @@ export default function ChatGroupPinnedMessagesScreen() {
         .eq('message_id', messageId);
 
       if (error) {
-        Alert.alert('שגיאה', 'לא ניתן להסיר את ההצמדה');
+        legacyAlert('שגיאה', 'לא ניתן להסיר את ההצמדה');
         return;
       }
 
       await loadPinnedMessages();
-      Alert.alert('הצלחה', 'ההודעה הוסרה מההצמדה');
+      legacyAlert('הצלחה', 'ההודעה הוסרה מההצמדה');
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בהסרת ההצמדה');
+      legacyAlert('שגיאה', 'שגיאה בהסרת ההצמדה');
     }
   };
 
@@ -214,13 +207,13 @@ const createStyles = (tokens: any) =>
       borderColor: 'rgba(255, 255, 255, 0.06)',
     },
     pinnedHeader: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 8,
     },
     pinnedHeaderLeft: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
     },
@@ -236,7 +229,7 @@ const createStyles = (tokens: any) =>
       marginBottom: 8,
     },
     pinnedFooter: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
     },
@@ -245,7 +238,7 @@ const createStyles = (tokens: any) =>
       fontSize: 12,
     },
     pinnedBadge: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
     },

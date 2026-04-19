@@ -97,7 +97,7 @@ class CourseService {
   }
 
   // יצירת קורס חדש
-  async createCourse(course: Omit<Course, 'created_at' | 'updated_at'> & { id?: string }): Promise<Course | null> {
+  async createCourse(course: Omit<Course, 'id' | 'created_at' | 'updated_at'> & { id?: string }): Promise<Course | null> {
     try {
       const courseData = { ...course };
       // אם יש id, נשתמש בו, אחרת נשאיר ל-Supabase ליצור
@@ -122,11 +122,15 @@ class CourseService {
   }
 
   // יצירת שיעור חדש
-  async createLesson(lesson: Omit<Lesson, 'id' | 'created_at' | 'updated_at'>): Promise<Lesson | null> {
+  async createLesson(lesson: Omit<Lesson, 'id' | 'created_at' | 'updated_at'> & { id?: string }): Promise<Lesson | null> {
     try {
+      const lessonData = { ...lesson };
+      const insertData = lessonData.id
+        ? lessonData
+        : Object.fromEntries(Object.entries(lessonData).filter(([key]) => key !== 'id'));
       const { data, error } = await supabase
         .from('lessons')
-        .insert(lesson)
+        .insert(insertData)
         .select()
         .single();
 

@@ -61,7 +61,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
     <Animated.View
       style={[
         {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: spacing.lg,
           paddingVertical: spacing.md,

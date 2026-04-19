@@ -71,30 +71,30 @@ function VoiceWaveformWithProgress({ progress, duration, isPlaying, waveformData
       {displayWaveform.map((value, index) => {
         const barProgress = (index + 1) / BARS_COUNT; // +1 to avoid 0
         const height = 3 + value * 18;
-        
-        // יצירת inputRange מונוטוני עולה
+
         const inputStart = Math.max(0.001, barProgress - 0.02);
 
         return (
-          <Animated.View
-            key={index}
-            style={[
-              styles.bar,
-              {
-                height,
-                backgroundColor: progress.interpolate({
-                  inputRange: [0, inputStart, barProgress, 1],
-                  outputRange: [inactiveColor, inactiveColor, barColor, barColor],
-                  extrapolate: 'clamp',
-                }),
-                opacity: progress.interpolate({
-                  inputRange: [0, inputStart, barProgress, 1],
-                  outputRange: [0.4, 0.4, 1, 1],
-                  extrapolate: 'clamp',
-                }),
-              },
-            ]}
-          />
+          <View key={index} style={styles.barCell}>
+            <Animated.View
+              style={[
+                styles.bar,
+                {
+                  height,
+                  backgroundColor: progress.interpolate({
+                    inputRange: [0, inputStart, barProgress, 1],
+                    outputRange: [inactiveColor, inactiveColor, barColor, barColor],
+                    extrapolate: 'clamp',
+                  }),
+                  opacity: progress.interpolate({
+                    inputRange: [0, inputStart, barProgress, 1],
+                    outputRange: [0.4, 0.4, 1, 1],
+                    extrapolate: 'clamp',
+                  }),
+                },
+              ]}
+            />
+          </View>
         );
       })}
     </View>
@@ -107,14 +107,21 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     flex: 1,
+    alignSelf: 'stretch',
+    width: '100%',
     minWidth: 0,
     height: 24,
   },
+  barCell: {
+    flex: 1,
+    minWidth: 0,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   bar: {
     width: 2.5,
-    marginRight: 2,
     borderRadius: 1.25,
   },
 });

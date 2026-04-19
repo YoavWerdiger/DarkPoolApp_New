@@ -34,8 +34,8 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
   const styles = useMemo(() => StyleSheet.create({
     container: {
       backgroundColor: DesignTokens.colors.background.elevated,
-      borderRadius: DesignTokens.borderRadius.lg,
-      marginBottom: DesignTokens.spacing.md,
+      borderRadius: DesignTokens.borderRadius['2xl'],
+      marginBottom: DesignTokens.spacing.lg,
       overflow: 'hidden',
       borderWidth: DesignTokens.layout.borderWidth.normal,
       borderColor: DesignTokens.colors.border.primary,
@@ -44,12 +44,13 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       padding: DesignTokens.spacing.lg,
     },
     headerContent: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse',
       alignItems: 'center',
     },
     headerLeft: {
       flex: 1,
-      marginRight: DesignTokens.spacing.md,
+      marginLeft: DesignTokens.spacing.md,
+      gap: DesignTokens.spacing.sm,
     },
     headerRight: {
       alignItems: 'center',
@@ -59,25 +60,27 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       fontSize: 18,
       fontWeight: '700',
       color: DesignTokens.colors.text.primary,
-      marginBottom: DesignTokens.spacing.xs,
       textAlign: 'right',
       letterSpacing: 0.3,
+      lineHeight: Math.round(18 * DesignTokens.typography.lineHeight.normal),
+      writingDirection: 'rtl',
     },
     description: {
       fontSize: DesignTokens.typography.fontSize.sm,
       color: DesignTokens.colors.text.secondary,
-      marginBottom: DesignTokens.spacing.sm,
       textAlign: 'right',
-      lineHeight: DesignTokens.typography.lineHeight.normal * DesignTokens.typography.fontSize.sm,
+      lineHeight: Math.round(DesignTokens.typography.fontSize.sm * DesignTokens.typography.lineHeight.normal),
+      writingDirection: 'rtl',
     },
     lessonCount: {
       fontSize: DesignTokens.typography.fontSize.xs,
       color: DesignTokens.colors.text.tertiary,
       textAlign: 'right',
+      writingDirection: 'rtl',
     },
     progressContainer: {
       alignItems: 'center',
-      marginBottom: DesignTokens.spacing.sm,
+      marginBottom: DesignTokens.spacing.xs,
     },
     progressBar: {
       width: 40,
@@ -109,6 +112,9 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       borderTopWidth: DesignTokens.layout.borderWidth.normal,
       borderTopColor: DesignTokens.colors.border.primary,
       position: 'relative',
+      paddingHorizontal: DesignTokens.spacing.lg,
+      paddingTop: DesignTokens.spacing.sm,
+      paddingBottom: DesignTokens.spacing.lg,
     },
     gradientBackground: {
       position: 'absolute',

@@ -7,7 +7,8 @@ import { MyNotesScreen } from '../screens/Learning/MyNotesScreen';
 import { LessonPlayerScreen } from '../screens/Learning/LessonPlayerScreen';
 import { withVideoBackground } from '../components/VideoBackground';
 
-const CoursesWithVideo = withVideoBackground(CoursesScreen);
+/** CoursesScreen — ScreenChrome + שכבת transback (שור ודוב) פנימית */
+const CoursesScreenPlain = CoursesScreen;
 const LearningWithVideo = withVideoBackground(LearningScreen);
 const CourseDetailWithVideo = withVideoBackground(CourseDetailScreen);
 const CoursePreviewWithVideo = withVideoBackground(CoursePreviewScreen);
@@ -37,9 +38,9 @@ export default function LearningStack() {
         animationDuration: 200,
       }}
     >
-      <Stack.Screen 
-        name="CoursesScreen" 
-        component={CoursesWithVideo}
+      <Stack.Screen
+        name="CoursesScreen"
+        component={CoursesScreenPlain}
         options={{ title: 'קורסים' }}
       />
       <Stack.Screen 

@@ -2,55 +2,47 @@
 // Chat Groups List Screen - Modern Design (Exact Copy)
 // ============================================
 
-import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   FlatList,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
   RefreshControl,
   ActivityIndicator,
-  Alert,
-  I18nManager,
   Image,
+  ImageBackground,
   TextInput,
   Keyboard,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { LinearGradient } from 'expo-linear-gradient';
-import UICard from '../../components/ui/UICard';
+import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { useAuth } from '../../context/AuthContext';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
-import { useNavigation } from '@react-navigation/native';
+import { useChat } from '../../context/ChatContext';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
+import { MainDrawerRegistration } from '../../navigation/MainDrawerRegistration';
 import { supabase } from '../../lib/supabase';
 import { ChatGroup } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
+import StoryViewer from '../../components/chat/StoryViewer';
+import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
+import { getUsersWithStories, StoryWithUser } from '../../services/storiesService';
+import { logger } from '../../utils/logger';
+import { legacyAlert } from '../../utils/appDialog';
+import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { SUPABASE_URL } from '../../config/publicEnv';
 
-// Force RTL
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+const { width: CHAT_SCREEN_W, height: CHAT_SCREEN_H } = Dimensions.get('window');
 
-// ============================================
-// Design Colors (from reference design)
-// ============================================
-const COLORS = {
-  background: {
-    primary: '#111111',
-    secondary: '#1a1a1a',
-    tertiary: '#2a2a2a',
-  },
-  border: '#2a2a2a',
-  text: {
-    primary: '#FFFFFF',
-    secondary: '#9CA3AF', // gray-400
-    tertiary: '#6B7280', // gray-500
-  },
-  accent: '#3B82F6', // blue-500
-  success: '#22C55E', // green-500
-  danger: '#EF4444', // red-500
-};
+// RTL is configured once inside the component via useEffect (not at module level)
 
 // Tab types
 type TabType = 'all' | 'unread' | 'mentions';
@@ -62,31 +54,32 @@ interface GroupWithMembership extends ChatGroup {
     content: string;
     sender_name: string;
     created_at: string;
+    message_type?: string;
   } | null;
 }
 
 // מיפוי תמונות לקבוצות
 const GROUP_IMAGES: { [key: string]: string } = {
-  'הכרזות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/111.png',
-  '🔔 הכרזות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/111.png',
-  'דיונים - כללי': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/777.PNG',
-  '💬 דיונים - כללי': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/777.PNG',
-  'נטו ניתוחים!': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/666.PNG',
-  '📊 נטו ניתוחים!': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/666.PNG',
-  'דיוני - פניסטוקס': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/999.PNG',
-  '💰 דיוני - פניסטוקס': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/999.PNG',
-  'שאלות ותשובות בשוק': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/888.PNG',
-  '❓ שאלות ותשובות בשוק': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/888.PNG',
-  'עסקאות מסחר יומי': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/111%20(1).PNG',
-  '📈 עסקאות מסחר יומי': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/111%20(1).PNG',
-  'רווחים והצלחות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/333.PNG',
-  '🎯 רווחים והצלחות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/333.PNG',
-  'חדשות מתפרצות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/777.png',
-  '⚡ חדשות מתפרצות': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/777.png',
-  'סווינגים וסטאפים': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/555.PNG',
-  '🔄 סווינגים וסטאפים': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/555.PNG',
-  'מסחר פניסטוקס - סיכון גבוה': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/222.PNG',
-  '⚠️ מסחר פניסטוקס - סיכון גבוה': 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/groups/222.PNG',
+  'הכרזות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111.png`,
+  '🔔 הכרזות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111.png`,
+  'דיונים - כללי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.PNG`,
+  '💬 דיונים - כללי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.PNG`,
+  'נטו ניתוחים!': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/666.PNG`,
+  '📊 נטו ניתוחים!': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/666.PNG`,
+  'דיוני - פניסטוקס': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/999.PNG`,
+  '💰 דיוני - פניסטוקס': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/999.PNG`,
+  'שאלות ותשובות בשוק': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
+  '❓ שאלות ותשובות בשוק': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
+  'עסקאות מסחר יומי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
+  '📈 עסקאות מסחר יומי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
+  'רווחים והצלחות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
+  '🎯 רווחים והצלחות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
+  'חדשות מתפרצות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.png`,
+  '⚡ חדשות מתפרצות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.png`,
+  'סווינגים וסטאפים': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/555.PNG`,
+  '🔄 סווינגים וסטאפים': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/555.PNG`,
+  'מסחר פניסטוקס - סיכון גבוה': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
+  '⚠️ מסחר פניסטוקס - סיכון גבוה': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
 };
 
 const getImageByGroupName = (groupName: string): string | null => {
@@ -132,21 +125,40 @@ const formatRelativeTime = (dateStr: string): string => {
 };
 
 export default function ChatGroupsListScreen() {
-  const DesignTokens = useDesignTokens();
+  const tokens = useDesignTokens();
   const navigation = useNavigation();
   const { user } = useAuth();
-  const mainTabsHeight = useMainTabsHeight();
+  const { groups: contextGroups, realtimeConnectionState } = useChat();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
+
+  const openMainDrawer = useCallback(() => {
+    void triggerDrawerMenuHaptic();
+    try {
+      dispatchOpenMainDrawer(navigation as unknown as DrawerParentNavigation);
+    } catch {
+      /* noop */
+    }
+  }, [navigation]);
 
   const [allGroups, setAllGroups] = useState<GroupWithMembership[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [totalMembers, setTotalMembers] = useState(0);
-  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const imageErrorsRef = useRef<Set<string>>(new Set());
+  const searchInputRef = useRef<TextInput>(null);
+  const isLoadingRef = useRef(false);
+  const [imageErrorCount, setImageErrorCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [joinGroupSheet, setJoinGroupSheet] = useState<{ visible: boolean; group: GroupWithMembership | null }>({ visible: false, group: null });
+  const [isJoining, setIsJoining] = useState(false);
+  const [addStorySheetVisible, setAddStorySheetVisible] = useState(false);
+  const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>([]);
+  const [storyViewerVisible, setStoryViewerVisible] = useState(false);
+  const [storyViewerInitialIndex, setStoryViewerInitialIndex] = useState(0);
 
   const loadGroups = async () => {
     if (!user) return;
-
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
     setIsLoading(true);
     try {
       const { data: groups, error: groupsError } = await supabase
@@ -155,8 +167,9 @@ export default function ChatGroupsListScreen() {
         .order('created_at', { ascending: true });
 
       if (groupsError) {
-        console.error('❌ Error loading groups:', groupsError);
+        isLoadingRef.current = false;
         setIsLoading(false);
+        legacyAlert('שגיאה', 'לא ניתן לטעון את הקבוצות. נסה שוב.');
         return;
       }
 
@@ -184,142 +197,187 @@ export default function ChatGroupsListScreen() {
       const unreadCountMap = new Map(memberships?.map(m => [m.group_id, m.unread_count || 0]) || []);
       const mentionedCountMap = new Map(memberships?.map(m => [m.group_id, m.mentioned_count || 0]) || []);
 
-      const groupsWithLastMessage = await Promise.all(
-        realGroups.map(async (g) => {
-          const { data: messages, error: lastMessageError } = await supabase
-            .from('chat_messages')
-            .select(`
-              content,
-              message_type,
-              created_at,
-              sender_id,
-              users!chat_messages_sender_id_fkey(
-                id,
-                display_name,
-                full_name
-              )
-            `)
-            .eq('group_id', g.id)
-            .eq('is_deleted', false)
-            .order('created_at', { ascending: false })
-            .limit(1);
-          
-          const lastMessage = messages && messages.length > 0 ? messages[0] : null;
-          
-          if (lastMessageError) {
-            console.error('❌ Error loading last message for group', g.id, lastMessageError);
-          }
+      // Batch-load last messages for all groups in a single query using DISTINCT ON
+      const groupIds = realGroups.map(g => g.id);
+      const { data: lastMessages } = await supabase
+        .rpc('get_last_messages_for_groups', { group_ids: groupIds })
+        .select('*');
 
-          let messageContent = '';
-          let senderName = 'משתמש';
-          
-          if (lastMessage) {
-            const users = (lastMessage as any).users;
-            if (users) {
-              const userData = Array.isArray(users) ? users[0] : users;
-              senderName = userData?.display_name || userData?.full_name || 'משתמש';
-            } else if (lastMessage.sender_id) {
-              const { data: userData } = await supabase
-                .from('users')
-                .select('display_name, full_name')
-                .eq('id', lastMessage.sender_id)
-                .maybeSingle();
-              
-              if (userData) {
-                senderName = userData.display_name || userData.full_name || 'משתמש';
-              }
-            }
-            
-            if (lastMessage.content) {
-              messageContent = lastMessage.content;
-            } else {
-              switch (lastMessage.message_type) {
-                case 'image':
-                  messageContent = '📷 תמונה';
-                  break;
-                case 'video':
-                  messageContent = '🎬 וידאו';
-                  break;
-                case 'audio':
-                  messageContent = '🎤 הודעת קול';
-                  break;
-                case 'document':
-                  messageContent = '📄 מסמך';
-                  break;
-                default:
-                  messageContent = 'הודעה';
-              }
+      // Fallback: if RPC doesn't exist yet, load with a single query per approach
+      let lastMessageMap = new Map<string, any>();
+      if (lastMessages && lastMessages.length > 0) {
+        for (const msg of lastMessages) {
+          lastMessageMap.set(msg.group_id, msg);
+        }
+      } else {
+        // Fallback: single batch query for all groups – limit to 1 per group via a subquery approach.
+        // We load the most recent 1 message per group by fetching groupIds.length records max.
+        const { data: batchMessages } = await supabase
+          .from('chat_messages')
+          .select(`
+            group_id,
+            content,
+            message_type,
+            created_at,
+            sender_id,
+            users!chat_messages_sender_id_fkey(id, display_name, full_name)
+          `)
+          .in('group_id', groupIds)
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: false })
+          .limit(groupIds.length * 5); // at most 5 recent msgs per group to find latest
+
+        if (batchMessages) {
+          for (const msg of batchMessages) {
+            if (!lastMessageMap.has(msg.group_id)) {
+              lastMessageMap.set(msg.group_id, msg);
             }
           }
+        }
+      }
 
-          const unreadCount = unreadCountMap.get(g.id) || 0;
-          const isMember = myGroupIds.has(g.id);
+      const getMessagePreview = (msg: any): string => {
+        if (msg.content) return msg.content;
+        const typeMap: Record<string, string> = { image: 'תמונה', video: 'וידאו', audio: 'הודעת קול', document: 'מסמך' };
+        return typeMap[msg.message_type] || 'הודעה';
+      };
 
-          return {
-            ...g,
-            is_member: isMember,
-            my_membership_id: membershipMap.get(g.id),
-            unread_count: unreadCount,
-            mentioned_count: mentionedCountMap.get(g.id) || 0,
-            last_message: lastMessage
-              ? {
-                  content: messageContent,
-                  sender_name: senderName,
-                  created_at: lastMessage.created_at,
-                }
-              : null,
-          };
-        })
-      );
+      const groupsWithLastMessage = realGroups.map((g) => {
+        const lastMessage = lastMessageMap.get(g.id);
+        let senderName = 'משתמש';
+        if (lastMessage) {
+          const users = (lastMessage as any).users;
+          if (users) {
+            const userData = Array.isArray(users) ? users[0] : users;
+            senderName = userData?.display_name || userData?.full_name || 'משתמש';
+          }
+        }
+
+        return {
+          ...g,
+          is_member: myGroupIds.has(g.id),
+          my_membership_id: membershipMap.get(g.id),
+          unread_count: unreadCountMap.get(g.id) || 0,
+          mentioned_count: mentionedCountMap.get(g.id) || 0,
+          last_message: lastMessage
+            ? {
+                content: getMessagePreview(lastMessage),
+                sender_name: senderName,
+                created_at: lastMessage.created_at,
+                message_type: lastMessage.message_type,
+              }
+            : null,
+        };
+      });
 
       setAllGroups(groupsWithLastMessage);
-
-      const { data: allMembers, error: membersError } = await supabase
-        .from('chat_group_members')
-        .select('user_id');
-
-      if (!membersError && allMembers) {
-        const uniqueMembers = new Set(allMembers.map(m => m.user_id));
-        setTotalMembers(uniqueMembers.size);
-      }
+    } catch (error) {
+      logger.error('ChatGroupsListScreen', 'loadGroups failed', error);
+      legacyAlert('שגיאה', 'לא ניתן לטעון את הקבוצות');
     } finally {
+      isLoadingRef.current = false;
       setIsLoading(false);
     }
   };
+
+  const loadStories = useCallback(async () => {
+    try {
+      const data = await getUsersWithStories(user?.id);
+      setUsersWithStories(data);
+    } catch (error) {
+      logger.error('ChatGroupsListScreen', 'Failed to load stories', error);
+      setUsersWithStories([]);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     loadGroups();
   }, [user]);
 
-  // Realtime subscription disabled temporarily - causing CHANNEL_ERROR loop
-  // TODO: Re-enable when Supabase Realtime is properly configured
-  // The app will still work with pull-to-refresh
-  /*
   useEffect(() => {
-    if (!user) return;
-    // ... subscription code disabled ...
-  }, [user?.id]);
-  */
+    loadStories();
+  }, [loadStories]);
+
+  useFocusEffect(useCallback(() => { loadStories(); }, [loadStories]));
+
+  // M8: removed useFocusEffect – realtime updates from contextGroups replace manual re-fetch on focus
+
+  // M8: contextGroups is the single source of truth for live data; merge all fields on change
+  useEffect(() => {
+    if (!contextGroups || contextGroups.length === 0) return;
+
+    setAllGroups(prev => {
+      let changed = false;
+      const next = prev.map(group => {
+        const cg = contextGroups.find(c => c.id === group.id);
+        if (!cg) return group;
+
+        const hasChange =
+          group.unread_count !== (cg.unread_count || 0) ||
+          group.mentioned_count !== (cg.mentioned_count || 0) ||
+          group.last_message_at !== cg.last_message_at ||
+          group.last_message_preview !== cg.last_message_preview ||
+          (group as any).is_muted !== (cg as any).is_muted;
+
+        if (!hasChange) return group;
+        changed = true;
+        return {
+          ...group,
+          unread_count: cg.unread_count || 0,
+          mentioned_count: cg.mentioned_count || 0,
+          last_message_at: cg.last_message_at,
+          last_message_preview: cg.last_message_preview,
+          is_muted: (cg as any).is_muted,
+          last_message: cg.last_message_preview
+            ? {
+                content: cg.last_message_preview,
+                sender_name: group.last_message?.sender_name ?? '',
+                created_at: cg.last_message_at ?? group.last_message?.created_at ?? '',
+                message_type: group.last_message?.message_type,
+              }
+            : group.last_message,
+        };
+      });
+      return changed ? next : prev; // avoid re-render if nothing changed
+    });
+  }, [contextGroups]);
 
   // Helper function for message type text
   const getMessageTypeText = (messageType: string): string => {
     switch (messageType) {
-      case 'image': return '📷 תמונה';
-      case 'video': return '🎬 וידאו';
-      case 'audio': return '🎤 הודעת קול';
-      case 'document': return '📄 מסמך';
+      case 'image': return 'תמונה';
+      case 'video': return 'וידאו';
+      case 'audio': return 'הודעת קול';
+      case 'document': return 'מסמך';
       default: return 'הודעה';
     }
   };
+  
+  // פונקציה להחזרת אייקון לפי סוג ההודעה
+  const getMessageTypeIcon = (messageType?: string): string | null => {
+    switch (messageType) {
+      case 'image': return 'image-outline';
+      case 'video': return 'videocam-outline';
+      case 'audio': return 'mic-outline';
+      case 'document': return 'document-text-outline';
+      default: return null;
+    }
+  };
 
-  // Filter groups
+  // בדיקה אם זו קבוצת הכרזות
+  const isAnnouncementGroup = (name: string) => {
+    const lowerName = name.toLowerCase();
+    return lowerName.includes('הכרזות') || lowerName.includes('announcement');
+  };
+
+  // Filter groups - הכרזות למעלה עם רווח אחריהן
   const filteredGroups = useMemo(() => {
     let filtered = allGroups;
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(group =>
-        group.name.toLowerCase().includes(query) ||
+        (group.name || '').toLowerCase().includes(query) ||
         group.description?.toLowerCase().includes(query)
       );
     }
@@ -333,6 +391,7 @@ export default function ChatGroupsListScreen() {
         break;
       case 'all':
       default:
+        // ממיין: חברים קודם
         filtered = [...filtered].sort((a, b) => {
           if (a.is_member && !b.is_member) return -1;
           if (!a.is_member && b.is_member) return 1;
@@ -341,8 +400,32 @@ export default function ChatGroupsListScreen() {
         break;
     }
 
-    return filtered;
+    // מיון: הכרזות למעלה
+    const announcements = filtered.filter(g => isAnnouncementGroup(g.name));
+    const regular = filtered.filter(g => !isAnnouncementGroup(g.name));
+
+    // 🔥 מיון לפי last_message_at - קבוצות עם הודעות חדשות למעלה (כמו וואטסאפ)
+    const sortByLastMessage = (groups: typeof filtered) => {
+      return [...groups].sort((a, b) => {
+        // קודם כל לפי membership
+        if (a.is_member && !b.is_member) return -1;
+        if (!a.is_member && b.is_member) return 1;
+        
+        // אחר כך לפי הודעה אחרונה (חדש קודם)
+        const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return timeB - timeA;
+      });
+    };
+
+    return [...sortByLastMessage(announcements), ...sortByLastMessage(regular)];
   }, [allGroups, searchQuery, activeTab]);
+
+  // מספר קבוצות ההכרזות (לחישוב הרווח)
+  const announcementCount = useMemo(() => 
+    filteredGroups.filter(g => isAnnouncementGroup(g.name)).length,
+    [filteredGroups]
+  );
 
   const unreadCount = useMemo(() => 
     allGroups.filter(g => g.is_member && (g.unread_count || 0) > 0).length, 
@@ -352,6 +435,7 @@ export default function ChatGroupsListScreen() {
   const handleJoinGroup = async (group: GroupWithMembership) => {
     if (!user) return;
 
+    setIsJoining(true);
     try {
       const { error } = await supabase
         .from('chat_group_members')
@@ -362,146 +446,158 @@ export default function ChatGroupsListScreen() {
         });
 
       if (error) {
-        Alert.alert('שגיאה', 'לא הצלחנו להצטרף');
+        legacyAlert('שגיאה', 'לא הצלחנו להצטרף');
+        setIsJoining(false);
         return;
       }
 
-      loadGroups();
-    } catch (error) {
-      console.error(error);
+      // סגור את ה-BottomSheet ונווט לקבוצה
+      setJoinGroupSheet({ visible: false, group: null });
+      setIsJoining(false);
+      await loadGroups();
+      
+      // נווט לקבוצה אחרי הצטרפות
+      (navigation as any).navigate('ChatGroup', { groupId: group.id });
+    } catch (error: any) {
+      setIsJoining(false);
+      legacyAlert('שגיאה', error?.message || 'שגיאה לא צפויה');
     }
   };
 
-  const handleGroupPress = (group: GroupWithMembership) => {
+  const handleGroupPress = useCallback((group: GroupWithMembership) => {
     if (!group.is_member) {
-      Alert.alert(
-        group.name,
-        'כדי לצפות בקבוצה יש להצטרף',
-        [
-          { text: 'ביטול', style: 'cancel' },
-          { text: 'הצטרף', onPress: () => handleJoinGroup(group) },
-        ]
-      );
+      setJoinGroupSheet({ visible: true, group });
       return;
     }
-
     Keyboard.dismiss();
     (navigation as any).navigate('ChatGroup', { groupId: group.id });
-  };
+  }, [navigation]);
 
-  const renderGroup = useCallback(({ item }: { item: GroupWithMembership }) => {
+  const renderGroup = useCallback(({ item, index }: { item: GroupWithMembership; index: number }) => {
     const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
     const hasUnread = (item.unread_count || 0) > 0;
     const hasMentions = (item.mentioned_count || 0) > 0;
-    
+    const isAnnouncement = isAnnouncementGroup(item.name);
     const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
-    const hasImageError = imageUrl ? imageErrors.has(imageUrl) : false;
+    const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
+    const isLastAnnouncement = isAnnouncement && index === announcementCount - 1 && announcementCount > 0;
+    const isLastItem = index === filteredGroups.length - 1;
+
+    const lastMsgPreview = item.is_member && item.last_message
+      ? item.last_message.message_type && item.last_message.message_type !== 'text'
+        ? `${item.last_message.sender_name}: ${getMessageTypeText(item.last_message.message_type)}`
+        : `${item.last_message.sender_name}: ${item.last_message.content}`
+      : item.is_member
+        ? 'אין הודעות עדיין'
+        : `${item.members_count || 0} חברים`;
+
+    const timeLabel = item.last_message
+      ? formatRelativeTime(item.last_message.created_at)
+      : '';
 
     return (
-      <TouchableOpacity
-        style={styles.chatItem}
-        onPress={() => handleGroupPress(item)}
-        activeOpacity={0.7}
-      >
-        {/* Avatar */}
-        <View style={styles.avatarContainer}>
-          {imageUrl && !hasImageError ? (
-            <Image 
-              source={{ uri: imageUrl }} 
-              style={styles.avatar}
-              resizeMode="cover"
-              onError={() => {
-                setImageErrors(prev => new Set(prev).add(imageUrl));
-              }}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Ionicons name={iconName} size={20} color={COLORS.text.secondary} />
-            </View>
-          )}
-          {/* Online/Unread indicator */}
-          {item.is_member && hasUnread && (
-            <View style={styles.onlineIndicator} />
-          )}
-        </View>
-
-        {/* Content */}
-        <View style={styles.chatContent}>
-          <View style={styles.topRow}>
-            <Text style={[styles.chatName, hasUnread && styles.chatNameUnread]} numberOfLines={1}>
-              {item.name}
-            </Text>
-            {item.last_message && (
-              <Text style={styles.timeText}>
-                {formatRelativeTime(item.last_message.created_at)}
-              </Text>
-            )}
-          </View>
-          
-          <View style={styles.bottomRow}>
-            {item.is_member ? (
-              <Text style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]} numberOfLines={1}>
-                {item.last_message 
-                  ? `${item.last_message.sender_name}: ${item.last_message.content}`
-                  : 'אין הודעות עדיין'
-                }
-              </Text>
-            ) : (
-              <Text style={styles.memberCountText}>
-                {item.members_count || 0} חברים
-              </Text>
-            )}
-            
-            {/* Badge */}
-            {hasUnread ? (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadBadgeText}>
-                  {item.unread_count! > 99 ? '99+' : item.unread_count}
-                </Text>
-              </View>
-            ) : hasMentions ? (
-              <View style={styles.mentionBadge}>
-                <Text style={styles.mentionBadgeText}>@</Text>
-              </View>
-            ) : !item.is_member ? (
-              <TouchableOpacity
-                style={styles.joinButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleJoinGroup(item);
+      <View key={`group-wrapper-${item.id}`}>
+        <TouchableOpacity
+          style={styles.chatRow}
+          onPress={() => handleGroupPress(item)}
+          activeOpacity={0.6}
+        >
+          {/* Avatar */}
+          <View style={styles.avatarWrap}>
+            {imageUrl && !hasImageError ? (
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.avatar}
+                resizeMode="cover"
+                onError={() => {
+                  if (!imageErrorsRef.current.has(imageUrl)) {
+                    imageErrorsRef.current.add(imageUrl);
+                    setImageErrorCount(c => c + 1);
+                  }
                 }}
-              >
-                <Ionicons name="add" size={16} color={COLORS.accent} />
-              </TouchableOpacity>
-            ) : null}
+              />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Ionicons name={iconName} size={22} color={tokens.colors.text.secondary} />
+              </View>
+            )}
+            {item.is_member && hasUnread && <View style={styles.unreadDot} />}
           </View>
-        </View>
-      </TouchableOpacity>
+
+          {/* Text content */}
+          <View style={styles.chatBody}>
+            <View style={styles.chatRow1}>
+              <Text style={[styles.chatName, hasUnread && styles.chatNameBold]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              {!!timeLabel && (
+                <Text style={[styles.chatTime, hasUnread && styles.chatTimeUnread]}>
+                  {timeLabel}
+                </Text>
+              )}
+            </View>
+            <View style={styles.chatRow2}>
+              <Text
+                style={[styles.chatPreview, hasUnread && styles.chatPreviewUnread]}
+                numberOfLines={1}
+              >
+                {item.last_message?.message_type && getMessageTypeIcon(item.last_message.message_type) ? (
+                  <>
+                    <Ionicons
+                      name={getMessageTypeIcon(item.last_message.message_type) as any}
+                      size={13}
+                      color={hasUnread ? tokens.colors.text.primary : tokens.colors.text.tertiary}
+                    />{' '}
+                  </>
+                ) : null}
+                {lastMsgPreview}
+              </Text>
+              {hasUnread ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {item.unread_count! > 99 ? '99+' : item.unread_count}
+                  </Text>
+                </View>
+              ) : hasMentions ? (
+                <View style={styles.mentionBadge}>
+                  <Text style={styles.mentionBadgeText}>@</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {isLastAnnouncement ? (
+          <View style={styles.sectionDivider} />
+        ) : !isLastItem ? (
+          <View style={styles.rowSeparator} />
+        ) : null}
+      </View>
     );
-  }, [imageErrors]);
+  }, [imageErrorCount, announcementCount, filteredGroups.length, styles, tokens, handleGroupPress]);
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       {isLoading ? (
         <>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+          <ActivityIndicator size="large" color={tokens.colors.primary.main} />
           <Text style={styles.emptyText}>טוען...</Text>
         </>
       ) : searchQuery ? (
         <>
-          <Ionicons name="search-outline" size={64} color={COLORS.text.tertiary} />
+          <Ionicons name="search-outline" size={64} color={tokens.colors.text.tertiary} />
           <Text style={styles.emptyTitle}>לא נמצאו תוצאות</Text>
           <Text style={styles.emptyText}>נסה לחפש משהו אחר</Text>
         </>
       ) : activeTab === 'unread' ? (
         <>
-          <Ionicons name="checkmark-done-circle-outline" size={64} color={COLORS.success} />
+          <Ionicons name="checkmark-done-circle-outline" size={64} color={tokens.colors.text.success} />
           <Text style={styles.emptyTitle}>הכל נקרא! 🎉</Text>
           <Text style={styles.emptyText}>אין הודעות חדשות</Text>
         </>
       ) : (
         <>
-          <Ionicons name="chatbubbles-outline" size={64} color={COLORS.text.tertiary} />
+          <Ionicons name="chatbubbles-outline" size={64} color={tokens.colors.text.tertiary} />
           <Text style={styles.emptyTitle}>אין קבוצות</Text>
         </>
       )}
@@ -509,327 +605,500 @@ export default function ChatGroupsListScreen() {
   );
 
   return (
-    <LinearGradient
-      colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-      style={{ flex: 1 }}
-    >
+    <View style={{ flex: 1 }}>
+      <MainDrawerRegistration />
+      <ScreenGradientBackground style={StyleSheet.absoluteFill} />
+      {/* שור ודוב ברקע — כמו LoginScreen */}
+      <View
+        pointerEvents="none"
+        style={{
+          ...StyleSheet.absoluteFillObject,
+          justifyContent: 'center',
+          alignItems: 'center',
+          opacity: 0.22,
+        }}
+      >
+        <ImageBackground
+          source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
+          style={{ width: CHAT_SCREEN_W * 1.6, height: CHAT_SCREEN_H * 1.6 }}
+          imageStyle={{ resizeMode: 'contain' }}
+        />
+      </View>
       <RNSafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.container}>
           {/* Header */}
-      <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: 0 }}>
-        <UICard variant="blur" padding="sm">
-          <View style={[styles.headerTop, { marginTop: 0 }]}>
-            {/* Right side: title + members, aligned right */}
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-              <Text style={[styles.headerTitle, { marginRight: 10 }]}>
-                קהילת - <Text style={styles.headerTitleBrand}>DarkPool</Text>
-              </Text>
-              <Text
-                style={{
-                  marginRight: 10, marginTop: 3,
-                  fontSize: DesignTokens.typography.fontSize.sm,
-                  color: DesignTokens.colors.text.secondary,
-                  textAlign: 'right',
-                }}
+          <View style={styles.appHeader}>
+            <View style={styles.appHeaderActions}>
+              <TouchableOpacity
+                style={styles.headerMenuBtn}
+                onPress={openMainDrawer}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="תפריט ראשי"
               >
-                {totalMembers} חברים בקהילה
-              </Text>
+                <Ionicons name="menu" size={28} color={tokens.colors.text.primary} />
+              </TouchableOpacity>
             </View>
-            {/* Left side: big logo, centered vertically */}
-            <Image
-              source={{
-                uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/f21d2751-1a07-4f04-bbd5-59540a4ae059-2.png',
-              }}
-              style={{ width: 96, height: 96, marginLeft: 10}}
-              resizeMode="contain"
-            />
+            <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]}>צ׳אטים</Text>
+            <View style={styles.appHeaderActions} />
           </View>
-        </UICard>
-      </View>
 
-          {/* Tabs */}
-          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md, marginBottom: DesignTokens.spacing.sm }}>
-            <UICard variant="blur" padding="none" style={styles.tabsCard}>
-              <View>
-                <View style={styles.tabsContainer}>
-                  <TouchableOpacity style={styles.tab} onPress={() => setActiveTab('all')}>
-                    <Text
-                      style={[
-                        styles.tabText,
-                        activeTab === 'all' && { color: DesignTokens.colors.primary.main },
-                      ]}
-                    >
-                      הכל
-                    </Text>
-                    {activeTab === 'all' && (
-                      <View
-                        style={[
-                          styles.tabIndicator,
-                          { backgroundColor: DesignTokens.colors.primary.main },
-                        ]}
-                      />
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity style={styles.tab} onPress={() => setActiveTab('unread')}>
-                    <View style={styles.tabContent}>
-                      <Text
-                        style={[
-                          styles.tabText,
-                          activeTab === 'unread' && { color: DesignTokens.colors.primary.main },
-                        ]}
-                      >
-                        לא נקראו
-                      </Text>
-                      {unreadCount > 0 && (
-                        <View
-                          style={[
-                            styles.tabBadge,
-                            { backgroundColor: DesignTokens.colors.primary.main },
-                          ]}
-                        >
-                          <Text style={styles.tabBadgeText}>{unreadCount}</Text>
-                        </View>
-                      )}
-                    </View>
-                    {activeTab === 'unread' && (
-                      <View
-                        style={[
-                          styles.tabIndicator,
-                          { backgroundColor: DesignTokens.colors.primary.main },
-                        ]}
-                      />
-                    )}
-                  </TouchableOpacity>
+          {/* שורת סטטוסים */}
+          <View style={styles.statusRow}>
+            <Pressable
+              style={styles.statusCircle}
+              onPress={() => setAddStorySheetVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="הוסף סטטוס"
+            >
+              <View style={styles.statusAddOuter}>
+                <View style={styles.statusCircleInner}>
+                  <Ionicons name="add" size={24} color={tokens.colors.primary.main} />
                 </View>
-
-                {/* Search Bar under tabs */}
-                <View
-                  style={[
-                    styles.searchContainer,
-                    { marginTop: 10, marginBottom: 12, marginHorizontal: 12 },
-                  ]}
-                >
-                  <Ionicons
-                    name="search"
-                    size={16}
-                    color={COLORS.text.tertiary}
-                    style={styles.searchIcon}
-                  />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="חיפוש בקבוצות..."
-                    placeholderTextColor={COLORS.text.tertiary}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    returnKeyType="search"
-                  />
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity
-                      onPress={() => setSearchQuery('')}
-                      style={styles.clearButton}
-                    >
-                      <Ionicons
-                        name="close-circle"
-                        size={16}
-                        color={COLORS.text.tertiary}
-                      />
-                    </TouchableOpacity>
-                  )}
+                <View style={styles.statusAddBadge}>
+                  <Ionicons name="add" size={11} color="#fff" />
                 </View>
               </View>
-            </UICard>
+              <Text style={[styles.statusLabel, { color: tokens.colors.primary.main }]}>הוסף</Text>
+            </Pressable>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flex: 1, direction: 'rtl' }}
+              contentContainerStyle={styles.statusRowScroll}
+            >
+            {usersWithStories.map((s, idx) => {
+              const avatar = s.user?.profile_picture;
+              const displayName = s.user?.display_name || s.user?.full_name || 'משתמש';
+              const isUnread = s.has_viewed === false;
+              const isOwn = s.user_id === user?.id;
+              return (
+                <TouchableOpacity
+                  key={s.user_id}
+                  style={styles.statusCircle}
+                  onPress={() => {
+                    setStoryViewerInitialIndex(idx);
+                    setStoryViewerVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  {isUnread ? (
+                    <LinearGradient
+                      colors={[tokens.colors.primary.main, tokens.colors.primary.light, tokens.colors.secondary.main]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.storyRingGradient}
+                    >
+                      <View style={styles.storyRingInner}>
+                        {avatar ? (
+                          <Image source={{ uri: avatar }} style={styles.statusCircleImage} resizeMode="cover" />
+                        ) : (
+                          <View style={styles.storyAvatarPlaceholder}>
+                            <Ionicons name="person" size={22} color={tokens.colors.text.secondary} />
+                          </View>
+                        )}
+                      </View>
+                    </LinearGradient>
+                  ) : (
+                    <View style={styles.storyRingViewed}>
+                      <View style={styles.storyRingInner}>
+                        {avatar ? (
+                          <Image source={{ uri: avatar }} style={styles.statusCircleImage} resizeMode="cover" />
+                        ) : (
+                          <View style={styles.storyAvatarPlaceholder}>
+                            <Ionicons name="person" size={22} color={tokens.colors.text.tertiary} />
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                  <Text style={[styles.statusLabel, isOwn && { color: tokens.colors.primary.main }]} numberOfLines={1}>
+                    {isOwn ? 'שלי' : displayName}
+                  </Text>
+                  {isUnread && s.story_count > 1 && (
+                    <View style={styles.storyCountBadge}>
+                      <Text style={styles.storyCountText}>{s.story_count}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            </ScrollView>
           </View>
 
+          {/* Chat list card – raised surface with rounded top corners */}
+          <View style={styles.listCard}>
+          {/* Search + Filters – Instagram style */}
+          <View style={styles.searchSection}>
+            <View style={styles.searchBar}>
+              <Ionicons name="search" size={16} color={tokens.colors.text.tertiary} />
+              <TextInput
+                ref={searchInputRef}
+                style={styles.searchInput}
+                placeholder="חיפוש..."
+                placeholderTextColor={tokens.colors.text.tertiary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={16} color={tokens.colors.text.tertiary} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={styles.filterRow}>
+              {(['all', 'unread'] as TabType[]).map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  style={[styles.filterPill, activeTab === tab && styles.filterPillActive]}
+                  onPress={() => setActiveTab(tab)}
+                >
+                  <Text style={[styles.filterPillText, activeTab === tab && styles.filterPillTextActive]}>
+                    {tab === 'all' ? 'הכל' : 'לא נקראו'}
+                  </Text>
+                  {tab === 'unread' && unreadCount > 0 && (
+                    <View style={styles.filterBadge}>
+                      <Text style={styles.filterBadgeText}>{unreadCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* חיבור Realtime — לא מציגים בזמן "connecting" ראשוני כדי לא להלחיץ */}
+          {(realtimeConnectionState === 'reconnecting' || realtimeConnectionState === 'offline') && (
+            <View style={styles.offlineBanner}>
+              {realtimeConnectionState === 'reconnecting' ? (
+                <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} />
+              ) : null}
+              <Text style={styles.offlineBannerText}>
+                {realtimeConnectionState === 'reconnecting'
+                  ? 'מתחבר מחדש לצ׳אט...'
+                  : 'אין חיבור בזמן אמת. הרשימה תתעדכן כשיחזור החיבור.'}
+              </Text>
+            </View>
+          )}
+
           {/* Chat List */}
-          <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <View style={{ flex: 1, minHeight: 0 }}>
             <FlatList
               data={filteredGroups}
               renderItem={renderGroup}
               keyExtractor={(item) => item.id}
+              ListHeaderComponent={null}
               ListEmptyComponent={renderEmpty}
               refreshControl={
-                <RefreshControl refreshing={isLoading} onRefresh={loadGroups} tintColor={COLORS.accent} />
+                <RefreshControl refreshing={isLoading} onRefresh={loadGroups} tintColor={tokens.colors.primary.main} />
               }
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator={false}
               contentContainerStyle={
-                filteredGroups.length === 0 ? styles.emptyListContainer : undefined
+                filteredGroups.length === 0 ? styles.emptyListContainer : { paddingTop: 4, paddingBottom: 20 }
               }
               keyboardShouldPersistTaps="handled"
+              initialNumToRender={10}
+              maxToRenderPerBatch={8}
+              windowSize={7}
+              removeClippedSubviews={true}
             />
+          </View>
           </View>
         </View>
       </RNSafeAreaView>
-    </LinearGradient>
+
+      {/* Join Group Bottom Sheet */}
+      <JoinGroupBottomSheet
+        visible={joinGroupSheet.visible}
+        onClose={() => setJoinGroupSheet({ visible: false, group: null })}
+        onJoin={() => joinGroupSheet.group && handleJoinGroup(joinGroupSheet.group)}
+        group={joinGroupSheet.group}
+        isJoining={isJoining}
+      />
+
+      {/* Add Story – מסך מלא בסגנון Instagram/WhatsApp */}
+      <AddStoryFullScreen
+        visible={addStorySheetVisible}
+        onClose={() => setAddStorySheetVisible(false)}
+        onAdded={() => loadStories()}
+      />
+
+      {/* Story Viewer */}
+      <StoryViewer
+        visible={storyViewerVisible}
+        onClose={() => { setStoryViewerVisible(false); loadStories(); }}
+        storiesByUser={usersWithStories}
+        initialUserIndex={storyViewerInitialIndex}
+        onStoriesChanged={loadStories}
+      />
+    </View>
   );
 }
 
 // ============================================
-// Styles - Exact Copy from Reference Design
+// Styles – Instagram DM inspired design
 // ============================================
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  
-  // Header - bg-[#1a1a1a] border-b border-[#2a2a2a] px-5 py-4
-  header: {
-    backgroundColor: COLORS.background.secondary,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-  },
-  headerTop: {
+const HP = 20; // horizontal padding constant
+
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: 'transparent' },
+
+  /* ── Header ── */
+  appHeader: {
     flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 0,
+    paddingHorizontal: HP,
+    paddingVertical: 14,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: COLORS.text.primary,
+  appHeaderTitleCenter: {
+    flex: 1,
+    textAlign: 'center',
   },
-  headerTitleBrand: {
+  appHeaderActions: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    minWidth: 72,
+  },
+  appHeaderTitle: {
+    fontSize: 22,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: tokens.colors.text.primary,
+    letterSpacing: -0.3,
   },
-  headerActions: {
-    flexDirection: 'row',
+  headerActionBtn: {
+    width: 34,
+    height: 34,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
-  headerButton: {
-    padding: 8,
-    borderRadius: 50,
+  headerMenuBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: tokens.colors.background.secondary,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.strong,
+    shadowColor: '#000',
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
 
-  // Search - bg-[#2a2a2a] rounded-full py-2.5 pl-10 pr-4
-  searchContainer: {
+  /* ── Raised list card ── */
+  listCard: {
+    flex: 1,
+    // Keep rounded top corners without brightening the screen gradient.
+    backgroundColor: 'transparent',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+
+  /* ── Stories row ── */
+  statusRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    paddingHorizontal: HP,
+    paddingTop: 8,
+    paddingBottom: 9,
+  },
+  statusRowScroll: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    paddingRight: 0,
+    marginLeft: 14,
+  },
+  statusCircle: { alignItems: 'center', marginLeft: 14 },
+  statusCircleInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: tokens.colors.background.tertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusAddOuter: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 1.5,
+    borderColor: tokens.colors.primary.glow,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  statusAddBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: tokens.colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: tokens.colors.background.primary,
+  },
+  storyRingGradient: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  storyRingViewed: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 1.5,
+    borderColor: tokens.colors.border.hover,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  storyRingInner: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    borderWidth: 2.5,
+    borderColor: tokens.colors.background.primary,
+    backgroundColor: tokens.colors.background.tertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  storyAvatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: tokens.colors.border.divider,
+  },
+  storyCountBadge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: tokens.colors.background.primary,
+  },
+  storyCountText: { color: tokens.colors.text.primary, fontSize: 9, fontWeight: '700' },
+  statusLabel: {
+    fontSize: 11,
+    color: tokens.colors.text.secondary,
+    maxWidth: 68,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  statusCircleImage: { width: 56, height: 56, borderRadius: 28 },
+
+  /* ── Search + Filters ── */
+  searchSection: {
+    paddingHorizontal: HP,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
+  searchBar: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    backgroundColor: COLORS.background.tertiary,
-    borderRadius: 50,
+    backgroundColor: tokens.colors.border.primary,
+    borderRadius: 22,
     paddingHorizontal: 16,
     height: 42,
-  },
-  searchIcon: {
-    marginLeft: 8,
+    gap: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: COLORS.text.primary,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     paddingVertical: 0,
   },
-  clearButton: {
-    padding: 4,
-  },
-
-  // Tabs - flex gap-6 px-5 py-3 border-b border-[#2a2a2a] bg-[#1a1a1a]
-  tabsCard: {
-    borderRadius: 30,
-    overflow: 'hidden',
-  },
-  tabsContainer: {
-    flexDirection: 'row-reverse',
-    paddingHorizontal: 16,
-    gap: 24,
-  },
-  tab: {
-    paddingVertical: 12,
-    position: 'relative',
-  },
-  tabContent: {
+  filterRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  filterPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: tokens.colors.background.tertiary,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     gap: 6,
   },
-  tabText: {
-    fontSize: 15,
+  filterPillActive: {
+    backgroundColor: 'rgba(0, 200, 5, 0.12)',
+  },
+  filterPillText: {
+    fontSize: 13,
     fontWeight: '500',
-    color: COLORS.text.secondary,
+    color: tokens.colors.text.secondary,
   },
-  tabTextActive: {
-    color: COLORS.accent,
+  filterPillTextActive: {
+    color: tokens.colors.primary.main,
+    fontWeight: '600',
   },
-  tabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: COLORS.accent,
-    borderRadius: 1,
-  },
-  tabBadge: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 50,
+  filterBadge: {
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: 9,
     minWidth: 18,
     height: 18,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 5,
   },
-  tabBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.text.primary,
-  },
+  filterBadgeText: { fontSize: 10, fontWeight: '700', color: tokens.colors.text.inverse },
 
-  // Chat Item - px-5 py-3.5 hover:bg-[#1a1a1a] border-b border-[#1a1a1a]
-  chatItem: {
+  /* ── Chat row ── */
+  chatRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: HP,
+    marginHorizontal: 8,
+    borderRadius: 16,
   },
-  avatarContainer: {
-    position: 'relative',
-    marginLeft: 16,
-  },
-  avatar: {
+  avatarWrap: { position: 'relative', marginLeft: 14 },
+  avatar: { width: 56, height: 56, borderRadius: 28 },
+  avatarFallback: {
     width: 56,
     height: 56,
     borderRadius: 28,
-  },
-  avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Online indicator - w-3 h-3 bg-green-500 rounded-full border-2 border-[#111111]
-  onlineIndicator: {
+  unreadDot: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
+    bottom: 1,
+    right: 1,
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: COLORS.success,
+    backgroundColor: tokens.colors.primary.main,
     borderWidth: 2,
-    borderColor: COLORS.background.primary,
+    borderColor: tokens.colors.background.primary,
   },
-  chatContent: {
-    flex: 1,
-    minWidth: 0,
-  },
-  topRow: {
+  chatBody: { flex: 1, minWidth: 0 },
+  chatRow1: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -838,83 +1107,72 @@ const styles = StyleSheet.create({
   chatName: {
     fontSize: 16,
     fontWeight: '500',
-    color: COLORS.text.primary,
+    color: tokens.colors.text.primary,
     flex: 1,
     textAlign: 'right',
   },
-  chatNameUnread: {
-    fontWeight: '700',
-  },
-  // Time - text-xs text-gray-500
-  timeText: {
+  chatNameBold: { fontWeight: '700' },
+  chatTime: {
     fontSize: 12,
-    color: COLORS.text.tertiary,
-    marginRight: 8,
+    color: tokens.colors.text.tertiary,
+    marginRight: 10,
   },
-  bottomRow: {
+  chatTimeUnread: { color: tokens.colors.primary.main },
+  chatRow2: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  // Last message - text-sm text-gray-400
-  lastMessage: {
+  chatPreview: {
     fontSize: 14,
-    color: COLORS.text.secondary,
+    color: tokens.colors.text.tertiary,
     flex: 1,
     textAlign: 'right',
   },
-  lastMessageUnread: {
-    color: COLORS.text.primary,
+  chatPreviewUnread: {
+    color: tokens.colors.text.secondary,
     fontWeight: '500',
   },
-  memberCountText: {
-    fontSize: 14,
-    color: COLORS.text.tertiary,
-  },
-  // Badge - bg-green-500 text-white text-xs rounded-full px-2 py-0.5
-  unreadBadge: {
-    backgroundColor: COLORS.success,
-    borderRadius: 50,
+  badge: {
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: 11,
     minWidth: 22,
     height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    marginRight: 8,
+    paddingHorizontal: 7,
+    marginRight: 10,
   },
-  unreadBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.text.primary,
-  },
+  badgeText: { fontSize: 12, fontWeight: '700', color: tokens.colors.text.inverse },
   mentionBadge: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: COLORS.danger,
+    backgroundColor: tokens.colors.text.danger,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
+    marginRight: 10,
   },
   mentionBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: tokens.colors.text.primary,
   },
-  joinButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.accent + '33',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
+  rowSeparator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: tokens.colors.border.divider,
+    marginHorizontal: HP,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: tokens.colors.border.primary,
+    marginHorizontal: HP,
+    marginTop: 6,
+    marginBottom: 2,
   },
 
-  // Empty State
-  emptyListContainer: {
-    flexGrow: 1,
-  },
+  /* ── Empty state ── */
+  emptyListContainer: { flexGrow: 1 },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -924,14 +1182,27 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: COLORS.text.primary,
+    color: tokens.colors.text.primary,
     marginTop: 16,
     textAlign: 'center',
   },
   emptyText: {
     fontSize: 15,
-    color: COLORS.text.secondary,
+    color: tokens.colors.text.secondary,
     marginTop: 8,
     textAlign: 'center',
   },
+
+  /* ── Offline banner ── */
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(239,68,68,0.8)',
+    paddingVertical: 6,
+    marginHorizontal: HP,
+    marginVertical: 4,
+    borderRadius: 10,
+  },
+  offlineBannerText: { color: '#fff', fontSize: 13, fontWeight: '600' },
 });

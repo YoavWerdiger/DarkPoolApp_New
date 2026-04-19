@@ -2,21 +2,9 @@
 // Chat Group Info Screen - Modern Design
 // ============================================
 
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  Alert,
-  Switch,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Modal, TextInput, KeyboardAvoidingView, Platform, I18nManager } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
@@ -29,7 +17,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
-import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
+import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 
 export default function ChatGroupInfoScreen() {
   const navigation = useNavigation();
@@ -77,6 +65,24 @@ export default function ChatGroupInfoScreen() {
   }, [messages, groupId]);
 
   const [gallerySignedThumbs, setGallerySignedThumbs] = useState<Record<string, string>>({});
+
+  const avatarOnlineCornerStyle = useMemo(
+    () => ({ ...(I18nManager.isRTL ? { left: 8 } : { right: 8 }) }),
+    [],
+  );
+  const galleryVideoCornerStyle = useMemo(
+    () => ({
+      top: DesignTokens.spacing.xs,
+      ...(I18nManager.isRTL
+        ? { left: DesignTokens.spacing.xs }
+        : { right: DesignTokens.spacing.xs }),
+    }),
+    [DesignTokens.spacing.xs],
+  );
+
+  /** בשורות הגדרות ממוסגרות ב־RTL האייקון צריך להצביע כמו בשאר האפליקציה */
+  const settingsDisclosureIcon = I18nManager.isRTL ? 'chevron-forward' : 'chevron-back';
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -108,7 +114,7 @@ export default function ChatGroupInfoScreen() {
       if (!newDesc.trim()) return;
       const { success, error } = await updateGroup(groupId, { description: newDesc.trim() });
       if (!success) {
-        Alert.alert('שגיאה', error || 'לא ניתן לעדכן את הקבוצה');
+        legacyAlert('שגיאה', error || 'לא ניתן לעדכן את הקבוצה');
       }
     });
   };
@@ -118,9 +124,9 @@ export default function ChatGroupInfoScreen() {
       if (!inputUserId?.trim() || !user?.id) return;
       const { error } = await chatGroupService.addGroupMember(groupId, inputUserId.trim(), user.id);
       if (error) {
-        Alert.alert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
+        legacyAlert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
       } else {
-        Alert.alert('הצלחה', 'המשתמש נוסף לקבוצה');
+        legacyAlert('הצלחה', 'המשתמש נוסף לקבוצה');
       }
     });
   };
@@ -148,11 +154,11 @@ export default function ChatGroupInfoScreen() {
 
     options.push({ text: 'ביטול', style: 'cancel' });
 
-    Alert.alert('פעולות חבר', '', options);
+    legacyAlert('פעולות חבר', '', options);
   };
 
   const handlePromoteMember = (member: ChatGroupMember) => {
-    Alert.alert(
+    legacyAlert(
       'הפוך לאדמין',
       `האם להפוך את ${member.user?.display_name} לאדמין?`,
       [
@@ -163,7 +169,7 @@ export default function ChatGroupInfoScreen() {
             if (!user?.id) return;
             const { error } = await chatGroupService.updateGroupMemberRole(groupId, member.user_id, ChatMemberRole.ADMIN, user.id);
             if (error) {
-              Alert.alert('שגיאה', 'לא ניתן לקדם את החבר');
+              legacyAlert('שגיאה', 'לא ניתן לקדם את החבר');
             }
           },
         },
@@ -172,7 +178,7 @@ export default function ChatGroupInfoScreen() {
   };
 
   const handleDemoteMember = (member: ChatGroupMember) => {
-    Alert.alert(
+    legacyAlert(
       'הורד מאדמין',
       `האם להוריד את ${member.user?.display_name} מאדמין?`,
       [
@@ -183,7 +189,7 @@ export default function ChatGroupInfoScreen() {
             if (!user?.id) return;
             const { error } = await chatGroupService.updateGroupMemberRole(groupId, member.user_id, ChatMemberRole.MEMBER, user.id);
             if (error) {
-              Alert.alert('שגיאה', 'לא ניתן להוריד את החבר מאדמין');
+              legacyAlert('שגיאה', 'לא ניתן להוריד את החבר מאדמין');
             }
           },
         },
@@ -192,7 +198,7 @@ export default function ChatGroupInfoScreen() {
   };
 
   const handleRemoveMember = (member: ChatGroupMember) => {
-    Alert.alert(
+    legacyAlert(
       'הסר חבר',
       `האם להסיר את ${member.user?.display_name} מהקבוצה?`,
       [
@@ -204,7 +210,7 @@ export default function ChatGroupInfoScreen() {
             if (!user?.id) return;
             const { error } = await chatGroupService.removeGroupMember(groupId, member.user_id, user.id);
             if (error) {
-              Alert.alert('שגיאה', 'לא ניתן להסיר את החבר מהקבוצה');
+              legacyAlert('שגיאה', 'לא ניתן להסיר את החבר מהקבוצה');
             }
           },
         },
@@ -218,7 +224,7 @@ export default function ChatGroupInfoScreen() {
     const { success } = await chatGroupService.toggleGroupMute(groupId, user.id, value);
     if (!success) {
       setIsMuted(!value);
-      Alert.alert('שגיאה', 'לא ניתן לשנות את הגדרות ההשתקה');
+      legacyAlert('שגיאה', 'לא ניתן לשנות את הגדרות ההשתקה');
     }
   };
 
@@ -240,7 +246,7 @@ export default function ChatGroupInfoScreen() {
       if (!newName?.trim()) return;
       const { success, error } = await updateGroup(groupId, { name: newName.trim() });
       if (!success) {
-        Alert.alert('שגיאה', error || 'לא ניתן לעדכן את הקבוצה');
+        legacyAlert('שגיאה', error || 'לא ניתן לעדכן את הקבוצה');
       }
     });
   };
@@ -254,7 +260,7 @@ export default function ChatGroupInfoScreen() {
   };
 
   const handleLeaveGroup = () => {
-    Alert.alert(
+    legacyAlert(
       'עזוב קבוצה',
       'האם אתה בטוח שברצונך לעזוב את הקבוצה?',
       [
@@ -272,17 +278,16 @@ export default function ChatGroupInfoScreen() {
                   navigation.goBack();
                 }
               } else {
-                Alert.alert('שגיאה', result.error || 'לא הצלחנו לעזוב את הקבוצה');
+                legacyAlert('שגיאה', result.error || 'לא הצלחנו לעזוב את הקבוצה');
               }
             } catch (error) {
-              Alert.alert('שגיאה', 'אירעה שגיאה בעת עזיבת הקבוצה');
+              legacyAlert('שגיאה', 'אירעה שגיאה בעת עזיבת הקבוצה');
             }
           },
         },
       ]
     );
   };
-
 
   // ============================================
   // Render
@@ -298,12 +303,7 @@ export default function ChatGroupInfoScreen() {
       <ChatScreenShell>
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <View style={styles.container}>
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Ionicons name="arrow-forward" size={22} color={DesignTokens.colors.text.secondary} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>פרטי קבוצה</Text>
-            </View>
+            <ChatSubScreenHeader title="פרטי קבוצה" onBack={handleBack} />
             <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
           </View>
         </SafeAreaView>
@@ -322,30 +322,15 @@ export default function ChatGroupInfoScreen() {
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
-          {/* Header */}
-          <View style={{
-            paddingHorizontal: 16,
-            paddingTop: 4,
-            paddingBottom: 10,
-            borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: 'rgba(255,255,255,0.06)',
-          }}>
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Ionicons name="close" size={22} color={DesignTokens.colors.text.secondary} />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>פרטי קבוצה</Text>
-              <View style={{ width: 36 }} />
-            </View>
-          </View>
+          <ChatSubScreenHeader title="פרטי קבוצה" onBack={handleBack} />
 
           <ScrollView 
             style={styles.scrollView} 
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg, paddingBottom: DesignTokens.spacing['3xl'] }}
+            contentContainerStyle={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg, paddingBottom: DesignTokens.spacing['3xl'], direction: 'rtl' }}
           >
           {/* Profile Header - UICard blur כמו בפרופיל */}
-          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+          <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
             <View style={styles.profileHeaderContent}>
               {/* Avatar */}
               <View style={styles.avatarContainer}>
@@ -357,7 +342,7 @@ export default function ChatGroupInfoScreen() {
                   </View>
                 )}
                 {/* Online indicator - for groups, show if there are online members */}
-                <View style={styles.onlineIndicator} />
+                <View style={[styles.onlineIndicator, avatarOnlineCornerStyle]} />
               </View>
 
               {/* Name & Status */}
@@ -370,22 +355,22 @@ export default function ChatGroupInfoScreen() {
 
           {/* תיאור הקבוצה - UICard blur */}
           {currentGroup.description && (
-            <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
-              <Text style={styles.sectionLabel}>תיאור הקבוצה</Text>
+            <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
+              <Text style={[styles.sectionLabel, styles.sectionLabelStandalone]}>תיאור הקבוצה</Text>
               <Text style={styles.aboutText}>{currentGroup.description}</Text>
             </UICard>
           )}
 
           {/* גלריית המדיה - UICard blur */}
-          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
-            <Text style={styles.sectionLabel}>גלריית הקבוצה</Text>
+          <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
+            <Text style={[styles.sectionLabel, styles.sectionLabelStandalone]}>גלריית הקבוצה</Text>
             {groupMediaItems.length > 0 ? (
               <View style={styles.mediaGrid}>
                 {groupMediaItems.map((item, index) => (
                   <TouchableOpacity key={item.id} style={styles.mediaItem}>
                     <Image source={{ uri: gallerySignedThumbs[item.id] || item.thumbnail }} style={styles.mediaImage} />
                     {item.type === 'video' && (
-                      <View style={styles.videoBadge}>
+                      <View style={[styles.videoBadge, galleryVideoCornerStyle]}>
                         <Ionicons name="play" size={12} color="#FFFFFF" />
                       </View>
                     )}
@@ -398,7 +383,7 @@ export default function ChatGroupInfoScreen() {
           </UICard>
 
           {/* הגדרות - UICard blur */}
-          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+          <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
             <TouchableOpacity style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <Ionicons name="notifications-outline" size={20} color={DesignTokens.colors.text.secondary} />
@@ -417,7 +402,7 @@ export default function ChatGroupInfoScreen() {
                 <Ionicons name="pin-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.settingText}>הודעות מוצמדות</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
             <View style={styles.separator} />
             <TouchableOpacity style={styles.settingRow} onPress={handleSearchMessages}>
@@ -425,7 +410,7 @@ export default function ChatGroupInfoScreen() {
                 <Ionicons name="search-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.settingText}>חפש בהודעות</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
             <View style={styles.separator} />
             <TouchableOpacity style={styles.settingRow} onPress={handleSavedMedia}>
@@ -433,7 +418,7 @@ export default function ChatGroupInfoScreen() {
                 <Ionicons name="folder-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.settingText}>שמירת מדיה</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
             {isAdmin && (
               <>
@@ -443,7 +428,7 @@ export default function ChatGroupInfoScreen() {
                     <Ionicons name="settings-outline" size={20} color={DesignTokens.colors.text.secondary} />
                     <Text style={styles.settingText}>הגדרות קבוצה</Text>
                   </View>
-                  <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+                  <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
                 </TouchableOpacity>
               </>
             )}
@@ -453,22 +438,25 @@ export default function ChatGroupInfoScreen() {
                 <Ionicons name="shield-outline" size={20} color={DesignTokens.colors.text.secondary} />
                 <Text style={styles.settingText}>פרטיות ותמיכה</Text>
               </View>
-              <Ionicons name="chevron-back" size={18} color={DesignTokens.colors.text.tertiary} />
+              <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
             </TouchableOpacity>
           </UICard>
 
           {/* Members - UICard blur */}
-          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+          <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>
+              <Text
+                style={[styles.sectionLabel, styles.sectionLabelInHeader]}
+                numberOfLines={1}
+              >
                 חברים ({currentGroup.members_count || sortedMembers.length})
               </Text>
-              {isAdmin && (
-                <TouchableOpacity onPress={handleAddMembers} style={styles.addButton}>
+              {isAdmin ? (
+                <TouchableOpacity onPress={handleAddMembers} style={styles.addButton} hitSlop={8}>
                   <Ionicons name="add" size={18} color={DesignTokens.colors.primary.main} />
                   <Text style={styles.addButtonText}>הוסף</Text>
                 </TouchableOpacity>
-              )}
+              ) : null}
             </View>
 
             {sortedMembers.map((member, index) => (
@@ -532,9 +520,10 @@ export default function ChatGroupInfoScreen() {
             }}
           >
             <UICard
-              variant="blur"
+              variant="surface"
               padding="md"
               style={{
+                borderRadius: 24,
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderWidth: 1,
@@ -609,39 +598,27 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
     paddingTop: 0,
-  },
-
-  header: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 18,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '700' as any,
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'center',
-    letterSpacing: -0.2,
+    direction: 'rtl',
   },
 
   scrollView: {
     flex: 1,
   },
+  sectionCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
 
   // Profile Header Content
   profileHeaderContent: {
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   avatarContainer: {
     position: 'relative',
     marginBottom: DesignTokens.spacing.md,
+    alignSelf: 'center',
   },
   avatar: {
     width: 128,
@@ -659,7 +636,6 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   onlineIndicator: {
     position: 'absolute',
     bottom: 8,
-    right: 8,
     width: 24,
     height: 24,
     borderRadius: 12,
@@ -672,15 +648,17 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     fontWeight: DesignTokens.typography.fontWeight.bold as any,
     color: DesignTokens.colors.text.primary,
     marginBottom: DesignTokens.spacing.xs,
-    textAlign: 'center',
+    textAlign: 'left',
+    alignSelf: 'stretch',
   },
   groupStatus: {
     fontSize: DesignTokens.typography.fontSize.sm,
     color: DesignTokens.colors.text.secondary,
-    textAlign: 'center',
+    textAlign: 'left',
+    alignSelf: 'stretch',
   },
   infoItem: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: DesignTokens.spacing.md,
     paddingVertical: DesignTokens.spacing.sm,
@@ -698,7 +676,7 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     fontSize: DesignTokens.typography.fontSize.sm,
     fontWeight: DesignTokens.typography.fontWeight.medium as any,
     color: DesignTokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: 'left',
   },
   mediaGrid: {
     flexDirection: 'row',
@@ -719,8 +697,6 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   },
   videoBadge: {
     position: 'absolute',
-    top: DesignTokens.spacing.xs,
-    right: DesignTokens.spacing.xs,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: DesignTokens.borderRadius.sm,
     padding: 4,
@@ -728,12 +704,13 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   emptyMediaText: {
     fontSize: DesignTokens.typography.fontSize.sm,
     color: DesignTokens.colors.text.tertiary,
-    textAlign: 'center',
-    marginTop: DesignTokens.spacing.md,
+    textAlign: 'left',
+    marginTop: DesignTokens.spacing.sm,
     fontStyle: 'italic',
+    writingDirection: 'rtl',
   },
   leaveButton: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: DesignTokens.spacing.xs,
     paddingHorizontal: DesignTokens.spacing.lg,
@@ -749,42 +726,55 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     color: DesignTokens.colors.danger.main,
   },
 
-  // Sections
+  // Sections — כותרות מיושרות לשמאל (הצד השני)
   sectionHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: DesignTokens.spacing.md,
+    width: '100%',
   },
   sectionLabel: {
     fontSize: DesignTokens.typography.fontSize.sm,
     fontWeight: DesignTokens.typography.fontWeight.medium as any,
     color: DesignTokens.colors.text.secondary,
-    textAlign: 'right',
+    textAlign: 'left',
     marginBottom: DesignTokens.spacing.md,
+    writingDirection: 'rtl',
+  },
+  /** כותרת מלאה ברוחב הכרטיס (תיאור / גלריה) */
+  sectionLabelStandalone: {
+    alignSelf: 'stretch',
+  },
+  sectionLabelInHeader: {
+    flex: 1,
+    marginBottom: 0,
+    textAlign: 'left',
   },
   aboutText: {
     fontSize: DesignTokens.typography.fontSize.base,
     color: DesignTokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: 'left',
     lineHeight: 22,
+    writingDirection: 'rtl',
   },
 
   // Settings
   settingRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: DesignTokens.spacing.md,
   },
   settingLeft: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: DesignTokens.spacing.md,
   },
   settingText: {
     fontSize: DesignTokens.typography.fontSize.base,
     color: DesignTokens.colors.text.primary,
+    textAlign: 'left',
   },
   separator: {
     height: 1,
@@ -794,7 +784,7 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
 
   // Members
   memberRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: DesignTokens.spacing.md,
   },
@@ -802,7 +792,7 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    marginLeft: DesignTokens.spacing.md,
+    marginEnd: DesignTokens.spacing.md,
   },
   memberAvatarPlaceholder: {
     width: 48,
@@ -811,7 +801,7 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     backgroundColor: DesignTokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: DesignTokens.spacing.md,
+    marginEnd: DesignTokens.spacing.md,
   },
   memberAvatarText: {
     fontSize: DesignTokens.typography.fontSize.lg,
@@ -820,11 +810,13 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   },
   memberInfo: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: 'stretch',
   },
   memberNameRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-start',
+    flexWrap: 'wrap',
     gap: DesignTokens.spacing.xs,
     marginBottom: DesignTokens.spacing.xs,
   },
@@ -832,9 +824,10 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     fontSize: DesignTokens.typography.fontSize.base,
     fontWeight: DesignTokens.typography.fontWeight.medium as any,
     color: DesignTokens.colors.text.primary,
+    textAlign: 'left',
   },
   adminBadge: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: DesignTokens.colors.warning.main + '20',
     paddingHorizontal: DesignTokens.spacing.xs,
@@ -850,11 +843,13 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   youLabel: {
     fontSize: DesignTokens.typography.fontSize.sm,
     color: DesignTokens.colors.text.tertiary,
+    textAlign: 'left',
   },
   onlineStatus: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: DesignTokens.spacing.xs,
+    alignSelf: 'flex-start',
   },
   onlineDot: {
     width: 8,
@@ -865,13 +860,15 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   onlineText: {
     fontSize: DesignTokens.typography.fontSize.sm,
     color: DesignTokens.colors.success.main,
+    textAlign: 'left',
   },
   offlineText: {
     fontSize: DesignTokens.typography.fontSize.sm,
     color: DesignTokens.colors.text.tertiary,
+    textAlign: 'left',
   },
   addButton: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: DesignTokens.spacing.xs,
   },
@@ -883,7 +880,7 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
 
   // Danger Zone
   dangerRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: DesignTokens.spacing.md,
     paddingVertical: DesignTokens.spacing.md,
@@ -918,7 +915,7 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     fontSize: 17,
     fontWeight: '600' as const,
     color: DesignTokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: 'left',
     marginBottom: 16,
   },
   promptInput: {
@@ -927,12 +924,12 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     padding: 12,
     color: DesignTokens.colors.text.primary,
     fontSize: 15,
-    textAlign: 'right',
+    textAlign: 'left',
     borderWidth: 1,
     borderColor: DesignTokens.colors.border.main,
   },
   promptButtons: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'flex-start',
     gap: 12,
     marginTop: 20,

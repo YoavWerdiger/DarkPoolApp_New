@@ -1,23 +1,14 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
-import { ModuleSection, LessonRow } from '../../components/learning';
+import { AcademySubScreenBar, ModuleSection, LessonRow } from '../../components/learning';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress } from '../../types/learning';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
-import { ArrowRight } from 'lucide-react-native';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 export const CourseDetailScreen: React.FC = () => {
@@ -67,7 +58,7 @@ export const CourseDetailScreen: React.FC = () => {
     if (!course) return;
 
     if (course.access === 'paid') {
-      Alert.alert(
+      legacyAlert(
         'קורס בתשלום',
         'קורס זה דורש תשלום. התכונה תהיה זמינה בקרוב.',
         [{ text: 'אישור' }]
@@ -77,13 +68,13 @@ export const CourseDetailScreen: React.FC = () => {
 
     try {
       await enrollMutation.mutateAsync(course.id);
-      Alert.alert(
+      legacyAlert(
         'הצלחה!',
         'נרשמת בהצלחה לקורס',
         [{ text: 'אישור' }]
       );
     } catch (error) {
-      Alert.alert(
+      legacyAlert(
         'שגיאה',
         'לא ניתן להירשם לקורס כרגע. נסה שוב מאוחר יותר.',
         [{ text: 'אישור' }]
@@ -161,24 +152,7 @@ export const CourseDetailScreen: React.FC = () => {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-        {/* Header עם back button */}
-        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            style={{
-              width: 36,
-              height: 36,
-              justifyContent: 'center',
-              alignItems: 'center',
-              borderRadius: 18,
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              alignSelf: 'flex-end',
-            }}
-          >
-            <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
+        <AcademySubScreenBar onBackPress={() => navigation.goBack()} />
 
         {/* Cover Image */}
         <View style={styles.coverContainer}>
@@ -199,11 +173,11 @@ export const CourseDetailScreen: React.FC = () => {
         <View style={{ paddingHorizontal: DesignTokens.spacing.lg }}>
           {/* Course Info Card */}
           <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
-            <Text style={styles.title}>{course.title}</Text>
-            
-            {course.subtitle && (
-              <Text style={styles.subtitle}>{course.subtitle}</Text>
-            )}
+            <View style={styles.courseInfoStack}>
+              <View style={styles.titleBlock}>
+                <Text style={styles.title}>{course.title}</Text>
+                {course.subtitle ? <Text style={styles.subtitle}>{course.subtitle}</Text> : null}
+              </View>
 
             {/* Instructor */}
             {course.owner && (
@@ -272,6 +246,7 @@ export const CourseDetailScreen: React.FC = () => {
                 </View>
               </View>
             )}
+            </View>
           </UICard>
 
           {/* Action Button */}
@@ -418,23 +393,34 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   coverPlaceholderText: {
     fontSize: 48,
   },
+  courseInfoStack: {
+    width: '100%',
+    gap: tokens.spacing.sm,
+  },
+  titleBlock: {
+    width: '100%',
+    gap: tokens.spacing.xs,
+    alignItems: 'stretch',
+  },
   title: {
     fontSize: tokens.typography.fontSize['2xl'],
     fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.sm,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize['2xl'] * 1.22),
   },
   subtitle: {
     fontSize: tokens.typography.fontSize.base,
+    fontWeight: '500' as any,
     color: tokens.colors.text.secondary,
-    marginBottom: tokens.spacing.lg,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.base * 1.45),
   },
   instructorContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    marginBottom: tokens.spacing.lg,
   },
   instructorAvatar: {
     width: 50,
@@ -443,7 +429,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: tokens.spacing.md,
+    marginRight: tokens.spacing.md,
   },
   avatarImage: {
     width: '100%',
@@ -462,19 +448,23 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.base,
     fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.xs,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.base * 1.35),
+    marginBottom: tokens.spacing.micro,
   },
   instructorBio: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.45),
   },
   progressContainer: {
-    marginBottom: tokens.spacing.lg,
+    width: '100%',
   },
   progressHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacing.sm,
@@ -483,11 +473,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.fontSize.base,
     fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
+    textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.fontSize.base * 1.3),
   },
   progressPercentage: {
     fontSize: tokens.typography.fontSize.base,
     fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.primary.main,
+    lineHeight: Math.round(tokens.typography.fontSize.base * 1.3),
   },
   progressBar: {
     height: 8,
@@ -501,45 +494,51 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: tokens.borderRadius.sm,
   },
   descriptionContainer: {
-    marginBottom: tokens.spacing.lg,
+    width: '100%',
+    gap: tokens.spacing.sm,
   },
   descriptionTitle: {
-    fontSize: tokens.typography.fontSize.base,
+    fontSize: tokens.typography.fontSize.sm,
     fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.sm,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.35),
   },
   description: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
-    lineHeight: tokens.typography.lineHeight.relaxed * tokens.typography.fontSize.sm,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.52),
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   tagsContainer: {
-    marginBottom: tokens.spacing.lg,
+    width: '100%',
+    gap: tokens.spacing.sm,
   },
   tagsTitle: {
-    fontSize: tokens.typography.fontSize.base,
+    fontSize: tokens.typography.fontSize.sm,
     fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.sm,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.35),
   },
   tagsRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
-    gap: tokens.spacing.sm,
+    gap: tokens.spacing.xs,
   },
   tag: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.sm,
-    borderRadius: tokens.borderRadius.lg,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.sm,
   },
   tagText: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.primary,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.3),
   },
   enrollButton: {
     backgroundColor: tokens.colors.primary.main,

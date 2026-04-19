@@ -59,7 +59,9 @@ export default function VoiceWaveform({ isRecording, audioLevel = 0 }: VoiceWave
   return (
     <View style={styles.container}>
       {barValues.map((value, index) => (
-        <Bar key={index} value={value} color={barColor} />
+        <View key={index} style={styles.barCell}>
+          <Bar value={value} color={barColor} />
+        </View>
       ))}
     </View>
   );
@@ -89,15 +91,20 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
     flex: 1,
+    alignSelf: 'stretch',
+    width: '100%',
     minWidth: 0,
     height: 24,
   },
-  barWrapper: {
-    width: 3,
-    marginRight: 2,
+  barCell: {
+    flex: 1,
+    minWidth: 0,
     height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  barWrapper: {
     justifyContent: 'center',
     alignItems: 'center',
   },

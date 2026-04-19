@@ -19,9 +19,11 @@ import { SUPABASE_URL } from '../../config/publicEnv';
 
 const { width, height } = Dimensions.get('window');
 
+type PlanConfig = (typeof SUBSCRIPTION_PLANS)[keyof typeof SUBSCRIPTION_PLANS];
+
 const getDisplayPlans = () => {
-  const plans = Object.values(SUBSCRIPTION_PLANS)
-    .filter(plan => !plan.isAddon && !plan.isOneTime)
+  const plans = (Object.values(SUBSCRIPTION_PLANS) as PlanConfig[])
+    .filter((plan) => !('isAddon' in plan && plan.isAddon) && !('isOneTime' in plan && plan.isOneTime))
     .map(plan => ({
       id: plan.id,
       name: plan.name,
@@ -65,10 +67,6 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
   const [selectedTrack, setSelectedTrack] = useState<string | null>(data.trackId || null);
   const tracks = getDisplayPlans();
-
-  useEffect(() => {
-    // placeholder
-  }, []);
 
   const formatPrice = (price: number, period: string) => {
     if (price === 0) return 'חינם';

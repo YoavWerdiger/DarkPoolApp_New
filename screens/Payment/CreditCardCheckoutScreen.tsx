@@ -1,31 +1,21 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Alert,
-  Dimensions,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  Shield, 
-  ArrowLeft, 
+import {
+  Shield,
   Crown,
   Star,
   Users,
-  User
+  User,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens, DesignTokens as StaticDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 
 const { width } = Dimensions.get('window');
 
@@ -40,6 +30,7 @@ interface CreditCardCheckoutScreenProps {
 }
 
 export default function CreditCardCheckoutScreen({ navigation, route }: CreditCardCheckoutScreenProps) {
+  const DesignTokens = useDesignTokens();
   const { user } = useAuth();
   const { data: registrationData } = useRegistration();
   const { planId, fromRegistration = false } = route.params;
@@ -112,7 +103,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       }
       
     } catch (error) {
-      Alert.alert(
+      legacyAlert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
       );
@@ -123,15 +114,15 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
 
   const validateForm = () => {
     if (!cardholderName.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס שם מלא');
+      legacyAlert('שגיאה', 'אנא הכנס שם מלא');
       return false;
     }
     if (!email.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס כתובת אימייל');
+      legacyAlert('שגיאה', 'אנא הכנס כתובת אימייל');
       return false;
     }
     if (!phone.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס מספר טלפון');
+      legacyAlert('שגיאה', 'אנא הכנס מספר טלפון');
       return false;
     }
     return true;
@@ -142,7 +133,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'payment_success') {
-        Alert.alert(
+        legacyAlert(
           'תשלום הושלם בהצלחה!',
           'המנוי שלך הופעל בהצלחה. תוכל להתחיל להשתמש בכל התכונות.',
           [
@@ -160,7 +151,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           ]
         );
       } else if (data.type === 'payment_failed') {
-        Alert.alert(
+        legacyAlert(
           'תשלום נכשל',
           data.message || 'התשלום נכשל. אנא נסה שוב.',
           [
@@ -180,12 +171,12 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   const handlePayment = async () => {
     // אם זה במהלך הרישום, המשתמש עדיין לא מחובר
     if (!fromRegistration && !user) {
-      Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
+      legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
       return;
     }
 
     if (!plan) {
-      Alert.alert('שגיאה', 'תוכנית מנוי לא נמצאה');
+      legacyAlert('שגיאה', 'תוכנית מנוי לא נמצאה');
       return;
     }
 
@@ -219,7 +210,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       }
       
     } catch (error) {
-      Alert.alert(
+      legacyAlert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
       );
@@ -249,27 +240,24 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     if (!plan) return null;
 
     return (
-      <View style={{
-        backgroundColor: '#141F14',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 20,
-        shadowColor: selectedPlan === 'premium' ? '#00C805' : '#000000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4
-      }}>
-        <View style={{ 
-          flexDirection: 'row-reverse', 
+      <UICard
+        variant="inputGlass"
+        padding="lg"
+        style={{
+          marginBottom: DesignTokens.spacing.lg,
+          borderRadius: DesignTokens.borderRadius.lg,
+        }}
+      >
+        <View style={{
+          flexDirection: 'row',
           alignItems: 'center',
-          marginBottom: 16
+          marginBottom: 16,
         }}>
           <View style={{
             width: 50,
             height: 50,
             borderRadius: 15,
-            backgroundColor: selectedPlan === 'premium' ? '#00C805' : '#333333',
+            backgroundColor: selectedPlan === 'premium' ? DesignTokens.colors.primary.main : 'rgba(255, 255, 255, 0.08)',
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: 16
@@ -306,7 +294,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             </View>
           </View>
         </View>
-      </View>
+      </UICard>
     );
   };
 
@@ -331,13 +319,11 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         {label}
       </Text>
       <View style={{
-        backgroundColor: DesignTokens.colors.background.primary,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: DesignTokens.colors.border.main,
-        flexDirection: 'row-reverse',
+        ...StaticDesignTokens.onboardingInputSurface,
+        borderRadius: DesignTokens.borderRadius.md,
+        flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16
+        paddingHorizontal: 16,
       }}>
         {icon && (
           <View style={{ marginLeft: 12 }}>
@@ -367,45 +353,14 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     </View>
   );
 
-
   // אם מציגים iframe תשלום
   if (showIframe) {
     return (
-      <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-        {/* Header */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 20,
-          paddingTop: 60,
-          paddingBottom: 20,
-          backgroundColor: DesignTokens.colors.background.primary
-        }}>
-          <TouchableOpacity
-            onPress={() => setShowIframe(false)}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#141F14',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 16
-            }}
-          >
-            <ArrowLeft size={20} color={DesignTokens.colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={{
-            color: DesignTokens.colors.text.primary,
-            fontSize: 20,
-            fontWeight: '700',
-            flex: 1,
-            textAlign: 'center',
-            writingDirection: 'rtl'
-          }}>
-            השלמת תשלום
-          </Text>
-        </View>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+          <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+            <ChatSubScreenHeader title="השלמת תשלום" onBack={() => setShowIframe(false)} />
+          </View>
 
         {/* WebView */}
         <WebView
@@ -430,7 +385,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: DesignTokens.colors.background.primary,
+              backgroundColor: 'rgba(10, 14, 10, 0.92)',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
@@ -446,19 +401,18 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             </View>
           )}
         />
+        </SafeAreaView>
       </View>
     );
   }
 
   // אם זה רישום - מציג מסך טעינה או WebView
   if (fromRegistration && (loading || showIframe)) {
-    if (showIframe && paymentUrl) {
-      return renderWebView();
-    }
-    
-    // מציג מסך טעינה
+    // WebView כש־showIframe מוצג מטופל בבלוק `if (showIframe)` למעלה (לפני הבלוק הזה ברינדור הבא)
+
+    // מסך טעינה לרישום לפני שמופיע ה־iframe
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         <View style={{ 
           flex: 1, 
           alignItems: 'center', 
@@ -490,76 +444,37 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }} edges={['top']}>
-      <KeyboardAvoidingView 
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
       >
-        {/* Header */}
-        <LinearGradient
-          colors={['rgba(0, 200, 5, 0.12)', 'rgba(0, 200, 5, 0.06)', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            paddingTop: 20,
-            paddingBottom: 20,
-            paddingHorizontal: 24,
-            borderBottomWidth: 1,
-            borderBottomColor: 'rgba(0, 230, 84, 0.2)'
-          }}
-        >
-        <View style={{ 
-          flexDirection: 'row-reverse', 
-          alignItems: 'center',
-          marginBottom: 16
-        }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginLeft: 16
-            }}
-          >
-            <ArrowLeft size={20} color={DesignTokens.colors.text.primary} />
-          </TouchableOpacity>
-          
-          <Text style={{ 
-            color: DesignTokens.colors.text.primary, 
-            fontSize: 24, 
-            fontWeight: '700',
-            writingDirection: 'rtl',
-            flex: 1
-          }}>
-            פרטי התשלום
-          </Text>
+        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <ChatSubScreenHeader title="פרטי התשלום" onBack={() => navigation.goBack()} />
         </View>
-      </LinearGradient>
 
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
+        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
           {/* Plan Card */}
           {renderPlanCard()}
 
           {/* Personal Details Section */}
-          <View style={{
-            backgroundColor: '#141F14',
-            borderRadius: 20,
-            padding: 20,
-            marginBottom: 20
-          }}>
+          <UICard
+            variant="inputGlass"
+            padding="lg"
+            style={{
+              marginBottom: DesignTokens.spacing.lg,
+              borderRadius: DesignTokens.borderRadius.lg,
+            }}
+          >
             <View style={{ 
-              flexDirection: 'row-reverse', 
+              flexDirection: 'row', 
               alignItems: 'center',
               marginBottom: 20
             }}>
@@ -602,17 +517,24 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               '050-1234567',
               'phone-pad'
             )}
-          </View>
+          </UICard>
 
           {/* Security Notice */}
+          <UICard
+            variant="inputGlass"
+            padding="md"
+            style={{
+              marginBottom: DesignTokens.spacing.lg,
+              borderRadius: DesignTokens.borderRadius.lg,
+            }}
+          >
           <View style={{
-            backgroundColor: 'rgba(0, 230, 84, 0.1)',
-            borderRadius: 16,
-            padding: 16,
-            marginBottom: 20
+            backgroundColor: 'rgba(0, 230, 84, 0.08)',
+            borderRadius: DesignTokens.borderRadius.md,
+            padding: DesignTokens.spacing.md,
           }}>
             <View style={{ 
-              flexDirection: 'row-reverse', 
+              flexDirection: 'row', 
               alignItems: 'center',
               marginBottom: 8
             }}>
@@ -635,14 +557,17 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
               תועבר לדף תשלום מאובטח של CardCom למילוי פרטי כרטיס האשראי. כל הפרטים מוצפנים עם SSL 256-bit והמערכת עומדת בתקן PCI DSS.
             </Text>
           </View>
+          </UICard>
 
           {/* Payment Summary */}
-          <View style={{
-            backgroundColor: '#141F14',
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 20
-          }}>
+          <UICard
+            variant="inputGlass"
+            padding="lg"
+            style={{
+              marginBottom: DesignTokens.spacing.lg,
+              borderRadius: DesignTokens.borderRadius.lg,
+            }}
+          >
             <Text style={{ 
               color: DesignTokens.colors.text.primary, 
               fontSize: 18, 
@@ -654,7 +579,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             </Text>
             
             <View style={{ 
-              flexDirection: 'row-reverse', 
+              flexDirection: 'row', 
               justifyContent: 'space-between',
               marginBottom: 8
             }}>
@@ -675,7 +600,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             </View>
             
             <View style={{ 
-              flexDirection: 'row-reverse', 
+              flexDirection: 'row', 
               justifyContent: 'space-between',
               marginBottom: 8
             }}>
@@ -697,12 +622,12 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
             
             <View style={{ 
               height: 1, 
-              backgroundColor: '#1A2B1A', 
+              backgroundColor: DesignTokens.colors.background.elevated, 
               marginVertical: 12 
             }} />
             
             <View style={{ 
-              flexDirection: 'row-reverse', 
+              flexDirection: 'row', 
               justifyContent: 'space-between'
             }}>
               <Text style={{ 
@@ -721,47 +646,40 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
                 {plan?.price === 0 ? 'חינם' : `₪${Math.round((plan?.price || 0) * 1.17)}`}
               </Text>
             </View>
-          </View>
+          </UICard>
 
           {/* Payment Button */}
           <TouchableOpacity
             onPress={handlePayment}
             disabled={loading}
             style={{
-              opacity: loading ? 0.7 : 1
+              opacity: loading ? 0.7 : 1,
+              backgroundColor: DesignTokens.colors.primary.main,
+              borderRadius: DesignTokens.borderRadius.lg,
+              padding: 18,
+              alignItems: 'center',
+              shadowColor: DesignTokens.colors.primary.main,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
             }}
           >
-            <LinearGradient
-              colors={[DesignTokens.colors.primary.main, DesignTokens.colors.primary.dark, DesignTokens.colors.primary.darker]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                borderRadius: 16,
-                padding: 18,
-                alignItems: 'center',
-                shadowColor: DesignTokens.colors.primary.main,
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.4,
-                shadowRadius: 12,
-                elevation: 8
-              }}
-            >
               {loading ? (
-                <ActivityIndicator color="#000000" size="small" />
+                <ActivityIndicator color={DesignTokens.colors.text.inverse} size="small" />
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Shield size={20} color="#000000" style={{ marginLeft: 8 }} />
-                  <Text style={{ 
-                    color: DesignTokens.colors.background.primary, 
-                    fontSize: 18, 
+                  <Shield size={20} color={DesignTokens.colors.text.inverse} style={{ marginLeft: 8 }} />
+                  <Text style={{
+                    color: DesignTokens.colors.text.inverse,
+                    fontSize: 18,
                     fontWeight: '700',
-                    writingDirection: 'rtl'
+                    writingDirection: 'rtl',
                   }}>
                     המשך לתשלום מאובטח
                   </Text>
                 </View>
               )}
-            </LinearGradient>
           </TouchableOpacity>
 
           {/* Terms */}

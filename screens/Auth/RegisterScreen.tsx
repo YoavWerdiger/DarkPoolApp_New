@@ -1,5 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { User, Mail, Lock } from 'lucide-react-native';
@@ -28,35 +29,35 @@ export default function RegisterScreen({ navigation }: any) {
 
   const validateForm = async () => {
     if (!fullName.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס את שמך המלא');
+      legacyAlert('שגיאה', 'אנא הכנס את שמך המלא');
       return false;
     }
     if (!email.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס כתובת אימייל');
+      legacyAlert('שגיאה', 'אנא הכנס כתובת אימייל');
       return false;
     }
     if (!email.includes('@')) {
-      Alert.alert('שגיאה', 'אנא הכנס כתובת אימייל תקינה');
+      legacyAlert('שגיאה', 'אנא הכנס כתובת אימייל תקינה');
       return false;
     }
     
     // בדיקה שהמייל לא קיים
     const { exists: emailExists, error: emailError } = await AuthService.checkEmailExists(email.trim());
     if (emailError) {
-      Alert.alert('שגיאה', 'שגיאה בבדיקת המייל');
+      legacyAlert('שגיאה', 'שגיאה בבדיקת המייל');
       return false;
     }
     if (emailExists) {
-      Alert.alert('שגיאה', 'כתובת המייל כבר קיימת במערכת');
+      legacyAlert('שגיאה', 'כתובת המייל כבר קיימת במערכת');
       return false;
     }
     
     if (password.length < 6) {
-      Alert.alert('שגיאה', 'הסיסמה חייבת להיות לפחות 6 תווים');
+      legacyAlert('שגיאה', 'הסיסמה חייבת להיות לפחות 6 תווים');
       return false;
     }
     if (password !== confirmPassword) {
-      Alert.alert('שגיאה', 'הסיסמאות אינן תואמות');
+      legacyAlert('שגיאה', 'הסיסמאות אינן תואמות');
       return false;
     }
     return true;
@@ -72,9 +73,9 @@ export default function RegisterScreen({ navigation }: any) {
     });
 
     if (error) {
-      Alert.alert('שגיאה בהרשמה', error);
+      legacyAlert('שגיאה בהרשמה', error);
     } else {
-      Alert.alert('הצלחה', 'החשבון נוצר בהצלחה! אנא אשר את האימייל שלך.', [
+      legacyAlert('הצלחה', 'החשבון נוצר בהצלחה! אנא אשר את האימייל שלך.', [
         { text: 'אישור', onPress: () => navigation.navigate('Login') }
       ]);
     }
@@ -439,7 +440,7 @@ export default function RegisterScreen({ navigation }: any) {
 
               {/* Login Link */}
               <View style={{ 
-                flexDirection: 'row-reverse', 
+                flexDirection: 'row', 
                 justifyContent: 'center', 
                 alignItems: 'center', 
                 marginTop: 24,

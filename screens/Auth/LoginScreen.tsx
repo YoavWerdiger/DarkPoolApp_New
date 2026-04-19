@@ -1,21 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  Dimensions,
-  Keyboard,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  ImageBackground,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Pressable, ScrollView, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
@@ -27,7 +12,6 @@ import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { SUPABASE_URL } from '../../config/publicEnv';
 
 const { width, height } = Dimensions.get('window');
-
 
 // ─── Reusable input ────────────────────────────────────────────────────────
 interface FieldProps {
@@ -129,7 +113,6 @@ export default function LoginScreen({ navigation }: any) {
   const { signIn, signInWithGoogle, isLoading } = useAuth();
   const { setGoogleUserData } = useRegistration();
 
-
   useEffect(() => {
     loadSavedCredentials();
   }, []);
@@ -163,12 +146,12 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('שגיאה', 'אנא מלא את כל השדות');
+      legacyAlert('שגיאה', 'אנא מלא את כל השדות');
       return;
     }
     const { error } = await signIn({ email: email.trim(), password });
     if (error) {
-      Alert.alert('שגיאה בהתחברות', error);
+      legacyAlert('שגיאה בהתחברות', error);
       await saveCredentials('', '', false);
     } else {
       await saveCredentials(email.trim(), password, rememberMe);
@@ -177,23 +160,23 @@ export default function LoginScreen({ navigation }: any) {
 
   const handleForgotPassword = () => {
     if (!email.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס את כתובת האימייל שלך');
+      legacyAlert('שגיאה', 'אנא הכנס את כתובת האימייל שלך');
       return;
     }
-    Alert.alert('איפוס סיסמה', 'נשלח לך אימייל לאיפוס הסיסמה');
+    legacyAlert('איפוס סיסמה', 'נשלח לך אימייל לאיפוס הסיסמה');
   };
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     try {
       const result = await signInWithGoogle();
-      if (result.error) { Alert.alert('שגיאה בהתחברות', result.error); return; }
+      if (result.error) { legacyAlert('שגיאה בהתחברות', result.error); return; }
       if (result.isNewUser && result.googleUser) {
         setGoogleUserData(result.googleUser);
         navigation.navigate('Onboarding', { skipToIntro: true });
       }
     } catch {
-      Alert.alert('שגיאה', 'אירעה שגיאה בהתחברות עם Google');
+      legacyAlert('שגיאה', 'אירעה שגיאה בהתחברות עם Google');
     } finally {
       setGoogleLoading(false);
     }
@@ -305,7 +288,7 @@ export default function LoginScreen({ navigation }: any) {
                 {/* Remember me + Forgot */}
                 <View
                   style={{
-                    flexDirection: 'row-reverse',
+                    flexDirection: 'row',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     marginBottom: 28,
@@ -314,7 +297,7 @@ export default function LoginScreen({ navigation }: any) {
                 >
                   <Pressable
                     onPress={() => setRememberMe(!rememberMe)}
-                    style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
                   >
                     <View
                       style={{
@@ -449,7 +432,7 @@ export default function LoginScreen({ navigation }: any) {
                     borderColor: colors.glass.card.border,
                     paddingVertical: 15,
                     paddingHorizontal: 16,
-                    flexDirection: 'row-reverse',
+                    flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 10,

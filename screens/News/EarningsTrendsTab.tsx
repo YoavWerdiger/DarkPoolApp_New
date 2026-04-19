@@ -87,7 +87,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
       }}
     >
       {/* Header - Company & Period */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View>
           <Text
             style={{
@@ -126,7 +126,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
       </View>
 
       {/* EPS & Revenue Estimates */}
-      <View style={{ flexDirection: 'row-reverse', marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', marginBottom: 12 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'right' }}>
             EPS צפוי
@@ -157,7 +157,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
       </View>
 
       {/* Analyst Insights */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
         {/* Analysts Count */}
         {trend.earnings_estimate_analysts_count !== null && (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>

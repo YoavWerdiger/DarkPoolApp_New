@@ -14,7 +14,7 @@ const appEnvironment = isExpoGo ? 'expo-go' : 'production';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => {
+  handleNotification: async (_notification) => {
     let shouldPlaySound = true;
     try {
       const saved = await AsyncStorage.getItem('notificationSettings');
@@ -27,6 +27,8 @@ Notifications.setNotificationHandler({
       shouldShowAlert: true,
       shouldPlaySound,
       shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
     };
   },
 });
@@ -107,7 +109,6 @@ export class NotificationService {
             allowAlert: true,
             allowBadge: true,
             allowSound: true,
-            allowAnnouncements: false,
           },
         });
         finalStatus = status;

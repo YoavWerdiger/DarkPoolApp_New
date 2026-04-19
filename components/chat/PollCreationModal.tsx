@@ -1,15 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Trash2 } from 'lucide-react-native';
 import { PollService } from '../../services/pollService';
@@ -57,17 +48,17 @@ export default function PollCreationModal({
 
   const validateForm = (): boolean => {
     if (!question.trim()) {
-      Alert.alert('שגיאה', 'יש להזין שאלה לסקר');
+      legacyAlert('שגיאה', 'יש להזין שאלה לסקר');
       return false;
     }
 
     if (options.some(option => !option.trim())) {
-      Alert.alert('שגיאה', 'יש למלא את כל האפשרויות');
+      legacyAlert('שגיאה', 'יש למלא את כל האפשרויות');
       return false;
     }
 
     if (options.length < 2) {
-      Alert.alert('שגיאה', 'יש צורך לפחות ב-2 אפשרויות');
+      legacyAlert('שגיאה', 'יש צורך לפחות ב-2 אפשרויות');
       return false;
     }
 
@@ -88,13 +79,13 @@ export default function PollCreationModal({
       );
 
       if (poll) {
-        Alert.alert('הצלחה', 'הסקר נוצר בהצלחה!');
+        legacyAlert('הצלחה', 'הסקר נוצר בהצלחה!');
         onPollCreated(poll);
         resetForm();
         onClose();
       }
     } catch (error: any) {
-      Alert.alert('שגיאה', error.message || 'לא ניתן ליצור את הסקר');
+      legacyAlert('שגיאה', error.message || 'לא ניתן ליצור את הסקר');
     } finally {
       setIsCreating(false);
     }
@@ -108,7 +99,7 @@ export default function PollCreationModal({
 
   const handleClose = () => {
     if (question.trim() || options.some(opt => opt.trim())) {
-      Alert.alert(
+      legacyAlert(
         'ביטול יצירת סקר',
         'האם אתה בטוח שברצונך לבטל? כל הנתונים יימחקו.',
         [
@@ -189,7 +180,7 @@ export default function PollCreationModal({
 
             {/* Options */}
             <View className="mb-6">
-              <View className="flex-row-reverse items-center justify-between mb-3">
+              <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-white font-bold text-lg text-right" style={{ flex: 1 }}>אפשרויות בחירה</Text>
                 <TouchableOpacity
                   onPress={addOption}
@@ -205,7 +196,7 @@ export default function PollCreationModal({
               </View>
 
               {options.map((option, index) => (
-                <View key={index} className="flex-row-reverse items-center mb-3">
+                <View key={index} className="flex-row items-center mb-3">
                   <View className="flex-1 ml-3">
                     <TextInput
                       value={option}

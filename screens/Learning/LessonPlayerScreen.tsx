@@ -1,15 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Pressable,
-  Alert,
-  ActivityIndicator,
-  Dimensions,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator, Dimensions } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -102,7 +93,7 @@ export const LessonPlayerScreen: React.FC = () => {
       });
       setSignedUrl(response.signed_url);
     } catch (error) {
-      Alert.alert(
+      legacyAlert(
         'שגיאה',
         'לא ניתן לטעון את הוידאו. בדוק את החיבור לאינטרנט.',
         [{ text: 'אישור' }]
@@ -271,9 +262,9 @@ export const LessonPlayerScreen: React.FC = () => {
         </Text>
         <TouchableOpacity 
           style={styles.quizButton}
-          onPress={() => navigation.navigate('QuizScreen' as never, { 
-            blockId: currentBlock?.id 
-          } as never)}
+          onPress={() => (navigation as { navigate: (n: string, p?: object) => void }).navigate('QuizScreen', {
+            blockId: currentBlock?.id,
+          })}
         >
           <Text style={styles.quizButtonText}>התחל חידון</Text>
         </TouchableOpacity>
@@ -395,23 +386,25 @@ export const LessonPlayerScreen: React.FC = () => {
           {/* Lesson Info Card */}
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md, marginBottom: DesignTokens.spacing.lg }}>
             <UICard variant="blur" padding="lg">
-              <Text style={styles.lessonInfoTitle}>{lesson.title}</Text>
-              <Text style={styles.lessonInfoSubtitle}>שיעור {currentBlockIndex + 1} בקורס הכשרה של דוד אריאל</Text>
-              
-              {/* Progress Info */}
-              {currentBlock?.type === 'video' && duration > 0 && (
-                <View style={styles.lessonProgressInfo}>
-                  <View style={styles.progressTimeRow}>
-                    <Text style={styles.progressTimeText}>
-                      {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')} / {Math.floor(duration / 60)}:{(Math.floor(duration % 60)).toString().padStart(2, '0')}
-                    </Text>
-                    <Text style={styles.progressPercentageText}>{lessonProgress}%</Text>
+              <View style={styles.lessonInfoStack}>
+                <Text style={styles.lessonInfoTitle}>{lesson.title}</Text>
+                <Text style={styles.lessonInfoSubtitle}>שיעור {currentBlockIndex + 1} בקורס הכשרה של דוד אריאל</Text>
+
+                {/* Progress Info */}
+                {currentBlock?.type === 'video' && duration > 0 ? (
+                  <View style={styles.lessonProgressInfo}>
+                    <View style={styles.progressTimeRow}>
+                      <Text style={styles.progressTimeText}>
+                        {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')} / {Math.floor(duration / 60)}:{(Math.floor(duration % 60)).toString().padStart(2, '0')}
+                      </Text>
+                      <Text style={styles.progressPercentageText}>{lessonProgress}%</Text>
+                    </View>
+                    <View style={styles.progressBarContainer}>
+                      <View style={[styles.progressBarFill, { width: `${Math.min(Math.max(lessonProgress, 0), 100)}%` }]} />
+                    </View>
                   </View>
-                  <View style={styles.progressBarContainer}>
-                    <View style={[styles.progressBarFill, { width: `${Math.min(Math.max(lessonProgress, 0), 100)}%` }]} />
-                  </View>
-                </View>
-              )}
+                ) : null}
+              </View>
             </UICard>
           </View>
 
@@ -586,7 +579,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderBottomRightRadius: tokens.borderRadius['2xl'],
   },
   headerRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 4,
@@ -599,7 +592,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   headerContent: {
     flex: 1,
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
@@ -608,7 +601,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'flex-end',
   },
   headerTitleRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
@@ -626,11 +619,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     marginBottom: 2,
     marginRight: 5,
+    lineHeight: 22,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   headerSubtitle: {
     fontSize: 12,
     marginRight: 5,
     color: tokens.colors.text.secondary,
+    lineHeight: 17,
+    textAlign: 'right',
+    writingDirection: 'rtl',
   },
   headerSpacer: {
     width: 36,
@@ -646,6 +645,41 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: '100%',
     height: (screenWidth * 9) / 16, // 16:9 aspect ratio
     backgroundColor: 'transparent',
+  },
+  playerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    gap: tokens.spacing.sm,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  playerPlayButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: tokens.colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playerTimeText: {
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.primary,
+    minWidth: 44,
+    textAlign: 'center',
+  },
+  timelineTrack: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  timelineFill: {
+    height: '100%',
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: 2,
   },
   textContainer: {
     padding: tokens.spacing.lg,
@@ -706,7 +740,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   downloadButtonText: {
     fontSize: tokens.typography.fontSize.base,
     fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: '#000000',
+    color: tokens.colors.text.inverse,
   },
   quizContainer: {
     justifyContent: 'center',
@@ -735,7 +769,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   quizButtonText: {
     fontSize: tokens.typography.fontSize.base,
     fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: '#000000',
+    color: tokens.colors.text.inverse,
   },
   videoControls: {
     flexDirection: 'row',
@@ -781,21 +815,30 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   navButtonTextDisabled: {
     color: tokens.colors.text.tertiary,
   },
+  lessonInfoStack: {
+    gap: tokens.spacing.sm,
+    width: '100%',
+  },
   lessonInfoTitle: {
     fontSize: tokens.typography.fontSize.xl,
     fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    marginBottom: tokens.spacing.xs,
+    lineHeight: Math.round(tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal),
+    writingDirection: 'rtl',
   },
   lessonInfoSubtitle: {
     fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    marginBottom: tokens.spacing.md,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * tokens.typography.lineHeight.normal),
+    writingDirection: 'rtl',
   },
   lessonProgressInfo: {
-    marginTop: tokens.spacing.md,
+    marginTop: 0,
+    paddingTop: tokens.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   progressTimeRow: {
     flexDirection: 'row',

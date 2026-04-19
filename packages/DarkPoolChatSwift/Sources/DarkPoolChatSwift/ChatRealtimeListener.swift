@@ -56,11 +56,12 @@ public final class ChatRealtimeListener: @unchecked Sendable {
 
                 do {
                     let repo = ChatRepository(client: supabaseClient)
-                    let dto = try await repo.fetchMessageById(messageId)
-                    let item = ChatDTOMapper.mapMessages([dto], currentUserId: currentUserId).first
-                    if let item {
-                        await onMessage(item)
-                    }
+                    let item = try await repo.fetchMessageEnriched(
+                        messageId: messageId,
+                        groupId: groupId,
+                        currentUserId: currentUserId
+                    )
+                    await onMessage(item)
                 } catch {
                     continue
                 }

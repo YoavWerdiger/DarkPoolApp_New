@@ -193,7 +193,7 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
     borderRadius: tokens.borderRadius.lg,
     paddingVertical: tokens.spacing.sm,
     paddingHorizontal: tokens.spacing.md,
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'flex-end',
     gap: tokens.spacing.sm,
   },

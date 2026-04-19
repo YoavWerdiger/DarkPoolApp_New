@@ -1,16 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  Modal,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView, KeyboardAvoidingView, Platform, Image, StyleSheet, type ImageStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Lock, Trash2, Clock, X } from 'lucide-react-native';
 import { PollService, PollWithVotes, PollOption } from '../../services/pollService';
@@ -72,12 +62,12 @@ function PollMessage({
 
   const handleVote = async () => {
     if (selectedOptions.length === 0) {
-      Alert.alert('שגיאה', 'יש לבחור לפחות אפשרות אחת');
+      legacyAlert('שגיאה', 'יש לבחור לפחות אפשרות אחת');
       return;
     }
 
     if (!currentPoll.multiple_choice && selectedOptions.length > 1) {
-      Alert.alert('שגיאה', 'סקר זה מאפשר רק תשובה אחת');
+      legacyAlert('שגיאה', 'סקר זה מאפשר רק תשובה אחת');
       return;
     }
 
@@ -98,9 +88,9 @@ function PollMessage({
         setSelectedOptions([]);
       }
 
-      Alert.alert('הצלחה', 'ההצבעה נשלחה בהצלחה!');
+      legacyAlert('הצלחה', 'ההצבעה נשלחה בהצלחה!');
     } catch (error: any) {
-      Alert.alert('שגיאה', error.message || 'לא ניתן לשלוח את ההצבעה');
+      legacyAlert('שגיאה', error.message || 'לא ניתן לשלוח את ההצבעה');
     } finally {
       setIsVoting(false);
     }
@@ -109,7 +99,7 @@ function PollMessage({
   const handleLockPoll = async () => {
     if (!isAdmin || currentPoll.creator_id !== user?.id) return;
 
-    Alert.alert(
+    legacyAlert(
       'נעילת סקר',
       'האם אתה בטוח שברצונך לנעול את הסקר? לא ניתן יהיה להצביע יותר.',
       [
@@ -128,9 +118,9 @@ function PollMessage({
                 onPollUpdated(updatedPoll);
               }
 
-              Alert.alert('הצלחה', 'הסקר ננעל בהצלחה');
+              legacyAlert('הצלחה', 'הסקר ננעל בהצלחה');
             } catch (error: any) {
-              Alert.alert('שגיאה', error.message || 'לא ניתן לנעול את הסקר');
+              legacyAlert('שגיאה', error.message || 'לא ניתן לנעול את הסקר');
             }
           }
         }
@@ -141,7 +131,7 @@ function PollMessage({
   const handleDeletePoll = async () => {
     if (!isAdmin || currentPoll.creator_id !== user?.id) return;
 
-    Alert.alert(
+    legacyAlert(
       'מחיקת סקר',
       'האם אתה בטוח שברצונך למחוק את הסקר? פעולה זו אינה הפיכה!',
       [
@@ -152,10 +142,10 @@ function PollMessage({
           onPress: async () => {
             try {
               await PollService.deletePoll(currentPoll.id, user?.id || '');
-              Alert.alert('הצלחה', 'הסקר נמחק בהצלחה');
+              legacyAlert('הצלחה', 'הסקר נמחק בהצלחה');
               // כאן צריך להודיע להורה על המחיקה
             } catch (error: any) {
-              Alert.alert('שגיאה', error.message || 'לא ניתן למחוק את הסקר');
+              legacyAlert('שגיאה', error.message || 'לא ניתן למחוק את הסקר');
             }
           }
         }
@@ -173,7 +163,7 @@ function PollMessage({
         <View style={styles.headerLeft}>
           <Image 
             source={require('../../assets/icons/ico-40-poll-2.png')} 
-            style={styles.pollIcon} 
+            style={styles.pollIcon as ImageStyle} 
             resizeMode="contain"
           />
           <Text style={styles.pollLabel}>סקר</Text>

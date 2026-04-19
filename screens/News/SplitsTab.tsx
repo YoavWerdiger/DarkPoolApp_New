@@ -8,7 +8,7 @@ import {
   Pressable
 } from 'react-native';
 import { Scissors, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react-native';
-import { useDesignTokens } from '../../components/ui/DesignTokens';
+import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
 
 interface Split {
@@ -68,7 +68,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
       />
 
       {/* Header */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flex: 1 }}>
           <Text 
             style={{ 
@@ -81,7 +81,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
           >
             {getCompanyName(split.code, split.name)}
           </Text>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
               {split.code}
             </Text>
@@ -161,7 +161,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
       </Text>
 
       {/* Date */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
         <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
           תאריך אפקטיבי:
         </Text>

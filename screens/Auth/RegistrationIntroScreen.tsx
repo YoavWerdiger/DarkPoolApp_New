@@ -181,7 +181,15 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
   };
 
   const handleNext = () => {
-    setData({ ...data, markets, experience, fullTime, style, goals, accountType: 'free' });
+    setData({
+      ...data,
+      markets,
+      experience: experience ?? '',
+      fullTime: fullTime ?? '',
+      style: style ?? '',
+      goals,
+      accountType: 'free',
+    });
     navigation.navigate('RegistrationTrack');
   };
 

@@ -1,21 +1,12 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-  TouchableOpacity,
-  Image,
-  Pressable
-} from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ArrowRight, Trash2 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useDesignTokens } from '../../components/ui/DesignTokens';
+import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LikedArticlesService, LikedArticle } from '../../services/likedArticlesService';
 import { formatNewsDate } from '../../services/newsService';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -137,7 +128,7 @@ export default function LikedArticlesScreen({ navigation }: any) {
       const articles = await LikedArticlesService.getLikedArticles();
       setLikedArticles(articles);
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לטעון את החדשות שאהבת');
+      legacyAlert('שגיאה', 'לא ניתן לטעון את החדשות שאהבת');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -152,10 +143,10 @@ export default function LikedArticlesScreen({ navigation }: any) {
         // הסרה מהרשימה מיידית
         setLikedArticles(prev => prev.filter(item => item.id !== article.id));
       } else {
-        Alert.alert('שגיאה', 'לא ניתן להסיר את האהבתי');
+        legacyAlert('שגיאה', 'לא ניתן להסיר את האהבתי');
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'בעיה בהסרת האהבתי');
+      legacyAlert('שגיאה', 'בעיה בהסרת האהבתי');
     }
   }, []);
 
@@ -172,7 +163,7 @@ export default function LikedArticlesScreen({ navigation }: any) {
 
   // מחיקת כל החדשות שאהב
   const handleClearAll = useCallback(async () => {
-    Alert.alert(
+    legacyAlert(
       'מחיקת כל החדשות',
       'האם אתה בטוח שברצונך למחוק את כל החדשות שאהבת?',
       [
@@ -185,7 +176,7 @@ export default function LikedArticlesScreen({ navigation }: any) {
             if (success) {
               setLikedArticles([]);
             } else {
-              Alert.alert('שגיאה', 'לא ניתן למחוק את החדשות');
+              legacyAlert('שגיאה', 'לא ניתן למחוק את החדשות');
             }
           }
         }

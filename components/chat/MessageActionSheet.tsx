@@ -246,9 +246,9 @@ export default function MessageActionSheet({
           <View 
             className="rounded-t-3xl p-6" 
             style={{
-              backgroundColor: DesignTokens?.colors?.background?.elevated || '#1A1A1A',
+              backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
               borderTopWidth: 0.5,
-              borderTopColor: DesignTokens?.colors?.border?.primary || 'rgba(255,255,255,0.1)',
+              borderTopColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)',
               shadowColor: '#000',
               shadowOffset: { width: 0, height: -4 },
               shadowOpacity: 0.2,
@@ -260,14 +260,14 @@ export default function MessageActionSheet({
             <View className="items-center mb-6">
               <View 
                 className="w-12 h-1 rounded-full mb-4" 
-                style={{ backgroundColor: DesignTokens?.colors?.border?.primary || 'rgba(255,255,255,0.1)' }}
+                style={{ backgroundColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)' }}
               />
               <Text 
                 className="text-lg font-bold"
                 style={{ 
-                  color: DesignTokens?.colors?.text?.primary || '#FFFFFF',
-                  fontSize: DesignTokens?.typography?.fontSize?.lg || 17,
-                  fontWeight: DesignTokens?.typography?.fontWeight?.bold || '700'
+                  color: DesignTokens.colors.text?.primary || '#FFFFFF',
+                  fontSize: DesignTokens.typography.fontSize.lg,
+                  fontWeight: DesignTokens.typography.fontWeight.bold
                 }}
               >
                 פעולות הודעה
@@ -281,23 +281,23 @@ export default function MessageActionSheet({
                 onPress={() => handleAction(onReply)}
                 className="w-20 h-20 rounded-2xl items-center justify-center m-2"
                 style={{
-                  backgroundColor: DesignTokens?.colors?.background?.elevated || '#1A1A1A',
+                  backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.2,
                   shadowRadius: 4,
                   elevation: 3,
                   borderWidth: 0.5,
-                  borderColor: DesignTokens?.colors?.border?.primary || 'rgba(255,255,255,0.1)'
+                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
                 }}
               >
-                <MessageCircle size={28} color={DesignTokens?.colors?.accent?.main || '#00E5FF'} strokeWidth={2} />
+                <MessageCircle size={28} color={DesignTokens.colors.accent?.main || '#00E5FF'} strokeWidth={2} />
                 <Text 
                   className="text-xs font-semibold mt-2"
                   style={{ 
-                    color: DesignTokens?.colors?.text?.primary || '#FFFFFF',
-                    fontSize: DesignTokens?.typography?.fontSize?.xs || 11,
-                    fontWeight: DesignTokens?.typography?.fontWeight?.semibold || '600'
+                    color: DesignTokens.colors.text?.primary || '#FFFFFF',
+                    fontSize: DesignTokens.typography.fontSize.xs,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold
                   }}
                 >
                   תגובה
@@ -309,23 +309,23 @@ export default function MessageActionSheet({
                 onPress={() => handleAction(onForward)}
                 className="w-20 h-20 rounded-2xl items-center justify-center m-2"
                 style={{
-                  backgroundColor: DesignTokens?.colors?.background?.elevated || '#1A1A1A',
+                  backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.2,
                   shadowRadius: 4,
                   elevation: 3,
                   borderWidth: 0.5,
-                  borderColor: DesignTokens?.colors?.border?.primary || 'rgba(255,255,255,0.1)'
+                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
                 }}
               >
-                <RotateCcw size={28} color={DesignTokens?.colors?.warning?.main || '#F59E0B'} strokeWidth={2} />
+                <RotateCcw size={28} color={DesignTokens.colors.warning?.main || '#F59E0B'} strokeWidth={2} />
                 <Text 
                   className="text-xs font-semibold mt-2"
                   style={{ 
-                    color: DesignTokens?.colors?.text?.primary || '#FFFFFF',
-                    fontSize: DesignTokens?.typography?.fontSize?.xs || 11,
-                    fontWeight: DesignTokens?.typography?.fontWeight?.semibold || '600'
+                    color: DesignTokens.colors.text?.primary || '#FFFFFF',
+                    fontSize: DesignTokens.typography.fontSize.xs,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold
                   }}
                 >
                   העבר
@@ -337,23 +337,23 @@ export default function MessageActionSheet({
                 onPress={() => handleAction(onCopy)}
                 className="w-20 h-20 rounded-2xl items-center justify-center m-2"
                 style={{
-                  backgroundColor: DesignTokens?.colors?.background?.elevated || '#1A1A1A',
+                  backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.2,
                   shadowRadius: 4,
                   elevation: 3,
                   borderWidth: 0.5,
-                  borderColor: DesignTokens?.colors?.border?.primary || 'rgba(255,255,255,0.1)'
+                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
                 }}
               >
-                <Copy size={28} color={DesignTokens?.colors?.success?.main || '#10B981'} strokeWidth={2} />
+                <Copy size={28} color={DesignTokens.colors.success?.main || '#10B981'} strokeWidth={2} />
                 <Text 
                   className="text-xs font-semibold mt-2"
                   style={{ 
-                    color: DesignTokens?.colors?.text?.primary || '#FFFFFF',
-                    fontSize: DesignTokens?.typography?.fontSize?.xs || 11,
-                    fontWeight: DesignTokens?.typography?.fontWeight?.semibold || '600'
+                    color: DesignTokens.colors.text?.primary || '#FFFFFF',
+                    fontSize: DesignTokens.typography.fontSize.xs,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold
                   }}
                 >
                   העתק
@@ -366,23 +366,23 @@ export default function MessageActionSheet({
                   onPress={() => handleAction(onEdit)}
                   className="w-20 h-20 rounded-2xl items-center justify-center m-2"
                   style={{
-                    backgroundColor: DesignTokens?.colors?.background?.elevated || '#1A1A1A',
+                    backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.2,
                     shadowRadius: 4,
                     elevation: 3,
                     borderWidth: 0.5,
-                    borderColor: DesignTokens?.colors?.border?.primary || 'rgba(255,255,255,0.1)'
+                    borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
                   }}
                 >
-                  <Edit size={28} color={DesignTokens?.colors?.warning?.main || '#F59E0B'} strokeWidth={2} />
+                  <Edit size={28} color={DesignTokens.colors.warning?.main || '#F59E0B'} strokeWidth={2} />
                   <Text 
                     className="text-xs font-semibold mt-2"
                     style={{ 
-                      color: DesignTokens?.colors?.text?.primary || '#FFFFFF',
-                      fontSize: DesignTokens?.typography?.fontSize?.xs || 11,
-                      fontWeight: DesignTokens?.typography?.fontWeight?.semibold || '600'
+                      color: DesignTokens.colors.text?.primary || '#FFFFFF',
+                      fontSize: DesignTokens.typography.fontSize.xs,
+                      fontWeight: DesignTokens.typography.fontWeight.semibold
                     }}
                   >
                     ערוך
@@ -395,23 +395,23 @@ export default function MessageActionSheet({
                 onPress={() => handleAction(onReact)}
                 className="w-20 h-20 rounded-2xl items-center justify-center m-2"
                 style={{
-                  backgroundColor: DesignTokens?.colors?.background?.elevated || '#1A1A1A',
+                  backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.2,
                   shadowRadius: 4,
                   elevation: 3,
                   borderWidth: 0.5,
-                  borderColor: DesignTokens?.colors?.border?.primary || 'rgba(255,255,255,0.1)'
+                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
                 }}
               >
-                <Heart size={28} color={DesignTokens?.colors?.danger?.main || '#EF4444'} strokeWidth={2} />
+                <Heart size={28} color={DesignTokens.colors.danger?.main || '#EF4444'} strokeWidth={2} />
                 <Text 
                   className="text-xs font-semibold mt-2"
                   style={{ 
-                    color: DesignTokens?.colors?.text?.primary || '#FFFFFF',
-                    fontSize: DesignTokens?.typography?.fontSize?.xs || 11,
-                    fontWeight: DesignTokens?.typography?.fontWeight?.semibold || '600'
+                    color: DesignTokens.colors.text?.primary || '#FFFFFF',
+                    fontSize: DesignTokens.typography.fontSize.xs,
+                    fontWeight: DesignTokens.typography.fontWeight.semibold
                   }}
                 >
                   ריאקציה
@@ -421,7 +421,10 @@ export default function MessageActionSheet({
               {/* Star/Unstar - Only show if user can star */}
               {canPin && (
                 <Pressable
-                  onPress={() => handleAction(isPinned ? onUnpin : onPin)}
+                  onPress={() => {
+                    const fn = isPinned ? onUnpin : onPin;
+                    if (fn) handleAction(fn);
+                  }}
                   className="w-20 h-20 bg-[#1F1F1F] rounded-2xl items-center justify-center m-2 active:bg-yellow-500/20"
                   style={{
                     shadowColor: '#000',

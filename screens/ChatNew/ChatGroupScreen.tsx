@@ -2,25 +2,10 @@
 // Chat Group Screen - Modern Design (from reference)
 // ============================================
 
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
-import {
-  View,
-  FlatList,
-  Text,
-  StyleSheet,
-  type ViewStyle,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  TextInput,
-  Animated as RNAnimated,
-  Easing,
-  Platform,
-  KeyboardAvoidingView,
-  Keyboard,
-} from 'react-native';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, Keyboard, InteractionManager } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
@@ -91,8 +76,46 @@ export default function ChatGroupScreen() {
   }, [currentGroup?.name]);
 
   const scrollToBottom = useCallback(() => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-  }, []);
+    const list = flatListRef.current;
+    if (!list || messages.length === 0) return;
+
+    setShowScrollToBottomButton(false);
+    isAtBottomRef.current = true;
+
+    // inverted: offset 0 = הודעות חדשות (תחתית). ניסיון כפול + nudge — לפעמים layout/מקלדת משאירים offset תקוע.
+    const toBottom = (animated: boolean) => {
+      try {
+        list.scrollToOffset({ offset: 0, animated });
+      } catch {
+        /* noop */
+      }
+      try {
+        list.scrollToEnd({ animated });
+      } catch {
+        /* noop */
+      }
+    };
+
+    toBottom(false);
+    toBottom(true);
+    requestAnimationFrame(() => {
+      toBottom(false);
+      toBottom(true);
+    });
+    InteractionManager.runAfterInteractions(() => {
+      toBottom(false);
+      toBottom(true);
+      setTimeout(() => toBottom(true), 32);
+    });
+    setTimeout(() => {
+      try {
+        list.scrollToIndex({ index: 0, animated: true, viewPosition: 0 });
+      } catch {
+        toBottom(false);
+        toBottom(true);
+      }
+    }, 72);
+  }, [messages.length]);
 
   // עוקב אחרי האם המשתמש נמצא בתחתית הרשימה
   const isAtBottomRef = useRef(true);
@@ -493,10 +516,10 @@ export default function ChatGroupScreen() {
         }, { onConflict: 'channel_id,message_id' });
 
       if (error) {
-        Alert.alert('שגיאה', 'לא ניתן להצמיד את ההודעה');
+        legacyAlert('שגיאה', 'לא ניתן להצמיד את ההודעה');
       }
     } catch {
-      Alert.alert('שגיאה', 'שגיאה בהצמדת ההודעה');
+      legacyAlert('שגיאה', 'שגיאה בהצמדת ההודעה');
     }
   };
 
@@ -526,12 +549,12 @@ export default function ChatGroupScreen() {
       try {
         const result = await editMessage(editModalMessageId, editModalText.trim());
         if (!result.success) {
-          Alert.alert('שגיאה', result.error || 'לא ניתן לערוך את ההודעה');
+          legacyAlert('שגיאה', result.error || 'לא ניתן לערוך את ההודעה');
           return;
         }
       } catch (e) {
         logger.error('ChatGroupScreen', 'Edit message failed', e);
-        Alert.alert('שגיאה', 'לא ניתן לערוך את ההודעה');
+        legacyAlert('שגיאה', 'לא ניתן לערוך את ההודעה');
         return;
       }
     }
@@ -543,15 +566,15 @@ export default function ChatGroupScreen() {
       try {
         const result = await deleteMessage(message.id, forEveryone);
         if (!result.success) {
-          Alert.alert('שגיאה', result.error || 'לא ניתן למחוק את ההודעה');
+          legacyAlert('שגיאה', result.error || 'לא ניתן למחוק את ההודעה');
         }
       } catch (e) {
         logger.error('ChatGroupScreen', 'Delete message failed', e);
-        Alert.alert('שגיאה', 'לא ניתן למחוק את ההודעה');
+        legacyAlert('שגיאה', 'לא ניתן למחוק את ההודעה');
       }
     };
 
-    Alert.alert(
+    legacyAlert(
       'מחק הודעה',
       'האם למחוק?',
       [
@@ -580,11 +603,11 @@ export default function ChatGroupScreen() {
     const result = await forwardMessage(selectedMessageForForward.id, groupIds);
 
     if (result.success) {
-      Alert.alert('הצלחה', 'ההודעה הועברה בהצלחה');
+      legacyAlert('הצלחה', 'ההודעה הועברה בהצלחה');
       setForwardModalVisible(false);
       setSelectedMessageForForward(null);
     } else {
-      Alert.alert('שגיאה', result.error || 'לא ניתן להעביר את ההודעה');
+      legacyAlert('שגיאה', result.error || 'לא ניתן להעביר את ההודעה');
     }
   };
 
@@ -630,39 +653,64 @@ export default function ChatGroupScreen() {
   const renderHeader = () => {
     if (!currentGroup) return null;
 
+    /**
+     * פס כלים LTR: חיפוש משמאל | במרכז טקסט ואז תמונה מימין לטקסט | חזרה מימין.
+     * אייקון החזרה מפוך (scaleX) כדי שיכוון נכון לעברית.
+     */
+    const searchButton = (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="חיפוש בהודעות"
+        style={styles.searchButton}
+        onPress={() => setSearchVisible(true)}
+      >
+        <Ionicons name="search" size={20} color={DesignTokens.colors.text.primary} />
+      </TouchableOpacity>
+    );
+
+    const backButton = (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="חזרה"
+        style={styles.backButton}
+        onPress={handleBack}
+      >
+        <View style={styles.headerBackIconFlip}>
+          <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
+        </View>
+      </TouchableOpacity>
+    );
+
+    const center = (
+      <TouchableOpacity style={styles.headerContent} onPress={handleGroupInfoPress} activeOpacity={0.7}>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {currentGroup.name}
+          </Text>
+          <Text style={styles.headerSubtitle} numberOfLines={1}>
+            {typingUsers.length > 0
+              ? `${typingUsers[0]?.user?.display_name || 'מישהו'} מקליד...`
+              : `${currentGroup.members_count} חברים`}
+          </Text>
+        </View>
+        <View style={styles.avatarContainer}>
+          {currentGroup.avatar_url ? (
+            <Image source={{ uri: currentGroup.avatar_url }} style={styles.headerAvatar} resizeMode="cover" />
+          ) : (
+            <View style={styles.headerAvatarPlaceholder}>
+              <Ionicons name="people" size={18} color={DesignTokens.colors.text.secondary} />
+            </View>
+          )}
+          {isConnected && <View style={styles.onlineIndicator} />}
+        </View>
+      </TouchableOpacity>
+    );
+
     return (
       <View style={styles.headerBar}>
-        {/* Right: back button */}
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
-        </TouchableOpacity>
-
-        {/* Center: avatar + name + subtitle */}
-        <TouchableOpacity style={styles.headerContent} onPress={handleGroupInfoPress} activeOpacity={0.7}>
-          <View style={styles.avatarContainer}>
-            {currentGroup.avatar_url ? (
-              <Image source={{ uri: currentGroup.avatar_url }} style={styles.headerAvatar} resizeMode="cover" />
-            ) : (
-              <View style={styles.headerAvatarPlaceholder}>
-                <Ionicons name="people" size={18} color={DesignTokens.colors.text.secondary} />
-              </View>
-            )}
-            {isConnected && <View style={styles.onlineIndicator} />}
-          </View>
-          <View style={styles.headerTextWrap}>
-            <Text style={styles.headerTitle} numberOfLines={1}>{currentGroup.name}</Text>
-            <Text style={styles.headerSubtitle} numberOfLines={1}>
-              {typingUsers.length > 0
-                ? `${typingUsers[0]?.user?.display_name || 'מישהו'} מקליד...`
-                : `${currentGroup.members_count} חברים`}
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* Left: search */}
-        <TouchableOpacity style={styles.searchButton} onPress={() => setSearchVisible(true)}>
-          <Ionicons name="search" size={20} color={DesignTokens.colors.text.primary} />
-        </TouchableOpacity>
+        {searchButton}
+        {center}
+        {backButton}
       </View>
     );
   };
@@ -842,108 +890,118 @@ export default function ChatGroupScreen() {
     );
   }
 
-  return (
-    <ChatScreenShell>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1, backgroundColor: 'transparent' }}
-      >
-        <View style={{ flex: 1 }}>
-          {/* Safe area top spacer + Header */}
-          <View style={{ paddingTop: insets.top + 8 }}>
-            {renderHeader()}
-          </View>
+  const chatMainColumn = (
+    <View style={{ flex: 1 }}>
+      {/* Safe area top spacer + Header */}
+      <View style={{ paddingTop: insets.top + 4, paddingBottom: 2 }}>
+        {renderHeader()}
+      </View>
 
-          {(realtimeConnectionState === 'reconnecting' || realtimeConnectionState === 'offline') && (
-            <View style={styles.connectionBanner}>
-              {realtimeConnectionState === 'reconnecting' ? (
-                <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} />
-              ) : null}
-              <Text style={styles.connectionBannerText}>
-                {realtimeConnectionState === 'reconnecting'
-                  ? 'מתחבר מחדש לצ׳אט...'
-                  : 'אין חיבור בזמן אמת. הודעות חדשות יופיעו כשיחזור החיבור.'}
+      {(realtimeConnectionState === 'reconnecting' || realtimeConnectionState === 'offline') && (
+        <View style={styles.connectionBanner}>
+          {realtimeConnectionState === 'reconnecting' ? (
+            <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} />
+          ) : null}
+          <Text style={styles.connectionBannerText}>
+            {realtimeConnectionState === 'reconnecting'
+              ? 'מתחבר מחדש לצ׳אט...'
+              : 'אין חיבור בזמן אמת. הודעות חדשות יופיעו כשיחזור החיבור.'}
+          </Text>
+        </View>
+      )}
+
+      {/* Messages area — minHeight:0 נדרש כדי שה-FlatList יקבל גלילה אמיתית בתוך עמודת flex */}
+      <View style={styles.messagesAreaFlex}>
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          extraData={messages.length}
+          inverted={true}
+          onEndReached={loadMoreMessages}
+          onEndReachedThreshold={0.3}
+          ListHeaderComponent={renderFooter}
+          ListEmptyComponent={renderEmpty}
+          scrollEnabled={true}
+          bounces={true}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
+          initialNumToRender={15}
+          maxToRenderPerBatch={8}
+          windowSize={11}
+          updateCellsBatchingPeriod={50}
+          contentContainerStyle={[
+            messages.length === 0 ? styles.emptyList : styles.messagesList,
+            { paddingTop: 12, paddingBottom: 8, flexGrow: 1 },
+          ]}
+          showsVerticalScrollIndicator
+          nestedScrollEnabled={Platform.OS === 'android'}
+          style={styles.flatListTransparent}
+          scrollEventThrottle={16}
+          onScroll={handleScroll}
+          onScrollToIndexFailed={(info) => {
+            if (!isMountedRef.current) return;
+            const offset = info.index * (info.averageItemLength || 100);
+            flatListRef.current?.scrollToOffset({ offset, animated: true });
+          }}
+        />
+
+      </View>
+
+      {/* Input area */}
+      <View style={[styles.inputArea, { paddingBottom: Math.max(6, insets.bottom > 0 ? 10 : 6) }]}>
+        {/* Typing indicator - מעל ה-input */}
+        {typingUsers.length > 0 && renderTypingIndicator()}
+        {/* בדיקה אם זו קבוצת הכרזות ואם המשתמש לא admin */}
+        {isAnnouncementGroup && !currentGroup?.is_admin ? (
+          <View style={styles.announcementOnlyView}>
+            <Ionicons name="megaphone-outline" size={18} color={DesignTokens.colors.text.tertiary} />
+            <Text style={styles.announcementOnlyText}>
+              רק מנהלי הקהילה יכולים לכתוב בצ'אט זה
+            </Text>
+          </View>
+        ) : (
+          <ChatInput
+            groupId={groupId}
+            onSendMessage={handleSendMessage}
+            onTyping={handleTyping}
+            replyTo={replyTo}
+            onCancelReply={() => setReplyTo(undefined)}
+          />
+        )}
+      </View>
+
+      {showScrollToBottomButton && (
+        <Pressable
+          style={[
+            styles.scrollToBottomButton,
+            { bottom: Math.max(72, insets.bottom + 66) },
+          ]}
+          onPress={scrollToBottom}
+          hitSlop={14}
+        >
+          <Ionicons name="chevron-down" size={18} color="#fff" />
+          {(initialUnreadInfo?.count ?? 0) > 0 && (
+            <View style={styles.scrollBadge} pointerEvents="none">
+              <Text style={styles.scrollBadgeText}>
+                {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
               </Text>
             </View>
           )}
+        </Pressable>
+      )}
+    </View>
+  );
 
-          {/* Messages area - takes remaining space */}
-          <View style={{ flex: 1 }}>
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={renderMessage}
-              keyExtractor={(item) => item.id}
-              extraData={messages.length}
-              inverted={true}
-              onEndReached={loadMoreMessages}
-              onEndReachedThreshold={0.3}
-              ListHeaderComponent={renderFooter}
-              ListEmptyComponent={renderEmpty}
-              scrollEnabled={true}
-              bounces={true}
-              keyboardDismissMode="interactive"
-              keyboardShouldPersistTaps="handled"
-              initialNumToRender={15}
-              maxToRenderPerBatch={8}
-              windowSize={11}
-              updateCellsBatchingPeriod={50}
-              contentContainerStyle={[
-                messages.length === 0 ? styles.emptyList : styles.messagesList,
-                { paddingTop: 12, paddingBottom: 8, flexGrow: 1 }
-              ]}
-              showsVerticalScrollIndicator={false}
-              style={styles.flatListTransparent}
-              scrollEventThrottle={16}
-              onScroll={handleScroll}
-              onScrollToIndexFailed={(info) => {
-                if (!isMountedRef.current) return;
-                const offset = info.index * (info.averageItemLength || 100);
-                flatListRef.current?.scrollToOffset({ offset, animated: true });
-              }}
-            />
-
-            {showScrollToBottomButton && (
-              <TouchableOpacity
-                style={styles.scrollToBottomButton}
-                onPress={scrollToBottom}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="chevron-down" size={18} color="#fff" />
-                {(initialUnreadInfo?.count ?? 0) > 0 && (
-                  <View style={styles.scrollBadge}>
-                    <Text style={styles.scrollBadgeText}>
-                      {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Input area */}
-          <View style={styles.inputArea}>
-            {/* Typing indicator - מעל ה-input */}
-            {typingUsers.length > 0 && renderTypingIndicator()}
-            {/* בדיקה אם זו קבוצת הכרזות ואם המשתמש לא admin */}
-            {isAnnouncementGroup && !currentGroup?.is_admin ? (
-              <View style={styles.announcementOnlyView}>
-                <Ionicons name="megaphone-outline" size={18} color={DesignTokens.colors.text.tertiary} />
-                <Text style={styles.announcementOnlyText}>
-                  רק מנהלי הקהילה יכולים לכתוב בצ'אט זה
-                </Text>
-              </View>
-            ) : (
-              <ChatInput
-                groupId={groupId}
-                onSendMessage={handleSendMessage}
-                onTyping={handleTyping}
-                replyTo={replyTo}
-                onCancelReply={() => setReplyTo(undefined)}
-              />
-            )}
-          </View>
-        </View>
+  return (
+    <ChatScreenShell>
+      <KeyboardAvoidingView
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 6 : 0}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+      >
+        {chatMainColumn}
       </KeyboardAvoidingView>
 
       {/* Modals - outside KeyboardAvoidingView */}
@@ -1134,45 +1192,60 @@ const HP = 20;
 const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   /* ── Header bar ── */
   headerBar: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 2,
-    paddingBottom: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
-    backgroundColor: 'rgba(13, 18, 16, 0.92)',
+    /** מנע כפל RTL מול forceRTL — כפתורים ותמונה בסדר צפוי */
+    direction: 'ltr',
+    marginHorizontal: 10,
+    paddingHorizontal: 12,
+    paddingTop: 9,
+    paddingBottom: 9,
+    minHeight: 58,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   backButton: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 18,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  headerBackIconFlip: {
+    transform: [{ scaleX: -1 }],
   },
   headerContent: {
     flex: 1,
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginHorizontal: 4,
+    marginHorizontal: 8,
+    minWidth: 0,
+    direction: 'ltr',
   },
   avatarContainer: {
     position: 'relative',
   },
   headerAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   headerAvatarPlaceholder: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
   onlineIndicator: {
     position: 'absolute',
@@ -1187,25 +1260,31 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   },
   headerTextWrap: {
     flex: 1,
-    alignItems: 'flex-end',
+    minWidth: 0,
+    alignItems: 'stretch',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: tokens.colors.text.primary,
     letterSpacing: -0.2,
+    textAlign: 'right',
+    width: '100%',
   },
   headerSubtitle: {
     fontSize: 12,
     color: tokens.colors.text.tertiary,
     marginTop: 1,
+    textAlign: 'right',
+    width: '100%',
   },
   searchButton: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 18,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
 
   /* ── Connection banner ── */
@@ -1239,6 +1318,12 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
     overflow: 'hidden',
+  },
+  /** עמודת flex עם minHeight:0 — בלי זה FlatList לעיתים לא מגלגל ו-scrollToBottom לא משפיע */
+  messagesAreaFlex: {
+    flex: 1,
+    minHeight: 0,
+    position: 'relative',
   },
   flatListTransparent: {
     backgroundColor: 'transparent',
@@ -1297,7 +1382,7 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
 
   /* ── Typing indicator ── */
   typingIndicatorContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'flex-end',
     paddingVertical: 6,
     gap: 8,
@@ -1336,17 +1421,15 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   /* ── Input area ── */
   inputArea: {
     paddingHorizontal: 10,
-    paddingTop: 8,
-    paddingBottom: 8,
-    backgroundColor: 'rgba(10, 14, 10, 0.96)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    paddingTop: 4,
+    paddingBottom: 6,
+    backgroundColor: 'transparent',
+    borderTopWidth: 0,
   },
 
   /* ── Scroll to bottom ── */
   scrollToBottomButton: {
     position: 'absolute',
-    bottom: 12,
     right: 10,
     width: 38,
     height: 38,
@@ -1359,7 +1442,7 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 6,
     elevation: 6,
-    zIndex: 10,
+    zIndex: 1000,
   },
   scrollBadge: {
     position: 'absolute',
@@ -1399,7 +1482,7 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
 
   /* ── Announcement only ── */
   announcementOnlyView: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,

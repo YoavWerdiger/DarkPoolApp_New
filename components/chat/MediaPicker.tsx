@@ -1,5 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React from 'react';
-import { View, Text, Alert, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MediaMetadata } from '../../services/mediaService';
 import * as ImagePicker from 'expo-image-picker';
@@ -55,7 +56,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('אישור נדרש', 'אנא אשר גישה למצלמה');
+        legacyAlert('אישור נדרש', 'אנא אשר גישה למצלמה');
         return;
       }
 
@@ -72,7 +73,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בצילום התמונה');
+      legacyAlert('שגיאה', 'שגיאה בצילום התמונה');
     }
   };
 
@@ -81,7 +82,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('אישור נדרש', 'אנא אשר גישה לגלריה');
+        legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
         return;
       }
 
@@ -97,7 +98,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בבחירת התמונה');
+      legacyAlert('שגיאה', 'שגיאה בבחירת התמונה');
     }
   };
 
@@ -106,7 +107,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('אישור נדרש', 'אנא אשר גישה למצלמה');
+        legacyAlert('אישור נדרש', 'אנא אשר גישה למצלמה');
         return;
       }
 
@@ -123,7 +124,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בצילום הוידאו');
+      legacyAlert('שגיאה', 'שגיאה בצילום הוידאו');
     }
   };
 
@@ -141,7 +142,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בבחירת הקובץ');
+      legacyAlert('שגיאה', 'שגיאה בבחירת הקובץ');
     }
   };
 
@@ -159,7 +160,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
         onClose();
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לבחור קובץ אודיו');
+      legacyAlert('שגיאה', 'לא ניתן לבחור קובץ אודיו');
     }
   };
 

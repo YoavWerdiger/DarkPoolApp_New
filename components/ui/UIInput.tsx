@@ -21,7 +21,7 @@ export interface UIInputProps extends Omit<TextInputProps, 'style'> {
   variant?: 'outlined' | 'filled';
   size?: 'sm' | 'md' | 'lg';
   containerStyle?: ViewStyle;
-  inputStyle?: ViewStyle;
+  inputStyle?: TextStyle;
 }
 
 const UIInput: React.FC<UIInputProps> = ({
@@ -83,7 +83,7 @@ const UIInput: React.FC<UIInputProps> = ({
     ...containerStyle,
   };
 
-  const inputStyles: ViewStyle = {
+  const inputStyles: TextStyle = {
     flex: 1,
     color: colors.text.primary,
     fontSize: sizeStyles.text.fontSize,

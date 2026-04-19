@@ -4,17 +4,9 @@
 // מודל לבחירת קבוצות להעברת הודעה
 // ============================================
 
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  ActivityIndicator,
-  Image,
-  Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { chatGroupService } from '../../services/chat';
@@ -100,7 +92,7 @@ export default function ForwardMessageModal({
       setSelectedGroups(new Set());
     } catch (error) {
       logger.error('ForwardMessageModal', 'Forward failed', error);
-      Alert.alert('שגיאה', 'לא ניתן להעביר את ההודעה');
+      legacyAlert('שגיאה', 'לא ניתן להעביר את ההודעה');
     } finally {
       setIsForwarding(false);
     }
@@ -241,7 +233,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.primary,
   },
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: tokens.spacing.lg,
@@ -281,7 +273,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingVertical: tokens.spacing.sm,
   },
   groupItem: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: tokens.spacing.lg,
     paddingVertical: tokens.spacing.md,
@@ -343,7 +335,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: tokens.colors.background.primary,
   },
   forwardButton: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: tokens.colors.primary.main,

@@ -1,5 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Star, RefreshCw, XCircle } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
@@ -170,18 +171,18 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
         .eq('message_id', messageId);
       
       if (error) {
-        Alert.alert('שגיאה', 'לא ניתן להסיר את ההצמדה');
+        legacyAlert('שגיאה', 'לא ניתן להסיר את ההצמדה');
         return;
       }
       
       // Reload pinned messages
       await loadPinnedMessages();
-      Alert.alert('הצלחה', 'ההודעה הוסרה מההצמדה');
+      legacyAlert('הצלחה', 'ההודעה הוסרה מההצמדה');
       
       // Notify parent component about the change
       onMessagePress?.('refresh_pinned');
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בהסרת ההצמדה');
+      legacyAlert('שגיאה', 'שגיאה בהסרת ההצמדה');
     }
   };
 

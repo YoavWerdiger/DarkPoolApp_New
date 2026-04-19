@@ -55,6 +55,8 @@ export interface Lesson {
   id: string;
   module_id: string;
   title: string;
+  /** תקציר לרשימת שיעורים (אופציונלי) */
+  description?: string;
   duration_seconds?: number;
   is_preview: boolean;
   sort_index: number;
@@ -191,6 +193,8 @@ export interface ProgressUpdateRequest {
   lesson_id: string;
   status: ProgressStatus;
   last_position_seconds?: number;
+  /** ל־invalidate של cache לפי קורס (אופציונלי) */
+  course_id?: string;
 }
 
 export interface QuizAttemptRequest {

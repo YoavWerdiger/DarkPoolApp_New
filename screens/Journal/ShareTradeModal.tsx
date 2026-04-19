@@ -1,5 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
@@ -33,7 +34,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (!user) {
-        Alert.alert('שגיאה', 'משתמש לא מחובר');
+        legacyAlert('שגיאה', 'משתמש לא מחובר');
         return;
       }
 
@@ -43,7 +44,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         .eq('user_id', user.id);
 
       if (memberError) {
-        Alert.alert('שגיאה', 'לא ניתן לטעון קבוצות');
+        legacyAlert('שגיאה', 'לא ניתן לטעון קבוצות');
         return;
       }
 
@@ -57,7 +58,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
           .order('name');
 
         if (channelsError) {
-          Alert.alert('שגיאה', 'לא ניתן לטעון פרטי קבוצות');
+          legacyAlert('שגיאה', 'לא ניתן לטעון פרטי קבוצות');
           return;
         }
 
@@ -66,7 +67,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         setChatGroups([]);
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בטעינת קבוצות');
+      legacyAlert('שגיאה', 'שגיאה בטעינת קבוצות');
     } finally {
       setLoading(false);
     }
@@ -78,7 +79,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('שגיאה', 'משתמש לא מחובר');
+        legacyAlert('שגיאה', 'משתמש לא מחובר');
         return;
       }
 
@@ -110,14 +111,14 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         });
 
       if (error) {
-        Alert.alert('שגיאה', 'לא ניתן לשתף לקבוצה');
+        legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
         return;
       }
 
-      Alert.alert('הצלחה', `הטרייד שותף לקבוצה "${groupName}"`);
+      legacyAlert('הצלחה', `הטרייד שותף לקבוצה "${groupName}"`);
       onClose();
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לשתף לקבוצה');
+      legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
     }
   };
 
@@ -211,7 +212,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: tokens.colors.background.secondary,
   },
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: tokens.spacing.lg,
@@ -234,7 +235,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: tokens.borderRadius.md,
   },
   tradePreviewHeader: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.sm,
     marginBottom: tokens.spacing.sm,
@@ -292,7 +293,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     padding: tokens.spacing.md,
   },
   groupItem: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     padding: tokens.spacing.md,
     backgroundColor: tokens.colors.background.tertiary,

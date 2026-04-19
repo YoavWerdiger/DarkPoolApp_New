@@ -7,7 +7,9 @@ import {
   ViewStyle,
   Easing,
   PanResponder,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Platform,
+  StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from './DesignTokens';
@@ -25,6 +27,13 @@ export interface UIBottomSheetProps {
 }
 
 const screenHeight = Dimensions.get('window').height;
+
+const styles = StyleSheet.create({
+  modalRoot: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+});
 
 const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
   visible,
@@ -111,17 +120,20 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
     return null;
   }
 
+  const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 20 : 12) + (Platform.OS === 'android' ? 10 : 8);
+
   return (
     <Modal
       visible={isMounted}
       transparent
       animationType="none"
       statusBarTranslucent={true}
+      presentationStyle="overFullScreen"
       onRequestClose={() => {
         onClose();
       }}
     >
-      <View style={{ flex: 1 }}>
+      <View style={styles.modalRoot}>
         {/* Backdrop */}
         <TouchableWithoutFeedback onPress={closeOnBackdropPress ? () => {
           onClose();
@@ -154,12 +166,13 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
             borderTopRightRadius: 24,
             minHeight: 200,
             maxHeight: maxHeightValue,
-            paddingBottom: insets.bottom,
-            shadowColor: '#000',
+            paddingBottom: bottomPad,
+            overflow: 'hidden',
+            shadowColor: Platform.OS === 'ios' ? '#000' : 'transparent',
             shadowOffset: { width: 0, height: -6 },
-            shadowOpacity: 0.22,
+            shadowOpacity: Platform.OS === 'ios' ? 0.22 : 0,
             shadowRadius: 16,
-            elevation: 10,
+            elevation: Platform.OS === 'android' ? 22 : 10,
             transform: [{ translateY }],
           }}
         >

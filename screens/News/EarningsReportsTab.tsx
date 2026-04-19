@@ -1,18 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  TouchableOpacity,
-  Image,
-  ScrollView,
-  Dimensions,
-  Animated
-} from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, ScrollView, Dimensions, Animated } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react-native';
@@ -70,7 +58,6 @@ const EarningsReportCard: React.FC<{
       return `$${num.toFixed(2)}`;
     }
   };
-
 
   // פונקציה לעיצוב זמן
   const getTimeDisplay = (beforeAfterMarket: string | null): string => {
@@ -525,7 +512,7 @@ export default function EarningsReportsTab() {
     } catch (error) {
       if (error instanceof Error) {
       }
-      Alert.alert('שגיאה', 'לא ניתן לטעון את דיווחי התוצאות');
+      legacyAlert('שגיאה', 'לא ניתן לטעון את דיווחי התוצאות');
       setReports([]);
       setFilteredReports([]);
     } finally {
@@ -1046,7 +1033,6 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
     return `https://cdn.brandfetch.io/${cleanSymbol}?c=1idgv-PUKssFHXQBcKA`;
   };
 
-
   const getTimeDisplay = (beforeAfterMarket: string | null): string => {
     if (!beforeAfterMarket) return 'טרם נקבע';
     if (beforeAfterMarket === 'BeforeMarket') return 'מסחר מוקדם';
@@ -1240,7 +1226,7 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
         >
           {/* כותרת - לוגו + טיקר + שם חברה */}
           <View style={{ paddingHorizontal: 16, paddingTop: 12, marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <Image
                 source={{ uri: getLogoUrl(report.code) }}
                 style={{
@@ -1666,7 +1652,6 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
                 </View>
               )}
             </View>
-
 
           </View>
         </ScrollView>

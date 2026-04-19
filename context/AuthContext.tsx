@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { AuthService, AuthUser, LoginCredentials, RegisterCredentials } from '../services/authService';
+import { supabase } from '../services/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NotificationService } from '../services/notificationService';
 import { logger } from '../utils/logger';
@@ -52,54 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  useEffect(() => {
-    logger.debug('AuthContext', 'Initializing');
-
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-    }, 10000);
-
-    initializeAuth();
-    const { data: { subscription } } = AuthService.onAuthStateChange(async (user) => {
-      logger.debug('AuthContext', 'Auth state changed');
-      setUser(user);
-      setIsLoading(false);
-
-      if (user) {
-        setSentryUser(user.id, user.email);
-        setTimeout(() => registerTokenOnce(), 2000);
-      } else {
-        clearSentryUser();
-        deviceTokenRegistered.current = false;
-      }
-    });
-
-    return () => {
-      clearTimeout(timeoutId);
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const initializeAuth = async () => {
-    try {
-      const checkUserPromise = checkUser();
-      const timeoutPromise = new Promise<null>((resolve) => {
-        setTimeout(() => resolve(null), 5000);
-      });
-
-      const currentUser = await Promise.race([checkUserPromise, timeoutPromise]);
-
-      if (currentUser) {
-        setTimeout(() => registerTokenOnce(), 2000);
-      }
-    } catch (error) {
-      logger.error('AuthContext', 'Error in initializeAuth', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const checkUser = async (): Promise<AuthUser | null> => {
+  const checkUser = useCallback(async (): Promise<AuthUser | null> => {
     try {
       const { user } = await AuthService.getCurrentUser();
       if (user) {
@@ -113,7 +67,62 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(null);
       return null;
     }
-  };
+  }, []);
+
+  const initializeAuth = useCallback(async () => {
+    try {
+      const currentUser = await checkUser();
+      if (currentUser) {
+        setTimeout(() => registerTokenOnce(), 2000);
+      }
+    } catch (error) {
+      logger.error('AuthContext', 'Error in initializeAuth', error);
+    }
+    // isLoading נסגר רק אחרי אירוע onAuthStateChange הראשון — מונע הבהוב מסך התחברות
+  }, [checkUser, registerTokenOnce]);
+
+  useEffect(() => {
+    logger.debug('AuthContext', 'Initializing');
+
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 15000);
+
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    (async () => {
+      // קודם טוענים סשן מלא — רק אחר כך מאזינים, כדי שלא INITIAL_SESSION עם null
+      // ידרוס את המשתמש לפני ש־getCurrentUser הסתיים (בעיקר באנדרואיד / דיסק איטי).
+      await initializeAuth();
+      const { data } = AuthService.onAuthStateChange(async (nextUser) => {
+        logger.debug('AuthContext', 'Auth state changed');
+        let resolved = nextUser;
+        if (!resolved) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session?.user) {
+            const { user: recovered } = await AuthService.getCurrentUser();
+            if (recovered) resolved = recovered;
+          }
+        }
+        setUser(resolved ?? null);
+        setIsLoading(false);
+
+        if (resolved) {
+          setSentryUser(resolved.id, resolved.email);
+          setTimeout(() => registerTokenOnce(), 2000);
+        } else {
+          clearSentryUser();
+          deviceTokenRegistered.current = false;
+        }
+      });
+      subscription = data.subscription;
+    })();
+
+    return () => {
+      clearTimeout(timeoutId);
+      subscription?.unsubscribe();
+    };
+  }, [initializeAuth, registerTokenOnce]);
 
   const attemptAutoLogin = async () => {
     // Supabase persistSession: true handles session renewal automatically.

@@ -2,16 +2,9 @@
 // Privacy & Support Screen
 // ============================================
 
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Linking,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
@@ -33,34 +26,34 @@ export default function PrivacySupportScreen() {
 
   const handleContactSupport = () => {
     Linking.openURL('mailto:support@darkpool.co.il').catch(() =>
-      Alert.alert('שגיאה', 'לא ניתן לפתוח את דוא"ל התמיכה')
+      legacyAlert('שגיאה', 'לא ניתן לפתוח את דוא"ל התמיכה')
     );
   };
 
   const handlePrivacyPolicy = () => {
     Linking.openURL('https://darkpool.co.il/privacy').catch(() =>
-      Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור')
+      legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
     );
   };
 
   const handleTermsOfService = () => {
     Linking.openURL('https://darkpool.co.il/terms').catch(() =>
-      Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור')
+      legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
     );
   };
 
   const handleFAQ = () => {
     Linking.openURL('https://darkpool.co.il/faq').catch(() =>
-      Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור')
+      legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
     );
   };
 
   const handleReportIssue = () => {
-    Alert.alert(
+    legacyAlert(
       'דיווח על בעיה',
       'איך תרצה לדווח?',
       [
-        { text: 'דוא"ל', onPress: () => Linking.openURL('mailto:report@darkpool.co.il').catch(() => Alert.alert('שגיאה', 'לא ניתן לפתוח אפליקציית דוא"ל')) },
+        { text: 'דוא"ל', onPress: () => Linking.openURL('mailto:report@darkpool.co.il').catch(() => legacyAlert('שגיאה', 'לא ניתן לפתוח אפליקציית דוא"ל')) },
         { text: 'ביטול', style: 'cancel' },
       ]
     );
@@ -177,13 +170,13 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     textAlign: 'right',
   },
   optionRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: DesignTokens.spacing.md,
   },
   optionLeft: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: DesignTokens.spacing.md,
   },
@@ -197,7 +190,7 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     marginVertical: DesignTokens.spacing.xs,
   },
   infoRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: DesignTokens.spacing.sm,
@@ -211,6 +204,4 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     color: DesignTokens.colors.text.primary,
   },
 });
-
-
 

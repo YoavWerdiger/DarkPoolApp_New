@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, RefreshControl, ActivityIndicator, Pressable, SectionList } from 'react-native';
 import { DollarSign, Calendar } from 'lucide-react-native';
-import { useDesignTokens } from '../../components/ui/DesignTokens';
+import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
 import UICard from '../../components/ui/UICard';
 
@@ -60,7 +60,7 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
       style={{
         marginHorizontal: 16,
         marginBottom: 10,
-        flexDirection: 'row-reverse',
+        flexDirection: 'row',
         alignItems: 'center',
       }}
     >
@@ -183,7 +183,7 @@ export default function DividendsTab() {
         paddingHorizontal: 16, 
         paddingVertical: 10,
         backgroundColor: DesignTokens.colors.background.primary,
-        flexDirection: 'row-reverse',
+        flexDirection: 'row',
         alignItems: 'center'
       }}
     >

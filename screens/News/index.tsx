@@ -7,11 +7,15 @@ import {
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import UICard from '../../components/ui/UICard';
+import { Ionicons } from '@expo/vector-icons';
+import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
+import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
 // קומפוננטים פנימיים
 import BreakingNewsTab from './BreakingNewsTab';
@@ -62,7 +66,16 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, { hasError: bool
 
 export default function NewsScreen({ route }: { route?: any }) {
   const DesignTokens = useDesignTokens();
+  const navigation = useNavigation();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const openMainDrawer = React.useCallback(() => {
+    void triggerDrawerMenuHaptic();
+    try {
+      dispatchOpenMainDrawer(navigation as unknown as DrawerParentNavigation);
+    } catch {
+      /* noop */
+    }
+  }, [navigation]);
 
   // deep-link מהתראה: route.params?.tab יכול להיות 'breaking' | 'calendar' | 'earnings'
   const initialTab: 'breaking' | 'calendar' | 'earnings' =
@@ -115,13 +128,24 @@ export default function NewsScreen({ route }: { route?: any }) {
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component || BreakingNewsTab;
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScreenGradientBackground style={styles.gradientContainer} />
+    <ScreenChrome>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         {/* כותרת */}
         <View style={styles.headerContainer}>
           <UICard variant="blur" padding="lg">
+            <View style={styles.headerTopRow}>
+              <TouchableOpacity
+                style={styles.headerMenuBtn}
+                onPress={openMainDrawer}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="תפריט ראשי"
+              >
+                <Ionicons name="menu" size={24} color={DesignTokens.colors.text.primary} />
+              </TouchableOpacity>
+              <View style={styles.headerSpacer} />
+            </View>
             <Text style={styles.headerTitle}>חדשות פיננסיות</Text>
             <Text style={styles.headerSubtitle}>
               כל אירוע פיננסי שסוחר צריך - בזמן אמת
@@ -142,9 +166,8 @@ export default function NewsScreen({ route }: { route?: any }) {
                       setActiveTab(tab.id);
                     }}
                     activeOpacity={0.7}
-                    style={styles.tab}
+                    style={[styles.tab, isActive && styles.tabActive]}
                   >
-                    {isActive && <View style={styles.tabActiveIndicator} />}
                     <Text
                       style={[
                         styles.tabText,
@@ -174,25 +197,38 @@ export default function NewsScreen({ route }: { route?: any }) {
           )}
         </View>
       </RNSafeAreaView>
-    </View>
+    </ScreenChrome>
   );
 }
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   ({
-    gradientContainer: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    },
     safeAreaContainer: {
       flex: 1,
     },
     headerContainer: {
       paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
       paddingTop: tokens.spacing.lg,
+    },
+    headerTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: tokens.spacing.sm,
+    },
+    headerMenuBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: tokens.colors.background.cardSolid,
+      borderWidth: 1,
+      borderColor: tokens.colors.border.primary,
+    },
+    headerSpacer: {
+      width: 42,
+      height: 42,
     },
     headerTitle: {
       fontSize: tokens.typography.displayXs.size,
@@ -221,25 +257,20 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     tabs: {
       flexDirection: 'row',
       padding: tokens.spacing.xs,
+      gap: tokens.spacing.sm,
     },
     tab: {
       flex: 1,
-      height: 44,
-      borderRadius: tokens.borderRadius['3xl'],
+      minHeight: 44,
+      paddingVertical: tokens.spacing.sm,
+      paddingHorizontal: tokens.spacing.sm,
+      borderRadius: tokens.borderRadius.full,
       backgroundColor: 'transparent',
       alignItems: 'center',
       justifyContent: 'center',
-      marginHorizontal: 2,
-      position: 'relative',
     },
-    tabActiveIndicator: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      borderRadius: tokens.borderRadius['3xl'],
-      backgroundColor: tokens.colors.background.cardSolid,
+    tabActive: {
+      backgroundColor: tokens.colors.background.tabActive,
     },
     tabText: {
       fontSize: tokens.typography.bodySmall.size,
@@ -249,8 +280,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       writingDirection: 'rtl' as any,
     },
     tabTextActive: {
-      color: tokens.colors.primary.main,
-      fontWeight: tokens.typography.fontWeight.bold as any,
+      color: tokens.colors.text.inverse,
+      fontWeight: tokens.typography.fontWeight.semibold as any,
     },
     tabContent: {
       flex: 1,

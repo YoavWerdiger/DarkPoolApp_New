@@ -1,15 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Linking,
-  TextInput,
-  Modal,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, TextInput, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,7 +8,7 @@ import { courseService } from '../../services/courseService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
-import { ArrowRight } from 'lucide-react-native';
+import { AcademySubScreenBar } from '../../components/learning';
 
 export const CoursePreviewScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -46,7 +37,7 @@ export const CoursePreviewScreen: React.FC = () => {
       );
       
       if (result) {
-        Alert.alert(
+        legacyAlert(
           'הצלחה!',
           'הקורס נוצר בהצלחה במסד הנתונים',
           [
@@ -57,10 +48,10 @@ export const CoursePreviewScreen: React.FC = () => {
           ]
         );
       } else {
-        Alert.alert('שגיאה', 'לא ניתן ליצור את הקורס כרגע');
+        legacyAlert('שגיאה', 'לא ניתן ליצור את הקורס כרגע');
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'אירעה שגיאה ביצירת הקורס');
+      legacyAlert('שגיאה', 'אירעה שגיאה ביצירת הקורס');
     } finally {
       setIsCreating(false);
     }
@@ -69,7 +60,7 @@ export const CoursePreviewScreen: React.FC = () => {
   const handleOpenYoutubeLink = (url: string) => {
     if (url) {
       Linking.openURL(url).catch((err) => {
-        Alert.alert('שגיאה', 'לא ניתן לפתוח את הקישור');
+        legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור');
       });
     }
   };
@@ -111,17 +102,11 @@ export const CoursePreviewScreen: React.FC = () => {
             contentContainerStyle={styles.content}
             showsVerticalScrollIndicator={false}
           >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-            >
-              <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>תצוגה מקדימה</Text>
-          </View>
+          <AcademySubScreenBar
+            style={{ marginHorizontal: -DesignTokens.spacing.lg }}
+            onBackPress={() => navigation.goBack()}
+            title="תצוגה מקדימה"
+          />
 
           {/* Course Info */}
           <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
@@ -269,6 +254,12 @@ export const CoursePreviewScreen: React.FC = () => {
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
+    gradientContainer: {
+      flex: 1,
+    },
+    safeAreaContainer: {
+      flex: 1,
+    },
     container: {
       flex: 1,
       backgroundColor: tokens.colors.background.primary,
@@ -279,26 +270,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     content: {
       padding: tokens.spacing.lg,
       paddingBottom: tokens.spacing['4xl'],
-    },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: tokens.spacing.lg,
-    },
-    backButton: {
-      padding: tokens.spacing.sm,
-      marginRight: tokens.spacing.md,
-    },
-    backButtonText: {
-      fontSize: tokens.typography.fontSize.base,
-      color: tokens.colors.primary.main,
-      fontWeight: tokens.typography.fontWeight.medium,
-    },
-    headerTitle: {
-      fontSize: tokens.typography.fontSize['2xl'],
-      fontWeight: tokens.typography.fontWeight.bold as any,
-      color: tokens.colors.text.primary,
-      textAlign: 'right',
     },
     courseTitle: {
       fontSize: tokens.typography.fontSize.xl,
@@ -453,7 +424,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     createButtonText: {
       fontSize: tokens.typography.fontSize.lg,
       fontWeight: tokens.typography.fontWeight.bold as any,
-      color: '#000000',
+      color: tokens.colors.text.inverse,
     },
     footerText: {
       fontSize: tokens.typography.fontSize.sm,

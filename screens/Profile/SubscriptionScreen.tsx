@@ -1,20 +1,12 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Alert,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import {
   Crown,
   Star,
   CreditCard,
   Calendar,
   Check,
-  ArrowRight,
   Zap,
   Users
 } from 'lucide-react-native';
@@ -25,6 +17,7 @@ import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentServic
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 interface SubscriptionPlan {
@@ -85,7 +78,7 @@ export default function SubscriptionScreen({ navigation }: any) {
 
   const handlePlanSelection = (planId: string) => {
     if (!user) {
-      Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
+      legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
       return;
     }
 
@@ -109,47 +102,10 @@ export default function SubscriptionScreen({ navigation }: any) {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Header עם blur */}
-        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <UICard
-            variant="blur"
-            padding="sm"
-          >
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: DesignTokens.spacing.md,
-              minHeight: 44,
-            }}>
-              <Text style={{
-                flex: 1,
-                textAlign: 'center',
-                fontSize: DesignTokens.typography.fontSize.lg,
-                fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                color: DesignTokens.colors.text.primary,
-                marginLeft: 36
-              }}>
-                מנוי ומסלול
-              </Text>
-
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-                style={{
-                  width: 36,
-                  height: 36,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderRadius: 18,
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                }}
-              >
-                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          </UICard>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <ChatSubScreenHeader title="מנוי ומסלול" onBack={() => navigation.goBack()} />
         </View>
 
         <View style={{ flex: 1 }}>
@@ -174,8 +130,9 @@ export default function SubscriptionScreen({ navigation }: any) {
                 </Text>
 
                 <UICard
-                  variant="blur"
+                  variant="inputGlass"
                   padding="lg"
+                  style={{ borderRadius: DesignTokens.borderRadius.lg }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: DesignTokens.spacing.lg }}>
                     <View style={{ flex: 1, alignItems: 'flex-end' }}>
@@ -261,8 +218,9 @@ export default function SubscriptionScreen({ navigation }: any) {
                     style={{ marginBottom: DesignTokens.spacing.md, opacity: isCurrentPlan ? 0.6 : 1 }}
                   >
                     <UICard
-                      variant="blur"
+                      variant="inputGlass"
                       padding="lg"
+                      style={{ borderRadius: DesignTokens.borderRadius.lg }}
                     >
                       {plan.popular && (
                         <View style={{
@@ -423,8 +381,9 @@ export default function SubscriptionScreen({ navigation }: any) {
             {/* Info Note */}
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md }}>
               <UICard
-                variant="blur"
+                variant="inputGlass"
                 padding="md"
+                style={{ borderRadius: DesignTokens.borderRadius.lg }}
               >
                 <Text style={{
                   fontSize: DesignTokens.typography.fontSize.sm,

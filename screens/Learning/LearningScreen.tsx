@@ -1,10 +1,12 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Alert, Platform, TextInput, SafeAreaView, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Modal, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Platform, TextInput, SafeAreaView, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Modal, Linking, ActivityIndicator } from 'react-native';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ScreenGradientBackground } from '../../components/VideoBackground';
-import { useRoute } from '@react-navigation/native';
+import { BrandTransbackWatermark } from '../../components/ui/BrandTransbackWatermark';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import { Ionicons } from '@expo/vector-icons';
@@ -141,11 +143,16 @@ const DEMO_COURSE = {
 
 function LearningScreen() {
   const route = useRoute();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { courseId: routeCourseId, lessonId: routeLessonId } = route.params as { courseId?: string; lessonId?: string } || {};
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const handleBackToAcademy = useCallback(() => {
+    (navigation as { navigate: (n: string) => void }).navigate('CoursesScreen');
+  }, [navigation]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -174,6 +181,8 @@ function LearningScreen() {
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [courseData, setCourseData] = useState<any>(null); // נתוני הקורס מהמסד
   const [lessonsData, setLessonsData] = useState<any[]>([]); // נתוני השיעורים מהמסד
+  /** טעינת רשימת השיעורים — כדי להציג פרוגרס גם לפני סיום ולא 0/0 מטעה */
+  const [lessonsProgressLoading, setLessonsProgressLoading] = useState(false);
   const videoRef = useRef(null);
   const youtubePlayerRef = useRef<any>(null);
   const vimeoWebViewRef = useRef<any>(null);
@@ -335,12 +344,12 @@ function LearningScreen() {
 
   // טעינת נתוני הקורס
   const loadCourseData = async () => {
+    if (!routeCourseId) {
+      return;
+    }
+    setLessonsProgressLoading(true);
     try {
       // נטען את הקורס מהמסד (או ניצור אותו אם לא קיים)
-      // אם אין routeCourseId, לא נטען כלום (לא נשתמש ב-default)
-      if (!routeCourseId) {
-        return;
-      }
       const courseId = routeCourseId;
       let course = await courseService.getCourseById(courseId);
       
@@ -459,6 +468,8 @@ function LearningScreen() {
       setCourseData(null);
       setLessonsData([]);
       setTotalProgress(0);
+    } finally {
+      setLessonsProgressLoading(false);
     }
   };
 
@@ -570,7 +581,7 @@ function LearningScreen() {
         }, 100);
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לבחור תמונה');
+      legacyAlert('שגיאה', 'לא ניתן לבחור תמונה');
     }
   };
 
@@ -641,7 +652,7 @@ function LearningScreen() {
           });
         }
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לבחור תמונה');
+      legacyAlert('שגיאה', 'לא ניתן לבחור תמונה');
     }
   };
 
@@ -815,9 +826,6 @@ function LearningScreen() {
       setIsLoadingNotes(false);
     }
   };
-
-
-
 
   const renderRichTextElement = (element: any, index: number) => {
     const renderContent = () => {
@@ -1096,7 +1104,7 @@ function LearningScreen() {
     if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
       await updateLessonProgress(progress, duration);
     }
-    Alert.alert('מעולה!', 'השיעור הושלם בהצלחה!', [
+    legacyAlert('מעולה!', 'השיעור הושלם בהצלחה!', [
       { text: 'המשך', onPress: () => setSelectedLesson(null) }
     ]);
   };
@@ -1111,7 +1119,6 @@ function LearningScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-
   const renderLessonCard = (lesson: any, index: number) => {
     const animatedValue = animatedValues[index] || new Animated.Value(1);
     // משתמשים ב-duration ב-key כדי ש-React יעדכן את הקומפוננטה כשהערך משתנה
@@ -1120,10 +1127,10 @@ function LearningScreen() {
     <Animated.View
       key={lessonKey}
       style={[
-        { marginBottom: 16, transform: [{ scale: animatedValue }] }
+        { marginBottom: DesignTokens.spacing.lg, transform: [{ scale: animatedValue }] }
       ]}
     >
-      <UICard variant="blur" padding="none">
+      <UICard variant="blur" padding="none" style={styles.lessonCardWrap}>
       <TouchableOpacity
         style={styles.lessonTouchable}
         onPress={() => handleLessonPress(lesson, index)}
@@ -1143,6 +1150,9 @@ function LearningScreen() {
               <Text style={{ color: DesignTokens.colors.text.primary, fontSize: DesignTokens.typography.fontSize['2xl'] }}>🎥</Text>
             </View>
           )}
+          <View style={styles.lessonNumberOnThumb} accessibilityLabel={`שיעור ${index + 1}`}>
+            <Text style={styles.lessonNumberOnThumbText}>{index + 1}</Text>
+          </View>
           <View style={[
             styles.durationBadge,
             {
@@ -1169,13 +1179,16 @@ function LearningScreen() {
         </View>
         
         <View style={styles.lessonContent}>
-          <View style={styles.lessonCardHeader}>
-              <Text style={styles.lessonCardTitle}>{lesson.title}</Text>
-            <View style={styles.lessonNumber}>
-              <Text style={styles.lessonNumberText}>{index + 1}</Text>
-            </View>
+          <View style={styles.lessonCardTextCol}>
+            <Text style={styles.lessonCardTitle} numberOfLines={2}>
+              {lesson.title}
+            </Text>
+            {lesson.description ? (
+              <Text style={styles.lessonDescription} numberOfLines={3}>
+                {lesson.description}
+              </Text>
+            ) : null}
           </View>
-          <Text style={styles.lessonDescription}>{lesson.description}</Text>
         </View>
       </TouchableOpacity>
       </UICard>
@@ -1381,22 +1394,52 @@ function LearningScreen() {
 
     const videoHTML = getVideoHTML();
 
+    const progressSeconds = Math.max(0, Math.floor(progress));
+    const durationSeconds = Math.max(0, Math.floor(duration));
+    const timeLine =
+      durationSeconds <= 0 && isLoading
+        ? 'טוען…'
+        : `${formatTime(progressSeconds)} / ${formatTime(durationSeconds)}`;
+    const pctDisplay =
+      durationSeconds <= 0 && isLoading ? '…' : `${Math.min(100, Math.max(0, Math.round(lessonProgress)))}%`;
+    const barWidthPct =
+      durationSeconds > 0
+        ? Math.min(100, Math.max(0, Math.round((progressSeconds / durationSeconds) * 100)))
+        : isLoading
+          ? 0
+          : Math.min(100, Math.max(0, Math.round(lessonProgress)));
+
+    const rawLessonDescription =
+      typeof selectedLesson.description === 'string' ? selectedLesson.description : '';
+    const lessonDescriptionDisplay = rawLessonDescription
+      .replace(/\r\n/g, '\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
     return (
       <View style={styles.lessonContainer}>
-        {/* Background Gradient - DarkPool עם שקיפות קלה לידאו */}
-        <LinearGradient
-          colors={[
-            DesignTokens.colors.background.elevated2,
-            DesignTokens.colors.background.secondary,
-            DesignTokens.colors.background.tertiary,
-            DesignTokens.colors.background.primary,
-          ]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        {/* Header - extends to top of screen */}
-        <View style={styles.newLessonHeader}>
+        <ScreenGradientBackground style={StyleSheet.absoluteFill} />
+        <BrandTransbackWatermark />
+        {/* Header - עם safe area */}
+        <View style={[styles.newLessonHeader, { paddingTop: insets.top + DesignTokens.spacing.md }]}>
+          <TouchableOpacity
+            style={styles.newBackButton}
+            onPress={async () => {
+              // שמירת המיקום האחרון לפני סגירה
+              if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
+                await updateLessonProgress(progress, duration);
+              }
+              setIsYouTubePlayerReady(false); // איפוס flag כשסוגרים
+              durationUpdatedRef.current.clear(); // איפוס מעקב duration כשסוגרים
+              durationCheckInProgressRef.current.clear(); // איפוס מעקב בדיקות duration
+              setSelectedLesson(null);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="חזרה לרשימת השיעורים"
+          >
+            <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+          </TouchableOpacity>
           <View style={styles.newHeaderContent}>
             <Text style={styles.newLessonNumber}>
               שיעור {(() => {
@@ -1409,22 +1452,6 @@ function LearningScreen() {
               {selectedLesson.title}
             </Text>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.newBackButton}
-            onPress={async () => {
-              // שמירת המיקום האחרון לפני סגירה
-              if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
-                await updateLessonProgress(progress, duration);
-              }
-              setIsYouTubePlayerReady(false); // איפוס flag כשסוגרים
-              durationUpdatedRef.current.clear(); // איפוס מעקב duration כשסוגרים
-              durationCheckInProgressRef.current.clear(); // איפוס מעקב בדיקות duration
-              setSelectedLesson(null);
-            }}
-          >
-            <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-          </TouchableOpacity>
         </View>
         
         {/* Safe Area for content */}
@@ -1497,7 +1524,7 @@ function LearningScreen() {
                   }
                 }}
                 onError={(error: any) => {
-                  Alert.alert('שגיאה', 'שגיאה בטעינת הסרטון. נסה לפתוח ב-YouTube.');
+                  legacyAlert('שגיאה', 'שגיאה בטעינת הסרטון. נסה לפתוח ב-YouTube.');
                 }}
                 initialPlayerParams={{
                   modestbranding: 1,
@@ -1529,7 +1556,7 @@ function LearningScreen() {
               }}
               onError={(syntheticEvent) => {
                 const { nativeEvent } = syntheticEvent;
-                Alert.alert('שגיאה', `שגיאה בטעינת הסרטון: ${nativeEvent.description || 'שגיאה לא ידועה'}`);
+                legacyAlert('שגיאה', `שגיאה בטעינת הסרטון: ${nativeEvent.description || 'שגיאה לא ידועה'}`);
               }}
               onHttpError={() => {}}
               onMessage={(event) => {
@@ -1591,20 +1618,32 @@ function LearningScreen() {
             contentContainerStyle={styles.contentContainer}
           >
             {/* Lesson Info - פשוט */}
-            <UICard variant="blur" padding="lg" style={{ marginBottom: 20 }}>
-              <Text style={styles.simpleLessonTitle}>{selectedLesson.title}</Text>
-              <Text style={styles.simpleLessonDescription}>{selectedLesson.description}</Text>
-              
-              {/* זמן והתקדמות */}
-              <View style={styles.lessonProgressInfo}>
+            <UICard variant="blur" padding="none" style={[styles.lessonMetaCard, styles.lessonMetaCardBlurShell, styles.lessonMetaCardBelowVideo]}>
+              <View style={styles.lessonMetaInner}>
+              {lessonDescriptionDisplay ? (
+                <Text style={styles.simpleLessonDescription}>{lessonDescriptionDisplay}</Text>
+              ) : null}
+
+              <View
+                style={[
+                  styles.lessonProgressInfo,
+                  !lessonDescriptionDisplay ? styles.lessonProgressInfoNoDescription : null,
+                ]}
+              >
                 <View style={styles.progressTimeRow}>
-                  <Text style={styles.progressTimeText}>
-                    {Math.floor(progress / 60)}:{(progress % 60).toFixed(0).padStart(2, '0')} / {Math.floor(duration / 60)}:{(duration % 60).toFixed(0).padStart(2, '0')}
-                  </Text>
-                  <Text style={styles.progressPercentageText}>{lessonProgress}%</Text>
+                  <Text style={styles.progressTimeText}>{timeLine}</Text>
+                  <Text style={styles.progressPercentageText}>{pctDisplay}</Text>
                 </View>
                 <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBarFill, { width: `${Math.min(Math.max(lessonProgress, 0), 100)}%` }]} />
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      {
+                        width: `${Math.min(100, Math.max(0, barWidthPct))}%`,
+                        minWidth: barWidthPct > 0 ? 4 : 0,
+                      },
+                    ]}
+                  />
                 </View>
                 {selectedLesson.completed && (
                   <View style={styles.completedStatus}>
@@ -1613,34 +1652,12 @@ function LearningScreen() {
                   </View>
                 )}
               </View>
+              </View>
             </UICard>
 
-            {/* Navigation Buttons - פשוט */}
-            <View style={styles.simpleNavigationButtons}>
-                  <TouchableOpacity
-                style={[styles.simpleNavButton, { opacity: (() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex >= 0 && currentIndex < lessons.length - 1 ? 1 : 0.5;
-                })() }]}
-                    onPress={() => {
-                      const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                      const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  if (currentIndex >= 0 && currentIndex < lessons.length - 1) {
-                    const nextLesson = lessons[currentIndex + 1];
-                    handleLessonPress(nextLesson, currentIndex + 1);
-                  }
-                }}
-                disabled={(() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex < 0 || currentIndex >= lessons.length - 1;
-                })()}
-              >
-                <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                <Text style={styles.simpleNavButtonText}>שיעור הבא</Text>
-              </TouchableOpacity>
-              
+            {/* ניווט — על אותו blur כמו כרטיסי המטא */}
+            <UICard variant="blur" padding="none" style={[styles.lessonMetaCard, styles.lessonMetaCardBlurShell]}>
+              <View style={styles.lessonNavRow}>
               <TouchableOpacity
                 style={[styles.simpleNavButton, { opacity: (() => {
                   const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
@@ -1664,24 +1681,57 @@ function LearningScreen() {
                 <Text style={styles.simpleNavButtonText}>שיעור קודם</Text>
                 <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
               </TouchableOpacity>
-          </View>
+
+              <TouchableOpacity
+                style={[styles.simpleNavButton, { opacity: (() => {
+                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                  return currentIndex >= 0 && currentIndex < lessons.length - 1 ? 1 : 0.5;
+                })() }]}
+                onPress={() => {
+                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                  if (currentIndex >= 0 && currentIndex < lessons.length - 1) {
+                    const nextLesson = lessons[currentIndex + 1];
+                    handleLessonPress(nextLesson, currentIndex + 1);
+                  }
+                }}
+                disabled={(() => {
+                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
+                  return currentIndex < 0 || currentIndex >= lessons.length - 1;
+                })()}
+              >
+                <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                <Text style={styles.simpleNavButtonText}>שיעור הבא</Text>
+              </TouchableOpacity>
+              </View>
+            </UICard>
           
             {/* Notes Section - כפתור לפתיחת Bottom Sheet */}
             <TouchableOpacity 
               onPress={() => setNotesModalVisible(true)}
               activeOpacity={0.8}
             >
-            <UICard variant="blur" padding="lg" style={{ marginBottom: 20 }}>
-              <View style={styles.simpleNotesHeader}>
-                <Edit3 size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                <Text style={styles.simpleNotesTitle}>הערות אישיות על השיעור</Text>
-                <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+            <UICard variant="blur" padding="none" style={[styles.lessonMetaCard, styles.lessonMetaCardBlurShell, styles.lessonMetaCardNotes]}>
+              <View style={styles.lessonMetaInner}>
+                <View style={styles.simpleNotesHeader}>
+                  <View style={styles.simpleNotesHeaderIconsRow}>
+                    <Edit3 size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                    <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                   </View>
+                  <View style={styles.simpleNotesTitleOverlay} pointerEvents="none">
+                    <Text style={styles.simpleNotesTitle} numberOfLines={2}>
+                      הערות אישיות על השיעור
+                    </Text>
+                  </View>
+                </View>
               <Text style={styles.notesPreview}>
                 {userNotes.trim() ? 
                   (userNotes.length > 100 ? userNotes.substring(0, 100) + '...' : userNotes) : 
                   'לחץ לכתיבת הערות...'}
               </Text>
+              </View>
             </UICard>
             </TouchableOpacity>
           </ScrollView>
@@ -1704,37 +1754,42 @@ function LearningScreen() {
             style={styles.notesSheetContent}
           >
             <View style={styles.notesSheetHeader}>
-              <TouchableOpacity
-                onPress={() => !isSaving && setNotesModalVisible(false)}
-                style={[styles.notesSheetIconButton, isSaving && styles.notesSheetIconButtonDisabled]}
-                disabled={isSaving}
-              >
-                <X size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </TouchableOpacity>
-              <Text style={styles.notesSheetTitle}>הערות אישיות על השיעור</Text>
-              <TouchableOpacity
-                onPress={async () => {
-                  if (selectedLesson && !isSaving) {
-                    try {
-                      setIsSaving(true);
-                      await saveUserNotes(selectedLesson.id, userNotes);
-                      Alert.alert('נשמר!', 'ההערות נשמרו בהצלחה');
-                    } catch (error) {
-                      Alert.alert('שגיאה', 'לא ניתן לשמור את ההערות');
-                    } finally {
-                      setIsSaving(false);
+              <View style={styles.notesSheetHeaderSlot}>
+                <TouchableOpacity
+                  onPress={() => !isSaving && setNotesModalVisible(false)}
+                  style={[styles.notesSheetIconButton, isSaving && styles.notesSheetIconButtonDisabled]}
+                  disabled={isSaving}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <X size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.notesSheetHeaderSlot}>
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (selectedLesson && !isSaving) {
+                      try {
+                        setIsSaving(true);
+                        await saveUserNotes(selectedLesson.id, userNotes);
+                        legacyAlert('נשמר!', 'ההערות נשמרו בהצלחה');
+                      } catch (error) {
+                        legacyAlert('שגיאה', 'לא ניתן לשמור את ההערות');
+                      } finally {
+                        setIsSaving(false);
+                      }
                     }
-                  }
-                }}
-                style={[styles.notesSheetSaveButton, isSaving && styles.notesSheetSaveButtonDisabled]}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <RefreshCw size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                ) : (
-                  <Text style={styles.notesSheetSaveText}>שמור</Text>
-                )}
-              </TouchableOpacity>
+                  }}
+                  style={[styles.notesSheetSaveButton, isSaving && styles.notesSheetSaveButtonDisabled]}
+                  disabled={isSaving}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  {isSaving ? (
+                    <RefreshCw size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                  ) : (
+                    <Text style={styles.notesSheetSaveText}>שמור</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
             <ScrollView
@@ -1746,13 +1801,18 @@ function LearningScreen() {
               <View style={styles.notesSheetInputWrapper}>
                 <TextInput
                   ref={textInputRef}
-                  style={styles.notesSheetInput}
+                  style={[
+                    styles.notesSheetInput,
+                    Platform.OS === 'android' && { includeFontPadding: false, paddingTop: DesignTokens.spacing.sm },
+                    Platform.OS === 'ios' && { paddingTop: DesignTokens.spacing.sm },
+                  ]}
                   placeholder="כתבו מחשבות, רעיונות ותזכורות מהשיעור..."
                   placeholderTextColor={DesignTokens.colors.text.tertiary}
                   value={userNotes}
                   onChangeText={setUserNotes}
                   multiline
                   autoFocus
+                  textAlignVertical="top"
                 />
               </View>
             </ScrollView>
@@ -1871,7 +1931,7 @@ function LearningScreen() {
   const displayCourse = courseData;
   const displayCoverUrl = courseData?.cover_url;
   const displayTitle = courseData?.title;
-  const displayDescription = courseData?.description;
+  const displayDescription = (courseData?.description ?? '').trim();
   const displayInstructorName = courseData?.instructor_name || courseData?.owner?.display_name;
   const displayInstructorAvatar = courseData?.instructor_avatar || courseData?.owner?.avatar_url;
 
@@ -1882,12 +1942,26 @@ function LearningScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Background Gradient - שקוף כדי שהוידאו יראה */}
       <ScreenGradientBackground style={StyleSheet.absoluteFill} />
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* כותרת הקורס */}
+      <BrandTransbackWatermark />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.courseListScroll}
+      >
       <View style={styles.courseHeader}>
         <View style={styles.courseImageContainer}>
+          <TouchableOpacity
+            style={[
+              styles.backOnCover,
+              { top: insets.top + DesignTokens.spacing.sm },
+            ]}
+            onPress={handleBackToAcademy}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="חזרה לאקדמיה"
+          >
+            <ArrowRight size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+          </TouchableOpacity>
           {displayCoverUrl ? (
             <Image source={{ uri: displayCoverUrl }} style={styles.courseImage} />
           ) : (
@@ -1898,13 +1972,16 @@ function LearningScreen() {
         </View>
         
         <View style={styles.courseInfo}>
-        <Text style={styles.courseTitle}>{displayTitle}</Text>
-        {courseData?.subtitle && (
-          <Text style={styles.courseSubtitle}>{courseData.subtitle}</Text>
-        )}
-        <Text style={styles.courseDescription}>{displayDescription}</Text>
-          
-          
+          <View style={styles.courseTitleBlock}>
+            <Text style={styles.courseTitle}>{displayTitle}</Text>
+            {courseData?.subtitle ? (
+              <Text style={styles.courseSubtitle}>{courseData.subtitle}</Text>
+            ) : null}
+          </View>
+          {displayDescription ? (
+            <Text style={styles.courseDescription}>{displayDescription}</Text>
+          ) : null}
+
           {/* מרצה */}
           <View style={styles.instructorContainer}>
             {displayInstructorAvatar ? (
@@ -1932,20 +2009,44 @@ function LearningScreen() {
           <Text style={styles.sectionTitle}>שיעורי הקורס</Text>
           <View style={styles.progressContainer}>
             {(() => {
-              const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : [];
-              const completedLessons = lessonsToRender.filter(lesson => lesson.completed).length;
-              const totalLessons = lessonsToRender.length;
-              const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
-              
+              const list = Array.isArray(lessonsData) ? lessonsData : [];
+              const totalLessons = list.length;
+              const completedLessons = list.filter((lesson: { completed?: boolean }) => lesson.completed).length;
+              const progressPercentage =
+                totalLessons > 0 ? Math.min(100, Math.round((completedLessons / totalLessons) * 100)) : 0;
+
+              if (lessonsProgressLoading) {
+                return (
+                  <>
+                    <View style={styles.progressTextRow}>
+                      <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
+                      <Text style={styles.progressTextMuted}>טוען התקדמות…</Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View style={[styles.progressFill, { width: '0%' }]} />
+                    </View>
+                  </>
+                );
+              }
+
+              const label =
+                totalLessons === 0
+                  ? 'אין שיעורים בקורס'
+                  : `${completedLessons}/${totalLessons} הושלמו`;
+
               return (
                 <>
-                  <Text style={styles.progressText}>{completedLessons}/{totalLessons} הושלמו</Text>
-                  <View style={[styles.progressBar, { width: 120, height: 6 }]}>
-                    <View style={[styles.progressFill, { 
-                      width: `${progressPercentage}%`,
-                      backgroundColor: DesignTokens.colors.primary.main,
-                      borderRadius: 3
-                    }]} />
+                  <Text style={styles.progressText}>{label}</Text>
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${progressPercentage}%`,
+                          minWidth: progressPercentage > 0 ? 4 : 0,
+                        },
+                      ]}
+                    />
                   </View>
                 </>
               );
@@ -2000,7 +2101,23 @@ function LearningScreen() {
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    // הרקע מגיע מהגרדיאנט
+    backgroundColor: tokens.colors.background.primary,
+  },
+  courseListScroll: {
+    paddingBottom: tokens.spacing['3xl'],
+  },
+  backOnCover: {
+    position: 'absolute',
+    right: tokens.spacing.lg,
+    zIndex: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   
   // Background Gradient
@@ -2022,29 +2139,30 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   // New Lesson Header Styles - Glassmorphism שקוף
   newLessonHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 50, // Add top padding for status bar
-    paddingBottom: 16,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingBottom: tokens.spacing.md,
     backgroundColor: tokens.colors.background.cardSolid,
     borderBottomWidth: 1,
     borderBottomColor: tokens.colors.border.primary,
-    minHeight: 100,
+    minHeight: 88,
+    gap: tokens.spacing.md,
   },
   newBackButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: tokens.borderRadius.full,
-    backgroundColor: tokens.colors.border.primary,
+    backgroundColor: tokens.colors.background.secondary,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.strong,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 16,
   },
   newHeaderContent: {
     flex: 1,
     alignItems: 'flex-end',
-    marginTop: 8, // Add margin from top instead of center
+    minWidth: 0,
   },
   newLessonNumber: {
     fontSize: tokens.typography.label.size,
@@ -2061,13 +2179,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     lineHeight: tokens.typography.titleSmall.size * tokens.typography.lineHeight.normal,
     textAlign: 'right',
   },
+  lessonCardTextCol: {
+    width: '100%',
+    alignItems: 'stretch',
+  },
   lessonCardTitle: {
     fontSize: tokens.typography.titleXs.size,
-    fontWeight: tokens.typography.titleXs.weight as any,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    flex: 1,
-    marginRight: 12,
+    lineHeight: Math.round(tokens.typography.titleXs.size * 1.35),
+    letterSpacing: 0.15,
+    writingDirection: 'rtl',
   },
   lessonDuration: {
     fontSize: tokens.typography.bodySmall.size,
@@ -2088,6 +2211,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   videoContainer: {
     aspectRatio: 16/9,
     backgroundColor: tokens.colors.background.primary,
+    overflow: 'hidden',
+    borderBottomLeftRadius: tokens.borderRadius.lg,
+    borderBottomRightRadius: tokens.borderRadius.lg,
   },
   videoPlayer: {
     width: '100%',
@@ -2098,8 +2224,33 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: 'transparent',
   },
   contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: 0,
+    paddingBottom: tokens.spacing['5xl'],
+  },
+  lessonMetaCard: {
+    marginBottom: tokens.spacing.lg,
+  },
+  /** מסגרת blur משותפת לכרטיסי מטא + ניווט (בלי margin עליון כברירת מחדל) */
+  lessonMetaCardBlurShell: {
+    borderRadius: tokens.borderRadius['2xl'],
+    borderWidth: 1,
+    borderColor: `${tokens.colors.primary.main}24`,
+    overflow: 'hidden',
+    ...tokens.shadows.sm,
+  },
+  /** מרווח נוסף בין הווידאו לכרטיס הראשון */
+  lessonMetaCardBelowVideo: {
+    marginTop: tokens.spacing.xl,
+  },
+  lessonMetaCardNotes: {
+    marginTop: tokens.spacing.lg,
+  },
+  lessonMetaInner: {
+    width: '100%',
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.lg,
+    gap: tokens.spacing.md,
   },
   
   // Lesson Info Card - Glassmorphism
@@ -2125,14 +2276,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    marginBottom: tokens.spacing.sm,
-    lineHeight: tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal,
+    lineHeight: Math.round(tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal),
+    writingDirection: 'rtl',
   },
   lessonInfoDescription: {
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
+    writingDirection: 'rtl',
   },
   lessonInfoRight: {
     alignItems: 'flex-end',
@@ -2311,7 +2463,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.primary,
     textAlignVertical: 'top',
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     textAlign: 'right',
   },
   notesHint: {
@@ -2330,33 +2482,28 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderWidth: 1,
     borderColor: tokens.colors.border.primary,
   },
-  simpleLessonTitle: {
-    fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-    marginBottom: tokens.spacing.sm,
-    lineHeight: tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal,
-  },
   simpleLessonDescription: {
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: Math.round(tokens.typography.body.size * 1.45),
+    writingDirection: 'rtl',
+    width: '100%',
   },
-  simpleNavigationButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
+  lessonNavRow: {
+    width: '100%',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.md,
   },
   simpleNavButton: {
     flex: 1,
-    backgroundColor: tokens.colors.background.cardSolid,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    backgroundColor: 'transparent',
+    paddingVertical: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.sm,
     borderRadius: tokens.borderRadius.md,
-    borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2376,17 +2523,35 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderColor: tokens.colors.border.primary,
   },
   simpleNotesHeader: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 40,
+    marginBottom: tokens.spacing.xs,
+  },
+  simpleNotesHeaderIconsRow: {
+    zIndex: 2,
+    width: '100%',
     flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    paddingHorizontal: tokens.spacing.xs,
+  },
+  simpleNotesTitleOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 80,
+    zIndex: 0,
   },
   simpleNotesTitle: {
-    flex: 1,
+    width: '100%',
     fontSize: tokens.typography.titleXs.size,
     fontWeight: tokens.typography.titleXs.weight as any,
     color: tokens.colors.text.primary,
     textAlign: 'center',
+    writingDirection: 'rtl',
   },
   simpleNotesInput: {
     backgroundColor: tokens.colors.background.tertiary,
@@ -2398,7 +2563,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.primary,
     textAlignVertical: 'top',
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     textAlign: 'right',
   },
   notesPreview: {
@@ -2406,39 +2571,46 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.secondary,
     textAlign: 'right',
     fontStyle: 'italic',
+    width: '100%',
+    lineHeight: Math.round(tokens.typography.bodySmall.size * 1.4),
+    writingDirection: 'rtl',
   },
 
-  // Notes bottom sheet
+  // Notes bottom sheet — הדר: רק סגירה ושמירה בקצוות
   notesSheetContent: {
     flex: 1,
-    paddingHorizontal: tokens.spacing.xl,
-    paddingBottom: tokens.spacing.xl,
-    paddingTop: tokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingBottom: tokens.spacing.lg,
+    paddingTop: tokens.spacing.md,
   },
   notesSheetHeader: {
-    flexDirection: 'row-reverse',
+    direction: 'rtl',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: tokens.spacing.lg,
+    width: '100%',
+    minHeight: 44,
+    paddingVertical: tokens.spacing.xs,
+    marginBottom: tokens.spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: tokens.colors.border.primary,
+  },
+  notesSheetHeaderSlot: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   notesSheetIconButton: {
     width: 40,
     height: 40,
     borderRadius: tokens.borderRadius.full,
-    backgroundColor: tokens.colors.background.tertiary,
+    backgroundColor: 'transparent',
+    borderWidth: tokens.layout?.borderWidth?.thin || 1,
+    borderColor: tokens.colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   notesSheetIconButtonDisabled: {
     opacity: 0.5,
-  },
-  notesSheetTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: tokens.typography.titleSmall.size,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    letterSpacing: tokens.typography.titleSmall.letterSpacing,
-    color: tokens.colors.text.primary,
   },
   notesSheetSaveButton: {
     minWidth: 88,
@@ -2459,32 +2631,43 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   notesSheetScroll: {
     flex: 1,
-    marginBottom: tokens.spacing.lg,
+    marginBottom: tokens.spacing.md,
+    backgroundColor: 'transparent',
   },
   notesSheetScrollContent: {
-    paddingBottom: tokens.spacing.lg,
+    flexGrow: 1,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: tokens.spacing.md,
   },
+  /** אזור כתיבה — מובחן בעדינות (לא בלוק tertiary כבד) */
   notesSheetInputWrapper: {
-    backgroundColor: tokens.colors.background.tertiary,
-    borderRadius: tokens.borderRadius.lg,
-    borderWidth: tokens.layout?.borderWidth?.thin || 1,
-    borderColor: tokens.colors.border.primary,
-    padding: tokens.spacing.lg,
+    direction: 'rtl',
     minHeight: 240,
+    paddingHorizontal: tokens.spacing.md,
+    paddingVertical: tokens.spacing.md,
+    backgroundColor: tokens.colors.background.input,
+    borderRadius: tokens.borderRadius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: tokens.colors.border.primary,
   },
   notesSheetInput: {
     fontSize: tokens.typography.body.size,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.primary,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
     textAlign: 'right',
     textAlignVertical: 'top',
-    minHeight: 200,
+    minHeight: 220,
+    width: '100%',
   },
   notesSheetFooter: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: tokens.spacing.md,
+    paddingTop: tokens.spacing.md,
+    marginTop: tokens.spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: tokens.colors.border.primary,
   },
   notesSheetHint: {
     flex: 1,
@@ -2596,7 +2779,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.primary,
     textAlignVertical: 'top',
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     textAlign: 'right',
     minHeight: 200,
   },
@@ -2715,7 +2898,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   richTextElement: {
     fontSize: tokens.typography.body.size,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.primary,
     marginBottom: 8,
     textAlign: 'right',
@@ -2805,7 +2988,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   flowingText: {
     fontSize: tokens.typography.body.size,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 4,
@@ -2833,7 +3016,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   inlineTextInput: {
     flex: 1,
     fontSize: tokens.typography.body.size,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     textAlignVertical: 'top',
@@ -2889,7 +3072,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   notesText: {
     fontSize: tokens.typography.body.size,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 4,
@@ -2910,16 +3093,21 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   
   // Lesson Progress Info
   lessonProgressInfo: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: 0,
+    width: '100%',
+    paddingTop: tokens.spacing.md,
     borderTopWidth: 1,
     borderTopColor: tokens.colors.border.primary,
   },
+  lessonProgressInfoNoDescription: {
+    paddingTop: 0,
+    borderTopWidth: 0,
+  },
   progressTimeRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: tokens.spacing.sm,
   },
   progressTimeText: {
     fontSize: tokens.typography.bodySmall.size,
@@ -2932,16 +3120,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontWeight: tokens.typography.titleXs.weight as any,
   },
   progressBarContainer: {
-    height: 4,
+    height: 6,
     backgroundColor: tokens.colors.background.tertiary,
-    borderRadius: 2,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: tokens.spacing.sm,
+    borderWidth: 1,
+    borderColor: `${tokens.colors.border.primary}99`,
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: tokens.colors.primary.main,
-    borderRadius: 2,
+    borderRadius: 3,
   },
   completedStatus: {
     flexDirection: 'row',
@@ -2962,6 +3152,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   courseImageContainer: {
     position: 'relative',
     marginBottom: 0,
+    overflow: 'hidden',
   },
   courseImage: {
     width: '100%',
@@ -3000,30 +3191,41 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   
   courseInfo: {
-    gap: 12,
-    padding: 20,
+    gap: tokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.xl,
+    paddingBottom: tokens.spacing.lg,
+  },
+  courseTitleBlock: {
+    gap: tokens.spacing.xs,
+    width: '100%',
   },
   courseTitle: {
     fontSize: tokens.typography.displaySmall.size,
     fontWeight: tokens.typography.displaySmall.weight as any,
     letterSpacing: tokens.typography.displaySmall.letterSpacing,
     color: tokens.colors.text.primary,
-    lineHeight: tokens.typography.displaySmall.size * tokens.typography.lineHeight.tight,
+    lineHeight: Math.round(tokens.typography.displaySmall.size * 1.22),
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   courseSubtitle: {
     fontSize: tokens.typography.titleSmall.size,
     fontWeight: tokens.typography.fontWeight.medium as any,
     letterSpacing: tokens.typography.titleSmall.letterSpacing,
     color: tokens.colors.text.secondary,
-    marginBottom: 0,
     textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.titleSmall.size * 1.35),
+    writingDirection: 'rtl',
   },
   courseDescription: {
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.tertiary,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: Math.round(tokens.typography.body.size * 1.5),
     textAlign: 'right',
+    writingDirection: 'rtl',
+    width: '100%',
+    alignSelf: 'stretch',
   },
   
   // Rating
@@ -3031,7 +3233,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginTop: 8,
   },
   rating: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
@@ -3047,10 +3249,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   
   // Instructor
   instructorContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
+    gap: tokens.spacing.md,
+    marginTop: tokens.spacing.xs,
   },
   instructorAvatar: {
     width: 50,
@@ -3065,15 +3267,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontWeight: tokens.typography.titleXs.weight as any,
     color: tokens.colors.text.primary,
     textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.titleXs.size * 1.3),
+    writingDirection: 'rtl',
   },
   instructorRole: {
     fontSize: tokens.typography.bodySmall.size,
     color: tokens.colors.text.secondary,
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: tokens.spacing.xs,
+    lineHeight: Math.round(tokens.typography.bodySmall.size * 1.35),
   },
   instructorRating: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginTop: 2,
@@ -3092,13 +3297,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   
   // Meta
   courseMeta: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 20,
     marginTop: 16,
   },
   metaItem: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
@@ -3116,17 +3321,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   
   // Lessons Section
   lessonsSection: {
-    padding: 20,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.xl,
+    paddingBottom: tokens.spacing.xl,
     position: 'relative',
   },
   
   // Chapter Sections
   chapterSection: {
-    marginBottom: 32,
+    marginBottom: tokens.spacing['3xl'],
   },
   chapterHeader: {
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: tokens.spacing.md,
+    paddingHorizontal: 0,
   },
   chapterTitle: {
     fontSize: tokens.typography.titleSmall.size,
@@ -3134,41 +3341,72 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     letterSpacing: tokens.typography.titleSmall.letterSpacing,
     color: tokens.colors.primary.main,
     textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.titleSmall.size * 1.4),
+    writingDirection: 'rtl',
   },
   chapterDivider: {
     height: 1,
     backgroundColor: tokens.colors.primary.main,
-    marginBottom: 20,
+    marginBottom: tokens.spacing.lg,
+    opacity: 0.85,
   },
   sectionHeader: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: tokens.spacing.xl,
+    gap: tokens.spacing.lg,
+    paddingBottom: tokens.spacing.sm,
   },
   sectionTitle: {
-    fontSize: tokens.typography.title.size,
-    fontWeight: tokens.typography.title.weight as any,
-    letterSpacing: tokens.typography.title.letterSpacing,
+    flex: 1,
+    flexShrink: 1,
+    fontSize: tokens.typography.titleSmall.size,
+    fontWeight: '700' as any,
+    letterSpacing: tokens.typography.titleSmall.letterSpacing,
     color: tokens.colors.text.primary,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.titleSmall.size * 1.35),
   },
   progressContainer: {
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
+    gap: tokens.spacing.sm,
+    minWidth: 132,
+    width: 132,
+    flexShrink: 0,
+  },
+  progressTextRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: tokens.spacing.sm,
+    minHeight: 22,
   },
   progressText: {
-    fontSize: tokens.typography.bodySmall.size,
+    fontSize: tokens.typography.fontSize.sm,
     textAlign: 'right',
     color: tokens.colors.text.secondary,
-    marginBottom: 4,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
+    writingDirection: 'rtl',
+    fontWeight: tokens.typography.fontWeight.medium as any,
+  },
+  progressTextMuted: {
+    fontSize: tokens.typography.fontSize.sm,
+    textAlign: 'right',
+    color: tokens.colors.text.tertiary,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
+    writingDirection: 'rtl',
   },
   progressBar: {
-    width: 120,
+    width: '100%',
     height: 6,
     backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 3,
     overflow: 'hidden',
-    marginTop: 4,
+    marginTop: tokens.spacing.xs,
+    borderWidth: 1,
+    borderColor: `${tokens.colors.border.primary}99`,
   },
   progressFill: {
     height: '100%',
@@ -3176,21 +3414,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderRadius: 3,
   },
   
-  // Lesson Cards - Glassmorphism
-  lessonCard: {
-    backgroundColor: tokens.colors.background.cardSolid,
-    borderRadius: tokens.borderRadius.lg,
-    marginBottom: 16,
-    overflow: 'hidden',
+  // Lesson Cards — מיושר ל־CourseCard / LessonRow
+  lessonCardWrap: {
+    borderRadius: tokens.borderRadius['2xl'],
     borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
+    borderColor: `${tokens.colors.primary.main}18`,
+    overflow: 'hidden',
   },
   lessonTouchable: {
-    flex: 1,
+    width: '100%',
   },
   lessonThumbnail: {
     position: 'relative',
-    height: 120,
+    height: 132,
     backgroundColor: tokens.colors.background.primary,
     overflow: 'hidden',
   },
@@ -3207,12 +3443,35 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     bottom: 0,
     backgroundColor: tokens.colors.backdrop,
   },
+  /** מספר שיעור על הבאנר — למעלה שמאל (צד שני ל־badge הזמן למטה־ימין) */
+  lessonNumberOnThumb: {
+    position: 'absolute',
+    top: tokens.spacing.md,
+    left: tokens.spacing.md,
+    zIndex: 2,
+    minWidth: 30,
+    height: 28,
+    paddingHorizontal: tokens.spacing.sm,
+    borderRadius: 14,
+    backgroundColor: tokens.colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    ...tokens.shadows.xs,
+  },
+  lessonNumberOnThumbText: {
+    color: tokens.colors.text.inverse,
+    fontWeight: '800' as any,
+    fontSize: 14,
+    lineHeight: 17,
+  },
   durationBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    bottom: tokens.spacing.md,
+    right: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
     borderRadius: tokens.borderRadius.sm,
     shadowColor: tokens.shadows.xs.shadowColor,
     shadowOffset: tokens.shadows.xs.shadowOffset,
@@ -3226,10 +3485,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   completedBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: tokens.spacing.md,
+    right: tokens.spacing.md,
     borderRadius: tokens.borderRadius.md,
-    padding: 4,
+    padding: tokens.spacing.xs,
     shadowColor: tokens.shadows.xs.shadowColor,
     shadowOffset: tokens.shadows.xs.shadowOffset,
     shadowOpacity: tokens.shadows.xs.shadowOpacity,
@@ -3238,36 +3497,21 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   
   lessonContent: {
-    flex: 1,
-    padding: 16,
-  },
-  lessonCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  lessonNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: tokens.colors.primary.main,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lessonNumberText: {
-    color: tokens.colors.text.primary,
-    fontWeight: tokens.typography.titleXs.weight as any,
-    fontSize: tokens.typography.bodySmall.size,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.lg,
+    paddingBottom: tokens.spacing.lg,
+    width: '100%',
   },
   lessonInfo: {
     flex: 1,
   },
   lessonDescription: {
-    fontSize: tokens.typography.body.size,
-    color: tokens.colors.text.tertiary,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    marginTop: tokens.spacing.xs,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.secondary,
+    lineHeight: Math.round(tokens.typography.bodySmall.size * 1.45),
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   lessonStatus: {
     marginTop: 2,

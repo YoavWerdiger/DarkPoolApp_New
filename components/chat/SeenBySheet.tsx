@@ -21,6 +21,14 @@ interface SeenByUser {
   read_at: string;
 }
 
+/** שורה מ־RPC `get_message_viewers` */
+interface MessageViewerRpcRow {
+  user_id: string;
+  full_name?: string | null;
+  profile_picture?: string | null;
+  viewed_at?: string | null;
+}
+
 interface SeenBySheetProps {
   visible: boolean;
   onClose: () => void;
@@ -57,10 +65,10 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
         .rpc('get_message_viewers', { message_uuid: messageId });
 
       if (viewersData && viewersData.length > 0) {
-        const usersWithTimestamp: SeenByUser[] = viewersData.map(viewer => ({
+        const usersWithTimestamp: SeenByUser[] = (viewersData as MessageViewerRpcRow[]).map((viewer) => ({
           id: viewer.user_id,
           full_name: viewer.full_name || 'משתמש',
-          profile_picture: viewer.profile_picture,
+          profile_picture: viewer.profile_picture ?? null,
           read_at: viewer.viewed_at || messageTimestamp,
         }));
         setUsers(usersWithTimestamp);

@@ -1,13 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+  StyleSheet,
+  ScrollView,
+  useWindowDimensions,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
-import AddTradeModal from './AddTradeModal';
 import { Trade } from './TradesListTab';
-import StatisticsCarousel, { StatisticItem } from '../../components/Journal/StatisticsCarousel';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 interface DailyPnl {
@@ -18,22 +26,29 @@ interface DailyPnl {
 export default function CalendarTab() {
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
+  const { width: windowWidth } = useWindowDimensions();
   const mainTabsHeight = useMainTabsHeight();
-  const styles = React.useMemo(() => createStyles(DesignTokens, mainTabsHeight), [DesignTokens, mainTabsHeight]);
+
+  /** רוחב פנימי אחיד + רווחים בין עמודות — כדי שהגריד יתאים למרכז המסך בלי חפיפה */
+  const gridLayout = React.useMemo(() => {
+    const horizontalPad = DesignTokens.layout?.screenPadding ?? DesignTokens.spacing.xl;
+    const inner = windowWidth - horizontalPad * 2;
+    const colGap = 4;
+    const dayWidth = Math.max(0, (inner - colGap * 6) / 7);
+    return { horizontalPad, inner, colGap, dayWidth };
+  }, [DesignTokens, windowWidth]);
+
+  const styles = React.useMemo(
+    () => createStyles(DesignTokens, mainTabsHeight, gridLayout),
+    [DesignTokens, mainTabsHeight, gridLayout]
+  );
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dailyPnl, setDailyPnl] = useState<DailyPnl[]>([]);
   const [loading, setLoading] = useState(true);
   const [trades, setTrades] = useState<Trade[]>([]);
-  const [showAddModal, setShowAddModal] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      loadTrades();
-    }
-  }, [user, currentDate]);
-
-  const loadTrades = async () => {
+  const loadTrades = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -87,7 +102,13 @@ export default function CalendarTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, currentDate]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadTrades();
+    }, [loadTrades])
+  );
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -168,10 +189,13 @@ export default function CalendarTab() {
   const calendarData = getCalendarData();
 
   const renderCalendarDay = ({ item, index }: { item: DailyPnl | null; index: number }) => {
+    const cellGap = index % 7 !== 6 ? gridLayout.colGap : 0;
+    const cellBase = [styles.calendarDay, { width: gridLayout.dayWidth, marginRight: cellGap }];
+
     // תא ריק
     if (!item) {
       return (
-        <View style={[styles.calendarDay, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
+        <View style={[...cellBase, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
       );
     }
     const dayNumber = formatDate(item.date);
@@ -189,7 +213,7 @@ export default function CalendarTab() {
     }
 
     return (
-      <View style={[styles.calendarDay, { backgroundColor }]}>
+      <View style={[...cellBase, { backgroundColor }]}>
         <Text style={styles.dayName}>{dayName}</Text>
         <Text style={styles.dayNumber}>{dayNumber}</Text>
         {hasTrades && (
@@ -214,7 +238,7 @@ export default function CalendarTab() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, styles.rtlRoot]}>
         <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
         <Text style={styles.loadingText}>טוען לוח שנה...</Text>
       </View>
@@ -224,36 +248,27 @@ export default function CalendarTab() {
   const monthTotal = dailyPnl.reduce((sum, day) => sum + day.pnl, 0);
   const isMonthProfit = monthTotal >= 0;
 
-  // חישוב סטטיסטיקות
-  const calculateAveragePnl = () => {
-    if (trades.length === 0) return 0;
-    const totalPnl = trades.reduce((sum, trade) => sum + trade.pnl, 0);
-    return totalPnl / trades.length;
-  };
-
-  const calculateWinRate = () => {
-    if (trades.length === 0) return 0;
-    const winningTrades = trades.filter(trade => trade.pnl > 0).length;
-    return Math.round((winningTrades / trades.length) * 100);
-  };
-
   return (
-    <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+    <View style={[styles.outer, styles.rtlRoot]}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={{ paddingBottom: mainTabsHeight + 100 }}
         showsVerticalScrollIndicator={true}
       >
         {/* Month Header */}
         <View style={styles.monthHeaderContainer}>
           <UICard variant="blur" padding="md">
             <View style={styles.monthHeader}>
-              <TouchableOpacity
-                onPress={() => navigateMonth('prev')}
-                style={styles.navButton}
-              >
-                <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
-              </TouchableOpacity>
+              <View style={styles.monthHeaderSide}>
+                <TouchableOpacity
+                  onPress={() => navigateMonth('prev')}
+                  style={styles.navButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="חודש קודם"
+                >
+                  <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.monthInfo}>
                 <Text style={styles.monthName}>{getMonthName(currentDate)}</Text>
@@ -272,21 +287,31 @@ export default function CalendarTab() {
                 </View>
               </View>
 
-              <TouchableOpacity
-                onPress={() => navigateMonth('next')}
-                style={styles.navButton}
-              >
-                <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
-              </TouchableOpacity>
+              <View style={styles.monthHeaderSide}>
+                <TouchableOpacity
+                  onPress={() => navigateMonth('next')}
+                  style={styles.navButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="חודש הבא"
+                >
+                  <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
+                </TouchableOpacity>
+              </View>
             </View>
           </UICard>
         </View>
 
         {/* Calendar Grid */}
         {/* כותרת ימי השבוע */}
-        <View style={styles.weekDaysHeader}>
+        <View style={[styles.weekDaysHeader, { paddingHorizontal: gridLayout.horizontalPad }]}>
           {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map((day, index) => (
-            <View key={index} style={styles.weekDayCell}>
+            <View
+              key={index}
+              style={[
+                styles.weekDayCell,
+                { width: gridLayout.dayWidth, marginRight: index < 6 ? gridLayout.colGap : 0 },
+              ]}
+            >
               <Text style={styles.weekDayText}>{day}</Text>
             </View>
           ))}
@@ -303,7 +328,10 @@ export default function CalendarTab() {
             renderItem={renderCalendarDay}
             keyExtractor={(item, index) => item ? item.date : `empty-${index}`}
             numColumns={7}
-            contentContainerStyle={styles.calendarGrid}
+            contentContainerStyle={[
+              styles.calendarGrid,
+              { paddingHorizontal: gridLayout.horizontalPad, maxWidth: windowWidth, alignSelf: 'center' },
+            ]}
             scrollEnabled={false}
           />
         )}
@@ -323,96 +351,31 @@ export default function CalendarTab() {
             <Text style={styles.legendText}>ללא טריידים</Text>
           </View>
         </View>
-
-        {/* Statistics Carousel */}
-        {(() => {
-          const statistics: StatisticItem[] = trades.length > 0 ? [
-            {
-              id: 'total-trades',
-              title: 'כמות עסקאות',
-              value: trades.length,
-              icon: 'list',
-              color: DesignTokens.colors.primary.main,
-              subtitle: `בחודש ${getMonthName(currentDate)}`,
-            },
-            {
-              id: 'month-pnl',
-              title: 'סה"כ חודש',
-              value: `$${formatCurrencyWithColor(monthTotal)}`,
-              icon: isMonthProfit ? 'trending-up' : 'trending-down',
-              color: isMonthProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
-              subtitle: isMonthProfit ? 'רווח חודשי' : 'הפסד חודשי',
-            },
-            {
-              id: 'average-pnl',
-              title: calculateAveragePnl() >= 0 ? 'רווח ממוצע' : 'הפסד ממוצע',
-              value: `$${formatCurrencyWithColor(calculateAveragePnl())}`,
-              icon: calculateAveragePnl() >= 0 ? 'trending-up' : 'trending-down',
-              color: calculateAveragePnl() >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
-              subtitle: 'לעסקה',
-            },
-            {
-              id: 'win-rate',
-              title: 'Win Rate',
-              value: `${calculateWinRate()}%`,
-              icon: 'trophy',
-              color: DesignTokens.colors.primary.main,
-              subtitle: `${trades.filter(t => t.pnl > 0).length} מתוך ${trades.length}`,
-            },
-          ] : [];
-          return statistics.length > 0 ? <StatisticsCarousel statistics={statistics} /> : null;
-        })()}
       </ScrollView>
-
-      {/* Add Trade FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setShowAddModal(true)}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={32} color={DesignTokens.colors.text.primary} />
-      </TouchableOpacity>
-
-      {/* Add Trade Modal */}
-      <AddTradeModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSuccess={() => {
-          setShowAddModal(false);
-          loadTrades();
-        }}
-      />
     </View>
   );
 }
 
-const { width } = Dimensions.get('window');
-const dayWidth = (width - 48) / 7; // 7 columns with padding
-
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight: number) => StyleSheet.create({
+const createStyles = (
+  tokens: ReturnType<typeof useDesignTokens>,
+  mainTabsHeight: number,
+  _grid: { horizontalPad: number; inner: number; colGap: number; dayWidth: number }
+) => StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
   },
-  fab: {
-    position: 'absolute',
-    bottom: mainTabsHeight + 16,
-    left: tokens.spacing.lg,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: tokens.colors.primary.main,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...tokens.shadows.md,
-    zIndex: 100,
+  rtlRoot: {
+    direction: 'rtl',
   },
-  scrollContent: {
+  outer: {
+    flex: 1,
+    minHeight: 0,
   },
   monthHeaderContainer: {
-    paddingHorizontal: tokens.spacing.lg,
-    paddingTop: tokens.spacing.md,
-    marginBottom: tokens.spacing.md,
+    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
+    paddingTop: 0,
+    marginBottom: tokens.spacing.sm,
   },
   loadingContainer: {
     flex: 1,
@@ -427,39 +390,50 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     color: tokens.colors.text.secondary,
   },
   monthHeader: {
-    flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  monthHeaderSide: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
   },
   navButton: {
     padding: tokens.spacing.sm,
   },
   monthInfo: {
+    flex: 2,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: tokens.spacing.xs,
+    paddingHorizontal: tokens.spacing.xs,
   },
   monthName: {
     fontSize: tokens.typography.displayXs.size,
     fontWeight: tokens.typography.displayXs.weight as any,
     letterSpacing: tokens.typography.displayXs.letterSpacing,
     color: tokens.colors.text.primary,
-    textAlign: 'right',
+    textAlign: 'center',
   },
   monthTotal: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: tokens.spacing.xs,
+    flexWrap: 'wrap',
   },
   monthTotalLabel: {
     fontSize: tokens.typography.body.size,
     fontWeight: tokens.typography.body.weight as any,
     color: tokens.colors.text.secondary,
-    textAlign: 'right',
+    textAlign: 'center',
   },
   monthTotalValue: {
     fontSize: tokens.typography.fontSize.base,
     fontWeight: tokens.typography.fontWeight.bold as any,
-    textAlign: 'right',
+    textAlign: 'center',
   },
   monthTotalProfit: {
     color: tokens.colors.primary.main,
@@ -469,15 +443,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   },
   weekDaysHeader: {
     flexDirection: 'row',
-    paddingHorizontal: tokens.spacing.lg,
-    marginBottom: 4,
+    flexWrap: 'nowrap',
+    justifyContent: 'flex-start',
+    alignSelf: 'center',
+    maxWidth: '100%',
+    marginBottom: 2,
   },
   weekDayCell: {
-    width: dayWidth,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    margin: 2,
   },
   weekDayText: {
     fontSize: tokens.typography.bodySmall.size,
@@ -485,13 +460,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     color: tokens.colors.text.secondary,
   },
   calendarGrid: {
-    paddingHorizontal: tokens.spacing.lg,
-    paddingBottom: tokens.spacing.md,
+    paddingBottom: tokens.spacing.sm,
   },
   calendarDay: {
-    width: dayWidth,
     aspectRatio: 1,
-    margin: 2,
     borderRadius: tokens.borderRadius.lg,
     padding: 2, // padding קטן יותר כדי שהמספר יכנס
     alignItems: 'center',
@@ -542,17 +514,20 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     textAlign: 'center',
   },
   legend: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: tokens.spacing.lg,
-    paddingVertical: tokens.spacing.md,
+    gap: tokens.spacing.md,
+    paddingVertical: tokens.spacing.sm,
+    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
     borderTopWidth: 1,
     borderTopColor: tokens.colors.border.primary,
-    marginTop: tokens.spacing.md,
+    marginTop: tokens.spacing.sm,
+    alignSelf: 'center',
+    maxWidth: '100%',
   },
   legendItem: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: tokens.spacing.xs,
   },

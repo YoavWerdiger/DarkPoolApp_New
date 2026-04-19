@@ -170,6 +170,8 @@ export interface PaymentRequest {
   planId: string;
   userEmail: string;
   userName: string;
+  /** מנוי חוזר (CardCom operation 2) */
+  isRecurring?: boolean;
   userPhone?: string;
   cardDetails?: {
     cardNumber: string;
@@ -340,7 +342,7 @@ class PaymentService {
     status: string;
     cardcomLowProfileId?: string;
     cardcomTransactionId?: string;
-    paymentUrl: string;
+    paymentUrl?: string;
   }) {
     try {
       // ניסיון 1: Edge Function (מומלץ)
@@ -627,8 +629,8 @@ class PaymentService {
           planId: planId,
           amount: plan.price,
           status: 'success',
-          cardcomLowProfileId: null,
-          paymentUrl: null,
+          cardcomLowProfileId: undefined,
+          paymentUrl: undefined,
           cardcomTransactionId: result.TranzactionId?.toString()
         });
 

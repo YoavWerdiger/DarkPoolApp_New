@@ -1,6 +1,4 @@
 import React from 'react';
-import TradingScreen from './TradingScreen';
+import JournalStack from '../../navigation/JournalStack';
 
-export default function JournalScreen() {
-  return <TradingScreen />;
-}
+export default JournalStack;

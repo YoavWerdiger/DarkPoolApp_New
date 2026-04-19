@@ -97,7 +97,9 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const onHandlerStateChange = (event: GestureHandlerStateChangeEvent) => {
     if (!dragToClose) return;
 
-    const { translationY, velocityY, state } = event.nativeEvent;
+    const { state } = event.nativeEvent;
+    const translationY = Number((event.nativeEvent as { translationY?: number }).translationY ?? 0);
+    const velocityY = Number((event.nativeEvent as { velocityY?: number }).velocityY ?? 0);
 
     // State 5 = END
     if (state === 5) {

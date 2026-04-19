@@ -5,9 +5,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ScreenGradientBackground } from '../VideoBackground';
 import UICard from '../ui/UICard';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { ChatSessionBackdrop } from './ChatSessionBackdrop';
 
 type ChatScreenShellProps = {
   children: React.ReactNode;
@@ -17,7 +17,7 @@ export function ChatScreenShell({ children }: ChatScreenShellProps) {
   const tokens = useDesignTokens();
   return (
     <View style={[styles.root, { backgroundColor: tokens.colors.background.primary }]}>
-      <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
+      <ChatSessionBackdrop />
       {children}
     </View>
   );
@@ -42,7 +42,7 @@ export function ChatSubScreenHeader({
   const tokens = useDesignTokens();
   return (
     <UICard
-      variant="blur"
+      variant="inputGlass"
       padding="md"
       style={[
         {
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },

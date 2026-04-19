@@ -1,7 +1,53 @@
+import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { openAuthSessionAsync, WebBrowserAuthSessionResult } from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
+import * as Linking from 'expo-linking';
+import { logger } from '../utils/logger';
 import { SUPABASE_URL } from '../config/publicEnv';
+
+/** חייב להתאים לפורמת scheme://host של Supabase; ב-Android expo-web-browser משווה startsWith ל-returnUrl */
+const GOOGLE_OAUTH_REDIRECT_NATIVE = 'com.darkpool.app://oauth';
+
+/** מונע שני signInWithOAuth במקביל — מחליף code-verifier ב-AsyncStorage ושובר PKCE */
+let googleOAuthFlowLock = false;
+
+/** GoTrue מצפה ל-auth_code בלבד, לא ל-URL מלא (אחרת 422 / invalid flow state בפרודקשן) */
+function extractPkceCodeFromCallbackUrl(callbackUrl: string): string | null {
+  try {
+    const parsed = Linking.parse(callbackUrl);
+    const q = parsed.queryParams as Record<string, string | undefined> | null;
+    const fromExpo = q?.code;
+    if (typeof fromExpo === 'string' && fromExpo.length > 0) return fromExpo;
+    const u = new URL(callbackUrl);
+    return u.searchParams.get('code');
+  } catch {
+    return null;
+  }
+}
+
+/** כשהפרופיל מ־public.users לא זמין בזמן (רשת איטית וכו') — לא מנתקים סשן תקף */
+function authUserToAppUser(u: SupabaseAuthUser): AuthUser {
+  const meta = (u.user_metadata || {}) as Record<string, unknown>;
+  const email = u.email ?? '';
+  const name =
+    (typeof meta.full_name === 'string' && meta.full_name) ||
+    (typeof meta.display_name === 'string' && meta.display_name) ||
+    email.split('@')[0] ||
+    '';
+  return {
+    id: u.id,
+    email,
+    display_name: (typeof meta.display_name === 'string' && meta.display_name) || name || undefined,
+    full_name: (typeof meta.full_name === 'string' && meta.full_name) || name || undefined,
+    profile_picture:
+      typeof meta.avatar_url === 'string'
+        ? meta.avatar_url
+        : typeof meta.profile_picture === 'string'
+          ? meta.profile_picture
+          : undefined,
+  };
+}
 
 export interface AuthUser {
   id: string;
@@ -338,7 +384,8 @@ export class AuthService {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) return { user: null, error: null };
       const user = await this.getUserProfile(data.user.id);
-      return { user, error: null };
+      if (user) return { user, error: null };
+      return { user: authUserToAppUser(data.user), error: null };
     } catch (error: any) {
       return { user: null, error: error.message };
     }
@@ -381,14 +428,22 @@ export class AuthService {
     isNewUser?: boolean;
     googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
   }> {
+    if (googleOAuthFlowLock) {
+      return { user: null, error: 'ההתחברות כבר מתבצעת — המתן לסיום' };
+    }
+    googleOAuthFlowLock = true;
     try {
-      // Create redirect URL - makeRedirectUri generates the correct format:
-      // Production/Dev build: com.darkpool.app://oauth
-      // Expo Go: exp://ip:port/--/oauth
+      // makeRedirectUri + native: בבילד אמיתי מחזירים בדיוק com.darkpool.app://oauth (תיעוד Supabase).
+      // בלי native, createURL עלול להחזיר com.darkpool.app:/oauth — ואז ב-Android ה-deep link
+      // com.darkpool.app://oauth?code=... לא מתחיל ב-returnUrl והזרימה נכשלת.
       const redirectUrl = makeRedirectUri({
         scheme: 'com.darkpool.app',
         path: 'oauth',
+        native: GOOGLE_OAUTH_REDIRECT_NATIVE,
       });
+      if (__DEV__) {
+        logger.info('AuthService', `Google OAuth redirectTo: ${redirectUrl}`);
+      }
 
       // Start OAuth flow
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -408,16 +463,33 @@ export class AuthService {
       }
 
       // Open browser for OAuth - Supabase will handle the callback via deep linking
-      const result = await openAuthSessionAsync(data.url, redirectUrl) as WebBrowserAuthSessionResult;
-      
-      if (result.type === 'cancel') {
+      const result = (await openAuthSessionAsync(data.url, redirectUrl, {
+        preferEphemeralSession: true,
+      })) as WebBrowserAuthSessionResult;
+
+      if (result.type === 'cancel' || result.type === 'dismiss') {
         return { user: null, error: 'ההתחברות בוטלה' };
       }
 
-      // PKCE flow: Supabase redirects to redirectTo URL with ?code=... query param
-      // exchangeCodeForSession handles both PKCE code exchange and implicit token parsing
+      // PKCE: חובה להעביר ל-exchangeCodeForSession רק את ה-authorization code (לא את כל ה-URL)
       if (result.type === 'success' && result.url) {
-        const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
+        const parsed = Linking.parse(result.url);
+        const errParam =
+          typeof parsed.queryParams?.error_description === 'string'
+            ? parsed.queryParams.error_description
+            : typeof parsed.queryParams?.error === 'string'
+              ? parsed.queryParams.error
+              : null;
+        if (errParam) {
+          return { user: null, error: errParam };
+        }
+
+        const code = extractPkceCodeFromCallbackUrl(result.url);
+        if (!code) {
+          return { user: null, error: 'לא התקבל קוד אימות מהדפדפן — נסה שוב' };
+        }
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
 
         if (sessionError || !sessionData.user) {
           return { user: null, error: sessionError?.message || 'שגיאה בהגדרת הסשן' };
@@ -458,6 +530,8 @@ export class AuthService {
       return { user: null, error: 'שגיאה בהתחברות עם Google' };
     } catch (error: any) {
       return { user: null, error: error.message || 'שגיאה בהתחברות עם Google' };
+    } finally {
+      googleOAuthFlowLock = false;
     }
   }
 
@@ -481,17 +555,15 @@ export class AuthService {
           });
           
           const user = await Promise.race([getUserProfilePromise, timeoutPromise]);
-          
+
           if (user) {
             callback(user);
           } else {
-            // אם getUserProfile מחזיר null או timeout, נקרא callback(null)
-            // זה יאפשר לאפליקציה להמשיך גם אם יש בעיית רשת
-            callback(null);
+            // סשן תקף אבל הפרופיל לא נטען בזמן (timeout / שורה חסרה / רשת) — לא מנתקים
+            callback(authUserToAppUser(session.user));
           }
-        } catch (error) {
-          // גם במקרה של שגיאה, נקרא callback(null) כדי שהאפליקציה תוכל להמשיך
-          callback(null);
+        } catch {
+          callback(authUserToAppUser(session.user));
         }
       } else {
         // אם אין session או אין user, נקרא callback(null)

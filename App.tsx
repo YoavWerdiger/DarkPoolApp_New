@@ -1,23 +1,33 @@
-import React, { useEffect, useRef } from 'react';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { ChatProvider } from './context/ChatContext';
 import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
-import { View, ActivityIndicator, Text, ImageBackground, StatusBar, Platform, StyleSheet } from 'react-native';
+import ProfileStack from './navigation/ProfileStack';
+import { View, ActivityIndicator, Text, StatusBar, StyleSheet, AppState, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AnimatedBackground } from './components/VideoBackground';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import OnboardingNavigator from './navigation/OnboardingNavigator';
 import { RegistrationProvider } from './context/RegistrationContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ScheduledUpdatesService from './services/scheduledUpdates';
 import { NotificationService } from './services/notificationService';
-import { useDesignTokens } from './components/ui/DesignTokens';
-import { SafeAreaProvider, useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import * as Linking from 'expo-linking';
-import { supabase } from './services/supabase';
+import { initSentry, Sentry } from './utils/sentry';
+import { ToastProvider } from './components/ui/Toast';
+import { AppDialogProvider } from './components/ui/AppDialogProvider';
+import { logger } from './utils/logger';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { HapticFeedback } from './utils/hapticFeedback';
+import { Fingerprint } from 'lucide-react-native';
+import { rootNavigationRef } from './navigation/rootNavigationRef';
+
+initSentry();
 
 const Stack = createNativeStackNavigator();
 
@@ -39,283 +49,188 @@ const OnboardingWithProvider = () => (
 
 function AppContent() {
   const { user, isLoading } = useAuth();
-  const navigationRef = useRef<NavigationContainerRef<any>>(null);
-  const DesignTokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
-  const safeBottom = insets.bottom || 0;
+  const [biometricLocked, setBiometricLocked] = useState(false);
+  const [biometricChecked, setBiometricChecked] = useState(false);
+  const appState = useRef(AppState.currentState);
 
-  console.log('🎓 AppContent: Auth state:', { user: user?.id, isLoading });
-
-  // טיפול ב-deep linking עבור OAuth
-  useEffect(() => {
-    // Handle initial URL (when app opens from a link)
-    const handleInitialURL = async () => {
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        console.log('🔗 AppContent: Initial URL:', initialUrl);
-        handleOAuthRedirect(initialUrl);
+  const attemptBiometricAuth = useCallback(async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
+        cancelLabel: 'ביטול',
+        disableDeviceFallback: false,
+      });
+      if (result.success) {
+        setBiometricLocked(false);
       }
-    };
-
-    // Handle URL when app is already open
-    const subscription = Linking.addEventListener('url', (event) => {
-      console.log('🔗 AppContent: URL event:', event.url);
-      handleOAuthRedirect(event.url);
-    });
-
-    handleInitialURL();
-
-    return () => {
-      subscription.remove();
-    };
+    } catch {}
   }, []);
 
-  // Handle OAuth redirect
-  const handleOAuthRedirect = async (url: string) => {
-    console.log('🔄 AppContent: Handling OAuth redirect:', url);
-    
-    // Check if this is an OAuth redirect (supports both exp:// and com.darkpool.app://)
-    const isOAuthRedirect = url.includes('/oauth') || 
-                           url.includes('com.darkpool.app://oauth') ||
-                           url.includes('exp://') && url.includes('oauth') ||
-                           url.includes('exps://') && url.includes('oauth');
-    
-    if (isOAuthRedirect) {
+  useEffect(() => {
+    if (!user || isLoading || biometricChecked) return;
+
+    const checkBiometric = async () => {
       try {
-        console.log('✅ AppContent: Detected OAuth redirect, parsing...');
-        
-        // Extract the URL fragment (everything after #)
-        let hash = '';
-        if (url.includes('#')) {
-          hash = url.split('#')[1];
-        } else if (url.includes('?')) {
-          // Some redirects use query params instead of hash
-          const queryPart = url.split('?')[1];
-          hash = queryPart;
-        }
-        
-        if (hash) {
-          const params = new URLSearchParams(hash);
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
-          const error = params.get('error') || params.get('error_description');
-          
-          if (error) {
-            console.error('❌ AppContent: OAuth error:', error);
+        const saved = await AsyncStorage.getItem('appSettings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.biometricAuth) {
+            setBiometricLocked(true);
+            setBiometricChecked(true);
+            const result = await LocalAuthentication.authenticateAsync({
+              promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
+              cancelLabel: 'ביטול',
+              disableDeviceFallback: false,
+            });
+            if (result.success) {
+              setBiometricLocked(false);
+            }
             return;
           }
-
-          if (accessToken && refreshToken) {
-            console.log('✅ AppContent: Got tokens from redirect, setting session...');
-            const { data, error: sessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-
-            if (sessionError) {
-              console.error('❌ AppContent: Error setting session:', sessionError);
-            } else if (data?.user) {
-              console.log('✅ AppContent: Session set successfully, user:', data.user.id);
-            }
-          } else {
-            console.log('⚠️ AppContent: No tokens in redirect URL, waiting for session...');
-            // Wait a bit for Supabase to process the redirect
-            setTimeout(async () => {
-              const { data: { session } } = await supabase.auth.getSession();
-              if (session?.user) {
-                console.log('✅ AppContent: Session found after delay');
-              }
-            }, 2000);
-          }
-        } else {
-          console.log('⚠️ AppContent: No hash in redirect URL, waiting for session...');
-          // Wait a bit for Supabase to process the redirect
-          setTimeout(async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-              console.log('✅ AppContent: Session found after delay');
-            }
-          }, 2000);
         }
-      } catch (error) {
-        console.error('❌ AppContent: Error handling OAuth redirect:', error);
-      }
+      } catch {}
+      setBiometricChecked(true);
+    };
+
+    checkBiometric();
+  }, [user, isLoading, biometricChecked]);
+
+  useEffect(() => {
+    if (!user) {
+      setBiometricChecked(false);
+      setBiometricLocked(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextState) => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active' && user) {
+        try {
+          const saved = await AsyncStorage.getItem('appSettings');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.biometricAuth) {
+              setBiometricLocked(true);
+              const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
+                cancelLabel: 'ביטול',
+                disableDeviceFallback: false,
+              });
+              if (result.success) {
+                setBiometricLocked(false);
+              }
+            }
+          }
+        } catch {}
+      }
+      appState.current = nextState;
+    });
+
+    return () => subscription.remove();
+  }, [user]);
+
+  useEffect(() => {
+    HapticFeedback.init();
+  }, []);
+
+  // אתחול עדכונים מתוזמנים
+  useEffect(() => {
+    // התחלת עדכונים מתוזמנים רק אחרי שהמשתמש מחובר
+    if (user && !isLoading) {
+      ScheduledUpdatesService.startScheduledUpdates();
+    }
+
+    return () => {
+      ScheduledUpdatesService.stopScheduledUpdates();
+    };
+  }, [user, isLoading]);
 
   // טיפול בהתראות
   useEffect(() => {
     if (!user) return;
 
-    console.log('📱 AppContent: Setting up notification listeners');
-
-    // טיפול בהתראה שמגיעה כשהאפליקציה פתוחה
-    const receivedSubscription = NotificationService.addNotificationReceivedListener((notification) => {
-      console.log('📬 AppContent: Notification received:', notification);
-      // ההתראה תוצג אוטומטית על ידי Expo
+    const receivedSubscription = NotificationService.addNotificationReceivedListener((_notification) => {
     });
 
-    // טיפול בלחיצה על התראה
     const responseSubscription = NotificationService.addNotificationResponseReceivedListener((response) => {
-      console.log('👆 AppContent: Notification tapped:', response);
-      
       const data = response.notification.request.content.data;
       const notificationType = data?.type;
 
-      if (!navigationRef.current) {
-        console.log('⚠️ AppContent: Navigation ref not ready');
-        return;
-      }
+      if (!rootNavigationRef.isReady()) return;
 
       try {
-        if (notificationType === 'news' && data?.articleId) {
-          // ניווט לטאב חדשות
-          console.log('📰 AppContent: Navigating to News tab');
-          navigationRef.current.navigate('Main', {
+        if (notificationType === 'chat_message' && data?.group_id) {
+          rootNavigationRef.navigate('Main', {
+            screen: 'Chat',
+            params: {
+              screen: 'ChatGroup',
+              params: {
+                groupId: data.group_id,
+                groupName: data.group_name || 'צ\'אט',
+              },
+            },
+          });
+        } else if (notificationType === 'news' && data?.articleId) {
+          rootNavigationRef.navigate('Main', {
             screen: 'News',
-            params: { articleId: data.articleId }
+            params: { articleId: data.articleId, tab: 'breaking' }
+          });
+        } else if (notificationType === 'economic_calendar') {
+          rootNavigationRef.navigate('Main', {
+            screen: 'News',
+            params: { tab: 'calendar' }
           });
         } else {
-          // ניווט למסך הראשי
-          console.log('🏠 AppContent: Navigating to Main');
-          navigationRef.current.navigate('Main');
+          rootNavigationRef.navigate('Main');
         }
-      } catch (error) {
-        console.error('❌ AppContent: Error navigating:', error);
+      } catch (navError) {
+        logger.error('App', 'Notification navigation failed', navError);
       }
     });
 
     return () => {
-      console.log('🧹 AppContent: Cleaning up notification listeners');
       receivedSubscription.remove();
       responseSubscription.remove();
     };
   }, [user]);
 
+  // מסך טעינה מינימלי בלבד בזמן טעינת ה-Auth (בלי splash \"מלאכותי\" ובלי תמונת רקע מרשת)
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
-        <LinearGradient 
-          colors={['rgba(0,230,84,0.08)', 'rgba(0,230,84,0.03)', 'rgba(0,230,84,0.05)']} 
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
-        />
-        <ImageBackground
-          source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            opacity: 0.1
-          }}
-          resizeMode="cover"
-        />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            paddingHorizontal: 32,
-            paddingVertical: 24,
-            borderRadius: 16,
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: 'rgba(0,230,84,0.2)'
-          }}>
-            <ActivityIndicator size="large" color="#05d157" />
-            <Text style={{ 
-              color: '#FFFFFF', 
-              fontSize: 16, 
-              fontWeight: '500',
-              marginTop: 16,
-              textAlign: 'center'
-            }}>
-              טוען אפליקציה...
-            </Text>
-          </View>
-        </View>
+      <View style={{ flex: 1, backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#00C805" />
+      </View>
+    );
+  }
+
+  // לא מציגים את ה-Main לפני שידוע אם נדרשת ביומטריה — מונע תחושת "זריקה" לשכבת הנעילה
+  if (user && !biometricChecked) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#00C805" />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, direction: 'ltr', backgroundColor: 'transparent' }}>
-      {/* גרדיאנט גלובלי שרץ מתחת לכל המסכים, כולל ה-safe area התחתון וה-MainTabs */}
-      <LinearGradient
-        colors={['#000000', '#000A04', '#001A0A', '#001A0A', '#000A04', '#000000']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* כיסוי נוסף ל-safe area התחתון ב-Android */}
-      {Platform.OS === 'android' && safeBottom > 0 && (
-        <View
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: safeBottom,
-            backgroundColor: '#000000', // צבע הגרדיאנט בתחתית
-            zIndex: -1,
-          }}
-        />
-      )}
-      <StatusBar 
-        barStyle="light-content" 
+    <View style={{ flex: 1, direction: 'ltr', backgroundColor: '#0A0E0A' }}>
+      <AnimatedBackground />
+      <StatusBar
+        barStyle="light-content"
         backgroundColor="transparent"
-        translucent={true}
+        translucent={false}
       />
-      <NavigationContainer 
-        ref={navigationRef}
-        theme={{
-          dark: true,
-          colors: {
-            primary: DesignTokens.colors.primary.main,
-            background: 'transparent',
-            card: 'transparent',
-            text: DesignTokens.colors.text.primary,
-            border: DesignTokens.colors.border.main,
-            notification: DesignTokens.colors.primary.main,
-          },
-          fonts: {
-            regular: {
-              fontFamily: Array.isArray(DesignTokens.typography.fontFamily.system) 
-                ? DesignTokens.typography.fontFamily.system[0] 
-                : 'System',
-              fontWeight: '400' as const,
-            },
-            medium: {
-              fontFamily: Array.isArray(DesignTokens.typography.fontFamily.system) 
-                ? DesignTokens.typography.fontFamily.system[0] 
-                : 'System',
-              fontWeight: '500' as const,
-            },
-            bold: {
-              fontFamily: Array.isArray(DesignTokens.typography.fontFamily.system) 
-                ? DesignTokens.typography.fontFamily.system[0] 
-                : 'System',
-              fontWeight: '700' as const,
-            },
-            heavy: {
-              fontFamily: Array.isArray(DesignTokens.typography.fontFamily.system) 
-                ? DesignTokens.typography.fontFamily.system[0] 
-                : 'System',
-              fontWeight: '800' as const,
-            },
-          },
-        }}
-      >
-        <Stack.Navigator 
-          screenOptions={{ 
-            headerShown: false,
-            contentStyle: {
-              backgroundColor: 'transparent',
-            },
-          }}
-        >
+      <NavigationContainer ref={rootNavigationRef}>
+        <Stack.Navigator screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+          animation: 'fade',
+        }}>
           {user ? (
+            <>
               <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Profile" component={ProfileStack} />
+            </>
           ) : (
             <>
               <Stack.Screen name="Auth" component={AuthStack} />
@@ -324,24 +239,69 @@ function AppContent() {
           )}
         </Stack.Navigator>
       </NavigationContainer>
+
+      {biometricLocked && (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
+          <LinearGradient
+            colors={['#0A0E0A', '#0F1A0F', '#0F1A0F', '#0A0E0A']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={{ alignItems: 'center', gap: 24 }}>
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: 'rgba(0, 230, 84, 0.15)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Fingerprint size={40} color="#00C805" strokeWidth={2} />
+            </View>
+            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>
+              האפליקציה נעולה
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, textAlign: 'center', paddingHorizontal: 40 }}>
+              אמת את זהותך באמצעות Face ID / Touch ID כדי להמשיך
+            </Text>
+            <TouchableOpacity
+              onPress={attemptBiometricAuth}
+              style={{
+                backgroundColor: '#00C805',
+                borderRadius: 14,
+                paddingVertical: 14,
+                paddingHorizontal: 40,
+                marginTop: 8,
+              }}
+            >
+              <Text style={{ color: '#000', fontSize: 16, fontWeight: '700' }}>
+                אמת זהות
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+      <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <AuthProvider>
-              <ChatProvider>
-                <AppContent />
-              </ChatProvider>
+              <ToastProvider>
+                <AppDialogProvider>
+                  <AppContent />
+                </AppDialogProvider>
+              </ToastProvider>
             </AuthProvider>
           </ThemeProvider>
         </QueryClientProvider>
-      </GestureHandlerRootView>
-    </SafeAreaProvider>
+      </KeyboardProvider>
+    </GestureHandlerRootView>
   );
 }

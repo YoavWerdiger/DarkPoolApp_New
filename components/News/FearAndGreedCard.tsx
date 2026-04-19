@@ -57,7 +57,7 @@ export default function FearAndGreedCard({
         overflow: 'hidden' as const,
       },
       header: {
-        flexDirection: 'row-reverse' as const,
+        flexDirection: 'row' as const,
         alignItems: 'center' as const,
         justifyContent: 'space-between' as const,
         marginBottom: -60,
@@ -152,7 +152,7 @@ export default function FearAndGreedCard({
         alignItems: 'center' as const,
       },
       segmentLabelContainer: {
-        flexDirection: 'row-reverse' as const,
+        flexDirection: 'row' as const,
         alignItems: 'center' as const,
         marginBottom: DesignTokens.spacing.xs,
         justifyContent: 'center' as const,
@@ -207,7 +207,7 @@ export default function FearAndGreedCard({
         marginBottom: DesignTokens.spacing.md,
       },
       historicalItem: {
-        flexDirection: 'row-reverse' as const,
+        flexDirection: 'row' as const,
         justifyContent: 'flex-start' as const,
         alignItems: 'center' as const,
         marginBottom: DesignTokens.spacing.sm,
@@ -274,7 +274,7 @@ export default function FearAndGreedCard({
 
   const renderHeader = (subtitle?: string) => (
     <View style={styles.header}>
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Text style={styles.title}>מדד הפחד והתאווה</Text>
       </View>
       {!disableToggle && (

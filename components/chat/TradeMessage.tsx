@@ -124,13 +124,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, isMe: boolean)
     marginVertical: tokens.spacing.xs,
   },
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacing.sm,
   },
   symbolContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.sm,
   },
@@ -154,7 +154,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, isMe: boolean)
     marginBottom: tokens.spacing.sm,
   },
   row: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
@@ -182,12 +182,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, isMe: boolean)
     borderTopColor: tokens.colors.border.primary,
   },
   footerRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   pnlContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.xs,
   },

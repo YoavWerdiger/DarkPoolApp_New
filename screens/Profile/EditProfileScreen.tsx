@@ -1,26 +1,12 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TextInput, 
-  Pressable, 
-  Alert,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  ActivityIndicator,
-  SafeAreaView,
-  StyleSheet
-} from 'react-native';
-import { 
-  Camera, 
-  User, 
-  ArrowRight,
+import { View, Text, ScrollView, TextInput, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
+import {
+  Camera,
+  User,
   Check,
   X,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -31,6 +17,7 @@ import { mediaService } from '../../services/mediaService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import OnboardingInput from '../../components/onboarding/OnboardingInput';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
@@ -83,7 +70,7 @@ export default function EditProfileScreen({ navigation }: any) {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert('שגיאה', 'נדרשת הרשאה לגישה לתמונות');
+        legacyAlert('שגיאה', 'נדרשת הרשאה לגישה לתמונות');
         return;
       }
 
@@ -98,13 +85,13 @@ export default function EditProfileScreen({ navigation }: any) {
         setProfileImage(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בבחירת תמונה');
+      legacyAlert('שגיאה', 'שגיאה בבחירת תמונה');
     }
   };
 
   const handleSave = async () => {
     if (!displayName.trim()) {
-      Alert.alert('שגיאה', 'נא להזין שם תצוגה');
+      legacyAlert('שגיאה', 'נא להזין שם תצוגה');
       return;
     }
 
@@ -112,7 +99,7 @@ export default function EditProfileScreen({ navigation }: any) {
 
     try {
       if (!user) {
-        Alert.alert('שגיאה', 'לא נמצא משתמש מחובר');
+        legacyAlert('שגיאה', 'לא נמצא משתמש מחובר');
         setIsSaving(false);
         return;
       }
@@ -137,17 +124,17 @@ export default function EditProfileScreen({ navigation }: any) {
       setIsSaving(false);
       
       if (error) {
-        Alert.alert('שגיאה', 'שגיאה בעדכון הפרופיל');
+        legacyAlert('שגיאה', 'שגיאה בעדכון הפרופיל');
         return;
       }
       
-      Alert.alert('הצלחה', 'הפרופיל נשמר בהצלחה', [
+      legacyAlert('הצלחה', 'הפרופיל נשמר בהצלחה', [
         { text: 'אישור', onPress: () => navigation.goBack() }
       ]);
       
     } catch (error) {
       setIsSaving(false);
-      Alert.alert('שגיאה', 'שגיאה בעדכון הפרופיל');
+      legacyAlert('שגיאה', 'שגיאה בעדכון הפרופיל');
     }
   };
 
@@ -161,51 +148,10 @@ export default function EditProfileScreen({ navigation }: any) {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Header - עיצוב כמו שדות דף הכניסה */}
-        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <View style={{
-            backgroundColor: 'rgba(255,255,255,0.05)',
-            borderRadius: 16,
-            borderWidth: 1.5,
-            borderColor: 'rgba(255,255,255,0.1)',
-            paddingHorizontal: DesignTokens.spacing.md,
-            paddingVertical: DesignTokens.spacing.sm,
-          }}>
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: DesignTokens.spacing.md,
-              minHeight: 44,
-            }}>
-              <Text style={{ 
-                flex: 1,
-                textAlign: 'center',
-                fontSize: DesignTokens.typography.fontSize.lg,
-                fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                color: DesignTokens.colors.text.primary,
-                marginLeft: 36
-              }}>
-                עריכת פרופיל
-              </Text>
-
-              <TouchableOpacity 
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-                style={{
-                  width: 36,
-                  height: 36,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderRadius: 18,
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                }}
-              >
-                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          </View>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <ChatSubScreenHeader title="עריכת פרופיל" onBack={() => navigation.goBack()} />
         </View>
 
         <KeyboardAvoidingView 
@@ -221,20 +167,20 @@ export default function EditProfileScreen({ navigation }: any) {
                 paddingTop: DesignTokens.spacing.md
               }}
             >
-            {/* Avatar Card - עיצוב כמו שדות דף הכניסה */}
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
-              <View style={{
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                borderRadius: 16,
-                borderWidth: 1.5,
-                borderColor: 'rgba(255,255,255,0.1)',
-                padding: DesignTokens.spacing.lg,
-              }}>
-                {/* Avatar Section */}
-                <View style={{
-                  alignItems: 'center',
-                  paddingVertical: DesignTokens.spacing.md
-                }}>
+              <UICard
+                variant="inputGlass"
+                padding="lg"
+                style={{
+                  borderRadius: DesignTokens.borderRadius.lg,
+                }}
+              >
+                <View
+                  style={{
+                    alignItems: 'center',
+                    paddingVertical: DesignTokens.spacing.sm,
+                  }}
+                >
                   <TouchableOpacity 
                     onPress={handleImagePicker}
                     style={{ position: 'relative' }}
@@ -276,7 +222,7 @@ export default function EditProfileScreen({ navigation }: any) {
                       borderColor: 'rgba(0, 0, 0, 0.3)',
                       ...DesignTokens.shadows.md
                     }}>
-                      <Camera size={18} color="#000000" strokeWidth={2.5} />
+                      <Camera size={18} color={DesignTokens.colors.text.inverse} strokeWidth={2.5} />
                     </View>
                   </TouchableOpacity>
 
@@ -289,7 +235,7 @@ export default function EditProfileScreen({ navigation }: any) {
                     לחץ לשינוי תמונת פרופיל
                   </Text>
                 </View>
-              </View>
+              </UICard>
             </View>
 
             {/* Form Fields - עיצוב כמו דף הכניסה (OnboardingInput) */}
@@ -419,12 +365,12 @@ export default function EditProfileScreen({ navigation }: any) {
                 }}
               >
                 {isSaving ? (
-                  <ActivityIndicator size="small" color="#000000" />
+                  <ActivityIndicator size="small" color={DesignTokens.colors.text.inverse} />
                 ) : (
                   <Text style={{ 
                     fontSize: DesignTokens.typography.fontSize.base + 1,
                     fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                    color: '#000000',
+                    color: DesignTokens.colors.text.inverse,
                     letterSpacing: DesignTokens.typography.letterSpacing.tight
                   }}>
                     שמור שינויים
@@ -450,7 +396,7 @@ export default function EditProfileScreen({ navigation }: any) {
           zIndex: 1000
         }}>
           <UICard
-            variant="blur"
+            variant="inputGlass"
             padding="lg"
             style={{
               width: '80%',

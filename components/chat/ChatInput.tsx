@@ -5,7 +5,7 @@
 // ============================================
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert, Animated, Image, Easing, PanResponder, GestureResponderEvent, PanResponderGestureState } from 'react-native';
+import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Alert, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
@@ -25,6 +25,7 @@ import MediaPreviewModal from './MediaPreviewModal';
 import { MediaFile } from '../../services/mediaService';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useMentions } from '../../hooks/useMentions';
 import MentionPicker from './MentionPicker';
 import { logger } from '../../utils/logger';
@@ -52,19 +53,18 @@ export default function ChatInput({
 }: ChatInputProps) {
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const { isDarkMode } = useTheme();
   const { addOptimisticMediaMessage, updateOptimisticMessage } = useChat();
   const { user } = useAuth();
+
+  /** על עיגול ירוק: כהה (לא לבן) — בבהיר inverse הוא לבן */
+  const micOnGreenColor = isDarkMode
+    ? DesignTokens.colors.text.inverse
+    : DesignTokens.colors.text.primary;
 
   const styles = useMemo(() => {
     return createStyles(DesignTokens, insets.bottom);
   }, [DesignTokens, insets.bottom]);
-
-  // Icon styles with DesignTokens
-  const iconImageStyle = useMemo(() => ({
-    width: 28,
-    height: 28,
-    tintColor: DesignTokens.colors.text.secondary,
-  }), [DesignTokens]);
 
   const [text, setText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -108,23 +108,14 @@ export default function ChatInput({
   const recordingDotOpacity = useRef(new Animated.Value(1)).current;
   const timelineProgress = useRef(new Animated.Value(0)).current;
   const sendBtnScale = useRef(new Animated.Value(1)).current;
+  const attachmentIconRotate = useRef(new Animated.Value(0)).current;
   const isStartingRecordingRef = useRef<boolean>(false);
   const pulseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // Hold-to-record gesture state
-  const [isHoldRecording, setIsHoldRecording] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
-  const holdRecordingRef = useRef(false);
   const isLockedRef = useRef(false);
-  const slideCancelAnim = useRef(new Animated.Value(0)).current;
-  const lockSlideAnim = useRef(new Animated.Value(0)).current;
-  const micScaleAnim = useRef(new Animated.Value(1)).current;
-  const trashScaleAnim = useRef(new Animated.Value(0)).current;
-  const CANCEL_THRESHOLD = 120; // px to slide left for cancel
-  const LOCK_THRESHOLD = 80; // px to slide up for lock
 
-  // Callback refs for PanResponder (avoids stale closures)
-  const startRecordingRef = useRef<() => void>(() => {});
+  // Callback refs (מונעים closures ישנים ב-handlers)
   const cancelRecordingRef = useRef<() => void>(() => {});
   const stopAndSendRecordingRef = useRef<() => void>(() => {});
   const isRecordingRef = useRef(false);
@@ -712,14 +703,14 @@ export default function ChatInput({
   // ============================================
   const handleStartAudioRecording = async () => {
     setMediaPickerVisible(false);
-    requestAnimationFrame(() => startRecording());
+    requestAnimationFrame(() => startRecording({ openInLockedMode: true }));
   };
 
   // ============================================
   // Record Audio
   // ============================================
 
-  const startRecording = async () => {
+  const startRecording = async (opts?: { openInLockedMode?: boolean }) => {
     if (isStartingRecordingRef.current) {
       return;
     }
@@ -793,6 +784,11 @@ export default function ChatInput({
       );
       pulseAnimationRef.current = pulseAnim;
       pulseAnim.start();
+
+      if (opts?.openInLockedMode) {
+        setIsLocked(true);
+        isLockedRef.current = true;
+      }
 
       recordingTimerRef.current = setInterval(() => {
         setRecordingDuration(prev => {
@@ -908,7 +904,7 @@ export default function ChatInput({
     try {
       if (!recordingRef.current) {
         // אם אין הקלטה פעילה, התחל מחדש
-        await startRecording();
+        await startRecording({ openInLockedMode: true });
         return;
       }
 
@@ -1300,9 +1296,7 @@ export default function ChatInput({
     setIsPlayingPreview(false);
     setPreviewPosition(0);
     setIsLocked(false);
-    setIsHoldRecording(false);
     isLockedRef.current = false;
-    holdRecordingRef.current = false;
     timelineProgress.setValue(0);
 
     if (recordingRef.current) {
@@ -1312,7 +1306,7 @@ export default function ChatInput({
   };
 
   // ============================================
-  // Hold-to-Record: stop + send immediately
+  // שליחת הקלטה מממשק נעול (כפתור שליחה)
   // ============================================
 
   const stopAndSendRecording = async () => {
@@ -1340,8 +1334,6 @@ export default function ChatInput({
 
       setIsRecording(false);
       setIsPaused(false);
-      setIsHoldRecording(false);
-      holdRecordingRef.current = false;
       setAudioLevel(0);
       setRecordingDuration(0);
       setWaveformSamples([]);
@@ -1405,14 +1397,11 @@ export default function ChatInput({
     } catch (error) {
       logger.error('ChatInput', 'stopAndSendRecording error', error);
       setIsRecording(false);
-      setIsHoldRecording(false);
-      holdRecordingRef.current = false;
     }
   };
 
   // Keep callback refs in sync (runs every render, no deps needed)
   useEffect(() => {
-    startRecordingRef.current = startRecording;
     cancelRecordingRef.current = cancelRecording;
     stopAndSendRecordingRef.current = stopAndSendRecording;
     isRecordingRef.current = isRecording;
@@ -1422,104 +1411,19 @@ export default function ChatInput({
     textRef.current = text;
   });
 
-  // ============================================
-  // PanResponder for hold-to-record gesture
-  // ============================================
-
-  const micPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_e, gs) => Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
-
-      onPanResponderGrant: () => {
-        if (isRecordingRef.current || isPausedRef.current || isLockedRef.current || disabledRef.current || isUploadingRef.current || textRef.current.trim().length > 0) return;
-
-        holdRecordingRef.current = true;
-        isLockedRef.current = false;
-        setIsHoldRecording(true);
-        setIsLocked(false);
-        slideCancelAnim.setValue(0);
-        lockSlideAnim.setValue(0);
-        trashScaleAnim.setValue(0);
-
-        Animated.spring(micScaleAnim, { toValue: 1.8, friction: 5, tension: 300, useNativeDriver: true }).start();
-
-        startRecordingRef.current();
-      },
-
-      onPanResponderMove: (_evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
-        if (!holdRecordingRef.current || isLockedRef.current) return;
-
-        const { dx, dy } = gestureState;
-
-        // Slide left to cancel: dx < 0 means finger moved left
-        const cancelProgress = Math.min(Math.max(Math.abs(dx) / 120, 0), 1);
-        if (dx < 0) {
-          slideCancelAnim.setValue(cancelProgress);
-          if (cancelProgress > 0.3) {
-            Animated.spring(trashScaleAnim, { toValue: 1, friction: 5, useNativeDriver: true }).start();
-          } else {
-            trashScaleAnim.setValue(0);
-          }
-        } else {
-          slideCancelAnim.setValue(0);
-          trashScaleAnim.setValue(0);
-        }
-
-        // Slide up to lock: dy < 0 means finger moved up
-        if (dy < 0) {
-          const lockProgress = Math.min(Math.abs(dy) / 80, 1);
-          lockSlideAnim.setValue(lockProgress);
-        } else {
-          lockSlideAnim.setValue(0);
-        }
-      },
-
-      onPanResponderRelease: (_evt: GestureResponderEvent, gestureState: PanResponderGestureState) => {
-        if (!holdRecordingRef.current) return;
-
-        const { dx, dy } = gestureState;
-
-        Animated.spring(micScaleAnim, { toValue: 1, friction: 5, tension: 300, useNativeDriver: true }).start();
-        slideCancelAnim.setValue(0);
-        lockSlideAnim.setValue(0);
-        trashScaleAnim.setValue(0);
-
-        // Check cancel: slid left far enough (dx < -84)
-        if (dx < -84) {
-          holdRecordingRef.current = false;
-          setIsHoldRecording(false);
-          cancelRecordingRef.current();
-          return;
-        }
-
-        // Check lock: slid up far enough (dy < -56)
-        if (dy < -56) {
-          holdRecordingRef.current = false;
-          isLockedRef.current = true;
-          setIsHoldRecording(false);
-          setIsLocked(true);
-          return;
-        }
-
-        // Normal release = stop and send
-        holdRecordingRef.current = false;
-        setIsHoldRecording(false);
-        stopAndSendRecordingRef.current();
-      },
-
-      onPanResponderTerminate: () => {
-        if (!holdRecordingRef.current) return;
-        Animated.spring(micScaleAnim, { toValue: 1, friction: 5, tension: 300, useNativeDriver: true }).start();
-        slideCancelAnim.setValue(0);
-        lockSlideAnim.setValue(0);
-        trashScaleAnim.setValue(0);
-        holdRecordingRef.current = false;
-        setIsHoldRecording(false);
-        cancelRecordingRef.current();
-      },
-    })
-  ).current;
+  /** לחיצה קצרה על המיקרופון → הקלטה + ממשק נעול (השהה / ביטול / שליחה) */
+  const handleMicTapToRecord = () => {
+    if (
+      isRecordingRef.current ||
+      isPausedRef.current ||
+      disabledRef.current ||
+      isUploadingRef.current ||
+      textRef.current.trim().length > 0
+    ) {
+      return;
+    }
+    void startRecording({ openInLockedMode: true });
+  };
 
   // ============================================
   // Show Attachment Options
@@ -1572,6 +1476,21 @@ export default function ChatInput({
   };
 
   const showAttachmentOptions = () => {
+    attachmentIconRotate.setValue(0);
+    Animated.sequence([
+      Animated.timing(attachmentIconRotate, {
+        toValue: 1,
+        duration: 110,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.spring(attachmentIconRotate, {
+        toValue: 0,
+        friction: 6,
+        tension: 140,
+        useNativeDriver: true,
+      }),
+    ]).start();
     setMediaPickerVisible(true);
   };
 
@@ -1622,10 +1541,10 @@ export default function ChatInput({
       {/* Reply Preview - Simple card ABOVE input area */}
       {replyTo ? (
         <View style={styles.replyPreviewContainer}>
-          <View style={styles.replyAccentBar} />
+          <View style={styles.replyPreviewBar} />
           <View style={styles.replyContent}>
-            <Text style={styles.replyLabel}>↩️ תשובה ל-{replyTo.senderName}</Text>
-            <Text style={styles.replyText} numberOfLines={1}>{replyTo.content || '📎 מדיה'}</Text>
+            <Text style={styles.replyLabel}>תשובה ל-{replyTo.senderName}</Text>
+            <Text style={styles.replyText} numberOfLines={1}>{replyTo.content || 'מדיה'}</Text>
           </View>
           <TouchableOpacity
             onPress={() => onCancelReply?.()}
@@ -1640,121 +1559,140 @@ export default function ChatInput({
       <View style={styles.container}>
         {/* Input Container - glass pill */}
         <UICard
-          variant="blur"
+          variant="surface"
           padding="none"
           style={styles.inputCardOuter}
           contentContainerStyle={styles.inputCardContent}
         >
           {/* Attachment Button - hidden during recording */}
-          {!isRecording && !isPaused && !isHoldRecording && (
+          {!isRecording && !isPaused && (
             <TouchableOpacity
               onPress={showAttachmentOptions}
               style={styles.iconButton}
               disabled={disabled || isUploading}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="צירוף מדיה"
             >
-              <Image
-                source={require('../../assets/icons/ico-32-plus.png')}
-                style={iconImageStyle}
-                resizeMode="contain"
-              />
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: attachmentIconRotate.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '45deg'],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <Ionicons name="add" size={28} color={DesignTokens.colors.text.secondary} />
+              </Animated.View>
             </TouchableOpacity>
           )}
 
           {/* Text Input or Recording UI */}
-          {isHoldRecording && isRecording && !isLocked ? (
-            /* Hold-to-record active overlay */
-            <View style={styles.holdRecordingContent}>
-              <Animated.View style={[styles.timerContainer, {
-                opacity: slideCancelAnim.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 0.3, 0] }),
-              }]}>
-                <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
-                <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
-              </Animated.View>
-
-              <View style={styles.slideCancelContainer}>
-                <Animated.View style={{
-                  flexDirection: 'row-reverse',
-                  alignItems: 'center',
-                  gap: 6,
-                  opacity: slideCancelAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.5, 0] }),
-                }}>
-                  <Animated.View style={{
-                    transform: [{
-                      translateX: slideCancelAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 40] })
-                    }],
-                  }}>
-                    <Ionicons name="chevron-back" size={16} color={DesignTokens.colors.text.tertiary} />
-                  </Animated.View>
-                  <Text style={styles.slideCancelText}>החלק לביטול</Text>
-                </Animated.View>
-
-                <Animated.View style={[styles.trashIconFloat, {
-                  opacity: trashScaleAnim,
-                  transform: [{ scale: trashScaleAnim }],
-                }]}>
-                  <Ionicons name="trash" size={20} color={DesignTokens.colors.text.danger} />
-                </Animated.View>
-              </View>
-
-              <Animated.View style={[styles.lockIndicator, {
-                opacity: lockSlideAnim.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0.5, 0.8, 1] }),
-                transform: [{
-                  translateY: lockSlideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -8] }),
-                }],
-              }]}>
-                <Ionicons
-                  name="lock-open-outline"
-                  size={14}
-                  color={DesignTokens.colors.text.secondary}
-                />
-              </Animated.View>
-            </View>
-          ) : (isRecording || (isPaused && !recordedAudioUri)) ? (
-            /* Locked recording or non-hold recording */
-            <View style={styles.recordingContent}>
-              <View style={styles.timerContainer}>
-                <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
+          {(isRecording || (isPaused && !recordedAudioUri)) ? (
+            /* שורה אחת: משמאל עצירה+מחיקה · במרכז זמן+גלים · מימין שליחה */
+            <View style={styles.recordingRowFull}>
+              <View style={styles.recordingLeftCluster}>
+                <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton} activeOpacity={0.7}>
+                  <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.text.danger} />
+                </TouchableOpacity>
                 {isRecording ? (
-                  <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
+                  <TouchableOpacity onPress={pauseRecording} style={styles.pauseResumeButton} activeOpacity={0.7}>
+                    <Ionicons name="pause" size={20} color={DesignTokens.colors.text.primary} />
+                  </TouchableOpacity>
                 ) : (
-                  <View style={[styles.recordingDot, { backgroundColor: '#888' }]} />
+                  <TouchableOpacity onPress={resumeRecording} style={styles.pauseResumeButton} activeOpacity={0.7}>
+                    <Ionicons name="mic" size={20} color={DesignTokens.colors.text.primary} />
+                  </TouchableOpacity>
                 )}
               </View>
 
-              <View style={styles.waveformWrapper}>
-                <VoiceWaveform isRecording={isRecording} audioLevel={audioLevel} />
-              </View>
-            </View>
-          ) : isPaused && recordedAudioUri ? (
-            /* יש הקלטה מוכנה - preview עם play button */
-            <View style={styles.recordingContent}>
-              {/* Timer */}
-              <View style={styles.timerContainer}>
-                <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
-                {isPlayingPreview && (
-                  <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
-                )}
+              <View style={styles.recordingCenterCluster}>
+                <View style={styles.waveformWrapper}>
+                  <VoiceWaveform isRecording={isRecording} audioLevel={audioLevel} />
+                </View>
+                <View style={styles.timerContainer}>
+                  <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
+                  {isRecording ? (
+                    <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
+                  ) : (
+                    <View style={[styles.recordingDot, { backgroundColor: '#888' }]} />
+                  )}
+                </View>
               </View>
 
-              {/* Waveforms with Progress */}
-              <VoiceWaveformWithProgress
-                progress={timelineProgress}
-                duration={previewDuration}
-                isPlaying={isPlayingPreview}
-                waveformData={waveformSamples}
-              />
-
-              {/* Play/Pause Button */}
               <TouchableOpacity
-                onPress={isPlayingPreview ? pausePreview : playPreview}
-                style={styles.playButtonInside}
+                onPress={() => {
+                  setIsLocked(false);
+                  isLockedRef.current = false;
+                  if (recordedAudioUri) {
+                    sendRecordedAudio();
+                  } else {
+                    stopAndSendRecording();
+                  }
+                }}
+                style={styles.sendButton}
+                disabled={isUploading}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={isPlayingPreview ? "pause" : "play"}
-                  size={18}
-                  color={DesignTokens.colors.primary.main}
-                />
+                <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
+              </TouchableOpacity>
+            </View>
+          ) : isPaused && recordedAudioUri ? (
+            /* תצוגה לפני שליחה — אותה לוגיקה: שמאל ניגון+מחיקה · מרכז זמן+גלים · ימין שליחה */
+            <View style={styles.recordingRowFull}>
+              <View style={styles.recordingLeftCluster}>
+                <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton} activeOpacity={0.7}>
+                  <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.text.danger} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={isPlayingPreview ? pausePreview : playPreview}
+                  style={styles.playButtonInside}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={isPlayingPreview ? 'pause' : 'play'}
+                    size={18}
+                    color={DesignTokens.colors.primary.main}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.recordingCenterCluster}>
+                <View style={styles.waveformPreviewWrapper}>
+                  <VoiceWaveformWithProgress
+                    progress={timelineProgress}
+                    duration={previewDuration}
+                    isPlaying={isPlayingPreview}
+                    waveformData={waveformSamples}
+                  />
+                </View>
+                <View style={styles.timerContainer}>
+                  <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
+                  {isPlayingPreview ? (
+                    <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
+                  ) : null}
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setIsLocked(false);
+                  isLockedRef.current = false;
+                  if (recordedAudioUri) {
+                    sendRecordedAudio();
+                  } else {
+                    stopAndSendRecording();
+                  }
+                }}
+                style={styles.sendButton}
+                disabled={isUploading}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -1783,123 +1721,116 @@ export default function ChatInput({
               )}
             </>
           )}
-        </UICard>
-
-        {/* Send/Voice Button - OUTSIDE the input container */}
-        {isLocked ? (
-          /* Locked mode - pause/resume, delete, send buttons */
-          <View style={styles.recordingButtons}>
-            {isRecording ? (
-              <TouchableOpacity onPress={pauseRecording} style={styles.pauseResumeButton} activeOpacity={0.7}>
-                <Ionicons name="pause" size={20} color={DesignTokens.colors.text.primary} />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={resumeRecording} style={styles.pauseResumeButton} activeOpacity={0.7}>
-                <Ionicons name="mic" size={20} color={DesignTokens.colors.text.primary} />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton} activeOpacity={0.7}>
-              <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.text.danger} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => {
-                setIsLocked(false);
-                isLockedRef.current = false;
-                if (recordedAudioUri) {
-                  sendRecordedAudio();
-                } else {
-                  stopAndSendRecording();
-                }
-              }}
-              style={styles.sendButton}
-              disabled={isUploading}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-            {/* PanResponder hitbox - stays mounted throughout the entire gesture */}
-            <Animated.View
-              {...micPanResponder.panHandlers}
-              pointerEvents={(isHoldRecording || (!isRecording && !isPaused && text.trim().length === 0 && !isUploading && !disabled)) ? 'auto' : 'none'}
+          {/* במצב נעול כל הבקרות בשורת ההקלטה המרכזית — כאן רק מיקרופון/שליחה כשאין הקלטה */}
+          {!isLocked ? (
+            <View
               style={{
-                position: 'absolute',
-                width: 60,
-                height: 60,
-                zIndex: 10,
-                transform: [{ scale: micScaleAnim }],
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'visible',
+                zIndex: 2,
+                elevation: 2,
               }}
-            />
-
-            {/* Microphone icon - visible when no text */}
-            {!isHoldRecording && (
-              <Animated.View
-                pointerEvents="none"
+            >
+              <View
                 style={{
-                  position: 'absolute',
-                  opacity: iconAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
-                  transform: [
-                    { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.5], extrapolate: 'clamp' }) },
-                    { rotate: iconAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-30deg'], extrapolate: 'clamp' }) },
-                  ],
+                  width: 44,
+                  height: 44,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
-                <View style={styles.voiceButton}>
-                  <Ionicons name="mic-outline" size={26} color={DesignTokens.colors.text.inverse} />
-                </View>
-              </Animated.View>
-            )}
+                {/* רקע ירוק קבוע — לא בתוך אנימציית opacity (שהייתה מעיפה את הירוק) */}
+                <View
+                  pointerEvents="none"
+                  style={[
+                    styles.sendButton,
+                    {
+                      position: 'absolute',
+                      width: 40,
+                      height: 40,
+                      left: 2,
+                      top: 2,
+                    },
+                  ]}
+                />
 
-            {/* Send icon - visible when text entered */}
-            {!isHoldRecording && (
-              <Animated.View
-                pointerEvents={text.trim().length > 0 ? 'auto' : 'none'}
-                style={{
-                  position: 'absolute',
-                  opacity: iconAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
-                  transform: [
-                    { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1], extrapolate: 'clamp' }) },
-                    { rotate: iconAnim.interpolate({ inputRange: [0, 1], outputRange: ['30deg', '0deg'], extrapolate: 'clamp' }) },
-                  ],
-                }}
-              >
-                <TouchableOpacity
-                  onPress={() => {
-                    Animated.sequence([
-                      Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
-                      Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
-                    ]).start();
-                    handleSend();
+                <Animated.View
+                  pointerEvents={text.trim().length === 0 ? 'auto' : 'none'}
+                  style={{
+                    position: 'absolute',
+                    width: 44,
+                    height: 44,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    opacity: iconAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
+                    transform: [
+                      { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.5], extrapolate: 'clamp' }) },
+                      { rotate: iconAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-30deg'], extrapolate: 'clamp' }) },
+                    ],
                   }}
-                  style={styles.sendButton}
-                  disabled={disabled || isUploading || text.trim().length === 0}
-                  activeOpacity={1}
                 >
-                  <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
-                    <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
-                  </Animated.View>
-                </TouchableOpacity>
-              </Animated.View>
-            )}
+                  <Pressable
+                    onPress={handleMicTapToRecord}
+                    disabled={disabled || isUploading}
+                    accessibilityRole="button"
+                    accessibilityLabel="הקלטת הודעה קולית"
+                    style={({ pressed }) => ({
+                      width: 40,
+                      height: 40,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      opacity: pressed && !disabled && !isUploading ? 0.88 : 1,
+                    })}
+                  >
+                    <Ionicons name="mic-outline" size={26} color={micOnGreenColor} />
+                  </Pressable>
+                </Animated.View>
 
-            {/* Pulsing mic during hold recording */}
-            {isHoldRecording && (
-              <Animated.View
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  transform: [{ scale: micScaleAnim }],
-                }}
-              >
-                <View style={[styles.voiceButton, { backgroundColor: DesignTokens.colors.text.danger, borderRadius: 22 }]}>
-                  <Ionicons name="mic" size={26} color={DesignTokens.colors.text.primary} />
-                </View>
-              </Animated.View>
-            )}
-          </View>
-        )}
+                <Animated.View
+                  pointerEvents={text.trim().length > 0 ? 'auto' : 'none'}
+                  style={{
+                    position: 'absolute',
+                    width: 44,
+                    height: 44,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    opacity: iconAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
+                    transform: [
+                      { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1], extrapolate: 'clamp' }) },
+                      { rotate: iconAnim.interpolate({ inputRange: [0, 1], outputRange: ['30deg', '0deg'], extrapolate: 'clamp' }) },
+                    ],
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => {
+                      Animated.sequence([
+                        Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
+                        Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
+                      ]).start();
+                      handleSend();
+                    }}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      backgroundColor: 'transparent',
+                    }}
+                    disabled={disabled || isUploading || text.trim().length === 0}
+                    activeOpacity={1}
+                  >
+                    <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
+                      <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
+                    </Animated.View>
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+            </View>
+          ) : null}
+        </UICard>
 
         {/* Uploading indicator removed – upload progress is shown on the optimistic message itself */}
       </View>
@@ -1958,31 +1889,35 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'transparent',
-    paddingTop: tokens.spacing.sm,
-    paddingBottom: tokens.spacing.xs,
-    gap: tokens.spacing.sm,
+    paddingTop: 2,
+    paddingBottom: Math.max(tokens.spacing.xs, safeAreaBottom > 0 ? 4 : 2),
+    gap: 0,
   },
 
   replyPreviewContainer: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'stretch',
     backgroundColor: tokens.colors.border.divider,
     marginHorizontal: tokens.spacing.xs,
     marginBottom: tokens.spacing.sm,
     paddingVertical: tokens.spacing.sm + 2,
     paddingHorizontal: tokens.spacing.md,
     borderRadius: tokens.borderRadius.lg,
-    borderLeftWidth: 0,
-    borderRightWidth: 3,
-    borderRightColor: tokens.colors.primary.main,
+    overflow: 'hidden',
   },
-  replyAccentBar: {
-    // לא בשימוש יותר - הגבול בצד ימין
-    display: 'none',
+  /** כמו replyBar בבועת הודעה – פס אנכי ישר, לא בורדר מעוגל */
+  replyPreviewBar: {
+    width: 3,
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: 1.5,
+    marginLeft: 8,
+    flexShrink: 0,
+    minHeight: 24,
+    alignSelf: 'stretch',
   },
   replyContent: {
     flex: 1,
-    marginRight: 8,
+    justifyContent: 'center',
   },
   replyLabel: {
     fontSize: tokens.typography.label.size,
@@ -2003,6 +1938,7 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     backgroundColor: tokens.colors.border.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 6,
   },
   cancelReplyText: {
     fontSize: 18,
@@ -2011,15 +1947,19 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
 
   inputCardOuter: {
     flex: 1,
-    borderRadius: tokens.borderRadius.lg,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
     overflow: 'hidden',
   },
   inputCardContent: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: tokens.spacing.sm + 2,
-    paddingVertical: tokens.spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: tokens.spacing.sm + 1,
+    paddingVertical: tokens.spacing.xs + 1,
     gap: tokens.spacing.xs,
+    minHeight: 52,
   },
   iconButton: {
     width: 40,
@@ -2027,13 +1967,14 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
   textInput: {
     flex: 1,
-    minHeight: 44,
-    maxHeight: 100,
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.sm,
+    minHeight: 40,
+    maxHeight: 88,
+    paddingHorizontal: tokens.spacing.md - 2,
+    paddingVertical: tokens.spacing.sm - 1,
     fontSize: tokens.typography.body.size,
     color: tokens.colors.text.primary,
     textAlignVertical: 'center',
@@ -2051,18 +1992,41 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     fontWeight: tokens.typography.fontWeight.semibold,
   },
 
-  // Recording Content - ישירות בתוך inputContainer (ללא בועה נוספת)
-  recordingContent: {
+  /** שורת הקלטה: שמאל עצירה+מחיקה · מרכז זמן+גלים · ימין שליחה (ltr כדי שיתאים למסך) */
+  recordingRowFull: {
     flex: 1,
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     minHeight: 40,
+    minWidth: 0,
+  },
+  recordingLeftCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+  },
+  recordingCenterCluster: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 0,
   },
   waveformWrapper: {
     flex: 1,
     minWidth: 0,
     height: 24,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
+  },
+  waveformPreviewWrapper: {
+    flex: 1,
+    minWidth: 0,
+    alignSelf: 'stretch',
+    justifyContent: 'center',
   },
   playButtonInside: {
     width: 32,
@@ -2074,9 +2038,9 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     backgroundColor: tokens.colors.border.primary,
   },
   timerContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     flexShrink: 0,
   },
   recordingDot: {
@@ -2123,27 +2087,13 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
   },
 
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: tokens.colors.bubbleMe,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  voiceButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: tokens.colors.bubbleMe,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Recording Buttons
-  recordingButtons: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
+    flexShrink: 0,
   },
   pauseResumeButton: {
     width: 40,
@@ -2157,46 +2107,6 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: tokens.colors.border.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Hold-to-record UI
-  holdRecordingContent: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 10,
-    minHeight: 40,
-    paddingHorizontal: 4,
-  },
-  slideCancelContainer: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  slideCancelText: {
-    fontSize: tokens.typography.label.size,
-    color: tokens.colors.text.tertiary,
-    fontWeight: tokens.typography.fontWeight.medium,
-  },
-  trashIconFloat: {
-    position: 'absolute',
-    left: 8,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 69, 58, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lockIndicator: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
     backgroundColor: tokens.colors.border.primary,
     justifyContent: 'center',
     alignItems: 'center',

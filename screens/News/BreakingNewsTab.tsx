@@ -1,22 +1,6 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  TouchableOpacity,
-  Image,
-  Linking,
-  Modal,
-  Share,
-  ScrollView,
-  Animated,
-  Dimensions,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -74,7 +58,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (!user) {
-        Alert.alert('שגיאה', 'משתמש לא מחובר');
+        legacyAlert('שגיאה', 'משתמש לא מחובר');
         return;
       }
 
@@ -85,7 +69,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
         .eq('user_id', user.id);
 
       if (memberError) {
-        Alert.alert('שגיאה', `לא ניתן לטעון קבוצות: ${memberError.message}`);
+        legacyAlert('שגיאה', `לא ניתן לטעון קבוצות: ${memberError.message}`);
         return;
       }
 
@@ -99,7 +83,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
           .order('name');
 
         if (channelsError) {
-          Alert.alert('שגיאה', `לא ניתן לטעון פרטי קבוצות: ${channelsError.message}`);
+          legacyAlert('שגיאה', `לא ניתן לטעון פרטי קבוצות: ${channelsError.message}`);
           return;
         }
 
@@ -120,7 +104,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
         }
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'שגיאה בטעינת קבוצות');
+      legacyAlert('שגיאה', 'שגיאה בטעינת קבוצות');
     } finally {
       setLoading(false);
     }
@@ -130,7 +114,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('שגיאה', 'משתמש לא מחובר');
+        legacyAlert('שגיאה', 'משתמש לא מחובר');
         return;
       }
 
@@ -163,14 +147,14 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
         });
 
       if (error) {
-        Alert.alert('שגיאה', 'לא ניתן לשתף לקבוצה');
+        legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
         return;
       }
 
-      Alert.alert('הצלחה', `החדשה שותפה לקבוצה "${groupName}"`);
+      legacyAlert('הצלחה', `החדשה שותפה לקבוצה "${groupName}"`);
       onClose();
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לשתף לקבוצה');
+      legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
     }
   };
 
@@ -307,7 +291,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
               <TouchableOpacity
                 key={group.id}
                 style={{
-                  flexDirection: 'row-reverse',
+                  flexDirection: 'row',
                   alignItems: 'center',
                   paddingVertical: 16,
                   paddingHorizontal: 4,
@@ -793,7 +777,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
     article.id?.length > 15;
 
   const hasImage = !!article.image_url;
-  const thumbnailHeight = 200;
+  const thumbnailHeight = 196;
 
   return (
     <UICard
@@ -802,8 +786,10 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
       onPress={() => onPress(article)}
       style={{
         marginHorizontal: DesignTokens.layout?.screenPadding ?? 20,
-        marginBottom: 0,
-        borderRadius: DesignTokens.borderRadius.lg,
+        marginBottom: 2,
+        borderRadius: DesignTokens.borderRadius.xl,
+        borderWidth: 1,
+        borderColor: DesignTokens.colors.border.primary,
         overflow: 'hidden',
       }}
     >
@@ -891,8 +877,8 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
       <View
         style={{
           paddingHorizontal: 16,
-          paddingTop: 12,
-          paddingBottom: 16,
+          paddingTop: 14,
+          paddingBottom: 18,
         }}
       >
         {/* אם יש תמונה - הכותרת כבר מעל, מציגים רק summary */}
@@ -1037,7 +1023,7 @@ export default function BreakingNewsTab() {
           // אם נכשל, החזר את המצב
           newLikedArticles.add(articleId);
           setLikedArticles(newLikedArticles);
-          Alert.alert('שגיאה', 'לא ניתן להסיר את האהבתי');
+          legacyAlert('שגיאה', 'לא ניתן להסיר את האהבתי');
         }
       } else {
         // הוספת אהבתי
@@ -1050,12 +1036,12 @@ export default function BreakingNewsTab() {
           // אם נכשל, החזר את המצב
           newLikedArticles.delete(articleId);
           setLikedArticles(newLikedArticles);
-          Alert.alert('שגיאה', 'לא ניתן להוסיף אהבתי');
+          legacyAlert('שגיאה', 'לא ניתן להוסיף אהבתי');
         }
       }
       
     } catch (error) {
-      Alert.alert('שגיאה', 'בעיה בשמירת האהבתי');
+      legacyAlert('שגיאה', 'בעיה בשמירת האהבתי');
     }
   }, [likedArticles]);
 
@@ -1224,7 +1210,7 @@ export default function BreakingNewsTab() {
 
       setArticles(newsArticles);
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לטעון את החדשות המתפרצות');
+      legacyAlert('שגיאה', 'לא ניתן לטעון את החדשות המתפרצות');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -1346,7 +1332,7 @@ export default function BreakingNewsTab() {
 
       await Share.share(shareContent);
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן לשתף את הכתבה');
+      legacyAlert('שגיאה', 'לא ניתן לשתף את הכתבה');
     }
   }, []);
 
@@ -1448,7 +1434,7 @@ export default function BreakingNewsTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+      <View style={{ flex: 1 }}>
         <FlatList
           data={articles}
           keyExtractor={(item) => item.id}
@@ -1463,6 +1449,10 @@ export default function BreakingNewsTab() {
           }
           ListEmptyComponent={renderEmptyState}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingTop: 4,
+            paddingBottom: Math.max(mainTabsHeight + 12, 28),
+          }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         />
       </View>

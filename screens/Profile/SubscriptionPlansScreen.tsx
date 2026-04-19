@@ -11,8 +11,7 @@ import {
   FlatList,
   StyleSheet
 } from 'react-native';
-import { 
-  ArrowRight,
+import {
   Check,
   X,
   Star,
@@ -23,7 +22,6 @@ import {
   Calendar,
   Gift
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -33,6 +31,7 @@ import AnimatedToggle from '../../components/ui/AnimatedToggle';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -399,7 +398,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
               </View>
             ) : plan.period === 'yearly' && plan.id === 'elite_yearly' ? (
               <View style={{ alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 4 }}>
                   <Text style={{
                     fontSize: 34,
                     fontWeight: '700',
@@ -434,7 +433,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
               </View>
             ) : (
               <View style={{ alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row-reverse', alignItems: 'baseline', marginBottom: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 }}>
                   <Text style={{
                     fontSize: 34,
                     fontWeight: '700',
@@ -477,7 +476,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           <View style={{ gap: 12, marginBottom: 24 }}>
             {(plan.price === 0 ? plan.features : plan.features.slice(0, 3)).map((feature, featureIndex) => (
               <View key={featureIndex} style={{ 
-                flexDirection: 'row-reverse', 
+                flexDirection: 'row', 
                 alignItems: 'center'
               }}>
                 <View style={{
@@ -554,55 +553,10 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
-      <LinearGradient
-        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
-        {/* Header עם blur */}
-        <View style={{ paddingTop: 0 + DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <UICard 
-            variant="blur"
-            padding="sm"
-          >
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: DesignTokens.spacing.md,
-              minHeight: 44,
-            }}>
-              <Text style={{
-                flex: 1,
-                textAlign: 'center',
-                fontSize: DesignTokens.typography.fontSize.lg,
-                fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                color: DesignTokens.colors.text.primary,
-                marginLeft: 36
-              }}>
-                בחר מסלול
-              </Text>
-
-              <TouchableOpacity 
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.7}
-                style={{
-                  width: 36,
-                  height: 36,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderRadius: 18,
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                }}
-              >
-                <ArrowRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </TouchableOpacity>
-            </View>
-          </UICard>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
+          <ChatSubScreenHeader title="בחר מסלול" onBack={() => navigation.goBack()} />
         </View>
 
       <View style={{ flex: 1 }}>
@@ -661,7 +615,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
         {/* Billing Period Toggle - Like Reaction Tabs */}
         <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
           <View style={{
-            flexDirection: 'row-reverse',
+            flexDirection: 'row',
             backgroundColor: 'rgba(6, 18, 12, 0.8)',
             paddingHorizontal: DesignTokens.spacing.md,
             paddingVertical: DesignTokens.spacing.sm,
@@ -777,7 +731,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           
           {/* Page Indicators */}
           <View style={{
-            flexDirection: 'row-reverse',
+            flexDirection: 'row',
             justifyContent: 'center',
             alignItems: 'center',
             marginTop: 20,
@@ -841,15 +795,16 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           </View>
           
           <UICard
-            variant="blur"
+            variant="inputGlass"
             padding="none"
             style={{
-              overflow: 'hidden'
+              overflow: 'hidden',
+              borderRadius: DesignTokens.borderRadius.lg,
             }}
           >
             {/* Table Header */}
             <View style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               backgroundColor: 'rgba(255, 255, 255, 0.03)',
               paddingVertical: DesignTokens.spacing.md,
               paddingHorizontal: DesignTokens.spacing.md,
@@ -886,7 +841,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
               <View 
                 key={featureIndex}
                 style={{
-                  flexDirection: 'row-reverse',
+                  flexDirection: 'row',
                   paddingVertical: DesignTokens.spacing.md,
                   paddingHorizontal: DesignTokens.spacing.md,
                   borderBottomWidth: featureIndex === allFeatures.length - 1 ? 0 : 1,
@@ -972,8 +927,9 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
         {/* How It Works */}
         <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing['2xl'] }}>
           <UICard
-            variant="blur"
+            variant="inputGlass"
             padding="lg"
+            style={{ borderRadius: DesignTokens.borderRadius.lg }}
           >
             <Text style={{
               fontSize: DesignTokens.typography.fontSize.base,
@@ -985,7 +941,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
               איך זה עובד?
             </Text>
             <View style={{
-              flexDirection: 'row-reverse',
+              flexDirection: 'row',
               justifyContent: 'space-between',
               gap: DesignTokens.spacing.sm
             }}>

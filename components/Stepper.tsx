@@ -10,7 +10,7 @@ interface StepperProps {
 
 const Stepper: React.FC<StepperProps> = ({ steps, currentStep }) => {
   return (
-    <View style={{ flexDirection: 'row-reverse', justifyContent: 'center', alignItems: 'center', marginVertical: 24 }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginVertical: 24 }}>
       {steps.map((step, idx) => {
         const isActive = idx === currentStep;
         const isCompleted = idx < currentStep;

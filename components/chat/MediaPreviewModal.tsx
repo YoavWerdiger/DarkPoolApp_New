@@ -1,20 +1,7 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  TextInput,
-  Dimensions,
-  Alert,
-  StyleSheet,
-  ActivityIndicator,
-  Animated as RNAnimated, // React Native Animated for modal animations
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, Modal, Pressable, TextInput, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated, // React Native Animated for modal animations
+  KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -306,7 +293,7 @@ export default function MediaPreviewModal({
     if (localFiles.length === 0) return;
     const validMediaFiles = localFiles.filter(f => f.uri);
     if (validMediaFiles.length === 0) {
-      Alert.alert('שגיאה', 'אין קבצים לשליחה');
+      legacyAlert('שגיאה', 'אין קבצים לשליחה');
       return;
     }
     // Send with copies of data, then close

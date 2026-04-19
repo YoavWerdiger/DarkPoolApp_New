@@ -33,6 +33,9 @@ type RegistrationData = {
   
   // סוג חשבון
   accountType: string;
+  /** תצוגה בהמשך תהליך תשלום */
+  trackName?: string;
+  trackPrice?: number;
   
   // הרשמה עם Google
   isGoogleSignUp: boolean;

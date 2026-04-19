@@ -2,21 +2,10 @@
 // Media Viewer Component - Glass Design
 // ============================================
 
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { logger } from '../../utils/logger';
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Dimensions,
-  ActivityIndicator,
-  Alert,
-  Share as RNShare,
-  Platform,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, Modal, Pressable, StyleSheet, Dimensions, ActivityIndicator, Share as RNShare, Platform, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
@@ -368,7 +357,7 @@ export default function MediaViewer({
   const handleCopy = async () => {
     try {
       await Clipboard.setStringAsync(displayUri);
-      Alert.alert('הועתק', 'הקישור הועתק ללוח');
+      legacyAlert('הועתק', 'הקישור הועתק ללוח');
     } catch (error) {
       logger.error('MediaViewer', 'Copy URL failed', error);
     }
@@ -377,12 +366,12 @@ export default function MediaViewer({
   const handleDownload = async () => {
     try {
       if (Platform.OS === 'web') {
-        Alert.alert('מידע', 'הורדה לא זמינה בפלטפורמה זו');
+        legacyAlert('מידע', 'הורדה לא זמינה בפלטפורמה זו');
         return;
       }
       const cacheDir = FileSystem.cacheDirectory;
       if (!cacheDir) {
-        Alert.alert('שגיאה', 'לא ניתן לגשת לתיקייה');
+        legacyAlert('שגיאה', 'לא ניתן לגשת לתיקייה');
         return;
       }
       const fileUri = `${cacheDir}media_${Date.now()}.${mediaType === 'image' ? 'jpg' : 'mp4'}`;
@@ -391,10 +380,10 @@ export default function MediaViewer({
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(downloadResult.uri);
       } else {
-        Alert.alert('הורד', 'הקובץ נשמר בהצלחה');
+        legacyAlert('הורד', 'הקובץ נשמר בהצלחה');
       }
     } catch (error) {
-      Alert.alert('שגיאה', 'לא ניתן להוריד את הקובץ');
+      legacyAlert('שגיאה', 'לא ניתן להוריד את הקובץ');
     }
   };
 

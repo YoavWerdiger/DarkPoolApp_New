@@ -87,11 +87,12 @@ export class LearningService {
       const courseIds = data?.map(c => c.id) || [];
       
       // Get enrollments (using user_course_progress as enrollment indicator)
-      const { data: enrollments } = await supabase
+      const { data: enrollmentRows } = await supabase
         .from('user_course_progress')
-        .select('DISTINCT course_id')
+        .select('course_id')
         .eq('user_id', user.id)
         .in('course_id', courseIds);
+      const enrolledCourseIds = new Set((enrollmentRows ?? []).map((r) => r.course_id));
 
       // Get lessons for each course
       const lessonsPromises = courseIds.map(async (courseId) => {
@@ -127,7 +128,9 @@ export class LearningService {
       const progressMap = new Map(progressResults.map(r => [r.courseId, r.progress]));
 
       coursesWithProgress = (data || []).map(course => {
-        const enrollment = enrollments?.find(e => e.course_id === course.id);
+        const enrollment = enrolledCourseIds.has(course.id)
+          ? { id: '', user_id: user.id, course_id: course.id, status: 'active' as const, created_at: '' }
+          : undefined;
         const lessons = lessonsMap.get(course.id) || [];
         const progress = progressMap.get(course.id) || [];
         
@@ -218,7 +221,7 @@ export class LearningService {
     } catch (error) {
       throw new LearningError({
         code: 'UNEXPECTED_ERROR',
-        message: error?.message || 'Unexpected error in fetchCourses',
+        message: error instanceof Error ? error.message : 'Unexpected error in fetchCourses',
         details: error
       });
     }
@@ -447,10 +450,13 @@ export class LearningService {
 
       if (progressData) {
         progress = {
+          id: progressData.id ?? '',
+          user_id: user.id,
           lesson_id: lessonId,
           status: progressData.is_completed ? 'completed' : 'in_progress',
           last_position_seconds: progressData.current_time_seconds || 0,
-          completed_at: progressData.completed_at || null
+          completed_at: progressData.completed_at || undefined,
+          updated_at: progressData.updated_at ?? new Date().toISOString(),
         };
       }
     }
@@ -593,10 +599,13 @@ export class LearningService {
     }
 
     return {
+      id: data.id,
+      user_id: data.user_id,
       lesson_id: request.lesson_id,
       status: data.is_completed ? 'completed' : 'in_progress',
       last_position_seconds: data.current_time_seconds || 0,
-      completed_at: data.completed_at || null
+      completed_at: data.completed_at || undefined,
+      updated_at: data.updated_at,
     };
   }
 
@@ -676,7 +685,7 @@ export class LearningService {
     // Get courses where user has progress
     const { data: progressData, error: progressError } = await supabase
       .from('user_course_progress')
-      .select('DISTINCT course_id')
+      .select('course_id')
       .eq('user_id', user.id);
 
     if (progressError) {
@@ -687,7 +696,7 @@ export class LearningService {
       });
     }
 
-    const courseIds = progressData?.map(p => p.course_id) || [];
+    const courseIds = [...new Set((progressData ?? []).map((p) => p.course_id))];
     
     if (courseIds.length === 0) {
       return [];

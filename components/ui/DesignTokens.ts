@@ -117,6 +117,26 @@ export const DesignTokens = {
     full: 9999, // עגול מלא
   },
 
+  // 🪟 Glass / Liquid Glass — ערכי טישטוש ושכבת-על (מסונכרנים עם מערכת העיצוב)
+  glass: {
+    blur: {
+      frosted: 72,
+      translucent: 40,
+      subtle: 24,
+    },
+    overlay: {
+      frostedDark: 'rgba(255,255,255,0.08)',
+      frostedLight: 'rgba(255,255,255,0.18)',
+      translucentDark: 'rgba(255,255,255,0.04)',
+      translucentLight: 'rgba(255,255,255,0.12)',
+    },
+    fallback: {
+      dark: 'rgba(26,26,26,0.92)',
+      light: 'rgba(245,245,245,0.94)',
+    },
+    border: 'rgba(255,255,255,0.1)',
+  },
+
   // 🌫️ Shadows - צללים
   shadows: {
     none: {

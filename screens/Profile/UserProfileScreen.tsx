@@ -332,7 +332,7 @@ export default function UserProfileScreen({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
         <MainDrawerScreenHeader title="פרופיל" onMenuPress={openMainDrawer} />
         <View style={{ flex: 1 }}>
           <ScrollView 

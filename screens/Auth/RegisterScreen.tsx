@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { User, Mail, Lock } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { AuthService } from '../../services/authService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
@@ -173,7 +174,14 @@ export default function RegisterScreen({ navigation }: any) {
             />
           </View>
 
-          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+          <RNSafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+            }}
+          >
             {/* Header Section */}
             <View style={{ alignItems: 'center', marginBottom: 40 }}>
               {/* Main Title */}
@@ -474,6 +482,7 @@ export default function RegisterScreen({ navigation }: any) {
               </View>
             </View>
           </View>
+          </RNSafeAreaView>
         </LinearGradient>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>

@@ -7,31 +7,25 @@ import {
   Switch,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   StyleSheet,
 } from 'react-native';
 import { 
   Moon, 
-  Smartphone,
-  Lock,
-  Database,
   Trash2,
   Info,
   ChevronLeft,
   RefreshCcw,
   HardDrive,
-  Fingerprint,
-  Shield
+  Fingerprint
 } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
@@ -51,7 +45,6 @@ export default function SettingsScreen({ navigation }: any) {
   const { user } = useAuth();
   const { theme, isDarkMode, toggleTheme } = useTheme();
   const DesignTokens = useDesignTokens();
-  const mainTabsHeight = useMainTabsHeight();
   const [settings, setSettings] = useState({
     darkMode: true,
     autoUpdate: true,
@@ -266,7 +259,7 @@ export default function SettingsScreen({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
         <ChatSubScreenHeader title="הגדרות" onBack={() => navigation.goBack()} />
 
         <View style={{ flex: 1 }}>

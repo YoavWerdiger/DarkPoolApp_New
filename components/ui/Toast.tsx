@@ -34,11 +34,11 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
   const translateY = useRef(new Animated.Value(48)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
-  const typeConfig: Record<ToastType, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
-    success: { icon: 'checkmark-circle', color: colors.success.main },
-    error: { icon: 'alert-circle', color: colors.danger.main },
-    info: { icon: 'information-circle', color: colors.info.main },
-    warning: { icon: 'warning', color: colors.warning.main },
+  const typeConfig: Record<ToastType, { icon: keyof typeof Ionicons.glyphMap }> = {
+    success: { icon: 'checkmark-circle' },
+    error: { icon: 'alert-circle' },
+    info: { icon: 'information-circle' },
+    warning: { icon: 'warning' },
   };
 
   useEffect(() => {
@@ -70,8 +70,8 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
           paddingRight: spacing.md,
           paddingVertical: spacing.md,
           borderRadius: borderRadius.xl,
-          borderColor: `${config.color}40`,
-          borderWidth: 1,
+          backgroundColor: colors.bubbleOther,
+          borderWidth: 0,
           maxWidth: '100%',
           gap: spacing.md,
           ...Platform.select({
@@ -83,7 +83,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
         },
       ]}
     >
-      <Ionicons name={config.icon} size={22} color={config.color} />
+      <Ionicons name={config.icon} size={22} color={colors.text.secondary} />
       <Text
         style={{
           flex: 1,

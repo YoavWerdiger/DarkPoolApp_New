@@ -628,7 +628,7 @@ export default function ChatGroupsListScreen() {
           imageStyle={{ resizeMode: 'contain' }}
         />
       </View>
-      <RNSafeAreaView style={styles.safeArea} edges={['top']}>
+      <RNSafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.appHeader}>
@@ -807,7 +807,9 @@ export default function ChatGroupsListScreen() {
               }
               showsVerticalScrollIndicator={false}
               contentContainerStyle={
-                filteredGroups.length === 0 ? styles.emptyListContainer : { paddingTop: 4, paddingBottom: 20 }
+                filteredGroups.length === 0
+                  ? styles.emptyListContainer
+                  : { paddingTop: 4, paddingBottom: 20 }
               }
               keyboardShouldPersistTaps="handled"
               initialNumToRender={10}

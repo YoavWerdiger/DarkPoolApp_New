@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Switch, TouchableOpacity, ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Switch, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { 
   Bell,
   Volume2,
@@ -15,10 +15,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { supabase } from '../../lib/supabase';
 import { NotificationService } from '../../services/notificationService';
 import { Linking, Platform } from 'react-native';
@@ -57,8 +56,6 @@ export default function NotificationsScreen({ navigation }: any) {
   const { user } = useAuth();
   const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
-  const mainTabsHeight = useMainTabsHeight();
   const [settings, setSettings] = useState<NotificationSettings>({
     notifications: true,
     sound: true,
@@ -390,7 +387,7 @@ export default function NotificationsScreen({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
         <ChatSubScreenHeader title="התראות" onBack={() => navigation.goBack()} />
 
         <View style={{ flex: 1 }}>

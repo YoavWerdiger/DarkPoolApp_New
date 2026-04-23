@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
 import {
   Camera,
   User,
@@ -14,18 +14,15 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { mediaService } from '../../services/mediaService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import OnboardingInput from '../../components/onboarding/OnboardingInput';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, updateProfile } = useAuth();
   const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
-  const mainTabsHeight = useMainTabsHeight();
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
@@ -154,7 +151,7 @@ export default function EditProfileScreen({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
         <ChatSubScreenHeader title="עריכת פרופיל" onBack={() => navigation.goBack()} />
 
         <KeyboardAvoidingView 

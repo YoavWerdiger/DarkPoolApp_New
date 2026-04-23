@@ -14,10 +14,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 interface SubscriptionPlan {
   id: string;
@@ -34,8 +33,6 @@ export default function SubscriptionScreen({ navigation }: any) {
   const { user } = useAuth();
   const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
-  const mainTabsHeight = useMainTabsHeight();
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,7 +99,7 @@ export default function SubscriptionScreen({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
         <ChatSubScreenHeader title="מנוי ומסלול" onBack={() => navigation.goBack()} />
 
         <View style={{ flex: 1 }}>

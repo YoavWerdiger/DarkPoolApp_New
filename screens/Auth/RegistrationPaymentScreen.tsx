@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { SUPABASE_URL } from '../../config/publicEnv';
 
 const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
@@ -151,7 +152,14 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
             />
           </View>
 
-          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+          <RNSafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+            }}
+          >
             {/* Header Section */}
             <View style={{ alignItems: 'center', marginBottom: 40 }}>
               {/* Main Title */}
@@ -389,6 +397,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               )}
             </View>
     </View>
+          </RNSafeAreaView>
         </ScreenChrome>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>

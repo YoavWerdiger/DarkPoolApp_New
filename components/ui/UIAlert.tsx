@@ -65,26 +65,18 @@ const UIAlert: React.FC<UIAlertProps> = ({
       case 'success':
         return {
           icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.success.main,
-          ring: 'rgba(0, 200, 5, 0.18)',
         };
       case 'warning':
         return {
           icon: 'warning' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.warning.main,
-          ring: 'rgba(255, 184, 0, 0.2)',
         };
       case 'error':
         return {
           icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.danger.main,
-          ring: 'rgba(255, 68, 68, 0.2)',
         };
       default: // info
         return {
           icon: 'information-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.info.main,
-          ring: 'rgba(59, 130, 246, 0.2)',
         };
     }
   };
@@ -109,8 +101,8 @@ const UIAlert: React.FC<UIAlertProps> = ({
     width: '100%',
     maxWidth: 340,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: typeConfig.ring,
+    backgroundColor: colors.bubbleOther,
+    borderWidth: 0,
     ...rtlCard,
   };
 
@@ -136,16 +128,17 @@ const UIAlert: React.FC<UIAlertProps> = ({
   };
 
   const twoCol = buttons.length === 2;
+  const isSingleButton = buttons.length === 1;
   const buttonContainerStyle: ViewStyle = {
     flexDirection: buttons.length > 2 ? 'column' : twoCol && I18nManager.isRTL ? 'row-reverse' : 'row',
-    justifyContent: 'space-between',
+    justifyContent: isSingleButton ? 'center' : 'space-between',
     marginTop: spacing.xs,
     gap: twoCol ? spacing.sm : 0,
   };
 
   const getButtonStyle = (button: UIAlertButton, index: number): ViewStyle => {
     const baseStyle: ViewStyle = {
-      flex: buttons.length > 2 ? 0 : 1,
+      flex: buttons.length > 2 || isSingleButton ? 0 : 1,
       minHeight: 48,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.base,
@@ -153,6 +146,8 @@ const UIAlert: React.FC<UIAlertProps> = ({
       marginBottom: buttons.length > 2 && index < buttons.length - 1 ? spacing.sm : 0,
       alignItems: 'center',
       justifyContent: 'center',
+      alignSelf: isSingleButton ? 'center' : undefined,
+      minWidth: isSingleButton ? 180 : undefined,
     };
 
     switch (button.style) {
@@ -171,7 +166,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
       default:
         return {
           ...baseStyle,
-          backgroundColor: colors.primary.main,
+          backgroundColor: '#FFFFFF',
         };
     }
   };
@@ -180,21 +175,21 @@ const UIAlert: React.FC<UIAlertProps> = ({
     switch (button.style) {
       case 'destructive':
         return {
-          color: colors.text.primary,
+          color: '#FFFFFF',
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
         };
       case 'cancel':
         return {
-          color: colors.text.secondary,
+          color: '#FFFFFF',
           fontWeight: typography.fontWeight.medium,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
         };
         default:
         return {
-          color: colors.text.inverse,
+          color: '#FFFFFF',
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
@@ -240,12 +235,12 @@ const UIAlert: React.FC<UIAlertProps> = ({
                       width: 64,
                       height: 64,
                       borderRadius: 32,
-                      backgroundColor: typeConfig.ring,
+                      backgroundColor: 'rgba(255,255,255,0.08)',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <Ionicons name={typeConfig.icon} size={32} color={typeConfig.iconColor} />
+                    <Ionicons name={typeConfig.icon} size={32} color={colors.text.secondary} />
                   </View>
                 </View>
               )}

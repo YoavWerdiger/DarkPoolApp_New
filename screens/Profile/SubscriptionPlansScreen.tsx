@@ -4,10 +4,8 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity,
-  SafeAreaView,
   Dimensions,
   Animated,
-  Platform,
   FlatList,
 } from 'react-native';
 import {
@@ -27,10 +25,9 @@ import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentServic
 import AnimatedCard from '../../components/ui/AnimatedCard';
 import AnimatedToggle from '../../components/ui/AnimatedToggle';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CARD_WIDTH = Math.round(screenWidth * 0.78);
@@ -77,8 +74,6 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
-  const mainTabsHeight = useMainTabsHeight();
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [scrollX] = useState(new Animated.Value(0));
@@ -541,7 +536,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
         <ChatSubScreenHeader title="בחר מסלול" onBack={() => navigation.goBack()} />
 
       <View style={{ flex: 1 }}>

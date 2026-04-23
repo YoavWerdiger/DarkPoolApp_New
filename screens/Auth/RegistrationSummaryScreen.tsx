@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../../services/authService';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SUPABASE_URL } from '../../config/publicEnv';
 
@@ -253,8 +254,14 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
             <ProgressBar current={5} total={5} />
           </View>
 
+          <RNSafeAreaView style={{ flex: 1 }} edges={['bottom']}>
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, paddingTop: 20 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingHorizontal: 24,
+              paddingBottom: 24,
+              paddingTop: 20,
+            }}
             showsVerticalScrollIndicator={false}
           >
             {/* Success icon */}
@@ -449,6 +456,7 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
               </TouchableOpacity>
             </View>
           </ScrollView>
+          </RNSafeAreaView>
         </LinearGradient>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>

@@ -12,12 +12,13 @@ export function useLockParentDrawerWhileFocused() {
     useCallback(() => {
       const nav = navigation as unknown as DrawerParentNavigation;
       const drawerNav = getMainDrawerNavigation(nav);
-      if (!drawerNav?.setOptions) return undefined;
+      const setDrawerOptions = drawerNav?.setOptions;
+      if (!setDrawerOptions) return undefined;
 
-      drawerNav.setOptions({ swipeEnabled: false });
+      setDrawerOptions({ swipeEnabled: false });
       return () => {
         // אותו drawerNav כמו בפוקוס — ב-blur חיפוש מחדש לפעמים מחזיר undefined וה-swipe נשאר כבוי.
-        drawerNav.setOptions({ swipeEnabled: true });
+        setDrawerOptions({ swipeEnabled: true });
       };
     }, [navigation])
   );

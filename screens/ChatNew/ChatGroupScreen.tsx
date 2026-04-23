@@ -14,7 +14,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, StackActions } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import ChatMessage from '../../components/chat/ChatMessage';
 import ChatInput from '../../components/chat/ChatInput';
@@ -667,9 +667,7 @@ export default function ChatGroupScreen() {
   /** חזרה — לדף פירוט הקבוצה (לא לרשימה), כדי שמסך המידע יהיה "תחנת היציאה" לפני הקהילה */
   const handleBack = () => {
     if (groupId) {
-      (navigation as { replace: (name: string, params?: { groupId: string }) => void }).replace('ChatGroupInfo', {
-        groupId,
-      });
+      navigation.dispatch(StackActions.replace('ChatGroupInfo', { groupId }));
     } else {
       navigation.goBack();
     }

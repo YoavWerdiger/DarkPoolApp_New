@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity, Animated, type ViewStyle, type TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -54,6 +54,9 @@ export default function FearAndGreedCard({
   const gaugeSize = 380;
 
   const styles = useMemo(() => {
+    const headerJustifyContent: ViewStyle['justifyContent'] = disableToggle ? 'center' : 'space-between';
+    const titleTextAlign: TextStyle['textAlign'] = disableToggle ? 'center' : 'right';
+
     return {
       container: {
         marginHorizontal: fullWidth ? 0 : DesignTokens.spacing.lg,
@@ -68,7 +71,7 @@ export default function FearAndGreedCard({
       header: {
         flexDirection: 'row' as const,
         alignItems: 'center' as const,
-        justifyContent: (disableToggle ? 'center' : 'space-between') as const,
+        justifyContent: headerJustifyContent,
         marginBottom: -60,
         zIndex: 10,
         paddingHorizontal: DesignTokens.spacing.sm,
@@ -77,7 +80,7 @@ export default function FearAndGreedCard({
         fontSize: DesignTokens.typography.fontSize.lg,
         fontWeight: DesignTokens.typography.fontWeight.bold as any,
         color: DesignTokens.colors.text.primary,
-        textAlign: (disableToggle ? 'center' : 'right') as const,
+        textAlign: titleTextAlign,
         writingDirection: 'rtl' as const,
         ...(disableToggle ? { width: '100%' as const } : {}),
       },

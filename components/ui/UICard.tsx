@@ -13,6 +13,7 @@ export interface UICardProps {
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
   pressable?: boolean;
+  accessibilityLabel?: string;
 }
 
 const UICard: React.FC<UICardProps> = ({
@@ -24,6 +25,7 @@ const UICard: React.FC<UICardProps> = ({
   style,
   contentContainerStyle,
   pressable = false,
+  accessibilityLabel,
 }) => {
   const tokens = useDesignTokens();
   const { colors, spacing, borderRadius, shadows, glassmorphism, layout } = tokens;
@@ -97,6 +99,9 @@ const UICard: React.FC<UICardProps> = ({
     ...flatOuterStyle,
   };
 
+  /** רדיוס לשכבות blur/מילוי — חייב להתאים ל־outer כדי שהעיגול ייראה מלא (לא "ריבוע עם blur"). */
+  const clipCornerRadius = flatOuterStyle?.borderRadius ?? borderRadius.lg;
+
   const themeMode = isDarkMode ? 'dark' : 'light';
   const glassOverlay = glassmorphism.cardBackground[themeMode][glassIntensity];
   const glassBorder = glassmorphism.border[themeMode][glassIntensity];
@@ -118,13 +123,15 @@ const UICard: React.FC<UICardProps> = ({
             <BlurView
               intensity={glassmorphism.blurIntensity[glassIntensity]}
               tint={blurTint}
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, { borderRadius: clipCornerRadius, overflow: 'hidden' }]}
             />
           ) : (
             <View
               style={[
                 StyleSheet.absoluteFill,
                 {
+                  borderRadius: clipCornerRadius,
+                  overflow: 'hidden',
                   backgroundColor: isDarkMode
                     ? 'rgba(22, 32, 24, 0.72)'
                     : 'rgba(245, 245, 247, 0.88)',
@@ -135,7 +142,11 @@ const UICard: React.FC<UICardProps> = ({
           <View
             style={[
               StyleSheet.absoluteFill,
-              { backgroundColor: glassOverlay },
+              {
+                borderRadius: clipCornerRadius,
+                overflow: 'hidden',
+                backgroundColor: glassOverlay,
+              },
             ]}
           />
           <View
@@ -145,7 +156,7 @@ const UICard: React.FC<UICardProps> = ({
                 borderWidth: StyleSheet.hairlineWidth * 2,
                 borderColor: glassBorder,
                 borderTopColor: glassTopHighlight,
-                borderRadius: flatOuterStyle?.borderRadius ?? borderRadius.lg,
+                borderRadius: clipCornerRadius,
               },
             ]}
           />
@@ -165,6 +176,8 @@ const UICard: React.FC<UICardProps> = ({
           pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] },
         ]}
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
       >
         {cardContent}
       </Pressable>

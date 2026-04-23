@@ -6,7 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
 import ProfileStack from './navigation/ProfileStack';
-import { View, ActivityIndicator, Text, StatusBar, StyleSheet, AppState, TouchableOpacity } from 'react-native';
+import { View, ActivityIndicator, Text, StatusBar, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AnimatedBackground } from './components/VideoBackground';
 import "./global.css";
@@ -26,6 +26,8 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from './utils/hapticFeedback';
 import { Fingerprint } from 'lucide-react-native';
 import { rootNavigationRef } from './navigation/rootNavigationRef';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
 
 initSentry();
 
@@ -133,6 +135,21 @@ function AppContent() {
     HapticFeedback.init();
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const setupNavigationBar = async () => {
+      try {
+        await NavigationBar.setBackgroundColorAsync('#00000000');
+        await NavigationBar.setButtonStyleAsync('light');
+      } catch (error) {
+        logger.warn('App', 'Failed to configure Android navigation bar', error);
+      }
+    };
+
+    setupNavigationBar();
+  }, []);
+
   // אתחול עדכונים מתוזמנים
   useEffect(() => {
     // התחלת עדכונים מתוזמנים רק אחרי שהמשתמש מחובר
@@ -177,8 +194,7 @@ function AppContent() {
           });
         } else if (notificationType === 'economic_calendar') {
           rootNavigationRef.navigate('Main', {
-            screen: 'News',
-            params: { tab: 'calendar' }
+            screen: 'NewsCalendar',
           });
         } else {
           rootNavigationRef.navigate('Main');
@@ -220,7 +236,8 @@ function AppContent() {
         backgroundColor="transparent"
         translucent={false}
       />
-      <NavigationContainer ref={rootNavigationRef}>
+      {/* חייב להתאים ל־direction של ה־View המעטף — אחרת useLocale (rtl) לא תואם ל־Yoga (ltr) ו־react-native-drawer-layout מחשב translateX שגוי (רצועת מגירה בפרודקשן). */}
+      <NavigationContainer ref={rootNavigationRef} direction="ltr">
         <Stack.Navigator screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: 'transparent' },
@@ -289,19 +306,21 @@ function AppContent() {
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
-      <KeyboardProvider>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            <AuthProvider>
-              <ToastProvider>
-                <AppDialogProvider>
-                  <AppContent />
-                </AppDialogProvider>
-              </ToastProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </KeyboardProvider>
+      <SafeAreaProvider>
+        <KeyboardProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+              <AuthProvider>
+                <ToastProvider>
+                  <AppDialogProvider>
+                    <AppContent />
+                  </AppDialogProvider>
+                </ToastProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </KeyboardProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

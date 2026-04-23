@@ -8,6 +8,7 @@ import { logger } from '../../utils/logger';
 import * as DocumentPicker from 'expo-document-picker';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 // ImagePicker media types - using new array format for Expo SDK 52+
 
@@ -24,6 +25,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
 
   // טיפול בבחירת פעולה
   const handleAction = async (actionType: string) => {
+    void HapticFeedback.selection();
     try {
       switch (actionType) {
         case 'camera':

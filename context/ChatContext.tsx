@@ -73,6 +73,8 @@ interface ChatContextType {
   // Group Actions
   loadGroups: () => Promise<void>;
   selectGroup: (groupId: string) => Promise<void>;
+  /** רענון פרטי הקבוצה והחברים מהמסד (בלי לטעון מחדש הודעות) */
+  refreshCurrentGroupDetails: () => Promise<void>;
   createGroup: (input: CreateChatGroupInput) => Promise<{ success: boolean; groupId?: string; error?: string }>;
   updateGroup: (groupId: string, input: UpdateChatGroupInput) => Promise<{ success: boolean; error?: string }>;
   leaveGroup: (groupId: string) => Promise<{ success: boolean; error?: string }>;
@@ -632,6 +634,33 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoadingMessages(false);
     }
+  }, [user]);
+
+  const refreshCurrentGroupDetails = useCallback(async () => {
+    if (!user || !currentGroupId.current) return;
+    const gid = currentGroupId.current;
+    const { data, error } = await chatGroupService.getChatGroupDetails(gid, user.id);
+    if (error) {
+      logger.error('ChatContext', 'refreshCurrentGroupDetails failed', error);
+      return;
+    }
+    if (!data || currentGroupId.current !== gid) return;
+    setCurrentGroup(data);
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === gid
+          ? {
+              ...g,
+              name: data.name,
+              description: data.description,
+              avatar_url: data.avatar_url,
+              members_count: data.members_count,
+              messages_count: data.messages_count,
+              updated_at: data.updated_at,
+            }
+          : g
+      )
+    );
   }, [user]);
 
   // ============================================
@@ -1365,6 +1394,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     initialUnreadInfo,
     loadGroups,
     selectGroup,
+    refreshCurrentGroupDetails,
     createGroup,
     updateGroup,
     leaveGroup,
@@ -1390,7 +1420,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     groups, currentGroup, messages, typingUsers,
     isLoadingGroups, isLoadingMessages, isSendingMessage,
     initialUnreadInfo, isConnected, realtimeConnectionState, totalUnreadCount,
-    loadGroups, selectGroup, createGroup, updateGroup, leaveGroup,
+    loadGroups, selectGroup, refreshCurrentGroupDetails, createGroup, updateGroup, leaveGroup,
     sendMessage, loadMoreMessages, loadMessagesAround, editMessage,
     deleteMessage, forwardMessage, addReaction, removeReaction,
     starMessage, unstarMessage, setTyping, markAsRead,

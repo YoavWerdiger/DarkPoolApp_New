@@ -75,7 +75,18 @@ export default function RegisterScreen({ navigation }: any) {
     if (error) {
       legacyAlert('שגיאה בהרשמה', error);
     } else {
-      legacyAlert('הצלחה', 'החשבון נוצר בהצלחה! אנא אשר את האימייל שלך.', [
+      legacyAlert('נשלח מייל אימות', 'החשבון נוצר בהצלחה. אנא אשר את האימייל לפני התחברות.', [
+        {
+          text: 'שלח שוב',
+          onPress: async () => {
+            const { error: resendError } = await AuthService.resendVerificationEmail(email.trim());
+            if (resendError) {
+              legacyAlert('שגיאה', resendError);
+            } else {
+              legacyAlert('בוצע', 'מייל אימות נשלח שוב בהצלחה');
+            }
+          },
+        },
         { text: 'אישור', onPress: () => navigation.navigate('Login') }
       ]);
     }

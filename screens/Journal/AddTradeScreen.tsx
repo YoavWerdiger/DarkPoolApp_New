@@ -8,8 +8,8 @@ import {
   StyleSheet,
   Platform,
   KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -23,6 +23,7 @@ import { supabase } from '../../services/supabase';
 import type { JournalStackParamList } from '../../navigation/JournalStack';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { BRANDFETCH_CLIENT_ID } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const STEPS = ['פרטי עסקה', 'מחירים וכמות', 'תאריכים ושעות'] as const;
 
@@ -165,8 +166,10 @@ export default function AddTradeScreen() {
       });
 
       if (error) throw error;
+      void HapticFeedback.success();
       navigation.goBack();
     } catch {
+      void HapticFeedback.error();
       legacyAlert('שגיאה', 'לא ניתן להוסיף את הטרייד');
     } finally {
       setLoading(false);
@@ -175,8 +178,10 @@ export default function AddTradeScreen() {
 
   const goNext = () => {
     if (!validateStep(step)) return;
-    if (step < STEPS.length - 1) setStep((x) => x + 1);
-    else void handleSubmit();
+    if (step < STEPS.length - 1) {
+      void HapticFeedback.impactLight();
+      setStep((x) => x + 1);
+    } else void handleSubmit();
   };
 
   const goBackStep = () => {
@@ -492,7 +497,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     topBar: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      paddingHorizontal: 16,
+      paddingHorizontal: tokens.layout.screenPadding,
       paddingVertical: 12,
       borderBottomWidth: 1,
       borderBottomColor: tokens.colors.border.primary,
@@ -506,8 +511,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     topBarSpacer: { width: 44 },
     topTitle: {
       flex: 1,
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: tokens.typography.title2.size,
+      lineHeight: tokens.typography.title2.lineHeight,
+      fontWeight: tokens.typography.title2.weight as '700',
       color: tokens.colors.text.primary,
       textAlign: 'center',
     },
@@ -540,17 +546,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       opacity: 0.45,
     },
     stepLabel: {
-      fontSize: 10,
+      fontSize: tokens.typography.caption.size,
+      lineHeight: tokens.typography.caption.lineHeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'center',
     },
     stepLabelActive: {
       color: tokens.colors.primary.main,
-      fontWeight: '600',
+      fontWeight: tokens.typography.fontWeight.semibold as '600',
     },
     scroll: { flex: 1 },
     scrollContent: {
-      paddingHorizontal: 20,
+      paddingHorizontal: tokens.layout.screenPadding,
+      paddingTop: tokens.spacing.xs,
       paddingBottom: 24,
     },
     inputGroup: {
@@ -587,7 +595,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       fontWeight: tokens.typography.fontWeight.bold,
     },
     footer: {
-      paddingHorizontal: 20,
+      paddingHorizontal: tokens.layout.screenPadding,
       paddingTop: 8,
       paddingBottom: 12,
       borderTopWidth: 1,

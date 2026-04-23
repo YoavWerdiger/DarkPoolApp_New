@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   FlatList,
   ActivityIndicator,
   StyleSheet,
@@ -15,6 +14,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { Trade } from './TradesListTab';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
@@ -31,12 +31,21 @@ export default function CalendarTab() {
 
   /** רוחב פנימי אחיד + רווחים בין עמודות — כדי שהגריד יתאים למרכז המסך בלי חפיפה */
   const gridLayout = React.useMemo(() => {
-    const horizontalPad = DesignTokens.layout?.screenPadding ?? DesignTokens.spacing.xl;
+    const horizontalPad = DesignTokens.layout?.screenPadding ?? 20;
     const inner = windowWidth - horizontalPad * 2;
-    const colGap = 4;
-    const dayWidth = Math.max(0, (inner - colGap * 6) / 7);
-    return { horizontalPad, inner, colGap, dayWidth };
+    /** אותו מרווח בין עמודות ובין שורות */
+    const cellGap = 4;
+    const dayWidth = Math.max(0, (inner - cellGap * 6) / 7);
+    return { horizontalPad, inner, cellGap, dayWidth };
   }, [DesignTokens, windowWidth]);
+
+  const glassDayBase = React.useMemo(
+    () => ({
+      ...DesignTokens.getGlassCardStyle('light'),
+      borderRadius: DesignTokens.borderRadius.lg,
+    }),
+    [DesignTokens]
+  );
 
   const styles = React.useMemo(
     () => createStyles(DesignTokens, mainTabsHeight, gridLayout),
@@ -127,6 +136,27 @@ export default function CalendarTab() {
     return formatted;
   };
 
+  /**
+   * מספרי P&L קצרים: 1000→$1k, 21000→$21k, מעל מיליון → $1.2M
+   * מחרוזת אחת — בלי פסיקים ששוברים שורה
+   */
+  const formatPnlForCell = (pnl: number) => {
+    if (pnl === 0) return '$0';
+    const sign = pnl < 0 ? '-' : '';
+    const v = Math.abs(pnl);
+    if (v >= 1_000_000) {
+      const m = v / 1_000_000;
+      const s = m >= 10 ? m.toFixed(0) : m.toFixed(1).replace(/\.0$/, '');
+      return `${sign}$${s}M`;
+    }
+    if (v >= 1_000) {
+      const k = v / 1_000;
+      const s = k % 1 < 0.05 ? k.toFixed(0) : k.toFixed(1).replace(/\.0$/, '');
+      return `${sign}$${s}k`;
+    }
+    return `${sign}$${v.toFixed(0)}`;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.getDate();
@@ -189,50 +219,72 @@ export default function CalendarTab() {
   const calendarData = getCalendarData();
 
   const renderCalendarDay = ({ item, index }: { item: DailyPnl | null; index: number }) => {
-    const cellGap = index % 7 !== 6 ? gridLayout.colGap : 0;
-    const cellBase = [styles.calendarDay, { width: gridLayout.dayWidth, marginRight: cellGap }];
+    const g = gridLayout.cellGap;
+    const hGap = index % 7 !== 6 ? g : 0;
+    const numRows = Math.ceil(calendarData.length / 7);
+    const row = Math.floor(index / 7);
+    const vGap = row < numRows - 1 ? g : 0;
+    const cellSize = { width: gridLayout.dayWidth, marginRight: hGap, marginBottom: vGap };
 
-    // תא ריק
+    const cellShell = (children: React.ReactNode, accent?: 'profit' | 'loss' | null) => (
+      <View style={[styles.calendarDay, glassDayBase, cellSize, styles.calendarDayClip]}>
+        {accent === 'profit' && (
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              { borderRadius: DesignTokens.borderRadius.lg, backgroundColor: `${DesignTokens.colors.success.main}24` },
+            ]}
+          />
+        )}
+        {accent === 'loss' && (
+          <View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFillObject,
+              { borderRadius: DesignTokens.borderRadius.lg, backgroundColor: `${DesignTokens.colors.text.danger}24` },
+            ]}
+          />
+        )}
+        {children}
+      </View>
+    );
+
     if (!item) {
-      return (
-        <View style={[...cellBase, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
-      );
+      return cellShell(null);
     }
+
     const dayNumber = formatDate(item.date);
     const dayName = getDayName(item.date);
     const hasTrades = item.pnl !== 0;
     const isProfit = item.pnl > 0;
     const isLoss = item.pnl < 0;
+    const accent = isProfit ? 'profit' : isLoss ? 'loss' : null;
 
-    // צבע רקע בהתאם ל-P&L
-    let backgroundColor = 'transparent';
-    if (isProfit) {
-      backgroundColor = `${DesignTokens.colors.success.main}20`;
-    } else if (isLoss) {
-      backgroundColor = `${DesignTokens.colors.text.danger}20`;
-    }
-
-    return (
-      <View style={[...cellBase, { backgroundColor }]}>
+    return cellShell(
+      <>
         <Text style={styles.dayName}>{dayName}</Text>
         <Text style={styles.dayNumber}>{dayNumber}</Text>
         {hasTrades && (
-          <View style={styles.pnlIndicator}>
-            <Text style={[
-              styles.pnlText,
-              isProfit && styles.pnlTextProfit,
-              isLoss && styles.pnlTextLoss
-            ]}>
-              <Text style={[
+          <View style={styles.pnlIndicator} pointerEvents="none">
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
+              ellipsizeMode="clip"
+              allowFontScaling
+              style={[
                 styles.pnlText,
                 isProfit && styles.pnlTextProfit,
-                isLoss && styles.pnlTextLoss
-              ]}>$</Text>
-              {formatCurrencyWithColor(item.pnl)}
+                isLoss && styles.pnlTextLoss,
+              ]}
+            >
+              {formatPnlForCell(item.pnl)}
             </Text>
           </View>
         )}
-      </View>
+      </>,
+      accent
     );
   };
 
@@ -257,59 +309,65 @@ export default function CalendarTab() {
       >
         {/* Month Header */}
         <View style={styles.monthHeaderContainer}>
-          <UICard variant="blur" padding="md">
+          {/** מעטפת כמו ניווט תאריך ב"דיווחי רווח" (EarningsReportsTab) */}
+          <UICard
+            variant="blur"
+            glassIntensity="subtle"
+            padding="none"
+            style={styles.monthNavCard}
+            contentContainerStyle={styles.monthNavCardInner}
+          >
             <View style={styles.monthHeader}>
-              <View style={styles.monthHeaderSide}>
-                <TouchableOpacity
-                  onPress={() => navigateMonth('prev')}
-                  style={styles.navButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="חודש קודם"
-                >
-                  <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
-                </TouchableOpacity>
-              </View>
+              <DayNavBlurButton
+                onPress={() => navigateMonth('prev')}
+                glassIntensity="subtle"
+                accessibilityLabel="חודש קודם"
+              >
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+              </DayNavBlurButton>
 
               <View style={styles.monthInfo}>
-                <Text style={styles.monthName}>{getMonthName(currentDate)}</Text>
-                <View style={styles.monthTotal}>
-                  <Text style={styles.monthTotalLabel}>סה"כ חודש:</Text>
-                  <Text style={[
-                    styles.monthTotalValue,
-                    isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
-                  ]}>
-                    <Text style={[
-                      styles.monthTotalValue,
-                      isMonthProfit ? styles.monthTotalProfit : styles.monthTotalLoss
-                    ]}>$</Text>
-                    {formatCurrencyWithColor(monthTotal)}
-                  </Text>
-                </View>
+                <Text style={styles.monthName} numberOfLines={2}>
+                  {getMonthName(currentDate)}
+                </Text>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                  style={[
+                    styles.monthTotalCaption,
+                    isMonthProfit ? styles.monthTotalCaptionProfit : styles.monthTotalCaptionLoss,
+                  ]}
+                >
+                  {`סה״כ חודש ${formatPnlForCell(monthTotal)}`}
+                </Text>
               </View>
 
-              <View style={styles.monthHeaderSide}>
-                <TouchableOpacity
-                  onPress={() => navigateMonth('next')}
-                  style={styles.navButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="חודש הבא"
-                >
-                  <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
-                </TouchableOpacity>
-              </View>
+              <DayNavBlurButton
+                onPress={() => navigateMonth('next')}
+                glassIntensity="subtle"
+                accessibilityLabel="חודש הבא"
+              >
+                <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+              </DayNavBlurButton>
             </View>
           </UICard>
         </View>
 
         {/* Calendar Grid */}
         {/* כותרת ימי השבוע */}
-        <View style={[styles.weekDaysHeader, { paddingHorizontal: gridLayout.horizontalPad }]}>
+        <View
+          style={[
+            styles.weekDaysHeader,
+            { paddingHorizontal: gridLayout.horizontalPad, marginBottom: gridLayout.cellGap },
+          ]}
+        >
           {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map((day, index) => (
             <View
               key={index}
               style={[
                 styles.weekDayCell,
-                { width: gridLayout.dayWidth, marginRight: index < 6 ? gridLayout.colGap : 0 },
+                { width: gridLayout.dayWidth, marginRight: index < 6 ? gridLayout.cellGap : 0 },
               ]}
             >
               <Text style={styles.weekDayText}>{day}</Text>
@@ -347,7 +405,12 @@ export default function CalendarTab() {
             <Text style={styles.legendText}>הפסד</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: 'transparent' }]} />
+            <View
+              style={[
+                styles.legendColor,
+                { backgroundColor: DesignTokens.colors.glass.card.bg, borderColor: DesignTokens.colors.glass.card.border },
+              ]}
+            />
             <Text style={styles.legendText}>ללא טריידים</Text>
           </View>
         </View>
@@ -359,7 +422,7 @@ export default function CalendarTab() {
 const createStyles = (
   tokens: ReturnType<typeof useDesignTokens>,
   mainTabsHeight: number,
-  _grid: { horizontalPad: number; inner: number; colGap: number; dayWidth: number }
+  _grid: { horizontalPad: number; inner: number; cellGap: number; dayWidth: number }
 ) => StyleSheet.create({
   container: {
     flex: 1,
@@ -373,9 +436,8 @@ const createStyles = (
     minHeight: 0,
   },
   monthHeaderContainer: {
-    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
-    paddingTop: 0,
-    marginBottom: tokens.spacing.sm,
+    paddingHorizontal: tokens.layout?.screenPadding ?? 20,
+    paddingVertical: 11,
   },
   loadingContainer: {
     flex: 1,
@@ -386,92 +448,84 @@ const createStyles = (
   loadingText: {
     fontSize: tokens.typography.body.size,
     fontWeight: tokens.typography.body.weight as any,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
+  },
+  /** כמו EarningsReportsTab — כרטיס blur + padding 12 */
+  monthNavCard: {
+    borderRadius: 16,
+    marginBottom: 10,
+  },
+  monthNavCardInner: {
+    padding: 12,
   },
   monthHeader: {
     flexDirection: 'row',
+    /** בלי זה, ב־rtlRoot הכפתור הראשון נזרק לימין והחצים נראים הפוכים */
+    direction: 'ltr' as 'ltr' | 'rtl',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  monthHeaderSide: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-  navButton: {
-    padding: tokens.spacing.sm,
-  },
   monthInfo: {
-    flex: 2,
+    flex: 1,
+    minWidth: 0,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.xs,
+    paddingHorizontal: 8,
   },
   monthName: {
-    fontSize: tokens.typography.displayXs.size,
-    fontWeight: tokens.typography.displayXs.weight as any,
-    letterSpacing: tokens.typography.displayXs.letterSpacing,
+    fontSize: 16,
+    fontWeight: '600' as any,
+    lineHeight: 21,
     color: tokens.colors.text.primary,
     textAlign: 'center',
+    writingDirection: 'rtl' as any,
   },
-  monthTotal: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: tokens.spacing.xs,
-    flexWrap: 'wrap',
-  },
-  monthTotalLabel: {
-    fontSize: tokens.typography.body.size,
-    fontWeight: tokens.typography.body.weight as any,
-    color: tokens.colors.text.secondary,
+  /** שורה משנית — כמו תג "היום" בדיווח רווח */
+  monthTotalCaption: {
+    fontSize: 11,
+    fontWeight: '600' as any,
+    marginTop: 1,
     textAlign: 'center',
+    writingDirection: 'rtl' as any,
   },
-  monthTotalValue: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    textAlign: 'center',
-  },
-  monthTotalProfit: {
+  monthTotalCaptionProfit: {
     color: tokens.colors.primary.main,
   },
-  monthTotalLoss: {
+  monthTotalCaptionLoss: {
     color: tokens.colors.text.danger,
   },
   weekDaysHeader: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
     justifyContent: 'flex-start',
+    alignItems: 'center',
     alignSelf: 'center',
     maxWidth: '100%',
-    marginBottom: 2,
   },
   weekDayCell: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 2,
   },
   weekDayText: {
-    fontSize: tokens.typography.bodySmall.size,
+    fontSize: tokens.typography.footnote.size,
+    lineHeight: tokens.typography.footnote.lineHeight,
     fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.secondary,
+    textAlign: 'center',
   },
   calendarGrid: {
-    paddingBottom: tokens.spacing.sm,
+    paddingBottom: 0,
   },
+  /** מבנה — רקע/מסגרת מ־getGlassCardStyle + glassDayBase */
   calendarDay: {
     aspectRatio: 1,
-    borderRadius: tokens.borderRadius.lg,
-    padding: 2, // padding קטן יותר כדי שהמספר יכנס
+    padding: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
-    backgroundColor: tokens.colors.glass.card.bg,
-    overflow: 'hidden', // חיתוך תוכן שחורג
+  },
+  calendarDayClip: {
+    overflow: 'hidden',
   },
   dayName: {
     fontSize: tokens.typography.fontSize.xs,
@@ -480,19 +534,26 @@ const createStyles = (
     display: 'none', // הסתרת שם היום כי יש כותרת נפרדת
   },
   dayNumber: {
-    fontSize: tokens.typography.fontSize.sm,
+    fontSize: tokens.typography.subhead.size,
+    lineHeight: tokens.typography.subhead.lineHeight,
     fontWeight: tokens.typography.fontWeight.bold as any,
     color: tokens.colors.text.primary,
     marginBottom: 1,
   },
   pnlIndicator: {
-    marginTop: 1,
+    width: '100%',
     maxWidth: '100%',
+    marginTop: 2,
+    paddingHorizontal: 0,
+    alignItems: 'center',
+    alignSelf: 'stretch',
   },
   pnlText: {
-    fontSize: 9, // גודל קטן יותר כדי להכנס בתא
-    fontWeight: tokens.typography.fontWeight.bold as any,
+    fontSize: 10,
+    maxWidth: '100%',
+    fontWeight: '700' as any,
     textAlign: 'center',
+    lineHeight: 12,
   },
   pnlTextProfit: {
     color: tokens.colors.primary.main,

@@ -1559,7 +1559,8 @@ export default function ChatInput({
       <View style={styles.container}>
         {/* Input Container - glass pill */}
         <UICard
-          variant="surface"
+          variant="glass"
+          glassIntensity="light"
           padding="none"
           style={styles.inputCardOuter}
           contentContainerStyle={styles.inputCardContent}
@@ -1945,12 +1946,10 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     color: tokens.colors.text.secondary,
   },
 
+  /** רדיוס בלבד — רקע/מסגרת מגיעים מ־UICard variant="glass" */
   inputCardOuter: {
     flex: 1,
     borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
     overflow: 'hidden',
   },
   inputCardContent: {
@@ -2090,7 +2089,8 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: tokens.colors.bubbleMe,
+    /** ירוק מותג מלא — לא צבע בועה (הבועה עדינה; הכפתור נשאר “פעמון”) */
+    backgroundColor: tokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,

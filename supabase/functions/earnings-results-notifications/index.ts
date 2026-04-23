@@ -177,18 +177,16 @@ serve(async (req) => {
 
       // יצירת התראה לכל משתמש
       for (const user of usersWithNotifications) {
-        // בדיקה אם כבר יש התראה על הדיווח הזה למשתמש הזה (ב-30 דקות האחרונות)
-        const { data: existingNotification } = await supabase
+        // אותו מזהה דיווח, גם אם is_sent (שאחרי שליחה) — אחרת טריגר/סנכרון חוזרים יוצרים עוד push
+        const { data: existingAny } = await supabase
           .from('pending_notifications')
           .select('id')
           .eq('user_id', user.user_id)
           .eq('notification_type', 'earnings')
-          .eq('is_sent', false)
-          .like('title', `%${companyName}%`)
-          .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
+          .contains('data', { type: 'earnings_results', earnings_report_id: report.id })
           .limit(1)
 
-        if (existingNotification && existingNotification.length > 0) {
+        if (existingAny && existingAny.length > 0) {
           continue
         }
 
@@ -202,6 +200,7 @@ serve(async (req) => {
             body: notificationBody,
             data: {
               type: 'earnings_results',
+              earnings_report_id: report.id,
               ticker: ticker,
               code: report.code,
               report_date: report.report_date,
@@ -216,7 +215,13 @@ serve(async (req) => {
           })
 
         if (insertError) {
-          console.error(`❌ Error creating notification for ${ticker}:`, insertError)
+          if ((insertError as { code?: string }).code === '23505') {
+            console.log(
+              `⏭️ Results notification already exists (unique) for user ${user.user_id} / ${ticker}`
+            )
+          } else {
+            console.error(`❌ Error creating notification for ${ticker}:`, insertError)
+          }
         } else {
           notificationsCreated++
           console.log(`✅ Created results notification for ${ticker} (${companyName})`)

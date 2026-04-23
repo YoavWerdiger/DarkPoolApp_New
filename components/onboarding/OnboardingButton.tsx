@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DesignTokens } from '../ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface OnboardingButtonProps {
   title: string;
@@ -29,6 +30,12 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
   const isDisabled = loading || disabled;
+
+  const runPress = () => {
+    if (isDisabled) return;
+    void HapticFeedback.impactLight();
+    onPress();
+  };
 
   const pressIn = () => {
     Animated.timing(scale, {
@@ -65,7 +72,7 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
           }}
         >
           <TouchableOpacity
-            onPress={onPress}
+            onPress={runPress}
             onPressIn={pressIn}
             onPressOut={pressOut}
             disabled={isDisabled}
@@ -101,7 +108,7 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
   return (
     <Animated.View style={[{ transform: [{ scale }] }, style]}>
       <TouchableOpacity
-        onPress={onPress}
+        onPress={runPress}
         onPressIn={pressIn}
         onPressOut={pressOut}
         disabled={isDisabled}

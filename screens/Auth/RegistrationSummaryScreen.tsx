@@ -163,21 +163,51 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
       if (signUpError) { setLoading(false); legacyAlert('שגיאה בהרשמה', signUpError); return; }
 
       if (user) {
-        try { await AsyncStorage.removeItem('explicit_logout'); } catch {}
-        setUser(user);
-        if (resetData) resetData();
+        if (data.isGoogleSignUp) {
+          setLoading(false);
+          try { await AsyncStorage.removeItem('explicit_logout'); } catch {}
+          setUser(user);
+          if (resetData) resetData();
 
-        const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
-        const planName     = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
+          const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
+          const planName     = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
 
-        legacyAlert(
-          'הרשמה הושלמה בהצלחה! 🎉',
-          `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}.`,
-          [{
-            text: 'התחל',
-            onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Main' }] }),
-          }]
-        );
+          legacyAlert(
+            'הרשמה הושלמה בהצלחה! 🎉',
+            `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}.`,
+            [{
+              text: 'התחל',
+              onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Main' }] }),
+            }]
+          );
+        } else {
+          setLoading(false);
+          try { await AsyncStorage.setItem('explicit_logout', 'true'); } catch {}
+          await signOut(true);
+          if (resetData) resetData();
+
+          legacyAlert(
+            'נשלח מייל אימות',
+            `שלחנו קישור אימות לכתובת ${data.email}. יש לאשר את המייל ורק אז להתחבר.`,
+            [
+              {
+                text: 'שלח שוב',
+                onPress: async () => {
+                  const { error } = await AuthService.resendVerificationEmail(data.email || '');
+                  if (error) {
+                    legacyAlert('שגיאה', error);
+                  } else {
+                    legacyAlert('בוצע', 'מייל אימות נשלח שוב בהצלחה');
+                  }
+                },
+              },
+              {
+                text: 'אישור',
+                onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
+              },
+            ]
+          );
+        }
       } else {
         legacyAlert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
       }

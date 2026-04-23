@@ -147,19 +147,18 @@ serve(async (req) => {
 
       // יצירת התראה לכל משתמש
       for (const user of usersWithNotifications) {
-        // בדיקה אם כבר יש התראה על הדיווח הזה למשתמש הזה
-        const { data: existingNotification } = await supabase
+        // בדיקת כפילות לפי מזהה דיווח (לא is_sent) — אחרי שליחה השורה נשארת is_sent=true
+        // אחרת ה-cron יחזור על אותו דיווח וייצר עוד push
+        const { data: existingAny } = await supabase
           .from('pending_notifications')
           .select('id')
           .eq('user_id', user.user_id)
           .eq('notification_type', 'earnings')
-          .eq('is_sent', false)
-          .like('body', `%${ticker}%`)
-          .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()) // ב-30 דקות האחרונות
+          .contains('data', { type: 'earnings', earnings_report_id: report.id })
           .limit(1)
 
-        if (existingNotification && existingNotification.length > 0) {
-          continue // כבר יש התראה
+        if (existingAny && existingAny.length > 0) {
+          continue
         }
 
         // יצירת התראה
@@ -172,6 +171,7 @@ serve(async (req) => {
             body: `${companyName} (${ticker}) - דיווח ${timeDisplay} בעוד ${minutesDiff} דקות`,
             data: {
               type: 'earnings',
+              earnings_report_id: report.id,
               ticker: ticker,
               code: report.code,
               report_date: report.report_date,
@@ -183,7 +183,11 @@ serve(async (req) => {
           })
 
         if (insertError) {
-          console.error(`❌ Error creating notification for ${ticker}:`, insertError)
+          if ((insertError as { code?: string }).code === '23505') {
+            console.log(`⏭️ Upcoming notification already exists (unique) for user ${user.user_id} / ${ticker}`)
+          } else {
+            console.error(`❌ Error creating notification for ${ticker}:`, insertError)
+          }
         } else {
           notificationsCreated++
           console.log(`✅ Created notification for ${ticker} (${companyName}) - ${minutesDiff} minutes`)

@@ -16,6 +16,7 @@ import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentServic
 import { useDesignTokens, DesignTokens as StaticDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const { width } = Dimensions.get('window');
 
@@ -103,6 +104,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       }
       
     } catch (error) {
+      void HapticFeedback.error();
       legacyAlert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
@@ -133,6 +135,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'payment_success') {
+        void HapticFeedback.success();
         legacyAlert(
           'תשלום הושלם בהצלחה!',
           'המנוי שלך הופעל בהצלחה. תוכל להתחיל להשתמש בכל התכונות.',
@@ -151,6 +154,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           ]
         );
       } else if (data.type === 'payment_failed') {
+        void HapticFeedback.error();
         legacyAlert(
           'תשלום נכשל',
           data.message || 'התשלום נכשל. אנא נסה שוב.',
@@ -210,6 +214,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       }
       
     } catch (error) {
+      void HapticFeedback.error();
       legacyAlert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
@@ -358,9 +363,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     return (
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-          <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-            <ChatSubScreenHeader title="השלמת תשלום" onBack={() => setShowIframe(false)} />
-          </View>
+          <ChatSubScreenHeader title="השלמת תשלום" onBack={() => setShowIframe(false)} />
 
         {/* WebView */}
         <WebView
@@ -450,9 +453,7 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         style={{ flex: 1, backgroundColor: 'transparent' }}
       >
-        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <ChatSubScreenHeader title="פרטי התשלום" onBack={() => navigation.goBack()} />
-        </View>
+        <ChatSubScreenHeader title="פרטי התשלום" onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={{ flex: 1 }}

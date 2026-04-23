@@ -6,6 +6,7 @@ import { ProgressRing } from './ProgressRing';
 import { AccessBadge } from './AccessBadge';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface CourseCardProps {
   course: CourseWithProgress;
@@ -24,24 +25,34 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   
   const isEnrolled = !!course.enrollment;
+  const lessonsFromModules =
+    course.modules?.reduce((sum, mod) => sum + (mod.lessons?.length ?? 0), 0) ?? 0;
+  const fromProgressTotal = course.progress?.total_lessons;
+  const fromMetaTotal = (course as any).total_lessons as number | undefined;
+  const fromLessonsArr = Array.isArray((course as any).lessons) ? (course as any).lessons.length : 0;
   const totalLessons =
-    course.progress?.total_lessons ??
-    (course as any).total_lessons ??
-    (Array.isArray((course as any).lessons) ? (course as any).lessons.length : 0);
+    [fromProgressTotal, fromMetaTotal, fromLessonsArr, lessonsFromModules].find(
+      (n) => typeof n === 'number' && n > 0
+    ) ?? 0;
   const completedLessons = course.progress?.completed_lessons || 0;
   const progressPercentage =
     totalLessons > 0
       ? (completedLessons / totalLessons) * 100
       : course.progress?.progress_percentage || 0;
-  
+  const showProgressRing = isEnrolled || totalLessons > 0;
+
   // קבלת מחיר מהקורס (אם יש)
   const coursePrice = (course as any).price || 0;
+  const hasTopRightBadge = coursePrice > 0 || (!hideBadges && coursePrice === 0);
   const originalPrice = (course as any).original_price || 0;
   const hasDiscount = originalPrice > 0 && originalPrice > coursePrice;
 
   return (
     <TouchableOpacity
-      onPress={() => onPress(course)}
+      onPress={() => {
+        void HapticFeedback.impactLight();
+        onPress(course);
+      }}
       activeOpacity={0.7}
     >
       <UICard
@@ -84,14 +95,20 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             </View>
           )}
 
-          {/* Progress Ring for enrolled courses */}
-          {isEnrolled && (
-            <View style={styles.progressContainer}>
+          {/* טבעת התקדמות — גם כשיש ספירת שיעורים מהמודולים בלי enrollment בלבד */}
+          {showProgressRing && (
+            <View
+              style={[
+                styles.progressContainer,
+                hasTopRightBadge && { top: 56 },
+              ]}
+            >
               <ProgressRing
-                progress={progressPercentage}
-                size={40}
+                progress={Math.min(100, Math.max(0, progressPercentage))}
+                size={48}
                 strokeWidth={3}
                 color={DesignTokens.colors.primary.main}
+                centerLabel={`${Math.round(progressPercentage)}%`}
               />
             </View>
           )}
@@ -123,22 +140,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             </Text>
           )}
 
-          {/* Progress Info */}
+          {/* סיכום שיעורים — בלי פס התקדמות (האחוז בטבעת) */}
           {totalLessons > 0 && (
             <View style={styles.progressInfo}>
-              <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${progressPercentage}%`,
-                    },
-                  ]}
-                />
-                <Text style={styles.progressPercentLabel}>
-                  {Math.round(progressPercentage)}%
-                </Text>
-              </View>
               <Text style={styles.progressText}>
                 {completedLessons}/{totalLessons} שיעורים הושלמו
               </Text>
@@ -282,34 +286,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginTop: tokens.spacing.sm,
   },
   progressText: {
-    fontSize: tokens.typography.fontSize.xs,
+    fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.medium as any,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
     textAlign: 'right',
-  },
-  progressTrack: {
-    width: '100%',
-    height: 18,
-    borderRadius: tokens.borderRadius.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: tokens.spacing.xs,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressPercentLabel: {
-    position: 'absolute',
-    color: tokens.colors.text.primary,
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-  },
-  progressFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: tokens.colors.primary.main,
-    borderRadius: tokens.borderRadius.full,
   },
   tagsContainer: {
     flexDirection: 'row-reverse',

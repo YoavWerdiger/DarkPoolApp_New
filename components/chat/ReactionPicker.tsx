@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 
 interface ReactionPickerProps {
@@ -112,6 +113,7 @@ export default function ReactionPicker({
   }), [DesignTokens]);
   
   const handleReaction = (emoji: string) => {
+    void HapticFeedback.selection();
     onReaction(emoji);
     onClose();
   };

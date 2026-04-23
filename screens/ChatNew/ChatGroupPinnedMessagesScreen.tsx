@@ -131,7 +131,15 @@ export default function ChatGroupPinnedMessagesScreen() {
                 <View style={styles.pinnedHeader}>
                   <View style={styles.pinnedHeaderLeft}>
                     <Ionicons
-                      name={msg.message_type === 'image' ? 'image' : msg.message_type === 'video' ? 'videocam' : 'chatbubble'}
+                      name={
+                        msg.message_type === 'image'
+                          ? 'image'
+                          : msg.message_type === 'video'
+                            ? 'videocam'
+                            : msg.message_type === 'trade'
+                              ? 'trending-up'
+                              : 'chatbubble'
+                      }
                       size={18}
                       color={DesignTokens.colors.primary.main}
                     />

@@ -6,8 +6,9 @@ import {
   Animated,
   TouchableOpacity,
   Platform,
+  I18nManager,
 } from 'react-native';
-import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 
@@ -29,7 +30,8 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: string) => void }) {
   const tokens = useDesignTokens();
   const { colors, borderRadius, typography, spacing } = tokens;
-  const translateY = useRef(new Animated.Value(-100)).current;
+  const glass = tokens.getGlassCardStyle('light');
+  const translateY = useRef(new Animated.Value(48)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
   const typeConfig: Record<ToastType, { icon: keyof typeof Ionicons.glyphMap; color: string }> = {
@@ -41,16 +43,16 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
 
   useEffect(() => {
     Animated.parallel([
-      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 80, friction: 12 }),
-      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 78, friction: 11 }),
+      Animated.timing(opacity, { toValue: 1, duration: 220, useNativeDriver: true }),
     ]).start();
 
     const timer = setTimeout(() => {
       Animated.parallel([
-        Animated.timing(translateY, { toValue: -100, duration: 250, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.timing(translateY, { toValue: 56, duration: 240, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 240, useNativeDriver: true }),
       ]).start(() => onDismiss(toast.id));
-    }, toast.duration || 3000);
+    }, toast.duration || 3500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -60,41 +62,48 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
   return (
     <Animated.View
       style={[
+        glass,
         {
-          flexDirection: 'row',
+          flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
-          paddingHorizontal: spacing.lg,
+          paddingLeft: spacing.base,
+          paddingRight: spacing.md,
           paddingVertical: spacing.md,
-          borderRadius: borderRadius.md,
+          borderRadius: borderRadius.xl,
+          borderColor: `${config.color}40`,
           borderWidth: 1,
-          backgroundColor: `${config.color}12`,
-          borderColor: `${config.color}30`,
-          gap: spacing.sm,
-          width: '100%',
+          maxWidth: '100%',
+          gap: spacing.md,
           ...Platform.select({
-            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8 },
-            android: { elevation: 8 },
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 16 },
+            android: { elevation: 12 },
           }),
           transform: [{ translateY }],
           opacity,
         },
       ]}
     >
-      <Ionicons name={config.icon} size={20} color={config.color} />
+      <Ionicons name={config.icon} size={22} color={config.color} />
       <Text
         style={{
           flex: 1,
           color: colors.text.primary,
-          fontSize: typography.bodySmall.size,
-          fontWeight: typography.label.weight,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          fontSize: typography.body.size,
+          fontWeight: typography.bodySemiBold.weight as '600',
+          lineHeight: typography.body.lineHeight,
+          textAlign: I18nManager.isRTL ? 'right' : 'left',
+          writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr',
         }}
+        numberOfLines={4}
       >
         {toast.message}
       </Text>
-      <TouchableOpacity onPress={() => onDismiss(toast.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-        <Ionicons name="close" size={16} color={colors.text.tertiary} />
+      <TouchableOpacity
+        onPress={() => onDismiss(toast.id)}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={{ padding: spacing.xs }}
+      >
+        <Ionicons name="close" size={20} color={colors.text.tertiary} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -102,8 +111,8 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: (id: 
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const safeAreaContext = useContext(SafeAreaInsetsContext);
-  const topInset = safeAreaContext?.top ?? 50;
+  const insets = useSafeAreaInsets();
+  const bottomPad = insets.bottom + 12;
 
   const showToast = useCallback((message: string, type: ToastType = 'info', duration = 3000) => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
@@ -117,7 +126,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <View style={[styles.container, { top: topInset + 8 }]} pointerEvents="box-none">
+      <View style={[styles.container, { bottom: bottomPad }]} pointerEvents="box-none">
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onDismiss={dismissToast} />
         ))}
@@ -141,10 +150,10 @@ export function useToast() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: 20,
-    right: 20,
-    zIndex: 9999,
-    alignItems: 'center',
-    gap: 8,
+    left: 16,
+    right: 16,
+    zIndex: 10000,
+    alignItems: 'stretch',
+    gap: 10,
   },
 });

@@ -8,6 +8,7 @@ import PollResults from './PollResults';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface PollMessageProps {
   poll: PollWithVotes;
@@ -86,10 +87,11 @@ function PollMessage({
         onPollUpdated(updatedPoll);
         setShowResults(true);
         setSelectedOptions([]);
+        void HapticFeedback.impactLight();
+        legacyAlert('הצלחה', 'ההצבעה נשלחה בהצלחה!');
       }
-
-      legacyAlert('הצלחה', 'ההצבעה נשלחה בהצלחה!');
     } catch (error: any) {
+      void HapticFeedback.error();
       legacyAlert('שגיאה', error.message || 'לא ניתן לשלוח את ההצבעה');
     } finally {
       setIsVoting(false);
@@ -116,6 +118,7 @@ function PollMessage({
               if (updatedPoll) {
                 setCurrentPoll(updatedPoll);
                 onPollUpdated(updatedPoll);
+                void HapticFeedback.impactLight();
               }
 
               legacyAlert('הצלחה', 'הסקר ננעל בהצלחה');

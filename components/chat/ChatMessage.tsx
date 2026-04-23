@@ -30,6 +30,7 @@ import {
   invalidateChatMediaPathCache,
   chatMediaStoragePathFromRef,
 } from '../../services/chat/chatSignedMediaUrl';
+import TradeMessage from './TradeMessage';
 
 type ResolvedMessageMedia = {
   main: string | null;
@@ -451,7 +452,11 @@ function ChatMessage({
           style={[
             styles.bubble,
             isMe ? styles.myBubble : styles.theirBubble,
-            (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO || message.message_type === MessageType.MEDIA_GROUP) && styles.mediaBubble,
+            (message.message_type === MessageType.IMAGE ||
+              message.message_type === MessageType.VIDEO ||
+              message.message_type === MessageType.MEDIA_GROUP ||
+              message.message_type === MessageType.TRADE) &&
+              styles.mediaBubble,
             message.reply_to && { minWidth: 200 },
           ]}
         >
@@ -503,6 +508,25 @@ function ChatMessage({
           )}
 
           {/* Media Content */}
+          {message.message_type === MessageType.TRADE &&
+            (() => {
+              const t = parseTradePayloadFromMessage(message);
+              if (!t) {
+                return (
+                  <Text
+                    style={[
+                      styles.messageText,
+                      isMe ? styles.myMessageText : styles.theirMessageText,
+                      { textAlign: 'right' },
+                    ]}
+                  >
+                    טרייד · לא ניתן לטעון פרטים
+                  </Text>
+                );
+              }
+              return <TradeMessage trade={t} isMe={isMe} embeddedInBubble />;
+            })()}
+
           {renderMediaContent(
             message,
             resolvedMedia,
@@ -525,7 +549,7 @@ function ChatMessage({
           )}
 
           {/* Text Content */}
-          {message.content && (() => {
+          {message.content && message.message_type !== MessageType.TRADE && (() => {
             if (message.message_type === MessageType.AUDIO) return null;
 
             let displayContent = message.content;
@@ -812,8 +836,36 @@ function getMediaTypeText(type?: MessageType | string | null): string {
       return '📎 מסמך';
     case MessageType.MEDIA_GROUP:
       return '🖼️ אלבום';
+    case MessageType.TRADE:
+      return '📈 טרייד';
     default:
       return 'מדיה';
+  }
+}
+
+type ParsedTrade = {
+  id: string;
+  symbol: string;
+  direction: 'long' | 'short';
+  entry_price: number;
+  exit_price: number;
+  quantity: number;
+  entry_date: string;
+  exit_date: string;
+  pnl: number;
+  return_percentage?: number;
+  notes?: string;
+};
+
+function parseTradePayloadFromMessage(message: ChatMessageType): ParsedTrade | null {
+  if (message.message_type !== MessageType.TRADE || !message.content?.trim()) return null;
+  try {
+    const o = JSON.parse(message.content.trim()) as { trade?: ParsedTrade };
+    const t = o.trade;
+    if (!t || typeof t.symbol !== 'string') return null;
+    return t;
+  } catch {
+    return null;
   }
 }
 
@@ -826,11 +878,23 @@ function getReplyPreviewText(reply: {
   if (type === MessageType.AUDIO) {
     return getMediaTypeText(MessageType.AUDIO);
   }
+  if (type === MessageType.TRADE && reply.content?.trim()) {
+    try {
+      const p = JSON.parse(reply.content.trim()) as { trade?: { symbol?: string } };
+      if (p.trade?.symbol) return `📈 טרייד · ${p.trade.symbol}`;
+    } catch {
+      /* ignore */
+    }
+    return getMediaTypeText(MessageType.TRADE);
+  }
   const raw = reply.content?.trim();
   if (raw) {
     if (raw.startsWith('{')) {
       try {
         const p = JSON.parse(raw) as Record<string, unknown>;
+        if (p.trade && typeof (p.trade as any).symbol === 'string') {
+          return `📈 טרייד · ${(p.trade as any).symbol}`;
+        }
         if (p.waveform != null || p.waveformData != null || typeof p.duration === 'number') {
           return getMediaTypeText(MessageType.AUDIO);
         }
@@ -1505,14 +1569,14 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingHorizontal: tokens.spacing.xs,
   },
   myBubble: {
-    backgroundColor: 'rgba(0, 200, 5, 0.24)',
+    backgroundColor: tokens.colors.bubbleMe,
     borderBottomRightRadius: 4,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomLeftRadius: 16,
   },
   theirBubble: {
-    backgroundColor: 'rgba(255, 255, 255, 0.09)',
+    backgroundColor: tokens.colors.bubbleOther,
     borderBottomLeftRadius: 4,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,

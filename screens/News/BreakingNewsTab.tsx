@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TextInput, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -8,18 +8,21 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { 
   newsService, 
   NewsArticle, 
   formatNewsDate,
   truncateText,
-  getNewsCategoryColor,
-  getNewsCategoryIcon
+  getNewsCategoryColor
 } from '../../services/newsService';
 import { LikedArticlesService } from '../../services/likedArticlesService';
 import UICard from '../../components/ui/UICard';
+import { useNavigation } from '@react-navigation/native';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 // Fear & Greed מוצג בטאב "עיקרי מדדים" בלבד
+
+const SHEET_DIVIDER = 'rgba(255, 255, 255, 0.12)';
 
 interface NewsCardProps {
   article: NewsArticle;
@@ -37,6 +40,7 @@ interface ShareModalProps {
 
 const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) => {
   const DesignTokens = useDesignTokens();
+  const sheetPad = DesignTokens.layout?.screenPadding ?? 20;
   const [chatGroups, setChatGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -172,7 +176,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
       backdropOpacity={0.5}
       showHandle={true}
     >
-      <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 40 }}>
+      <View style={{ paddingHorizontal: sheetPad, paddingTop: 8, paddingBottom: 40 }}>
           <ScrollView contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
         {/* כותרת - SwiftUI style */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
@@ -200,14 +204,14 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
           </TouchableOpacity>
         </View>
 
-        {/* תצוגה מקדימה של החדשה - SwiftUI style */}
-        <View 
+        {/* תצוגה מקדימה — כרטיס blur כמו יומן כלכלי */}
+        <UICard
+          variant="blur"
+          padding="none"
           style={{
-            padding: 0,
-            borderRadius: 16,
-            backgroundColor: 'transparent',
-            marginBottom: 32,
-            overflow: 'hidden'
+            borderRadius: DesignTokens.borderRadius['2xl'],
+            overflow: 'hidden',
+            marginBottom: DesignTokens.spacing.xl,
           }}
         >
           {article.image_url && (
@@ -216,12 +220,12 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
               style={{
                 width: '100%',
                 height: 180,
-                marginBottom: 16
               }}
               resizeMode="cover"
             />
           )}
-          <View style={{ paddingHorizontal: 4 }}>
+          {article.image_url ? <View style={{ height: 1, backgroundColor: SHEET_DIVIDER }} /> : null}
+          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingVertical: DesignTokens.spacing.md }}>
             <Text 
               style={{ 
                 fontSize: 20, 
@@ -261,7 +265,7 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
               </Text>
             </View>
           </View>
-        </View>
+        </UICard>
 
         {/* רשימת קבוצות - SwiftUI style */}
         {loading ? (
@@ -287,68 +291,71 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
             >
               בחר קבוצה
             </Text>
-            {chatGroups.map((group, index) => (
+            {chatGroups.map((group) => (
               <TouchableOpacity
                 key={group.id}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingVertical: 16,
-                  paddingHorizontal: 4,
-                  marginBottom: index < chatGroups.length - 1 ? 0 : 0,
-                  borderBottomWidth: index < chatGroups.length - 1 ? 0.5 : 0,
-                  borderBottomColor: 'rgba(255,255,255,0.1)'
-                }}
+                activeOpacity={0.88}
                 onPress={() => shareToGroup(group.id, group.name)}
               >
-                <View style={{ flex: 1, marginRight: 16 }}>
-                  <Text 
-                    style={{ 
-                      fontSize: 17, 
-                      fontWeight: '600', 
-                      color: DesignTokens.colors.text.primary, 
-                      textAlign: 'right',
-                      marginBottom: 4,
-                      letterSpacing: -0.2
-                    }}
-                  >
-                    {group.name}
-                  </Text>
-                  <Text 
-                    style={{ 
-                      fontSize: 14, 
-                      color: 'rgba(255,255,255,0.5)', 
-                      textAlign: 'right' 
-                    }}
-                  >
-                    קבוצת צ'אט
-                  </Text>
-                </View>
-                <View 
+                <UICard
+                  variant="blur"
+                  padding="md"
                   style={{
-                    width: 50,
-                    height: 50,
-                    borderRadius: 25,
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden'
+                    borderRadius: DesignTokens.borderRadius.xl,
+                    marginBottom: DesignTokens.spacing.sm,
                   }}
                 >
-                  {group.image_url ? (
-                    <Image 
-                      source={{ uri: group.image_url }}
-                      style={{ width: 50, height: 50 }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Ionicons 
-                      name="people" 
-                      size={24} 
-                      color="rgba(255,255,255,0.6)" 
-                    />
-                  )}
-                </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ flex: 1, marginRight: 16 }}>
+                      <Text 
+                        style={{ 
+                          fontSize: 17, 
+                          fontWeight: '600', 
+                          color: DesignTokens.colors.text.primary, 
+                          textAlign: 'right',
+                          marginBottom: 4,
+                          letterSpacing: -0.2
+                        }}
+                      >
+                        {group.name}
+                      </Text>
+                      <Text 
+                        style={{ 
+                          fontSize: 14, 
+                          color: 'rgba(255,255,255,0.5)', 
+                          textAlign: 'right' 
+                        }}
+                      >
+                        קבוצת צ'אט
+                      </Text>
+                    </View>
+                    <View 
+                      style={{
+                        width: 50,
+                        height: 50,
+                        borderRadius: 25,
+                        backgroundColor: 'rgba(255,255,255,0.1)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      {group.image_url ? (
+                        <Image 
+                          source={{ uri: group.image_url }}
+                          style={{ width: 50, height: 50 }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Ionicons 
+                          name="people" 
+                          size={24} 
+                          color="rgba(255,255,255,0.6)" 
+                        />
+                      )}
+                    </View>
+                  </View>
+                </UICard>
               </TouchableOpacity>
             ))}
           </View>
@@ -447,6 +454,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
   onPrevious
 }) => {
   const DesignTokens = useDesignTokens();
+  const detailPad = DesignTokens.layout?.screenPadding ?? 20;
   const insets = useSafeAreaInsets();
   const [likeCount, setLikeCount] = useState<number>(0);
   
@@ -464,20 +472,6 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
 
   if (!article) return null;
 
-  const categoryColor = getNewsCategoryColor(article.category);
-  const categoryIcon = getNewsCategoryIcon(article.category);
-  
-  // זיהוי אם זה טוויטר או חדשה רגילה
-  const isTwitterPost = article.source === 'Twitter' || 
-                       article.source === 'Bloomberg' || 
-                       article.source === 'Reuters' ||
-                       article.source === 'CNN' ||
-                       article.source === 'BBC' ||
-                       article.source === 'טוויטר' ||
-                       article.url?.includes('twitter.com') ||
-                       article.source_url?.includes('twitter.com') ||
-                       article.id?.length > 15;
-
   return (
     <BottomSheet
       isOpen={visible}
@@ -486,6 +480,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       enablePanDownToClose={true}
       backdropOpacity={0.5}
       showHandle={!article.image_url}
+      edgeToEdge={!!article.image_url}
     >
       <View style={{ flex: 1 }}>
         {/* תמונה - עד לחלק העליון של ה-BottomSheet */}
@@ -500,6 +495,8 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               right: 0,
               zIndex: 1,
               overflow: 'hidden',
+              borderTopLeftRadius: DesignTokens.borderRadius.xl,
+              borderTopRightRadius: DesignTokens.borderRadius.xl,
             }}
             pointerEvents="box-none"
           >
@@ -618,7 +615,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
           showsVerticalScrollIndicator={false}
         >
           {/* תוכן */}
-          <View style={{ paddingHorizontal: 20, paddingTop: article.image_url ? 20 : 20 }}>
+          <View style={{ paddingHorizontal: detailPad, paddingTop: article.image_url ? 20 : 20 }}>
             {/* כותרת */}
             <Text 
               style={{ 
@@ -659,7 +656,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
               {article.content || article.summary}
             </Text>
 
-            {/* כפתורי פעולה - אופקיים, ממורכזים, ממלאים את הרוחב */}
+            {/* כפתורי פעולה — זכוכית/מסגרת, לא רקע tertiary כהה */}
             <View style={{ 
               flexDirection: 'row',
               gap: 12,
@@ -676,10 +673,12 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                   paddingVertical: 12,
                   paddingHorizontal: 16,
                   borderRadius: 24,
-                  backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.7)' : DesignTokens.colors.background.tertiary,
+                  backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.22)' : DesignTokens.colors.background.card,
+                  borderWidth: 1,
+                  borderColor: isLiked ? 'rgba(255, 59, 92, 0.55)' : 'rgba(255, 255, 255, 0.14)',
                   shadowColor: isLiked ? '#FF3B5C' : 'transparent',
                   shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: isLiked ? 0.2 : 0,
+                  shadowOpacity: isLiked ? 0.15 : 0,
                   shadowRadius: 2,
                   elevation: isLiked ? 2 : 0,
                 }}
@@ -696,14 +695,14 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                 <Ionicons 
                   name={isLiked ? "heart" : "heart-outline"} 
                   size={18} 
-                  color={isLiked ? "#FFF" : DesignTokens.colors.text.secondary}
+                  color={isLiked ? '#FF6B8A' : DesignTokens.colors.text.secondary}
                   style={{ marginRight: 8 }}
                 />
                 <Text 
                   style={{ 
                     fontSize: 14,
                     fontWeight: '600',
-                    color: isLiked ? "#FFF" : DesignTokens.colors.text.secondary
+                    color: isLiked ? DesignTokens.colors.text.primary : DesignTokens.colors.text.secondary
                   }}
                 >
                   {isLiked ? 'שמור' : 'שמור למועדפים'}
@@ -712,7 +711,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                   <Text style={{
                     fontSize: 12,
                     fontWeight: '600',
-                    color: isLiked ? "#FFF" : DesignTokens.colors.text.secondary,
+                    color: DesignTokens.colors.text.tertiary,
                     marginRight: 6,
                   }}>
                     ({likeCount})
@@ -730,7 +729,9 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                   paddingVertical: 12,
                   paddingHorizontal: 16,
                   borderRadius: 24,
-                  backgroundColor: DesignTokens.colors.background.tertiary,
+                  backgroundColor: DesignTokens.colors.background.card,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.14)',
                 }}
                 onPress={() => onShare(article)}
                 activeOpacity={0.7}
@@ -762,7 +763,6 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
 const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, onShare, isLiked }) => {
   const DesignTokens = useDesignTokens();
   const categoryColor = getNewsCategoryColor(article.category);
-  const categoryIcon = getNewsCategoryIcon(article.category);
 
   const handleSharePress = () => {
     if (onShare) onShare(article);
@@ -778,21 +778,23 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
 
   const hasImage = !!article.image_url;
   const thumbnailHeight = 196;
+  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
+  const cardRadius = DesignTokens.borderRadius['2xl'];
 
   return (
-    <UICard
-      variant="elevated"
-      padding="none"
+    <Pressable
       onPress={() => onPress(article)}
-      style={{
-        marginHorizontal: DesignTokens.layout?.screenPadding ?? 20,
-        marginBottom: 2,
-        borderRadius: DesignTokens.borderRadius.xl,
-        borderWidth: 1,
-        borderColor: DesignTokens.colors.border.primary,
-        overflow: 'hidden',
-      }}
+      style={{ marginHorizontal: screenPad, marginBottom: 12 }}
+      accessibilityRole="button"
     >
+      <UICard
+        variant="blur"
+        padding="none"
+        style={{
+          borderRadius: cardRadius,
+          overflow: 'hidden',
+        }}
+      >
       {/* Thumbnail + גרדיאנט רגיל לקריאת כותרת על התמונה */}
       <View style={{ height: thumbnailHeight, width: '100%', position: 'relative' }}>
         {hasImage ? (
@@ -873,12 +875,14 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
         )}
       </View>
 
-      {/* תוכן מתחת לתמונה */}
+      <View style={{ height: 1, backgroundColor: SHEET_DIVIDER }} />
+
+      {/* תוכן מתחת לתמונה — padding כמו כרטיסי יומן */}
       <View
         style={{
-          paddingHorizontal: 16,
-          paddingTop: 14,
-          paddingBottom: 18,
+          paddingHorizontal: DesignTokens.spacing.lg,
+          paddingTop: DesignTokens.spacing.md,
+          paddingBottom: DesignTokens.spacing.lg,
         }}
       >
         {/* אם יש תמונה - הכותרת כבר מעל, מציגים רק summary */}
@@ -889,7 +893,7 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
               color: DesignTokens.colors.text.secondary,
               textAlign: 'right',
               lineHeight: 20,
-              marginBottom: 12,
+              marginBottom: DesignTokens.spacing.sm,
             }}
             numberOfLines={2}
           >
@@ -915,7 +919,10 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                 justifyContent: 'center',
                 backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.15)' : 'rgba(255,255,255,0.06)',
               }}
-              onPress={() => onLike(article)}
+              onPress={(e) => {
+                e?.stopPropagation?.();
+                onLike(article);
+              }}
               activeOpacity={0.7}
             >
               <Ionicons
@@ -933,7 +940,10 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                 justifyContent: 'center',
                 backgroundColor: 'rgba(255,255,255,0.06)',
               }}
-              onPress={handleSharePress}
+              onPress={(e) => {
+                e?.stopPropagation?.();
+                handleSharePress();
+              }}
             >
               <Ionicons name="share-outline" size={18} color={DesignTokens.colors.text.secondary} />
             </TouchableOpacity>
@@ -970,13 +980,14 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           </View>
         )}
       </View>
-    </UICard>
+      </UICard>
+    </Pressable>
   );
 };
 
 export default function BreakingNewsTab() {
   const DesignTokens = useDesignTokens();
-  const mainTabsHeight = useMainTabsHeight();
+  const listBottomInset = useMainTabsHeight(16);
   const [articles, setArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -993,6 +1004,21 @@ export default function BreakingNewsTab() {
   // מצב מודל שיתוף
   const [shareArticle, setShareArticle] = useState<NewsArticle | null>(null);
   const [shareModalVisible, setShareModalVisible] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigation = useNavigation();
+
+  const filteredArticles = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return articles;
+    return articles.filter((a) => {
+      const blob = [a.title, a.label, a.summary, a.source, a.category]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return blob.includes(q);
+    });
+  }, [articles, searchQuery]);
 
   // טעינת החדשות שאהב המשתמש
   const loadLikedArticles = useCallback(async () => {
@@ -1281,38 +1307,45 @@ export default function BreakingNewsTab() {
   // רענון
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([
-      loadBreakingNews(),
-      loadLikedArticles()
-    ]);
-    setRefreshing(false);
+    try {
+      await Promise.all([
+        loadBreakingNews(),
+        loadLikedArticles()
+      ]);
+    } finally {
+      setRefreshing(false);
+      void HapticFeedback.impactLight();
+    }
   }, [loadBreakingNews, loadLikedArticles]);
 
   // בחירת כתבה - פתיחת מודל מפורט
   const handleArticlePress = useCallback((article: NewsArticle) => {
-    const index = articles.findIndex(a => a.id === article.id);
+    void HapticFeedback.impactLight();
+    const index = filteredArticles.findIndex((a) => a.id === article.id);
     setSelectedArticle(article);
     setSelectedArticleIndex(index >= 0 ? index : 0);
     setDetailModalVisible(true);
-  }, [articles]);
+  }, [filteredArticles]);
 
   // ניווט לחדשה הבאה
   const handleNextArticle = useCallback(() => {
-    if (selectedArticleIndex < articles.length - 1) {
+    if (selectedArticleIndex < filteredArticles.length - 1) {
+      void HapticFeedback.selection();
       const nextIndex = selectedArticleIndex + 1;
       setSelectedArticleIndex(nextIndex);
-      setSelectedArticle(articles[nextIndex]);
+      setSelectedArticle(filteredArticles[nextIndex]);
     }
-  }, [selectedArticleIndex, articles]);
+  }, [selectedArticleIndex, filteredArticles]);
 
   // ניווט לחדשה הקודמת
   const handlePreviousArticle = useCallback(() => {
     if (selectedArticleIndex > 0) {
+      void HapticFeedback.selection();
       const prevIndex = selectedArticleIndex - 1;
       setSelectedArticleIndex(prevIndex);
-      setSelectedArticle(articles[prevIndex]);
+      setSelectedArticle(filteredArticles[prevIndex]);
     }
-  }, [selectedArticleIndex, articles]);
+  }, [selectedArticleIndex, filteredArticles]);
 
   // סגירת מודל מפורט
   const handleCloseDetailModal = useCallback(() => {
@@ -1347,6 +1380,95 @@ export default function BreakingNewsTab() {
     setShareModalVisible(false);
     setShareArticle(null);
   }, []);
+
+  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
+
+  /** חיפוש מימין, לב משמאל — כיוון LTR לשורה בלבד כדי שלא ייעלם הלב ב־RTL */
+  const renderSearchHeader = useCallback(() => {
+    const searchActive = searchQuery.trim().length > 0;
+    const openLiked = () => (navigation as { navigate: (n: string) => void }).navigate('NewsLiked');
+    return (
+      <View
+        style={{
+          paddingHorizontal: screenPad,
+          paddingTop: 4,
+          paddingBottom: 14,
+          marginBottom: 8,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          // כפיית סדר שמאל→ימין לשורה — מונע דחיפת הלב מחוץ למסך במצב RTL גלובלי
+          direction: 'ltr',
+        }}
+      >
+        <TouchableOpacity
+          onPress={openLiked}
+          activeOpacity={0.88}
+          accessibilityRole="button"
+          accessibilityLabel="כתבות שמורות"
+          style={{ flexShrink: 0, zIndex: 2 }}
+        >
+          <UICard
+            variant="blur"
+            glassIntensity="subtle"
+            padding="none"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              overflow: 'hidden',
+            }}
+            contentContainerStyle={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Ionicons name="heart-outline" size={22} color="#FFFFFF" />
+          </UICard>
+        </TouchableOpacity>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <UICard
+            variant="blur"
+            glassIntensity="subtle"
+            padding="none"
+            style={{
+              borderRadius: 18,
+              overflow: 'hidden',
+            }}
+          >
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 12, minHeight: 40 }}>
+              {searchActive ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={20} color={DesignTokens.colors.text.tertiary} />
+                </TouchableOpacity>
+              ) : (
+                <View style={{ width: 20 }} />
+              )}
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="חיפוש בחדשות..."
+                placeholderTextColor={DesignTokens.colors.text.tertiary}
+                style={{
+                  flex: 1,
+                  marginHorizontal: 8,
+                  color: DesignTokens.colors.text.primary,
+                  fontSize: 15,
+                  textAlign: 'right',
+                  writingDirection: 'rtl',
+                  paddingVertical: 6,
+                }}
+                returnKeyType="search"
+              />
+              <Ionicons name="search" size={18} color={DesignTokens.colors.text.tertiary} />
+            </View>
+          </UICard>
+        </View>
+      </View>
+    );
+  }, [DesignTokens, navigation, searchQuery, screenPad]);
   
   // רינדור כתבה
   const renderArticle = ({ item }: { item: NewsArticle }) => (
@@ -1360,27 +1482,30 @@ export default function BreakingNewsTab() {
   );
 
   // רינדור רשימה ריקה
-  const renderEmptyState = () => (
-    <View className="flex-1 justify-center items-center px-8 py-16">
-      <Ionicons 
-        name="newspaper-outline" 
-        size={48} 
-        color={DesignTokens.colors.text.tertiary} 
-      />
-      <Text 
-        className="text-lg font-semibold mt-4 text-center"
-        style={{ color: DesignTokens.colors.text.primary }}
-      >
-        אין חדשות כרגע
-      </Text>
-      <Text 
-        className="text-sm mt-2 text-center"
-        style={{ color: DesignTokens.colors.text.secondary }}
-      >
-        החדשות המתפרצות יופיעו כאן
-      </Text>
-    </View>
-  );
+  const renderEmptyState = () => {
+    const hasSearch = searchQuery.trim().length > 0;
+    return (
+      <View className="flex-1 justify-center items-center px-8 py-16">
+        <Ionicons
+          name={hasSearch ? 'search-outline' : 'newspaper-outline'}
+          size={48}
+          color={DesignTokens.colors.text.tertiary}
+        />
+        <Text
+          className="text-lg font-semibold mt-4 text-center"
+          style={{ color: DesignTokens.colors.text.primary }}
+        >
+          {hasSearch ? 'אין תוצאות לחיפוש' : 'אין חדשות כרגע'}
+        </Text>
+        <Text
+          className="text-sm mt-2 text-center"
+          style={{ color: DesignTokens.colors.text.secondary }}
+        >
+          {hasSearch ? 'נסה ניסוח אחר או נקה את החיפוש' : 'משיכה למטה לרענון — החדשות יופיעו כאן'}
+        </Text>
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -1396,49 +1521,14 @@ export default function BreakingNewsTab() {
     );
   }
 
-  if (articles.length === 0) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32, paddingVertical: 32 }}>
-        <Ionicons 
-          name="newspaper-outline" 
-          size={48} 
-          color={DesignTokens.colors.text.tertiary} 
-        />
-        <Text 
-          className="text-lg font-semibold mt-4 text-center"
-          style={{ color: DesignTokens.colors.text.primary }}
-        >
-          אין חדשות כרגע
-        </Text>
-        <Text 
-          className="text-sm mt-2 text-center"
-          style={{ color: DesignTokens.colors.text.secondary }}
-        >
-          החדשות המתפרצות יופיעו כאן
-        </Text>
-        <Pressable
-          onPress={loadBreakingNews}
-          className="mt-6 px-6 py-3 rounded-full"
-          style={{ backgroundColor: DesignTokens.colors.primary.main }}
-        >
-          <Text 
-            className="text-sm font-medium"
-            style={{ color: DesignTokens.colors.text.primary }}
-          >
-            רענן
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
         <FlatList
-          data={articles}
+          data={filteredArticles}
           keyExtractor={(item) => item.id}
           renderItem={renderArticle}
+          ListHeaderComponent={renderSearchHeader}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -1448,12 +1538,14 @@ export default function BreakingNewsTab() {
             />
           }
           ListEmptyComponent={renderEmptyState}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             paddingTop: 4,
-            paddingBottom: Math.max(mainTabsHeight + 12, 28),
+            paddingBottom: listBottomInset + DesignTokens.spacing.md,
+            flexGrow: 1,
           }}
-          ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         />
       </View>
       
@@ -1467,7 +1559,7 @@ export default function BreakingNewsTab() {
           onLike={handleLike}
           onShare={handleShareFromModal}
           currentIndex={selectedArticleIndex}
-          totalArticles={articles.length}
+          totalArticles={filteredArticles.length}
           onNext={handleNextArticle}
           onPrevious={handlePreviousArticle}
         />

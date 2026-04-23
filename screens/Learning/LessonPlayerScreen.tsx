@@ -4,21 +4,24 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, Activi
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLesson, useSaveProgress, useGetSignedUrl } from '../../hooks/useLearning';
 import { LessonWithProgress, BlockType } from '../../types/learning';
-import { ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3 } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Play, Pause, ChevronDown, Edit3, ArrowRight } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 const { width: screenWidth } = Dimensions.get('window');
 
+/** רקע אטום (לא rgba חצי־שקוף) — אחרת רואים את הגרדיאנט הירוק של מסכי האקדמיה מתחת */
+const LESSON_BG_GRADIENT = ['#080808', '#0A0A0A', '#0B0B0B', '#0B0B0B', '#0A0A0A', '#080808'] as const;
+
 export const LessonPlayerScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
@@ -302,7 +305,7 @@ export const LessonPlayerScreen: React.FC = () => {
   if (isLoading) {
     return (
       <LinearGradient
-        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
+        colors={[...LESSON_BG_GRADIENT]}
         locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
         style={styles.gradientContainer}
       >
@@ -319,7 +322,7 @@ export const LessonPlayerScreen: React.FC = () => {
   if (error || !lesson) {
     return (
       <LinearGradient
-        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
+        colors={[...LESSON_BG_GRADIENT]}
         locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
         style={styles.gradientContainer}
       >
@@ -338,39 +341,25 @@ export const LessonPlayerScreen: React.FC = () => {
 
   return (
     <LinearGradient
-      colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
+      colors={[...LESSON_BG_GRADIENT]}
       locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
       style={styles.gradientContainer}
     >
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-        {/* Header – באותו סגנון כמו צ'אט */}
+        {/* Header — זכוכית עם שוליים; בלי padding כפול ל-safe-area (כבר מטופל ב־SafeAreaView) */}
         <View style={styles.headerWrapper}>
-          <UICard
-            variant="blur"
-            padding="md"
-            style={[
-              styles.headerCard,
-              { paddingTop: insets.top + 8 },
-            ]}
-          >
+          <UICard variant="blur" glassIntensity="subtle" padding="sm" style={styles.headerOuterBlur}>
             <View style={styles.headerRow}>
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-                <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.secondary} />
-              </TouchableOpacity>
-              <View style={styles.headerContent}>
-                <View style={styles.headerInfo}>
-                  <View style={styles.headerTitleRow}>
-                    <View style={styles.headerIconPlaceholder}>
-                      <Ionicons name="book-outline" size={18} color={DesignTokens.colors.text.secondary} />
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.headerTitle} numberOfLines={1}>{lesson.title}</Text>
-                      <Text style={styles.headerSubtitle}>
-                        שיעור {currentBlockIndex + 1} מתוך {lesson.blocks?.length ?? 0}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+              <DayNavBlurButton onPress={() => navigation.goBack()} glassIntensity="subtle">
+                <ArrowRight size={18} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+              </DayNavBlurButton>
+              <View style={styles.headerTextBlock}>
+                <Text style={styles.headerTitle} numberOfLines={2}>
+                  {lesson.title}
+                </Text>
+                <Text style={styles.headerSubtitle}>
+                  שיעור {currentBlockIndex + 1} מתוך {lesson.blocks?.length ?? 0}
+                </Text>
               </View>
               <View style={styles.headerSpacer} />
             </View>
@@ -385,7 +374,7 @@ export const LessonPlayerScreen: React.FC = () => {
           >
           {/* Lesson Info Card */}
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md, marginBottom: DesignTokens.spacing.lg }}>
-            <UICard variant="blur" padding="lg">
+            <UICard variant="elevated" padding="lg" style={styles.lessonPanel}>
               <View style={styles.lessonInfoStack}>
                 <Text style={styles.lessonInfoTitle}>{lesson.title}</Text>
                 <Text style={styles.lessonInfoSubtitle}>שיעור {currentBlockIndex + 1} בקורס הכשרה של דוד אריאל</Text>
@@ -410,7 +399,7 @@ export const LessonPlayerScreen: React.FC = () => {
 
           {/* Content */}
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
-            <UICard variant="blur" padding="none">
+            <UICard variant="elevated" padding="none" style={styles.lessonPanel}>
               {renderCurrentBlock()}
             </UICard>
           </View>
@@ -418,7 +407,7 @@ export const LessonPlayerScreen: React.FC = () => {
           {/* Video Controls */}
           {currentBlock?.type === 'video' && (
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
-              <UICard variant="blur" padding="lg">
+              <UICard variant="elevated" padding="lg" style={styles.lessonPanel}>
                 <View style={styles.videoControls}>
                   <TouchableOpacity
                     style={styles.playButton}
@@ -437,7 +426,7 @@ export const LessonPlayerScreen: React.FC = () => {
 
           {/* Personal Notes Card */}
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
-            <UICard variant="blur" padding="md">
+            <UICard variant="elevated" padding="md" style={styles.lessonPanel}>
               <TouchableOpacity
                 style={styles.notesHeader}
                 onPress={() => setNotesExpanded(!notesExpanded)}
@@ -471,43 +460,37 @@ export const LessonPlayerScreen: React.FC = () => {
             </UICard>
           </View>
 
-          {/* Navigation */}
+          {/* ניווט בלוקים — כמו מעבר הימים (חצים עגולים בזכוכית) */}
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingBottom: DesignTokens.spacing.lg }}>
-            <UICard variant="blur" padding="md">
-              <View style={styles.navigation}>
-                <TouchableOpacity
-                  style={[
-                    styles.navButton,
-                    (!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) && styles.navButtonDisabled
-                  ]}
-                  onPress={goToNextBlock}
-                  disabled={!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1}
-                >
-                  <ChevronRight size={20} color={(!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) ? DesignTokens.colors.text.tertiary : DesignTokens.colors.primary.main} strokeWidth={2} />
-                  <Text style={[
-                    styles.navButtonText,
-                    (!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1) && styles.navButtonTextDisabled
-                  ]}>
-                    הבא
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.navButton,
-                    currentBlockIndex === 0 && styles.navButtonDisabled
-                  ]}
+            <UICard variant="blur" glassIntensity="subtle" padding="sm" style={styles.blockNavOuterBlur}>
+              <View style={styles.blockNavRow}>
+                <DayNavBlurButton
                   onPress={goToPreviousBlock}
                   disabled={currentBlockIndex === 0}
+                  glassIntensity="subtle"
                 >
-                  <Text style={[
-                    styles.navButtonText,
-                    currentBlockIndex === 0 && styles.navButtonTextDisabled
-                  ]}>
-                    הקודם
-                  </Text>
-                  <ChevronLeft size={20} color={currentBlockIndex === 0 ? DesignTokens.colors.text.tertiary : DesignTokens.colors.primary.main} strokeWidth={2} />
-                </TouchableOpacity>
+                  <ChevronLeft
+                    size={18}
+                    color={currentBlockIndex === 0 ? DesignTokens.colors.text.tertiary : DesignTokens.colors.text.primary}
+                    strokeWidth={2}
+                  />
+                </DayNavBlurButton>
+                <View style={styles.blockNavCenter} />
+                <DayNavBlurButton
+                  onPress={goToNextBlock}
+                  disabled={!lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1}
+                  glassIntensity="subtle"
+                >
+                  <ChevronRight
+                    size={18}
+                    color={
+                      !lesson.blocks || currentBlockIndex >= lesson.blocks.length - 1
+                        ? DesignTokens.colors.text.tertiary
+                        : DesignTokens.colors.text.primary
+                    }
+                    strokeWidth={2}
+                  />
+                </DayNavBlurButton>
               </View>
             </UICard>
           </View>
@@ -566,73 +549,64 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'center',
   },
   headerWrapper: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: tokens.spacing.sm,
+    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.lg,
+    paddingTop: 8,
+    paddingBottom: 8,
   },
-  headerCard: {
-    marginHorizontal: 0,
-    marginTop: 0,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderBottomLeftRadius: tokens.borderRadius['2xl'],
-    borderBottomRightRadius: tokens.borderRadius['2xl'],
+  /** פאנל נייטרלי — לא blur ולא ירוק ממותג; רקע אחיד מתחת */
+  lessonPanel: {
+    backgroundColor: '#141414',
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  /** כמו שורת היומן הכלכלי — כרטיס blur חיצוני */
+  headerOuterBlur: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  blockNavOuterBlur: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  blockNavRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+  },
+  blockNavCenter: {
+    flex: 1,
+    minWidth: 8,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 4,
+    gap: tokens.spacing.md,
+    minHeight: 44,
   },
-  backButton: {
-    padding: 8,
-    marginLeft: 5,
-    marginRight: -3,
-  },
-  headerContent: {
+  headerTextBlock: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  headerInfo: {
-    flex: 1,
+    minWidth: 0,
     alignItems: 'flex-end',
   },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerIconPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: tokens.colors.background.tertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: '700' as const,
     color: tokens.colors.text.primary,
     marginBottom: 2,
-    marginRight: 5,
-    lineHeight: 22,
+    lineHeight: Math.round(tokens.typography.fontSize.lg * 1.25),
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   headerSubtitle: {
-    fontSize: 12,
-    marginRight: 5,
+    fontSize: tokens.typography.fontSize.sm,
     color: tokens.colors.text.secondary,
-    lineHeight: 17,
+    lineHeight: 18,
     textAlign: 'right',
     writingDirection: 'rtl',
   },
   headerSpacer: {
-    width: 36,
+    width: DAY_NAV_BUTTON_SIZE,
   },
   videoContainer: {
     borderRadius: 16,
@@ -788,32 +762,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
-  },
-  navigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: tokens.spacing.md,
-  },
-  navButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(5, 209, 87, 0.08)',
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.md,
-    borderRadius: tokens.borderRadius.lg,
-    gap: tokens.spacing.xs,
-  },
-  navButtonDisabled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    opacity: 0.5,
-  },
-  navButtonText: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.text.primary,
-  },
-  navButtonTextDisabled: {
-    color: tokens.colors.text.tertiary,
   },
   lessonInfoStack: {
     gap: tokens.spacing.sm,

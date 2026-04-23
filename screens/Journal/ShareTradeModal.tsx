@@ -6,6 +6,9 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { supabase } from '../../services/supabase';
 import { Trade } from './TradesListTab';
+import { getChatGroups } from '../../services/chat/chatGroupService';
+import { sendChatMessage } from '../../services/chat/chatMessageService';
+import { ChatMessageType } from '../../types/chat.types';
 
 interface ShareTradeModalProps {
   trade: Trade | null;
@@ -13,15 +16,21 @@ interface ShareTradeModalProps {
   onClose: () => void;
 }
 
+type ChatGroupRow = {
+  id: string;
+  name: string;
+  avatar_url?: string | null;
+};
+
 export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeModalProps) {
   const DesignTokens = useDesignTokens();
-  const [chatGroups, setChatGroups] = useState<any[]>([]);
+  const [chatGroups, setChatGroups] = useState<ChatGroupRow[]>([]);
   const [loading, setLoading] = useState(false);
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
   useEffect(() => {
     if (visible && trade) {
-      loadChatGroups();
+      void loadChatGroups();
     } else {
       setChatGroups([]);
       setLoading(false);
@@ -31,42 +40,25 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
   const loadChatGroups = async () => {
     setLoading(true);
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         legacyAlert('שגיאה', 'משתמש לא מחובר');
         return;
       }
 
-      const { data: memberRows, error: memberError } = await supabase
-        .from('channel_members')
-        .select('channel_id')
-        .eq('user_id', user.id);
-
-      if (memberError) {
-        legacyAlert('שגיאה', 'לא ניתן לטעון קבוצות');
+      const { data: groups, error } = await getChatGroups(user.id);
+      if (error) {
+        legacyAlert('שגיאה', error.message || 'לא ניתן לטעון קבוצות');
         return;
       }
 
-      const channelIds = memberRows?.map(row => row.channel_id) || [];
-
-      if (channelIds.length > 0) {
-        const { data: channels, error: channelsError } = await supabase
-          .from('channels')
-          .select('id, name, image_url')
-          .in('id', channelIds)
-          .order('name');
-
-        if (channelsError) {
-          legacyAlert('שגיאה', 'לא ניתן לטעון פרטי קבוצות');
-          return;
-        }
-
-        setChatGroups(channels || []);
-      } else {
-        setChatGroups([]);
-      }
-    } catch (error) {
+      const rows: ChatGroupRow[] = (groups || []).map((g: any) => ({
+        id: g.id,
+        name: g.name || 'קבוצה',
+        avatar_url: g.avatar_url,
+      }));
+      setChatGroups(rows);
+    } catch {
       legacyAlert('שגיאה', 'שגיאה בטעינת קבוצות');
     } finally {
       setLoading(false);
@@ -83,8 +75,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         return;
       }
 
-      // יצירת אובייקט הטרייד המלא
-      const tradeData = {
+      const tradePayload = {
         id: trade.id,
         symbol: trade.symbol,
         direction: trade.direction,
@@ -99,25 +90,25 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         tags: trade.tags,
       };
 
-      // שליחת הודעת טרייד מיוחדת לקבוצה
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          channel_id: groupId,
-          sender_id: user.id,
-          content: `${trade.symbol} ${trade.direction === 'long' ? 'Long' : 'Short'}`,
-          type: 'trade',
-          trade_data: tradeData
-        });
+      const content = JSON.stringify({ trade: tradePayload });
 
-      if (error) {
-        legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
+      const { data: sent, error } = await sendChatMessage(
+        {
+          group_id: groupId,
+          message_type: ChatMessageType.TRADE,
+          content,
+        },
+        user.id
+      );
+
+      if (error || !sent) {
+        legacyAlert('שגיאה', error?.message || 'לא ניתן לשתף לקבוצה');
         return;
       }
 
       legacyAlert('הצלחה', `הטרייד שותף לקבוצה "${groupName}"`);
       onClose();
-    } catch (error) {
+    } catch {
       legacyAlert('שגיאה', 'לא ניתן לשתף לקבוצה');
     }
   };
@@ -137,7 +128,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>שתף טרייד</Text>
+          <Text style={styles.title}>שתף טרייד לצ׳אט</Text>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color={DesignTokens.colors.text.primary} />
           </TouchableOpacity>
@@ -146,25 +137,33 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
         <View style={styles.tradePreview}>
           <View style={styles.tradePreviewHeader}>
             <Text style={styles.tradeSymbol}>{trade.symbol}</Text>
-            <View style={[
-              styles.directionBadge,
-              { backgroundColor: trade.direction === 'long' 
-                ? `${DesignTokens.colors.primary.main}20` 
-                : `${DesignTokens.colors.text.danger}20` }
-            ]}>
-              <Text style={[
-                styles.directionText,
-                { color: trade.direction === 'long' 
-                  ? DesignTokens.colors.primary.main 
-                  : DesignTokens.colors.text.danger }
-              ]}>
+            <View
+              style={[
+                styles.directionBadge,
+                {
+                  backgroundColor:
+                    trade.direction === 'long'
+                      ? `${DesignTokens.colors.primary.main}20`
+                      : `${DesignTokens.colors.text.danger}20`,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.directionText,
+                  {
+                    color:
+                      trade.direction === 'long'
+                        ? DesignTokens.colors.primary.main
+                        : DesignTokens.colors.text.danger,
+                  },
+                ]}
+              >
                 {trade.direction === 'long' ? 'Long' : 'Short'}
               </Text>
             </View>
           </View>
-          <Text style={styles.tradePnl}>
-            P&L: ${trade.pnl.toFixed(2)}
-          </Text>
+          <Text style={styles.tradePnl}>P&L: ${trade.pnl.toFixed(2)}</Text>
         </View>
 
         {loading ? (
@@ -176,7 +175,7 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
           <View style={styles.emptyContainer}>
             <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.tertiary} />
             <Text style={styles.emptyText}>אין קבוצות זמינות</Text>
-            <Text style={styles.emptySubtext}>הצטרף לקבוצה כדי לשתף טריידים</Text>
+            <Text style={styles.emptySubtext}>הצטרף לקבוצת צ׳אט כדי לשתף טריידים</Text>
           </View>
         ) : (
           <FlatList
@@ -185,17 +184,17 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.groupItem}
-                onPress={() => shareToGroup(item.id, item.name || 'קבוצה')}
+                onPress={() => shareToGroup(item.id, item.name)}
               >
-                {item.image_url ? (
-                  <Image source={{ uri: item.image_url }} style={styles.groupAvatar} />
+                {item.avatar_url ? (
+                  <Image source={{ uri: item.avatar_url }} style={styles.groupAvatar} />
                 ) : (
                   <View style={styles.groupAvatarPlaceholder}>
                     <Ionicons name="people" size={24} color={DesignTokens.colors.text.secondary} />
                   </View>
                 )}
-                <Text style={styles.groupName}>{item.name || 'קבוצה ללא שם'}</Text>
-                <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.tertiary} />
+                <Text style={styles.groupName}>{item.name}</Text>
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
               </TouchableOpacity>
             )}
             contentContainerStyle={styles.listContent}
@@ -206,120 +205,127 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
   );
 }
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: tokens.colors.background.secondary,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: tokens.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: tokens.colors.border.primary,
-  },
-  title: {
-    fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-  },
-  closeButton: {
-    padding: tokens.spacing.xs,
-  },
-  tradePreview: {
-    backgroundColor: tokens.colors.background.tertiary,
-    margin: tokens.spacing.lg,
-    padding: tokens.spacing.md,
-    borderRadius: tokens.borderRadius.md,
-  },
-  tradePreviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.spacing.sm,
-    marginBottom: tokens.spacing.sm,
-  },
-  tradeSymbol: {
-    fontSize: tokens.typography.fontSize.xl,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-  },
-  directionBadge: {
-    paddingHorizontal: tokens.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: tokens.borderRadius.sm,
-  },
-  directionText: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.bold,
-  },
-  tradePnl: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.primary.main,
-    textAlign: 'right',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: tokens.spacing.md,
-  },
-  loadingText: {
-    fontSize: tokens.typography.fontSize.base,
-    color: tokens.colors.text.secondary,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: tokens.spacing.xl,
-    gap: tokens.spacing.md,
-  },
-  emptyText: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.text.primary,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: tokens.typography.fontSize.base,
-    color: tokens.colors.text.secondary,
-    textAlign: 'center',
-  },
-  listContent: {
-    padding: tokens.spacing.md,
-  },
-  groupItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: tokens.spacing.md,
-    backgroundColor: tokens.colors.background.tertiary,
-    borderRadius: tokens.borderRadius.md,
-    marginBottom: tokens.spacing.sm,
-    gap: tokens.spacing.md,
-  },
-  groupAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
-  groupAvatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: tokens.colors.background.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  groupName: {
-    flex: 1,
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.medium,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-  },
-});
-
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: tokens.spacing.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: tokens.colors.border.primary,
+    },
+    title: {
+      fontSize: tokens.typography.fontSize.xl,
+      fontWeight: tokens.typography.fontWeight.bold,
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+      writingDirection: 'rtl',
+    },
+    closeButton: {
+      padding: tokens.spacing.xs,
+    },
+    tradePreview: {
+      backgroundColor: tokens.colors.background.input,
+      margin: tokens.spacing.lg,
+      padding: tokens.spacing.md,
+      borderRadius: tokens.borderRadius.lg,
+      borderWidth: 1,
+      borderColor: `${tokens.colors.primary.main}22`,
+    },
+    tradePreviewHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: tokens.spacing.sm,
+      marginBottom: tokens.spacing.sm,
+    },
+    tradeSymbol: {
+      fontSize: tokens.typography.fontSize.xl,
+      fontWeight: tokens.typography.fontWeight.bold,
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+    },
+    directionBadge: {
+      paddingHorizontal: tokens.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: tokens.borderRadius.sm,
+    },
+    directionText: {
+      fontSize: tokens.typography.fontSize.xs,
+      fontWeight: tokens.typography.fontWeight.bold,
+    },
+    tradePnl: {
+      fontSize: tokens.typography.fontSize.base,
+      fontWeight: tokens.typography.fontWeight.bold,
+      color: tokens.colors.primary.main,
+      textAlign: 'right',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: tokens.spacing.md,
+    },
+    loadingText: {
+      fontSize: tokens.typography.fontSize.base,
+      color: tokens.colors.text.secondary,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: tokens.spacing.xl,
+      gap: tokens.spacing.md,
+    },
+    emptyText: {
+      fontSize: tokens.typography.fontSize.lg,
+      fontWeight: tokens.typography.fontWeight.bold,
+      color: tokens.colors.text.primary,
+      textAlign: 'center',
+    },
+    emptySubtext: {
+      fontSize: tokens.typography.fontSize.base,
+      color: tokens.colors.text.secondary,
+      textAlign: 'center',
+    },
+    listContent: {
+      padding: tokens.spacing.md,
+      paddingBottom: tokens.spacing['3xl'],
+    },
+    groupItem: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      padding: tokens.spacing.md,
+      backgroundColor: tokens.colors.background.input,
+      borderRadius: tokens.borderRadius.lg,
+      marginBottom: tokens.spacing.sm,
+      gap: tokens.spacing.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: tokens.colors.border.primary,
+    },
+    groupAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+    },
+    groupAvatarPlaceholder: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: tokens.colors.background.secondary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    groupName: {
+      flex: 1,
+      fontSize: tokens.typography.fontSize.base,
+      fontWeight: tokens.typography.fontWeight.medium,
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+      writingDirection: 'rtl',
+    },
+  });

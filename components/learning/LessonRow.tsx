@@ -5,6 +5,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { CheckCircle2 } from 'lucide-react-native';
 import { mediaService } from '../../services/mediaService';
 import { useTheme } from '../../context/ThemeContext';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface LessonRowProps {
   lesson: LessonWithProgress;
@@ -176,7 +177,11 @@ export const LessonRow: React.FC<LessonRowProps> = ({
         styles.container,
         isLockedForUser && styles.lockedContainer
       ]}
-      onPress={() => !isLockedForUser && onPress(lesson)}
+      onPress={() => {
+        if (isLockedForUser) return;
+        void HapticFeedback.impactLight();
+        onPress(lesson);
+      }}
       activeOpacity={isLockedForUser ? 1 : 0.8}
       disabled={isLockedForUser}
     >

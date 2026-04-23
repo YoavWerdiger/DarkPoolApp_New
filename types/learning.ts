@@ -255,6 +255,7 @@ export interface ProgressRingProps {
   size?: number;
   strokeWidth?: number;
   color?: string;
+  centerLabel?: string;
 }
 
 export interface AccessBadgeProps {

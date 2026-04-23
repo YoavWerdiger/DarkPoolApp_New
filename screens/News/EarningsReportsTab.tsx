@@ -3,13 +3,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, ScrollView, Dimensions, Animated } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
-import { Clock, Sun, Moon, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react-native';
+import { Clock, Sun, Moon, ChevronUp } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 import { supabase } from '../../lib/supabase';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import UICard from '../../components/ui/UICard';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const EarningsReportCard: React.FC<{ 
   report: EarningsReport; 
@@ -343,7 +344,6 @@ const EarningsReportCard: React.FC<{
 
 export default function EarningsReportsTab() {
   const DesignTokens = useDesignTokens();
-  const mainTabsHeight = useMainTabsHeight();
   const [reports, setReports] = useState<EarningsReport[]>([]);
   const [filteredReports, setFilteredReports] = useState<EarningsReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -546,14 +546,16 @@ export default function EarningsReportsTab() {
   // רענון
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    
-    // טען את הנתונים מהטבלה (ללא קריאה ל-Edge Function שלא קיים)
-    await loadEarningsReports();
-    
+    try {
+      await loadEarningsReports();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
   }, [loadEarningsReports]);
 
   // בחירת דיווח - פתיחת bottom sheet
   const handleReportPress = useCallback((report: EarningsReport) => {
+    void HapticFeedback.impactLight();
     setSelectedReport(report);
     setDetailModalVisible(true);
   }, []);
@@ -698,7 +700,7 @@ export default function EarningsReportsTab() {
           }}
         >
           <Ionicons 
-            name="bar-chart-outline" 
+            name="notifications-outline" 
             size={56} 
             color={DesignTokens.colors.primary.main} 
           />
@@ -782,44 +784,45 @@ export default function EarningsReportsTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ניווט תאריכים - SwiftUI style */}
-      <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+      {/* ניווט תאריכים — קומפקטי ואחיד ליומן כלכלי */}
+      <View
+        style={{
+          paddingHorizontal: DesignTokens.layout?.screenPadding ?? 20,
+          paddingVertical: 11,
+        }}
+      >
         <UICard
           variant="blur"
-          padding="md"
+          glassIntensity="subtle"
+          padding="none"
           style={{
-            borderRadius: 20,
-            marginBottom: 12,
+            borderRadius: 16,
+            marginBottom: 10,
+            padding: 12,
           }}
         >
-          {/* שורה עליונה - ניווט תאריכים */}
           <View style={{ 
             flexDirection: 'row', 
+            direction: 'ltr',
             alignItems: 'center', 
             justifyContent: 'space-between',
-            marginBottom: 8
+            marginBottom: selectedDate.toDateString() !== new Date().toDateString() ? 6 : 0,
           }}>
-            {/* חץ שמאל - יום קודם */}
-            <TouchableOpacity
-              onPress={goToPreviousDay}
-              activeOpacity={1}
-              style={{
-                padding: 8,
-                borderRadius: 12,
-                backgroundColor: DesignTokens.colors.background.tertiary
-              }}
-            >
-              <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-            </TouchableOpacity>
+            <DayNavBlurButton onPress={goToPreviousDay} glassIntensity="subtle">
+              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+            </DayNavBlurButton>
 
-            {/* תאריך נוכחי */}
-            <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={{
-                fontSize: 18,
-                fontWeight: '600',
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'center'
-              }}>
+            <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 8 }}>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  lineHeight: 21,
+                  color: DesignTokens.colors.text.primary,
+                  textAlign: 'center',
+                }}
+                numberOfLines={2}
+              >
                 {selectedDate.toLocaleDateString('he-IL', { 
                   weekday: 'long',
                   day: 'numeric',
@@ -829,53 +832,44 @@ export default function EarningsReportsTab() {
               </Text>
               {selectedDate.toDateString() === new Date().toDateString() && (
                 <Text style={{
-                  fontSize: 12,
-                  color: DesignTokens.colors.success.main,
-                  fontWeight: '500',
-                  marginTop: 2
+                  fontSize: 11,
+                  color: DesignTokens.colors.primary.main,
+                  fontWeight: '600',
+                  marginTop: 1,
                 }}>
                   היום
                 </Text>
               )}
             </View>
 
-            {/* חץ ימין - יום הבא */}
-            <TouchableOpacity
-              onPress={goToNextDay}
-              activeOpacity={1}
-              style={{
-                padding: 8,
-                borderRadius: 12,
-                backgroundColor: DesignTokens.colors.background.tertiary
-              }}
-            >
-              <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-            </TouchableOpacity>
+            <DayNavBlurButton onPress={goToNextDay} glassIntensity="subtle">
+              <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+            </DayNavBlurButton>
           </View>
 
-          {/* שורה תחתונה - כפתור היום בלבד */}
           {selectedDate.toDateString() !== new Date().toDateString() && (
             <View style={{ 
               flexDirection: 'row', 
               alignItems: 'center', 
-              justifyContent: 'center'
+              justifyContent: 'center',
+              marginTop: 0,
             }}>
               <TouchableOpacity
                 onPress={goToToday}
-                activeOpacity={1}
+                activeOpacity={0.85}
                 style={{
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  borderRadius: 20,
-                  backgroundColor: `${DesignTokens.colors.primary.main}26`
+                  paddingHorizontal: 14,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                  backgroundColor: DesignTokens.colors.primary.dim,
+                  borderWidth: 1,
+                  borderColor: 'rgba(0, 200, 80, 0.35)',
                 }}
               >
                 <Text style={{
-                  fontSize: 12,
-                  color: DesignTokens.colors.success.main,
-                  fontWeight: '600'
+                  fontSize: 11,
+                  color: DesignTokens.colors.primary.main,
+                  fontWeight: '700',
                 }}>
                   היום
                 </Text>
@@ -886,7 +880,7 @@ export default function EarningsReportsTab() {
       </View>
 
       {/* רשימת דיווחים */}
-      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+      <View style={{ flex: 1, minHeight: 0 }}>
         <FlatList
           ref={flatListRef}
           data={filteredReports}

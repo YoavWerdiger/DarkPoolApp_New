@@ -5,6 +5,15 @@ import { logger } from '../utils/logger';
 
 const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
 
+function toUploadErrorMessage(err: unknown, fallback: string): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (!raw || raw === 'Unknown error') return fallback;
+  if (/network request failed|failed to fetch|load failed|נכשל/i.test(raw)) {
+    return 'אין חיבור יציב לרשת או לשרת. בדוק אינטרנט/־VPN ונסה שוב.';
+  }
+  return raw;
+}
+
 export interface MediaFile {
   id: string;
   uri: string;
@@ -371,7 +380,10 @@ class MediaService {
 
       if (error) {
         logger.error('MediaService', 'Upload error', error);
-        return { success: false, error: error.message };
+        return {
+          success: false,
+          error: toUploadErrorMessage(error, error.message || 'העלאה נכשלה'),
+        };
       }
 
       const { data: urlData } = supabase.storage
@@ -391,7 +403,7 @@ class MediaService {
       logger.error('MediaService', 'Upload error', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: toUploadErrorMessage(error, 'העלאה נכשלה — נסה שוב'),
       };
     }
   }

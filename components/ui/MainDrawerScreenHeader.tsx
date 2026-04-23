@@ -1,42 +1,40 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from './DayNavBlurButton';
 
-/** כמו `MarketsScreen` / רשימת צ׳אטים — מרווח אופקי לכותרת ול־section */
+/** כמו מסך שווקים (בית) / רשימת צ׳אטים — מרווח אופקי לכותרת ול־section */
 export const MAIN_SCREEN_HEADER_HP = 20;
 
 const HEADER_SIDE = 72;
-const MENU_SIZE = 46;
-
-const circleMenuBtn = (tokens: ReturnType<typeof useDesignTokens>) => ({
-  width: MENU_SIZE,
-  height: MENU_SIZE,
-  borderRadius: MENU_SIZE / 2,
-  justifyContent: 'center' as const,
-  alignItems: 'center' as const,
-  backgroundColor: tokens.colors.background.secondary,
-  borderWidth: 1,
-  borderColor: tokens.colors.border.strong,
-  shadowColor: '#000',
-  shadowOpacity: 0.28,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 4 },
-  elevation: 6,
-});
 
 export type MainDrawerScreenHeaderProps = {
   title: string;
+  /** כותרת משנה מתחת לכותרת (למשל מדד פחד במסך שווקים) */
+  subtitle?: string;
   onMenuPress: () => void;
   /** תוכן מתחת לכותרת — באותו padding אופקי כמו `sectionPicker` בשווקים */
   section?: React.ReactNode;
+  /** עקיפת מרווחים סביב ה־section (למשל חדשות — רשת קומפקטית) */
+  sectionContainerStyle?: ViewStyle;
   style?: ViewStyle;
+  /** כפתור/אייקון בצד ימין (מיושר ל־minWidth כמו כפתור התפריט) */
+  rightAccessory?: React.ReactNode;
 };
 
 /**
- * שורת תפריט + כותרת ממורכזת כמו מסכי שורש (שווקים, יומן, צ׳אטים) — לא כמו חדשות.
+ * שורת תפריט + כותרת ממורכזת כמו מסכי שורש (שווקים, חדשות, צ׳אטים).
  */
-export function MainDrawerScreenHeader({ title, onMenuPress, section, style }: MainDrawerScreenHeaderProps) {
+export function MainDrawerScreenHeader({
+  title,
+  subtitle,
+  onMenuPress,
+  section,
+  sectionContainerStyle,
+  style,
+  rightAccessory,
+}: MainDrawerScreenHeaderProps) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
@@ -44,22 +42,32 @@ export function MainDrawerScreenHeader({ title, onMenuPress, section, style }: M
     <View style={style}>
       <View style={styles.appHeader}>
         <View style={styles.appHeaderActions}>
-          <TouchableOpacity
-            style={styles.headerMenuBtn}
+          <DayNavBlurButton
             onPress={onMenuPress}
-            activeOpacity={0.8}
-            accessibilityRole="button"
+            glassIntensity="subtle"
+            size={DRAWER_MENU_BUTTON_SIZE}
             accessibilityLabel="תפריט ראשי"
           >
-            <Ionicons name="menu" size={28} color={tokens.colors.text.primary} />
-          </TouchableOpacity>
+            <Ionicons name="menu" size={24} color={tokens.colors.text.primary} />
+          </DayNavBlurButton>
         </View>
-        <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]} numberOfLines={1}>
-          {title}
-        </Text>
-        <View style={styles.appHeaderActions} />
+        <View style={styles.titleBlock}>
+          <Text style={styles.appHeaderTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.appHeaderActions} pointerEvents="box-none">
+          {rightAccessory}
+        </View>
       </View>
-      {section != null ? <View style={styles.sectionPicker}>{section}</View> : null}
+      {section != null ? (
+        <View style={[styles.sectionPicker, sectionContainerStyle]}>{section}</View>
+      ) : null}
     </View>
   );
 }
@@ -77,16 +85,27 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       alignItems: 'center',
       minWidth: HEADER_SIDE,
     },
-    headerMenuBtn: circleMenuBtn(tokens),
+    titleBlock: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 4,
+      minHeight: 48,
+    },
     appHeaderTitle: {
       fontSize: 22,
       fontWeight: '700' as const,
       color: tokens.colors.text.primary,
       letterSpacing: -0.3,
-    },
-    appHeaderTitleCenter: {
-      flex: 1,
       textAlign: 'center',
+    },
+    appHeaderSubtitle: {
+      marginTop: 3,
+      fontSize: 13,
+      fontWeight: '500' as const,
+      color: tokens.colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 17,
     },
     sectionPicker: {
       paddingHorizontal: MAIN_SCREEN_HEADER_HP,

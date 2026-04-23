@@ -219,6 +219,8 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
         return 'document';
       case 'poll':
         return 'list';
+      case 'trade':
+        return 'trending-up';
       default:
         return 'chatbubble';
     }

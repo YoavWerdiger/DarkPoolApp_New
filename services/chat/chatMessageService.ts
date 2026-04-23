@@ -21,6 +21,7 @@ import {
   ChatReactionGroup,
   ChatError,
   ChatMessageType,
+  isChatMessageTypeAllowedInDb,
 } from '../../types/chat.types';
 import {
   checkRateLimit,
@@ -62,7 +63,30 @@ export async function sendChatMessage(
       return { data: null, error: groupIdValidation.error! };
     }
 
-    if (input.message_type === 'text' && input.content) {
+    if (!isChatMessageTypeAllowedInDb(String(input.message_type ?? ''))) {
+      return {
+        data: null,
+        error: {
+          code: 'INVALID_MESSAGE_TYPE',
+          message: `סוג הודעה לא נתמך: ${String(input.message_type)}`,
+        },
+      };
+    }
+
+    if (input.message_type === ChatMessageType.TRADE) {
+      const raw = input.content?.trim();
+      if (!raw) {
+        return { data: null, error: { code: 'EMPTY_TRADE', message: 'טרייד ריק' } };
+      }
+      try {
+        const parsed = JSON.parse(raw) as { trade?: { symbol?: string } };
+        if (!parsed.trade || typeof parsed.trade.symbol !== 'string' || !parsed.trade.symbol.trim()) {
+          return { data: null, error: { code: 'INVALID_TRADE', message: 'נתוני טרייד לא תקינים' } };
+        }
+      } catch {
+        return { data: null, error: { code: 'INVALID_TRADE_JSON', message: 'פורמט טרייד לא תקין' } };
+      }
+    } else if (input.message_type === 'text' && input.content) {
       const contentValidation = validateMessageContent(input.content);
       if (!contentValidation.valid) {
         return { data: null, error: contentValidation.error! };
@@ -212,12 +236,19 @@ export async function sendChatMessage(
 
     if (messageError || !messageData) {
       logger.error('ChatMessage', 'Error sending message', messageError);
-      return { 
-        data: null, 
-        error: { 
-          code: 'SEND_MESSAGE_ERROR', 
-          message: messageError?.message || 'שגיאה בשליחת הודעה' 
-        } 
+      const pgCode = messageError?.code;
+      const isTypeConstraint =
+        pgCode === '23514' &&
+        String(messageError?.message ?? '').includes('valid_message_type');
+      return {
+        data: null,
+        error: {
+          code: isTypeConstraint ? 'MESSAGE_TYPE_DB_CONSTRAINT' : 'SEND_MESSAGE_ERROR',
+          message:
+            isTypeConstraint
+              ? 'סוג ההודעה לא מעודכן בשרת. הרץ ב-Supabase את המיגרציה 010 (קובץ 010_chat_message_type_trade_and_media_group.sql) כדי לאפשר trade ו-media_group.'
+              : messageError?.message || 'שגיאה בשליחת הודעה',
+        },
       };
     }
 

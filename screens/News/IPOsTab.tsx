@@ -10,6 +10,7 @@ import {
 import { Rocket, Calendar, DollarSign } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface IPO {
   id: string
@@ -216,10 +217,14 @@ export default function IPOsTab() {
     }
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadIPOs();
-  };
+    try {
+      await loadIPOs();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
+  }, [loadIPOs]);
 
   useEffect(() => {
     loadIPOs();

@@ -16,6 +16,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useDesignTokens } from '../DesignTokens';
 import { BottomSheetProps } from './BottomSheet.types';
 import { createStyles } from './BottomSheet.styles';
+import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DEFAULT_SNAP_POINTS = [0.5];
@@ -38,6 +39,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   backdropOpacity = 0.4,
   onSnapPointChange,
   useModal = true,
+  edgeToEdge = false,
 }) => {
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
@@ -96,6 +98,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   // משתמשים רק ב-isOpen כ-dependency כדי למנוע אנימציה מחדש בשינוי תוכן
   useEffect(() => {
     if (isOpen && snapValues.length > 0) {
+      void HapticFeedback.impactLight();
       const targetY = snapValues[0];
       translateY.value = SCREEN_HEIGHT;
       currentSnapIndex.value = 0;
@@ -233,11 +236,12 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const styles = createStyles(tokens.colors.overlay || 'rgba(0,0,0,0.6)');
 
-  /** שכבת זכוכית מעל הטשטוש — כמו UICard */
+  /** שכבת זכוכית מעל הטשטוש — רק ב־iOS (ב־Android נרצה אפור "other bubble") */
   const glassTintOverlay =
     isDarkMode
       ? tokens.glassmorphism.cardBackground.dark.medium
       : tokens.glassmorphism.cardBackground.light.medium;
+  const androidSheetBackground = tokens.colors.background.secondary;
 
   const content = (
     <Fragment>
@@ -267,9 +271,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             style={[
               StyleSheet.absoluteFill,
               {
-                backgroundColor: isDarkMode
-                  ? 'rgba(22, 32, 24, 0.72)'
-                  : 'rgba(245, 245, 247, 0.88)',
+                // Android בלבד: צבע אפור זהה לבועת "other"
+                backgroundColor: androidSheetBackground,
               },
             ]}
           />
@@ -278,7 +281,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           pointerEvents="none"
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: glassTintOverlay },
+            { backgroundColor: Platform.OS === 'ios' ? glassTintOverlay : 'transparent' },
           ]}
         />
 
@@ -288,29 +291,66 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
               { paddingBottom: contentPaddingBottom },
             ]}
           >
-            {/* Handle area for pan gesture - can be dragged */}
-          <GestureDetector gesture={panGesture}>
-            <View 
-              style={{ 
-                width: '100%', 
-                alignItems: 'center', 
-                paddingVertical: 16,
-                minHeight: 44, // גודל מינימלי לנגיעה
-              }}
-              hitSlop={{ top: 20, bottom: 20, left: 0, right: 0 }}
-            >
-              {showHandle && (
-                <View
-                  style={[
-                    styles.handle,
-                    { backgroundColor: tokens.colors.border.active }
-                  ]}
-                />
-              )}
-            </View>
-          </GestureDetector>
-
-            {children}
+            {edgeToEdge ? (
+              <>
+                {/* גרירה צפה — לא דוחפת את התוכן למטה */}
+                <GestureDetector gesture={panGesture}>
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: showHandle ? 52 : 36,
+                      alignItems: 'center',
+                      justifyContent: showHandle ? 'flex-start' : 'center',
+                      paddingTop: showHandle ? 16 : 0,
+                      zIndex: 20,
+                    }}
+                    hitSlop={
+                      showHandle
+                        ? { top: 12, bottom: 12, left: 0, right: 0 }
+                        : { top: 8, bottom: 12, left: 0, right: 0 }
+                    }
+                  >
+                    {showHandle && (
+                      <View
+                        style={[
+                          styles.handle,
+                          { backgroundColor: tokens.colors.border.active },
+                        ]}
+                      />
+                    )}
+                  </View>
+                </GestureDetector>
+                <View style={{ flex: 1 }}>{children}</View>
+              </>
+            ) : (
+              <>
+                {/* Handle area for pan gesture - can be dragged */}
+                <GestureDetector gesture={panGesture}>
+                  <View 
+                    style={{ 
+                      width: '100%', 
+                      alignItems: 'center', 
+                      paddingVertical: 16,
+                      minHeight: 44,
+                    }}
+                    hitSlop={{ top: 20, bottom: 20, left: 0, right: 0 }}
+                  >
+                    {showHandle && (
+                      <View
+                        style={[
+                          styles.handle,
+                          { backgroundColor: tokens.colors.border.active }
+                        ]}
+                      />
+                    )}
+                  </View>
+                </GestureDetector>
+                {children}
+              </>
+            )}
           </View>
         </Animated.View>
     </Fragment>

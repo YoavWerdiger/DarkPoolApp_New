@@ -15,6 +15,7 @@ import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
 import { AcademyScreenHeader, CourseCard } from '../../components/learning';
 import { ScreenChrome, MAIN_SCREEN_HEADER_HP } from '../../components/ui';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import { CourseWithProgress } from '../../types/learning';
 import { courseService } from '../../services/courseService';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
@@ -76,8 +77,12 @@ export const CoursesScreen: React.FC = () => {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+      void HapticFeedback.impactLight();
+    }
   }, [refetch]);
 
   const handleCoursePress = useCallback(
@@ -109,6 +114,7 @@ export const CoursesScreen: React.FC = () => {
       }
       try {
         await enrollMutation.mutateAsync(course.id);
+        void HapticFeedback.success();
         legacyAlert('הצלחה!', 'נרשמת בהצלחה לקורס', [{ text: 'אישור' }]);
       } catch {
         legacyAlert('שגיאה', 'לא ניתן להירשם לקורס כרגע. נסה שוב מאוחר יותר.', [{ text: 'אישור' }]);

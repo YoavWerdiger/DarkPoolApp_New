@@ -109,22 +109,44 @@ function scheduleDrawerOpenRetries() {
   });
 }
 
-/**
- * פותח את מגירת Main. מסכי Profile יושבים ב־Stack מעל Main — קודם חוזרים ל־Main ואז נפתחת מגירה.
- */
-export function dispatchOpenMainDrawer(navigation: DrawerParentNavigation) {
-  const target =
-    getMainDrawerNavigation(navigation) ?? registeredMainDrawerNav;
-  if (tryDispatchOpenDrawer(target)) {
-    return;
+/** ה־ProfileStack הוא אח ל־Main ב־root — כשהוא פעיל, פתיחת מגירה דרך ה־ref נשארת מאחורי ה־Stack */
+function isRootProfileStackFocused(): boolean {
+  if (!rootNavigationRef.isReady()) return false;
+  try {
+    const root = rootNavigationRef.getState();
+    const routes = root?.routes as { name?: string }[] | undefined;
+    if (!routes?.length) return false;
+    const idx = typeof root.index === 'number' ? root.index : routes.length - 1;
+    return routes[idx]?.name === 'Profile';
+  } catch {
+    return false;
   }
+}
 
+function openDrawerAfterSwitchToMain(navigation: DrawerParentNavigation) {
   navigateRootStackToMain(navigation);
-
   InteractionManager.runAfterInteractions(() => {
     if (tryDispatchOpenDrawer(registeredMainDrawerNav)) {
       return;
     }
     scheduleDrawerOpenRetries();
   });
+}
+
+/**
+ * פותח את מגירת Main. מסכי Profile יושבים ב־Stack מעל Main — קודם חוזרים ל־Main ואז נפתחת מגירה.
+ */
+export function dispatchOpenMainDrawer(navigation: DrawerParentNavigation) {
+  if (isRootProfileStackFocused()) {
+    openDrawerAfterSwitchToMain(navigation);
+    return;
+  }
+
+  const target =
+    getMainDrawerNavigation(navigation) ?? registeredMainDrawerNav;
+  if (tryDispatchOpenDrawer(target)) {
+    return;
+  }
+
+  openDrawerAfterSwitchToMain(navigation);
 }

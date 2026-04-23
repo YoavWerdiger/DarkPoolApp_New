@@ -18,6 +18,10 @@ interface FearAndGreedCardProps {
    * כשהוא true – ללא מרווחים מהצדדים, ברוחב מלא של הקונטיינר
    */
   fullWidth?: boolean;
+  /** כשהוא true – בלי שורת כותרת בכרטיס (הכותרת מוצגת בכותרת המסך) */
+  hideHeader?: boolean;
+  /** ריפוד פנימי של UICard; `none` + מסך שכבר מרווח אופקית — מצמצם «מסגרת» סביב הגייג' */
+  cardPadding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
 export default function FearAndGreedCard({
@@ -25,6 +29,8 @@ export default function FearAndGreedCard({
   initialExpanded,
   disableToggle,
   fullWidth,
+  hideHeader = false,
+  cardPadding = 'sm',
 }: FearAndGreedCardProps) {
   const DesignTokens = useDesignTokens();
   const [data, setData] = useState<FearAndGreedData | null>(null);
@@ -52,24 +58,28 @@ export default function FearAndGreedCard({
       container: {
         marginHorizontal: fullWidth ? 0 : DesignTokens.spacing.lg,
         marginTop: 0,
-        marginBottom: DesignTokens.spacing.md,
+        marginBottom:
+          fullWidth && cardPadding === 'none'
+            ? DesignTokens.spacing.sm
+            : DesignTokens.spacing.md,
         borderRadius: DesignTokens.borderRadius.lg,
         overflow: 'hidden' as const,
       },
       header: {
         flexDirection: 'row' as const,
         alignItems: 'center' as const,
-        justifyContent: 'space-between' as const,
+        justifyContent: (disableToggle ? 'center' : 'space-between') as const,
         marginBottom: -60,
         zIndex: 10,
-        paddingRight: DesignTokens.spacing.sm,
+        paddingHorizontal: DesignTokens.spacing.sm,
       },
       title: {
         fontSize: DesignTokens.typography.fontSize.lg,
         fontWeight: DesignTokens.typography.fontWeight.bold as any,
         color: DesignTokens.colors.text.primary,
-        textAlign: 'right' as const,
+        textAlign: (disableToggle ? 'center' : 'right') as const,
         writingDirection: 'rtl' as const,
+        ...(disableToggle ? { width: '100%' as const } : {}),
       },
       valueContainer: {
         flexDirection: 'row' as const,
@@ -136,7 +146,8 @@ export default function FearAndGreedCard({
       gaugeContainer: {
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
-        marginVertical: 0,
+        marginTop: -DesignTokens.spacing.base,
+        marginBottom: 0,
         position: 'relative' as const,
         width: '100%' as const,
         height: gaugeSize * 0.5,
@@ -229,7 +240,16 @@ export default function FearAndGreedCard({
         writingDirection: 'rtl' as const,
       },
     };
-  }, [DesignTokens, fullWidth]);
+  }, [DesignTokens, fullWidth, cardPadding, disableToggle]);
+
+  const cardContentContainerStyle =
+    cardPadding === 'none'
+      ? {
+          /** כמו `titlePad` ב־MarketsIndicesCard — כותרות באותו מרחק מקצה הכרטיס העליון */
+          paddingTop: hideHeader ? DesignTokens.spacing.xs : DesignTokens.spacing.md,
+          paddingBottom: DesignTokens.spacing.sm,
+        }
+      : undefined;
 
   useEffect(() => {
     loadFearAndGreedIndex();
@@ -272,9 +292,20 @@ export default function FearAndGreedCard({
 
   const effectiveExpanded = disableToggle ? true : expanded;
 
-  const renderHeader = (subtitle?: string) => (
+  const renderHeader = (_subtitle?: string) => (
     <View style={styles.header}>
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View
+        style={
+          disableToggle
+            ? {
+                width: '100%' as const,
+                flexDirection: 'row' as const,
+                alignItems: 'center' as const,
+                justifyContent: 'center' as const,
+              }
+            : { flexDirection: 'row' as const, alignItems: 'center' as const, flex: 1 }
+        }
+      >
         <Text style={styles.title}>מדד הפחד והתאווה</Text>
       </View>
       {!disableToggle && (
@@ -312,8 +343,12 @@ export default function FearAndGreedCard({
   if (loading) {
     return (
       <View style={styles.container}>
-        <UICard variant="blur" padding="md">
-          {renderHeader()}
+        <UICard
+          variant="blur"
+          padding={cardPadding}
+          contentContainerStyle={cardContentContainerStyle}
+        >
+          {!hideHeader ? renderHeader() : null}
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
             <Text style={[styles.description, { marginTop: DesignTokens.spacing.sm }]}>
@@ -328,8 +363,12 @@ export default function FearAndGreedCard({
   if (error || !data) {
     return (
       <View style={styles.container}>
-        <UICard variant="blur" padding="md">
-          {renderHeader()}
+        <UICard
+          variant="blur"
+          padding={cardPadding}
+          contentContainerStyle={cardContentContainerStyle}
+        >
+          {!hideHeader ? renderHeader() : null}
           <Text style={styles.errorText}>
             {error || 'לא ניתן לטעון את המדד'}
           </Text>
@@ -420,8 +459,12 @@ export default function FearAndGreedCard({
 
   const CardContent = (
     <View style={styles.container}>
-      <UICard variant="blur" padding="sm">
-        {renderHeader(description)}
+      <UICard
+        variant="blur"
+        padding={cardPadding}
+        contentContainerStyle={cardContentContainerStyle}
+      >
+        {!hideHeader ? renderHeader(description) : null}
 
         {!effectiveExpanded ? (
           <View style={{ marginTop: DesignTokens.spacing.sm }}>
@@ -436,7 +479,7 @@ export default function FearAndGreedCard({
           <>
 
             {/* גייג' במרכז */}
-            <View style={{ alignItems: 'center', marginTop: 0 }}>
+            <View style={{ alignItems: 'center' }}>
               <View style={styles.gaugeContainer}>
                 <Svg width={gaugeSize} height={gaugeSize * 0.6} viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}>
                   {/* רקע קשת אפור - מתחת לכל הקשתות */}

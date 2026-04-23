@@ -1,4 +1,5 @@
 import { useDesignTokens } from "../ui/DesignTokens";
+import { HapticFeedback } from "../../utils/hapticFeedback";
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Menu, MenuProvider, MenuOptions, MenuOption, MenuTrigger } from 'react-native-popup-menu';
@@ -95,6 +96,7 @@ export default function MessageContextMenu({
       <MenuOption
         key={item.id}
         onSelect={() => {
+          void HapticFeedback.selection();
           item.onPress?.();
           onClose();
         }}

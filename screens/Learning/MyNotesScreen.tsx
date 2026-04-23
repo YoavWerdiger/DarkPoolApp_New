@@ -12,6 +12,7 @@ import { FileText, Copy } from 'lucide-react-native';
 import { AcademySubScreenBar } from '../../components/learning';
 import UICard from '../../components/ui/UICard';
 import * as Clipboard from 'expo-clipboard';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface NoteWithDetails {
   id?: string;
@@ -59,10 +60,15 @@ export const MyNotesScreen: React.FC = () => {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadNotes();
+    try {
+      await loadNotes();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
   }, [loadNotes]);
 
   const handleNotePress = useCallback((note: NoteWithDetails) => {
+    void HapticFeedback.impactLight();
     (navigation as { navigate: (n: string, p: object) => void }).navigate('LearningScreen', {
       courseId: note.course_id,
       lessonId: note.lesson_id,
@@ -73,6 +79,7 @@ export const MyNotesScreen: React.FC = () => {
     e.stopPropagation();
     try {
       await Clipboard.setStringAsync(note.notes_content);
+      void HapticFeedback.selection();
       legacyAlert('הועתק', 'ההערה הועתקה ללוח');
     } catch (error) {
       legacyAlert('שגיאה', 'לא ניתן להעתיק את ההערה');

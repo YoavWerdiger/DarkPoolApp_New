@@ -12,7 +12,8 @@ const CoursesScreenPlain = CoursesScreen;
 const LearningWithVideo = withVideoBackground(LearningScreen);
 const CourseDetailWithVideo = withVideoBackground(CourseDetailScreen);
 const CoursePreviewWithVideo = withVideoBackground(CoursePreviewScreen);
-const LessonPlayerWithVideo = withVideoBackground(LessonPlayerScreen);
+/** מסך שיעור: בלי withVideoBackground — רקע ירוק־שחור מאחורי blur גרם לכתם ירוק; המסך מגדיר רקע נייטרלי משלו */
+const LessonPlayerPlain = LessonPlayerScreen;
 const MyNotesWithVideo = withVideoBackground(MyNotesScreen);
 
 export type LearningStackParamList = {
@@ -60,7 +61,7 @@ export default function LearningStack() {
       />
       <Stack.Screen
         name="LessonPlayerScreen"
-        component={LessonPlayerWithVideo}
+        component={LessonPlayerPlain}
         options={{ title: 'שיעור', headerShown: false }}
       />
       <Stack.Screen

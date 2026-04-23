@@ -19,6 +19,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const { width } = Dimensions.get('window');
 
@@ -65,6 +66,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
     try {
       // אם התוכנית חינמית
       if (selectedPlan === 'free') {
+        void HapticFeedback.success();
         legacyAlert(
           'הרשמה הושלמה!',
           'החשבון החינמי שלך נוצר בהצלחה.',
@@ -103,7 +105,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         
         if (supported) {
           await Linking.openURL(paymentResponse.paymentUrl);
-          
+          void HapticFeedback.impactLight();
           legacyAlert(
             'העברה לדף התשלום',
             'אנא השלם את התשלום בדף שנפתח. לאחר השלמת התשלום, תועבר חזרה לאפליקציה.',
@@ -128,6 +130,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       }
       
     } catch (error) {
+      void HapticFeedback.error();
       legacyAlert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
@@ -139,8 +142,13 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // כאן ניתן להוסיף רענון נתונים
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      // כאן ניתן להוסיף רענון נתונים
+      await new Promise<void>((r) => setTimeout(r, 1000));
+    } finally {
+      setRefreshing(false);
+      void HapticFeedback.impactLight();
+    }
   };
 
   const renderPlanIcon = (planId: string) => {
@@ -423,9 +431,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <ChatSubScreenHeader title="צ'קאאוט" onBack={() => navigation.goBack()} />
-        </View>
+        <ChatSubScreenHeader title="צ'קאאוט" onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={{ flex: 1 }}

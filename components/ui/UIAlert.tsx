@@ -45,7 +45,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
   closeOnBackdropPress = false,
 }) => {
   const DesignTokens = useDesignTokens();
-  const { colors, typography, spacing, borderRadius, shadows } = DesignTokens;
+  const { colors, typography, spacing, borderRadius } = DesignTokens;
   
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -66,25 +66,25 @@ const UIAlert: React.FC<UIAlertProps> = ({
         return {
           icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
           iconColor: colors.success.main,
-          backgroundColor: colors.background.sheet,
+          ring: 'rgba(0, 200, 5, 0.18)',
         };
       case 'warning':
         return {
           icon: 'warning' as keyof typeof Ionicons.glyphMap,
           iconColor: colors.warning.main,
-          backgroundColor: colors.background.sheet,
+          ring: 'rgba(255, 184, 0, 0.2)',
         };
       case 'error':
         return {
           icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
           iconColor: colors.danger.main,
-          backgroundColor: colors.background.sheet,
+          ring: 'rgba(255, 68, 68, 0.2)',
         };
       default: // info
         return {
           icon: 'information-circle' as keyof typeof Ionicons.glyphMap,
           iconColor: colors.info.main,
-          backgroundColor: colors.background.sheet,
+          ring: 'rgba(59, 130, 246, 0.2)',
         };
     }
   };
@@ -102,50 +102,57 @@ const UIAlert: React.FC<UIAlertProps> = ({
 
   const rtlCard: ViewStyle = I18nManager.isRTL ? { direction: 'rtl' } : {};
 
+  const glass = DesignTokens.getGlassCardStyle('medium');
   const containerStyle: ViewStyle = {
-    backgroundColor: typeConfig.backgroundColor,
-    borderRadius: borderRadius['2xl'],
+    ...glass,
     padding: spacing.xl,
     width: '100%',
-    maxWidth: 320,
-    ...shadows.lg,
-    borderWidth: 0.5,
-    borderColor: colors.border.default,
+    maxWidth: 340,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: typeConfig.ring,
     ...rtlCard,
   };
 
   const titleStyle: TextStyle = {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
+    fontSize: typography.title2.size,
+    fontWeight: typography.title2.weight as TextStyle['fontWeight'],
+    letterSpacing: typography.title2.letterSpacing,
+    lineHeight: typography.title2.lineHeight,
     color: colors.text.primary,
     textAlign: 'center',
     writingDirection: 'rtl',
-    marginBottom: message ? spacing.sm : 0,
+    marginBottom: message ? spacing.md : 0,
   };
 
   const messageStyle: TextStyle = {
-    fontSize: typography.fontSize.base,
+    fontSize: typography.body.size,
+    fontWeight: typography.body.weight as TextStyle['fontWeight'],
     color: colors.text.secondary,
     textAlign: 'center',
     writingDirection: 'rtl',
-    lineHeight: typography.lineHeight.normal * typography.fontSize.base,
+    lineHeight: typography.body.lineHeight,
     marginBottom: spacing.lg,
   };
 
+  const twoCol = buttons.length === 2;
   const buttonContainerStyle: ViewStyle = {
-    flexDirection: buttons.length > 2 ? 'column' : 'row',
+    flexDirection: buttons.length > 2 ? 'column' : twoCol && I18nManager.isRTL ? 'row-reverse' : 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.md,
+    marginTop: spacing.xs,
+    gap: twoCol ? spacing.sm : 0,
   };
 
   const getButtonStyle = (button: UIAlertButton, index: number): ViewStyle => {
     const baseStyle: ViewStyle = {
       flex: buttons.length > 2 ? 0 : 1,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      borderRadius: borderRadius.md,
-      marginHorizontal: buttons.length > 2 ? 0 : (index > 0 ? spacing.sm : 0),
+      minHeight: 48,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.base,
+      borderRadius: borderRadius.full,
       marginBottom: buttons.length > 2 && index < buttons.length - 1 ? spacing.sm : 0,
+      alignItems: 'center',
+      justifyContent: 'center',
     };
 
     switch (button.style) {
@@ -207,13 +214,13 @@ const UIAlert: React.FC<UIAlertProps> = ({
 
       <View style={{ flex: 1 }}>
         <Pressable
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.overlay }]}
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.background.overlayHeavy }]}
           onPress={closeOnBackdropPress ? onClose : undefined}
         />
         <View
           style={[
             StyleSheet.absoluteFillObject,
-            { justifyContent: 'center', alignItems: 'center', padding: spacing['2xl'] },
+            { justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
           ]}
           pointerEvents="box-none"
         >
@@ -222,8 +229,24 @@ const UIAlert: React.FC<UIAlertProps> = ({
               style={[containerStyle, { transform: [{ scale: scaleAnim }] }]}
             >
               {showIcon && (
-                <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-                  <Ionicons name={typeConfig.icon} size={48} color={typeConfig.iconColor} />
+                <View
+                  style={{
+                    alignItems: 'center',
+                    marginBottom: spacing.lg,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 32,
+                      backgroundColor: typeConfig.ring,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name={typeConfig.icon} size={32} color={typeConfig.iconColor} />
+                  </View>
                 </View>
               )}
 

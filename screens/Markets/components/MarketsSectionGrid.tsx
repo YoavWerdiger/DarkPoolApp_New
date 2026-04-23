@@ -27,7 +27,7 @@ function chunkPairs<T>(arr: T[]): T[][] {
 }
 
 /**
- * בחירת אזור — רשת עמודות זוגיות (שורה אחת ל־2 פריטים, 2×2 ל־4 וכו'), ממורכזת.
+ * בחירת אזור — רשת 2 עמודות; שורה אחרונה עם פריט יחיד ממורכזת (כמו 3 פריטים בחדשות).
  */
 export function MarketsSectionGrid({
   sections,
@@ -38,14 +38,14 @@ export function MarketsSectionGrid({
   const t = useDesignTokens();
   const rows = useMemo(() => chunkPairs(sections), [sections]);
 
-  const renderTile = (item: SectionItem) => {
+  const renderTile = (item: SectionItem, singleInRow: boolean) => {
     const active = activeId === item.id;
     return (
       <TouchableOpacity
         key={item.id}
         onPress={() => onSelect(item.id)}
         activeOpacity={0.82}
-        style={styles.tileWrap}
+        style={[styles.tileWrap, singleInRow && styles.tileWrapOrphan]}
         accessibilityRole="button"
         accessibilityState={{ selected: active }}
         accessibilityLabel={`${accessibilityGroupLabel}: ${item.title}`}
@@ -89,8 +89,11 @@ export function MarketsSectionGrid({
   return (
     <View style={styles.outer}>
       {rows.map((row, idx) => (
-        <View key={idx} style={styles.row}>
-          {row.map(renderTile)}
+        <View
+          key={idx}
+          style={[styles.row, row.length === 1 && styles.rowSingleOrphan]}
+        >
+          {row.map((item) => renderTile(item, row.length === 1))}
         </View>
       ))}
     </View>
@@ -98,30 +101,39 @@ export function MarketsSectionGrid({
 }
 
 const styles = StyleSheet.create({
+  /** רוחב מלא מתחת לכותרת — מיושר לאותם קצוות כמו תוכן הטאבים */
   outer: {
     width: '100%',
-    maxWidth: 420,
-    alignSelf: 'center',
+    alignSelf: 'stretch',
     gap: 10,
   },
   row: {
     flexDirection: 'row-reverse',
     gap: 10,
   },
+  /** פריט יחיד בשורה — ממורכז, רוחב כמו תא ברשת 2×2 */
+  rowSingleOrphan: {
+    justifyContent: 'center',
+  },
   tileWrap: {
     flex: 1,
     minWidth: 0,
   },
+  tileWrapOrphan: {
+    flex: 0,
+    width: '48%',
+    maxWidth: 200,
+  },
   card: {
-    minHeight: 92,
+    minHeight: 96,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     borderRadius: 18,
   },
   label: {
-    fontSize: 13,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 17,
+    lineHeight: 18,
   },
 });

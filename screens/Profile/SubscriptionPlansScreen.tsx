@@ -9,7 +9,6 @@ import {
   Animated,
   Platform,
   FlatList,
-  StyleSheet
 } from 'react-native';
 import {
   Check,
@@ -22,7 +21,6 @@ import {
   Calendar,
   Gift
 } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
@@ -303,8 +301,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           style={{
             width: CARD_WIDTH,
             borderRadius: DesignTokens.borderRadius['2xl'],
-            padding: DesignTokens.spacing.lg,
-            paddingBottom: DesignTokens.spacing['2xl'],
+            padding: 0,
             borderWidth: isSelected ? 2 : 1,
             borderColor,
             shadowColor: accentColor,
@@ -316,27 +313,16 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             overflow: 'hidden',
           }}
         >
-          {Platform.OS === 'ios' ? (
-            <BlurView
-              intensity={80}
-              tint="systemChromeMaterialDark"
-              style={StyleSheet.absoluteFill}
-            />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(25, 25, 25, 0.92)' }]} />
-          )}
-          <View style={[
-            StyleSheet.absoluteFill,
-            {
-              borderWidth: 0.5,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-              borderTopColor: 'rgba(255, 255, 255, 0.20)',
+          <UICard
+            variant="glass"
+            glassIntensity="light"
+            padding="lg"
+            style={{
               borderRadius: DesignTokens.borderRadius['2xl'],
-            }
-          ]} />
-          
-          {/* Content */}
-          <View style={{ position: 'relative', zIndex: 1 }}>
+              paddingBottom: DesignTokens.spacing['2xl'],
+            }}
+          >
+          <View style={{ position: 'relative' }}>
 
           {/* Plan Header */}
           <View style={{ alignItems: 'center', marginBottom: 24, marginTop: plan.popular ? 12 : 0 }}>
@@ -547,6 +533,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             </TouchableOpacity>
           </View>
           </View>
+          </UICard>
         </AnimatedCard>
       </Animated.View>
     );
@@ -555,9 +542,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <ChatSubScreenHeader title="בחר מסלול" onBack={() => navigation.goBack()} />
-        </View>
+        <ChatSubScreenHeader title="בחר מסלול" onBack={() => navigation.goBack()} />
 
       <View style={{ flex: 1 }}>
         <Animated.ScrollView 
@@ -795,7 +780,8 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           </View>
           
           <UICard
-            variant="inputGlass"
+            variant="glass"
+            glassIntensity="light"
             padding="none"
             style={{
               overflow: 'hidden',
@@ -927,7 +913,8 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
         {/* How It Works */}
         <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing['2xl'] }}>
           <UICard
-            variant="inputGlass"
+            variant="glass"
+            glassIntensity="light"
             padding="lg"
             style={{ borderRadius: DesignTokens.borderRadius.lg }}
           >

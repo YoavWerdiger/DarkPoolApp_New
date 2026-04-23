@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, TextInputProps, Animated, Easing } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TextInputProps } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
 
 interface OnboardingInputProps extends TextInputProps {
   label: string;
@@ -18,41 +19,18 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
   ...textInputProps
 }) => {
   const [focused, setFocused] = useState(false);
-  const borderAnim = useRef(new Animated.Value(0)).current;
-
-  const onFocus = () => {
-    setFocused(true);
-    Animated.timing(borderAnim, {
-      toValue: 1,
-      duration: 200,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const onBlur = () => {
-    setFocused(false);
-    Animated.timing(borderAnim, {
-      toValue: 0,
-      duration: 200,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: false,
-    }).start();
-  };
+  const onFocus = () => setFocused(true);
+  const onBlur = () => setFocused(false);
 
   const surface = DesignTokens.onboardingInputSurface;
 
   const borderColor = error
     ? '#F85149'
-    : borderAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [surface.borderColor, DesignTokens.colors.primary.main],
-      });
+    : focused
+      ? DesignTokens.colors.primary.main
+      : surface.borderColor;
 
-  const bgColor = borderAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [surface.backgroundColor, 'rgba(0,230,84,0.06)'],
-  });
+  const bgColor = focused ? 'rgba(0,230,84,0.06)' : surface.backgroundColor;
 
   return (
     <View style={{ marginBottom: 18 }}>
@@ -69,45 +47,52 @@ const OnboardingInput: React.FC<OnboardingInputProps> = ({
         {label}
       </Text>
 
-      <Animated.View
+      <UICard
+        variant="inputGlass"
+        padding="none"
         style={{
-          backgroundColor: bgColor,
-          borderRadius: 16,
+          borderRadius: 26,
           borderWidth: surface.borderWidth,
           borderColor,
+          backgroundColor: bgColor,
           paddingHorizontal: 16,
           paddingVertical: multiline ? 12 : 0,
-          flexDirection: 'row',
-          alignItems: multiline ? 'flex-start' : 'center',
         }}
       >
-        {icon && (
-          <Ionicons
-            name={icon}
-            size={19}
-            color={focused ? DesignTokens.colors.primary.main : 'rgba(255,255,255,0.28)'}
-            style={{ marginTop: multiline ? 4 : 0 }}
-          />
-        )}
-        <TextInput
+        <View
           style={{
-            flex: 1,
-            color: '#fff',
-            paddingHorizontal: icon ? 12 : 0,
-            paddingVertical: multiline ? 4 : 16,
-            fontSize: 16,
-            fontWeight: '400',
-            textAlign: 'right',
-            minHeight: multiline ? 80 : undefined,
-            textAlignVertical: multiline ? 'top' : 'center',
+            flexDirection: 'row',
+            alignItems: multiline ? 'flex-start' : 'center',
           }}
-          placeholderTextColor="rgba(255,255,255,0.2)"
-          multiline={multiline}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          {...textInputProps}
-        />
-      </Animated.View>
+        >
+          {icon && (
+            <Ionicons
+              name={icon}
+              size={19}
+              color={focused ? DesignTokens.colors.primary.main : 'rgba(255,255,255,0.28)'}
+              style={{ marginTop: multiline ? 4 : 0 }}
+            />
+          )}
+          <TextInput
+            style={{
+              flex: 1,
+              color: '#fff',
+              paddingHorizontal: icon ? 12 : 0,
+              paddingVertical: multiline ? 4 : 16,
+              fontSize: 16,
+              fontWeight: '400',
+              textAlign: 'right',
+              minHeight: multiline ? 80 : undefined,
+              textAlignVertical: multiline ? 'top' : 'center',
+            }}
+            placeholderTextColor="rgba(255,255,255,0.2)"
+            multiline={multiline}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            {...textInputProps}
+          />
+        </View>
+      </UICard>
 
       {error && (
         <View

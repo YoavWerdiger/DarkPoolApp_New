@@ -1,7 +1,44 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
+
+/** תואם ללוגיקה ב־TradesListTab — קודם מהמסד, אחרת חישוב ממחירים */
+export function resolveTradeReturnPercent(trade: {
+  return_percentage?: number | null;
+  entry_price: number;
+  exit_price: number;
+  direction: 'long' | 'short';
+}): number {
+  if (trade.return_percentage !== undefined && trade.return_percentage !== null) {
+    const r = Number(trade.return_percentage);
+    return Number.isFinite(r) ? r : 0;
+  }
+  const entry = Number(trade.entry_price);
+  if (entry > 0) {
+    const exit = Number(trade.exit_price);
+    if (trade.direction === 'long') {
+      return ((exit - entry) / entry) * 100;
+    }
+    return ((entry - exit) / entry) * 100;
+  }
+  return 0;
+}
+
+function normalizeTrade(raw: TradeMessageProps['trade']): TradeMessageProps['trade'] {
+  return {
+    ...raw,
+    entry_price: Number(raw.entry_price),
+    exit_price: Number(raw.exit_price),
+    quantity: Number(raw.quantity),
+    pnl: Number(raw.pnl),
+    return_percentage:
+      raw.return_percentage === undefined || raw.return_percentage === null
+        ? undefined
+        : Number(raw.return_percentage),
+  };
+}
 
 interface TradeMessageProps {
   trade: {
@@ -18,11 +55,72 @@ interface TradeMessageProps {
     notes?: string;
   };
   isMe: boolean;
+  embeddedInBubble?: boolean;
 }
 
-function TradeMessage({ trade, isMe }: TradeMessageProps) {
+function TradeSymbolLogo({
+  symbol,
+  size,
+  fallbackColor,
+  backgroundColor,
+}: {
+  symbol: string;
+  size: number;
+  fallbackColor: string;
+  backgroundColor: string;
+}) {
+  const [failed, setFailed] = useState(false);
+  const uri = !failed ? brandfetchTickerLogoUri(symbol) : null;
+  const initials = symbol.trim().slice(0, 4).toUpperCase() || '—';
+
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor,
+        overflow: 'hidden',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {uri ? (
+        <Image
+          source={{ uri }}
+          style={{ width: size, height: size }}
+          contentFit="cover"
+          transition={160}
+          cachePolicy="memory-disk"
+          recyclingKey={symbol}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Text
+          style={{
+            fontSize: Math.max(10, size * 0.26),
+            fontWeight: '700',
+            color: fallbackColor,
+          }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+        >
+          {initials}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+export default function TradeMessage({ trade: tradeRaw, isMe: _isMe, embeddedInBubble }: TradeMessageProps) {
   const DesignTokens = useDesignTokens();
-  const styles = React.useMemo(() => createStyles(DesignTokens, isMe), [DesignTokens, isMe]);
+  const styles = useMemo(
+    () => createStyles(DesignTokens, !!embeddedInBubble),
+    [DesignTokens, embeddedInBubble]
+  );
+
+  const trade = useMemo(() => normalizeTrade(tradeRaw), [tradeRaw]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -42,205 +140,218 @@ function TradeMessage({ trade, isMe }: TradeMessageProps) {
   };
 
   const isProfit = trade.pnl >= 0;
-  const directionColor = trade.direction === 'long' 
-    ? DesignTokens.colors.primary.main 
-    : DesignTokens.colors.text.danger;
+  const directionColor =
+    trade.direction === 'long' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
+  const returnPct = resolveTradeReturnPercent(trade);
+
+  const pnlLabel = isProfit ? 'רווח נטו' : 'הפסד נטו';
 
   return (
-    <TouchableOpacity style={styles.container} activeOpacity={0.9}>
-      <View style={styles.header}>
-        <View style={styles.symbolContainer}>
-          <Text style={styles.symbol}>{trade.symbol}</Text>
-          <View style={[styles.directionBadge, { backgroundColor: `${directionColor}20` }]}>
-            <Text style={[styles.directionText, { color: directionColor }]}>
-              {trade.direction === 'long' ? 'Long' : 'Short'}
-            </Text>
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <View style={styles.headerTextCol}>
+          <View style={styles.symbolRow}>
+            <Text style={styles.symbol}>{trade.symbol}</Text>
+            <View style={[styles.directionBadge, { backgroundColor: `${directionColor}22` }]}>
+              <Text style={[styles.directionText, { color: directionColor }]}>
+                {trade.direction === 'long' ? 'Long' : 'Short'}
+              </Text>
+            </View>
           </View>
+        </View>
+        <View style={styles.logoWrap}>
+          <TradeSymbolLogo
+            symbol={trade.symbol}
+            size={44}
+            fallbackColor={DesignTokens.colors.text.primary}
+            backgroundColor="rgba(255,255,255,0.1)"
+          />
         </View>
       </View>
 
       <View style={styles.details}>
         <View style={styles.row}>
-          <Text style={styles.label}>כניסה:</Text>
+          <Text style={styles.label}>כניסה:{'\u00a0'}</Text>
           <Text style={styles.price}>{formatCurrency(trade.entry_price)}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>יציאה:</Text>
+          <Text style={styles.label}>יציאה:{'\u00a0'}</Text>
           <Text style={styles.price}>{formatCurrency(trade.exit_price)}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>כמות:</Text>
+          <Text style={styles.label}>כמות:{'\u00a0'}</Text>
           <Text style={styles.value}>{trade.quantity}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.label}>תאריך:</Text>
+          <Text style={styles.label}>תאריך:{'\u00a0'}</Text>
           <Text style={styles.value}>{formatDate(trade.exit_date)}</Text>
         </View>
-      </View>
 
-      <View style={styles.footer}>
-        <View style={styles.footerRow}>
-          <View style={[styles.pnlContainer, isProfit ? styles.pnlProfit : styles.pnlLoss]}>
-            <Ionicons 
-              name={isProfit ? 'trending-up' : 'trending-down'} 
-              size={16} 
-              color={isProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger} 
-            />
-            <Text style={[
-              styles.pnlText,
-              isProfit ? styles.pnlTextProfit : styles.pnlTextLoss
-            ]}>
-              {formatCurrency(trade.pnl)}
-            </Text>
-          </View>
-          {trade.return_percentage !== undefined && trade.return_percentage !== null && (
-            <View style={[styles.returnContainer, isProfit ? styles.returnProfit : styles.returnLoss]}>
-              <Text style={[
-                styles.returnText,
-                isProfit ? styles.returnTextProfit : styles.returnTextLoss
-              ]}>
-                {trade.return_percentage > 0 ? '+' : ''}{trade.return_percentage.toFixed(2)}%
-              </Text>
-            </View>
-          )}
+        {/* שורה אחת: רווח נטו: $X / הפסד נטו: $X — ערך מ־trade.pnl (מסד) */}
+        <View style={styles.row}>
+          <Text
+            style={[
+              styles.label,
+              isProfit ? styles.labelProfit : styles.labelLoss,
+            ]}
+          >
+            {pnlLabel}:{'\u00a0'}
+          </Text>
+          <Text
+            style={[
+              styles.emphasisValue,
+              isProfit ? styles.valueProfit : styles.valueLoss,
+            ]}
+          >
+            {formatCurrency(trade.pnl)}
+          </Text>
+        </View>
+
+        {/* שורה נפרדת: תשואה: ±X% — קודם מ־return_percentage במסד, אחרת כמו ביומן */}
+        <View style={styles.row}>
+          <Text style={styles.label}>תשואה:{'\u00a0'}</Text>
+          <Text
+            style={[
+              styles.emphasisValue,
+              returnPct >= 0 ? styles.valueProfit : styles.valueLoss,
+            ]}
+          >
+            {returnPct >= 0 ? '+' : ''}
+            {returnPct.toFixed(2)}%
+          </Text>
         </View>
       </View>
 
-      {trade.notes && (
+      {trade.notes ? (
         <View style={styles.notesContainer}>
           <Text style={styles.notesText}>{trade.notes}</Text>
         </View>
-      )}
-    </TouchableOpacity>
+      ) : null}
+    </View>
   );
 }
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>, isMe: boolean) => StyleSheet.create({
-  container: {
-    backgroundColor: tokens.colors.background.tertiary,
-    borderRadius: tokens.borderRadius.md,
-    padding: tokens.spacing.md,
-    maxWidth: '85%',
-    marginVertical: tokens.spacing.xs,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: tokens.spacing.sm,
-  },
-  symbolContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.spacing.sm,
-  },
-  symbol: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-  },
-  directionBadge: {
-    paddingHorizontal: tokens.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: tokens.borderRadius.sm,
-  },
-  directionText: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.bold,
-  },
-  details: {
-    gap: tokens.spacing.xs,
-    marginBottom: tokens.spacing.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  label: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-  },
-  price: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.medium,
-    textAlign: 'right',
-  },
-  value: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.primary,
-    fontWeight: tokens.typography.fontWeight.medium,
-    textAlign: 'right',
-  },
-  footer: {
-    marginTop: tokens.spacing.sm,
-    paddingTop: tokens.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: tokens.colors.border.primary,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  pnlContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.spacing.xs,
-  },
-  pnlProfit: {
-    // Applied conditionally
-  },
-  pnlLoss: {
-    // Applied conditionally
-  },
-  pnlText: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold,
-    textAlign: 'right',
-  },
-  pnlTextProfit: {
-    color: tokens.colors.primary.main,
-  },
-  pnlTextLoss: {
-    color: tokens.colors.text.danger,
-  },
-  returnContainer: {
-    paddingHorizontal: tokens.spacing.sm,
-    paddingVertical: 4,
-    borderRadius: tokens.borderRadius.sm,
-  },
-  returnProfit: {
-    backgroundColor: `${tokens.colors.primary.main}20`,
-  },
-  returnLoss: {
-    backgroundColor: `${tokens.colors.text.danger}20`,
-  },
-  returnText: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.bold,
-    textAlign: 'right',
-  },
-  returnTextProfit: {
-    color: tokens.colors.primary.main,
-  },
-  returnTextLoss: {
-    color: tokens.colors.text.danger,
-  },
-  notesContainer: {
-    marginTop: tokens.spacing.sm,
-    paddingTop: tokens.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: tokens.colors.border.primary,
-  },
-  notesText: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    fontStyle: 'italic',
-    textAlign: 'right',
-  },
-});
-
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>, embeddedInBubble: boolean) =>
+  StyleSheet.create({
+    container: embeddedInBubble
+      ? {
+          width: '100%',
+          maxWidth: 300,
+          alignSelf: 'stretch',
+          paddingVertical: tokens.spacing.sm,
+          paddingHorizontal: tokens.spacing.md,
+          marginHorizontal: tokens.spacing.xs,
+        }
+      : {
+          backgroundColor: tokens.colors.background.tertiary,
+          borderRadius: tokens.borderRadius.lg,
+          padding: tokens.spacing.lg,
+          maxWidth: '90%',
+          marginVertical: tokens.spacing.xs,
+          marginHorizontal: tokens.spacing.sm,
+          borderWidth: 1,
+          borderColor: `${tokens.colors.primary.main}28`,
+        },
+    headerRow: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: tokens.spacing.md,
+      marginBottom: tokens.spacing.md,
+      paddingBottom: tokens.spacing.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: tokens.colors.border.primary,
+    },
+    logoWrap: {
+      flexShrink: 0,
+    },
+    headerTextCol: {
+      flex: 1,
+      minWidth: 0,
+    },
+    symbolRow: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: tokens.spacing.sm,
+      flexWrap: 'wrap',
+    },
+    symbol: {
+      fontSize: tokens.typography.fontSize.lg,
+      fontWeight: tokens.typography.fontWeight.bold,
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+    },
+    directionBadge: {
+      paddingHorizontal: tokens.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: tokens.borderRadius.sm,
+    },
+    directionText: {
+      fontSize: tokens.typography.fontSize.xs,
+      fontWeight: tokens.typography.fontWeight.bold,
+    },
+    details: {
+      gap: tokens.spacing.sm,
+    },
+    row: {
+      flexDirection: 'row-reverse',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: tokens.spacing.md,
+      width: '100%',
+    },
+    label: {
+      fontSize: tokens.typography.fontSize.sm,
+      color: tokens.colors.text.secondary,
+      textAlign: 'right',
+      flexShrink: 0,
+      fontWeight: tokens.typography.fontWeight.medium,
+    },
+    labelProfit: {
+      color: tokens.colors.primary.main,
+    },
+    labelLoss: {
+      color: tokens.colors.text.danger,
+    },
+    price: {
+      fontSize: tokens.typography.fontSize.sm,
+      color: tokens.colors.primary.main,
+      fontWeight: tokens.typography.fontWeight.semibold,
+      textAlign: 'left',
+      writingDirection: 'ltr',
+      flex: 1,
+    },
+    value: {
+      fontSize: tokens.typography.fontSize.sm,
+      color: tokens.colors.text.primary,
+      fontWeight: tokens.typography.fontWeight.medium,
+      textAlign: 'left',
+      flex: 1,
+    },
+    emphasisValue: {
+      fontSize: tokens.typography.fontSize.sm,
+      fontWeight: tokens.typography.fontWeight.bold,
+      textAlign: 'left',
+      writingDirection: 'ltr',
+      flex: 1,
+    },
+    valueProfit: {
+      color: tokens.colors.primary.main,
+    },
+    valueLoss: {
+      color: tokens.colors.text.danger,
+    },
+    notesContainer: {
+      marginTop: tokens.spacing.md,
+      paddingTop: tokens.spacing.sm,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: tokens.colors.border.primary,
+    },
+    notesText: {
+      fontSize: tokens.typography.fontSize.sm,
+      color: tokens.colors.text.secondary,
+      fontStyle: 'italic',
+      textAlign: 'right',
+      writingDirection: 'rtl',
+    },
+  });

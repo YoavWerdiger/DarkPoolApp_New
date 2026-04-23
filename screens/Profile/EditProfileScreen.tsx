@@ -8,7 +8,6 @@ import {
   X,
   ChevronDown,
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
@@ -104,13 +103,18 @@ export default function EditProfileScreen({ navigation }: any) {
         return;
       }
 
-      let profilePictureUrl = profileImage;
+      let profilePictureUrl: string | null = profileImage;
 
-      if (profileImage && (profileImage.startsWith('file:') || profileImage.startsWith('assets:'))) {
+      const isRemoteImage =
+        typeof profileImage === 'string' && /^https?:\/\//i.test(profileImage);
+      if (profileImage && !isRemoteImage) {
         const upload = await mediaService.uploadMedia(profileImage, 'image');
-        if (upload.success) {
-          profilePictureUrl = upload.url || null;
+        if (!upload.success) {
+          setIsSaving(false);
+          legacyAlert('שגיאה', upload.error || 'העלאת תמונת הפרופיל נכשלה. נסה שוב או בחר תמונה אחרת.');
+          return;
         }
+        profilePictureUrl = upload.url ?? null;
       }
 
       const { error } = await updateProfile({
@@ -124,7 +128,7 @@ export default function EditProfileScreen({ navigation }: any) {
       setIsSaving(false);
       
       if (error) {
-        legacyAlert('שגיאה', 'שגיאה בעדכון הפרופיל');
+        legacyAlert('שגיאה', error);
         return;
       }
       
@@ -132,9 +136,10 @@ export default function EditProfileScreen({ navigation }: any) {
         { text: 'אישור', onPress: () => navigation.goBack() }
       ]);
       
-    } catch (error) {
+    } catch (error: unknown) {
       setIsSaving(false);
-      legacyAlert('שגיאה', 'שגיאה בעדכון הפרופיל');
+      const msg = error instanceof Error ? error.message : 'שגיאה בעדכון הפרופיל';
+      legacyAlert('שגיאה', msg);
     }
   };
 
@@ -150,9 +155,7 @@ export default function EditProfileScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <ChatSubScreenHeader title="עריכת פרופיל" onBack={() => navigation.goBack()} />
-        </View>
+        <ChatSubScreenHeader title="עריכת פרופיל" onBack={() => navigation.goBack()} />
 
         <KeyboardAvoidingView 
           style={{ flex: 1 }}
@@ -169,7 +172,8 @@ export default function EditProfileScreen({ navigation }: any) {
             >
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
               <UICard
-                variant="inputGlass"
+                variant="glass"
+                glassIntensity="light"
                 padding="lg"
                 style={{
                   borderRadius: DesignTokens.borderRadius.lg,
@@ -396,7 +400,8 @@ export default function EditProfileScreen({ navigation }: any) {
           zIndex: 1000
         }}>
           <UICard
-            variant="inputGlass"
+            variant="glass"
+            glassIntensity="light"
             padding="lg"
             style={{
               width: '80%',

@@ -9,9 +9,9 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
 import ShareTradeModal from './ShareTradeModal';
-import ExportTradeImage from '../../components/Journal/ExportTradeImage';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 function TradeSymbolLogo({
   symbol,
@@ -93,15 +93,9 @@ export default function TradesListTab() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterDirection, setFilterDirection] = useState<'all' | 'long' | 'short'>('all');
-  const [filterPnl, setFilterPnl] = useState<'all' | 'profit' | 'loss'>('all');
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const styles = React.useMemo(() => createStyles(DesignTokens, mainTabsHeight), [DesignTokens, mainTabsHeight]);
-
-  const filtersActive = filterDirection !== 'all' || filterPnl !== 'all';
 
   const loadTrades = useCallback(async () => {
     if (!user) return;
@@ -147,6 +141,7 @@ export default function TradesListTab() {
                 .eq('user_id', user?.id);
 
               if (error) throw error;
+              void HapticFeedback.impactLight();
               loadTrades();
             } catch (error: any) {
               legacyAlert('שגיאה', 'לא ניתן למחוק את הטרייד');
@@ -209,7 +204,7 @@ export default function TradesListTab() {
     const returnPercentage = calculateReturnPercentage();
 
     return (
-      <UICard variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.sm }}>
+      <UICard variant="blur" padding="md" style={styles.tradeCard}>
         <View style={styles.tradeHeader}>
           <View style={styles.tradeHeaderMain}>
             <TradeSymbolLogo
@@ -230,15 +225,6 @@ export default function TradesListTab() {
             </View>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedTrade(item);
-                setShowExportModal(true);
-              }}
-              style={styles.shareButton}
-            >
-              <Ionicons name="image-outline" size={18} color={DesignTokens.colors.primary.main} />
-            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
                 setSelectedTrade(item);
@@ -322,137 +308,71 @@ export default function TradesListTab() {
     );
   }
 
-  // סינון טריידים
-  const filteredTrades = trades.filter(trade => {
-    // חיפוש לפי ticker
-    if (searchQuery && !trade.symbol.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    // סינון לפי כיוון
-    if (filterDirection !== 'all' && trade.direction !== filterDirection) {
-      return false;
-    }
-    // סינון לפי רווח/הפסד
-    if (filterPnl === 'profit' && trade.pnl <= 0) {
-      return false;
-    }
-    if (filterPnl === 'loss' && trade.pnl >= 0) {
-      return false;
-    }
+  const q = searchQuery.trim().toLowerCase();
+  const filteredTrades = trades.filter((trade) => {
+    if (q && !trade.symbol.toLowerCase().includes(q)) return false;
     return true;
   });
 
+  const placeholderColor = 'rgba(255, 255, 255, 0.4)';
+
   return (
     <View style={[styles.container, styles.rtlRoot]}>
-      {/* Search Bar */}
-      <View style={styles.searchCard}>
-        <UICard variant="blur" padding="sm" style={styles.searchCardInner}>
-          <View style={styles.searchContainer}>
-            <Ionicons name="search" size={18} color={DesignTokens.colors.text.secondary} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="חפש לפי ticker..."
-              placeholderTextColor={DesignTokens.colors.text.tertiary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              textAlign="right"
+      <View style={styles.searchSection}>
+        <View style={styles.searchPill} accessibilityRole="search">
+          <View style={styles.searchLeadingIcon} pointerEvents="none" accessibilityElementsHidden>
+            <Ionicons
+              name="search"
+              size={20}
+              color={DesignTokens.colors.text.tertiary}
             />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <Ionicons name="close-circle" size={18} color={DesignTokens.colors.text.secondary} />
-              </TouchableOpacity>
-            )}
           </View>
-        </UICard>
-      </View>
-
-      {/* פילטרים — רק אייקון; פתיחה/סגירה, בלי טקסט וללא יישור לשני קצוות */}
-      <View style={styles.filtersOuter}>
-        <TouchableOpacity
-          style={styles.filtersIconButton}
-          onPress={() => setFiltersOpen((v) => !v)}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel={filtersOpen ? 'סגור פילטרים' : 'פתח פילטרים'}
-          accessibilityState={{ expanded: filtersOpen }}
-        >
-          <Ionicons
-            name={filtersOpen ? 'close' : 'options-outline'}
-            size={24}
-            color={
-              filtersOpen || filtersActive
-                ? DesignTokens.colors.primary.main
-                : DesignTokens.colors.text.secondary
-            }
+          <TextInput
+            style={styles.searchInput}
+            placeholder="חיפוש לפי סמל"
+            placeholderTextColor={placeholderColor}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            textAlign="right"
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="characters"
+            clearButtonMode="never"
+            accessibilityLabel="חיפוש רשימת טריידים לפי סמל"
           />
-        </TouchableOpacity>
-
-        {filtersOpen ? (
-          <View style={styles.filtersPanel}>
-              <Text style={styles.filterSectionLabel}>כיוון</Text>
-              <View style={styles.filterButtonsRow}>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterDirection === 'all' && styles.filterButtonActive]}
-                  onPress={() => setFilterDirection('all')}
-                >
-                  <Text style={[styles.filterButtonText, filterDirection === 'all' && styles.filterButtonTextActive]}>
-                    הכל
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterDirection === 'long' && styles.filterButtonActive]}
-                  onPress={() => setFilterDirection('long')}
-                >
-                  <Text style={[styles.filterButtonText, filterDirection === 'long' && styles.filterButtonTextActive]}>
-                    Long
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterDirection === 'short' && styles.filterButtonActive]}
-                  onPress={() => setFilterDirection('short')}
-                >
-                  <Text style={[styles.filterButtonText, filterDirection === 'short' && styles.filterButtonTextActive]}>
-                    Short
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={[styles.filterSectionLabel, styles.filterSectionLabelSecond]}>תוצאה</Text>
-              <View style={styles.filterButtonsRow}>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterPnl === 'all' && styles.filterButtonActive]}
-                  onPress={() => setFilterPnl('all')}
-                >
-                  <Text style={[styles.filterButtonText, filterPnl === 'all' && styles.filterButtonTextActive]}>
-                    הכל
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterPnl === 'profit' && styles.filterButtonActive]}
-                  onPress={() => setFilterPnl('profit')}
-                >
-                  <Text style={[styles.filterButtonText, filterPnl === 'profit' && styles.filterButtonTextActive]}>
-                    רווח
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.filterButton, filterPnl === 'loss' && styles.filterButtonActive]}
-                  onPress={() => setFilterPnl('loss')}
-                >
-                  <Text style={[styles.filterButtonText, filterPnl === 'loss' && styles.filterButtonTextActive]}>
-                    הפסד
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+          {q.length > 0 ? (
+            <TouchableOpacity
+              onPress={() => setSearchQuery('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.clearSearchBtn}
+              accessibilityRole="button"
+              accessibilityLabel="נקה חיפוש"
+            >
+              <Ionicons
+                name="close-circle"
+                size={22}
+                color={DesignTokens.colors.text.secondary}
+              />
+            </TouchableOpacity>
           ) : null}
+        </View>
       </View>
 
       {/* Trades List */}
       {filteredTrades.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="document-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-          <Text style={styles.emptyText}>אין טריידים עדיין</Text>
-          <Text style={styles.emptySubtext}>הוסף טרייד ראשון כדי להתחיל</Text>
+          {trades.length === 0 ? (
+            <>
+              <Text style={styles.emptyText}>אין טריידים עדיין</Text>
+              <Text style={styles.emptySubtext}>הוסף טרייד ראשון כדי להתחיל</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.emptyText}>אין תוצאות</Text>
+              <Text style={styles.emptySubtext}>בדוק את הסמל או נקה את החיפוש</Text>
+            </>
+          )}
         </View>
       ) : (
         <View style={styles.listWrap}>
@@ -476,17 +396,6 @@ export default function TradesListTab() {
         }}
       />
 
-      {/* Export Trade Image Modal */}
-      {selectedTrade && (
-        <ExportTradeImage
-          trade={selectedTrade}
-          visible={showExportModal}
-          onClose={() => {
-            setShowExportModal(false);
-            setSelectedTrade(null);
-          }}
-        />
-      )}
     </View>
   );
 }
@@ -508,92 +417,45 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   loadingText: {
     fontSize: tokens.typography.body.size,
     fontWeight: tokens.typography.body.weight as any,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
   },
-  searchCard: {
-    marginHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
-    marginTop: tokens.spacing.sm,
-    marginBottom: tokens.spacing.xs,
+  searchSection: {
+    marginHorizontal: tokens.layout?.screenPadding ?? 20,
+    marginTop: tokens.spacing.xs,
+    marginBottom: tokens.spacing.md,
   },
-  searchCardInner: {
-    borderRadius: tokens.borderRadius.lg,
-    minHeight: 44,
-  },
-  searchContainer: {
-    flexDirection: 'row',
+  searchPill: {
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: tokens.spacing.xs,
-    paddingVertical: tokens.spacing.xs,
+    minHeight: 50,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    paddingLeft: 10,
+    borderRadius: tokens.borderRadius['3xl'],
+    backgroundColor: tokens.colors.glass.card.bg,
+    borderWidth: 1,
+    borderColor: tokens.colors.glass.card.border,
+    gap: 4,
   },
-  searchIcon: {
-    marginHorizontal: tokens.spacing.xs,
+  searchLeadingIcon: {
+    paddingHorizontal: 6,
   },
   searchInput: {
     flex: 1,
-    fontSize: tokens.typography.fontSize.sm,
+    minWidth: 0,
+    fontSize: tokens.typography.bodySmall.size,
+    lineHeight: tokens.typography.bodySmall.lineHeight,
     color: tokens.colors.text.primary,
     textAlign: 'right',
-    paddingVertical: 0,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
   },
-  clearButton: {
-    padding: tokens.spacing.xs,
-  },
-  filtersOuter: {
-    alignSelf: 'stretch',
-    marginHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
-    marginBottom: tokens.spacing.sm,
-    backgroundColor: 'transparent',
-    alignItems: 'flex-start',
-  },
-  filtersIconButton: {
-    padding: 6,
-    backgroundColor: 'transparent',
-  },
-  filtersPanel: {
-    paddingTop: tokens.spacing.sm,
-    paddingBottom: tokens.spacing.xs,
-    backgroundColor: 'transparent',
-  },
-  filterSectionLabel: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.medium as any,
-    color: tokens.colors.text.tertiary,
-    textAlign: 'right',
-    writingDirection: 'rtl' as any,
-    marginBottom: 4,
-  },
-  filterSectionLabelSecond: {
-    marginTop: tokens.spacing.sm,
-  },
-  filterButtonsRow: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: tokens.spacing.xs,
+  clearSearchBtn: {
+    padding: 4,
+    flexShrink: 0,
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  filterButton: {
-    paddingHorizontal: tokens.spacing.sm,
-    paddingVertical: 6,
-    borderRadius: tokens.borderRadius.lg,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
-    minWidth: 50,
-  },
-  filterButtonActive: {
-    backgroundColor: 'rgba(0, 200, 5, 0.08)',
-    borderColor: tokens.colors.primary.main,
-  },
-  filterButtonText: {
-    fontSize: tokens.typography.bodySmall.size,
-    fontWeight: tokens.typography.bodySmall.weight as any,
-    color: tokens.colors.text.secondary,
-    textAlign: 'center',
-  },
-  filterButtonTextActive: {
-    color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.bold as any,
   },
   summaryContainer: {
     backgroundColor: tokens.colors.background.cardSolid,
@@ -637,8 +499,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     minHeight: 0,
   },
   listContent: {
-    paddingHorizontal: tokens.layout?.screenPadding ?? tokens.spacing.xl,
-    paddingTop: tokens.spacing.xs,
+    paddingHorizontal: tokens.layout?.screenPadding ?? 20,
+    paddingTop: 0,
   },
   tradeHeader: {
     flexDirection: 'row',
@@ -686,8 +548,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   deleteButton: {
     padding: tokens.spacing.xs,
   },
+  tradeCard: {
+    marginBottom: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius['2xl'],
+    borderWidth: 1,
+    borderColor: `${tokens.colors.primary.main}24`,
+    overflow: 'hidden',
+    ...tokens.shadows.sm,
+  },
   tradeDetails: {
-    gap: 4,
+    gap: tokens.spacing.xs,
     marginBottom: tokens.spacing.xs,
   },
   tradeRow: {
@@ -695,6 +565,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
+    gap: tokens.spacing.sm,
   },
   tradeLabel: {
     fontSize: tokens.typography.fontSize.sm,
@@ -731,6 +602,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
+    gap: tokens.spacing.sm,
   },
   footerReturnRow: {
     flexDirection: 'row',
@@ -738,6 +610,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
     alignItems: 'center',
     width: '100%',
     marginTop: 14,
+    gap: tokens.spacing.sm,
   },
   pnlLabel: {
     fontSize: tokens.typography.fontSize.sm,
@@ -822,7 +695,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, mainTabsHeight
   emptySubtext: {
     fontSize: tokens.typography.body.size,
     fontWeight: tokens.typography.body.weight as any,
-    lineHeight: tokens.typography.body.size * tokens.typography.body.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },

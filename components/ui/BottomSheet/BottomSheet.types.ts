@@ -10,6 +10,8 @@ export interface BottomSheetProps {
   backdropOpacity?: number;
   onSnapPointChange?: (index: number) => void;
   useModal?: boolean; // אם false, render כ-View במקום Modal
+  /** כש־true: אזור הגרירה צף מעל התוכן — התוכן מתחיל מקצה עליון השיט (למשל תמונה עד הקצה) */
+  edgeToEdge?: boolean;
 }
 
 

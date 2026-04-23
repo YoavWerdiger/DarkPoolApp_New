@@ -1,5 +1,5 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet, I18nManager } from 'react-native';
 import {
   User,
@@ -15,10 +15,11 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
-import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
-import { ProfileDrawerMenuBar } from '../../components/profile/ProfileDrawerMenuBar';
+import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
+import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
+import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
 interface MenuItem {
   id: string;
@@ -31,8 +32,15 @@ interface MenuItem {
 export default function UserProfileScreen({ navigation }: any) {
   const { user, isLoading, signOut } = useAuth();
   const DesignTokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
-  const mainTabsHeight = useMainTabsHeight();
+
+  const openMainDrawer = useCallback(() => {
+    void triggerDrawerMenuHaptic();
+    try {
+      dispatchOpenMainDrawer(navigation as unknown as DrawerParentNavigation);
+    } catch {
+      /* noop */
+    }
+  }, [navigation]);
 
   const [profileData, setProfileData] = useState<any>(null);
 
@@ -325,16 +333,17 @@ export default function UserProfileScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <ProfileDrawerMenuBar />
+        <MainDrawerScreenHeader title="פרופיל" onMenuPress={openMainDrawer} />
         <View style={{ flex: 1 }}>
           <ScrollView 
             style={{ flex: 1 }} 
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: DesignTokens.spacing.xl }}
           >
-          {/* Profile Header Card - עם blur, מעוגל מכל הצדדים */}
+          {/* Profile Header — זכוכית (glass) */}
           <UICard
-            variant="inputGlass"
+            variant="glass"
+            glassIntensity="light"
             padding="none"
             style={{
               marginHorizontal: DesignTokens.spacing.base,
@@ -371,9 +380,10 @@ export default function UserProfileScreen({ navigation }: any) {
 
       {/* Menu Sections */}
       <View style={{ paddingHorizontal: DesignTokens.spacing.base, marginTop: DesignTokens.spacing.md }}>
-        {/* Main Menu Section - עם blur כמו MainTabs */}
+        {/* תפריט ראשי — זכוכית */}
         <UICard
-          variant="inputGlass"
+          variant="glass"
+          glassIntensity="light"
           padding="none"
           style={{
             marginBottom: DesignTokens.spacing.md,
@@ -455,9 +465,10 @@ export default function UserProfileScreen({ navigation }: any) {
             ))}
         </UICard>
 
-        {/* Secondary Menu Section - עם blur כמו MainTabs */}
+        {/* תפריט משני — זכוכית */}
         <UICard
-          variant="inputGlass"
+          variant="glass"
+          glassIntensity="light"
           padding="none"
           style={{
             marginBottom: DesignTokens.spacing.md,
@@ -575,7 +586,8 @@ export default function UserProfileScreen({ navigation }: any) {
           }}
         >
           <UICard
-            variant="inputGlass"
+            variant="glass"
+            glassIntensity="light"
             padding="none"
             style={{
               alignItems: 'center',

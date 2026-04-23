@@ -11,6 +11,7 @@ export { default as UIBottomSheet } from './UIBottomSheet';
 export { default as UIAlert } from './UIAlert';
 export { AppDialogProvider, useAppDialog } from './AppDialogProvider';
 export { default as UICard } from './UICard';
+export { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, DRAWER_MENU_BUTTON_SIZE } from './DayNavBlurButton';
 export { default as UIInput } from './UIInput';
 
 // Design Tokens

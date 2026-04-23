@@ -78,7 +78,8 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
       subtitle="מלא את הפרטים שלך כדי להמשיך"
       currentStep={1}
       totalSteps={5}
-      showBack={false}
+      showBack={true}
+      onBack={() => navigation.goBack()}
       scrollable={true}
     >
       {/* Error Banner */}

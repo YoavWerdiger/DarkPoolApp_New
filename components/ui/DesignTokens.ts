@@ -44,8 +44,12 @@ const darkColors = {
     overlayHeavy: 'rgba(0, 0, 0, 0.85)',
   },
 
-  bubbleMe: '#00C805',
-  bubbleOther: 'rgba(255, 255, 255, 0.08)',
+  /**
+   * בועות צ'אט — אטימות מלאה (α=1) עם **מראה כמו** ה־rgba הישן
+   * (ריקוד אלפא על גבי רקע #0A0E0A — כמו ChatSessionBackdrop).
+   */
+  bubbleMe: '#0F4D12', // מעט יותר בהיר/חי מ־#083B09, עדיין אותו DNA
+  bubbleOther: '#2C322F', // מעט יותר בהיר מ־#202324
 
   text: {
     primary: '#FFFFFF',
@@ -145,8 +149,9 @@ const lightColors = {
     overlayHeavy: 'rgba(0, 0, 0, 0.70)',
   },
 
-  bubbleMe: '#DCF8C6',
-  bubbleOther: '#FFFFFF',
+  /** light: אותו עיקרון — מרכיבים rgba כמו בקודם מעל רקע #F5F5F7 */
+  bubbleMe: '#C8F4CA', // מעט יותר “פגז” / בולט
+  bubbleOther: '#FAFAFA',
 
   text: {
     primary: '#000000',

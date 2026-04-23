@@ -320,6 +320,22 @@ export class AuthService {
     }
   }
 
+  // Resend signup verification email
+  static async resendVerificationEmail(email: string): Promise<{ error: string | null }> {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+      });
+      if (error) {
+        return { error: error.message || 'שגיאה בשליחת מייל האימות' };
+      }
+      return { error: null };
+    } catch (error: any) {
+      return { error: error?.message || 'שגיאה בשליחת מייל האימות' };
+    }
+  }
+
   // Check if email already exists
   static async checkEmailExists(email: string): Promise<{ exists: boolean; error: string | null }> {
     try {
@@ -410,14 +426,45 @@ export class AuthService {
     };
   }
 
-  // Update user profile
+  // Update user profile (לא שולחים `id` ל־UPDATE — רק .eq)
   static async updateProfile(updates: Partial<AuthUser>): Promise<{ user: AuthUser | null; error: string | null }> {
     try {
-      const { data, error } = await supabase.from('users').update(updates).eq('id', updates.id).select().single();
-      if (error || !data) return { user: null, error: error?.message || 'שגיאה בעדכון' };
-      return { user: data, error: null };
+      const id = updates.id;
+      if (!id) {
+        return { user: null, error: 'מזהה משתמש חסר' };
+      }
+
+      const payload: Record<string, unknown> = {};
+      if (updates.display_name !== undefined) payload.display_name = updates.display_name;
+      if (updates.full_name !== undefined) payload.full_name = updates.full_name;
+      if (updates.phone !== undefined) {
+        payload.phone = updates.phone === '' ? null : updates.phone;
+      }
+      if (updates.gender !== undefined) {
+        payload.gender = updates.gender;
+      }
+      if (updates.profile_picture !== undefined) {
+        payload.profile_picture = updates.profile_picture || null;
+      }
+      if (updates.account_type !== undefined) payload.account_type = updates.account_type;
+      if (updates.track_id !== undefined) payload.track_id = updates.track_id;
+      if (updates.intro_data !== undefined) payload.intro_data = updates.intro_data;
+      if (updates.registration_completed !== undefined) {
+        payload.registration_completed = updates.registration_completed;
+      }
+
+      const { error } = await supabase.from('users').update(payload).eq('id', id);
+      if (error) {
+        return { user: null, error: error.message || 'שגיאה בעדכון' };
+      }
+
+      const user = await this.getUserProfile(id);
+      if (!user) {
+        return { user: null, error: 'העדכון נרשם אבל לא נטען הפרופיל — נסה שוב' };
+      }
+      return { user, error: null };
     } catch (error: any) {
-      return { user: null, error: error.message };
+      return { user: null, error: error?.message || 'שגיאה בעדכון' };
     }
   }
 

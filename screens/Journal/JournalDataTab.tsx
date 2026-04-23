@@ -121,12 +121,13 @@ function JournalSymbolLogoChip({
   symbol: string;
   labelColor: string;
 }) {
+  const tokens = useDesignTokens();
   const [failed, setFailed] = useState(false);
   const uri = !failed ? brandfetchTickerLogoUri(symbol) : null;
 
   return (
     <View style={styles.symbolChip}>
-      <View style={styles.symbolChipLogoBox}>
+      <View style={[styles.symbolChipLogoBox, { backgroundColor: tokens.colors.background.input }]}>
         {uri ? (
           <Image
             source={{ uri }}
@@ -161,9 +162,24 @@ function JournalPerformanceTile({
   textSecondary: string;
   textTertiary: string;
 }) {
+  const tokens = useDesignTokens();
   return (
     <View style={{ width }}>
-      <UICard variant="blur" padding="sm" style={styles.statCardOuter}>
+      <UICard
+        variant="glass"
+        glassIntensity="light"
+        padding="sm"
+        style={[
+          styles.statCardOuter,
+          {
+            borderWidth: 1,
+            borderColor: `${tokens.colors.primary.main}24`,
+            borderRadius: tokens.borderRadius['2xl'],
+            overflow: 'hidden',
+            ...tokens.shadows.sm,
+          },
+        ]}
+      >
         <View style={styles.statCardRow}>
           <StatTileLeading tile={tile} accent={tile.accent} />
           <View style={styles.statCardTextCol}>
@@ -358,7 +374,23 @@ export default function JournalDataTab() {
   const chartW = Math.min(windowW - 40, 400);
   const statsInnerW = windowW - 40;
   const statsGap = 10;
-  const statTileW = Math.max(140, (statsInnerW - statsGap) / 2);
+  /** במסכים צרים — עמודה אחת; אחרת שתי עמודות עם כרטיס אחרון במלוא הרוחב כשהמספר אי-זוגי */
+  const statColumns = statsInnerW < 360 ? 1 : 2;
+  const statTileW =
+    statColumns === 1
+      ? statsInnerW
+      : Math.max(148, (statsInnerW - statsGap) / 2);
+
+  const journalDataCardChrome = useMemo(
+    () => ({
+      borderWidth: 1 as const,
+      borderColor: `${DesignTokens.colors.primary.main}24`,
+      borderRadius: DesignTokens.borderRadius['2xl'],
+      overflow: 'hidden' as const,
+      ...DesignTokens.shadows.sm,
+    }),
+    [DesignTokens]
+  );
 
   const loadTrades = useCallback(async () => {
     if (!user) return;
@@ -432,7 +464,7 @@ export default function JournalDataTab() {
         title: 'P&L כולל',
         value: `$${formatCurrency(totalPnl)}`,
         subtitle: isTotalProfit ? 'רווח נטו' : 'הפסד נטו',
-        icon: isTotalProfit ? 'trending-up' : 'trending-down',
+        icon: isTotalProfit ? 'trending-up-outline' : 'trending-down-outline',
         accent: isTotalProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger,
       },
       {
@@ -559,17 +591,23 @@ export default function JournalDataTab() {
               <Text style={[styles.sectionHeading, { color: DesignTokens.colors.text.primary }]}>
                 סיכום ביצועים
               </Text>
-              <View style={[styles.statsGrid, { gap: statsGap }]}>
-                {performanceTiles.map((tile) => (
-                  <JournalPerformanceTile
-                    key={tile.id}
-                    tile={tile}
-                    width={statTileW}
-                    textPrimary={DesignTokens.colors.text.primary}
-                    textSecondary={DesignTokens.colors.text.secondary}
-                    textTertiary={DesignTokens.colors.text.tertiary}
-                  />
-                ))}
+              <View style={[styles.statsGrid, { gap: statsGap, width: statsInnerW }]}>
+                {performanceTiles.map((tile, index) => {
+                  const n = performanceTiles.length;
+                  const lastSpansFull =
+                    statColumns === 2 && n % 2 === 1 && index === n - 1;
+                  const tileW = lastSpansFull ? statsInnerW : statTileW;
+                  return (
+                    <JournalPerformanceTile
+                      key={tile.id}
+                      tile={tile}
+                      width={tileW}
+                      textPrimary={DesignTokens.colors.text.primary}
+                      textSecondary={DesignTokens.colors.text.secondary}
+                      textTertiary={DesignTokens.colors.text.tertiary}
+                    />
+                  );
+                })}
               </View>
             </View>
           ) : null}
@@ -598,7 +636,12 @@ export default function JournalDataTab() {
             </View>
           ) : null}
 
-          <UICard variant="blur" padding="md" style={styles.chartCard}>
+          <UICard
+            variant="glass"
+            glassIntensity="light"
+            padding="md"
+            style={[styles.chartCard, journalDataCardChrome]}
+          >
             <Text style={[styles.chartTitle, { color: DesignTokens.colors.text.primary }]}>
               צבירת P&L
             </Text>
@@ -608,7 +651,12 @@ export default function JournalDataTab() {
             <CumulativePnlChart series={cumSeries} chartW={chartW} colors={chartColors} />
           </UICard>
 
-          <UICard variant="blur" padding="md" style={styles.chartCard}>
+          <UICard
+            variant="glass"
+            glassIntensity="light"
+            padding="md"
+            style={[styles.chartCard, journalDataCardChrome]}
+          >
             <Text style={[styles.chartTitle, { color: DesignTokens.colors.text.primary }]}>
               P&L חודשי
             </Text>
@@ -674,6 +722,7 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
+    alignContent: 'flex-start',
   },
   statCardOuter: {
     borderRadius: 14,
@@ -718,10 +767,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   symbolChipImage: {
     width: 44,

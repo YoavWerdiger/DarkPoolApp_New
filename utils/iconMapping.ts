@@ -130,6 +130,7 @@ export const iconMapping: Record<string, any> = {
   'trending-up-outline': TrendingUp,
   'color-palette': Palette,
   'notifications': Bell,
+  'notifications-outline': Bell,
   'notifications-off': BellOff,
   'ellipsis-vertical': MoreVertical,
   'eye-off-outline': EyeOff,

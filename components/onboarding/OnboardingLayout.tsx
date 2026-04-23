@@ -104,43 +104,44 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
           </View>
 
           <SafeAreaView style={{ flex: 1 }}>
+            {/* Back Button */}
+            {showBack && onBack && (
+              <View style={{ paddingHorizontal: 24, paddingTop: 8 }}>
+                <TouchableOpacity
+                  onPress={onBack}
+                  activeOpacity={0.75}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: 'rgba(255,255,255,0.07)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    alignSelf: 'flex-end',
+                  }}
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={22}
+                    color={DesignTokens.colors.text.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Progress Bar — not animated so it's always visible */}
             <ProgressBar current={currentStep} total={totalSteps} />
 
             <View style={{ flex: 1 }}>
-              {/* Back Button */}
-              {showBack && onBack && (
-                <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
-                  <TouchableOpacity
-                    onPress={onBack}
-                    activeOpacity={0.75}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 20,
-                      backgroundColor: 'rgba(255,255,255,0.07)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.08)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      alignSelf: 'flex-end',
-                    }}
-                  >
-                    <Ionicons
-                      name="chevron-forward"
-                      size={22}
-                      color={DesignTokens.colors.text.primary}
-                    />
-                  </TouchableOpacity>
-                </View>
-              )}
 
               {/* Content */}
               <Content {...contentProps}>
                 <View
                   style={{
                     paddingHorizontal: 24,
-                    paddingTop: showBack ? 8 : 16,
+                    paddingTop: showBack ? 6 : 16,
                     paddingBottom: 32,
                   }}
                 >

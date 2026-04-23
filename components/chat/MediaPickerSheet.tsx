@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface MediaPickerSheetProps {
   visible: boolean;
@@ -141,6 +142,7 @@ export default function MediaPickerSheet({
               key={option.id}
               style={styles.optionItem}
               onPress={() => {
+                void HapticFeedback.selection();
                 // ⚡ פעולה קודם – מתחיל לפתוח picker/מצלמה מיד, sheet נסגר במקביל
                 option.action();
                 onClose();

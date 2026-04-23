@@ -10,6 +10,7 @@ import {
 import { Scissors, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react-native';
 import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface Split {
   id: string
@@ -200,10 +201,14 @@ export default function SplitsTab() {
     }
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadSplits();
-  };
+    try {
+      await loadSplits();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
+  }, [loadSplits]);
 
   useEffect(() => {
     loadSplits();

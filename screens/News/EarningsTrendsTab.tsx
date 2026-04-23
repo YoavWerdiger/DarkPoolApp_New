@@ -11,6 +11,7 @@ import { TrendingUp, TrendingDown, Users } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface EarningsTrend {
   id: string
@@ -217,10 +218,14 @@ export default function EarningsTrendsTab() {
     }
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadTrends();
-  };
+    try {
+      await loadTrends();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
+  }, [loadTrends]);
 
   useEffect(() => {
     loadTrends();

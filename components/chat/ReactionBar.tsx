@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface ReactionBarProps {
   onReaction: (emoji: string) => void;
@@ -49,7 +50,10 @@ export default function ReactionBar({ onReaction, currentReaction }: ReactionBar
         return (
           <Pressable
             key={emoji}
-            onPress={() => onReaction(emoji)}
+            onPress={() => {
+              void HapticFeedback.selection();
+              onReaction(emoji);
+            }}
             style={({ pressed }) => [
               styles.emojiBtn,
               isSelected && !pressed && styles.emojiBtnSelected,

@@ -15,6 +15,28 @@ export enum ChatMessageType {
   SYSTEM = 'system',
   POLL = 'poll',
   MEDIA_GROUP = 'media_group', // Multiple media items in one message
+  /** יומן מסחר — תוכן JSON: { "trade": { ... } } */
+  TRADE = 'trade',
+}
+
+/**
+ * חייב להתאים ל־`valid_message_type` בבסיס הנתונים
+ * (ראה `supabase/migrations/010_chat_message_type_trade_and_media_group.sql`).
+ */
+export const CHAT_MESSAGE_TYPES_ALLOWED_IN_DB: readonly ChatMessageType[] = [
+  ChatMessageType.TEXT,
+  ChatMessageType.IMAGE,
+  ChatMessageType.VIDEO,
+  ChatMessageType.AUDIO,
+  ChatMessageType.DOCUMENT,
+  ChatMessageType.SYSTEM,
+  ChatMessageType.POLL,
+  ChatMessageType.MEDIA_GROUP,
+  ChatMessageType.TRADE,
+] as const;
+
+export function isChatMessageTypeAllowedInDb(t: string): t is ChatMessageType {
+  return (CHAT_MESSAGE_TYPES_ALLOWED_IN_DB as readonly string[]).includes(t);
 }
 
 // Media item for MEDIA_GROUP messages

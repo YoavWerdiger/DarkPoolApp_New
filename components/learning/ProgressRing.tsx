@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
 
@@ -9,6 +9,8 @@ interface ProgressRingProps {
   strokeWidth?: number;
   color?: string;
   backgroundColor?: string;
+  /** טקסט במרכז (למשל "42%") */
+  centerLabel?: string;
 }
 
 export const ProgressRing: React.FC<ProgressRingProps> = ({
@@ -16,7 +18,8 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   size = 60,
   strokeWidth = 4,
   color,
-  backgroundColor = 'rgba(255,255,255,0.1)'
+  backgroundColor = 'rgba(255,255,255,0.1)',
+  centerLabel,
 }) => {
   const DesignTokens = useDesignTokens();
   const defaultColor = color || DesignTokens.colors.primary.main;
@@ -24,6 +27,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   const circumference = 2 * Math.PI * radius;
   const strokeDasharray = circumference;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const labelFontSize = Math.max(10, Math.min(16, Math.round(size * 0.24)));
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
@@ -51,6 +55,24 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
+      {centerLabel != null && centerLabel !== '' ? (
+        <View style={styles.labelWrap} pointerEvents="none">
+          <Text
+            style={[
+              styles.label,
+              {
+                fontSize: labelFontSize,
+                color: DesignTokens.colors.text.primary,
+              },
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
+            {centerLabel}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 };
@@ -62,6 +84,16 @@ const styles = StyleSheet.create({
   },
   svg: {
     position: 'absolute',
+  },
+  labelWrap: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+  },
+  label: {
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
 

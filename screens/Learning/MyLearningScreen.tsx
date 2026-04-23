@@ -17,7 +17,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { CourseWithProgress } from '../../types/learning';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
-import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
 export const MyLearningScreen: React.FC = () => {
   const navigation = useNavigation() as {
@@ -40,8 +40,12 @@ export const MyLearningScreen: React.FC = () => {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+      void HapticFeedback.impactLight();
+    }
   }, [refetch]);
 
   const handleCoursePress = useCallback((course: CourseWithProgress) => {
@@ -55,6 +59,7 @@ export const MyLearningScreen: React.FC = () => {
   }, [navigation]);
 
   const handleContinueLearning = useCallback((course: CourseWithProgress) => {
+    void HapticFeedback.impactLight();
     if (course.progress?.last_lesson_id) {
       navigation.navigate('LessonPlayerScreen', {
         lessonId: course.progress.last_lesson_id,

@@ -63,7 +63,18 @@ serve(async (req) => {
     if (!group_id) return respond({ error: 'Missing group_id' }, 400);
     if (!message_type) return respond({ error: 'Missing message_type' }, 400);
 
-    const ALLOWED_MESSAGE_TYPES = ['text', 'image', 'video', 'audio', 'document', 'poll', 'system', 'reply', 'forward'];
+    /** חייב להתאים ל־valid_message_type בטבלה (לא reply/forward — אלה לא עמודות message_type) */
+    const ALLOWED_MESSAGE_TYPES = [
+      'text',
+      'image',
+      'video',
+      'audio',
+      'document',
+      'poll',
+      'system',
+      'media_group',
+      'trade',
+    ];
     if (!ALLOWED_MESSAGE_TYPES.includes(message_type)) {
       return respond({ error: 'Invalid message_type' }, 400);
     }

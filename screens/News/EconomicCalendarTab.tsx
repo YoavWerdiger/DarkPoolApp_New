@@ -2,15 +2,16 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Clock, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import { EconomicEvent } from '../../services/economicCalendarService';
 type EconEvent = EconomicEvent;
 import { supabase } from '../../lib/supabase';
 import { getIndicatorExplanation } from '../../utils/economicIndicatorExplanations';
 import { translateEconomicEventNameSmart } from '../../utils/economicEventTranslations';
 import UICard from '../../components/ui/UICard';
-import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
+import { formatEconomicDisplayValue, parseEconomicNumber } from '../../utils/economicNumberFormat';
 
 const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent) => void }> = ({ 
   event, 
@@ -44,8 +45,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
   const cleanTitle = stripEmojis(translatedTitle);
 
   const getActualColor = (): string => {
-    const actual = Number(event.actual);
-    const forecast = Number(event.forecast);
+    const actual = parseEconomicNumber(event.actual);
+    const forecast = parseEconomicNumber(event.forecast);
     if (!isFinite(actual) || !isFinite(forecast)) {
       return DesignTokens.colors.text.primary;
     }
@@ -117,7 +118,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
             {event.actual && (
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>תוצאה</Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: getActualColor(), textAlign: 'center' }}>{event.actual}</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: getActualColor(), textAlign: 'center' }}>{formatEconomicDisplayValue(event.actual)}</Text>
               </View>
             )}
               {event.actual && (event.forecast || event.previous) && (
@@ -126,7 +127,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
             {event.forecast && (
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>תחזית</Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center' }}>{event.forecast}</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center' }}>{formatEconomicDisplayValue(event.forecast)}</Text>
               </View>
             )}
             {event.forecast && event.previous && (
@@ -135,7 +136,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
             {event.previous && (
               <View style={{ flex: 1, alignItems: 'center' }}>
                 <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>קודם</Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'center' }}>{event.previous}</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'center' }}>{formatEconomicDisplayValue(event.previous)}</Text>
               </View>
             )}
           </View>
@@ -198,7 +199,6 @@ const CRITICAL_EVENTS = [
 
 export default function EconomicCalendarTab() {
   const DesignTokens = useDesignTokens();
-  const mainTabsHeight = useMainTabsHeight();
   const [events, setEvents] = useState<EconEvent[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<EconEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -212,7 +212,7 @@ export default function EconomicCalendarTab() {
   
   // Ref לגלילה לאירוע הקרוב ביותר
   const dailyEventsListRef = useRef<FlatList>(null);
-  
+
   // דיבאג - בדיקה מתי הref מוכן (useLayoutEffect רץ סינכרוני אחרי DOM update)
   useLayoutEffect(() => {
     if (!loading) {
@@ -534,9 +534,13 @@ export default function EconomicCalendarTab() {
   }, [loadEconomicEvents]);
 
   // רענון
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadEconomicEvents();
+    try {
+      await loadEconomicEvents();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
   }, [loadEconomicEvents]);
 
   // בוטל: טעינת נתונים היסטוריים ידנית – היסטוריה נטענת בדיפולט דרך ה-cache
@@ -552,9 +556,9 @@ export default function EconomicCalendarTab() {
     
     if (event.forecast || event.actual || event.previous) {
       message += 'נתונים:\n';
-      if (event.forecast) message += `תחזית: ${event.forecast}\n`;
-      if (event.actual) message += `תוצאה: ${event.actual}\n`;
-      if (event.previous) message += `ערך קודם: ${event.previous}\n`;
+      if (event.forecast) message += `תחזית: ${formatEconomicDisplayValue(event.forecast)}\n`;
+      if (event.actual) message += `תוצאה: ${formatEconomicDisplayValue(event.actual)}\n`;
+      if (event.previous) message += `ערך קודם: ${formatEconomicDisplayValue(event.previous)}\n`;
       message += '\n';
     }
     
@@ -628,24 +632,6 @@ export default function EconomicCalendarTab() {
             : `לא נמצאו אירועים כלכליים ב${dateStr}`
           }
         </Text>
-      <TouchableOpacity
-        style={{
-          marginTop: 24,
-          paddingHorizontal: 28,
-          paddingVertical: 14,
-          borderRadius: 14,
-          backgroundColor: DesignTokens.colors.background.secondary
-        }}
-        onPress={loadEconomicEvents}
-      >
-        <Text style={{
-          fontSize: 15,
-          fontWeight: '700',
-          color: DesignTokens.colors.primary.main
-        }}>
-          רענן נתונים
-        </Text>
-      </TouchableOpacity>
     </View>
   );
   };
@@ -670,37 +656,41 @@ export default function EconomicCalendarTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ניווט תאריכים - SwiftUI style */}
-      <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-        <UICard variant="blur" padding="md" style={{ borderRadius: 20, marginBottom: 12 }}>
+      {/* ניווט תאריכים — קומפקטי: פחות padding, blur עדין, טקסט בגודל מאוזן */}
+      <View
+        style={{
+          paddingHorizontal: DesignTokens.layout?.screenPadding ?? 20,
+          paddingVertical: 11,
+        }}
+      >
+        <UICard
+          variant="blur"
+          glassIntensity="subtle"
+          padding="none"
+          style={{ borderRadius: 16, marginBottom: 10, padding: 12 }}
+        >
           {/* שורה עליונה - ניווט תאריכים */}
           <View style={{ 
             flexDirection: 'row', 
             alignItems: 'center', 
             justifyContent: 'space-between',
-            marginBottom: 8
+            marginBottom: selectedDate.toDateString() !== new Date().toDateString() ? 6 : 0,
           }}>
-            {/* חץ שמאל - יום קודם */}
-            <TouchableOpacity
-              onPress={goToPreviousDay}
-              activeOpacity={1}
-              style={{
-                padding: 8,
-                borderRadius: 12,
-                backgroundColor: DesignTokens.colors.background.tertiary
-              }}
-            >
-              <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-            </TouchableOpacity>
+            <DayNavBlurButton onPress={goToPreviousDay} glassIntensity="subtle">
+              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+            </DayNavBlurButton>
 
-            {/* תאריך נוכחי */}
-            <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={{
-                fontSize: 18,
-                fontWeight: '600',
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'center'
-              }}>
+            <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 8 }}>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  lineHeight: 21,
+                  color: DesignTokens.colors.text.primary,
+                  textAlign: 'center',
+                }}
+                numberOfLines={2}
+              >
                 {selectedDate.toLocaleDateString('he-IL', { 
                   weekday: 'long',
                   day: 'numeric',
@@ -710,54 +700,44 @@ export default function EconomicCalendarTab() {
               </Text>
               {selectedDate.toDateString() === new Date().toDateString() && (
                 <Text style={{
-                  fontSize: 12,
+                  fontSize: 11,
                   color: DesignTokens.colors.primary.main,
-                  fontWeight: '500',
-                  marginTop: 2
+                  fontWeight: '600',
+                  marginTop: 1,
                 }}>
                   היום
                 </Text>
               )}
             </View>
 
-            {/* חץ ימין - יום הבא */}
-            <TouchableOpacity
-              onPress={goToNextDay}
-              activeOpacity={1}
-              style={{
-                padding: 8,
-                borderRadius: 12,
-                backgroundColor: DesignTokens.colors.background.tertiary
-              }}
-            >
-              <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-            </TouchableOpacity>
+            <DayNavBlurButton onPress={goToNextDay} glassIntensity="subtle">
+              <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+            </DayNavBlurButton>
           </View>
 
-          {/* כפתור חזרה להיום - מוצג רק כשלא בהיום */}
           {selectedDate.toDateString() !== new Date().toDateString() && (
             <View style={{ 
               flexDirection: 'row', 
               alignItems: 'center', 
               justifyContent: 'center',
-              marginTop: 8
+              marginTop: 0,
             }}>
               <TouchableOpacity
                 onPress={goToToday}
-                activeOpacity={0.6}
+                activeOpacity={0.85}
                 style={{
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  borderRadius: 20,
-                  backgroundColor: DesignTokens.colors.primary.main
+                  paddingHorizontal: 14,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                  backgroundColor: DesignTokens.colors.primary.dim,
+                  borderWidth: 1,
+                  borderColor: 'rgba(0, 200, 80, 0.35)',
                 }}
               >
                 <Text style={{
-                  fontSize: 12,
-                  color: '#000',
-                  fontWeight: '700'
+                  fontSize: 11,
+                  color: DesignTokens.colors.primary.main,
+                  fontWeight: '700',
                 }}>
                   היום
                 </Text>
@@ -769,15 +749,19 @@ export default function EconomicCalendarTab() {
 
       {/* כפתור טעינת נתונים היסטוריים – בוטל לפי דרישה */}
 
-      {/* אירועים יומיים - FlatList לגלילה יעילה עם ref */}
-      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+      {/* אירועים יומיים — גובה מלא; מרווח לטאבים התחתון רק במסך האב (News/index) */}
+      <View style={{ flex: 1, minHeight: 0 }}>
         <FlatList
           ref={dailyEventsListRef}
           data={dailyEvents}
           keyExtractor={(item, index) => `${item.id}-${item.time}-${index}`}
           renderItem={renderEvent}
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingTop: 4, flexGrow: 1 }}
+          contentContainerStyle={{
+            paddingTop: 4,
+            paddingBottom: DesignTokens.spacing.md,
+            flexGrow: 1,
+          }}
           showsVerticalScrollIndicator={true}
           // אופטימיזציות ביצועים
         initialNumToRender={10}

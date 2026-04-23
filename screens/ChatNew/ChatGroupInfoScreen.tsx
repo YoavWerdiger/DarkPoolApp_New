@@ -3,12 +3,12 @@
 // ============================================
 
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Modal, TextInput, KeyboardAvoidingView, Platform, I18nManager } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { ChatGroupMember, ChatMemberRole } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,7 +17,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
-import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 
 export default function ChatGroupInfoScreen() {
   const navigation = useNavigation();
@@ -27,7 +27,8 @@ export default function ChatGroupInfoScreen() {
   useLockParentDrawerWhileFocused();
 
   const { groupId } = route.params as { groupId: string };
-  const { currentGroup, leaveGroup, updateGroup, messages } = useChat();
+  const { currentGroup, leaveGroup, updateGroup, messages, refreshCurrentGroupDetails } = useChat();
+  const insets = useSafeAreaInsets();
 
   const [isMuted, setIsMuted] = useState(currentGroup?.is_muted || false);
   const [promptVisible, setPromptVisible] = useState(false);
@@ -83,6 +84,12 @@ export default function ChatGroupInfoScreen() {
   /** בשורות הגדרות ממוסגרות ב־RTL האייקון צריך להצביע כמו בשאר האפליקציה */
   const settingsDisclosureIcon = I18nManager.isRTL ? 'chevron-forward' : 'chevron-back';
 
+  useFocusEffect(
+    useCallback(() => {
+      void refreshCurrentGroupDetails();
+    }, [refreshCurrentGroupDetails])
+  );
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -127,6 +134,7 @@ export default function ChatGroupInfoScreen() {
         legacyAlert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
       } else {
         legacyAlert('הצלחה', 'המשתמש נוסף לקבוצה');
+        void refreshCurrentGroupDetails();
       }
     });
   };
@@ -298,13 +306,25 @@ export default function ChatGroupInfoScreen() {
     return null;
   }
 
+  const exitBtnTop = insets.top + 8;
+
   if (!currentGroup) {
     return (
       <ChatScreenShell>
-        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <SafeAreaView style={styles.safeArea} edges={['bottom']}>
           <View style={styles.container}>
-            <ChatSubScreenHeader title="פרטי קבוצה" onBack={handleBack} />
-            <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
+            <View style={styles.errorStateBody}>
+              <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
+            </View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="סגור"
+              onPress={handleBack}
+              style={[styles.exitBtnFullScreen, { top: exitBtnTop }]}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="close" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </ChatScreenShell>
@@ -320,17 +340,20 @@ export default function ChatGroupInfoScreen() {
 
   return (
     <ChatScreenShell>
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <View style={styles.container}>
-          <ChatSubScreenHeader title="פרטי קבוצה" onBack={handleBack} />
-
           <ScrollView 
             style={styles.scrollView} 
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg, paddingBottom: DesignTokens.spacing['3xl'], direction: 'rtl' }}
+            contentContainerStyle={{
+              paddingHorizontal: DesignTokens.spacing.lg,
+              paddingTop: exitBtnTop + 44,
+              paddingBottom: DesignTokens.spacing['3xl'],
+              direction: 'rtl',
+            }}
           >
-          {/* Profile Header - UICard blur כמו בפרופיל */}
-          <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
+          {/* Profile Header — glass כמו טוקני הצ'אט */}
+          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
             <View style={styles.profileHeaderContent}>
               {/* Avatar */}
               <View style={styles.avatarContainer}>
@@ -348,21 +371,21 @@ export default function ChatGroupInfoScreen() {
               {/* Name & Status */}
               <Text style={styles.groupName}>{currentGroup.name}</Text>
               <Text style={styles.groupStatus}>
-                {currentGroup.members_count} חברים
+                {sortedMembers.length} חברים
               </Text>
             </View>
           </UICard>
 
-          {/* תיאור הקבוצה - UICard blur */}
+          {/* תיאור הקבוצה */}
           {currentGroup.description && (
-            <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
+            <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
               <Text style={[styles.sectionLabel, styles.sectionLabelStandalone]}>תיאור הקבוצה</Text>
               <Text style={styles.aboutText}>{currentGroup.description}</Text>
             </UICard>
           )}
 
-          {/* גלריית המדיה - UICard blur */}
-          <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
+          {/* גלריית המדיה */}
+          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
             <Text style={[styles.sectionLabel, styles.sectionLabelStandalone]}>גלריית הקבוצה</Text>
             {groupMediaItems.length > 0 ? (
               <View style={styles.mediaGrid}>
@@ -382,8 +405,8 @@ export default function ChatGroupInfoScreen() {
             )}
           </UICard>
 
-          {/* הגדרות - UICard blur */}
-          <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
+          {/* הגדרות */}
+          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
             <TouchableOpacity style={styles.settingRow}>
               <View style={styles.settingLeft}>
                 <Ionicons name="notifications-outline" size={20} color={DesignTokens.colors.text.secondary} />
@@ -442,21 +465,24 @@ export default function ChatGroupInfoScreen() {
             </TouchableOpacity>
           </UICard>
 
-          {/* Members - UICard blur */}
-          <UICard variant="surface" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
-            <View style={styles.sectionHeader}>
+          {/* חברים */}
+          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
+            <View style={styles.membersSectionHeader}>
+              <View style={styles.membersHeaderSide} />
               <Text
-                style={[styles.sectionLabel, styles.sectionLabelInHeader]}
+                style={styles.membersSectionTitle}
                 numberOfLines={1}
               >
-                חברים ({currentGroup.members_count || sortedMembers.length})
+                חברים ({sortedMembers.length})
               </Text>
-              {isAdmin ? (
-                <TouchableOpacity onPress={handleAddMembers} style={styles.addButton} hitSlop={8}>
-                  <Ionicons name="add" size={18} color={DesignTokens.colors.primary.main} />
-                  <Text style={styles.addButtonText}>הוסף</Text>
-                </TouchableOpacity>
-              ) : null}
+              <View style={styles.membersHeaderSide}>
+                {isAdmin ? (
+                  <TouchableOpacity onPress={handleAddMembers} style={styles.addButton} hitSlop={8}>
+                    <Ionicons name="add" size={18} color={DesignTokens.colors.primary.main} />
+                    <Text style={styles.addButtonText}>הוסף</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
             </View>
 
             {sortedMembers.map((member, index) => (
@@ -509,7 +535,7 @@ export default function ChatGroupInfoScreen() {
             ))}
           </UICard>
 
-          {/* עזיבת קבוצה - UICard blur */}
+          {/* עזיבת קבוצה — glass עם מסגרת סכנה עדינה */}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={handleLeaveGroup}
@@ -520,10 +546,11 @@ export default function ChatGroupInfoScreen() {
             }}
           >
             <UICard
-              variant="surface"
+              variant="glass"
+              glassIntensity="light"
               padding="md"
               style={{
-                borderRadius: 24,
+                borderRadius: DesignTokens.borderRadius['2xl'],
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderWidth: 1,
@@ -540,6 +567,16 @@ export default function ChatGroupInfoScreen() {
             </UICard>
           </TouchableOpacity>
           </ScrollView>
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="סגור"
+            onPress={handleBack}
+            style={[styles.exitBtnFullScreen, { top: exitBtnTop }]}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="close" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
@@ -604,16 +641,35 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  /** כמו סגירת מסך מלא (AddStory / מצלמה): עיגול כהה + X */
+  exitBtnFullScreen: {
+    position: 'absolute',
+    left: DesignTokens.spacing.md,
+    zIndex: 100,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.22)',
+    elevation: 10,
+  },
+  errorStateBody: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: DesignTokens.spacing.lg,
+  },
+  /** רדיוס בלבד — צבע/מסגרת מגיעים מ־UICard variant="glass" + DesignTokens.glassmorphism */
   sectionCard: {
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: DesignTokens.borderRadius['2xl'],
   },
 
   // Profile Header Content
   profileHeaderContent: {
-    alignItems: 'stretch',
+    alignItems: 'center',
   },
   avatarContainer: {
     position: 'relative',
@@ -648,14 +704,16 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     fontWeight: DesignTokens.typography.fontWeight.bold as any,
     color: DesignTokens.colors.text.primary,
     marginBottom: DesignTokens.spacing.xs,
-    textAlign: 'left',
-    alignSelf: 'stretch',
+    textAlign: 'center',
+    alignSelf: 'center',
+    width: '100%',
   },
   groupStatus: {
     fontSize: DesignTokens.typography.fontSize.sm,
     color: DesignTokens.colors.text.secondary,
-    textAlign: 'left',
-    alignSelf: 'stretch',
+    textAlign: 'center',
+    alignSelf: 'center',
+    width: '100%',
   },
   infoItem: {
     flexDirection: 'row',
@@ -726,13 +784,24 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     color: DesignTokens.colors.danger.main,
   },
 
-  // Sections — כותרות מיושרות לשמאל (הצד השני)
-  sectionHeader: {
+  membersSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: DesignTokens.spacing.md,
     width: '100%',
+  },
+  membersHeaderSide: {
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  membersSectionTitle: {
+    flex: 1,
+    fontSize: DesignTokens.typography.fontSize.sm,
+    fontWeight: DesignTokens.typography.fontWeight.medium as any,
+    color: DesignTokens.colors.text.secondary,
+    textAlign: 'center',
   },
   sectionLabel: {
     fontSize: DesignTokens.typography.fontSize.sm,
@@ -745,11 +814,6 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   /** כותרת מלאה ברוחב הכרטיס (תיאור / גלריה) */
   sectionLabelStandalone: {
     alignSelf: 'stretch',
-  },
-  sectionLabelInHeader: {
-    flex: 1,
-    marginBottom: 0,
-    textAlign: 'left',
   },
   aboutText: {
     fontSize: DesignTokens.typography.fontSize.base,
@@ -777,8 +841,8 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
     textAlign: 'left',
   },
   separator: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: DesignTokens.colors.border.divider,
     marginVertical: DesignTokens.spacing.xs,
   },
 

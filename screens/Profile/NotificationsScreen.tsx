@@ -7,12 +7,10 @@ import {
   Smartphone,
   MessageSquare,
   Newspaper,
-  TrendingUp,
   Calendar,
   ChevronLeft,
   Mic
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -185,6 +183,7 @@ export default function NotificationsScreen({ navigation }: any) {
   };
 
   const handleToggle = async (key: keyof NotificationSettings) => {
+    void HapticFeedback.selection();
     const newValue = !settings[key];
     // עדכן את המצב מיד (לפני כל בדיקות הרשאות)
     const newSettings = {
@@ -368,7 +367,7 @@ export default function NotificationsScreen({ navigation }: any) {
       id: 'earningsNotifications',
       title: 'דיווחי תוצאות',
       subtitle: 'התראות על דיווחי רווח',
-      icon: TrendingUp,
+      icon: Bell,
       key: 'earningsNotifications'
     },
     {
@@ -392,9 +391,7 @@ export default function NotificationsScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <ChatSubScreenHeader title="התראות" onBack={() => navigation.goBack()} />
-        </View>
+        <ChatSubScreenHeader title="התראות" onBack={() => navigation.goBack()} />
 
         <View style={{ flex: 1 }}>
           <ScrollView 
@@ -416,7 +413,8 @@ export default function NotificationsScreen({ navigation }: any) {
             </Text>
 
             <UICard
-              variant="inputGlass"
+              variant="glass"
+              glassIntensity="light"
               padding="none"
               style={{ marginBottom: DesignTokens.spacing.lg, borderRadius: DesignTokens.borderRadius.lg }}
             >
@@ -503,7 +501,8 @@ export default function NotificationsScreen({ navigation }: any) {
             </Text>
 
             <UICard
-              variant="inputGlass"
+              variant="glass"
+              glassIntensity="light"
               padding="none"
               style={{ marginBottom: DesignTokens.spacing.lg, borderRadius: DesignTokens.borderRadius.lg }}
             >
@@ -590,7 +589,8 @@ export default function NotificationsScreen({ navigation }: any) {
             </Text>
 
             <UICard
-              variant="inputGlass"
+              variant="glass"
+              glassIntensity="light"
               padding="none"
               style={{ marginBottom: DesignTokens.spacing.lg, borderRadius: DesignTokens.borderRadius.lg }}
             >

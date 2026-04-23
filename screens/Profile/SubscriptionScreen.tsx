@@ -10,7 +10,6 @@ import {
   Zap,
   Users
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
@@ -104,9 +103,7 @@ export default function SubscriptionScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <ChatSubScreenHeader title="מנוי ומסלול" onBack={() => navigation.goBack()} />
-        </View>
+        <ChatSubScreenHeader title="מנוי ומסלול" onBack={() => navigation.goBack()} />
 
         <View style={{ flex: 1 }}>
           <ScrollView
@@ -130,7 +127,8 @@ export default function SubscriptionScreen({ navigation }: any) {
                 </Text>
 
                 <UICard
-                  variant="inputGlass"
+                  variant="glass"
+                  glassIntensity="light"
                   padding="lg"
                   style={{ borderRadius: DesignTokens.borderRadius.lg }}
                 >
@@ -218,7 +216,8 @@ export default function SubscriptionScreen({ navigation }: any) {
                     style={{ marginBottom: DesignTokens.spacing.md, opacity: isCurrentPlan ? 0.6 : 1 }}
                   >
                     <UICard
-                      variant="inputGlass"
+                      variant="glass"
+                      glassIntensity="light"
                       padding="lg"
                       style={{ borderRadius: DesignTokens.borderRadius.lg }}
                     >
@@ -381,7 +380,8 @@ export default function SubscriptionScreen({ navigation }: any) {
             {/* Info Note */}
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md }}>
               <UICard
-                variant="inputGlass"
+                variant="glass"
+                glassIntensity="light"
                 padding="md"
                 style={{ borderRadius: DesignTokens.borderRadius.lg }}
               >

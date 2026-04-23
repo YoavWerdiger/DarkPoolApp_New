@@ -3,6 +3,7 @@ import { View, Text, RefreshControl, ActivityIndicator, Pressable, SectionList }
 import { DollarSign, Calendar } from 'lucide-react-native';
 import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import UICard from '../../components/ui/UICard';
 
 interface Dividend {
@@ -168,10 +169,14 @@ export default function DividendsTab() {
     }
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadDividends();
-  };
+    try {
+      await loadDividends();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
+  }, [loadDividends]);
 
   useEffect(() => {
     loadDividends();

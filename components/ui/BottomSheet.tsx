@@ -19,6 +19,7 @@ import {
   PanGestureHandler,
   GestureHandlerStateChangeEvent,
 } from "react-native-gesture-handler";
+import { HapticFeedback } from "../../utils/hapticFeedback";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -64,6 +65,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   useEffect(() => {
     if (visible) {
+      void HapticFeedback.impactLight();
       openSheet();
     } else {
       closeSheet();

@@ -1,53 +1,59 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, Dimensions } from 'react-native';
+import { View, Text, useWindowDimensions } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
 import { getTradingViewMarketOverviewHTML } from '../embeds/tradingViewEmbeds';
 import { MarketsTradingView } from '../components/MarketsTradingView';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-type Props = { mainTabsHeight: number };
-
-export function MarketsIndicesTab({ mainTabsHeight }: Props) {
+/** כרטיס מדדים — כותרת קומפקטית, הווידג'ט ברוחב מלא של הכרטיס (ללא «מסגרת» פנימית סביב TradingView) */
+export function MarketsIndicesCard() {
   const tokens = useDesignTokens();
+  const { height: winH } = useWindowDimensions();
 
   const marketOverviewHtml = useMemo(() => getTradingViewMarketOverviewHTML(tokens), [tokens]);
 
+  const chartHeight = useMemo(() => {
+    return Math.round(Math.min(Math.max(winH * 0.42, 260), winH * 0.52));
+  }, [winH]);
+
   const styles = useMemo(
     () => ({
-      widgetCard: {
-        marginTop: tokens.spacing.xs,
+      card: {
+        marginTop: 0,
         marginBottom: tokens.spacing.lg,
+        borderRadius: tokens.borderRadius.lg,
+        overflow: 'hidden' as const,
       },
-      widgetTitle: {
+      title: {
         fontSize: tokens.typography.titleSmall.size,
         fontWeight: tokens.typography.fontWeight.bold as '700',
         color: tokens.colors.text.primary,
-        textAlign: 'right' as const,
-        marginBottom: tokens.spacing.sm,
+        textAlign: 'center' as const,
+        writingDirection: 'rtl' as const,
+        width: '100%' as const,
+      },
+      titlePad: {
+        paddingHorizontal: tokens.spacing.md,
+        paddingTop: tokens.spacing.md,
+        paddingBottom: tokens.spacing.sm,
+        alignItems: 'center' as const,
       },
     }),
     [tokens]
   );
 
   return (
-    <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
-      <ScrollView
-        contentContainerStyle={{ paddingHorizontal: tokens.spacing.lg }}
-        showsVerticalScrollIndicator={false}
-      >
-        <UICard variant="blur" padding="md" style={{ ...styles.widgetCard, ...tokens.shadows.lg }}>
-          <Text style={styles.widgetTitle}>מדדים ועתידיים</Text>
-          <View style={{ borderRadius: tokens.borderRadius.lg, overflow: 'hidden' }}>
-            <MarketsTradingView
-              html={marketOverviewHtml}
-              instanceKey="market-overview"
-              height={SCREEN_HEIGHT * 0.45}
-            />
-          </View>
-        </UICard>
-      </ScrollView>
-    </View>
+    <UICard variant="blur" padding="none" style={{ ...styles.card, ...tokens.shadows.lg }}>
+      <View style={styles.titlePad}>
+        <Text style={styles.title}>מדדים וחוזים עתידיים</Text>
+      </View>
+      <View style={{ width: '100%', overflow: 'hidden' }}>
+        <MarketsTradingView
+          html={marketOverviewHtml}
+          instanceKey="market-overview"
+          height={chartHeight}
+        />
+      </View>
+    </UICard>
   );
 }

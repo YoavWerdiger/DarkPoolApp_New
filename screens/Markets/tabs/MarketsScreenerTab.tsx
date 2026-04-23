@@ -12,16 +12,16 @@ const SCREENER_SEGMENTS: { id: ScreenerKind; label: string }[] = [
   { id: 'sp500', label: 'S&P500' },
 ];
 
-type Props = { mainTabsHeight: number };
-
-export function MarketsScreenerTab({ mainTabsHeight }: Props) {
+export function MarketsScreenerTab() {
   const tokens = useDesignTokens();
   const [screenerType, setScreenerType] = useState<ScreenerKind>('sp500');
 
   const screenerHtml = useMemo(() => getTradingViewScreenerHTML(screenerType), [screenerType]);
 
+  const hp = tokens.layout.screenPadding;
+
   return (
-    <View style={{ flex: 1, paddingHorizontal: tokens.spacing.lg, marginBottom: mainTabsHeight - 12 }}>
+    <View style={{ flex: 1, minHeight: 0, paddingHorizontal: hp }}>
       <UICard
         variant="blur"
         padding="none"

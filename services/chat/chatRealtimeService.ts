@@ -474,18 +474,30 @@ export async function subscribeToAllUserGroups(
   onNewMessage: (groupId: string, message: ChatMessage) => void,
   onGroupUpdate: (groupId: string, data: any) => void
 ): Promise<RealtimeChannel | null> {
-  const channelName = `user-membership:${userId}`;
+  /**
+   * שני מנויי postgres_changes על אותו channel מפיקים אצל Supabase
+   * "mismatch between server and client bindings for postgres changes" — לכן
+   * מפרידים ל־2 ערוצים.
+   */
+  const baseName = `user-membership:${userId}`;
+  const nameMessages = `${baseName}:messages`;
+  const nameMembers = `${baseName}:members`;
 
-  const retryCount = failedChannels.get(channelName) ?? 0;
+  const retryCount = failedChannels.get(baseName) ?? 0;
   if (retryCount >= MAX_RETRIES) {
-    logger.warn(TAG, `Skipping subscription to ${channelName} - max retries reached`);
+    logger.warn(TAG, `Skipping subscription to ${baseName} - max retries reached`);
     return null;
   }
 
-  if (activeChannels.has(channelName)) {
-    const existingChannel = activeChannels.get(channelName);
-    existingChannel?.unsubscribe();
-    activeChannels.delete(channelName);
+  for (const k of [nameMessages, nameMembers] as const) {
+    if (activeChannels.has(k)) {
+      try {
+        activeChannels.get(k)?.unsubscribe();
+      } catch {
+        /* ignore */
+      }
+      activeChannels.delete(k);
+    }
   }
 
   const { data: memberships } = await supabase
@@ -498,7 +510,38 @@ export async function subscribeToAllUserGroups(
 
   logger.debug(TAG, `User is member of ${userGroups.size} groups`);
 
-  const channel = supabase.channel(channelName)
+  let errorTeardownOnce = false;
+  const handleError = (from: string, err: unknown) => {
+    if (errorTeardownOnce) return;
+    errorTeardownOnce = true;
+    const msg = err && typeof (err as any)?.message === 'string' ? (err as any).message : String(err);
+    logger.error(TAG, `Error subscribing to ${from}: ${msg}`);
+    for (const k of [nameMessages, nameMembers] as const) {
+      if (activeChannels.has(k)) {
+        try {
+          activeChannels.get(k)?.unsubscribe();
+        } catch {
+          /* ignore */
+        }
+        activeChannels.delete(k);
+      }
+    }
+    scheduleRetry(baseName, () => {
+      void subscribeToAllUserGroups(userId, onNewMessage, onGroupUpdate);
+    });
+  };
+
+  let subMessagesOk = false;
+  let subMembersOk = false;
+  const onBothSubscribed = () => {
+    if (subMessagesOk && subMembersOk) {
+      failedChannels.delete(baseName);
+      connectionStatusCallback?.('CONNECTED');
+    }
+  };
+
+  const chMessages = supabase
+    .channel(nameMessages)
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'chat_messages' },
@@ -514,9 +557,26 @@ export async function subscribeToAllUserGroups(
         onNewMessage(groupId, newMessage);
       }
     )
+    .subscribe((status, err) => {
+      if (status === 'CHANNEL_ERROR') {
+        handleError(nameMessages, err);
+      } else if (status === 'SUBSCRIBED') {
+        subMessagesOk = true;
+        logger.debug(TAG, `Subscribed: ${nameMessages}`);
+        onBothSubscribed();
+      }
+    });
+
+  const chMembers = supabase
+    .channel(nameMembers)
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'chat_group_members', filter: `user_id=eq.${userId}` },
+      {
+        event: '*',
+        schema: 'public',
+        table: 'chat_group_members',
+        filter: `user_id=eq.${userId}`,
+      },
       async (payload: RealtimePostgresChangesPayload<any>) => {
         if (payload.eventType === 'INSERT') {
           userGroupsCache.get(userId)?.add(payload.new.group_id);
@@ -532,21 +592,17 @@ export async function subscribeToAllUserGroups(
     )
     .subscribe((status, err) => {
       if (status === 'CHANNEL_ERROR') {
-        logger.error(TAG, `Error subscribing to user groups channel: ${err?.message ?? 'Unknown'}`);
-        activeChannels.delete(channelName);
-        try { channel.unsubscribe(); } catch (_) { /* ignore */ }
-        scheduleRetry(channelName, () => {
-          subscribeToAllUserGroups(userId, onNewMessage, onGroupUpdate);
-        });
+        handleError(nameMembers, err);
       } else if (status === 'SUBSCRIBED') {
-        logger.debug(TAG, 'Subscribed to user groups channel');
-        failedChannels.delete(channelName);
-        connectionStatusCallback?.('CONNECTED');
+        subMembersOk = true;
+        logger.debug(TAG, `Subscribed: ${nameMembers}`);
+        onBothSubscribed();
       }
     });
 
-  activeChannels.set(channelName, channel);
-  return channel;
+  activeChannels.set(nameMessages, chMessages);
+  activeChannels.set(nameMembers, chMembers);
+  return chMessages;
 }
 
 export function updateUserGroupsCache(userId: string, groupId: string, action: 'add' | 'remove'): void {

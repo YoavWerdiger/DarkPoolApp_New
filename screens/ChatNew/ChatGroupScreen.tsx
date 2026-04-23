@@ -9,6 +9,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
+import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 import { useChat } from '../../context/ChatContext';
@@ -31,6 +32,7 @@ import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export default function ChatGroupScreen() {
   const DesignTokens = useDesignTokens();
@@ -310,6 +312,8 @@ export default function ChatGroupScreen() {
 
       if (!result.success && !(result as any).queued) {
         logger.error('ChatGroupScreen', 'Send message failed', result.error);
+      } else {
+        void HapticFeedback.impactLight();
       }
 
       setReplyTo(undefined);
@@ -496,8 +500,10 @@ export default function ChatGroupScreen() {
     try {
       if (message.is_starred_by_me) {
         await unstarMessage(message.id);
+        void HapticFeedback.selection();
       } else {
         await starMessage(message.id, groupId);
+        void HapticFeedback.impactLight();
       }
     } catch (e) {
       logger.error('ChatGroupScreen', 'Star/unstar failed', e);
@@ -517,6 +523,8 @@ export default function ChatGroupScreen() {
 
       if (error) {
         legacyAlert('שגיאה', 'לא ניתן להצמיד את ההודעה');
+      } else {
+        void HapticFeedback.impactLight();
       }
     } catch {
       legacyAlert('שגיאה', 'שגיאה בהצמדת ההודעה');
@@ -524,11 +532,23 @@ export default function ChatGroupScreen() {
   };
 
   const handleCopy = async (message: ChatMessageType) => {
-    const textToCopy = message.content || message.media_url || '';
+    let textToCopy = message.content || message.media_url || '';
+    if (message.message_type === MessageType.TRADE && message.content?.trim()) {
+      try {
+        const p = JSON.parse(message.content.trim()) as { trade?: { symbol?: string; pnl?: number } };
+        const t = p.trade;
+        if (t?.symbol) {
+          textToCopy = `טרייד ${t.symbol}${typeof t.pnl === 'number' ? ` · P&L $${t.pnl.toFixed(2)}` : ''}`;
+        }
+      } catch {
+        /* נשאר JSON גולמי */
+      }
+    }
     if (!textToCopy) return;
     try {
       const Clipboard = await import('expo-clipboard');
       await Clipboard.setStringAsync(textToCopy);
+      void HapticFeedback.selection();
     } catch {
       /* clipboard unavailable on this platform */
     }
@@ -552,6 +572,7 @@ export default function ChatGroupScreen() {
           legacyAlert('שגיאה', result.error || 'לא ניתן לערוך את ההודעה');
           return;
         }
+        void HapticFeedback.impactLight();
       } catch (e) {
         logger.error('ChatGroupScreen', 'Edit message failed', e);
         legacyAlert('שגיאה', 'לא ניתן לערוך את ההודעה');
@@ -567,6 +588,8 @@ export default function ChatGroupScreen() {
         const result = await deleteMessage(message.id, forEveryone);
         if (!result.success) {
           legacyAlert('שגיאה', result.error || 'לא ניתן למחוק את ההודעה');
+        } else {
+          void HapticFeedback.impactLight();
         }
       } catch (e) {
         logger.error('ChatGroupScreen', 'Delete message failed', e);
@@ -603,6 +626,7 @@ export default function ChatGroupScreen() {
     const result = await forwardMessage(selectedMessageForForward.id, groupIds);
 
     if (result.success) {
+      void HapticFeedback.impactLight();
       legacyAlert('הצלחה', 'ההודעה הועברה בהצלחה');
       setForwardModalVisible(false);
       setSelectedMessageForForward(null);
@@ -620,6 +644,7 @@ export default function ChatGroupScreen() {
       const existingReaction = myCurrentReactions.find(r => r.emoji === emoji);
       if (existingReaction) {
         await removeReaction(message.id, emoji);
+        void HapticFeedback.selection();
         return;
       }
 
@@ -628,6 +653,7 @@ export default function ChatGroupScreen() {
       }
 
       await addReaction(message.id, emoji);
+      void HapticFeedback.impactLight();
     } catch (e) {
       logger.error('ChatGroupScreen', 'Reaction press failed', e);
     }
@@ -638,8 +664,15 @@ export default function ChatGroupScreen() {
     setReactionDetailsModalVisible(true);
   };
 
+  /** חזרה — לדף פירוט הקבוצה (לא לרשימה), כדי שמסך המידע יהיה "תחנת היציאה" לפני הקהילה */
   const handleBack = () => {
-    navigation.goBack();
+    if (groupId) {
+      (navigation as { replace: (name: string, params?: { groupId: string }) => void }).replace('ChatGroupInfo', {
+        groupId,
+      });
+    } else {
+      navigation.goBack();
+    }
   };
 
   const handleGroupInfoPress = () => {
@@ -707,11 +740,17 @@ export default function ChatGroupScreen() {
     );
 
     return (
-      <View style={styles.headerBar}>
+      <UICard
+        variant="glass"
+        glassIntensity="light"
+        padding="none"
+        style={styles.headerGlassOuter}
+        contentContainerStyle={styles.headerBarInner}
+      >
         {searchButton}
         {center}
         {backButton}
-      </View>
+      </UICard>
     );
   };
 
@@ -1190,22 +1229,21 @@ const FadingDot = React.memo(({ delay, dotStyle }: { delay: number; dotStyle: Vi
 const HP = 20;
 
 const createChatGroupStyles = (tokens: any) => StyleSheet.create({
-  /* ── Header bar ── */
-  headerBar: {
+  /* ── Header — UICard glass כמו כרטיסיות בפרטי קבוצה ── */
+  headerGlassOuter: {
+    marginHorizontal: 10,
+    borderRadius: 34,
+  },
+  headerBarInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     /** מנע כפל RTL מול forceRTL — כפתורים ותמונה בסדר צפוי */
     direction: 'ltr',
-    marginHorizontal: 10,
     paddingHorizontal: 12,
     paddingTop: 9,
     paddingBottom: 9,
     minHeight: 58,
-    borderRadius: 34,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   backButton: {
     width: 38,

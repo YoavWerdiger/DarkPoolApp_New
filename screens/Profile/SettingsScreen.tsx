@@ -1,6 +1,15 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Switch, TouchableOpacity, ActivityIndicator, SafeAreaView, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Switch,
+  TouchableOpacity,
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+} from 'react-native';
 import { 
   Moon, 
   Smartphone,
@@ -14,7 +23,6 @@ import {
   Fingerprint,
   Shield
 } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
@@ -25,6 +33,7 @@ import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface SettingItem {
   id: string;
@@ -70,6 +79,7 @@ export default function SettingsScreen({ navigation }: any) {
   };
 
   const handleToggle = async (key: string, value: boolean) => {
+    void HapticFeedback.selection();
     const newSettings = {
       ...settings,
       [key]: value
@@ -111,6 +121,7 @@ export default function SettingsScreen({ navigation }: any) {
                 await AsyncStorage.multiRemove(cacheKeys);
               }
               
+              void HapticFeedback.success();
               legacyAlert('הצלחה', 'המטמון נוקה בהצלחה');
             } catch (error) {
               legacyAlert('שגיאה', 'שגיאה בניקוי המטמון');
@@ -147,6 +158,7 @@ export default function SettingsScreen({ navigation }: any) {
 
         if (result.success) {
           handleToggle('biometricAuth', true);
+          void HapticFeedback.success();
           legacyAlert('הצלחה', 'אימות ביומטרי הופעל בהצלחה');
         } else {
           legacyAlert('בוטל', 'אימות ביומטרי בוטל');
@@ -255,16 +267,19 @@ export default function SettingsScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <View style={{ paddingTop: DesignTokens.spacing.md, paddingHorizontal: DesignTokens.spacing.lg }}>
-          <ChatSubScreenHeader title="הגדרות" onBack={() => navigation.goBack()} />
-        </View>
+        <ChatSubScreenHeader title="הגדרות" onBack={() => navigation.goBack()} />
 
         <View style={{ flex: 1 }}>
           <ScrollView 
             style={{ flex: 1 }}
             showsVerticalScrollIndicator={false}
           >
-          <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
+          <View
+            style={{
+              paddingHorizontal: DesignTokens.spacing.base,
+              paddingTop: DesignTokens.spacing.md,
+            }}
+          >
             {settingSections.map((section, sectionIndex) => (
               <View key={sectionIndex} style={{ marginBottom: DesignTokens.spacing.lg }}>
                 {/* Section Title */}
@@ -273,7 +288,6 @@ export default function SettingsScreen({ navigation }: any) {
                   fontWeight: DesignTokens.typography.fontWeight.bold as any,
                   color: DesignTokens.colors.text.tertiary,
                   marginBottom: DesignTokens.spacing.sm,
-                  marginRight: DesignTokens.spacing.xs,
                   textAlign: 'right',
                   textTransform: 'uppercase',
                   letterSpacing: DesignTokens.typography.letterSpacing.wide
@@ -281,9 +295,10 @@ export default function SettingsScreen({ navigation }: any) {
                   {section.title}
                 </Text>
 
-                {/* Section Items עם blur */}
+                {/* Section Items */}
                 <UICard 
-                  variant="inputGlass"
+                  variant="glass"
+                  glassIntensity="light"
                   padding="none"
                   style={{ borderRadius: DesignTokens.borderRadius.lg }}
                 >
@@ -296,9 +311,8 @@ export default function SettingsScreen({ navigation }: any) {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        paddingTop: DesignTokens.spacing.lg,
-                        paddingBottom: itemIndex < section.items.length - 1 ? DesignTokens.spacing.md : DesignTokens.spacing.lg,
-                        paddingHorizontal: DesignTokens.spacing.lg,
+                        paddingVertical: DesignTokens.spacing.md,
+                        paddingHorizontal: DesignTokens.spacing.base,
                       }}
                     >
                     {/* Switch/Chevron - שמאל */}
@@ -355,10 +369,13 @@ export default function SettingsScreen({ navigation }: any) {
                     </View>
                   </TouchableOpacity>
                   {itemIndex < section.items.length - 1 && (
-                    <View style={{
-                      height: 1,
-                      backgroundColor: DesignTokens.colors.border.divider,
-                    }} />
+                    <View
+                      style={{
+                        height: StyleSheet.hairlineWidth,
+                        backgroundColor: DesignTokens.colors.border.divider,
+                        marginHorizontal: DesignTokens.spacing.base,
+                      }}
+                    />
                   )}
                 </View>
                 ))}

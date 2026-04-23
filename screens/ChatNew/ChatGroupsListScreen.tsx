@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -37,7 +38,7 @@ import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
 import { getUsersWithStories, StoryWithUser } from '../../services/storiesService';
 import { logger } from '../../utils/logger';
 import { legacyAlert } from '../../utils/appDialog';
-import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { SUPABASE_URL } from '../../config/publicEnv';
 
 const { width: CHAT_SCREEN_W, height: CHAT_SCREEN_H } = Dimensions.get('window');
@@ -455,7 +456,8 @@ export default function ChatGroupsListScreen() {
       setJoinGroupSheet({ visible: false, group: null });
       setIsJoining(false);
       await loadGroups();
-      
+
+      void HapticFeedback.impactLight();
       // נווט לקבוצה אחרי הצטרפות
       (navigation as any).navigate('ChatGroup', { groupId: group.id });
     } catch (error: any) {
@@ -466,10 +468,12 @@ export default function ChatGroupsListScreen() {
 
   const handleGroupPress = useCallback((group: GroupWithMembership) => {
     if (!group.is_member) {
+      void HapticFeedback.selection();
       setJoinGroupSheet({ visible: true, group });
       return;
     }
     Keyboard.dismiss();
+    void HapticFeedback.impactLight();
     (navigation as any).navigate('ChatGroup', { groupId: group.id });
   }, [navigation]);
 
@@ -629,15 +633,14 @@ export default function ChatGroupsListScreen() {
           {/* Header */}
           <View style={styles.appHeader}>
             <View style={styles.appHeaderActions}>
-              <TouchableOpacity
-                style={styles.headerMenuBtn}
+              <DayNavBlurButton
                 onPress={openMainDrawer}
-                activeOpacity={0.8}
-                accessibilityRole="button"
+                glassIntensity="subtle"
+                size={DRAWER_MENU_BUTTON_SIZE}
                 accessibilityLabel="תפריט ראשי"
               >
-                <Ionicons name="menu" size={28} color={tokens.colors.text.primary} />
-              </TouchableOpacity>
+                <Ionicons name="menu" size={24} color={tokens.colors.text.primary} />
+              </DayNavBlurButton>
             </View>
             <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]}>צ׳אטים</Text>
             <View style={styles.appHeaderActions} />
@@ -790,7 +793,17 @@ export default function ChatGroupsListScreen() {
               ListHeaderComponent={null}
               ListEmptyComponent={renderEmpty}
               refreshControl={
-                <RefreshControl refreshing={isLoading} onRefresh={loadGroups} tintColor={tokens.colors.primary.main} />
+                <RefreshControl
+                  refreshing={isLoading}
+                  onRefresh={async () => {
+                    try {
+                      await loadGroups();
+                    } finally {
+                      void HapticFeedback.impactLight();
+                    }
+                  }}
+                  tintColor={tokens.colors.primary.main}
+                />
               }
               showsVerticalScrollIndicator={false}
               contentContainerStyle={
@@ -873,22 +886,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerMenuBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: tokens.colors.background.secondary,
-    borderWidth: 1,
-    borderColor: tokens.colors.border.strong,
-    shadowColor: '#000',
-    shadowOpacity: 0.28,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-
   /* ── Raised list card ── */
   listCard: {
     flex: 1,

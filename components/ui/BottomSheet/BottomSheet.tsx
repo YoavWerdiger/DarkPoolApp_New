@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
+import React, { useEffect, useCallback, useMemo, useRef, Fragment, createContext, useContext } from 'react';
 import { View, Pressable, Dimensions, Modal, StyleSheet, Platform } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -29,6 +29,12 @@ const SPRING_CONFIG = {
 const CLOSE_THRESHOLD = 120;
 const VELOCITY_THRESHOLD = 800;
 
+const BottomSheetCloseContext = createContext<(() => void) | null>(null);
+
+export function useBottomSheetClose() {
+  return useContext(BottomSheetCloseContext);
+}
+
 const BottomSheet: React.FC<BottomSheetProps> = ({
   isOpen,
   onClose,
@@ -40,6 +46,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   onSnapPointChange,
   useModal = true,
   edgeToEdge = false,
+  dragAreaHeight,
 }) => {
   const tokens = useDesignTokens();
   const { isDarkMode } = useTheme();
@@ -70,8 +77,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   }, [minAllowedY]);
   
   const handleCloseWithAnimation = useCallback(() => {
-    // ⚡ OPTIMISTIC: סגירה מהירה
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 100 }, (finished) => {
+    // סגירה חלקה — אנימציית החלקה למטה לפני סגירת ה-Modal
+    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 220 }, (finished) => {
       'worklet';
       if (finished && onClose) {
         runOnJS(onClose)();
@@ -96,21 +103,28 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
   // פתיחה/סגירה - זה הקוד הקריטי
   // משתמשים רק ב-isOpen כ-dependency כדי למנוע אנימציה מחדש בשינוי תוכן
+  const wasOpenRef = useRef(false);
   useEffect(() => {
     if (isOpen && snapValues.length > 0) {
-      void HapticFeedback.impactLight();
-      const targetY = snapValues[0];
-      translateY.value = SCREEN_HEIGHT;
-      currentSnapIndex.value = 0;
-      
-      // ⚡ OPTIMISTIC: פותחים מיד בלי delay
-      translateY.value = withSpring(targetY, SPRING_CONFIG);
+      const isOpening = !wasOpenRef.current;
+      wasOpenRef.current = true;
+      const targetY = snapValues[currentSnapIndex.value] ?? snapValues[0];
+      if (isOpening) {
+        void HapticFeedback.impactLight();
+        translateY.value = SCREEN_HEIGHT;
+        currentSnapIndex.value = 0;
+        translateY.value = withSpring(snapValues[0], SPRING_CONFIG);
+      } else {
+        // snapPoints התעדכנו בזמן שהשיט פתוח (לדוגמה אחרי מדידה של תוכן) -
+        // נזיז לערך ה-snap הנוכחי החדש בצורה עדינה
+        translateY.value = withSpring(targetY, SPRING_CONFIG);
+      }
     } else if (!isOpen) {
-      // ⚡ OPTIMISTIC: סגירה מהירה יותר
+      wasOpenRef.current = false;
       translateY.value = withTiming(SCREEN_HEIGHT, { duration: 100 });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, snapValues]);
 
   const findNearestSnapPoint = useCallback((currentY: number, snapVals: number[]): number => {
     'worklet';
@@ -136,6 +150,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     const currentMinAllowedY = minAllowedY;
     
     return Gesture.Pan()
+      // דורש תנועה אמיתית לפני שהגסטרה מופעלת — מאפשר לכפתורים (TouchableOpacity)
+      // שמתחת לאזור הגרירה לקבל tap events
+      .activeOffsetY([-8, 8])
       .onStart(() => {
         'worklet';
         if (!currentSnapValues || currentSnapValues.length === 0) return;
@@ -184,8 +201,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           (currentY > SCREEN_HEIGHT * 0.7 && velocity >= 0); // קרוב לסגור
 
         if (shouldClose) {
-          // ⚡ OPTIMISTIC: סגירה מהירה
-          translateY.value = withTiming(SCREEN_HEIGHT, { duration: 100 }, (finished) => {
+          translateY.value = withTiming(SCREEN_HEIGHT, { duration: 220 }, (finished) => {
             'worklet';
             if (finished && onClose) {
               runOnJS(onClose)();
@@ -244,7 +260,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   const androidSheetBackground = tokens.colors.background.secondary;
 
   const content = (
-    <Fragment>
+    <BottomSheetCloseContext.Provider value={handleCloseWithAnimation}>
+      <Fragment>
       <Pressable
         style={StyleSheet.absoluteFill}
         android_ripple={{ color: 'transparent' }}
@@ -301,17 +318,14 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
                       top: 0,
                       left: 0,
                       right: 0,
-                      height: showHandle ? 52 : 36,
+                      height: dragAreaHeight ?? (showHandle ? 64 : 72),
                       alignItems: 'center',
-                      justifyContent: showHandle ? 'flex-start' : 'center',
+                      justifyContent: 'flex-start',
                       paddingTop: showHandle ? 16 : 0,
                       zIndex: 20,
                     }}
-                    hitSlop={
-                      showHandle
-                        ? { top: 12, bottom: 12, left: 0, right: 0 }
-                        : { top: 8, bottom: 12, left: 0, right: 0 }
-                    }
+                    pointerEvents="box-none"
+                    hitSlop={{ top: 16, bottom: 8, left: 0, right: 0 }}
                   >
                     {showHandle && (
                       <View
@@ -334,9 +348,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
                       width: '100%', 
                       alignItems: 'center', 
                       paddingVertical: 16,
-                      minHeight: 44,
+                      minHeight: 36,
                     }}
-                    hitSlop={{ top: 20, bottom: 20, left: 0, right: 0 }}
+                    pointerEvents="box-none"
+                    hitSlop={{ top: 16, bottom: 0, left: 0, right: 0 }}
                   >
                     {showHandle && (
                       <View
@@ -353,7 +368,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             )}
           </View>
         </Animated.View>
-    </Fragment>
+      </Fragment>
+    </BottomSheetCloseContext.Provider>
   );
 
   if (!useModal) {

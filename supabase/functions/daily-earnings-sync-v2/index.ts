@@ -6,66 +6,277 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface NewApiResponseItem {
-  company_name: string | null;
-  eps_estimate: number | string | null;
-  quarter: string | null;
-  report_date: string;
-  report_time: string | null;
-  revenue_estimate: number | string | null;
-  ticker: string;
-  raw?: {
-    assetName?: string;
-    earningsDate?: string;
-    earningsTime?: string;
-    eps?: number;
-    epsEstimate?: number;
-    epsPrior?: number;
-    epsSurprise?: number;
-    epsSurprisePercent?: number;
-    importance?: number;
-    marketCap?: number;
-    period?: string;
-    periodYear?: number;
-    revenue?: number;
-    revenueEstimate?: number;
-    revenuePrior?: number;
-    revenueSurprise?: number;
-    revenueSurprisePercent?: number;
-    symbol?: string;
-  };
+// earningshub.com API (task d92ba1a9-30aa-478e-8453-f464b4ac8d56)
+// This single scraper provides BOTH upcoming (next 6 months) and reported (last 3 months + actuals).
+const PARSE_SCRAPER_ID = '4a2d47a5-9885-41c3-a3eb-b1411610a667'
+const PARSE_BASE_URL = `https://api.parse.bot/scraper/${PARSE_SCRAPER_ID}`
+
+interface ParseEarningsItem {
+  ticker?: string | null
+  company_name?: string | null
+  report_date?: string | null
+  report_time?: string | null
+  quarter?: string | null
+  eps_estimate?: number | string | null
+  eps_actual?: number | string | null
+  revenue_estimate?: number | string | null
+  revenue_actual?: number | string | null
+  raw?: Record<string, unknown>
 }
 
-function parseNumber(val: string | number | null | undefined): number | null {
-  if (val === null || val === undefined) return null;
-  if (typeof val === 'number') return val;
-  
-  let str = val.toString().trim().toUpperCase();
-  let multiplier = 1;
-  
-  if (str.endsWith('B')) {
-    multiplier = 1_000_000_000;
-    str = str.slice(0, -1);
-  } else if (str.endsWith('M')) {
-    multiplier = 1_000_000;
-    str = str.slice(0, -1);
-  } else if (str.endsWith('K')) {
-    multiplier = 1_000;
-    str = str.slice(0, -1);
+function parseNumber(val: unknown): number | null {
+  if (val === null || val === undefined || val === '') return null
+  if (typeof val === 'number') return Number.isFinite(val) ? val : null
+
+  let str = String(val).trim().toUpperCase()
+  if (!str) return null
+  let multiplier = 1
+
+  if (str.endsWith('B')) { multiplier = 1_000_000_000; str = str.slice(0, -1) }
+  else if (str.endsWith('M')) { multiplier = 1_000_000; str = str.slice(0, -1) }
+  else if (str.endsWith('K')) { multiplier = 1_000; str = str.slice(0, -1) }
+
+  str = str.replace(/[$,\s]/g, '')
+  const num = parseFloat(str)
+  if (!Number.isFinite(num)) return null
+  return num * multiplier
+}
+
+// Normalize market timing to the values the UI expects: "BeforeMarket" | "AfterMarket" | null
+// Handles: "Before Market Open", "After Market Close", "BeforeMarket", "AfterMarket",
+//          "pre-market", "post-market", "BMO", "AMC", etc.
+function parseMarketTiming(timeStr: string | null | undefined): string | null {
+  if (!timeStr) return null
+  const lower = String(timeStr).toLowerCase()
+  if (lower.includes('before') || lower.includes('pre-market') || lower.includes('premarket') || lower.includes('bmo') || lower.includes('market open')) {
+    return 'BeforeMarket'
   }
-  
-  const num = parseFloat(str);
-  if (isNaN(num)) return null;
-  return num * multiplier;
+  if (lower.includes('after') || lower.includes('post-market') || lower.includes('postmarket') || lower.includes('amc') || lower.includes('market close')) {
+    return 'AfterMarket'
+  }
+  return null
 }
 
-function parseTime(timeStr: string | null): string {
-  if (!timeStr) return 'Time Not Supplied';
-  const lower = timeStr.toLowerCase();
-  if (lower.includes('after') || lower.includes('close')) return 'After Market';
-  if (lower.includes('before') || lower.includes('open')) return 'Before Market';
-  if (lower.match(/\d{2}:\d{2}/)) return timeStr; // Keep specific time if given
-  return 'Time Not Supplied';
+async function callParseEndpoint(endpoint: string, apiKey: string, body: Record<string, unknown> = {}): Promise<unknown> {
+  const url = `${PARSE_BASE_URL}/${endpoint}`
+  const bodyStr = JSON.stringify(body)
+  console.log(`[parse] POST ${endpoint} body=${bodyStr.slice(0, 300)}`)
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': apiKey,
+    },
+    body: bodyStr,
+  })
+
+  const text = await resp.text()
+  console.log(`[parse] ${endpoint} -> HTTP ${resp.status} len=${text.length} preview=${text.slice(0, 500)}`)
+
+  if (!resp.ok) {
+    throw new Error(`${endpoint} HTTP ${resp.status}: ${text.slice(0, 500)}`)
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    throw new Error(`${endpoint} returned non-JSON: ${text.slice(0, 300)}`)
+  }
+
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    const obj = parsed as Record<string, unknown>
+    console.log(`[parse] ${endpoint} object keys: ${Object.keys(obj).join(',')}`)
+    if (obj.error) {
+      throw new Error(`${endpoint} API error: ${String(obj.error)}`)
+    }
+
+    // Parse wraps successful responses as { status: 'success', data: { <named_array>: [...] } }.
+    // Dig into `data` and find the first array value inside it.
+    if (obj.data && typeof obj.data === 'object' && !Array.isArray(obj.data)) {
+      const inner = obj.data as Record<string, unknown>
+      for (const key of ['upcoming_earnings', 'reported_earnings', 'earnings', 'entries', 'items', 'results']) {
+        if (Array.isArray(inner[key])) {
+          console.log(`[parse] ${endpoint} extracted data.${key} -> ${(inner[key] as unknown[]).length} items`)
+          return inner[key]
+        }
+      }
+      // fallback: first array value in data
+      for (const [k, v] of Object.entries(inner)) {
+        if (Array.isArray(v)) {
+          console.log(`[parse] ${endpoint} extracted data.${k} -> ${v.length} items (fallback)`)
+          return v
+        }
+      }
+    }
+
+    if (Array.isArray(obj.data)) return obj.data
+    if (Array.isArray(obj.entries)) return obj.entries
+    if (Array.isArray(obj.results)) return obj.results
+    if (Array.isArray(obj.earnings)) return obj.earnings
+    if (Array.isArray(obj.items)) return obj.items
+  }
+
+  return parsed
+}
+
+function toArray(value: unknown): ParseEarningsItem[] {
+  if (Array.isArray(value)) return value as ParseEarningsItem[]
+  return []
+}
+
+function buildRecord(item: ParseEarningsItem): Record<string, unknown> | null {
+  const rawTicker = (item.ticker || (item.raw as { symbol?: string } | undefined)?.symbol || '').toString().trim().toUpperCase()
+  if (!rawTicker) return null
+
+  const reportDate = item.report_date || (item.raw as { earningsDate?: string } | undefined)?.earningsDate
+  if (!reportDate || !/^\d{4}-\d{2}-\d{2}/.test(String(reportDate))) return null
+
+  const code = rawTicker.includes('.') ? rawTicker : `${rawTicker}.US`
+  const marketTiming = parseMarketTiming(item.report_time)
+
+  const raw = (item.raw ?? {}) as Record<string, unknown>
+
+  const epsEstimate = parseNumber(item.eps_estimate) ?? parseNumber(raw.epsEstimate)
+  const epsActual = parseNumber(item.eps_actual) ?? parseNumber(raw.eps)
+  const revenueEstimate = parseNumber(item.revenue_estimate) ?? parseNumber(raw.revenueEstimate)
+  const revenueActual = parseNumber(item.revenue_actual) ?? parseNumber(raw.revenue)
+
+  const epsSurprise = epsActual !== null && epsEstimate !== null ? epsActual - epsEstimate : null
+  const epsSurprisePercent = epsSurprise !== null && epsEstimate !== null && epsEstimate !== 0
+    ? (epsSurprise / Math.abs(epsEstimate)) * 100
+    : null
+  const revSurprise = revenueActual !== null && revenueEstimate !== null ? revenueActual - revenueEstimate : null
+  const revSurprisePercent = revSurprise !== null && revenueEstimate !== null && revenueEstimate !== 0
+    ? (revSurprise / Math.abs(revenueEstimate)) * 100
+    : null
+
+  return {
+    ticker: rawTicker,
+    code,
+    company_name: item.company_name ?? (raw.assetName as string | undefined) ?? null,
+    report_date: String(reportDate).slice(0, 10),
+    report_time: item.report_time ?? null,
+    quarter: item.quarter ?? null,
+
+    // canonical EPS
+    eps_estimate: epsEstimate,
+    estimate: epsEstimate,
+    eps: epsActual,
+    actual: epsActual,
+    eps_surprise: epsSurprise,
+    eps_surprise_percent: epsSurprisePercent,
+
+    // canonical revenue
+    revenue_estimate: revenueEstimate,
+    revenue_estimate_avg: revenueEstimate,
+    revenue: revenueActual,
+    revenue_actual: revenueActual,
+    revenue_surprise: revSurprise,
+    revenue_surprise_percent: revSurprisePercent,
+
+    // timing (unified: BeforeMarket/AfterMarket)
+    before_after_market: marketTiming,
+
+    // backward compatibility
+    date: String(reportDate).slice(0, 10),
+    time: item.report_time ?? null,
+    symbol: rawTicker,
+    asset_name: item.company_name ?? (raw.assetName as string | undefined) ?? null,
+
+    // metadata
+    source: 'earningshub.com',
+    api_source: 'earningshub.com',
+    currency: 'USD',
+    updated_at: new Date().toISOString(),
+  }
+}
+
+// Merge duplicates within a batch, preferring the record with actuals (reported) over estimates (upcoming).
+function mergeByKey(records: Record<string, unknown>[]): Record<string, unknown>[] {
+  const map = new Map<string, Record<string, unknown>>()
+  for (const rec of records) {
+    const key = `${rec.ticker}|${rec.report_date}`
+    const existing = map.get(key)
+    if (!existing) {
+      map.set(key, rec)
+      continue
+    }
+    // prefer the one that has actuals
+    const hasActuals = rec.actual !== null || rec.revenue_actual !== null
+    const existingHasActuals = existing.actual !== null || existing.revenue_actual !== null
+    if (hasActuals && !existingHasActuals) {
+      map.set(key, { ...existing, ...rec })
+    } else if (!hasActuals && existingHasActuals) {
+      map.set(key, { ...rec, ...existing })
+    } else {
+      map.set(key, { ...existing, ...rec })
+    }
+  }
+  return Array.from(map.values())
+}
+
+async function probeAllParseEndpoints(apiKey: string) {
+  const today = new Date().toISOString().split('T')[0]
+  const future = new Date(); future.setDate(future.getDate() + 30)
+  const futureStr = future.toISOString().split('T')[0]
+  const past = new Date(); past.setDate(past.getDate() - 30)
+  const pastStr = past.toISOString().split('T')[0]
+
+  const probes: Array<{ scraper: string; endpoint: string; body: Record<string, unknown> }> = [
+    // Primary API (4a2d47a5)
+    { scraper: '4a2d47a5-9885-41c3-a3eb-b1411610a667', endpoint: 'get_upcoming_earnings', body: {} },
+    { scraper: '4a2d47a5-9885-41c3-a3eb-b1411610a667', endpoint: 'get_upcoming_earnings', body: { start_date: today, end_date: futureStr } },
+    { scraper: '4a2d47a5-9885-41c3-a3eb-b1411610a667', endpoint: 'get_reported_earnings', body: {} },
+    { scraper: '4a2d47a5-9885-41c3-a3eb-b1411610a667', endpoint: 'get_reported_earnings', body: { start_date: pastStr, end_date: today } },
+    // API #2 (raw HTML)
+    { scraper: '19f29e4b-4d7f-4a6e-9fd5-61a2a712543d', endpoint: 'fetch_recent_earnings_pages', body: { page_number: '1' } },
+    { scraper: '19f29e4b-4d7f-4a6e-9fd5-61a2a712543d', endpoint: 'update_actuals_for_today', body: {} },
+    // API #3 (older upcoming)
+    { scraper: '5bcb6c63-dbcd-4383-9928-d7eb9e6d55ed', endpoint: 'fetch_earnings_data', body: {} },
+    { scraper: '5bcb6c63-dbcd-4383-9928-d7eb9e6d55ed', endpoint: 'get_upcoming_earnings', body: {} },
+  ]
+
+  const results: Array<Record<string, unknown>> = []
+  for (const p of probes) {
+    const t0 = Date.now()
+    try {
+      const resp = await fetch(`https://api.parse.bot/scraper/${p.scraper}/${p.endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-API-Key': apiKey },
+        body: JSON.stringify(p.body),
+      })
+      const text = await resp.text()
+      const elapsed = Date.now() - t0
+      let parsed: unknown = null
+      try { parsed = JSON.parse(text) } catch { /* keep raw */ }
+      const arrLen = Array.isArray(parsed) ? parsed.length : null
+      const keys = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? Object.keys(parsed as Record<string, unknown>)
+        : null
+      results.push({
+        scraper: p.scraper.slice(0, 8),
+        endpoint: p.endpoint,
+        body: p.body,
+        status: resp.status,
+        elapsed_ms: elapsed,
+        bytes: text.length,
+        is_array: Array.isArray(parsed),
+        array_length: arrLen,
+        object_keys: keys,
+        preview: text.slice(0, 400),
+      })
+    } catch (err) {
+      results.push({
+        scraper: p.scraper.slice(0, 8),
+        endpoint: p.endpoint,
+        body: p.body,
+        error: err instanceof Error ? err.message : String(err),
+        elapsed_ms: Date.now() - t0,
+      })
+    }
+  }
+  return results
 }
 
 serve(async (req) => {
@@ -73,409 +284,194 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const startedAt = Date.now()
+  const url = new URL(req.url)
+  const mode = url.searchParams.get('mode')
+
   try {
-    console.log('🚀 Daily Earnings Sync V2 (New API) started')
-    
-    // Supabase Client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    console.log('Daily Earnings Sync V2 (earningshub.com) started')
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const apiKey = Deno.env.get('EARNINGS_API_KEY') || Deno.env.get('PARSE_BOT_API_KEY')
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase configuration (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)')
+    }
+    if (!apiKey) {
+      throw new Error('Missing EARNINGS_API_KEY (or PARSE_BOT_API_KEY) env var')
+    }
+
+    if (mode === 'debug') {
+      console.log('Running Parse diagnostics...')
+      const diagnostics = await probeAllParseEndpoints(apiKey)
+      return new Response(
+        JSON.stringify({ mode: 'debug', elapsed_ms: Date.now() - startedAt, probes: diagnostics }, null, 2),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Parse.bot API Key
-    // Note: User needs to set this secret
-    // Try to get from header first (for testing), then env
-    const authHeader = req.headers.get('Authorization'); // This is for the function itself usually
-    // We look for a specific header for the API key if passed, or env
-    const apiKey = Deno.env.get('EARNINGS_API_KEY') || Deno.env.get('PARSE_BOT_API_KEY');
+    // Build explicit date ranges (scraper defaults occasionally return empty if
+    // the website structure varies — being explicit is more reliable).
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
+    const upcomingEnd = new Date(today); upcomingEnd.setDate(upcomingEnd.getDate() + 180)
+    const upcomingEndStr = upcomingEnd.toISOString().split('T')[0]
+    const reportedStart = new Date(today); reportedStart.setDate(reportedStart.getDate() - 90)
+    const reportedStartStr = reportedStart.toISOString().split('T')[0]
 
-    if (!apiKey) {
-      console.warn('⚠️ Missing EARNINGS_API_KEY or PARSE_BOT_API_KEY in environment variables.');
-      // For now, we continue but the API call might fail if it requires auth and we don't have it.
-      // However, if the user provided the key in the code snippet, I should have it.
-      // Since I don't have it, I will assume the user needs to set it.
-    }
-
-    // 1. Fetch Data
-    // Try get_upcoming_earnings first, if it fails, try fetch_earnings_data and filter locally
-    console.log('🔄 Fetching earnings data from API...');
-    console.log('🔑 API Key present:', apiKey ? 'Yes' : 'No');
-    
-    const today = new Date();
-    const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + 30);
-    const startDateStr = today.toISOString().split('T')[0];
-    const endDateStr = endDate.toISOString().split('T')[0];
-    
-    let responseData: any = null;
-    
-    // Try get_upcoming_earnings first
+    // 1. Fetch upcoming earnings (future)
+    console.log(`Fetching upcoming earnings (${todayStr} -> ${upcomingEndStr})...`)
+    let upcomingItems: ParseEarningsItem[] = []
     try {
-      console.log('📡 Trying get_upcoming_earnings...');
-      const upcomingUrl = 'https://api.parse.bot/scraper/5bcb6c63-dbcd-4383-9928-d7eb9e6d55ed/get_upcoming_earnings';
-      const upcomingResponse = await fetch(upcomingUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { 'X-API-Key': apiKey } : {})
-        },
-        body: JSON.stringify({})
-      });
-
-      if (upcomingResponse.ok) {
-        const upcomingData = await upcomingResponse.json();
-        if (Array.isArray(upcomingData) && upcomingData.length > 0) {
-          console.log(`✅ get_upcoming_earnings returned ${upcomingData.length} records`);
-          responseData = upcomingData;
-        }
+      const upcomingRaw = await callParseEndpoint('get_upcoming_earnings', apiKey, {
+        start_date: todayStr,
+        end_date: upcomingEndStr,
+      })
+      upcomingItems = toArray(upcomingRaw)
+      console.log(`  -> upcoming: ${upcomingItems.length} items`)
+      if (upcomingItems.length > 0) {
+        console.log(`  sample: ${JSON.stringify(upcomingItems[0]).slice(0, 500)}`)
       }
     } catch (err) {
-      console.log('⚠️ get_upcoming_earnings failed, trying alternative approach...');
+      console.error('  upcoming failed:', err instanceof Error ? err.message : String(err))
     }
 
-    // If get_upcoming_earnings didn't work, try fetch_earnings_data and filter locally
-    if (!responseData || !Array.isArray(responseData)) {
-      console.log('📡 Trying fetch_earnings_data...');
-      const fetchUrl = 'https://api.parse.bot/scraper/5bcb6c63-dbcd-4383-9928-d7eb9e6d55ed/fetch_earnings_data';
-      const fetchResponse = await fetch(fetchUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(apiKey ? { 'X-API-Key': apiKey } : {})
-        },
-        body: JSON.stringify({})
-      });
-
-      if (!fetchResponse.ok) {
-        const errorText = await fetchResponse.text();
-        throw new Error(`Fetch API Error: ${fetchResponse.status} ${errorText}`);
+    // 2. Fetch reported earnings (past with actuals)
+    console.log(`Fetching reported earnings (${reportedStartStr} -> ${todayStr})...`)
+    let reportedItems: ParseEarningsItem[] = []
+    try {
+      const reportedRaw = await callParseEndpoint('get_reported_earnings', apiKey, {
+        start_date: reportedStartStr,
+        end_date: todayStr,
+      })
+      reportedItems = toArray(reportedRaw)
+      console.log(`  -> reported: ${reportedItems.length} items`)
+      if (reportedItems.length > 0) {
+        console.log(`  sample: ${JSON.stringify(reportedItems[0]).slice(0, 500)}`)
       }
-
-      const fetchResponseData = await fetchResponse.json();
-      console.log('📦 Fetch Response Type:', Array.isArray(fetchResponseData) ? 'Array' : typeof fetchResponseData);
-
-      // Handle response
-      let allEarningsData: NewApiResponseItem[] = [];
-      if (Array.isArray(fetchResponseData)) {
-        allEarningsData = fetchResponseData;
-      } else if (fetchResponseData && typeof fetchResponseData === 'object') {
-        if (fetchResponseData.error) {
-          throw new Error(`Fetch API Error: ${fetchResponseData.error}`);
-        }
-        if (Array.isArray(fetchResponseData.data)) {
-          allEarningsData = fetchResponseData.data;
-        } else {
-          throw new Error(`Unexpected fetch response format`);
-        }
-      }
-
-      console.log(`📊 Fetched ${allEarningsData.length} total records from fetch_earnings_data`);
-
-      // Filter locally by date
-      console.log(`📅 Filtering locally from ${startDateStr} to ${endDateStr}...`);
-      responseData = allEarningsData.filter(item => {
-        const reportDate = item.report_date || item.raw?.earningsDate;
-        return reportDate && reportDate >= startDateStr && reportDate <= endDateStr;
-      });
-      
-      console.log(`📊 Filtered to ${responseData.length} records`);
+    } catch (err) {
+      console.error('  reported failed:', err instanceof Error ? err.message : String(err))
     }
 
-    if (!responseData || !Array.isArray(responseData) || responseData.length === 0) {
-      console.warn('⚠️ No earnings data available');
+    const totalFetched = upcomingItems.length + reportedItems.length
+    if (totalFetched === 0) {
+      throw new Error('Both Parse endpoints returned empty results')
+    }
+
+    // 3. Build + merge records
+    const allItems: ParseEarningsItem[] = [...upcomingItems, ...reportedItems]
+    const rawRecords: Record<string, unknown>[] = []
+    let skipped = 0
+    for (const item of allItems) {
+      const rec = buildRecord(item)
+      if (rec) rawRecords.push(rec)
+      else skipped++
+    }
+    const records = mergeByKey(rawRecords)
+    console.log(`Prepared ${records.length} unique records (raw: ${rawRecords.length}, skipped: ${skipped})`)
+
+    if (records.length === 0) {
       return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Earnings sync completed - No data available from API',
-          inserted_count: 0,
-          source: 'New API'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      );
+        JSON.stringify({ success: true, inserted_count: 0, message: 'No valid records to upsert' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
     }
 
-    console.log('📦 Final Response Type:', Array.isArray(responseData) ? 'Array' : typeof responseData);
-    console.log('📦 Final Response count:', responseData.length);
-
-    // Handle both array and object responses
-    let data: NewApiResponseItem[] = [];
-    if (Array.isArray(responseData)) {
-      data = responseData;
-    } else if (responseData && typeof responseData === 'object') {
-      // Check if it's an error object
-      if (responseData.error) {
-        const errorMsg = responseData.error;
-        console.error('❌ API returned error:', errorMsg);
-        throw new Error(`API returned error: ${errorMsg}`);
-      }
-      // Check if data is nested
-      if (Array.isArray(responseData.data)) {
-        data = responseData.data;
-      } else {
-        console.warn('⚠️ Unexpected response format:', Object.keys(responseData));
-        throw new Error('Unexpected API response format');
-      }
-    } else {
-      throw new Error('Invalid API response format');
+    if (records.length > 0) {
+      console.log('Sample record:', JSON.stringify(records[0], null, 2))
     }
 
-    console.log(`📊 Fetched ${data.length} records from API`);
+    // 4. Upsert in batches
+    const batchSize = 100
+    let insertedCount = 0
+    let errorCount = 0
 
-    if (data.length > 0) {
-      console.log('✅ Sample item:', JSON.stringify(data[0], null, 2));
-    } else {
-      console.warn('⚠️ No records returned from API');
-    }
+    for (let i = 0; i < records.length; i += batchSize) {
+      const batch = records.slice(i, i + batchSize)
 
-    // 2. Process and Upsert to Database
-    if (data.length === 0) {
-      console.warn('⚠️ No data to process');
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'Earnings sync completed - No data available from API',
-          inserted_count: 0,
-          source: 'New API',
-          warning: 'API returned empty array'
-        }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      );
-    }
-
-    let insertedCount = 0;
-    let errorCount = 0;
-
-    // Process in batches
-    const batchSize = 50;
-    for (let i = 0; i < data.length; i += batchSize) {
-      const batch = data.slice(i, i + batchSize);
-      
-      const recordsToUpsert = batch.map(item => {
-        const raw = item.raw || {};
-        const ticker = item.ticker ? item.ticker.toUpperCase() : raw.symbol;
-        if (!ticker) return null;
-
-        // Ensure .US suffix for consistency if it's a US stock system
-        // The current system seems to use .US. The new API returns plain tickers.
-        // We'll append .US if it's not present.
-        const code = ticker.includes('.') ? ticker : `${ticker}.US`;
-
-        // Map fields according to API JSON structure exactly
-        return {
-          // Primary key - UUID will be generated automatically
-          
-          // Main fields from API (top level)
-          ticker: ticker, // Original ticker without .US
-          code: code, // ticker.US for backward compatibility
-          company_name: item.company_name || null,
-          report_date: item.report_date || raw.earningsDate,
-          report_time: item.report_time || null,
-          quarter: item.quarter || null,
-          eps_estimate: parseNumber(item.eps_estimate) ?? null,
-          revenue_estimate: parseNumber(item.revenue_estimate) ?? null,
-          
-          // Fields from raw object
-          symbol: raw.symbol || ticker || null,
-          sk: raw.sk || null,
-          earnings_date: raw.earningsDate || item.report_date || null,
-          earnings_time: raw.earningsTime || null,
-          earnings_date_time: raw.earningsDateTime ? new Date(raw.earningsDateTime).toISOString() : null,
-          
-          // EPS fields from raw
-          eps: raw.eps ?? null,
-          eps_estimate_raw: raw.epsEstimate ?? null,
-          eps_prior: raw.epsPrior ?? null,
-          eps_surprise: raw.epsSurprise ?? null,
-          eps_surprise_percent: raw.epsSurprisePercent ?? null,
-          
-          // Revenue fields from raw
-          revenue: raw.revenue ?? null,
-          revenue_estimate_raw: raw.revenueEstimate ?? null,
-          revenue_prior: raw.revenuePrior ?? null,
-          revenue_surprise: raw.revenueSurprise ?? null,
-          revenue_surprise_percent: raw.revenueSurprisePercent ?? null,
-          
-          // Period fields
-          period: raw.period || null,
-          period_year: raw.periodYear || null,
-          
-          // Metadata
-          importance: raw.importance ?? null,
-          is_date_confirmed: raw.isDateConfirmed ?? false,
-          market_cap: raw.marketCap ?? null,
-          external_id: raw.externalId || null,
-          asset_name: raw.assetName || item.company_name || null,
-          
-          // Backward compatibility fields
-          date: item.report_date || raw.earningsDate,
-          time: raw.earningsTime || null,
-          before_after_market: parseTime(item.report_time || (raw.earningsTime ? raw.earningsTime : null)),
-          estimate: parseNumber(item.eps_estimate) ?? raw.epsEstimate ?? null,
-          actual: raw.eps ?? null,
-          revenue_estimate_avg: parseNumber(item.revenue_estimate) ?? raw.revenueEstimate ?? null,
-          revenue_actual: raw.revenue ?? null,
-          
-          // Source
-          api_source: item.source || 'earningshub.com',
-          source: 'earningshub.com',
-          currency: 'USD',
-          
-          // Timestamps
-          updated_at: new Date().toISOString()
-        };
-      }).filter(Boolean);
-
-      if (recordsToUpsert.length === 0) {
-        console.warn('⚠️ No valid records to upsert in this batch');
-        continue;
-      }
-
-      console.log(`📝 Attempting to upsert ${recordsToUpsert.length} records...`);
-      console.log('📋 Sample record:', JSON.stringify(recordsToUpsert[0], null, 2));
-
-      // Upsert using unique constraint
-      // Try ticker first, fallback to code if ticker constraint doesn't exist
-      let error = null;
-      
-      // First try with ticker
-      console.log('🔄 Trying upsert with ticker,report_date...');
-      const { error: tickerError, data: tickerData } = await supabase
+      const { error: tickerError } = await supabase
         .from('earnings_calendar')
-        .upsert(recordsToUpsert, {
-          onConflict: 'ticker,report_date',
-          ignoreDuplicates: false
-        });
-      
-      if (tickerError) {
-        console.log('⚠️ Ticker upsert error:', tickerError.message);
-        if (tickerError.message.includes('unique constraint') || tickerError.message.includes('no unique constraint')) {
-          // Fallback to code if ticker constraint doesn't exist
-          console.log('🔄 Falling back to code,report_date...');
-          const { error: codeError, data: codeData } = await supabase
-            .from('earnings_calendar')
-            .upsert(recordsToUpsert, {
-              onConflict: 'code,report_date',
-              ignoreDuplicates: false
-            });
-          error = codeError;
-          if (!error) {
-            console.log(`✅ Upserted ${recordsToUpsert.length} records using code,report_date`);
-          }
-        } else {
-          error = tickerError;
-        }
-      } else {
-        console.log(`✅ Upserted ${recordsToUpsert.length} records using ticker,report_date`);
+        .upsert(batch, { onConflict: 'ticker,report_date', ignoreDuplicates: false })
+
+      if (!tickerError) {
+        insertedCount += batch.length
+        continue
       }
 
-      if (error) {
-        console.error('❌ Error upserting batch:', error);
-        console.error('❌ Error details:', JSON.stringify(error, null, 2));
-        
-        // Fallback: Try one by one if batch fails
-        for (const rec of recordsToUpsert) {
-          try {
-            // Query for existing record by ticker+date or code+date
-            let existing = null;
-            if (rec!.ticker) {
-              const { data, error: queryError } = await supabase
-                .from('earnings_calendar')
-                .select('id')
-                .eq('ticker', rec!.ticker)
-                .eq('report_date', rec!.report_date)
-                .maybeSingle();
-              if (!queryError) existing = data;
-            }
-            
-            // Fallback to code if ticker didn't find anything
-            if (!existing && rec!.code) {
-              const { data, error: queryError } = await supabase
-                .from('earnings_calendar')
-                .select('id')
-                .eq('code', rec!.code)
-                .eq('report_date', rec!.report_date)
-                .maybeSingle();
-              if (!queryError) existing = data;
-            }
-            
-            if (queryError) {
-              console.error(`❌ Error querying for ${rec!.code}:`, queryError);
-              errorCount++;
-              continue;
-            }
-            
-            if (existing) {
-              // Update existing record
-              const { error: updateError } = await supabase
-                .from('earnings_calendar')
-                .update(rec!)
-                .eq('id', existing.id);
-              
-              if (updateError) {
-                console.error(`❌ Error updating ${rec!.code}:`, updateError);
-                errorCount++;
-              } else {
-                insertedCount++;
-              }
-            } else {
-              // Insert new record (UUID will be generated automatically)
-              const { error: insertError } = await supabase
-                .from('earnings_calendar')
-                .insert(rec!);
-              
-              if (insertError) {
-                console.error(`❌ Error inserting ${rec!.code}:`, insertError);
-                errorCount++;
-              } else {
-                insertedCount++;
-              }
-            }
-          } catch (err) {
-            console.error(`❌ Exception processing ${rec!.code}:`, err);
-            errorCount++;
-          }
+      console.warn(`Batch ${i / batchSize + 1}: ticker,report_date upsert failed -> ${tickerError.message}`)
+
+      // Fallback: try code,report_date
+      if (tickerError.message?.toLowerCase().includes('constraint')) {
+        const { error: codeError } = await supabase
+          .from('earnings_calendar')
+          .upsert(batch, { onConflict: 'code,report_date', ignoreDuplicates: false })
+        if (!codeError) {
+          insertedCount += batch.length
+          continue
         }
-      } else {
-        insertedCount += recordsToUpsert.length;
+        console.warn(`Batch ${i / batchSize + 1}: code,report_date upsert failed -> ${codeError.message}`)
+      }
+
+      // Final fallback: per-row
+      for (const rec of batch) {
+        try {
+          const { data: existing } = await supabase
+            .from('earnings_calendar')
+            .select('id')
+            .eq('ticker', rec.ticker as string)
+            .eq('report_date', rec.report_date as string)
+            .maybeSingle()
+
+          if (existing) {
+            const { error } = await supabase
+              .from('earnings_calendar')
+              .update(rec)
+              .eq('id', existing.id)
+            if (error) { errorCount++; console.error(`update ${rec.code}:`, error.message) }
+            else insertedCount++
+          } else {
+            const { error } = await supabase.from('earnings_calendar').insert(rec)
+            if (error) { errorCount++; console.error(`insert ${rec.code}:`, error.message) }
+            else insertedCount++
+          }
+        } catch (err) {
+          errorCount++
+          console.error('per-row exception:', err instanceof Error ? err.message : String(err))
+        }
       }
     }
+
+    const elapsed = Date.now() - startedAt
+    console.log(`Done. inserted=${insertedCount} errors=${errorCount} elapsed_ms=${elapsed}`)
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Earnings sync completed',
+        source: 'earningshub.com',
+        scraper_id: PARSE_SCRAPER_ID,
+        upcoming_fetched: upcomingItems.length,
+        reported_fetched: reportedItems.length,
+        total_unique: records.length,
+        skipped,
         inserted_count: insertedCount,
         error_count: errorCount,
-        total_fetched: data.length,
-        source: 'New API'
+        elapsed_ms: elapsed,
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
-
   } catch (error) {
-    console.error('❌ Sync error:', error)
-    console.error('❌ Error details:', {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    })
+    const message = error instanceof Error ? error.message : String(error)
+    console.error('Sync error:', message)
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        source: 'New API'
+        error: message,
+        elapsed_ms: Date.now() - startedAt,
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
 })

@@ -81,6 +81,16 @@ export default function TradingScreen() {
           paddingHorizontal: DesignTokens.layout.screenPadding,
           paddingTop: 2,
           paddingBottom: DesignTokens.spacing.sm,
+          alignItems: 'center',
+        },
+        tabBarCard: {
+          width: '100%',
+          maxWidth: 520,
+          alignSelf: 'center',
+          borderRadius: DesignTokens.borderRadius['3xl'],
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: `${DesignTokens.colors.primary.main}22`,
         },
         tabContent: {
           flex: 1,
@@ -137,14 +147,7 @@ export default function TradingScreen() {
         </View>
 
         <View style={styles.tabBarWrap} accessibilityRole="tablist">
-          <UICard
-            variant="blur"
-            padding="none"
-            style={{
-              borderRadius: DesignTokens.borderRadius['3xl'],
-              overflow: 'hidden',
-            }}
-          >
+          <UICard variant="glass" glassIntensity="light" padding="none" style={styles.tabBarCard}>
             <MarketsSegmentedControl
               options={JOURNAL_SEGMENTS}
               value={activeTab}

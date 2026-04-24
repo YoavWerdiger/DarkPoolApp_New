@@ -19,6 +19,20 @@ import { logger } from '../../utils/logger';
 
 const TAG = 'ChatRealtime';
 
+/** ב־CHANNEL_ERROR לעיתים `err` מגיע undefined — לא לוגים כ־"undefined" בלבד */
+function formatRealtimeSubscribeErr(err: unknown): string {
+  if (err == null) return 'CHANNEL_ERROR (no error payload from Realtime client)';
+  if (typeof err === 'string') return err;
+  if (err instanceof Error && err.message) return err.message;
+  try {
+    const s = JSON.stringify(err);
+    if (s && s !== '{}') return s;
+  } catch {
+    /* ignore */
+  }
+  return String(err);
+}
+
 type MessageListener = (message: ChatMessage, eventType: 'INSERT' | 'UPDATE' | 'DELETE') => void;
 type ReactionListener = (reaction: ChatReaction, eventType: 'INSERT' | 'DELETE') => void;
 type TypingListener = (indicators: ChatTypingIndicator[]) => void;
@@ -266,7 +280,7 @@ export function subscribeToGroup(
       failedChannels.delete(groupId);
       connectionStatusCallback?.('CONNECTED');
     } else if (status === 'CHANNEL_ERROR') {
-      logger.error(TAG, `Error subscribing to group ${groupId}: ${err?.message ?? 'Unknown'}`);
+      logger.error(TAG, `Error subscribing to group ${groupId}: ${formatRealtimeSubscribeErr(err)}`);
       activeChannels.delete(groupId);
       try { channel.unsubscribe(); } catch (_) { /* ignore */ }
       scheduleRetry(groupId, () => {
@@ -514,7 +528,7 @@ export async function subscribeToAllUserGroups(
   const handleError = (from: string, err: unknown) => {
     if (errorTeardownOnce) return;
     errorTeardownOnce = true;
-    const msg = err && typeof (err as any)?.message === 'string' ? (err as any).message : String(err);
+    const msg = formatRealtimeSubscribeErr(err);
     logger.error(TAG, `Error subscribing to ${from}: ${msg}`);
     for (const k of [nameMessages, nameMembers] as const) {
       if (activeChannels.has(k)) {

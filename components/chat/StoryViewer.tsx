@@ -1,7 +1,18 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
-import { View, Text, Image, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, Dimensions, Modal, StatusBar, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  StyleSheet,
+  Dimensions,
+  Modal,
+  StatusBar,
+  ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
@@ -382,34 +393,50 @@ export default function StoryViewer({
               </View>
             )}
 
-            {/* ===== Text overlays (video, or image fallback when content has JSON) ===== */}
+            {/* ===== Text / emoji overlays (video, or image fallback when content has JSON) ===== */}
             {mediaReady && (currentStory.media_type === 'video' || currentStory.media_type === 'image') && currentStory.content && (() => {
               try {
                 const parsed = JSON.parse(currentStory.content);
                 if (!Array.isArray(parsed)) return null;
                 return parsed.map((o: any, idx: number) => {
-                  const bgColor = o.bgStyle === 'solid'
-                    ? (o.color === '#FFFFFF' ? '#000000' : '#FFFFFF')
-                    : o.bgStyle === 'semi'
-                      ? 'rgba(0,0,0,0.45)'
-                      : 'transparent';
+                  const isEmoji = o.type === 'emoji';
+                  const bgColor = isEmoji
+                    ? 'transparent'
+                    : o.bgStyle === 'solid'
+                      ? (o.color === '#FFFFFF' ? '#000000' : '#FFFFFF')
+                      : o.bgStyle === 'semi'
+                        ? 'rgba(0,0,0,0.45)'
+                        : 'transparent';
+                  const tx = typeof o.x === 'number' ? o.x : 0;
+                  const ty = typeof o.y === 'number' ? o.y : 0;
+                  const sc = typeof o.scale === 'number' ? o.scale : 1;
                   return (
                     <View
                       key={idx}
-                      style={[styles.overlayText, { zIndex: 12 }]}
+                      style={[
+                        styles.overlayText,
+                        {
+                          zIndex: 12,
+                          transform: [
+                            { translateX: tx },
+                            { translateY: ty },
+                            { scale: sc },
+                          ],
+                        },
+                      ]}
                       pointerEvents="none"
                     >
                       <View style={{
                         backgroundColor: bgColor,
-                        borderRadius: o.bgStyle !== 'none' ? 12 : 0,
-                        paddingHorizontal: o.bgStyle !== 'none' ? 16 : 0,
-                        paddingVertical: o.bgStyle !== 'none' ? 8 : 0,
+                        borderRadius: !isEmoji && o.bgStyle !== 'none' ? 12 : 0,
+                        paddingHorizontal: !isEmoji && o.bgStyle !== 'none' ? 16 : 0,
+                        paddingVertical: !isEmoji && o.bgStyle !== 'none' ? 8 : 0,
                         maxWidth: SCREEN_WIDTH * 0.85,
                       }}>
                         <Text style={{
-                          color: o.color || '#fff',
+                          color: isEmoji ? '#fff' : (o.color || '#fff'),
                           fontSize: o.fontSize || 28,
-                          fontWeight: o.bold ? '800' : '400',
+                          fontWeight: !isEmoji && o.bold ? '800' : '400',
                           textAlign: 'center',
                           textShadowColor: 'rgba(0,0,0,0.5)',
                           textShadowOffset: { width: 0, height: 1 },
@@ -431,11 +458,12 @@ export default function StoryViewer({
               style={[styles.topGradient, { paddingTop: insets.top + 10 }]}
               pointerEvents="box-none"
             >
-              {/* Progress bars */}
+              {/* סגמנטים מימין לשמאל: אינדקס 0 תמיד בימין (לא תלוי ב־isRTL בסימולטור / Modal) */}
               <View style={styles.progressRow}>
-                {stories.map((_, i) => (
-                  <ProgressBarFill key={i} index={i} progress={progress} />
-                ))}
+                {stories.map((_, idx) => {
+                  const i = stories.length - 1 - idx;
+                  return <ProgressBarFill key={i} index={i} progress={progress} />;
+                })}
               </View>
 
               {/* Header */}
@@ -553,6 +581,7 @@ const styles = StyleSheet.create({
   },
   progressRow: {
     flexDirection: 'row',
+    direction: 'ltr',
     marginBottom: 12,
   },
 

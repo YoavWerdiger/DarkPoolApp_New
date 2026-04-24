@@ -1,9 +1,10 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, ScrollView, Dimensions, Animated } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, Sun, Moon, ChevronUp } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 import { supabase } from '../../lib/supabase';
@@ -60,26 +61,37 @@ const EarningsReportCard: React.FC<{
     }
   };
 
+  // מנרמל "BeforeMarket" / "Before Market" / "pre-market" / "BMO" / "Before" וכד' לערך אחד
+  const normalizeMarketTiming = (value: string | null | undefined): 'BeforeMarket' | 'AfterMarket' | null => {
+    if (!value) return null;
+    const lower = String(value).toLowerCase();
+    if (lower.includes('before') || lower.includes('pre-market') || lower.includes('premarket') || lower.includes('bmo')) {
+      return 'BeforeMarket';
+    }
+    if (lower.includes('after') || lower.includes('post-market') || lower.includes('postmarket') || lower.includes('amc')) {
+      return 'AfterMarket';
+    }
+    return null;
+  };
+
   // פונקציה לעיצוב זמן
   const getTimeDisplay = (beforeAfterMarket: string | null): string => {
-    if (!beforeAfterMarket) return 'טרם נקבע';
-    if (beforeAfterMarket === 'BeforeMarket') return 'מסחר מוקדם';
-    if (beforeAfterMarket === 'AfterMarket') return 'מסחר מאוחר';
-    return beforeAfterMarket;
+    const n = normalizeMarketTiming(beforeAfterMarket);
+    if (n === 'BeforeMarket') return 'מסחר מוקדם';
+    if (n === 'AfterMarket') return 'מסחר מאוחר';
+    return beforeAfterMarket ? beforeAfterMarket : 'טרם נקבע';
   };
 
   // פונקציה לקבלת אייקון וצבע לזמן
   const getTimeIcon = (beforeAfterMarket: string | null) => {
-    if (!beforeAfterMarket) {
-      return { icon: Clock, color: DesignTokens.colors.text.secondary, text: 'טרם נקבע' };
+    const n = normalizeMarketTiming(beforeAfterMarket);
+    if (n === 'BeforeMarket') {
+      return { icon: Sun, color: '#d1a11d', text: 'מסחר מוקדם' };
     }
-    if (beforeAfterMarket === 'BeforeMarket') {
-      return { icon: Sun, color: '#d1a11d', text: 'מסחר מוקדם' }; // צהוב זהב
+    if (n === 'AfterMarket') {
+      return { icon: Moon, color: '#007AFF', text: 'מסחר מאוחר' };
     }
-    if (beforeAfterMarket === 'AfterMarket') {
-      return { icon: Moon, color: '#007AFF', text: 'מסחר מאוחר' }; // כחול בהיר יותר
-    }
-    return { icon: Clock, color: DesignTokens.colors.text.secondary, text: beforeAfterMarket };
+    return { icon: Clock, color: DesignTokens.colors.text.secondary, text: beforeAfterMarket || 'טרם נקבע' };
   };
 
   // פונקציה לעיצוב סימבול
@@ -342,10 +354,80 @@ const EarningsReportCard: React.FC<{
   );
 };
 
+// Helper: מנרמל "BeforeMarket" / "Before Market" / "pre-market" / "BMO" / "Before" וכד' לערך אחד.
+// שימוש ב-module-level כדי למנוע recreate בכל render של הקומפוננטה.
+const normalizeTiming = (value: string | null | undefined): 'BeforeMarket' | 'AfterMarket' | null => {
+  if (!value) return null;
+  const lower = String(value).toLowerCase();
+  if (lower.includes('before') || lower.includes('pre-market') || lower.includes('premarket') || lower.includes('bmo')) return 'BeforeMarket';
+  if (lower.includes('after') || lower.includes('post-market') || lower.includes('postmarket') || lower.includes('amc')) return 'AfterMarket';
+  return null;
+};
+
+// מפריד סקשן עם תווית על רקע זכוכית אמיתית (BlurView)
+const SectionDivider: React.FC<{
+  label: string;
+  icon?: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+  iconColor?: string;
+  marginTop?: number;
+}> = ({ label, icon: Icon, iconColor, marginTop = 12 }) => {
+  const DesignTokens = useDesignTokens();
+  return (
+    <View
+      style={{
+        marginTop,
+        marginBottom: 10,
+        marginHorizontal: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}
+    >
+      <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+      <View
+        style={{
+          marginHorizontal: 10,
+          borderRadius: 14,
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.14)',
+        }}
+      >
+        <BlurView intensity={40} tint="dark" style={{ paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+          {Icon && (
+            <Icon size={11} color={iconColor || DesignTokens.colors.text.secondary} strokeWidth={2.2} />
+          )}
+          <Text
+            style={{
+              fontSize: 11,
+              fontWeight: '700',
+              color: DesignTokens.colors.text.primary,
+              marginLeft: Icon ? 6 : 0,
+              letterSpacing: 0.2,
+            }}
+          >
+            {label}
+          </Text>
+        </BlurView>
+      </View>
+      <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+    </View>
+  );
+};
+
+// ימים לפני/אחרי התאריך הנבחר שנטעין מראש כדי שניווט יום קדימה/אחורה יהיה מיידי.
+const WINDOW_DAYS_BEFORE = 3;
+const WINDOW_DAYS_AFTER = 7;
+
+function toDateKey(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
 export default function EarningsReportsTab() {
   const DesignTokens = useDesignTokens();
-  const [reports, setReports] = useState<EarningsReport[]>([]);
-  const [filteredReports, setFilteredReports] = useState<EarningsReport[]>([]);
+  // Map of date string → reports for that day. נטען הדרגתית.
+  const [reportsByDate, setReportsByDate] = useState<Record<string, EarningsReport[]>>({});
+  // tracking של אילו ימים כבר נטענו, כדי למנוע קריאות כפולות.
+  const loadedDatesRef = useRef<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -396,144 +478,156 @@ export default function EarningsReportsTab() {
     setSelectedDate(new Date());
   };
 
-  // פילטור דיווחים לפי תאריך (מובנה ב-loadEarningsReports)
-
-  // טעינת דיווחי תוצאות
-  const loadEarningsReports = useCallback(async () => {
+  // טעינת חלון ימים סביב תאריך נתון (ברירת מחדל: selectedDate).
+  // שליפה בודדת לטווח קטן (~11 ימים) → ~100-300 רשומות בלבד → טעינה מהירה מאוד.
+  // שליפות חוזרות על ימים שכבר נטענו נחסמות ב-cache ברמת ה-service.
+  const loadWindowAround = useCallback(async (centerDate: Date, opts: { forceReload?: boolean } = {}) => {
     try {
-      const selectedDateStr = selectedDate.toISOString().split('T')[0];
-      setLoading(true);
-      
-      // שליפה אחת של כל הנתונים
-      const startTime = Date.now();
-      const allReports = await EarningsService.getAll();
-      const loadTime = Date.now() - startTime;
-      if (allReports.length > 0) {
+      const t0 = Date.now();
+      const reports = await EarningsService.getDateWindow(centerDate, WINDOW_DAYS_BEFORE, WINDOW_DAYS_AFTER);
+
+      // בונים map לפי תאריך ומסמנים את הימים כטעונים
+      const byDate: Record<string, EarningsReport[]> = {};
+      for (const r of reports) {
+        (byDate[r.report_date] = byDate[r.report_date] || []).push(r);
       }
-      
-      // סינון לפי התאריך הנבחר
-      let dateReports = EarningsService.filterByDate(allReports, selectedDateStr);
-      // אם אין דיווחים לתאריך הנבחר, נבדוק אם יש דיווחים קרובים
-      if (dateReports.length === 0) {
-        const today = new Date().toISOString().split('T')[0];
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        
-        const todayReports = EarningsService.filterByDate(allReports, today);
-        const tomorrowReports = EarningsService.filterByDate(allReports, tomorrowStr);
-        
-        // מציגים את הדיווחים הקרובים ביותר (אם יש)
-        const closestReports = allReports
-          .filter(r => r.report_date >= selectedDateStr)
-          .sort((a, b) => a.report_date.localeCompare(b.report_date))
-          .slice(0, 5);
-        
-        if (closestReports.length > 0) {
-        }
+      // מוודאים שגם ימים ללא דיווחים בחלון יסומנו כ"טעונים"
+      const centerStr = toDateKey(centerDate);
+      for (let i = -WINDOW_DAYS_BEFORE; i <= WINDOW_DAYS_AFTER; i++) {
+        const d = new Date(centerDate);
+        d.setDate(d.getDate() + i);
+        const key = toDateKey(d);
+        if (!(key in byDate)) byDate[key] = [];
+        loadedDatesRef.current.add(key);
       }
-      
-      // מיון: BeforeMarket מעל AfterMarket, ואז לפי שעה (שעון ישראל)
-      const sortedReports = dateReports.sort((a, b) => {
-        // פונקציה עזר לקבלת סדר עדיפות
-        const getPriority = (type: string | null): number => {
-          if (type === 'BeforeMarket') return 1; // ראשון
-          if (type === 'AfterMarket') return 2; // שני
-          return 3; // אחרון
-        };
-        
-        // השוואת עדיפות (BeforeMarket > AfterMarket > אחר)
-        const priorityA = getPriority(a.before_after_market);
-        const priorityB = getPriority(b.before_after_market);
-        
-        if (priorityA !== priorityB) {
-          return priorityA - priorityB;
-        }
-        
-        // אם שניהם באותה קטגוריה, נמיין לפי שעה (שעון ישראל)
-        // המרה לשעון ישראל והשוואה
-        const getTimeInIsrael = (report: EarningsReport): number => {
-          if (!report.earnings_date_time) {
-            // אם אין זמן, נשתמש ב-report_date + זמן ברירת מחדל
-            // BeforeMarket - 8:00, AfterMarket - 16:00
-            if (report.before_after_market === 'BeforeMarket') return 8 * 60; // 8:00
-            if (report.before_after_market === 'AfterMarket') return 16 * 60; // 16:00
-            return 0;
-          }
-          try {
-            // המרה ל-Date object
-            const date = new Date(report.earnings_date_time);
-            // המרה לשעון ישראל - שימוש ב-Intl.DateTimeFormat
-            const formatter = new Intl.DateTimeFormat('en-US', {
-              timeZone: 'Asia/Jerusalem',
-              hour12: false,
-              hour: '2-digit',
-              minute: '2-digit'
-            });
-            const parts = formatter.formatToParts(date);
-            const hours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
-            const minutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
-            // החזרת זמן בדקות מהתחלת היום
-            return hours * 60 + minutes;
-          } catch {
-            // במקרה של שגיאה, נשתמש בערכי ברירת מחדל
-            if (report.before_after_market === 'BeforeMarket') return 8 * 60;
-            if (report.before_after_market === 'AfterMarket') return 16 * 60;
-            return 0;
-          }
-        };
-        
-        const timeA = getTimeInIsrael(a);
-        const timeB = getTimeInIsrael(b);
-        
-        // מיון לפי זמן - מהמוקדם למאוחר (באותה קטגוריה)
-        return timeA - timeB;
-      });
-      
-      // דיבאג: כמה BeforeMarket vs AfterMarket?
-      const beforeCount = dateReports.filter(r => r.before_after_market === 'BeforeMarket').length;
-      const afterCount = dateReports.filter(r => r.before_after_market === 'AfterMarket').length;
-      const nullCount = dateReports.filter(r => !r.before_after_market).length;
-      
-      if (sortedReports.length > 0) {
+
+      setReportsByDate(prev => (opts.forceReload ? byDate : { ...prev, ...byDate }));
+
+      if (__DEV__) {
+        console.log(`[EarningsReportsTab] window around ${centerStr}: ${reports.length} rows in ${Date.now() - t0}ms`);
       }
-      
-      setReports(allReports); // שמירת כל הנתונים
-      
-      if (sortedReports.length === 0 && allReports.length > 0 && selectedDateStr === new Date().toISOString().split('T')[0]) {
-        const datesWithReports = [...new Set(allReports.map(r => r.report_date))].sort();
-        const nextDate = datesWithReports.find(d => d >= selectedDateStr);
-        if (nextDate) {
-          setSelectedDate(new Date(nextDate + 'T12:00:00'));
-        }
-      }
-      setFilteredReports(sortedReports); // הצגת דיווחי התאריך הנבחר ממוינים
-      
     } catch (error) {
-      if (error instanceof Error) {
-      }
+      console.error('[EarningsReportsTab] load window failed:', error instanceof Error ? error.message : error);
       legacyAlert('שגיאה', 'לא ניתן לטעון את דיווחי התוצאות');
-      setReports([]);
-      setFilteredReports([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [selectedDate]);
+  }, []);
 
-  // טעינה ראשונית
+  // טעינה ראשונית: לפני שמטעינים, בודקים אם היום יש דיווחים. אם אין — קופצים לתאריך הקרוב.
+  const didInitialLoadRef = useRef(false);
   useEffect(() => {
-    loadEarningsReports();
-  }, [loadEarningsReports]);
+    if (didInitialLoadRef.current) return;
+    didInitialLoadRef.current = true;
+    (async () => {
+      const todayStr = toDateKey(new Date());
+      // שליפה זעירה (LIMIT 1) כדי למצוא את התאריך הקרוב ביותר עם דיווחים
+      const nextDate = await EarningsService.getNextDateWithReports(todayStr);
+      const center = nextDate && nextDate !== todayStr
+        ? new Date(nextDate + 'T12:00:00')
+        : new Date();
+      if (nextDate && nextDate !== todayStr) {
+        setSelectedDate(center);
+      }
+      await loadWindowAround(center);
+    })();
+  }, [loadWindowAround]);
 
-  // Realtime subscription
+  // בכל שינוי של selectedDate — טוען חלון סביב התאריך אם הוא לא כבר טעון.
+  useEffect(() => {
+    const key = toDateKey(selectedDate);
+    if (loadedDatesRef.current.has(key)) return; // כבר טעון
+    loadWindowAround(selectedDate);
+  }, [selectedDate, loadWindowAround]);
+
+  // סינון + מיון לוקאלי — רץ מיידית בכל שינוי תאריך (ללא רשת).
+  const filteredReports = useMemo(() => {
+    const key = toDateKey(selectedDate);
+    const dateReports = reportsByDate[key];
+    if (!dateReports || dateReports.length === 0) return [];
+
+    const getPriority = (type: string | null): number => {
+      const n = normalizeTiming(type);
+      if (n === 'BeforeMarket') return 1;
+      if (n === 'AfterMarket') return 2;
+      return 3;
+    };
+
+    const getTimeInIsrael = (report: EarningsReport): number => {
+      const n = normalizeTiming(report.before_after_market);
+      if (!report.earnings_date_time) {
+        if (n === 'BeforeMarket') return 8 * 60;
+        if (n === 'AfterMarket') return 16 * 60;
+        return 0;
+      }
+      try {
+        const date = new Date(report.earnings_date_time);
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Jerusalem',
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+        const parts = formatter.formatToParts(date);
+        const hours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+        const minutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+        return hours * 60 + minutes;
+      } catch {
+        if (n === 'BeforeMarket') return 8 * 60;
+        if (n === 'AfterMarket') return 16 * 60;
+        return 0;
+      }
+    };
+
+    return [...dateReports].sort((a, b) => {
+      const pa = getPriority(a.before_after_market);
+      const pb = getPriority(b.before_after_market);
+      if (pa !== pb) return pa - pb;
+      return getTimeInIsrael(a) - getTimeInIsrael(b);
+    });
+  }, [reportsByDate, selectedDate]);
+
+  // Realtime subscription — patch נקודתי ב-state במקום refetch. זול וחלק.
   useEffect(() => {
     const subscription = supabase
       .channel('earnings_calendar_channel')
-      .on('postgres_changes', 
+      .on('postgres_changes',
         { event: '*', schema: 'public', table: 'earnings_calendar' },
         (payload) => {
-          loadEarningsReports();
+          const eventType = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
+          if (eventType === 'DELETE') {
+            const oldRow = (payload.old ?? {}) as Partial<EarningsReport>;
+            if (!oldRow.id) return;
+            const oldDate = oldRow.report_date;
+            EarningsService.removeReport(oldRow.id, oldDate);
+            if (oldDate && loadedDatesRef.current.has(oldDate)) {
+              setReportsByDate(prev => {
+                const list = prev[oldDate];
+                if (!list) return prev;
+                const next = list.filter(r => r.id !== oldRow.id);
+                if (next.length === list.length) return prev;
+                return { ...prev, [oldDate]: next };
+              });
+            }
+            return;
+          }
+
+          const row = (payload.new ?? {}) as EarningsReport;
+          if (!row.id || !row.report_date) return;
+          // מעדכנים גם את ה-cache ברמת ה-service
+          EarningsService.patchReport(row);
+
+          // מעדכנים state רק אם היום כבר ב-window הטעון
+          if (!loadedDatesRef.current.has(row.report_date)) return;
+          setReportsByDate(prev => {
+            const list = prev[row.report_date] ?? [];
+            const idx = list.findIndex(r => r.id === row.id);
+            const nextList = idx >= 0
+              ? [...list.slice(0, idx), row, ...list.slice(idx + 1)]
+              : [...list, row];
+            return { ...prev, [row.report_date]: nextList };
+          });
         }
       )
       .subscribe();
@@ -541,17 +635,19 @@ export default function EarningsReportsTab() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []); // הסרנו את התלות ב-loadEarningsReports
+  }, []);
 
-  // רענון
+  // רענון ידני (pull-to-refresh) — מאפס cache וטוען את החלון הנוכחי מחדש.
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadEarningsReports();
+      EarningsService.clearCache();
+      loadedDatesRef.current.clear();
+      await loadWindowAround(selectedDate, { forceReload: true });
     } finally {
       void HapticFeedback.impactLight();
     }
-  }, [loadEarningsReports]);
+  }, [selectedDate, loadWindowAround]);
 
   // בחירת דיווח - פתיחת bottom sheet
   const handleReportPress = useCallback((report: EarningsReport) => {
@@ -580,83 +676,12 @@ export default function EarningsReportsTab() {
     
     return (
       <>
-        {/* כותרת "לפני פתיחה" בתחילת הרשימה */}
         {isFirstBeforeMarket && (
-          <View style={{ 
-            marginTop: 12,
-            marginBottom: 8,
-            marginHorizontal: 16,
-            flexDirection: 'row',
-            alignItems: 'center'
-          }}>
-            <View style={{ 
-              flex: 1, 
-              height: 1, 
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-            }} />
-            <View style={{ 
-              marginHorizontal: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              backgroundColor: 'rgba(0, 0, 0, 0.4)',
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-            }}>
-              <Text style={{ 
-                fontSize: 11, 
-                fontWeight: '600',
-                color: DesignTokens.colors.text.secondary
-              }}>
-                מסחר מוקדם
-              </Text>
-            </View>
-            <View style={{ 
-              flex: 1, 
-              height: 1, 
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-            }} />
-          </View>
+          <SectionDivider label="מסחר מוקדם" icon={Sun} iconColor="#d1a11d" marginTop={12} />
         )}
-        
-        {/* הפרדה בין לפני פתיחה לאחרי סגירה */}
         {showDivider && (
-          <View style={{ 
-            marginVertical: 14,
-            marginHorizontal: 16,
-            flexDirection: 'row',
-            alignItems: 'center'
-          }}>
-            <View style={{ 
-              flex: 1, 
-              height: 1, 
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-            }} />
-            <View style={{ 
-              marginHorizontal: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              backgroundColor: 'rgba(0, 0, 0, 0.4)',
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.12)',
-            }}>
-              <Text style={{ 
-                fontSize: 11, 
-                fontWeight: '600',
-                color: DesignTokens.colors.text.secondary
-              }}>
-                מסחר מאוחר
-              </Text>
-            </View>
-            <View style={{ 
-              flex: 1, 
-              height: 1, 
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-            }} />
-          </View>
+          <SectionDivider label="מסחר מאוחר" icon={Moon} iconColor="#007AFF" marginTop={14} />
         )}
-        
         <EarningsReportCard
           report={item}
           onPress={handleReportPress}
@@ -674,10 +699,12 @@ export default function EarningsReportsTab() {
       month: 'long'
     });
     
-    // מציאת הדיווחים הקרובים ביותר
-    const closestReports = reports
-      .filter(r => r.report_date >= selectedDate.toISOString().split('T')[0])
-      .sort((a, b) => a.report_date.localeCompare(b.report_date))
+    // מציאת הדיווחים הקרובים ביותר מתוך החלון הטעון
+    const selectedDateStr = toDateKey(selectedDate);
+    const closestReports = Object.entries(reportsByDate)
+      .filter(([date]) => date >= selectedDateStr)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .flatMap(([, list]) => list)
       .slice(0, 3);
     
     const hasClosestReports = closestReports.length > 0;
@@ -754,7 +781,7 @@ export default function EarningsReportsTab() {
             borderRadius: 14,
             backgroundColor: DesignTokens.colors.background.secondary
           }}
-          onPress={loadEarningsReports}
+          onPress={handleRefresh}
         >
           <Text style={{
             fontSize: 15,

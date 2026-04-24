@@ -17,6 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
@@ -24,8 +25,15 @@ import type { JournalStackParamList } from '../../navigation/JournalStack';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { BRANDFETCH_CLIENT_ID } from '../../config/publicEnv';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  TIMEFRAME_OPTIONS,
+  MOOD_OPTIONS,
+  MISTAKE_OPTIONS,
+  type TradeTimeframe,
+  type MoodId,
+} from './tradeJournalConstants';
 
-const STEPS = ['פרטי עסקה', 'מחירים וכמות', 'תאריכים ושעות'] as const;
+const STEPS = ['פרטי עסקה', 'מחירים וכמות', 'תאריכים ושעות', 'יומן מסחר'] as const;
 
 type Nav = NativeStackNavigationProp<JournalStackParamList, 'AddTrade'>;
 
@@ -47,6 +55,15 @@ export default function AddTradeScreen() {
   const [exitTimeText, setExitTimeText] = useState('');
   const [loading, setLoading] = useState(false);
   const [logoLoadFailed, setLogoLoadFailed] = useState(false);
+
+  const [timeframe, setTimeframe] = useState<TradeTimeframe | null>(null);
+  const [moodBefore, setMoodBefore] = useState<MoodId | null>(null);
+  const [moodAfter, setMoodAfter] = useState<MoodId | null>(null);
+  const [followedPlan, setFollowedPlan] = useState<boolean | null>(null);
+  const [strategyType, setStrategyType] = useState('');
+  const [entryReason, setEntryReason] = useState('');
+  const [exitReason, setExitReason] = useState('');
+  const [mistakeIds, setMistakeIds] = useState<string[]>([]);
 
   const brandLogoUri = useMemo(() => {
     if (!symbol.trim()) return null;
@@ -133,6 +150,26 @@ export default function AddTradeScreen() {
     return true;
   };
 
+  const toggleMistake = (id: string) => {
+    setMistakeIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const buildJournalDetails = () => {
+    const jd: Record<string, unknown> = {};
+    if (timeframe) jd.timeframe = timeframe;
+    if (moodBefore) jd.mood_before = moodBefore;
+    if (moodAfter) jd.mood_after = moodAfter;
+    if (followedPlan !== null) jd.followed_plan = followedPlan;
+    const st = strategyType.trim();
+    if (st) jd.strategy_type = st;
+    const er = entryReason.trim();
+    if (er) jd.entry_reason = er;
+    const xr = exitReason.trim();
+    if (xr) jd.exit_reason = xr;
+    if (mistakeIds.length) jd.mistakes = [...mistakeIds];
+    return jd;
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       legacyAlert('שגיאה', 'יש להתחבר כדי להוסיף טרייד');
@@ -163,6 +200,7 @@ export default function AddTradeScreen() {
         entry_date: parsedEntryDate.toISOString(),
         exit_date: parsedExitDate.toISOString(),
         notes: null,
+        journal_details: buildJournalDetails(),
       });
 
       if (error) throw error;
@@ -199,7 +237,6 @@ export default function AddTradeScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         >
-          {/* כותרת — כמו יומן: ימין־שמאל, בלי Bottom Sheet */}
           <View style={styles.topBar}>
             <TouchableOpacity
               onPress={goBackStep}
@@ -219,7 +256,6 @@ export default function AddTradeScreen() {
             <View style={styles.topBarSpacer} />
           </View>
 
-          {/* אינדיקטור שלבים */}
           <View style={styles.stepDots}>
             {STEPS.map((label, i) => (
               <View key={label} style={styles.stepDotWrap}>
@@ -272,61 +308,73 @@ export default function AddTradeScreen() {
                   </View>
                   <View style={styles.symbolInputWrap}>
                     <Text style={styles.label}>סמל *</Text>
-                    <TextInput
-                      style={styles.input}
-                      value={symbol}
-                      onChangeText={setSymbol}
-                      placeholder="למשל AAPL, TSLA, MSFT"
-                      placeholderTextColor={DesignTokens.colors.text.tertiary}
-                      autoCapitalize="characters"
-                      autoCorrect={false}
-                      textAlign="right"
-                    />
+                    <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                      <TextInput
+                        style={styles.inputGlassInner}
+                        value={symbol}
+                        onChangeText={setSymbol}
+                        placeholder="למשל AAPL, TSLA, MSFT"
+                        placeholderTextColor={DesignTokens.colors.text.tertiary}
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                        textAlign="right"
+                      />
+                    </UICard>
                   </View>
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>כיוון *</Text>
                   <View style={styles.directionButtons}>
-                    <TouchableOpacity
+                    <UICard
+                      variant="inputGlass"
+                      padding="none"
                       style={[
-                        styles.directionButton,
-                        direction === 'long'
-                          ? { backgroundColor: `${DesignTokens.colors.primary.main}20` }
-                          : { backgroundColor: DesignTokens.colors.background.tertiary },
+                        styles.directionGlass,
+                        direction === 'long' && styles.directionGlassLongOn,
                       ]}
-                      onPress={() => setDirection('long')}
                     >
-                      <Text
-                        style={[
-                          styles.directionButtonText,
-                          direction === 'long'
-                            ? { color: DesignTokens.colors.primary.main }
-                            : { color: DesignTokens.colors.text.secondary },
-                        ]}
+                      <TouchableOpacity
+                        style={styles.directionTouch}
+                        onPress={() => setDirection('long')}
+                        activeOpacity={0.85}
                       >
-                        Long
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                        <Text
+                          style={[
+                            styles.directionButtonText,
+                            direction === 'long'
+                              ? { color: DesignTokens.colors.primary.main }
+                              : { color: DesignTokens.colors.text.secondary },
+                          ]}
+                        >
+                          Long
+                        </Text>
+                      </TouchableOpacity>
+                    </UICard>
+                    <UICard
+                      variant="inputGlass"
+                      padding="none"
                       style={[
-                        styles.directionButton,
-                        direction === 'short'
-                          ? { backgroundColor: `${DesignTokens.colors.text.danger}20` }
-                          : { backgroundColor: DesignTokens.colors.background.tertiary },
+                        styles.directionGlass,
+                        direction === 'short' && styles.directionGlassShortOn,
                       ]}
-                      onPress={() => setDirection('short')}
                     >
-                      <Text
-                        style={[
-                          styles.directionButtonText,
-                          direction === 'short'
-                            ? { color: DesignTokens.colors.text.danger }
-                            : { color: DesignTokens.colors.text.secondary },
-                        ]}
+                      <TouchableOpacity
+                        style={styles.directionTouch}
+                        onPress={() => setDirection('short')}
+                        activeOpacity={0.85}
                       >
-                        Short
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={[
+                            styles.directionButtonText,
+                            direction === 'short'
+                              ? { color: DesignTokens.colors.text.danger }
+                              : { color: DesignTokens.colors.text.secondary },
+                          ]}
+                        >
+                          Short
+                        </Text>
+                      </TouchableOpacity>
+                    </UICard>
                   </View>
                 </View>
               </>
@@ -336,39 +384,45 @@ export default function AddTradeScreen() {
               <>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>מחיר כניסה *</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={entryPrice}
-                    onChangeText={setEntryPrice}
-                    placeholder="0.00"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    keyboardType="decimal-pad"
-                    textAlign="right"
-                  />
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={entryPrice}
+                      onChangeText={setEntryPrice}
+                      placeholder="0.00"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      keyboardType="decimal-pad"
+                      textAlign="right"
+                    />
+                  </UICard>
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>מחיר יציאה *</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={exitPrice}
-                    onChangeText={setExitPrice}
-                    placeholder="0.00"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    keyboardType="decimal-pad"
-                    textAlign="right"
-                  />
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={exitPrice}
+                      onChangeText={setExitPrice}
+                      placeholder="0.00"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      keyboardType="decimal-pad"
+                      textAlign="right"
+                    />
+                  </UICard>
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>כמות *</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={quantity}
-                    onChangeText={setQuantity}
-                    placeholder="1"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    keyboardType="decimal-pad"
-                    textAlign="right"
-                  />
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={quantity}
+                      onChangeText={setQuantity}
+                      placeholder="1"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      keyboardType="decimal-pad"
+                      textAlign="right"
+                    />
+                  </UICard>
                 </View>
               </>
             )}
@@ -377,47 +431,244 @@ export default function AddTradeScreen() {
               <>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>תאריך כניסה * (DD/MM/YYYY)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={entryDateText}
-                    onChangeText={setEntryDateText}
-                    placeholder="01/01/2024"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    textAlign="right"
-                  />
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={entryDateText}
+                      onChangeText={setEntryDateText}
+                      placeholder="01/01/2024"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      textAlign="right"
+                    />
+                  </UICard>
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>שעת כניסה * (HH:MM)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={entryTimeText}
-                    onChangeText={setEntryTimeText}
-                    placeholder="09:30"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    textAlign="right"
-                  />
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={entryTimeText}
+                      onChangeText={setEntryTimeText}
+                      placeholder="09:30"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      textAlign="right"
+                    />
+                  </UICard>
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>תאריך יציאה * (DD/MM/YYYY)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={exitDateText}
-                    onChangeText={setExitDateText}
-                    placeholder="01/01/2024"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    textAlign="right"
-                  />
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={exitDateText}
+                      onChangeText={setExitDateText}
+                      placeholder="01/01/2024"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      textAlign="right"
+                    />
+                  </UICard>
                 </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>שעת יציאה * (HH:MM)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={exitTimeText}
-                    onChangeText={setExitTimeText}
-                    placeholder="16:00"
-                    placeholderTextColor={DesignTokens.colors.text.tertiary}
-                    textAlign="right"
-                  />
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={exitTimeText}
+                      onChangeText={setExitTimeText}
+                      placeholder="16:00"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      textAlign="right"
+                    />
+                  </UICard>
+                </View>
+              </>
+            )}
+
+            {step === 3 && (
+              <>
+                <Text style={styles.stepIntro}>
+                  שדות אופציונליים — ניתן לדלג ולשמור; אפשר לערוך מאוחר יותר כשיהיה עריכת טרייד.
+                </Text>
+
+                <Text style={styles.label}>מסגרת זמן</Text>
+                <View style={styles.chipRow}>
+                  {TIMEFRAME_OPTIONS.map((opt) => {
+                    const selected = timeframe === opt.id;
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        onPress={() => setTimeframe(selected ? null : opt.id)}
+                        activeOpacity={0.85}
+                      >
+                        <UICard
+                          variant="inputGlass"
+                          padding="sm"
+                          style={[styles.chipCard, selected && styles.chipCardSelected]}
+                        >
+                          <Text
+                            style={[styles.chipText, selected && { color: DesignTokens.colors.primary.main }]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </UICard>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.label, styles.labelSpaced]}>מצב רגשי לפני הטרייד</Text>
+                <View style={styles.chipWrap}>
+                  {MOOD_OPTIONS.map((opt) => {
+                    const selected = moodBefore === opt.id;
+                    return (
+                      <TouchableOpacity
+                        key={`b-${opt.id}`}
+                        onPress={() => setMoodBefore(selected ? null : opt.id)}
+                        activeOpacity={0.85}
+                      >
+                        <UICard
+                          variant="inputGlass"
+                          padding="sm"
+                          style={[styles.chipCard, selected && styles.chipCardSelected]}
+                        >
+                          <Text
+                            style={[styles.chipText, selected && { color: DesignTokens.colors.primary.main }]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </UICard>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.label, styles.labelSpaced]}>מצב רגשי אחרי הטרייד</Text>
+                <View style={styles.chipWrap}>
+                  {MOOD_OPTIONS.map((opt) => {
+                    const selected = moodAfter === opt.id;
+                    return (
+                      <TouchableOpacity
+                        key={`a-${opt.id}`}
+                        onPress={() => setMoodAfter(selected ? null : opt.id)}
+                        activeOpacity={0.85}
+                      >
+                        <UICard
+                          variant="inputGlass"
+                          padding="sm"
+                          style={[styles.chipCard, selected && styles.chipCardSelected]}
+                        >
+                          <Text
+                            style={[styles.chipText, selected && { color: DesignTokens.colors.primary.main }]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </UICard>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.label, styles.labelSpaced]}>עמידה בתוכנית</Text>
+                <View style={styles.chipRow}>
+                  {(
+                    [
+                      { v: true as const, label: 'כן' },
+                      { v: false as const, label: 'לא' },
+                      { v: null as const, label: 'לא צוין' },
+                    ] as const
+                  ).map((opt) => {
+                    const selected = followedPlan === opt.v;
+                    return (
+                      <TouchableOpacity
+                        key={String(opt.v)}
+                        onPress={() => setFollowedPlan(opt.v)}
+                        activeOpacity={0.85}
+                      >
+                        <UICard
+                          variant="inputGlass"
+                          padding="sm"
+                          style={[styles.chipCard, selected && styles.chipCardSelected]}
+                        >
+                          <Text
+                            style={[styles.chipText, selected && { color: DesignTokens.colors.primary.main }]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </UICard>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>סוג אסטרטגיה</Text>
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={strategyType}
+                      onChangeText={setStrategyType}
+                      placeholder="למשל: פריצה, גרף מחיר, ביקוש..."
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      textAlign="right"
+                    />
+                  </UICard>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>סיבת כניסה</Text>
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShellMultiline}>
+                    <TextInput
+                      style={[styles.inputGlassInner, styles.inputGlassInnerMultiline]}
+                      value={entryReason}
+                      onChangeText={setEntryReason}
+                      placeholder="למה נכנסתי לעסקה"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      textAlign="right"
+                      multiline
+                    />
+                  </UICard>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>סיבת יציאה</Text>
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShellMultiline}>
+                    <TextInput
+                      style={[styles.inputGlassInner, styles.inputGlassInnerMultiline]}
+                      value={exitReason}
+                      onChangeText={setExitReason}
+                      placeholder="למה יצאתי"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      textAlign="right"
+                      multiline
+                    />
+                  </UICard>
+                </View>
+
+                <Text style={[styles.label, styles.labelSpaced]}>טעויות (סמן מה שרלוונטי)</Text>
+                <View style={styles.mistakeList}>
+                  {MISTAKE_OPTIONS.map((m) => {
+                    const on = mistakeIds.includes(m.id);
+                    return (
+                      <TouchableOpacity
+                        key={m.id}
+                        onPress={() => toggleMistake(m.id)}
+                        activeOpacity={0.85}
+                      >
+                        <UICard
+                          variant="inputGlass"
+                          padding="sm"
+                          style={[styles.mistakeCard, on && styles.mistakeCardOn]}
+                        >
+                          <View style={styles.mistakeRowInner}>
+                            <View style={[styles.mistakeBox, on && styles.mistakeBoxOn]}>
+                              {on ? (
+                                <Ionicons name="checkmark" size={16} color={DesignTokens.colors.primary.main} />
+                              ) : null}
+                            </View>
+                            <Text style={styles.mistakeLabel}>{m.label}</Text>
+                          </View>
+                        </UICard>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </>
             )}
@@ -485,6 +736,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       height: 72,
       borderRadius: 36,
       borderWidth: 1,
+      borderColor: tokens.colors.border.primary,
       backgroundColor: tokens.colors.background.tertiary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -572,27 +824,122 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       textAlign: 'right',
       writingDirection: 'rtl',
     },
-    input: {
-      backgroundColor: tokens.colors.background.tertiary,
-      borderRadius: tokens.borderRadius.md,
-      padding: tokens.spacing.md,
+    inputGlassShell: {
+      borderRadius: tokens.borderRadius['3xl'],
+      overflow: 'hidden',
+      paddingHorizontal: tokens.spacing.md,
+      minHeight: 50,
+      justifyContent: 'center',
+    },
+    inputGlassShellMultiline: {
+      borderRadius: tokens.borderRadius['3xl'],
+      overflow: 'hidden',
+      paddingHorizontal: tokens.spacing.md,
+      paddingVertical: tokens.spacing.sm,
+    },
+    inputGlassInner: {
+      backgroundColor: 'transparent',
+      borderWidth: 0,
+      paddingVertical: tokens.spacing.sm,
       fontSize: tokens.typography.fontSize.base,
       color: tokens.colors.text.primary,
+      width: '100%',
+    },
+    inputGlassInnerMultiline: {
+      minHeight: 72,
+      textAlignVertical: 'top',
     },
     directionButtons: {
       flexDirection: 'row-reverse',
       gap: tokens.spacing.sm,
     },
-    directionButton: {
+    directionGlass: {
       flex: 1,
-      padding: tokens.spacing.md,
-      borderRadius: tokens.borderRadius.md,
+      borderRadius: tokens.borderRadius['3xl'],
+      overflow: 'hidden',
+    },
+    directionGlassLongOn: {
+      backgroundColor: `${tokens.colors.primary.main}18`,
+      borderColor: `${tokens.colors.primary.main}55`,
+    },
+    directionGlassShortOn: {
+      backgroundColor: `${tokens.colors.text.danger}18`,
+      borderColor: `${tokens.colors.text.danger}55`,
+    },
+    directionTouch: {
+      paddingVertical: tokens.spacing.md,
       alignItems: 'center',
       justifyContent: 'center',
     },
     directionButtonText: {
       fontSize: tokens.typography.fontSize.base,
       fontWeight: tokens.typography.fontWeight.bold,
+    },
+    chipRow: {
+      flexDirection: 'row-reverse',
+      flexWrap: 'wrap',
+      gap: tokens.spacing.sm,
+      marginBottom: tokens.spacing.md,
+    },
+    chipWrap: {
+      flexDirection: 'row-reverse',
+      flexWrap: 'wrap',
+      gap: tokens.spacing.sm,
+      marginBottom: tokens.spacing.md,
+    },
+    chipCard: {
+      borderRadius: tokens.borderRadius.full,
+      overflow: 'hidden',
+    },
+    chipCardSelected: {
+      backgroundColor: `${tokens.colors.primary.main}20`,
+      borderColor: tokens.colors.primary.main,
+    },
+    chipText: {
+      fontSize: tokens.typography.fontSize.sm,
+      color: tokens.colors.text.secondary,
+      textAlign: 'center',
+    },
+    labelSpaced: {
+      marginTop: tokens.spacing.sm,
+    },
+    mistakeList: {
+      gap: tokens.spacing.xs,
+      marginBottom: tokens.spacing.lg,
+    },
+    mistakeCard: {
+      width: '100%',
+      borderRadius: tokens.borderRadius['3xl'],
+      overflow: 'hidden',
+    },
+    mistakeCardOn: {
+      borderColor: `${tokens.colors.primary.main}55`,
+      backgroundColor: tokens.colors.selection.subtle,
+    },
+    mistakeRowInner: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: tokens.spacing.sm,
+    },
+    mistakeBox: {
+      width: 22,
+      height: 22,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: tokens.colors.border.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    mistakeBoxOn: {
+      borderColor: tokens.colors.primary.main,
+      backgroundColor: `${tokens.colors.primary.main}18`,
+    },
+    mistakeLabel: {
+      flex: 1,
+      fontSize: tokens.typography.fontSize.sm,
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+      writingDirection: 'rtl',
     },
     footer: {
       paddingHorizontal: tokens.layout.screenPadding,
@@ -605,7 +952,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: tokens.colors.primary.main,
-      borderRadius: tokens.borderRadius.md,
+      borderRadius: tokens.borderRadius['3xl'],
       paddingVertical: 14,
     },
     primaryBtnDisabled: { opacity: 0.55 },

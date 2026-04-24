@@ -4,6 +4,8 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Keyboa
 import { Ionicons } from '@expo/vector-icons';
 import { Trash2 } from 'lucide-react-native';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { PollService } from '../../services/pollService';
@@ -29,6 +31,7 @@ export default function PollCreationBottomSheet({
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { user } = useAuth();
+  const animatedClose = useBottomSheetClose();
 
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
@@ -60,12 +63,12 @@ export default function PollCreationBottomSheet({
           style: 'destructive',
           onPress: () => {
             resetForm();
-            onClose();
+            (animatedClose ?? onClose)();
           },
         },
       ]);
     } else {
-      onClose();
+      (animatedClose ?? onClose)();
     }
   };
 
@@ -160,9 +163,15 @@ export default function PollCreationBottomSheet({
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.headerIconButton}>
-            <Ionicons name="close" size={22} color={tokens.colors.text.primary} />
-          </TouchableOpacity>
+          <DayNavBlurButton
+            onPress={handleClose}
+            size={DAY_NAV_BUTTON_SIZE}
+            glassIntensity="subtle"
+            style={styles.headerIconButton}
+            accessibilityLabel="חזרה"
+          >
+            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+          </DayNavBlurButton>
 
           <View style={styles.headerCenter}>
             <Text style={styles.title}>יצירת סקר</Text>
@@ -351,12 +360,7 @@ const createStyles = (tokens: any) => {
       gap: tokens.spacing.sm,
     },
     headerIconButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      alignSelf: 'center',
     },
     headerCenter: {
       flex: 1,

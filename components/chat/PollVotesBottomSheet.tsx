@@ -3,6 +3,8 @@ import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, Sty
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { PollService, PollOption } from '../../services/pollService';
 import { logger } from '../../utils/logger';
 
@@ -29,6 +31,7 @@ export default function PollVotesBottomSheet({
 }: PollVotesBottomSheetProps) {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const animatedClose = useBottomSheetClose();
   const [votersByOption, setVotersByOption] = useState<Record<string, VoterInfo[]>>({});
   const [loading, setLoading] = useState(false);
 
@@ -57,6 +60,10 @@ export default function PollVotesBottomSheet({
     return votersByOption[optionId] || [];
   };
 
+  const handleHeaderClose = () => {
+    (animatedClose ?? onClose)();
+  };
+
   return (
     <BottomSheet
       isOpen={visible}
@@ -70,9 +77,15 @@ export default function PollVotesBottomSheet({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.headerIconButton}>
-            <Ionicons name="close" size={22} color={DesignTokens.colors.text.primary} />
-          </TouchableOpacity>
+          <DayNavBlurButton
+            onPress={handleHeaderClose}
+            size={DAY_NAV_BUTTON_SIZE}
+            glassIntensity="subtle"
+            style={styles.headerIconButton}
+            accessibilityLabel="חזרה"
+          >
+            <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
 
           <View style={styles.headerCenter}>
             <Text style={styles.title}>פירוט הצבעות</Text>
@@ -172,12 +185,7 @@ const createStyles = (tokens: any) => {
       gap: tokens.spacing.sm,
     },
     headerIconButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(255,255,255,0.06)',
+      alignSelf: 'center',
     },
     headerCenter: {
       flex: 1,

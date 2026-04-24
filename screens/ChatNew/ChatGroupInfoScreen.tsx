@@ -14,6 +14,7 @@ import { ChatGroupMember, ChatMemberRole } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
@@ -316,15 +317,15 @@ export default function ChatGroupInfoScreen() {
             <View style={styles.errorStateBody}>
               <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
             </View>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="סגור"
+            <DayNavBlurButton
               onPress={handleBack}
+              size={DAY_NAV_BUTTON_SIZE}
+              glassIntensity="subtle"
               style={[styles.exitBtnFullScreen, { top: exitBtnTop }]}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="חזרה"
             >
-              <Ionicons name="close" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
+            </DayNavBlurButton>
           </View>
         </SafeAreaView>
       </ChatScreenShell>
@@ -568,15 +569,15 @@ export default function ChatGroupInfoScreen() {
           </TouchableOpacity>
           </ScrollView>
 
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="סגור"
+          <DayNavBlurButton
             onPress={handleBack}
+            size={DAY_NAV_BUTTON_SIZE}
+            glassIntensity="subtle"
             style={[styles.exitBtnFullScreen, { top: exitBtnTop }]}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel="חזרה"
           >
-            <Ionicons name="close" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
         </View>
       </SafeAreaView>
 
@@ -641,20 +642,11 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  /** כמו סגירת מסך מלא (AddStory / מצלמה): עיגול כהה + X */
+  /** כפתור חזרה קבוע למעלה-שמאל */
   exitBtnFullScreen: {
     position: 'absolute',
     left: DesignTokens.spacing.md,
     zIndex: 100,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.22)',
-    elevation: 10,
   },
   errorStateBody: {
     flex: 1,

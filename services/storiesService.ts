@@ -161,13 +161,29 @@ export async function getUsersWithStories(currentUserId?: string): Promise<Story
     });
   }
 
+  const storyTime = (s: StoryWithUser) => {
+    const t = new Date(s.created_at).getTime();
+    return Number.isFinite(t) ? t : 0;
+  };
+
+  /**
+   * UI בשורת הסטטוסים: `ScrollView` עם `flexDirection: 'row'` — ישן משמאל, חדש מימין (ליד «הוסף»).
+   */
+  result.sort((a, b) => {
+    const ta = storyTime(a);
+    const tb = storyTime(b);
+    if (ta !== tb) return ta - tb;
+    if (a.has_viewed !== b.has_viewed) return a.has_viewed ? -1 : 1;
+    return a.user_id.localeCompare(b.user_id);
+  });
+
+  /** «שלי» צמוד ל־«הוסף» בצד ימין */
   if (currentUserId) {
-    result.sort((a, b) => {
-      if (a.user_id === currentUserId) return -1;
-      if (b.user_id === currentUserId) return 1;
-      if (a.has_viewed === b.has_viewed) return 0;
-      return a.has_viewed ? 1 : -1;
-    });
+    const i = result.findIndex((s) => s.user_id === currentUserId);
+    if (i !== -1 && i !== result.length - 1) {
+      const [me] = result.splice(i, 1);
+      result.push(me);
+    }
   }
 
   return result;

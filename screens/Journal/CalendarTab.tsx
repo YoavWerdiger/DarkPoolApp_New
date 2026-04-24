@@ -15,13 +15,17 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
-import { Trade } from './TradesListTab';
+import type { Trade } from './tradeTypes';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
 interface DailyPnl {
   date: string;
   pnl: number;
 }
+
+/** אלפא (סיומת RRGGBBAA) לשכבות רווח/הפסד בלוח — חזק יותר מהגרסה הקודמת (~14%) כדי שהירוק/אדום יבלטו דרך הזכוכית */
+const CALENDAR_CELL_TINT_ALPHA = '65';
+const CALENDAR_LEGEND_SWATCH_ALPHA = '4A';
 
 export default function CalendarTab() {
   const DesignTokens = useDesignTokens();
@@ -227,13 +231,31 @@ export default function CalendarTab() {
     const cellSize = { width: gridLayout.dayWidth, marginRight: hGap, marginBottom: vGap };
 
     const cellShell = (children: React.ReactNode, accent?: 'profit' | 'loss' | null) => (
-      <View style={[styles.calendarDay, glassDayBase, cellSize, styles.calendarDayClip]}>
+      <View
+        style={[
+          styles.calendarDay,
+          glassDayBase,
+          cellSize,
+          styles.calendarDayClip,
+          accent === 'profit' && {
+            borderWidth: 1,
+            borderColor: `${DesignTokens.colors.success.main}B3`,
+          },
+          accent === 'loss' && {
+            borderWidth: 1,
+            borderColor: `${DesignTokens.colors.text.danger}B3`,
+          },
+        ]}
+      >
         {accent === 'profit' && (
           <View
             pointerEvents="none"
             style={[
               StyleSheet.absoluteFillObject,
-              { borderRadius: DesignTokens.borderRadius.lg, backgroundColor: `${DesignTokens.colors.success.main}24` },
+              {
+                borderRadius: DesignTokens.borderRadius.lg,
+                backgroundColor: `${DesignTokens.colors.success.main}${CALENDAR_CELL_TINT_ALPHA}`,
+              },
             ]}
           />
         )}
@@ -242,7 +264,10 @@ export default function CalendarTab() {
             pointerEvents="none"
             style={[
               StyleSheet.absoluteFillObject,
-              { borderRadius: DesignTokens.borderRadius.lg, backgroundColor: `${DesignTokens.colors.text.danger}24` },
+              {
+                borderRadius: DesignTokens.borderRadius.lg,
+                backgroundColor: `${DesignTokens.colors.text.danger}${CALENDAR_CELL_TINT_ALPHA}`,
+              },
             ]}
           />
         )}
@@ -311,8 +336,8 @@ export default function CalendarTab() {
         <View style={styles.monthHeaderContainer}>
           {/** מעטפת כמו ניווט תאריך ב"דיווחי רווח" (EarningsReportsTab) */}
           <UICard
-            variant="blur"
-            glassIntensity="subtle"
+            variant="glass"
+            glassIntensity="light"
             padding="none"
             style={styles.monthNavCard}
             contentContainerStyle={styles.monthNavCardInner}
@@ -397,11 +422,21 @@ export default function CalendarTab() {
         {/* Legend */}
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.success.main}20` }]} />
+            <View
+              style={[
+                styles.legendColor,
+                { backgroundColor: `${DesignTokens.colors.success.main}${CALENDAR_LEGEND_SWATCH_ALPHA}` },
+              ]}
+            />
             <Text style={styles.legendText}>רווח</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.text.danger}20` }]} />
+            <View
+              style={[
+                styles.legendColor,
+                { backgroundColor: `${DesignTokens.colors.text.danger}${CALENDAR_LEGEND_SWATCH_ALPHA}` },
+              ]}
+            />
             <Text style={styles.legendText}>הפסד</Text>
           </View>
           <View style={styles.legendItem}>
@@ -482,14 +517,14 @@ const createStyles = (
   },
   /** שורה משנית — כמו תג "היום" בדיווח רווח */
   monthTotalCaption: {
-    fontSize: 11,
-    fontWeight: '600' as any,
+    fontSize: 12,
+    fontWeight: '700' as any,
     marginTop: 1,
     textAlign: 'center',
     writingDirection: 'rtl' as any,
   },
   monthTotalCaptionProfit: {
-    color: tokens.colors.primary.main,
+    color: tokens.colors.success.main,
   },
   monthTotalCaptionLoss: {
     color: tokens.colors.text.danger,
@@ -549,14 +584,14 @@ const createStyles = (
     alignSelf: 'stretch',
   },
   pnlText: {
-    fontSize: 10,
+    fontSize: 11,
     maxWidth: '100%',
-    fontWeight: '700' as any,
+    fontWeight: '800' as any,
     textAlign: 'center',
-    lineHeight: 12,
+    lineHeight: 13,
   },
   pnlTextProfit: {
-    color: tokens.colors.primary.main,
+    color: tokens.colors.success.main,
   },
   pnlTextLoss: {
     color: tokens.colors.text.danger,

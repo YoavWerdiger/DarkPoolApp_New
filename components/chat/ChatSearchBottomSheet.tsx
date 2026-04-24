@@ -11,6 +11,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { searchMessagesInGroup } from '../../services/chat/chatSearchService';
 import { ChatMessage } from '../../types/chat.types';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
@@ -31,6 +33,10 @@ export default function ChatSearchBottomSheet({
 }: ChatSearchBottomSheetProps) {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const animatedClose = useBottomSheetClose();
+  const handleHeaderClose = useCallback(() => {
+    (animatedClose ?? onClose)();
+  }, [animatedClose, onClose]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
@@ -171,9 +177,15 @@ export default function ChatSearchBottomSheet({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={DesignTokens.colors.text.primary} />
-          </TouchableOpacity>
+          <DayNavBlurButton
+            onPress={handleHeaderClose}
+            size={DAY_NAV_BUTTON_SIZE}
+            glassIntensity="subtle"
+            style={styles.closeButton}
+            accessibilityLabel="חזרה"
+          >
+            <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
           <Text style={styles.title}>חיפוש הודעות</Text>
           <View style={styles.spacer} />
         </View>
@@ -288,7 +300,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderBottomColor: tokens.colors.border.divider,
   },
   closeButton: {
-    padding: tokens.spacing.xs,
+    alignSelf: 'center',
   },
   title: {
     flex: 1,

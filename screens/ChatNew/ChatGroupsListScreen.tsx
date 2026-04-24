@@ -26,7 +26,11 @@ import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
+import {
+  dispatchOpenMainDrawer,
+  consumePendingOpenMainDrawer,
+  type DrawerParentNavigation,
+} from '../../navigation/mainDrawerNav';
 import { MainDrawerRegistration } from '../../navigation/MainDrawerRegistration';
 import { supabase } from '../../lib/supabase';
 import { ChatGroup } from '../../types/chat.types';
@@ -141,6 +145,24 @@ export default function ChatGroupsListScreen() {
     }
   }, [navigation]);
 
+  /**
+   * כש־Profile לחץ על תפריט, הדגל pendingOpenMainDrawer מוצב + ניווט חוזר ל־Main.
+   * כאן (מסך ברירת המחדל של ה־drawer) צורכים את הדגל ופותחים את המגירה מהנאב שלנו.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (!consumePendingOpenMainDrawer()) return;
+      const timer = setTimeout(() => {
+        try {
+          dispatchOpenMainDrawer(navigation as unknown as DrawerParentNavigation);
+        } catch {
+          /* noop */
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    }, [navigation])
+  );
+
   const [allGroups, setAllGroups] = useState<GroupWithMembership[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const imageErrorsRef = useRef<Set<string>>(new Set());
@@ -155,6 +177,7 @@ export default function ChatGroupsListScreen() {
   const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>([]);
   const [storyViewerVisible, setStoryViewerVisible] = useState(false);
   const [storyViewerInitialIndex, setStoryViewerInitialIndex] = useState(0);
+  const storiesScrollRef = useRef<ScrollView>(null);
 
   const loadGroups = async () => {
     if (!user) return;
@@ -665,10 +688,14 @@ export default function ChatGroupsListScreen() {
               <Text style={[styles.statusLabel, { color: tokens.colors.primary.main }]}>הוסף</Text>
             </Pressable>
             <ScrollView
+              ref={storiesScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={{ flex: 1, direction: 'rtl' }}
+              style={{ flex: 1 }}
               contentContainerStyle={styles.statusRowScroll}
+              onContentSizeChange={() => {
+                storiesScrollRef.current?.scrollToEnd({ animated: false });
+              }}
             >
             {usersWithStories.map((s, idx) => {
               const avatar = s.user?.profile_picture;
@@ -908,8 +935,10 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingBottom: 9,
   },
   statusRowScroll: {
-    flexDirection: 'row-reverse',
+    flexGrow: 1,
+    flexDirection: 'row',
     alignItems: 'flex-start',
+    justifyContent: 'flex-end',
     paddingRight: 0,
     marginLeft: 14,
   },

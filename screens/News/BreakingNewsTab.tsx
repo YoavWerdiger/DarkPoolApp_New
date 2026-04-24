@@ -3,9 +3,10 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { View, Text, TextInput, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
+import BottomSheet, { useBottomSheetClose } from '../../components/ui/BottomSheet/BottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { 
@@ -441,6 +442,64 @@ interface NewsDetailModalProps {
   onPrevious?: () => void;
 }
 
+/** כפתור סגירה זכוכיתי שמשתמש באנימציית הסגירה של ה-BottomSheet (דרך ה-context),
+ *  עם fallback ל-onClose רגיל אם הוא לא בתוך BottomSheet. */
+const SheetCloseButton: React.FC<{
+  fallback: () => void;
+  tint: 'dark' | 'light';
+  iconColor: string;
+}> = ({ fallback, tint, iconColor }) => {
+  const animatedClose = useBottomSheetClose();
+  const handleClose = useCallback(() => {
+    if (animatedClose) animatedClose();
+    else fallback();
+  }, [animatedClose, fallback]);
+
+  const isDark = tint === 'dark';
+  return (
+    <TouchableOpacity
+      onPress={handleClose}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel="סגור"
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{
+        position: 'absolute',
+        top: 14,
+        right: 14,
+        zIndex: 100,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        overflow: 'hidden',
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.18)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: isDark ? 0.25 : 0.2,
+        shadowRadius: isDark ? 6 : 5,
+        elevation: isDark ? 5 : 4,
+      }}
+    >
+      <BlurView
+        intensity={isDark ? 40 : 30}
+        tint={isDark ? 'dark' : 'default'}
+        style={StyleSheet.absoluteFill}
+      />
+      <View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.18)' : 'rgba(255, 255, 255, 0.06)' },
+        ]}
+      />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name="chevron-down" size={20} color={iconColor} />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
 const NewsDetailModal: React.FC<NewsDetailModalProps> = ({ 
   visible, 
   article, 
@@ -470,17 +529,55 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
     }
   }, [visible, article?.id]);
 
+  // גובה התוכן הפנימי (מודד ב-runtime דרך onLayout) — יאפשר snap point מדויק
+  const [measuredContentH, setMeasuredContentH] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!visible) setMeasuredContentH(null);
+  }, [visible, article?.id]);
+
+  // Snap point דינמי לפי כמות התוכן — שהsheet ייפתח בדיוק בגובה שצריך,
+  // ועדיין אפשר לגרור למעלה לתצוגה מלאה
+  const dynamicSnapPoints = useMemo(() => {
+    const screenH = Dimensions.get('window').height;
+    const safeTop = insets.top + 20;
+    const maxAbs = screenH - safeTop;
+
+    const imageH = article?.image_url ? 240 : 0;
+    const safeBottom = Math.max(insets.bottom, 20) + 20;
+
+    let desiredAbs: number;
+    if (measuredContentH != null) {
+      desiredAbs = imageH + measuredContentH + safeBottom;
+    } else {
+      // הערכה זמנית עד שתהיה מדידה
+      const titleText = article?.label || article?.title || '';
+      const bodyText = article?.content || article?.summary || '';
+      const CHARS_PER_LINE = 36;
+      const titleLines = Math.min(4, Math.max(1, Math.ceil(titleText.length / CHARS_PER_LINE)));
+      const bodyLines = Math.max(1, Math.ceil(bodyText.length / CHARS_PER_LINE));
+      const estimated = 20 + titleLines * 28 + 10 + 20 + 16 + bodyLines * 23 + 20 + 48 + 20;
+      desiredAbs = imageH + estimated + safeBottom;
+    }
+
+    const clampedAbs = Math.min(maxAbs, desiredAbs);
+    const primary = Math.max(0.35, Math.min(0.9, clampedAbs / screenH));
+    const expanded = 0.95;
+    return primary >= expanded - 0.03 ? [primary] : [primary, expanded];
+  }, [article?.label, article?.title, article?.content, article?.summary, article?.image_url, measuredContentH, insets.top, insets.bottom]);
+
   if (!article) return null;
 
   return (
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
-      snapPoints={[0.7, 0.95]}
+      snapPoints={dynamicSnapPoints}
       enablePanDownToClose={true}
       backdropOpacity={0.5}
       showHandle={!article.image_url}
       edgeToEdge={!!article.image_url}
+      dragAreaHeight={article.image_url ? 240 : undefined}
     >
       <View style={{ flex: 1 }}>
         {/* תמונה - עד לחלק העליון של ה-BottomSheet */}
@@ -531,91 +628,34 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
                 }}
               />
             </View>
-            {/* כפתור סגירה - על התמונה */}
-            <View 
-              style={{ 
-                position: 'absolute', 
-                top: 12, 
-                right: 12, 
-                zIndex: 100,
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.3,
-                shadowRadius: 4,
-                elevation: 5,
-              }}
-              pointerEvents="auto"
-            >
-              <TouchableOpacity
-                onPress={onClose}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Ionicons 
-                  name="close" 
-                  size={22} 
-                  color="#FFF" 
-                />
-              </TouchableOpacity>
-            </View>
+            {/* כפתור סגירה זכוכית — שברון כלפי מטה, על התמונה */}
+            <SheetCloseButton fallback={onClose} tint="dark" iconColor="#FFFFFF" />
           </View>
         ) : (
-          /* כפתור סגירה - כשאין תמונה */
-          <View style={{ 
-            position: 'absolute', 
-            top: 12, 
-            right: 12, 
-            zIndex: 100,
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: DesignTokens.colors.background.tertiary,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 5,
-          }}>
-            <TouchableOpacity
-              onPress={onClose}
-              style={{
-                width: '100%',
-                height: '100%',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Ionicons 
-                name="close" 
-                size={22} 
-                color={DesignTokens.colors.text.primary} 
-              />
-            </TouchableOpacity>
-          </View>
+          /* כפתור סגירה זכוכית — שברון כלפי מטה, בלי תמונה */
+          <SheetCloseButton
+            fallback={onClose}
+            tint="light"
+            iconColor={DesignTokens.colors.text.primary}
+          />
         )}
 
         {/* תוכן - ScrollView */}
         <ScrollView 
           contentContainerStyle={{ 
-            paddingBottom: 40, // מרווח תחתון נוסף - ה-safe area כבר מטופל ב-BottomSheet
+            paddingBottom: 20,
             paddingTop: article.image_url ? 240 : 0, // מקום לתמונה
           }}
           showsVerticalScrollIndicator={false}
         >
           {/* תוכן */}
-          <View style={{ paddingHorizontal: detailPad, paddingTop: article.image_url ? 20 : 20 }}>
+          <View
+            onLayout={(e) => {
+              const h = e.nativeEvent.layout.height;
+              if (h > 0) setMeasuredContentH(h);
+            }}
+            style={{ paddingHorizontal: detailPad, paddingTop: 20 }}
+          >
             {/* כותרת */}
             <Text 
               style={{ 
@@ -827,20 +867,11 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                   color: '#FFFFFF',
                   textAlign: 'right',
                   lineHeight: 22,
+                  writingDirection: 'rtl',
                 }}
                 numberOfLines={2}
               >
                 {article.label || article.title}
-              </Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: 'rgba(255,255,255,0.7)',
-                  marginTop: 4,
-                  textAlign: 'right',
-                }}
-              >
-                {article.source} • {formatNewsDate(article.published_at)}
               </Text>
             </View>
           </>
@@ -885,22 +916,6 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           paddingBottom: DesignTokens.spacing.lg,
         }}
       >
-        {/* אם יש תמונה - הכותרת כבר מעל, מציגים רק summary */}
-        {hasImage && (article.label ? article.title : article.summary) && (
-          <Text
-            style={{
-              fontSize: 14,
-              color: DesignTokens.colors.text.secondary,
-              textAlign: 'right',
-              lineHeight: 20,
-              marginBottom: DesignTokens.spacing.sm,
-            }}
-            numberOfLines={2}
-          >
-            {truncateText(article.label ? article.title : article.summary || '', 80)}
-          </Text>
-        )}
-
         <View
           style={{
             flexDirection: 'row',
@@ -949,17 +964,45 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             </TouchableOpacity>
           </View>
 
-          {/* מקור וזמן - אם אין תמונה */}
-          {!hasImage && (
+          {/* מקור וזמן — תמיד, בכיוון RTL מימין לשמאל */}
+          <View
+            style={{
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              flexShrink: 1,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '500',
+                color: DesignTokens.colors.text.secondary,
+                writingDirection: 'rtl',
+              }}
+              numberOfLines={1}
+            >
+              {article.source}
+            </Text>
             <Text
               style={{
                 fontSize: 12,
                 color: DesignTokens.colors.text.tertiary,
+                marginHorizontal: 6,
               }}
             >
-              {article.source} • {formatNewsDate(article.published_at)}
+              ·
             </Text>
-          )}
+            <Text
+              style={{
+                fontSize: 12,
+                color: DesignTokens.colors.text.tertiary,
+                writingDirection: 'rtl',
+              }}
+              numberOfLines={1}
+            >
+              {formatNewsDate(article.published_at)}
+            </Text>
+          </View>
         </View>
 
         {/* קטגוריה */}
@@ -1523,12 +1566,13 @@ export default function BreakingNewsTab() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* חיפוש + כפתור כתבות שאהבתי — קבועים, מחוץ לרשימה */}
+      {renderSearchHeader()}
       <View style={{ flex: 1 }}>
         <FlatList
           data={filteredArticles}
           keyExtractor={(item) => item.id}
           renderItem={renderArticle}
-          ListHeaderComponent={renderSearchHeader}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

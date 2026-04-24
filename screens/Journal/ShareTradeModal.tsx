@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import { supabase } from '../../services/supabase';
-import { Trade } from './TradesListTab';
+import type { Trade } from './tradeTypes';
 import { getChatGroups } from '../../services/chat/chatGroupService';
 import { sendChatMessage } from '../../services/chat/chatMessageService';
 import { ChatMessageType } from '../../types/chat.types';

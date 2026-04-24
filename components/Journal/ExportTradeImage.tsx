@@ -19,6 +19,8 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import type { Trade } from '../../screens/Journal/TradesListTab';
 import { Ionicons } from '@expo/vector-icons';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
 import { ScreenGradientBackground } from '../VideoBackground';
 import { SUPABASE_URL } from '../../config/publicEnv';
@@ -46,6 +48,7 @@ function getReturnPercentage(trade: Trade): number {
 
 export default function ExportTradeImage({ trade, visible, onClose }: ExportTradeImageProps) {
   const DesignTokens = useDesignTokens();
+  const animatedClose = useBottomSheetClose();
   const viewShotRef = useRef<View>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [layoutReady, setLayoutReady] = useState(false);
@@ -138,6 +141,9 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
   }
 
   const { isProfit, ret, dirColor, pnlColor, retColor, logoUri } = snapshot;
+  const handleHeaderClose = () => {
+    (animatedClose ?? onClose)();
+  };
 
   return (
     <BottomSheet
@@ -151,9 +157,15 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>יצוא טרייד לתמונה</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={DesignTokens.colors.text.primary} />
-          </TouchableOpacity>
+          <DayNavBlurButton
+            onPress={handleHeaderClose}
+            size={DAY_NAV_BUTTON_SIZE}
+            glassIntensity="subtle"
+            style={styles.closeButton}
+            accessibilityLabel="חזרה"
+          >
+            <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
         </View>
 
         <ScrollView
@@ -360,7 +372,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       textAlign: 'right',
     },
     closeButton: {
-      padding: tokens.spacing.xs,
+      alignSelf: 'center',
     },
     previewContainer: {
       flex: 1,

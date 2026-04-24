@@ -1,5 +1,4 @@
 import { DrawerActions } from '@react-navigation/native';
-import { InteractionManager } from 'react-native';
 import { rootNavigationRef } from './rootNavigationRef';
 
 export function getMainDrawerPosition(): 'left' | 'right' {
@@ -63,6 +62,22 @@ export function registerMainDrawerNavigation(
   registeredMainDrawerNav = nav;
 }
 
+/**
+ * דגל "פתיחה ממתינה" — מוצב כשלחצו על תפריט מתוך Profile.
+ * Chat (מסך ה־drawer הפעיל) יצרוך אותו ב־useFocusEffect ויפתח את המגירה בעצמו.
+ */
+let pendingOpenMainDrawer = false;
+
+export function markPendingOpenMainDrawer(): void {
+  pendingOpenMainDrawer = true;
+}
+
+export function consumePendingOpenMainDrawer(): boolean {
+  if (!pendingOpenMainDrawer) return false;
+  pendingOpenMainDrawer = false;
+  return true;
+}
+
 function tryDispatchOpenDrawer(
   nav: DrawerParentNavigation | null | undefined
 ): boolean {
@@ -75,8 +90,28 @@ function tryDispatchOpenDrawer(
   }
 }
 
-/** עולה בשרשרת האבות עד stack שמכיל את המסך Main, ומבצע navigate('Main') — נדרש כש־Profile מכסה את Main */
+/** Fallback אמין — ראקט-נאביגשן ינתב את הפעולה לנאב־המגירה הקרוב בעץ (Main). */
+function tryDispatchOpenDrawerViaRoot(): boolean {
+  try {
+    if (!rootNavigationRef.isReady()) return false;
+    rootNavigationRef.dispatch(DrawerActions.openDrawer());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** מנווט ל־Main. מעדיף את rootNavigationRef (אמין יותר מכל פונקציית getParent בעץ מקונן) */
 function navigateRootStackToMain(navigation: DrawerParentNavigation) {
+  try {
+    if (rootNavigationRef.isReady()) {
+      rootNavigationRef.navigate('Main' as never);
+      return;
+    }
+  } catch {
+    /* נופלים ל־walk של parents */
+  }
+
   let nav: DrawerParentNavigation | undefined = navigation;
   for (let depth = 0; depth < 16 && nav; depth++) {
     try {
@@ -91,22 +126,6 @@ function navigateRootStackToMain(navigation: DrawerParentNavigation) {
     }
     nav = nav.getParent?.() as DrawerParentNavigation | undefined;
   }
-  try {
-    if (rootNavigationRef.isReady()) {
-      rootNavigationRef.navigate('Main' as never);
-    }
-  } catch {
-    /* noop */
-  }
-}
-
-function scheduleDrawerOpenRetries() {
-  const delays = [0, 40, 100, 220, 450, 800];
-  delays.forEach((ms) => {
-    setTimeout(() => {
-      tryDispatchOpenDrawer(registeredMainDrawerNav);
-    }, ms);
-  });
 }
 
 /** ה־ProfileStack הוא אח ל־Main ב־root — כשהוא פעיל, פתיחת מגירה דרך ה־ref נשארת מאחורי ה־Stack */
@@ -124,13 +143,9 @@ function isRootProfileStackFocused(): boolean {
 }
 
 function openDrawerAfterSwitchToMain(navigation: DrawerParentNavigation) {
+  /** המסך של Chat יצרוך את הדגל ב־useFocusEffect ויפתח את המגירה מתוך הנאב שלו (אמין ביותר) */
+  markPendingOpenMainDrawer();
   navigateRootStackToMain(navigation);
-  InteractionManager.runAfterInteractions(() => {
-    if (tryDispatchOpenDrawer(registeredMainDrawerNav)) {
-      return;
-    }
-    scheduleDrawerOpenRetries();
-  });
 }
 
 /**
@@ -145,6 +160,10 @@ export function dispatchOpenMainDrawer(navigation: DrawerParentNavigation) {
   const target =
     getMainDrawerNavigation(navigation) ?? registeredMainDrawerNav;
   if (tryDispatchOpenDrawer(target)) {
+    return;
+  }
+
+  if (tryDispatchOpenDrawerViaRoot()) {
     return;
   }
 

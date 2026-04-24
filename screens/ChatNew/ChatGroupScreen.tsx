@@ -14,7 +14,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigation, useRoute, useFocusEffect, StackActions } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import ChatMessage from '../../components/chat/ChatMessage';
 import ChatInput from '../../components/chat/ChatInput';
@@ -664,13 +664,14 @@ export default function ChatGroupScreen() {
     setReactionDetailsModalVisible(true);
   };
 
-  /** חזרה — לדף פירוט הקבוצה (לא לרשימה), כדי שמסך המידע יהיה "תחנת היציאה" לפני הקהילה */
+  /** חזרה — למסך הקודם בסטאק (לרוב רשימת הצ'אטים). */
   const handleBack = () => {
-    if (groupId) {
-      navigation.dispatch(StackActions.replace('ChatGroupInfo', { groupId }));
-    } else {
+    if (navigation.canGoBack()) {
       navigation.goBack();
+      return;
     }
+    // fallback במצבי deeplink/stack חריג
+    (navigation as any).navigate('ChatGroupsList');
   };
 
   const handleGroupInfoPress = () => {
@@ -987,12 +988,12 @@ export default function ChatGroupScreen() {
       </View>
 
       {/* Input area */}
-      <View style={[styles.inputArea, { paddingBottom: Math.max(6, insets.bottom > 0 ? 10 : 6) }]}>
+      <View style={styles.inputArea}>
         {/* Typing indicator - מעל ה-input */}
         {typingUsers.length > 0 && renderTypingIndicator()}
         {/* בדיקה אם זו קבוצת הכרזות ואם המשתמש לא admin */}
         {isAnnouncementGroup && !currentGroup?.is_admin ? (
-          <View style={styles.announcementOnlyView}>
+          <View style={[styles.announcementOnlyView, { paddingBottom: 14 + insets.bottom }]}>
             <Ionicons name="megaphone-outline" size={18} color={DesignTokens.colors.text.tertiary} />
             <Text style={styles.announcementOnlyText}>
               רק מנהלי הקהילה יכולים לכתוב בצ'אט זה

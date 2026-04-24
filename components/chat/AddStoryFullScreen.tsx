@@ -23,6 +23,8 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
+import { PanResponder } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useAuth } from '../../context/AuthContext';
 import { uploadStoryImage, uploadStoryVideo, createStory } from '../../services/storiesService';
 import { chatPalette } from './chatDesignTokens';
@@ -55,10 +57,34 @@ const OVERLAY_COLORS = [
   '#FF2D55', '#A2845E',
 ];
 
+const DRAW_COLORS = [
+  '#FFFFFF', '#000000', '#FF3B30', '#FF9500', '#FFCC00',
+  '#34C759', '#00C7BE', '#007AFF', '#AF52DE', '#FF2D55',
+];
+
+const DRAW_STROKE_WIDTHS = [3, 6, 10, 16];
+
+const POPULAR_EMOJIS = [
+  '😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳',
+  '😜','🤪','🤔','😏','😇','🙃','😅','😭','😱','🤯',
+  '😡','🥵','🥶','🤒','🤕','🤢','👻','💀','👽','🤖',
+  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💖',
+  '💯','💥','✨','🔥','⭐','🌟','⚡','☀️','🌈','☁️',
+  '👍','👎','👏','🙌','👌','✌️','🤞','🤟','🤘','🤙',
+  '💪','🙏','👀','👁️','🧠','🫀','💋','👄','🦷','👅',
+  '🎉','🎊','🎁','🎂','🍾','🥂','🍺','☕','🍕','🍔',
+  '⚽','🏀','🏈','⚾','🎾','🏐','🏓','🎱','🎳','🏆',
+  '🚀','✈️','🚗','🏠','🌍','📱','💻','🎮','🎧','📸',
+  '💰','💵','💎','🔑','🎯','📈','📉','💡','⚠️','❓',
+  '✅','❌','⭕','🆗','🆒','🔔','💤','💬','👑','🎩',
+];
+
 type BgStyle = 'none' | 'solid' | 'semi';
+type OverlayType = 'text' | 'emoji';
 
 interface TextOverlayItem {
   id: string;
+  type?: OverlayType;
   text: string;
   color: string;
   fontSize: number;
@@ -69,13 +95,26 @@ interface TextOverlayItem {
   scale: number;
 }
 
+interface DrawPath {
+  id: string;
+  d: string;
+  color: string;
+  strokeWidth: number;
+}
+
 /* ─────────────── Draggable Text Component ─────────────── */
 function DraggableText({
   item,
   onDoubleTap,
+  onDragStateChange,
+  onRequestDelete,
+  onCommitPosition,
 }: {
   item: TextOverlayItem;
   onDoubleTap: (id: string) => void;
+  onDragStateChange?: (dragging: boolean, y: number) => void;
+  onRequestDelete?: (id: string) => void;
+  onCommitPosition?: (id: string, x: number, y: number, scale: number) => void;
 }) {
   const translateX = useSharedValue(item.x);
   const translateY = useSharedValue(item.y);
@@ -84,14 +123,35 @@ function DraggableText({
   const savedTranslateY = useSharedValue(item.y);
   const savedScale = useSharedValue(item.scale);
 
+  const DELETE_Y_THRESHOLD = SH - 160;
+
+  const notifyDragStart = () => onDragStateChange?.(true, translateY.value);
+  const notifyDragMove = (absY: number) => onDragStateChange?.(true, absY);
+  const notifyDragEnd = (absY: number) => {
+    onDragStateChange?.(false, absY);
+    const shouldDelete = absY >= DELETE_Y_THRESHOLD;
+    if (shouldDelete && onRequestDelete) {
+      onRequestDelete(item.id);
+    } else if (onCommitPosition) {
+      onCommitPosition(item.id, translateX.value, translateY.value, scale.value);
+    }
+  };
+
   const panGesture = Gesture.Pan()
+    .onStart(() => {
+      runOnJS(notifyDragStart)();
+    })
     .onUpdate((e) => {
       translateX.value = savedTranslateX.value + e.translationX;
       translateY.value = savedTranslateY.value + e.translationY;
+      const absY = (SH / 2 - 60) + translateY.value;
+      runOnJS(notifyDragMove)(absY);
     })
     .onEnd(() => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
+      const absY = (SH / 2 - 60) + translateY.value;
+      runOnJS(notifyDragEnd)(absY);
     });
 
   const pinchGesture = Gesture.Pinch()
@@ -122,11 +182,14 @@ function DraggableText({
     ],
   }));
 
-  const bgColor = item.bgStyle === 'solid'
-    ? (item.color === '#FFFFFF' ? '#000000' : '#FFFFFF')
-    : item.bgStyle === 'semi'
-      ? 'rgba(0,0,0,0.45)'
-      : 'transparent';
+  const isEmoji = item.type === 'emoji';
+  const bgColor = isEmoji
+    ? 'transparent'
+    : item.bgStyle === 'solid'
+      ? (item.color === '#FFFFFF' ? '#000000' : '#FFFFFF')
+      : item.bgStyle === 'semi'
+        ? 'rgba(0,0,0,0.45)'
+        : 'transparent';
 
   return (
     <GestureDetector gesture={composed}>
@@ -135,18 +198,20 @@ function DraggableText({
           dragStyles.textPill,
           {
             backgroundColor: bgColor,
-            borderRadius: item.bgStyle !== 'none' ? 12 : 0,
-            paddingHorizontal: item.bgStyle !== 'none' ? 16 : 0,
-            paddingVertical: item.bgStyle !== 'none' ? 8 : 0,
+            borderRadius: !isEmoji && item.bgStyle !== 'none' ? 12 : 0,
+            paddingHorizontal: !isEmoji && item.bgStyle !== 'none' ? 16 : 0,
+            paddingVertical: !isEmoji && item.bgStyle !== 'none' ? 8 : 0,
           },
         ]}>
           <Text style={[
             dragStyles.text,
-            {
-              color: item.color,
-              fontSize: item.fontSize,
-              fontWeight: item.bold ? '800' : '400',
-            },
+            isEmoji
+              ? { fontSize: item.fontSize, color: '#fff' }
+              : {
+                  color: item.color,
+                  fontSize: item.fontSize,
+                  fontWeight: item.bold ? '800' : '400',
+                },
           ]}>
             {item.text}
           </Text>
@@ -159,6 +224,7 @@ function DraggableText({
 const dragStyles = StyleSheet.create({
   container: {
     position: 'absolute',
+    top: SH / 2 - 60,
     alignSelf: 'center',
     zIndex: 15,
   },
@@ -410,6 +476,204 @@ const editorStyles = StyleSheet.create({
   },
 });
 
+/* ─────────────── Emoji Picker Overlay ─────────────── */
+function EmojiPickerOverlay({
+  visible,
+  onSelect,
+  onClose,
+}: {
+  visible: boolean;
+  onSelect: (emoji: string) => void;
+  onClose: () => void;
+}) {
+  const insets = useSafeAreaInsets();
+  if (!visible) return null;
+
+  return (
+    <View style={emojiStyles.root}>
+      <Pressable style={emojiStyles.backdrop} onPress={onClose} />
+      <View style={[emojiStyles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={emojiStyles.handle} />
+        <View style={emojiStyles.header}>
+          <Text style={emojiStyles.title}>הוסף אימוג'י</Text>
+          <TouchableOpacity onPress={onClose} style={emojiStyles.closeBtn}>
+            <Ionicons name="close" size={22} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={emojiStyles.grid}
+        >
+          {POPULAR_EMOJIS.map((e, i) => (
+            <TouchableOpacity
+              key={`${e}-${i}`}
+              style={emojiStyles.emojiBtn}
+              onPress={() => onSelect(e)}
+              activeOpacity={0.6}
+            >
+              <Text style={emojiStyles.emojiText}>{e}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+const emojiStyles = StyleSheet.create({
+  root: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 40,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  sheet: {
+    backgroundColor: 'rgba(24,24,28,0.98)',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: SH * 0.55,
+    paddingTop: 10,
+    paddingHorizontal: 12,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    alignSelf: 'center',
+    marginBottom: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
+    paddingBottom: 10,
+  },
+  title: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingBottom: 12,
+  },
+  emojiBtn: {
+    width: (SW - 24) / 7,
+    height: (SW - 24) / 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emojiText: {
+    fontSize: 32,
+  },
+});
+
+/* ─────────────── Drawing Canvas ─────────────── */
+function DrawingCanvas({
+  paths,
+  color,
+  strokeWidth,
+  onPathComplete,
+  enabled,
+}: {
+  paths: DrawPath[];
+  color: string;
+  strokeWidth: number;
+  onPathComplete: (path: DrawPath) => void;
+  enabled: boolean;
+}) {
+  const [currentD, setCurrentD] = useState<string>('');
+  const currentDRef = useRef<string>('');
+
+  const colorRef = useRef(color);
+  const strokeWidthRef = useRef(strokeWidth);
+  const onPathCompleteRef = useRef(onPathComplete);
+  useEffect(() => { colorRef.current = color; }, [color]);
+  useEffect(() => { strokeWidthRef.current = strokeWidth; }, [strokeWidth]);
+  useEffect(() => { onPathCompleteRef.current = onPathComplete; }, [onPathComplete]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        const d = `M ${locationX.toFixed(2)} ${locationY.toFixed(2)}`;
+        currentDRef.current = d;
+        setCurrentD(d);
+      },
+      onPanResponderMove: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        const d = `${currentDRef.current} L ${locationX.toFixed(2)} ${locationY.toFixed(2)}`;
+        currentDRef.current = d;
+        setCurrentD(d);
+      },
+      onPanResponderRelease: () => {
+        if (currentDRef.current) {
+          onPathCompleteRef.current({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            d: currentDRef.current,
+            color: colorRef.current,
+            strokeWidth: strokeWidthRef.current,
+          });
+        }
+        currentDRef.current = '';
+        setCurrentD('');
+      },
+      onPanResponderTerminate: () => {
+        currentDRef.current = '';
+        setCurrentD('');
+      },
+    })
+  ).current;
+
+  return (
+    <View
+      style={StyleSheet.absoluteFillObject}
+      pointerEvents={enabled ? 'auto' : 'none'}
+      {...(enabled ? panResponder.panHandlers : {})}
+    >
+      <Svg style={StyleSheet.absoluteFillObject} pointerEvents="none">
+        {paths.map((p) => (
+          <Path
+            key={p.id}
+            d={p.d}
+            stroke={p.color}
+            strokeWidth={p.strokeWidth}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        ))}
+        {currentD ? (
+          <Path
+            d={currentD}
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        ) : null}
+      </Svg>
+    </View>
+  );
+}
+
 /* ─────────────── Main Component ─────────────── */
 interface AddStoryFullScreenProps {
   visible: boolean;
@@ -447,6 +711,15 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   const [showTextEditor, setShowTextEditor] = useState(false);
   const [editingOverlayId, setEditingOverlayId] = useState<string | null>(null);
   const captureAreaRef = useRef<View>(null);
+
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [drawPaths, setDrawPaths] = useState<DrawPath[]>([]);
+  const [drawMode, setDrawMode] = useState(false);
+  const [drawColor, setDrawColor] = useState<string>(DRAW_COLORS[0]);
+  const [drawStrokeWidth, setDrawStrokeWidth] = useState<number>(DRAW_STROKE_WIDTHS[1]);
+
+  const [draggingOverlayId, setDraggingOverlayId] = useState<string | null>(null);
+  const [trashHover, setTrashHover] = useState(false);
 
   const gallerySlide = useRef(new Animated.Value(0)).current;
 
@@ -524,6 +797,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       setEditingOverlayId(null);
       setIsRecording(false);
       setGalleryExpanded(false);
+      setShowEmojiPicker(false);
+      setDrawPaths([]);
+      setDrawMode(false);
+      setDrawColor(DRAW_COLORS[0]);
+      setDrawStrokeWidth(DRAW_STROKE_WIDTHS[1]);
+      setDraggingOverlayId(null);
+      setTrashHover(false);
     } else {
       loadRecentPhotos();
       if (!permission?.granted) {
@@ -665,6 +945,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     } else {
       const newOverlay: TextOverlayItem = {
         id: Date.now().toString(),
+        type: 'text',
         text,
         color,
         fontSize,
@@ -680,6 +961,51 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     setEditingOverlayId(null);
   }, [editingOverlayId]);
 
+  const handleAddEmoji = useCallback((emoji: string) => {
+    const newOverlay: TextOverlayItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      type: 'emoji',
+      text: emoji,
+      color: '#FFFFFF',
+      fontSize: 72,
+      bold: false,
+      bgStyle: 'none',
+      x: 0,
+      y: 0,
+      scale: 1,
+    };
+    setOverlays(prev => [...prev, newOverlay]);
+    setShowEmojiPicker(false);
+  }, []);
+
+  const handleOverlayDragChange = useCallback((id: string, dragging: boolean, absY: number) => {
+    if (dragging) {
+      setDraggingOverlayId(id);
+      setTrashHover(absY >= SH - 160);
+    } else {
+      setDraggingOverlayId(null);
+      setTrashHover(false);
+    }
+  }, []);
+
+  const handleOverlayDelete = useCallback((id: string) => {
+    setOverlays(prev => prev.filter(o => o.id !== id));
+    setDraggingOverlayId(null);
+    setTrashHover(false);
+  }, []);
+
+  const handleOverlayCommitPosition = useCallback((id: string, x: number, y: number, scale: number) => {
+    setOverlays(prev => prev.map(o => o.id === id ? { ...o, x, y, scale } : o));
+  }, []);
+
+  const undoLastDraw = useCallback(() => {
+    setDrawPaths(prev => prev.slice(0, -1));
+  }, []);
+
+  const clearDrawing = useCallback(() => {
+    setDrawPaths([]);
+  }, []);
+
   const handleShareMedia = async () => {
     if (!user?.id || !mediaUri) return;
     try {
@@ -689,7 +1015,22 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       let uploadUri = mediaUri;
       let overlayContent: string | undefined;
 
-      if (mediaType === 'image' && hasOverlays && captureAreaRef.current) {
+      const hasDrawings = drawPaths.length > 0;
+      const shouldFlatten = mediaType === 'image' && (hasOverlays || hasDrawings) && captureAreaRef.current;
+
+      const serializeOverlays = () => JSON.stringify(overlays.map(o => ({
+        type: o.type || 'text',
+        text: o.text,
+        color: o.color,
+        fontSize: o.fontSize,
+        bold: o.bold,
+        bgStyle: o.bgStyle,
+        x: o.x,
+        y: o.y,
+        scale: o.scale,
+      })));
+
+      if (shouldFlatten) {
         try {
           const capturedUri = await Promise.race([
             captureRef(captureAreaRef, {
@@ -705,16 +1046,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           logger.debug('AddStoryFullScreen', 'Image+overlays flattened successfully');
         } catch (captureErr: any) {
           logger.debug('AddStoryFullScreen', `Capture failed (${captureErr?.message}), falling back to JSON overlays`);
-          overlayContent = JSON.stringify(overlays.map(o => ({
-            text: o.text, color: o.color, fontSize: o.fontSize,
-            bold: o.bold, bgStyle: o.bgStyle,
-          })));
+          if (hasOverlays) overlayContent = serializeOverlays();
         }
       } else if (mediaType === 'video' && hasOverlays) {
-        overlayContent = JSON.stringify(overlays.map(o => ({
-          text: o.text, color: o.color, fontSize: o.fontSize,
-          bold: o.bold, bgStyle: o.bgStyle,
-        })));
+        overlayContent = serializeOverlays();
       }
 
       setIsUploading(true);
@@ -1014,72 +1349,200 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           )}
         </View>
 
+        {/* Drawing layer (always rendered; captures input only when drawMode is on) */}
+        <DrawingCanvas
+          paths={drawPaths}
+          color={drawColor}
+          strokeWidth={drawStrokeWidth}
+          onPathComplete={(p) => setDrawPaths(prev => [...prev, p])}
+          enabled={drawMode}
+        />
+
         {overlays.map((item) => (
           <DraggableText
             key={item.id}
             item={item}
             onDoubleTap={openTextEditor}
+            onDragStateChange={(dragging, absY) => handleOverlayDragChange(item.id, dragging, absY)}
+            onRequestDelete={handleOverlayDelete}
+            onCommitPosition={handleOverlayCommitPosition}
           />
         ))}
       </View>
 
-      {/* Top bar */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0.55)', 'transparent']}
-        style={[s.previewTopGrad, { paddingTop: insets.top + 12 }]}
-        pointerEvents="box-none"
-      >
-        <View style={s.previewTopRow}>
-          <Pressable
-            onPress={() => { setMediaUri(null); setOverlays([]); setPhase('capture'); }}
-            hitSlop={16}
-          >
-            <Ionicons name="arrow-forward" size={26} color="#fff" />
-          </Pressable>
+      {/* Top bar – hidden while drawing */}
+      {!drawMode && (
+        <LinearGradient
+          colors={['rgba(0,0,0,0.55)', 'transparent']}
+          style={[s.previewTopGrad, { paddingTop: insets.top + 12 }]}
+          pointerEvents="box-none"
+        >
+          <View style={s.previewTopRow}>
+            <Pressable
+              onPress={() => { setMediaUri(null); setOverlays([]); setDrawPaths([]); setDrawMode(false); setPhase('capture'); }}
+              hitSlop={16}
+            >
+              <Ionicons name="arrow-forward" size={26} color="#fff" />
+            </Pressable>
 
-          <View style={s.previewToolbar}>
-            <TouchableOpacity style={s.previewToolBtn} onPress={() => openTextEditor()} activeOpacity={0.7}>
-              <MaterialCommunityIcons name="format-text" size={22} color="#fff" />
+            <View style={s.previewToolbar}>
+              <TouchableOpacity style={s.previewToolBtn} onPress={() => openTextEditor()} activeOpacity={0.7}>
+                <MaterialCommunityIcons name="format-text" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.previewToolBtn}
+                onPress={() => setShowEmojiPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="happy-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.previewToolBtn}
+                onPress={() => setDrawMode(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="brush-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+      )}
+
+      {/* Drawing toolbar */}
+      {drawMode && (
+        <>
+          <View style={[s.drawTopBar, { paddingTop: insets.top + 12 }]}>
+            <TouchableOpacity
+              style={s.drawIconBtn}
+              onPress={() => setDrawMode(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={s.drawDoneText}>סיום</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[s.previewToolBtn, { opacity: 0.35 }]} disabled>
-              <Ionicons name="happy-outline" size={22} color="#fff" />
+
+            <View style={{ flex: 1 }} />
+
+            <TouchableOpacity
+              style={[s.drawIconBtn, drawPaths.length === 0 && { opacity: 0.4 }]}
+              onPress={undoLastDraw}
+              disabled={drawPaths.length === 0}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-undo" size={20} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity style={[s.previewToolBtn, { opacity: 0.35 }]} disabled>
-              <Ionicons name="brush-outline" size={22} color="#fff" />
+
+            <TouchableOpacity
+              style={[s.drawIconBtn, drawPaths.length === 0 && { opacity: 0.4 }]}
+              onPress={clearDrawing}
+              disabled={drawPaths.length === 0}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-      </LinearGradient>
 
-      {/* Bottom share */}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.65)']}
-        style={[s.previewBottomGrad, { paddingBottom: insets.bottom + 24 }]}
-        pointerEvents="box-none"
-      >
-        <TouchableOpacity
-          style={s.shareButton}
-          onPress={handleShareMedia}
-          disabled={isUploading}
-          activeOpacity={0.8}
+          <View style={[s.drawBottomBar, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={s.drawStrokeRow}>
+              {DRAW_STROKE_WIDTHS.map((w) => (
+                <TouchableOpacity
+                  key={w}
+                  onPress={() => setDrawStrokeWidth(w)}
+                  style={[
+                    s.strokeBtn,
+                    drawStrokeWidth === w && s.strokeBtnActive,
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <View style={{
+                    width: w * 1.3,
+                    height: w * 1.3,
+                    borderRadius: (w * 1.3) / 2,
+                    backgroundColor: drawColor,
+                  }} />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.drawColorScroll}
+            >
+              {DRAW_COLORS.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setDrawColor(c)}
+                  style={[
+                    s.drawColorDot,
+                    { backgroundColor: c },
+                    drawColor === c && s.drawColorDotActive,
+                  ]}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        </>
+      )}
+
+      {/* Bottom share – hidden while drawing */}
+      {!drawMode && (
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.65)']}
+          style={[s.previewBottomGrad, { paddingBottom: insets.bottom + 24 }]}
+          pointerEvents="box-none"
         >
-          <LinearGradient
-            colors={[chatPalette.primary, chatPalette.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={s.shareButtonInner}
+          <TouchableOpacity
+            style={s.shareButton}
+            onPress={handleShareMedia}
+            disabled={isUploading}
+            activeOpacity={0.8}
           >
-            <Text style={s.shareButtonText}>שתף לסטטוס</Text>
-            <Ionicons name="paper-plane" size={18} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
-      </LinearGradient>
+            <LinearGradient
+              colors={[chatPalette.primary, chatPalette.primaryDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.shareButtonInner}
+            >
+              <Text style={s.shareButtonText}>שתף לסטטוס</Text>
+              <Ionicons name="paper-plane" size={18} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </LinearGradient>
+      )}
+
+      {/* Trash drop zone – visible while dragging an overlay */}
+      {draggingOverlayId && (
+        <View
+          pointerEvents="none"
+          style={[s.trashZone, { bottom: insets.bottom + 24 }]}
+        >
+          <View style={[
+            s.trashCircle,
+            trashHover && s.trashCircleActive,
+          ]}>
+            <Ionicons
+              name="trash"
+              size={trashHover ? 28 : 24}
+              color="#fff"
+            />
+          </View>
+          <Text style={s.trashHint}>
+            {trashHover ? 'שחרר למחיקה' : 'גרור לכאן למחיקה'}
+          </Text>
+        </View>
+      )}
 
       <TextEditorOverlay
         visible={showTextEditor}
         initial={editingOverlay}
         onDone={handleTextEditorDone}
         onCancel={() => { setShowTextEditor(false); setEditingOverlayId(null); }}
+      />
+
+      <EmojiPickerOverlay
+        visible={showEmojiPicker}
+        onSelect={handleAddEmoji}
+        onClose={() => setShowEmojiPicker(false)}
       />
     </View>
   );
@@ -1462,6 +1925,113 @@ const s = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '700',
+  },
+
+  /* ---- Drawing mode ---- */
+  drawTopBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    zIndex: 25,
+  },
+  drawIconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 4,
+  },
+  drawDoneText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  drawBottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 25,
+    paddingTop: 10,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  drawStrokeRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+    paddingBottom: 10,
+  },
+  strokeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  strokeBtnActive: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderColor: '#fff',
+  },
+  drawColorScroll: {
+    paddingHorizontal: 16,
+    gap: 10,
+    alignItems: 'center',
+  },
+  drawColorDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  drawColorDotActive: {
+    borderColor: '#fff',
+    borderWidth: 3,
+    transform: [{ scale: 1.18 }],
+  },
+
+  /* ---- Trash drop zone ---- */
+  trashZone: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 28,
+  },
+  trashCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  trashCircleActive: {
+    backgroundColor: 'rgba(255,59,48,0.85)',
+    borderColor: '#fff',
+    transform: [{ scale: 1.15 }],
+  },
+  trashHint: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 
   /* ---- Upload overlay ---- */

@@ -12,6 +12,8 @@ export interface BottomSheetProps {
   useModal?: boolean; // אם false, render כ-View במקום Modal
   /** כש־true: אזור הגרירה צף מעל התוכן — התוכן מתחיל מקצה עליון השיט (למשל תמונה עד הקצה) */
   edgeToEdge?: boolean;
+  /** גובה אזור הגסטרה הצף במצב edgeToEdge (בpx). מאפשר להגדיל את אזור הגרירה (למשל מעל תמונה שלמה). */
+  dragAreaHeight?: number;
 }
 
 

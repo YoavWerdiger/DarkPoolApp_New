@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ActivityIndicator, TouchableOpacity, Animated, type ViewStyle, type TextStyle } from 'react-native';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  TouchableOpacity,
+  Animated,
+  useWindowDimensions,
+  type ViewStyle,
+  type TextStyle,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -33,6 +42,7 @@ export default function FearAndGreedCard({
   cardPadding = 'sm',
 }: FearAndGreedCardProps) {
   const DesignTokens = useDesignTokens();
+  const { width: windowWidth } = useWindowDimensions();
   const [data, setData] = useState<FearAndGreedData | null>(null);
   const [historicalData, setHistoricalData] = useState<{
     previousClose?: FearAndGreedData;
@@ -50,8 +60,13 @@ export default function FearAndGreedCard({
     return null;
   }
 
-  // פרמטרים לגייג' חצי עגול - מותאם לגודל (הוגדל)
-  const gaugeSize = 380;
+  /** קואורדינטות לוגיות של הגייג' (viewBox) — הרינדור מוקטן לרוחב המסך כדי שלא ייחתך עם overflow:hidden */
+  const LOGICAL_GAUGE = 380;
+  const hp = DesignTokens.layout?.screenPadding ?? DesignTokens.spacing.lg;
+  const gaugeViewportW = Math.min(
+    LOGICAL_GAUGE,
+    Math.max(220, windowWidth - (fullWidth ? hp * 2 + 12 : hp * 2 + DesignTokens.spacing.lg * 2 + 12))
+  );
 
   const styles = useMemo(() => {
     const headerJustifyContent: ViewStyle['justifyContent'] = disableToggle ? 'center' : 'space-between';
@@ -153,8 +168,8 @@ export default function FearAndGreedCard({
         marginBottom: 0,
         position: 'relative' as const,
         width: '100%' as const,
-        height: gaugeSize * 0.5,
-        minHeight: gaugeSize * 0.5,
+        height: gaugeViewportW * 0.55,
+        minHeight: gaugeViewportW * 0.55,
         alignSelf: 'center' as const,
       },
       segmentsLabels: {
@@ -243,7 +258,7 @@ export default function FearAndGreedCard({
         writingDirection: 'rtl' as const,
       },
     };
-  }, [DesignTokens, fullWidth, cardPadding, disableToggle]);
+  }, [DesignTokens, fullWidth, cardPadding, disableToggle, gaugeViewportW]);
 
   const cardContentContainerStyle =
     cardPadding === 'none'
@@ -282,11 +297,14 @@ export default function FearAndGreedCard({
       });
     } catch (err: any) {
       setError(err.message || 'שגיאה בטעינת המדד');
-      // נסה לטעון רק את הערך הנוכחי
+      // נסה לטעון רק את הערך הנוכחי (או ברירת מחדל) — ואז להציג כרטיס מלא, לא מסך שגיאה קבוע
       try {
         const currentValue = await fearAndGreedService.getCurrentValue();
         setData(currentValue);
+        setHistoricalData(null);
+        setError(null);
       } catch {
+        /* נשארים עם error מהקריאה המלאה */
       }
     } finally {
       setLoading(false);
@@ -405,8 +423,8 @@ export default function FearAndGreedCard({
   const icon = fearAndGreedService.getValueIcon(value);
 
   // פרמטרים לגייג' חצי עגול - מותאם לגודל (הוגדל)
-  const centerX = gaugeSize / 2;
-  const centerY = gaugeSize * 0.88; // מיקום נמוך יותר ליצירת חצי עיגול
+  const centerX = LOGICAL_GAUGE / 2;
+  const centerY = LOGICAL_GAUGE * 0.88; // מיקום נמוך יותר ליצירת חצי עיגול
   const radius = 100; // הוגדל
   const strokeWidth = 28; // עובי הקשת (הוגדל)
   const startAngle = -180; // מתחיל משמאל
@@ -484,7 +502,12 @@ export default function FearAndGreedCard({
             {/* גייג' במרכז */}
             <View style={{ alignItems: 'center' }}>
               <View style={styles.gaugeContainer}>
-                <Svg width={gaugeSize} height={gaugeSize * 0.6} viewBox={`0 0 ${gaugeSize} ${gaugeSize}`}>
+                <Svg
+                  width={gaugeViewportW}
+                  height={gaugeViewportW * 0.55}
+                  viewBox={`0 0 ${LOGICAL_GAUGE} ${LOGICAL_GAUGE}`}
+                  preserveAspectRatio="xMidYMid meet"
+                >
                   {/* רקע קשת אפור - מתחת לכל הקשתות */}
                   <Path
                     d={createArcPath(startAngle, endAngle, radius)}

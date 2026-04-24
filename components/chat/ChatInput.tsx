@@ -1891,7 +1891,8 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     alignItems: 'center',
     backgroundColor: 'transparent',
     paddingTop: 2,
-    paddingBottom: Math.max(tokens.spacing.xs, safeAreaBottom > 0 ? 4 : 2),
+    /** insets.bottom = אזור מקשי המערכת / home indicator — חייב להתווסף במלואו, לא רק כ־boolean */
+    paddingBottom: safeAreaBottom + Math.max(tokens.spacing.sm, 6),
     gap: 0,
   },
 

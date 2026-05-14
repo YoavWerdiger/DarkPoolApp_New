@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, Platform, Text, Image } from 'react-native';
+import { View, StyleSheet, Text, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import ReactionBar from './ReactionBar';
@@ -7,6 +7,7 @@ import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens, DesignTokens as CoreDesignTokens } from '../ui/DesignTokens';
+import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 
 import { HapticFeedback } from '../../utils/hapticFeedback';
@@ -77,6 +78,20 @@ export default function LongPressOverlay({
     }
   }, [visible, message]);
 
+  // snap point דינמי — חייב להיות לפני כל early return (Rules of Hooks)
+  // edgeToEdge=true מקטין overhead של handle ל-~18px
+  const snapPoint = React.useMemo(() => {
+    if (!message) return 0.62;
+    const mainCount = 4
+      + (message.isMe && !message.id?.toString().startsWith('temp-') ? 1 : 0) // edit
+      + (isAdmin ? 1 : 0); // pin
+    const dangerCount = (message.isMe ? 1 : 0) + (message.isMe || isAdmin ? 1 : 0);
+    const mainRows = Math.ceil(mainCount / 4);
+    const dangerRows = dangerCount > 0 ? 1 : 0;
+    const totalRows = mainRows + dangerRows;
+    return Math.min(0.82, 0.52 + totalRows * 0.088);
+  }, [message, isAdmin]);
+
   if (!message) {
     return null;
   }
@@ -92,58 +107,57 @@ export default function LongPressOverlay({
   const renderMessagePreview = () => {
     if (!message) return null;
 
-    const timeText = message.timestamp 
+    const timeText = message.timestamp
       ? format(new Date(message.timestamp), 'HH:mm')
-      : message.createdAt 
+      : message.createdAt
       ? format(new Date(message.createdAt), 'HH:mm')
       : '';
 
+    const isMedia = !!(message.mediaUrl && (message.type === 'image' || message.type === 'video'));
+    const mediaIcon = message.type === 'video' ? 'videocam' : 'image';
+    const mediaLabel = message.type === 'video' ? 'סרטון' : 'תמונה';
+
+    const isMe = message.isMe;
+    const p = messagePreviewStyles;
+
     return (
-      <View style={messagePreviewStyles.previewContainer}>
-        <View 
-          style={[
-            messagePreviewStyles.bubble,
-            message.isMe ? messagePreviewStyles.myBubble : messagePreviewStyles.theirBubble
-          ]}
-        >
-          {/* Avatar */}
-          {!message.isMe && message.senderAvatar && (
-            <Image 
-              source={{ uri: message.senderAvatar }} 
-              style={messagePreviewStyles.avatar} 
-            />
-          )}
-
-          {/* Content */}
-          <View style={messagePreviewStyles.messageContent}>
-            {/* Sender Name */}
-            {!message.isMe && message.senderName && (
-              <Text style={messagePreviewStyles.senderName}>
-                {message.senderName}
-              </Text>
-            )}
-
-            {/* Media or Text */}
-            {message.mediaUrl && (message.type === 'image' || message.type === 'video') ? (
-              <Image 
-                source={{ uri: message.mediaUrl }} 
-                style={messagePreviewStyles.mediaImage}
-                resizeMode="cover"
-              />
-            ) : message.content ? (
-              <Text style={messagePreviewStyles.messageText} numberOfLines={4}>
-                {message.content}
-              </Text>
-            ) : null}
-
-            {/* Timestamp */}
-            {timeText && (
-              <Text style={messagePreviewStyles.timeText}>
-                {timeText}
-              </Text>
+      <View style={p.row}>
+        {!isMe && (
+          <View style={p.avatarCol}>
+            {message.senderAvatar ? (
+              <Image source={{ uri: message.senderAvatar }} style={p.avatar} />
+            ) : (
+              <View style={[p.avatar, p.avatarFallback]}>
+                <Text style={p.avatarLetter}>
+                  {(message.senderName ?? '?').charAt(0).toUpperCase()}
+                </Text>
+              </View>
             )}
           </View>
+        )}
+
+        <View style={[p.bubble, isMe ? p.myBubble : p.theirBubble]}>
+          {!isMe && message.senderName ? (
+            <Text style={p.senderName} numberOfLines={1}>{message.senderName}</Text>
+          ) : null}
+
+          {isMedia && (
+            <View style={p.mediaRow}>
+              <Ionicons name={mediaIcon as any} size={16} color={DesignTokens.colors.text.secondary} />
+              <Text style={p.mediaText}>{mediaLabel}</Text>
+            </View>
+          )}
+
+          {message.content ? (
+            <Text style={[p.msgText, isMe ? p.myText : p.theirText]} numberOfLines={4}>
+              {message.content}
+            </Text>
+          ) : null}
+
+          <Text style={[p.timeText, isMe ? p.myTime : p.theirTime]}>{timeText}</Text>
         </View>
+
+        {!isMe && <View style={p.spacer} />}
       </View>
     );
   };
@@ -152,118 +166,128 @@ export default function LongPressOverlay({
     <BottomSheet
       isOpen={visible}
       onClose={onClose}
-      snapPoints={[0.75]} // הגדלתי ל-75% כדי שיהיה יותר מקום
+      snapPoints={[snapPoint]}
       showHandle={true}
       enablePanDownToClose={true}
-      backdropOpacity={0.4}
+      backdropOpacity={0.5}
       useModal={true}
+      edgeToEdge={true}
     >
-      <View style={styles.content}>
-        {/* Message Preview */}
+      <View style={styles.sheet}>
         {renderMessagePreview()}
 
-        {/* Reaction Bar */}
         <View style={styles.reactionWrapper}>
           <ReactionBar onReaction={handleReaction} currentReaction={currentUserReaction} />
         </View>
 
-        {/* Context Menu */}
-        <View style={styles.contextMenuWrapper}>
-          <ContextMenu 
-            onSelect={handleOptionSelect} 
-            isAdmin={isAdmin}
-            isMe={message.isMe}
-            canEdit={!message.id?.toString().startsWith('temp-')}
-          />
-        </View>
+        <ContextMenu
+          onSelect={handleOptionSelect}
+          isAdmin={isAdmin}
+          isMe={message.isMe}
+          canEdit={!message.id?.toString().startsWith('temp-')}
+        />
       </View>
     </BottomSheet>
   );
 }
 
 const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
-  previewContainer: {
-    paddingHorizontal: tokens.spacing.lg,
-    paddingTop: tokens.spacing.lg,
-    paddingBottom: tokens.spacing.md,
-    alignItems: 'center',
-  },
-  bubble: {
-    maxWidth: '85%',
-    borderRadius: tokens.borderRadius.lg,
-    paddingVertical: tokens.spacing.sm,
-    paddingHorizontal: tokens.spacing.md,
-    flexDirection: 'row',
+  row: {
+    flexDirection: 'row-reverse',
     alignItems: 'flex-end',
-    gap: tokens.spacing.sm,
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  avatarCol: {
+    alignSelf: 'flex-end',
+    marginBottom: 2,
+  },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+  },
+  avatarFallback: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: tokens.colors.text.primary,
+  },
+  spacer: { width: 34 + 8 },
+  bubble: {
+    flex: 1,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
   },
   myBubble: {
     backgroundColor: tokens.colors.primary.dim,
-    borderBottomRightRadius: tokens.borderRadius.xs,
-    borderTopLeftRadius: tokens.borderRadius.lg,
-    borderTopRightRadius: tokens.borderRadius.lg,
-    borderBottomLeftRadius: tokens.borderRadius.lg,
-    borderWidth: tokens.layout.borderWidth.normal,
+    borderBottomRightRadius: 4,
+    borderWidth: 1,
     borderColor: tokens.colors.border.active,
-    alignSelf: 'flex-end',
   },
   theirBubble: {
-    backgroundColor: tokens.colors.background.cardSolid,
-    borderBottomLeftRadius: tokens.borderRadius.xs,
-    borderTopLeftRadius: tokens.borderRadius.lg,
-    borderTopRightRadius: tokens.borderRadius.lg,
-    borderBottomRightRadius: tokens.borderRadius.lg,
-    borderWidth: tokens.layout.borderWidth.normal,
-    borderColor: tokens.colors.border.primary,
-    alignSelf: 'flex-start',
-  },
-  avatar: {
-    width: 32,
-    height: 30,
-    borderRadius: tokens.borderRadius.lg,
-  },
-  messageContent: {
-    flex: 1,
-    alignItems: 'flex-end',
+    backgroundColor: tokens.colors.background.cardSolid ?? 'rgba(255,255,255,0.08)',
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   senderName: {
-    fontSize: tokens.typography.label.size,
-    fontWeight: tokens.typography.fontWeight.semibold,
-    color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.xs,
-  },
-  messageText: {
-    fontSize: tokens.typography.fontSize.base,
-    lineHeight: Math.round(tokens.typography.fontSize.base * tokens.typography.lineHeight.normal),
-    color: tokens.colors.text.primary,
+    fontSize: 13,
+    fontWeight: '700',
+    color: tokens.colors.primary.main,
     textAlign: 'right',
   },
-  mediaImage: {
-    width: 200,
-    height: 200,
-    borderRadius: tokens.borderRadius.md,
-    marginBottom: tokens.spacing.xs,
+  mediaRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 5,
+  },
+  mediaText: {
+    fontSize: 14,
+    color: tokens.colors.text.secondary,
+  },
+  msgText: {
+    fontSize: 16,
+    lineHeight: 22,
+    textAlign: 'right',
+  },
+  myText: {
+    color: '#fff',
+  },
+  theirText: {
+    color: tokens.colors.text.primary,
   },
   timeText: {
-    fontSize: tokens.typography.fontSize.xs,
-    color: tokens.colors.text.secondary,
-    marginTop: tokens.spacing.xs,
-    textAlign: 'right',
+    fontSize: 11,
+    alignSelf: 'flex-end',
+  },
+  myTime: {
+    color: 'rgba(255,255,255,0.5)',
+  },
+  theirTime: {
+    color: tokens.colors.text.tertiary,
   },
 });
 
 const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    paddingHorizontal: 0,
-    paddingBottom: CoreDesignTokens.spacing.sm,
+  sheet: {
+    // paddingBottom מוסר — BottomSheet כבר מוסיף contentPaddingBottom (~54px)
   },
   reactionWrapper: {
     alignItems: 'center',
-    marginBottom: CoreDesignTokens.spacing.lg,
-    marginTop: CoreDesignTokens.spacing.sm,
-  },
-  contextMenuWrapper: {
-    flex: 1,
+    marginVertical: 10,
   },
 });

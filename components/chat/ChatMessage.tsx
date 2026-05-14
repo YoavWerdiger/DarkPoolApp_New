@@ -31,6 +31,7 @@ import {
   chatMediaStoragePathFromRef,
 } from '../../services/chat/chatSignedMediaUrl';
 import TradeMessage from './TradeMessage';
+import LinkPreview, { extractFirstUrl } from './LinkPreview';
 
 type ResolvedMessageMedia = {
   main: string | null;
@@ -546,6 +547,20 @@ function ChatMessage({
             message.message_type === MessageType.AUDIO
               ? { sentTimeText: timeText, isEdited: !!message.is_edited, isSending }
               : undefined,
+            /* timeOverlay: IMAGE/VIDEO ללא caption — timestamp overlay על התמונה כמו WhatsApp */
+            (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) && !message.content
+              ? (
+                <View style={styles.imageTimeOverlay}>
+                  {message.is_edited && (
+                    <Text style={styles.imageTimeText}>נערך · </Text>
+                  )}
+                  <Text style={styles.imageTimeText}>{timeText}</Text>
+                  {isMe && isSending && (
+                    <ActivityIndicator size={8} color="rgba(255,255,255,0.7)" />
+                  )}
+                </View>
+              )
+              : undefined,
           )}
 
           {/* Text Content */}
@@ -564,20 +579,32 @@ function ChatMessage({
               { textAlign: detectTextDirection(displayContent) }
             ];
             const mentionStyle = {
-              color: isMe ? DesignTokens.colors.text.inverse : DesignTokens.colors.primary.main,
-              fontWeight: DesignTokens.typography.fontWeight.semibold,
+              /* הודעות שלי — בועה כהה, mention צריך להיות לבן bold; של אחרים — ירוק */
+              color: isMe ? 'rgba(255,255,255,0.95)' : DesignTokens.colors.primary.main,
+              fontWeight: '700' as const,
             };
 
+            const linkUrl = extractFirstUrl(displayContent);
             return (
-              <Text style={textStyle}>
-                {renderTextWithMentions(displayContent, textStyle, mentionStyle)}
-              </Text>
+              <>
+                <Text style={textStyle}>
+                  {renderTextWithMentions(displayContent, textStyle, mentionStyle)}
+                </Text>
+                {linkUrl && !message.is_sending && (
+                  <LinkPreview url={linkUrl} isMe={isMe} />
+                )}
+              </>
             );
           })()}
 
-          {/* Metadata — לאודיו: זמן שליחה בשורה אחת עם מיקום/אורך בתוך AudioPlayer */}
-          {(message.send_error || message.message_type !== MessageType.AUDIO) && (
-          <View style={styles.metadata}>
+          {/* Metadata — לאודיו: זמן בתוך AudioPlayer; לתמונה/וידאו ללא caption: overlay על התמונה */}
+          {(message.send_error || message.message_type !== MessageType.AUDIO) &&
+           !((message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) && !message.content) && (
+          <View style={[styles.metadata,
+            (message.message_type === MessageType.IMAGE ||
+             message.message_type === MessageType.VIDEO ||
+             message.message_type === MessageType.MEDIA_GROUP) && { paddingHorizontal: 6, paddingBottom: 2 }
+          ]}>
             {message.send_error ? (
               <Text style={styles.sendErrorText}>⚠ שגיאה · לחץ לחיצה ארוכה לנסות שוב</Text>
             ) : (
@@ -655,7 +682,8 @@ function renderMediaContent(
   isMe: boolean,
   tokens: ReturnType<typeof useDesignTokens>,
   onMediaPress?: () => void,
-  audioMeta?: AudioBubbleMeta
+  audioMeta?: AudioBubbleMeta,
+  timeOverlayNode?: React.ReactNode
 ) {
   const imageUri =
     message.local_media_uri || resolved.main || message.media_url;
@@ -675,12 +703,14 @@ function renderMediaContent(
       const aspectRatio = imgW && imgH ? imgW / imgH : 4 / 3;
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9} disabled={message.is_uploading}>
-          <View>
+          <View style={{ position: 'relative' }}>
             <Image
               source={{ uri: resolved.thumb || message.media_thumbnail_url || imageUri }}
               style={[styles.mediaImage, { aspectRatio }, message.is_uploading && { opacity: 0.7 }]}
               resizeMode="cover"
             />
+            {/* Timestamp overlay — כמו WhatsApp, בפינה ימין-תחתון של התמונה */}
+            {timeOverlayNode}
             {message.is_uploading && (
               <View style={[styles.uploadOverlay, { aspectRatio }]}>
                 <ActivityIndicator size="large" color={tokens.colors.primary.main} />
@@ -729,6 +759,9 @@ function renderMediaContent(
                 </Text>
               </View>
             )}
+
+            {/* Timestamp overlay */}
+            {timeOverlayNode}
           </View>
         </TouchableOpacity>
       );
@@ -1403,22 +1436,42 @@ function AudioPlayer({
 }
 
 export default memo(ChatMessage, (prevProps, nextProps) => {
+  const a = prevProps.message;
+  const b = nextProps.message;
+
+  // Fast path: identical id + identical object reference means ChatContext
+  // didn't replace the message object → nothing visible could have changed.
+  if (a === b && prevProps.isHighlighted === nextProps.isHighlighted &&
+      prevProps.isMe === nextProps.isMe &&
+      prevProps.showAvatar === nextProps.showAvatar &&
+      prevProps.showSenderName === nextProps.showSenderName) {
+    return true;
+  }
+
+  // Field-level comparator — every field that ChatMessage renders to the
+  // screen MUST be listed here, otherwise edits/reactions/read-receipts
+  // can silently fail to update.
   return (
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.message.content === nextProps.message.content &&
-    prevProps.message.is_edited === nextProps.message.is_edited &&
-    prevProps.message.is_deleted === nextProps.message.is_deleted &&
-    prevProps.message.media_url === nextProps.message.media_url &&
-    prevProps.message.is_sending === nextProps.message.is_sending &&
-    prevProps.message.send_error === nextProps.message.send_error &&
-    prevProps.message.upload_progress === nextProps.message.upload_progress &&
-    prevProps.message.reactions?.length === nextProps.message.reactions?.length &&
-    prevProps.message.reactions === nextProps.message.reactions &&
+    a.id === b.id &&
+    a.content === b.content &&
+    a.is_edited === b.is_edited &&
+    a.is_deleted === b.is_deleted &&
+    a.deleted_for_everyone === b.deleted_for_everyone &&
+    a.media_url === b.media_url &&
+    a.media_thumbnail_url === b.media_thumbnail_url &&
+    a.is_sending === b.is_sending &&
+    a.send_error === b.send_error &&
+    a.upload_progress === b.upload_progress &&
+    a.reactions === b.reactions &&
+    a.reactions_count === b.reactions_count &&
+    a.read_by_count === b.read_by_count &&
+    a.is_starred_by_me === b.is_starred_by_me &&
+    a.mentioned_users === b.mentioned_users &&
+    a.reply_to === b.reply_to &&
     prevProps.isMe === nextProps.isMe &&
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.showSenderName === nextProps.showSenderName &&
-    prevProps.isHighlighted === nextProps.isHighlighted &&
-    true
+    prevProps.isHighlighted === nextProps.isHighlighted
   );
 });
 
@@ -1640,6 +1693,25 @@ const createStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  /* WhatsApp-style timestamp overlay on images/videos */
+  imageTimeOverlay: {
+    position: 'absolute',
+    bottom: 6,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.48)',
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    gap: 3,
+  },
+  imageTimeText: {
+    color: 'rgba(255,255,255,0.93)',
+    fontSize: 11,
+    fontWeight: '500',
+    writingDirection: 'ltr',
   },
   videoOverlay: {
     ...StyleSheet.absoluteFillObject,

@@ -14,6 +14,10 @@ export interface BottomSheetProps {
   edgeToEdge?: boolean;
   /** גובה אזור הגסטרה הצף במצב edgeToEdge (בpx). מאפשר להגדיל את אזור הגרירה (למשל מעל תמונה שלמה). */
   dragAreaHeight?: number;
+  /** גרדיאנט מסך + שור־דוב (כמו ChatSessionBackdrop). ברירת מחדל: true */
+  showBrandBackground?: boolean;
+  /** פינות עליונות של לוח השיט (ברירת מחדל מ־styles). למשל 28 כמו מודאל טופס */
+  topCornerRadius?: number;
 }
 
 

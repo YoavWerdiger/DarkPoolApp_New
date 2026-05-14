@@ -1,15 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+// ============================================
+// MentionPicker — styled like replyPreviewContainer in ChatInput
+// ============================================
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  Keyboard,
-  KeyboardEvent,
-  Platform,
+  View, Text, StyleSheet, FlatList, Image,
+  TouchableOpacity, Platform, Keyboard, KeyboardEvent,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
@@ -31,242 +26,222 @@ interface MentionPickerProps {
 }
 
 const MentionPicker: React.FC<MentionPickerProps> = ({
-  visible,
-  onSelectUser,
-  onClose,
-  groupId,
-  searchQuery,
+  visible, onSelectUser, onClose, groupId, searchQuery,
 }) => {
-  const DesignTokens = useDesignTokens();
-  const styles = useMemo(() => createMentionStyles(DesignTokens), [DesignTokens]);
+  const tokens = useDesignTokens();
   const [members, setMembers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const currentUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height);
-    const onHide = () => setKeyboardHeight(0);
-
-    const sub1 = Keyboard.addListener(showEvent, onShow);
-    const sub2 = Keyboard.addListener(hideEvent, onHide);
-    return () => { sub1.remove(); sub2.remove(); };
+    supabase.auth.getUser().then(({ data }) => {
+      currentUserIdRef.current = data.user?.id ?? null;
+    });
   }, []);
 
   useEffect(() => {
-    if (visible && groupId) {
-      loadGroupMembers();
-    }
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent  = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height);
+    const onHide = () => setKeyboardHeight(0);
+    const s1 = Keyboard.addListener(showEvent, onShow);
+    const s2 = Keyboard.addListener(hideEvent,  onHide);
+    return () => { s1.remove(); s2.remove(); };
+  }, []);
+
+  useEffect(() => {
+    if (visible && groupId) loadGroupMembers();
   }, [visible, groupId]);
 
   const loadGroupMembers = async () => {
-    if (!groupId) return;
-    setLoading(true);
     try {
-      const { data: membersData, error: membersError } = await supabase
+      const { data, error } = await supabase
         .from('chat_group_members')
-        .select(`
-          user_id,
-          role,
-          users:user_id (
-            id,
-            full_name,
-            display_name,
-            profile_picture
-          )
-        `)
+        .select('user_id, users:user_id(id, full_name, display_name, profile_picture)')
         .eq('group_id', groupId);
-
-      if (membersError) {
-        setLoading(false);
-        return;
+      if (!error && data) {
+        setMembers(
+          data
+            .filter(m => m.user_id !== currentUserIdRef.current)
+            .map(m => {
+              const u = m.users as any;
+              return {
+                id: m.user_id,
+                full_name: u?.full_name ?? null,
+                display_name: u?.display_name ?? u?.full_name ?? null,
+                profile_picture: u?.profile_picture ?? null,
+              };
+            })
+        );
       }
-
-      if (membersData && membersData.length > 0) {
-        const formattedMembers = membersData.map(member => {
-          const userData = member.users as any;
-          return {
-            id: member.user_id,
-            full_name: userData?.full_name || null,
-            profile_picture: userData?.profile_picture || null,
-            display_name: userData?.display_name || userData?.full_name || `User ${member.user_id.slice(0, 8)}`,
-          };
-        });
-        setMembers(formattedMembers);
-      } else {
-        setMembers([]);
-      }
-    } catch (error) {
-      logger.error('MentionPicker', 'Failed to load members', error);
-      setMembers([]);
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      logger.error('MentionPicker', 'load failed', e);
     }
   };
 
-  const filteredMembers = useMemo(() => {
-    if (!searchQuery) return members;
-    const query = searchQuery.toLowerCase().replace('@', '');
-    return members.filter(member => {
-      const name = (member.display_name || member.full_name || '').toLowerCase();
-      return name.includes(query);
+  // אם השם נראה כמו email — מציג רק את החלק לפני @
+  const cleanName = (raw: string | null): string => {
+    if (!raw) return '';
+    if (raw.includes('@')) return raw.split('@')[0];
+    return raw;
+  };
+
+  const filtered = useMemo(() => {
+    // deduplicate by user id
+    const seen = new Set<string>();
+    const unique = members.filter(m => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+    if (!searchQuery) return unique;
+    const q = searchQuery.toLowerCase().replace('@', '');
+    return unique.filter(m => {
+      const name = cleanName(m.display_name || m.full_name || '');
+      return name.toLowerCase().includes(q);
     });
   }, [members, searchQuery]);
 
-  const handleSelectUser = (member: User) => {
-    const displayName = member.display_name || member.full_name || 'משתמש';
-    onSelectUser({ id: member.id, display: `@${displayName}` });
+  const handleSelect = (m: User) => {
+    const display = cleanName(m.display_name || m.full_name) || 'משתמש';
+    onSelectUser({ id: m.id, display: `@${display}` });
     onClose();
   };
 
-  const renderMember = ({ item }: { item: User }) => (
-    <TouchableOpacity
-      style={styles.memberRow}
-      onPress={() => handleSelectUser(item)}
-      activeOpacity={0.7}
-    >
-      <Image
-        source={
-          item.profile_picture
-            ? { uri: item.profile_picture }
-            : require('../../assets/icon.png')
-        }
-        style={styles.avatar}
-      />
-      <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>
-          {item.display_name || item.full_name || 'משתמש'}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+  if (!visible || filtered.length === 0) return null;
 
-  if (!visible) return null;
-
-  // Position the picker just above the keyboard
-  const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 8 : 80;
+  const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 4 : 76;
+  const maxItems = Math.min(filtered.length, 5);
+  const ITEM_H = 44;
+  const primary = tokens.colors.primary.main;
+  const dividerBg = tokens.colors.border?.divider ?? 'rgba(255,255,255,0.07)';
+  const lgRadius = tokens.borderRadius?.lg ?? 16;
 
   return (
-    // Full-screen backdrop to dismiss on outside tap
-    <TouchableWithoutFeedback onPress={onClose}>
-      <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-        <TouchableWithoutFeedback>
-          <View style={[styles.container, { bottom: bottomOffset }]}>
-            <View style={styles.picker}>
-              <View style={styles.header}>
-                <Text style={styles.title}>בחר משתמש</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Text style={styles.closeText}>✕</Text>
-                </TouchableOpacity>
-              </View>
+    <View
+      pointerEvents="box-none"
+      style={[StyleSheet.absoluteFill, { zIndex: 2000 }]}
+    >
+      <View
+        style={[
+          styles.container,
+          {
+            bottom: bottomOffset,
+            height: maxItems * ITEM_H,
+            backgroundColor: dividerBg,
+            borderRadius: lgRadius,
+          },
+        ]}
+      >
+        {/* פס ירוק שמאלי — בדיוק כמו replyPreviewBar */}
+        <View style={[styles.accentBar, { backgroundColor: primary }]} />
 
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>טוען...</Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={filteredMembers}
-                  renderItem={renderMember}
-                  keyExtractor={(item) => item.id}
-                  showsVerticalScrollIndicator={true}
-                  contentContainerStyle={styles.listContainer}
-                  keyboardShouldPersistTaps="handled"
-                  style={styles.list}
-                />
-              )}
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
+        <FlatList
+          data={filtered}
+          keyExtractor={m => m.id}
+          keyboardShouldPersistTaps="always"
+          showsVerticalScrollIndicator={false}
+          style={styles.list}
+            renderItem={({ item, index }) => {
+            const name = cleanName(item.display_name || item.full_name) || 'משתמש';
+            const isLast = index === filtered.length - 1;
+            return (
+              <TouchableOpacity
+                onPress={() => handleSelect(item)}
+                activeOpacity={0.55}
+                style={[
+                  styles.row,
+                  { height: ITEM_H },
+                  !isLast && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: 'rgba(255,255,255,0.08)',
+                  },
+                ]}
+              >
+                {/* @ prefix — כמו replyLabel */}
+                <Text style={[styles.atSign, { color: primary }]}>@</Text>
+
+                {/* שם */}
+                <Text style={[styles.name, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                  {name}
+                </Text>
+
+                {/* Avatar */}
+                {item.profile_picture ? (
+                  <Image source={{ uri: item.profile_picture }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarFallback]}>
+                    <Text style={[styles.avatarLetter, { color: tokens.colors.text.secondary }]}>
+                      {name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          }}
+        />
       </View>
-    </TouchableWithoutFeedback>
+    </View>
   );
 };
 
-const createMentionStyles = (tokens: any) =>
-  StyleSheet.create({
-    container: {
-      position: 'absolute',
-      left: 20,
-      right: 20,
-      zIndex: 1000,
-    },
-    picker: {
-      backgroundColor: tokens.colors.background.elevated2,
-      borderRadius: tokens.borderRadius.lg,
-      maxHeight: 300,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: tokens.colors.border.subtle,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 8,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: tokens.spacing.base,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
-    },
-    title: {
-      color: tokens.colors.text.primary,
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: '600',
-    },
-    closeButton: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: tokens.colors.background.input,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    closeText: {
-      color: tokens.colors.text.primary,
-      fontSize: tokens.typography.fontSize.sm,
-    },
-    loadingContainer: {
-      padding: 40,
-      alignItems: 'center',
-    },
-    loadingText: {
-      color: tokens.colors.text.tertiary,
-      fontSize: tokens.typography.fontSize.base,
-    },
-    listContainer: {
-      paddingBottom: tokens.spacing.base,
-    },
-    list: {
-      maxHeight: 220,
-    },
-    memberRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: tokens.spacing.base,
-      paddingVertical: tokens.spacing.md,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.divider,
-    },
-    avatar: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      marginRight: 12,
-    },
-    memberInfo: {
-      flex: 1,
-    },
-    memberName: {
-      color: tokens.colors.text.primary,
-      fontSize: tokens.typography.fontSize.base,
-      fontWeight: '500',
-      textAlign: 'right',
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  accentBar: {
+    width: 3,
+    borderRadius: 1.5,
+    marginVertical: 8,
+    marginLeft: 10,
+    flexShrink: 0,
+  },
+  list: {
+    flex: 1,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    gap: 8,
+  },
+  atSign: {
+    fontSize: 13,
+    fontWeight: '700',
+    flexShrink: 0,
+    width: 14,
+    textAlign: 'center',
+  },
+  name: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    flexShrink: 0,
+  },
+  avatarFallback: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarLetter: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+});
 
 export default MentionPicker;

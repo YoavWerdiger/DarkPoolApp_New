@@ -18,6 +18,7 @@ import Animated, {
   useAnimatedStyle,
   runOnJS,
   withTiming,
+  withSpring,
 } from 'react-native-reanimated';
 import {
   GestureDetector,
@@ -243,6 +244,25 @@ export default function MediaViewer({
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
+  // Focal point saved at pinch start
+  const pinchFocalX = useSharedValue(0);
+  const pinchFocalY = useSharedValue(0);
+  const pinchStartScale = useSharedValue(1);
+  const pinchStartTranslateX = useSharedValue(0);
+  const pinchStartTranslateY = useSharedValue(0);
+
+  const SPRING = { damping: 20, stiffness: 220 };
+
+  const resetZoom = () => {
+    'worklet';
+    scale.value = withSpring(1, SPRING);
+    translateX.value = withSpring(0, SPRING);
+    translateY.value = withSpring(0, SPRING);
+    savedScale.value = 1;
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+  };
+
   // Reset when modal closes
   React.useEffect(() => {
     if (!visible) {
@@ -255,85 +275,98 @@ export default function MediaViewer({
     }
   }, [visible]);
 
-  // Pinch gesture for zoom
+  // Pinch gesture — tracks focal point for natural zoom origin
   const pinchGesture = Gesture.Pinch()
+    .onStart((event) => {
+      'worklet';
+      pinchStartScale.value = savedScale.value;
+      pinchStartTranslateX.value = translateX.value;
+      pinchStartTranslateY.value = translateY.value;
+      // focal point relative to screen center
+      pinchFocalX.value = event.focalX - SCREEN_WIDTH / 2;
+      pinchFocalY.value = event.focalY - SCREEN_HEIGHT / 2;
+    })
     .onUpdate((event) => {
-      scale.value = savedScale.value * event.scale;
+      'worklet';
+      const newScale = Math.max(0.5, Math.min(6, pinchStartScale.value * event.scale));
+      scale.value = newScale;
+      // Keep the focal point stationary as scale changes
+      const scaleRatio = event.scale;
+      translateX.value = pinchStartTranslateX.value + pinchFocalX.value * (1 - scaleRatio);
+      translateY.value = pinchStartTranslateY.value + pinchFocalY.value * (1 - scaleRatio);
     })
     .onEnd(() => {
-      // If pinched smaller than 1, return to 1 (no spring - natural feel)
+      'worklet';
       if (scale.value < 1) {
-        scale.value = 1;
-        savedScale.value = 1;
-        translateX.value = 0;
-        translateY.value = 0;
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
+        resetZoom();
       } else if (scale.value > 5) {
-        scale.value = 5;
+        scale.value = withSpring(5, SPRING);
         savedScale.value = 5;
+        savedTranslateX.value = translateX.value;
+        savedTranslateY.value = translateY.value;
       } else {
         savedScale.value = scale.value;
+        savedTranslateX.value = translateX.value;
+        savedTranslateY.value = translateY.value;
       }
     });
 
-  // Pan gesture for drag - only when zoomed in
+  // Pan gesture — only when zoomed, with spring boundary snap
   const panGesture = Gesture.Pan()
-    .minDistance(10)
+    .minDistance(0)
+    .averageTouches(true)
+    .onStart(() => {
+      'worklet';
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    })
     .onUpdate((event) => {
-      // Only allow panning when zoomed in
+      'worklet';
       if (scale.value > 1) {
         translateX.value = savedTranslateX.value + event.translationX;
         translateY.value = savedTranslateY.value + event.translationY;
       }
     })
     .onEnd(() => {
-      // When not zoomed, don't allow panning (stays at center)
+      'worklet';
       if (scale.value <= 1) {
-        translateX.value = 0;
-        translateY.value = 0;
+        translateX.value = withSpring(0, SPRING);
+        translateY.value = withSpring(0, SPRING);
         savedTranslateX.value = 0;
         savedTranslateY.value = 0;
       } else {
-        // When zoomed, constrain to bounds (natural, no spring)
-        const maxTranslateX = (SCREEN_WIDTH * (scale.value - 1)) / 2;
-        const maxTranslateY = (SCREEN_HEIGHT * (scale.value - 1)) / 2;
-
-        let finalX = translateX.value;
-        let finalY = translateY.value;
-
-        if (Math.abs(translateX.value) > maxTranslateX) {
-          finalX = translateX.value > 0 ? maxTranslateX : -maxTranslateX;
-        }
-        if (Math.abs(translateY.value) > maxTranslateY) {
-          finalY = translateY.value > 0 ? maxTranslateY : -maxTranslateY;
-        }
-
-        translateX.value = finalX;
-        translateY.value = finalY;
-        savedTranslateX.value = finalX;
-        savedTranslateY.value = finalY;
+        const maxX = (SCREEN_WIDTH  * (scale.value - 1)) / 2;
+        const maxY = (SCREEN_HEIGHT * (scale.value - 1)) / 2;
+        const clampedX = Math.max(-maxX, Math.min(maxX, translateX.value));
+        const clampedY = Math.max(-maxY, Math.min(maxY, translateY.value));
+        translateX.value = withSpring(clampedX, SPRING);
+        translateY.value = withSpring(clampedY, SPRING);
+        savedTranslateX.value = clampedX;
+        savedTranslateY.value = clampedY;
       }
     });
 
-  // Double tap to zoom - original direct animation (no spring)
+  // Double tap — zoom to 2.5x (spring) or reset
   const doubleTapGesture = Gesture.Tap()
     .numberOfTaps(2)
-    .onEnd(() => {
+    .onEnd((event) => {
+      'worklet';
       if (savedScale.value > 1) {
-        scale.value = 1;
-        savedScale.value = 1;
-        translateX.value = 0;
-        translateY.value = 0;
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
+        resetZoom();
       } else {
-        scale.value = 2;
-        savedScale.value = 2;
+        // Zoom centered on tap point
+        const fX = event.x - SCREEN_WIDTH  / 2;
+        const fY = event.y - SCREEN_HEIGHT / 2;
+        const targetScale = 2.5;
+        scale.value = withSpring(targetScale, SPRING);
+        translateX.value = withSpring(-fX * (targetScale - 1), SPRING);
+        translateY.value = withSpring(-fY * (targetScale - 1), SPRING);
+        savedScale.value = targetScale;
       }
     });
 
-  const composedGesture = Gesture.Race(
+  // Pinch + pan simultaneously; doubleTap exclusive (takes priority)
+  const composedGesture = Gesture.Exclusive(
     doubleTapGesture,
     Gesture.Simultaneous(pinchGesture, panGesture)
   );

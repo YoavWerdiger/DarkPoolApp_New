@@ -313,6 +313,21 @@ export default function CalendarTab() {
     );
   };
 
+  // חייב להיות לפני כל early return — Rules of Hooks
+  const monthTotal = dailyPnl.reduce((sum, day) => sum + day.pnl, 0);
+  const isMonthProfit = monthTotal >= 0;
+
+  const monthStats = React.useMemo(() => {
+    const activeDays = dailyPnl.filter((d) => d.pnl !== 0);
+    if (activeDays.length === 0) return null;
+    const winDays = activeDays.filter((d) => d.pnl > 0).length;
+    const lossDays = activeDays.filter((d) => d.pnl < 0).length;
+    const best = Math.max(...activeDays.map((d) => d.pnl));
+    const worst = Math.min(...activeDays.map((d) => d.pnl));
+    const tradeCount = trades.length;
+    return { winDays, lossDays, best, worst, tradeCount };
+  }, [dailyPnl, trades]);
+
   if (loading) {
     return (
       <View style={[styles.loadingContainer, styles.rtlRoot]}>
@@ -321,9 +336,6 @@ export default function CalendarTab() {
       </View>
     );
   }
-
-  const monthTotal = dailyPnl.reduce((sum, day) => sum + day.pnl, 0);
-  const isMonthProfit = monthTotal >= 0;
 
   return (
     <View style={[styles.outer, styles.rtlRoot]}>
@@ -422,33 +434,60 @@ export default function CalendarTab() {
         {/* Legend */}
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendColor,
-                { backgroundColor: `${DesignTokens.colors.success.main}${CALENDAR_LEGEND_SWATCH_ALPHA}` },
-              ]}
-            />
+            <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.success.main}${CALENDAR_LEGEND_SWATCH_ALPHA}` }]} />
             <Text style={styles.legendText}>רווח</Text>
           </View>
           <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendColor,
-                { backgroundColor: `${DesignTokens.colors.text.danger}${CALENDAR_LEGEND_SWATCH_ALPHA}` },
-              ]}
-            />
+            <View style={[styles.legendColor, { backgroundColor: `${DesignTokens.colors.text.danger}${CALENDAR_LEGEND_SWATCH_ALPHA}` }]} />
             <Text style={styles.legendText}>הפסד</Text>
           </View>
           <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendColor,
-                { backgroundColor: DesignTokens.colors.glass.card.bg, borderColor: DesignTokens.colors.glass.card.border },
-              ]}
-            />
+            <View style={[styles.legendColor, { backgroundColor: DesignTokens.colors.glass.card.bg, borderColor: DesignTokens.colors.glass.card.border }]} />
             <Text style={styles.legendText}>ללא טריידים</Text>
           </View>
         </View>
+
+        {/* Monthly Stats */}
+        {monthStats ? (
+          <View style={{ paddingHorizontal: DesignTokens.layout?.screenPadding ?? 20, paddingBottom: 8 }}>
+            <UICard variant="glass" glassIntensity="light" padding="md" style={{ borderRadius: 16, marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'right', marginBottom: 12, letterSpacing: 0.3 }}>
+                סטטיסטיקות חודש
+              </Text>
+              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>טריידים</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: DesignTokens.colors.text.primary }}>{monthStats.tradeCount}</Text>
+                </View>
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>ימי רווח</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: DesignTokens.colors.primary.main }}>{monthStats.winDays}</Text>
+                </View>
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>ימי הפסד</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: DesignTokens.colors.text.danger }}>{monthStats.lossDays}</Text>
+                </View>
+              </View>
+              <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: DesignTokens.colors.border.subtle, marginVertical: 10 }} />
+              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>יום הטוב</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: DesignTokens.colors.primary.main, writingDirection: 'ltr' }}>{formatCurrency(monthStats.best)}</Text>
+                </View>
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>יום הגרוע</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: DesignTokens.colors.text.danger, writingDirection: 'ltr' }}>{formatCurrency(monthStats.worst)}</Text>
+                </View>
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text style={{ fontSize: 10, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>סה"כ חודש</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: isMonthProfit ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger, writingDirection: 'ltr' }}>
+                    {isMonthProfit ? '+' : ''}{formatCurrency(monthTotal)}
+                  </Text>
+                </View>
+              </View>
+            </UICard>
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );

@@ -11,9 +11,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
-import { useTheme } from '../../../context/ThemeContext';
 import { useDesignTokens } from '../DesignTokens';
+import { BrandTransbackWatermark } from '../BrandTransbackWatermark';
+import { ScreenGradientBackground } from '../../VideoBackground';
 import { BottomSheetProps } from './BottomSheet.types';
 import { createStyles } from './BottomSheet.styles';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
@@ -26,8 +26,8 @@ const SPRING_CONFIG = {
   stiffness: 280,
   mass: 0.4,
 };
-const CLOSE_THRESHOLD = 120;
-const VELOCITY_THRESHOLD = 800;
+const CLOSE_THRESHOLD = 88;
+const VELOCITY_THRESHOLD = 650;
 
 const BottomSheetCloseContext = createContext<(() => void) | null>(null);
 
@@ -47,10 +47,13 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   useModal = true,
   edgeToEdge = false,
   dragAreaHeight,
+  showBrandBackground = true,
+  topCornerRadius,
 }) => {
   const tokens = useDesignTokens();
-  const { isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
+  const dragStripPaddingV = showHandle ? 22 : 8;
+  const dragStripMinHeight = showHandle ? 88 : 36;
   /** באנדרואיד לפעמים insets.bottom=0 למרות סרגל ניווט/מחוות — מגנים על ריפוד תחתון */
   const contentPaddingBottom = useMemo(() => {
     const minBottom = Platform.OS === 'android' ? 24 : 20;
@@ -150,9 +153,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     const currentMinAllowedY = minAllowedY;
     
     return Gesture.Pan()
-      // דורש תנועה אמיתית לפני שהגסטרה מופעלת — מאפשר לכפתורים (TouchableOpacity)
-      // שמתחת לאזור הגרירה לקבל tap events
-      .activeOffsetY([-8, 8])
+      // סף גבוה — מונע הפעלה מטאפ רגיל על כפתור (5px היה רגיש מדי)
+      .activeOffsetY([-18, 18])
+      .failOffsetX([-20, 20])
       .onStart(() => {
         'worklet';
         if (!currentSnapValues || currentSnapValues.length === 0) return;
@@ -252,13 +255,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const styles = createStyles(tokens.colors.overlay || 'rgba(0,0,0,0.6)');
 
-  /** שכבת זכוכית מעל הטשטוש — רק ב־iOS (ב־Android נרצה אפור "other bubble") */
-  const glassTintOverlay =
-    isDarkMode
-      ? tokens.glassmorphism.cardBackground.dark.medium
-      : tokens.glassmorphism.cardBackground.light.medium;
-  const androidSheetBackground = tokens.colors.background.secondary;
-
+  /**
+   * רקע השיט כמו מסכי האפליקציה (TradingScreen וכו'):
+   * #0A0E0A → ScreenGradientBackground → BrandTransbackWatermark — בלי שכבה כהה
+   * שמכסה את הגרדיאנט והשור־דוב.
+   */
   const content = (
     <BottomSheetCloseContext.Provider value={handleCloseWithAnimation}>
       <Fragment>
@@ -274,99 +275,72 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         style={[
           styles.container, 
           sheetStyle,
+          topCornerRadius != null && topCornerRadius > 0
+            ? {
+                borderTopLeftRadius: topCornerRadius,
+                borderTopRightRadius: topCornerRadius,
+              }
+            : null,
         ]}
         collapsable={false}
       >
-        {Platform.OS === 'ios' ? (
-          <BlurView
-            intensity={tokens.glassmorphism.blurIntensity.medium}
-            tint={tokens.glassmorphism.blurTint.default}
-            style={StyleSheet.absoluteFill}
-          />
+        {showBrandBackground ? (
+          <>
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, { backgroundColor: '#0A0E0A' }]}
+            />
+            <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
+            <BrandTransbackWatermark
+              layout="sheetBottom"
+              sheetVisibleHeightPx={
+                snapValues.length > 0
+                  ? SCREEN_HEIGHT - snapValues[0]
+                  : SCREEN_HEIGHT * 0.5
+              }
+            />
+          </>
         ) : (
           <View
+            pointerEvents="none"
             style={[
               StyleSheet.absoluteFill,
-              {
-                // Android בלבד: צבע אפור זהה לבועת "other"
-                backgroundColor: androidSheetBackground,
-              },
+              { backgroundColor: tokens.colors.background.secondary },
             ]}
           />
         )}
-        <View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            { backgroundColor: Platform.OS === 'ios' ? glassTintOverlay : 'transparent' },
-          ]}
-        />
 
-          <View 
-            style={[
-              styles.content,
-              { paddingBottom: contentPaddingBottom },
-            ]}
-          >
-            {edgeToEdge ? (
-              <>
-                {/* גרירה צפה — לא דוחפת את התוכן למטה */}
-                <GestureDetector gesture={panGesture}>
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: dragAreaHeight ?? (showHandle ? 64 : 72),
-                      alignItems: 'center',
-                      justifyContent: 'flex-start',
-                      paddingTop: showHandle ? 16 : 0,
-                      zIndex: 20,
-                    }}
-                    pointerEvents="box-none"
-                    hitSlop={{ top: 16, bottom: 8, left: 0, right: 0 }}
-                  >
+          {/* כל ה-sheet ניתן לגרירה — GestureDetector עוטף את כל התוכן */}
+          <GestureDetector gesture={panGesture}>
+            <View 
+              style={[
+                styles.content,
+                { paddingBottom: contentPaddingBottom },
+              ]}
+            >
+              {edgeToEdge ? (
+                <>
+                  {/* Handle indicator (visual only) */}
+                  {showHandle && (
+                    <View style={{ width: '100%', alignItems: 'center', paddingTop: 14, paddingBottom: 4 }}>
+                      <View style={[styles.handle, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>{children}</View>
+                </>
+              ) : (
+                <>
+                  {/* Handle indicator */}
+                  <View style={{ width: '100%', alignItems: 'center', paddingVertical: dragStripPaddingV, minHeight: dragStripMinHeight }}>
                     {showHandle && (
-                      <View
-                        style={[
-                          styles.handle,
-                          { backgroundColor: tokens.colors.border.active },
-                        ]}
-                      />
+                      <View style={[styles.handle, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
                     )}
                   </View>
-                </GestureDetector>
-                <View style={{ flex: 1 }}>{children}</View>
-              </>
-            ) : (
-              <>
-                {/* Handle area for pan gesture - can be dragged */}
-                <GestureDetector gesture={panGesture}>
-                  <View 
-                    style={{ 
-                      width: '100%', 
-                      alignItems: 'center', 
-                      paddingVertical: 16,
-                      minHeight: 36,
-                    }}
-                    pointerEvents="box-none"
-                    hitSlop={{ top: 16, bottom: 0, left: 0, right: 0 }}
-                  >
-                    {showHandle && (
-                      <View
-                        style={[
-                          styles.handle,
-                          { backgroundColor: tokens.colors.border.active }
-                        ]}
-                      />
-                    )}
-                  </View>
-                </GestureDetector>
-                {children}
-              </>
-            )}
-          </View>
+                  {children}
+                </>
+              )}
+            </View>
+          </GestureDetector>
         </Animated.View>
       </Fragment>
     </BottomSheetCloseContext.Provider>

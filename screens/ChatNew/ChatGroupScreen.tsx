@@ -77,77 +77,93 @@ export default function ChatGroupScreen() {
     return lowerName.includes('הכרזות') || lowerName.includes('announcement');
   }, [currentGroup?.name]);
 
-  const scrollToBottom = useCallback(() => {
+  // נתונים מסודרים מהישנים לחדשים (oldest → newest) – FlatList רגיל ללא inverted.
+  // כך scrollToEnd עובד אמין ב-iOS, בלי הבאגים של inverted={true} ב-RN 0.81.
+  const displayMessages = useMemo(() => {
+    if (messages.length === 0) return messages;
+    return [...messages].reverse();
+  }, [messages]);
+
+  // מונע loadMoreMessages בזמן גלילה לתחתית או לפני שהמסך התייצב על הסוף
+  const disableLoadMoreRef = useRef(true);
+  // האם הגענו פעם ראשונה לסוף הרשימה (אז מותר ל-onStartReached לעבוד)
+  const hasInitiallyScrolledRef = useRef(false);
+  // ה-content height האחרון – משמש להבדיל בין "תוכן גדל בסוף" לבין "תוכן הוסף בראש"
+  const lastContentHeightRef = useRef(0);
+
+  const scrollToBottom = useCallback((animated: boolean = true) => {
     const list = flatListRef.current;
     if (!list || messages.length === 0) return;
 
+    logger.debug('ChatGroupScreen', `scrollToBottom called: messagesLen=${messages.length}, animated=${animated}`);
+
     setShowScrollToBottomButton(false);
     isAtBottomRef.current = true;
+    disableLoadMoreRef.current = true;
+    setTimeout(() => { disableLoadMoreRef.current = false; }, 800);
 
-    // inverted: offset 0 = הודעות חדשות (תחתית). ניסיון כפול + nudge — לפעמים layout/מקלדת משאירים offset תקוע.
-    const toBottom = (animated: boolean) => {
-      try {
-        list.scrollToOffset({ offset: 0, animated });
-      } catch {
-        /* noop */
-      }
-      try {
-        list.scrollToEnd({ animated });
-      } catch {
-        /* noop */
-      }
-    };
-
-    toBottom(false);
-    toBottom(true);
-    requestAnimationFrame(() => {
-      toBottom(false);
-      toBottom(true);
-    });
-    InteractionManager.runAfterInteractions(() => {
-      toBottom(false);
-      toBottom(true);
-      setTimeout(() => toBottom(true), 32);
-    });
-    setTimeout(() => {
-      try {
-        list.scrollToIndex({ index: 0, animated: true, viewPosition: 0 });
-      } catch {
-        toBottom(false);
-        toBottom(true);
-      }
-    }, 72);
+    // ב-iOS אנימציה נכשלת כשגובה ה-content משתנה תוך כדי, אז גם וגם:
+    // קופצים מיד ללא אנימציה, ואז מוסיפים אנימציה רק אם המשתמש ביקש.
+    try {
+      list.scrollToEnd({ animated: false });
+      logger.debug('ChatGroupScreen', 'scrollToEnd(false) issued');
+    } catch (e) {
+      logger.error('ChatGroupScreen', 'scrollToEnd failed', e);
+    }
+    if (animated) {
+      requestAnimationFrame(() => {
+        try { list.scrollToEnd({ animated: false }); } catch { /* noop */ }
+      });
+      setTimeout(() => {
+        try { list.scrollToEnd({ animated: false }); } catch { /* noop */ }
+      }, 80);
+    }
   }, [messages.length]);
 
   // עוקב אחרי האם המשתמש נמצא בתחתית הרשימה
   const isAtBottomRef = useRef(true);
   const isSendingRef = useRef(false);
 
+  const lastScrollLogRef = useRef(0);
   const handleScroll = useCallback((event: any) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    isAtBottomRef.current = offsetY < 80;
-    setShowScrollToBottomButton(offsetY > 200);
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const offsetY = contentOffset.y;
+    const distanceFromBottom = contentSize.height - layoutMeasurement.height - offsetY;
+    isAtBottomRef.current = distanceFromBottom < 80;
+    setShowScrollToBottomButton(distanceFromBottom > 200);
+    const now = Date.now();
+    if (now - lastScrollLogRef.current > 500) {
+      lastScrollLogRef.current = now;
+      logger.debug('ChatGroupScreen', `onScroll offsetY=${offsetY.toFixed(0)} distFromBottom=${distanceFromBottom.toFixed(0)} atBottom=${distanceFromBottom < 80}`);
+    }
   }, []);
 
   const scrollToBottomOnKeyboard = useCallback(() => {
     if (isAtBottomRef.current) {
-      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+      flatListRef.current?.scrollToEnd({ animated: false });
     }
   }, []);
 
+  // KEYBOARD: listen on the "did" event on BOTH platforms, not "will".
+  //
+  // react-native-keyboard-controller drives the keyboard animation via
+  // Reanimated. When we update state (or even just trigger a scrollToEnd
+  // which mutates FlatList internals) in `keyboardWillShow` on iOS, a React
+  // commit can block Reanimated from applying its animated updates in the
+  // same frame — the keyboard then snaps in without animation, and the
+  // input button feels delayed. Listening to `keyboardDidShow` instead
+  // gives us a guaranteed-clean window to anchor the scroll position.
   useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const subShow = Keyboard.addListener(showEvent, () => {
+    const subShow = Keyboard.addListener('keyboardDidShow', () => {
       scrollToBottomOnKeyboard();
     });
     return () => subShow.remove();
   }, [scrollToBottomOnKeyboard]);
 
-  // אחרי סגירת המקלדת ה-KeyboardAvoidingView מחזיר גובה — ה-FlatList ההפוך לפעמים נשאר עם offset שגוי / רווח בתחתית
+  // אחרי סגירת המקלדת ה-KeyboardAvoidingView מחזיר גובה — ה-FlatList לפעמים נשאר עם offset שגוי / רווח בתחתית
   useEffect(() => {
     let hideTimer: ReturnType<typeof setTimeout> | undefined;
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const subHide = Keyboard.addListener(hideEvent, () => {
+    const subHide = Keyboard.addListener('keyboardDidHide', () => {
       if (hideTimer) clearTimeout(hideTimer);
       const delay = Platform.OS === 'android' ? 120 : 48;
       hideTimer = setTimeout(() => {
@@ -160,25 +176,42 @@ export default function ChatGroupScreen() {
     };
   }, [scrollToBottomOnKeyboard]);
 
-  // גלול לתחתית כשנוספת הודעה חדשה
+  // גלול לתחתית כשנוספת הודעה חדשה (שלי או של אחר אם אני בתחתית)
   const prevMessagesLengthRef = useRef(0);
   useEffect(() => {
     const newLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     prevMessagesLengthRef.current = newLength;
 
+    // טעינה ראשונה של הודעות בקבוצה הזו – גלול לסוף בלי אנימציה (מציג הודעות אחרונות מיד)
+    if (newLength > 0 && !hasInitiallyScrolledRef.current) {
+      hasInitiallyScrolledRef.current = true;
+      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength}), scrolling to end`);
+      // השהייה קצרה כדי שה-FlatList ירנדר את הפריטים לפני קפיצה
+      const t1 = setTimeout(() => scrollToBottom(false), 100);
+      const t2 = setTimeout(() => scrollToBottom(false), 350);
+      const t3 = setTimeout(() => {
+        scrollToBottom(false);
+        // עכשיו מותר ל-onStartReached לטעון עוד היסטוריה אם המשתמש ייגלל למעלה
+        disableLoadMoreRef.current = false;
+      }, 700);
+      return () => {
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      };
+    }
+
     const isNewMessage = newLength > prevLength && newLength - prevLength <= 3;
     if (!isNewMessage) return;
 
-    if (isSendingRef.current || isAtBottomRef.current) {
-      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-      scrollTimeoutRef.current = setTimeout(() => {
-        if (isMountedRef.current) {
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-        }
-      }, 50);
+    const shouldScroll = isSendingRef.current || isAtBottomRef.current;
+    logger.debug('ChatGroupScreen', `messages.length changed: ${prevLength}->${newLength}, shouldScroll=${shouldScroll}`);
+    if (shouldScroll) {
+      // הודעה אופטימיסטית כבר ברינדור – גלילה ללא אנימציה כדי שזה ירגיש מיידי
+      scrollToBottom(false);
     }
-  }, [messages.length]);
+  }, [messages.length, scrollToBottom]);
 
   const [replyTo, setReplyTo] = useState<{
     id: string;
@@ -232,6 +265,11 @@ export default function ChatGroupScreen() {
   useEffect(() => {
     if (groupId) {
       selectGroup(groupId);
+      // איפוס מצב הגלילה כשעוברים בין קבוצות – נטען מחדש מההתחלה
+      hasInitiallyScrolledRef.current = false;
+      disableLoadMoreRef.current = true;
+      prevMessagesLengthRef.current = 0;
+      lastContentHeightRef.current = 0;
     }
   }, [groupId]);
 
@@ -252,10 +290,10 @@ export default function ChatGroupScreen() {
   );
 
   useEffect(() => {
-    if (messages.length > 0 && currentGroup?.last_read_message_id) {
-      const lastReadIndex = messages.findIndex(m => m.id === currentGroup.last_read_message_id);
+    if (displayMessages.length > 0 && currentGroup?.last_read_message_id) {
+      const lastReadIndex = displayMessages.findIndex(m => m.id === currentGroup.last_read_message_id);
 
-      if (lastReadIndex > 0) {
+      if (lastReadIndex >= 0 && lastReadIndex < displayMessages.length - 1) {
         const timeoutId = setTimeout(() => {
           if (!isMountedRef.current) return;
           try {
@@ -270,7 +308,7 @@ export default function ChatGroupScreen() {
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [currentGroup?.last_read_message_id]);
+  }, [currentGroup?.last_read_message_id, displayMessages.length]);
 
   useEffect(() => {
     if (scrollToMessageId && messages.length > 0) {
@@ -283,8 +321,16 @@ export default function ChatGroupScreen() {
   // Handlers
   // ============================================
 
-  const handleSendMessage = async (content: string, mediaUrl?: string, mediaType?: MessageType, metadata?: { waveformData?: number[]; media_urls?: any[]; mentioned_users?: string[]; mentions?: any[];[key: string]: any }) => {
-    // For MEDIA_GROUP, we don't need mediaUrl but need media_urls in metadata
+  // PERF: All handlers that flow into ChatInput or ChatMessage MUST be
+  // useCallback'd with stable deps. Without it the children are forced to
+  // re-render on every parent state update (new message arriving, scroll
+  // event, anything), which is the root cause of "send button feels delayed".
+  const handleSendMessage = useCallback(async (
+    content: string,
+    mediaUrl?: string,
+    mediaType?: MessageType,
+    metadata?: { waveformData?: number[]; media_urls?: any[]; mentioned_users?: string[]; mentions?: any[];[key: string]: any },
+  ) => {
     const hasMediaGroup = mediaType === MessageType.MEDIA_GROUP && (metadata?.media_urls?.length ?? 0) > 0;
 
     if (!groupId || (!content?.trim() && !mediaUrl && !hasMediaGroup)) {
@@ -318,21 +364,16 @@ export default function ChatGroupScreen() {
 
       setReplyTo(undefined);
       setShowScrollToBottomButton(false);
-
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-        }
-      }, 50);
+      // הגלילה עצמה תקרה דרך ה-useEffect של messages.length (שיורה כשה-optimistic message נכנס)
+      // – זה מונע מספר פקודות scrollToOffset במקביל שמתבטלות זו את זו ב-iOS.
     } catch (e) {
       logger.error('ChatGroupScreen', 'Send message error', e);
     } finally {
-      // Keep isSendingRef true a bit longer so the messages.length useEffect also scrolls
       setTimeout(() => { isSendingRef.current = false; }, 500);
     }
-  };
+  }, [groupId, replyTo?.id, sendMessage]);
 
-  const handleJumpToMessage = async (messageId: string) => {
+  const handleJumpToMessage = useCallback(async (messageId: string) => {
     if (!isMountedRef.current) return;
 
     if (jumpTimeoutRef.current) {
@@ -379,9 +420,12 @@ export default function ChatGroupScreen() {
     const scrollToMessage = () => {
       if (!isMountedRef.current || !flatListRef.current) return;
 
+      // displayMessages הוא reverse של messages – המרת אינדקס
+      const displayIndex = messagesRef.current.length - 1 - messageIndex;
+
       try {
         flatListRef.current.scrollToIndex({
-          index: messageIndex,
+          index: displayIndex,
           animated: true,
           viewPosition: 0.5,
         });
@@ -408,15 +452,15 @@ export default function ChatGroupScreen() {
     jumpTimeoutRef.current = setTimeout(() => {
       scrollToMessage();
     }, 200);
-  };
+  }, [loadMessagesAround]);
 
-  const handleTyping = (isTyping: boolean) => {
+  const handleTyping = useCallback((isTyping: boolean) => {
     if (groupId) {
       setTyping(groupId, isTyping);
     }
-  };
+  }, [groupId, setTyping]);
 
-  const handleMessageLongPress = (message: ChatMessageType) => {
+  const handleMessageLongPress = useCallback((message: ChatMessageType) => {
     const isMe = message.sender_id === user?.id;
 
     const snapshot: MessageSnapshot = {
@@ -433,7 +477,7 @@ export default function ChatGroupScreen() {
     };
 
     setLongPressMessage(snapshot);
-  };
+  }, [groupId, user?.id]);
 
   const handleMessageAction = (action: string, payload?: any) => {
     const currentMessageId = longPressMessage?.id;
@@ -464,7 +508,10 @@ export default function ChatGroupScreen() {
           handleEdit(message);
           break;
         case 'delete':
-          handleDelete(message);
+          handleDelete(message, false);
+          break;
+        case 'deleteForEveryone':
+          handleDelete(message, true);
           break;
         case 'star':
           handleStar(message);
@@ -488,13 +535,18 @@ export default function ChatGroupScreen() {
     }
   };
 
-  const handleReply = (message: ChatMessageType) => {
+  const handleReply = useCallback((message: ChatMessageType) => {
     setReplyTo({
       id: message.id,
       senderName: message.sender?.display_name || 'משתמש',
       content: message.content || 'מדיה',
     });
-  };
+  }, []);
+
+  // Memoised onCancelReply so ChatInput's React.memo can short-circuit when
+  // the user just types a key (was: `() => setReplyTo(undefined)` inline,
+  // which gave a fresh function reference on every keystroke).
+  const handleCancelReply = useCallback(() => setReplyTo(undefined), []);
 
   const handleStar = async (message: ChatMessageType) => {
     try {
@@ -582,8 +634,8 @@ export default function ChatGroupScreen() {
     setEditModalVisible(false);
   };
 
-  const handleDelete = (message: ChatMessageType) => {
-    const doDelete = async (forEveryone: boolean) => {
+  const handleDelete = (message: ChatMessageType, forEveryone: boolean) => {
+    const doDelete = async () => {
       try {
         const result = await deleteMessage(message.id, forEveryone);
         if (!result.success) {
@@ -597,20 +649,13 @@ export default function ChatGroupScreen() {
       }
     };
 
+    // אישור מחיקה
     legacyAlert(
-      'מחק הודעה',
-      'האם למחוק?',
+      forEveryone ? 'מחק לכולם' : 'מחק אצלי',
+      forEveryone ? 'ההודעה תימחק לכל המשתתפים' : 'ההודעה תוסתר רק אצלך',
       [
         { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'מחק רק אצלי',
-          onPress: () => doDelete(false),
-        },
-        {
-          text: 'מחק לכולם',
-          style: 'destructive',
-          onPress: () => doDelete(true),
-        },
+        { text: 'מחק', style: 'destructive', onPress: doDelete },
       ]
     );
   };
@@ -635,7 +680,7 @@ export default function ChatGroupScreen() {
     }
   };
 
-  const handleReactionPress = async (message: ChatMessageType, emoji: string) => {
+  const handleReactionPress = useCallback(async (message: ChatMessageType, emoji: string) => {
     if (message.id.startsWith('temp-')) return;
 
     try {
@@ -657,12 +702,12 @@ export default function ChatGroupScreen() {
     } catch (e) {
       logger.error('ChatGroupScreen', 'Reaction press failed', e);
     }
-  };
+  }, [addReaction, removeReaction]);
 
-  const handleReactionDetailsPress = (message: ChatMessageType) => {
+  const handleReactionDetailsPress = useCallback((message: ChatMessageType) => {
     setSelectedMessageForDetails(message);
     setReactionDetailsModalVisible(true);
-  };
+  }, []);
 
   /** חזרה — למסך הקודם בסטאק (לרוב רשימת הצ'אטים). */
   const handleBack = () => {
@@ -799,15 +844,13 @@ export default function ChatGroupScreen() {
       const showDivider = shouldShowDateDivider(item, prevMessage);
       const showUnreadDivider = shouldShowUnreadDivider(item.id);
 
+      // No inner `key` props: FlatList already keys cells via `keyExtractor`,
+      // and child elements inside a renderItem return are NOT in an array —
+      // adding keys here costs reconciliation time without any benefit.
       return (
-        <View key={`message-wrapper-${item.id}-${index}`}>
-          {showDivider && (
-            <View key={`divider-${item.id}-${index}`}>
-              {renderDateDivider(new Date(item.created_at))}
-            </View>
-          )}
+        <View>
+          {showDivider && renderDateDivider(new Date(item.created_at))}
           <ChatMessage
-            key={`message-${item.id}-${index}`}
             message={item}
             isMe={isMe}
             showAvatar={showAvatar}
@@ -820,11 +863,7 @@ export default function ChatGroupScreen() {
             isHighlighted={item.id === highlightedMessageId}
           />
           {showUnreadDivider && (
-            <View key={`unread-divider-${item.id}-${index}`}>
-              <UnreadDivider
-                unreadCount={initialUnreadInfo?.count || 0}
-              />
-            </View>
+            <UnreadDivider unreadCount={initialUnreadInfo?.count || 0} />
           )}
         </View>
       );
@@ -952,13 +991,43 @@ export default function ChatGroupScreen() {
       <View style={styles.messagesAreaFlex}>
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={displayMessages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
-          extraData={messages.length}
-          inverted={true}
-          onEndReached={loadMoreMessages}
-          onEndReachedThreshold={0.3}
+          // PERF: `extraData` previously held the entire `displayMessages`
+          // array — which is freshly allocated on every state update —
+          // defeating ChatMessage memoization for every visible cell. We
+          // pass a lightweight sentinel (`highlightedMessageId`) so FlatList
+          // only re-evaluates cells when that specific UI state changes,
+          // while normal data updates still flow through `data`.
+          extraData={highlightedMessageId}
+          // Android-only: aggressively unmount off-screen rows to keep the
+          // ViewManager hierarchy small in long histories. iOS handles
+          // recycling via `windowSize` already, and enabling this on iOS
+          // is known to cause occasional touch dead-zones.
+          removeClippedSubviews={Platform.OS === 'android'}
+          onStartReached={() => {
+            if (disableLoadMoreRef.current) {
+              logger.debug('ChatGroupScreen', 'onStartReached suppressed');
+              return;
+            }
+            if (!hasInitiallyScrolledRef.current) {
+              logger.debug('ChatGroupScreen', 'onStartReached suppressed (initial scroll not done)');
+              return;
+            }
+            logger.debug('ChatGroupScreen', 'onStartReached → loadMoreMessages (older)');
+            loadMoreMessages();
+          }}
+          onStartReachedThreshold={0.2}
+          onContentSizeChange={(_w, h) => {
+            lastContentHeightRef.current = h;
+            // אם המשתמש "בתחתית" (הודעה אחרונה גלויה) – ודא שגלילה תישאר שם כשתוכן גדל.
+            // Logger.debug is intentionally NOT called here — onContentSizeChange
+            // fires on every scroll/layout pass and floods the dev console.
+            if (isAtBottomRef.current) {
+              flatListRef.current?.scrollToEnd({ animated: false });
+            }
+          }}
           ListHeaderComponent={renderFooter}
           ListEmptyComponent={renderEmpty}
           scrollEnabled={true}
@@ -970,16 +1039,31 @@ export default function ChatGroupScreen() {
           windowSize={11}
           updateCellsBatchingPeriod={50}
           contentContainerStyle={[
-            messages.length === 0 ? styles.emptyList : styles.messagesList,
-            { paddingTop: 12, paddingBottom: 8, flexGrow: 1 },
+            displayMessages.length === 0 ? styles.emptyList : styles.messagesList,
+            { paddingTop: 12, paddingBottom: 8 },
           ]}
           showsVerticalScrollIndicator
           nestedScrollEnabled={Platform.OS === 'android'}
           style={styles.flatListTransparent}
           scrollEventThrottle={16}
           onScroll={handleScroll}
+          // SCROLL: In a non-inverted list, "index 0" is the OLDEST message
+          // (top of the screen). `maintainVisibleContentPosition` only kicks
+          // in when items are inserted AT OR BEFORE the smallest visible
+          // index, i.e. when older history is prepended via `onStartReached`.
+          // That is exactly the case we want to anchor — so we keep
+          // `minIndexForVisible: 0`. However, `autoscrollToTopThreshold` was
+          // previously set to `10`, which makes RN auto-scroll the viewport
+          // to the very top whenever the user is within 10px of it. In a
+          // chat that means "fly to the oldest message" the moment a render
+          // happens while the user is pinned near the top — which is the
+          // exact "scroll fights me" symptom users described. We omit that
+          // option here so the anchor logic still works on prepend, without
+          // the auto-fly-up side effect.
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           onScrollToIndexFailed={(info) => {
             if (!isMountedRef.current) return;
+            logger.warn('ChatGroupScreen', `onScrollToIndexFailed index=${info.index} highestMeasuredFrameIndex=${info.highestMeasuredFrameIndex} avg=${info.averageItemLength}`);
             const offset = info.index * (info.averageItemLength || 100);
             flatListRef.current?.scrollToOffset({ offset, animated: true });
           }}
@@ -1005,37 +1089,27 @@ export default function ChatGroupScreen() {
             onSendMessage={handleSendMessage}
             onTyping={handleTyping}
             replyTo={replyTo}
-            onCancelReply={() => setReplyTo(undefined)}
+            onCancelReply={handleCancelReply}
           />
         )}
       </View>
 
-      {showScrollToBottomButton && (
-        <Pressable
-          style={[
-            styles.scrollToBottomButton,
-            { bottom: Math.max(72, insets.bottom + 66) },
-          ]}
-          onPress={scrollToBottom}
-          hitSlop={14}
-        >
-          <Ionicons name="chevron-down" size={18} color="#fff" />
-          {(initialUnreadInfo?.count ?? 0) > 0 && (
-            <View style={styles.scrollBadge} pointerEvents="none">
-              <Text style={styles.scrollBadgeText}>
-                {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-      )}
     </View>
   );
 
   return (
     <ChatScreenShell>
+      {/*
+        KEYBOARD: `translate-with-padding` is the recommended `behavior` for
+        chat screens per react-native-keyboard-controller's docs. It moves
+        the view up using a Reanimated transform AND applies a one-shot
+        paddingTop — the cheapest possible animation path, identical on
+        iOS and Android. Compared to the old `padding` mode it eliminates
+        the per-frame layout pass that caused the input area to feel
+        "rubber-banded" while the keyboard slid in.
+      */}
       <KeyboardAvoidingView
-        behavior="padding"
+        behavior="translate-with-padding"
         keyboardVerticalOffset={Platform.OS === 'ios' ? 6 : 0}
         style={{ flex: 1, backgroundColor: 'transparent' }}
       >
@@ -1078,6 +1152,30 @@ export default function ChatGroupScreen() {
         onClose={() => setLongPressMessage(null)}
         onAction={handleMessageAction}
       />
+
+      {/* Scroll-to-bottom FAB — outside KAV so it never shifts with keyboard */}
+      {showScrollToBottomButton && (
+        <Pressable
+          style={[
+            styles.scrollToBottomButton,
+            { bottom: Math.max(72, insets.bottom + 66) },
+          ]}
+          onPress={() => {
+            logger.debug('ChatGroupScreen', 'scroll-to-bottom button pressed');
+            scrollToBottom();
+          }}
+          hitSlop={14}
+        >
+          <Ionicons name="chevron-down" size={20} color="#fff" />
+          {(initialUnreadInfo?.count ?? 0) > 0 && (
+            <View style={styles.scrollBadge} pointerEvents="none">
+              <Text style={styles.scrollBadgeText}>
+                {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      )}
 
       <ChatSearchBottomSheet
         visible={searchVisible}

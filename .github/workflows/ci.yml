@@ -20,7 +20,14 @@ jobs:
       - run: npm ci
 
       - name: TypeScript check
-        run: npx tsc --noEmit
+        # The TS server requires an enlarged Node stack for this codebase
+        # (deep type graph in the chat + portfolios modules causes RangeError
+        # with the default 984KB stack on Node 20). Run tsc via node directly
+        # so we can pass --stack-size.
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:ci
 
       - name: Check for hardcoded secrets
         run: |

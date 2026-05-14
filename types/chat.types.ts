@@ -80,11 +80,16 @@ export enum ReportStatus {
 // ============================================
 
 export interface ChatGroupSettings {
-  muteNotifications: boolean;
-  onlyAdminsCanSend: boolean;
-  onlyAdminsCanEditInfo: boolean;
-  showJoinMessages: boolean;
-  allowMembersToAddOthers: boolean;
+  muteNotifications?: boolean;
+  onlyAdminsCanSend?: boolean;
+  onlyAdminsCanEditInfo?: boolean;
+  showJoinMessages?: boolean;
+  allowMembersToAddOthers?: boolean;
+  // Group visibility / posting model (stored on JSONB settings column).
+  // is_announcement mirrors onlyAdminsCanSend semantics at the UI layer;
+  // is_public controls whether the group is discoverable to non-members.
+  is_announcement?: boolean;
+  is_public?: boolean;
 }
 
 export interface ChatGroup {
@@ -388,7 +393,8 @@ export interface CreateChatGroupInput {
   name: string;
   description?: string;
   avatar_url?: string;
-  member_ids: string[]; // IDs של משתמשים להוסיף
+  /** IDs של משתמשים להוסיף בעת יצירה. עשוי להיות ריק / לא קיים — היוצר יתווסף כאדמין בכל מקרה. */
+  member_ids?: string[];
   settings?: Partial<ChatGroupSettings>;
 }
 

@@ -30,14 +30,15 @@ export const LessonRow: React.FC<LessonRowProps> = ({
   const hasAccess = isEnrolled || lesson.is_preview;
   const isLockedForUser = isLocked || (!hasAccess);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [mediaDuration, setMediaDuration] = useState<string | null>(null);
 
   useEffect(() => {
     const loadMedia = async () => {
       if (!courseId) return;
-      
       try {
         const media = await mediaService.getLessonMedia(courseId, lesson.id);
         if (media) {
+          // Thumbnail
           if (media.thumbnail_url) {
             setThumbnailUrl(media.thumbnail_url);
           } else if (media.youtube_id) {
@@ -45,17 +46,24 @@ export const LessonRow: React.FC<LessonRowProps> = ({
           } else if (media.vimeo_id) {
             setThumbnailUrl(`https://vumbnail.com/${media.vimeo_id}.jpg`);
           }
+          // Duration fallback from media record
+          if (media.duration_minutes && media.duration_minutes > 0) {
+            const m = media.duration_minutes;
+            const h = Math.floor(m / 60);
+            const mins = m % 60;
+            setMediaDuration(h > 0 ? `${h}:${mins.toString().padStart(2,'0')}:00` : `${mins}:00`);
+          }
         }
       } catch {
       }
     };
-
     loadMedia();
   }, [courseId, lesson.id]);
 
-  // משתמשים ישירות ב-lesson.duration שנשלף מ-fetchCourse מהמסד הנתונים
-  // הקוד ב-learningService.ts כבר ממיר את duration_minutes ל-duration בפורמט MM:SS או HH:MM:SS
-  const displayDuration = (lesson as any).duration || '00:00';
+  // lesson.duration comes from learningService (duration_minutes → MM:SS).
+  // If it's '00:00' or missing, use media duration fetched directly.
+  const lessonDur = (lesson as any).duration;
+  const displayDuration = (lessonDur && lessonDur !== '00:00') ? lessonDur : (mediaDuration || '00:00');
   
   const isCompleted = lesson.progress?.status === 'completed';
 

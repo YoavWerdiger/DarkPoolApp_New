@@ -193,12 +193,13 @@ export const LessonPlayerScreen: React.FC = () => {
       setLessonProgress(Math.min(Math.max(progressPercentage, 0), 100));
     }
     
-    // Save progress every 5 seconds
-    if (Math.floor(position) % 5 === 0) {
+    // Save progress every 5 seconds (include total duration for badge)
+    if (Math.floor(position) % 5 === 0 && duration > 0) {
       saveProgressMutation.mutate({
         lesson_id: lessonId,
         status: 'in_progress',
-        last_position_seconds: Math.floor(position)
+        last_position_seconds: Math.floor(position),
+        total_duration_seconds: Math.floor(duration),
       });
     }
   }, [lessonId, saveProgressMutation, duration]);

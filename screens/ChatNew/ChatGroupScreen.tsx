@@ -77,45 +77,17 @@ export default function ChatGroupScreen() {
     return lowerName.includes('הכרזות') || lowerName.includes('announcement');
   }, [currentGroup?.name]);
 
-  // נתונים מסודרים מהישנים לחדשים (oldest → newest) – FlatList רגיל ללא inverted.
-  // כך scrollToEnd עובד אמין ב-iOS, בלי הבאגים של inverted={true} ב-RN 0.81.
-  const displayMessages = useMemo(() => {
-    if (messages.length === 0) return messages;
-    return [...messages].reverse();
-  }, [messages]);
-
-  // מונע loadMoreMessages בזמן גלילה לתחתית או לפני שהמסך התייצב על הסוף
-  const disableLoadMoreRef = useRef(true);
-  // האם הגענו פעם ראשונה לסוף הרשימה (אז מותר ל-onStartReached לעבוד)
-  const hasInitiallyScrolledRef = useRef(false);
-  // ה-content height האחרון – משמש להבדיל בין "תוכן גדל בסוף" לבין "תוכן הוסף בראש"
-  const lastContentHeightRef = useRef(0);
-  // כשה-flag דלוק, כל onContentSizeChange ינסה שוב לגלול לתחתית
-  // (נדרש כי FlatList מרנדר הודעות ב-batches — scrollToEnd הראשון לא מכיר את כל הגובה)
-  const pendingScrollToBottomRef = useRef(false);
+  // With inverted={true}: messages[0] (newest) renders at the BOTTOM.
+  // scrollToOffset(0) is always "go to newest" — simple and reliable.
+  // onEndReached fires when scrolled to index N-1 (oldest) = user wants older history.
+  const hasInitiallyRenderedRef = useRef(false);
 
   const scrollToBottom = useCallback((animated: boolean = true) => {
-    const list = flatListRef.current;
-    if (!list || messages.length === 0) return;
-
+    if (!flatListRef.current || messages.length === 0) return;
     setShowScrollToBottomButton(false);
     RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
     isAtBottomRef.current = true;
-    pendingScrollToBottomRef.current = true;
-    disableLoadMoreRef.current = true;
-    setTimeout(() => { disableLoadMoreRef.current = false; }, 800);
-
-    // scrollToOffset(999999) is more reliable than scrollToEnd when item heights
-    // aren't fully measured yet — RN clamps it to the actual max scroll offset.
-    // We fire it immediately + after one frame to catch the post-layout position.
-    const doScroll = () => {
-      try { list.scrollToOffset({ offset: 999999, animated: false }); } catch { /* noop */ }
-    };
-    doScroll();
-    requestAnimationFrame(doScroll);
-    if (animated) {
-      setTimeout(doScroll, 80);
-    }
+    flatListRef.current.scrollToOffset({ offset: 0, animated });
   }, [messages.length]);
 
   // עוקב אחרי האם המשתמש נמצא בתחתית הרשימה
@@ -124,12 +96,11 @@ export default function ChatGroupScreen() {
 
   const lastScrollLogRef = useRef(0);
   const handleScroll = useCallback((event: any) => {
-    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const { contentOffset } = event.nativeEvent;
+    // Inverted list: offset 0 = bottom (newest messages). Higher offset = scrolled toward older.
     const offsetY = contentOffset.y;
-    const distanceFromBottom = contentSize.height - layoutMeasurement.height - offsetY;
-    isAtBottomRef.current = distanceFromBottom < 80;
-    if (distanceFromBottom < 10) pendingScrollToBottomRef.current = false;
-    const shouldShow = distanceFromBottom > 200;
+    isAtBottomRef.current = offsetY < 80;
+    const shouldShow = offsetY > 200;
     setShowScrollToBottomButton(prev => {
       if (prev !== shouldShow) {
         RNAnimated.timing(scrollBtnOpacity, {
@@ -143,7 +114,7 @@ export default function ChatGroupScreen() {
     const now = Date.now();
     if (now - lastScrollLogRef.current > 500) {
       lastScrollLogRef.current = now;
-      logger.debug('ChatGroupScreen', `onScroll offsetY=${offsetY.toFixed(0)} distFromBottom=${distanceFromBottom.toFixed(0)} atBottom=${distanceFromBottom < 80}`);
+      logger.debug('ChatGroupScreen', `onScroll offsetY=${offsetY.toFixed(0)} atBottom=${offsetY < 80}`);
     }
   }, []);
 
@@ -151,30 +122,17 @@ export default function ChatGroupScreen() {
   // keyboard show/hide natively via Reanimated — no manual scroll listeners needed.
   // Adding Keyboard listeners here would fight the controller's animation.
 
-  // גלול לתחתית כשנוספת הודעה חדשה (שלי או של אחר אם אני בתחתית)
+  // With inverted list, newest messages appear at offset 0 automatically.
+  // No initial scroll needed — just track new messages for auto-scroll.
   const prevMessagesLengthRef = useRef(0);
   useEffect(() => {
     const newLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     prevMessagesLengthRef.current = newLength;
 
-    // טעינה ראשונה של הודעות בקבוצה הזו – גלול לסוף בלי אנימציה (מציג הודעות אחרונות מיד)
-    if (newLength > 0 && !hasInitiallyScrolledRef.current) {
-      hasInitiallyScrolledRef.current = true;
-      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength}), scrolling to end`);
-      // השהייה קצרה כדי שה-FlatList ירנדר את הפריטים לפני קפיצה
-      const t1 = setTimeout(() => scrollToBottom(false), 100);
-      const t2 = setTimeout(() => scrollToBottom(false), 350);
-      const t3 = setTimeout(() => {
-        scrollToBottom(false);
-        // עכשיו מותר ל-onStartReached לטעון עוד היסטוריה אם המשתמש ייגלל למעלה
-        disableLoadMoreRef.current = false;
-      }, 700);
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
+    if (newLength > 0 && !hasInitiallyRenderedRef.current) {
+      hasInitiallyRenderedRef.current = true;
+      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength})`);
     }
 
     const isNewMessage = newLength > prevLength && newLength - prevLength <= 3;
@@ -182,7 +140,6 @@ export default function ChatGroupScreen() {
 
     const shouldScroll = isSendingRef.current || isAtBottomRef.current;
     if (shouldScroll) {
-      // Animate scroll like WhatsApp: smooth when sending, smooth when at bottom
       scrollToBottom(true);
     }
   }, [messages.length, scrollToBottom]);
@@ -240,11 +197,8 @@ export default function ChatGroupScreen() {
   useEffect(() => {
     if (groupId) {
       selectGroup(groupId);
-      // איפוס מצב הגלילה כשעוברים בין קבוצות – נטען מחדש מההתחלה
-      hasInitiallyScrolledRef.current = false;
-      disableLoadMoreRef.current = true;
+      hasInitiallyRenderedRef.current = false;
       prevMessagesLengthRef.current = 0;
-      lastContentHeightRef.current = 0;
     }
   }, [groupId]);
 
@@ -265,10 +219,11 @@ export default function ChatGroupScreen() {
   );
 
   useEffect(() => {
-    if (displayMessages.length > 0 && currentGroup?.last_read_message_id) {
-      const lastReadIndex = displayMessages.findIndex(m => m.id === currentGroup.last_read_message_id);
-
-      if (lastReadIndex >= 0 && lastReadIndex < displayMessages.length - 1) {
+    if (messages.length > 0 && currentGroup?.last_read_message_id) {
+      // With inverted list, messages[0]=newest. If lastRead is not at index 0,
+      // there are newer messages — scroll to show the last read message.
+      const lastReadIndex = messages.findIndex(m => m.id === currentGroup.last_read_message_id);
+      if (lastReadIndex > 0) {
         const timeoutId = setTimeout(() => {
           if (!isMountedRef.current) return;
           try {
@@ -279,11 +234,10 @@ export default function ChatGroupScreen() {
             });
           } catch { /* onScrollToIndexFailed will handle */ }
         }, 300);
-
         return () => clearTimeout(timeoutId);
       }
     }
-  }, [currentGroup?.last_read_message_id, displayMessages.length]);
+  }, [currentGroup?.last_read_message_id, messages.length]);
 
   useEffect(() => {
     if (scrollToMessageId && messages.length > 0) {
@@ -395,12 +349,10 @@ export default function ChatGroupScreen() {
     const scrollToMessage = () => {
       if (!isMountedRef.current || !flatListRef.current) return;
 
-      // displayMessages הוא reverse של messages – המרת אינדקס
-      const displayIndex = messagesRef.current.length - 1 - messageIndex;
-
+      // With inverted list, index in messages array = index in FlatList data
       try {
         flatListRef.current.scrollToIndex({
-          index: displayIndex,
+          index: messageIndex,
           animated: true,
           viewPosition: 0.5,
         });
@@ -971,79 +923,38 @@ export default function ChatGroupScreen() {
       <View style={styles.messagesAreaFlex}>
         <FlatList
           ref={flatListRef}
-          data={displayMessages}
+          data={messages}
+          inverted
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
-          // PERF: `extraData` previously held the entire `displayMessages`
-          // array — which is freshly allocated on every state update —
-          // defeating ChatMessage memoization for every visible cell. We
-          // pass a lightweight sentinel (`highlightedMessageId`) so FlatList
-          // only re-evaluates cells when that specific UI state changes,
-          // while normal data updates still flow through `data`.
           extraData={highlightedMessageId}
-          // Android-only: aggressively unmount off-screen rows to keep the
-          // ViewManager hierarchy small in long histories. iOS handles
-          // recycling via `windowSize` already, and enabling this on iOS
-          // is known to cause occasional touch dead-zones.
           removeClippedSubviews={Platform.OS === 'android'}
-          onStartReached={() => {
-            if (disableLoadMoreRef.current) {
-              logger.debug('ChatGroupScreen', 'onStartReached suppressed');
-              return;
-            }
-            if (!hasInitiallyScrolledRef.current) {
-              logger.debug('ChatGroupScreen', 'onStartReached suppressed (initial scroll not done)');
-              return;
-            }
-            logger.debug('ChatGroupScreen', 'onStartReached → loadMoreMessages (older)');
-            loadMoreMessages();
-          }}
-          onStartReachedThreshold={0.2}
-          onContentSizeChange={(_w, h) => {
-            lastContentHeightRef.current = h;
-            // Continue scrolling to bottom as FlatList renders more batches.
-            // pendingScrollToBottomRef is set by scrollToBottom() and cleared
-            // once onScroll confirms we actually reached distanceFromBottom < 10.
-            if (pendingScrollToBottomRef.current) {
-              flatListRef.current?.scrollToOffset({ offset: 999999, animated: false });
-            }
-          }}
-          ListHeaderComponent={renderFooter}
+          // Inverted: "end" of data = oldest messages = user scrolled to the top
+          onEndReached={loadMoreMessages}
+          onEndReachedThreshold={0.3}
+          // ListFooterComponent appears at the visual TOP (oldest end) in inverted list
+          ListFooterComponent={renderFooter}
           ListEmptyComponent={renderEmpty}
           scrollEnabled={true}
           bounces={true}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
-          initialNumToRender={15}
-          maxToRenderPerBatch={8}
+          initialNumToRender={20}
+          maxToRenderPerBatch={10}
           windowSize={11}
           updateCellsBatchingPeriod={50}
           contentContainerStyle={[
-            displayMessages.length === 0 ? styles.emptyList : styles.messagesList,
-            { paddingTop: 12, paddingBottom: 8 },
+            messages.length === 0 ? styles.emptyList : styles.messagesList,
+            { paddingTop: 8, paddingBottom: 12 },
           ]}
           showsVerticalScrollIndicator
           nestedScrollEnabled={Platform.OS === 'android'}
           style={styles.flatListTransparent}
           scrollEventThrottle={16}
           onScroll={handleScroll}
-          // SCROLL: In a non-inverted list, "index 0" is the OLDEST message
-          // (top of the screen). `maintainVisibleContentPosition` only kicks
-          // in when items are inserted AT OR BEFORE the smallest visible
-          // index, i.e. when older history is prepended via `onStartReached`.
-          // That is exactly the case we want to anchor — so we keep
-          // `minIndexForVisible: 0`. However, `autoscrollToTopThreshold` was
-          // previously set to `10`, which makes RN auto-scroll the viewport
-          // to the very top whenever the user is within 10px of it. In a
-          // chat that means "fly to the oldest message" the moment a render
-          // happens while the user is pinned near the top — which is the
-          // exact "scroll fights me" symptom users described. We omit that
-          // option here so the anchor logic still works on prepend, without
-          // the auto-fly-up side effect.
-          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
           onScrollToIndexFailed={(info) => {
             if (!isMountedRef.current) return;
-            logger.warn('ChatGroupScreen', `onScrollToIndexFailed index=${info.index} highestMeasuredFrameIndex=${info.highestMeasuredFrameIndex} avg=${info.averageItemLength}`);
+            logger.warn('ChatGroupScreen', `onScrollToIndexFailed index=${info.index}`);
             const offset = info.index * (info.averageItemLength || 100);
             flatListRef.current?.scrollToOffset({ offset, animated: true });
           }}

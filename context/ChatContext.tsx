@@ -33,6 +33,7 @@ import {
   makeClientMessageId,
 } from '../services/chat/chatOfflineQueue';
 import { supabase } from '../services/supabase';
+import * as Haptics from 'expo-haptics';
 // Audio import removed — notification sound is not yet implemented (no mp3 asset in repo)
 
 const MAX_OFFLINE_RETRY_ATTEMPTS = 5;
@@ -458,7 +459,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 }
               });
             } else {
-              // Someone else's message
+              // Someone else's message — subtle haptic like WhatsApp/Telegram
               processedMessageIds.current.add(enrichedMessage.id);
               setMessages(prev => {
                 const existingIndex = prev.findIndex(m => m.id === enrichedMessage.id);
@@ -467,6 +468,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 }
                 return [enrichedMessage, ...prev];
               });
+              Haptics.selectionAsync().catch(() => {});
             }
 
             // Auto mark as read
@@ -840,6 +842,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       // when the user is on a nested screen (e.g. ChatGroupInfoScreen)
       chatRealtimeService.unsubscribeFromGroup(groupId);
 
+      // The global `user-membership:{userId}:messages` channel filters incoming
+      // chat_messages by `userGroupsCache`. The cache is normally invalidated
+      // by a Realtime DELETE event on chat_group_members, but Postgres only
+      // emits the PRIMARY KEY (`id`) on DELETE unless REPLICA IDENTITY FULL is
+      // set, so neither the filter nor `payload.old.group_id` are reliable.
+      // Update the cache explicitly to make sure the user stops receiving
+      // realtime updates for the group they just left.
+      chatRealtimeService.updateUserGroupsCache(user.id, groupId, 'remove');
+
       // Remove from groups list
       setGroups(prev => prev.filter(g => g.id !== groupId));
 
@@ -1003,6 +1014,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         // שגיאה רגילה – סמן על האופטימיסטי ואפשר retry
         logger.error('ChatContext', `Error sending message: ${errMsg || error?.code || 'Unknown'}`);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
         setMessages(prev => prev.map(m =>
           m.id === tempId ? { ...m, is_sending: false, send_error: errMsg || 'שגיאה בשליחת הודעה' } : m
         ));

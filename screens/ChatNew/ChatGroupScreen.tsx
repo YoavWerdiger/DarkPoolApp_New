@@ -1107,7 +1107,7 @@ export default function ChatGroupScreen() {
         ]}
       >
         <Pressable
-          onPress={() => scrollToBottom(true)}
+          onPress={() => { void HapticFeedback.selection(); scrollToBottom(true); }}
           hitSlop={14}
           style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
         >

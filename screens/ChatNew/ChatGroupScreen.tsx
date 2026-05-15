@@ -4,7 +4,7 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, Keyboard, InteractionManager } from 'react-native';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, InteractionManager } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -95,28 +95,19 @@ export default function ChatGroupScreen() {
     const list = flatListRef.current;
     if (!list || messages.length === 0) return;
 
-    logger.debug('ChatGroupScreen', `scrollToBottom called: messagesLen=${messages.length}, animated=${animated}`);
-
     setShowScrollToBottomButton(false);
+    RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
     isAtBottomRef.current = true;
     disableLoadMoreRef.current = true;
     setTimeout(() => { disableLoadMoreRef.current = false; }, 800);
 
-    // ב-iOS אנימציה נכשלת כשגובה ה-content משתנה תוך כדי, אז גם וגם:
-    // קופצים מיד ללא אנימציה, ואז מוסיפים אנימציה רק אם המשתמש ביקש.
     try {
-      list.scrollToEnd({ animated: false });
-      logger.debug('ChatGroupScreen', 'scrollToEnd(false) issued');
+      list.scrollToEnd({ animated });
     } catch (e) {
-      logger.error('ChatGroupScreen', 'scrollToEnd failed', e);
-    }
-    if (animated) {
-      requestAnimationFrame(() => {
-        try { list.scrollToEnd({ animated: false }); } catch { /* noop */ }
-      });
-      setTimeout(() => {
-        try { list.scrollToEnd({ animated: false }); } catch { /* noop */ }
-      }, 80);
+      // fallback — index-based scroll to last item
+      try {
+        list.scrollToIndex({ index: messages.length - 1, animated, viewPosition: 1 });
+      } catch { /* noop */ }
     }
   }, [messages.length]);
 
@@ -130,7 +121,17 @@ export default function ChatGroupScreen() {
     const offsetY = contentOffset.y;
     const distanceFromBottom = contentSize.height - layoutMeasurement.height - offsetY;
     isAtBottomRef.current = distanceFromBottom < 80;
-    setShowScrollToBottomButton(distanceFromBottom > 200);
+    const shouldShow = distanceFromBottom > 200;
+    setShowScrollToBottomButton(prev => {
+      if (prev !== shouldShow) {
+        RNAnimated.timing(scrollBtnOpacity, {
+          toValue: shouldShow ? 1 : 0,
+          duration: 180,
+          useNativeDriver: true,
+        }).start();
+      }
+      return shouldShow;
+    });
     const now = Date.now();
     if (now - lastScrollLogRef.current > 500) {
       lastScrollLogRef.current = now;
@@ -138,43 +139,9 @@ export default function ChatGroupScreen() {
     }
   }, []);
 
-  const scrollToBottomOnKeyboard = useCallback(() => {
-    if (isAtBottomRef.current) {
-      flatListRef.current?.scrollToEnd({ animated: false });
-    }
-  }, []);
-
-  // KEYBOARD: listen on the "did" event on BOTH platforms, not "will".
-  //
-  // react-native-keyboard-controller drives the keyboard animation via
-  // Reanimated. When we update state (or even just trigger a scrollToEnd
-  // which mutates FlatList internals) in `keyboardWillShow` on iOS, a React
-  // commit can block Reanimated from applying its animated updates in the
-  // same frame — the keyboard then snaps in without animation, and the
-  // input button feels delayed. Listening to `keyboardDidShow` instead
-  // gives us a guaranteed-clean window to anchor the scroll position.
-  useEffect(() => {
-    const subShow = Keyboard.addListener('keyboardDidShow', () => {
-      scrollToBottomOnKeyboard();
-    });
-    return () => subShow.remove();
-  }, [scrollToBottomOnKeyboard]);
-
-  // אחרי סגירת המקלדת ה-KeyboardAvoidingView מחזיר גובה — ה-FlatList לפעמים נשאר עם offset שגוי / רווח בתחתית
-  useEffect(() => {
-    let hideTimer: ReturnType<typeof setTimeout> | undefined;
-    const subHide = Keyboard.addListener('keyboardDidHide', () => {
-      if (hideTimer) clearTimeout(hideTimer);
-      const delay = Platform.OS === 'android' ? 120 : 48;
-      hideTimer = setTimeout(() => {
-        scrollToBottomOnKeyboard();
-      }, delay);
-    });
-    return () => {
-      subHide.remove();
-      if (hideTimer) clearTimeout(hideTimer);
-    };
-  }, [scrollToBottomOnKeyboard]);
+  // react-native-keyboard-controller (behavior="translate-with-padding") handles
+  // keyboard show/hide natively via Reanimated — no manual scroll listeners needed.
+  // Adding Keyboard listeners here would fight the controller's animation.
 
   // גלול לתחתית כשנוספת הודעה חדשה (שלי או של אחר אם אני בתחתית)
   const prevMessagesLengthRef = useRef(0);
@@ -206,10 +173,9 @@ export default function ChatGroupScreen() {
     if (!isNewMessage) return;
 
     const shouldScroll = isSendingRef.current || isAtBottomRef.current;
-    logger.debug('ChatGroupScreen', `messages.length changed: ${prevLength}->${newLength}, shouldScroll=${shouldScroll}`);
     if (shouldScroll) {
-      // הודעה אופטימיסטית כבר ברינדור – גלילה ללא אנימציה כדי שזה ירגיש מיידי
-      scrollToBottom(false);
+      // Animate scroll like WhatsApp: smooth when sending, smooth when at bottom
+      scrollToBottom(true);
     }
   }, [messages.length, scrollToBottom]);
 
@@ -227,6 +193,7 @@ export default function ChatGroupScreen() {
   const [forwardModalVisible, setForwardModalVisible] = useState(false);
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<ChatMessageType | null>(null);
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
+  const scrollBtnOpacity = useRef(new RNAnimated.Value(0)).current;
   const [longPressMessage, setLongPressMessage] = useState<MessageSnapshot | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -451,7 +418,7 @@ export default function ChatGroupScreen() {
 
     jumpTimeoutRef.current = setTimeout(() => {
       scrollToMessage();
-    }, 200);
+    }, 50);
   }, [loadMessagesAround]);
 
   const handleTyping = useCallback((isTyping: boolean) => {
@@ -1159,17 +1126,17 @@ export default function ChatGroupScreen() {
       />
 
       {/* Scroll-to-bottom FAB — outside KAV so it never shifts with keyboard */}
-      {showScrollToBottomButton && (
+      <RNAnimated.View
+        pointerEvents={showScrollToBottomButton ? 'auto' : 'none'}
+        style={[
+          styles.scrollToBottomButton,
+          { bottom: Math.max(72, insets.bottom + 66), opacity: scrollBtnOpacity },
+        ]}
+      >
         <Pressable
-          style={[
-            styles.scrollToBottomButton,
-            { bottom: Math.max(72, insets.bottom + 66) },
-          ]}
-          onPress={() => {
-            logger.debug('ChatGroupScreen', 'scroll-to-bottom button pressed');
-            scrollToBottom();
-          }}
+          onPress={() => scrollToBottom()}
           hitSlop={14}
+          style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
         >
           <Ionicons name="chevron-down" size={20} color="#fff" />
           {(initialUnreadInfo?.count ?? 0) > 0 && (
@@ -1180,7 +1147,7 @@ export default function ChatGroupScreen() {
             </View>
           )}
         </Pressable>
-      )}
+      </RNAnimated.View>
 
       <ChatSearchBottomSheet
         visible={searchVisible}

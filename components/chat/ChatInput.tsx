@@ -1527,11 +1527,7 @@ function ChatInputImpl({
       {/* Reply Preview - Simple card ABOVE input area */}
       {replyTo ? (
         <View style={styles.replyPreviewContainer}>
-          <View style={styles.replyPreviewBar} />
-          <View style={styles.replyContent}>
-            <Text style={styles.replyLabel}>תשובה ל-{replyTo.senderName}</Text>
-            <Text style={styles.replyText} numberOfLines={1}>{replyTo.content || 'מדיה'}</Text>
-          </View>
+          {/* X button on the LEFT — in RTL Hebrew it appears at the leading/far end */}
           <TouchableOpacity
             onPress={() => onCancelReply?.()}
             style={styles.cancelReply}
@@ -1539,6 +1535,12 @@ function ChatInputImpl({
           >
             <Ionicons name="close" size={20} color={DesignTokens.colors.text.tertiary} />
           </TouchableOpacity>
+          <View style={styles.replyContent}>
+            <Text style={styles.replyLabel}>תשובה ל-{replyTo.senderName}</Text>
+            <Text style={styles.replyText} numberOfLines={1}>{replyTo.content || 'מדיה'}</Text>
+          </View>
+          {/* Green bar on the RIGHT — adjacent to text in RTL reading direction */}
+          <View style={styles.replyPreviewBar} />
         </View>
       ) : null}
 
@@ -1877,7 +1879,7 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     width: 3,
     backgroundColor: tokens.colors.primary.main,
     borderRadius: 1.5,
-    marginLeft: 8,
+    marginLeft: 10,
     flexShrink: 0,
     minHeight: 24,
     alignSelf: 'stretch',
@@ -1905,7 +1907,8 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     backgroundColor: tokens.colors.border.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
+    marginRight: 8,
+    alignSelf: 'center',
   },
   cancelReplyText: {
     fontSize: 18,

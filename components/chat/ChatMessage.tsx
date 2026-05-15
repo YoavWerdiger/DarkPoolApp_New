@@ -290,6 +290,10 @@ function ChatMessage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Image progressive loading — must be at component top level (Rules of Hooks)
+  const imgOpacity = useRef(new Animated.Value(0)).current;
+  const imgOpacitySet = useRef(false);
+
   const swipeTranslateX = useSharedValue(0);
 
   const triggerReplySwipe = useCallback(() => {
@@ -698,19 +702,38 @@ function renderMediaContent(
 
   switch (message.message_type) {
     case MessageType.IMAGE: {
-      // Use real dimensions when available, fallback to 4:3
       const imgW = message.media_width;
       const imgH = message.media_height;
       const aspectRatio = imgW && imgH ? imgW / imgH : 4 / 3;
+      // imgOpacity ref is declared at component top level (Rules of Hooks)
+      const isLocalOrNoFull = imageUri === resolved.thumb || !message.media_url;
+      if (isLocalOrNoFull && !imgOpacitySet.current) {
+        imgOpacity.setValue(1);
+        imgOpacitySet.current = true;
+      }
+      const onImgLoad = () => {
+        imgOpacitySet.current = true;
+        Animated.timing(imgOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+      };
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9} disabled={message.is_uploading}>
           <View style={{ position: 'relative' }}>
-            <Image
-              source={{ uri: resolved.thumb || message.media_thumbnail_url || imageUri }}
-              style={[styles.mediaImage, { aspectRatio }, message.is_uploading && { opacity: 0.7 }]}
+            {/* Blur thumbnail shown first */}
+            {message.media_thumbnail_url && message.media_url && (
+              <Image
+                source={{ uri: message.media_thumbnail_url }}
+                style={[styles.mediaImage, { aspectRatio, position: 'absolute' }]}
+                resizeMode="cover"
+                blurRadius={6}
+              />
+            )}
+            {/* Full image fades in on load */}
+            <Animated.Image
+              source={{ uri: imageUri || '' }}
+              style={[styles.mediaImage, { aspectRatio }, message.is_uploading && { opacity: 0.7 }, { opacity: imgOpacity }]}
               resizeMode="cover"
+              onLoad={onImgLoad}
             />
-            {/* Timestamp overlay — כמו WhatsApp, בפינה ימין-תחתון של התמונה */}
             {timeOverlayNode}
             {message.is_uploading && (
               <View style={[styles.uploadOverlay, { aspectRatio }]}>

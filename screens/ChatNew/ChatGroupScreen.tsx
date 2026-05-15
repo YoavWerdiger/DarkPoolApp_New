@@ -34,6 +34,30 @@ import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
+// ── Skeleton bubble — shown while messages are loading ──────────────────────
+const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; width: string; delay: number }) => {
+  const opacity = useRef(new RNAnimated.Value(0.35)).current;
+  useEffect(() => {
+    const anim = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.timing(opacity, { toValue: 0.7, duration: 700, useNativeDriver: true }),
+        RNAnimated.timing(opacity, { toValue: 0.35, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    const t = setTimeout(() => anim.start(), delay);
+    return () => { clearTimeout(t); anim.stop(); };
+  }, []);
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: isMe ? 'flex-end' : 'flex-start', marginBottom: 6 }}>
+      {!isMe && <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', marginRight: 6, alignSelf: 'flex-end' }} />}
+      <RNAnimated.View style={{
+        width, height: 36, borderRadius: 14, opacity,
+        backgroundColor: isMe ? 'rgba(15,77,18,0.5)' : 'rgba(44,50,47,0.5)',
+      }} />
+    </View>
+  );
+});
+
 export default function ChatGroupScreen() {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createChatGroupStyles(DesignTokens), [DesignTokens]);
@@ -865,7 +889,21 @@ export default function ChatGroupScreen() {
   };
 
   const renderEmpty = () => {
-    if (isLoadingMessages) return null;
+    if (isLoadingMessages) {
+      // Skeleton bubbles while messages load — never show blank screen
+      return (
+        <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+          {[
+            { isMe: false, w: '60%' }, { isMe: true, w: '45%' },
+            { isMe: false, w: '75%' }, { isMe: false, w: '50%' },
+            { isMe: true, w: '55%' }, { isMe: true, w: '35%' },
+            { isMe: false, w: '65%' }, { isMe: false, w: '40%' },
+          ].map((s, i) => (
+            <SkeletonBubble key={i} isMe={s.isMe} width={s.w as any} delay={i * 60} />
+          ))}
+        </View>
+      );
+    }
 
     return (
       <View style={styles.emptyContainer}>
@@ -928,9 +966,14 @@ export default function ChatGroupScreen() {
   if (!currentGroup) {
     return (
       <ChatScreenShell>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={styles.loadingText}>טוען...</Text>
+        <View style={{ flex: 1, paddingHorizontal: 12, paddingTop: 16 }}>
+          {[
+            { isMe: false, w: '55%' }, { isMe: true, w: '40%' },
+            { isMe: false, w: '70%' }, { isMe: true, w: '50%' },
+            { isMe: false, w: '60%' }, { isMe: true, w: '45%' },
+          ].map((s, i) => (
+            <SkeletonBubble key={i} isMe={s.isMe} width={s.w as any} delay={i * 80} />
+          ))}
         </View>
       </ChatScreenShell>
     );

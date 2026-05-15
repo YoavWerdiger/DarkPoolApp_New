@@ -18,6 +18,7 @@ import {
   Keyboard,
   ScrollView,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -37,6 +38,7 @@ import { ChatGroup } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
+import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
 import StoryViewer from '../../components/chat/StoryViewer';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
 import { getUsersWithStories, StoryWithUser } from '../../services/storiesService';
@@ -45,6 +47,31 @@ import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { SUPABASE_URL } from '../../config/publicEnv';
 
+// Skeleton row for groups list
+const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
+  const opacity = React.useRef(new Animated.Value(0.3)).current;
+  React.useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.65, duration: 750, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.3, duration: 750, useNativeDriver: true }),
+      ])
+    );
+    const t = setTimeout(() => anim.start(), delay);
+    return () => { clearTimeout(t); anim.stop(); };
+  }, []);
+  return (
+    <Animated.View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, opacity }}>
+      <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.12)', marginRight: 12 }} />
+      <View style={{ flex: 1, gap: 8 }}>
+        <View style={{ height: 13, width: '60%', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 6 }} />
+        <View style={{ height: 11, width: '80%', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6 }} />
+      </View>
+      <View style={{ width: 36, height: 11, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6 }} />
+    </Animated.View>
+  );
+});
+
 const { width: CHAT_SCREEN_W, height: CHAT_SCREEN_H } = Dimensions.get('window');
 
 // RTL is configured once inside the component via useEffect (not at module level)
@@ -52,9 +79,10 @@ const { width: CHAT_SCREEN_W, height: CHAT_SCREEN_H } = Dimensions.get('window')
 // Tab types
 type TabType = 'all' | 'unread' | 'mentions';
 
-interface GroupWithMembership extends ChatGroup {
+interface GroupWithMembership extends Omit<ChatGroup, 'my_role'> {
   is_member: boolean;
   my_membership_id?: string;
+  my_role?: ChatGroup['my_role'];
   last_message?: {
     content: string;
     sender_name: string;
@@ -178,6 +206,13 @@ export default function ChatGroupsListScreen() {
   const [storyViewerVisible, setStoryViewerVisible] = useState(false);
   const [storyViewerInitialIndex, setStoryViewerInitialIndex] = useState(0);
   const storiesScrollRef = useRef<ScrollView>(null);
+  const [createGroupSheetVisible, setCreateGroupSheetVisible] = useState(false);
+
+  // בדיקת admin — האם המשתמש admin בלפחות קבוצה אחת
+  const isGlobalAdmin = useMemo(
+    () => allGroups.some(g => g.my_role === 'admin'),
+    [allGroups]
+  );
 
   const loadGroups = async () => {
     if (!user) return;
@@ -213,13 +248,14 @@ export default function ChatGroupsListScreen() {
 
       const { data: memberships } = await supabase
         .from('chat_group_members')
-        .select('id, group_id, unread_count, mentioned_count')
+        .select('id, group_id, unread_count, mentioned_count, role')
         .eq('user_id', user.id);
 
       const myGroupIds = new Set(memberships?.map(m => m.group_id) || []);
       const membershipMap = new Map(memberships?.map(m => [m.group_id, m.id]) || []);
       const unreadCountMap = new Map(memberships?.map(m => [m.group_id, m.unread_count || 0]) || []);
       const mentionedCountMap = new Map(memberships?.map(m => [m.group_id, m.mentioned_count || 0]) || []);
+      const roleMap = new Map(memberships?.map(m => [m.group_id, m.role]) || []);
 
       // Batch-load last messages for all groups in a single query using DISTINCT ON
       const groupIds = realGroups.map(g => g.id);
@@ -281,6 +317,7 @@ export default function ChatGroupsListScreen() {
           ...g,
           is_member: myGroupIds.has(g.id),
           my_membership_id: membershipMap.get(g.id),
+          my_role: roleMap.get(g.id),
           unread_count: unreadCountMap.get(g.id) || 0,
           mentioned_count: mentionedCountMap.get(g.id) || 0,
           last_message: lastMessage
@@ -456,6 +493,11 @@ export default function ChatGroupsListScreen() {
     [allGroups]
   );
 
+  const mentionsCount = useMemo(() =>
+    allGroups.filter(g => g.is_member && (g.mentioned_count || 0) > 0).length,
+    [allGroups]
+  );
+
   const handleJoinGroup = async (group: GroupWithMembership) => {
     if (!user) return;
 
@@ -606,10 +648,9 @@ export default function ChatGroupsListScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       {isLoading ? (
-        <>
-          <ActivityIndicator size="large" color={tokens.colors.primary.main} />
-          <Text style={styles.emptyText}>טוען...</Text>
-        </>
+        <View style={{ width: '100%' }}>
+          {[0,1,2,3,4,5,6,7].map(i => <SkeletonGroupRow key={i} delay={i * 70} />)}
+        </View>
       ) : searchQuery ? (
         <>
           <Ionicons name="search-outline" size={64} color={tokens.colors.text.tertiary} />
@@ -621,6 +662,12 @@ export default function ChatGroupsListScreen() {
           <Ionicons name="checkmark-done-circle-outline" size={64} color={tokens.colors.text.success} />
           <Text style={styles.emptyTitle}>הכל נקרא! 🎉</Text>
           <Text style={styles.emptyText}>אין הודעות חדשות</Text>
+        </>
+      ) : activeTab === 'mentions' ? (
+        <>
+          <Ionicons name="at-outline" size={64} color={tokens.colors.text.tertiary} />
+          <Text style={styles.emptyTitle}>אין אזכורים</Text>
+          <Text style={styles.emptyText}>כשמישהו יזכיר אותך בצ'אט, תראה כאן</Text>
         </>
       ) : (
         <>
@@ -666,7 +713,17 @@ export default function ChatGroupsListScreen() {
               </DayNavBlurButton>
             </View>
             <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]}>צ׳אטים</Text>
-            <View style={styles.appHeaderActions} />
+            <View style={styles.appHeaderActions}>
+              {isGlobalAdmin && (
+                <TouchableOpacity
+                  style={styles.headerActionBtn}
+                  onPress={() => setCreateGroupSheetVisible(true)}
+                  accessibilityLabel="צור קבוצה חדשה"
+                >
+                  <Ionicons name="create-outline" size={22} color={tokens.colors.text.primary} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* שורת סטטוסים */}
@@ -778,18 +835,23 @@ export default function ChatGroupsListScreen() {
               )}
             </View>
             <View style={styles.filterRow}>
-              {(['all', 'unread'] as TabType[]).map((tab) => (
+              {(['all', 'unread', 'mentions'] as TabType[]).map((tab) => (
                 <TouchableOpacity
                   key={tab}
                   style={[styles.filterPill, activeTab === tab && styles.filterPillActive]}
                   onPress={() => setActiveTab(tab)}
                 >
                   <Text style={[styles.filterPillText, activeTab === tab && styles.filterPillTextActive]}>
-                    {tab === 'all' ? 'הכל' : 'לא נקראו'}
+                    {tab === 'all' ? 'הכל' : tab === 'unread' ? 'לא נקראו' : '@אזכורים'}
                   </Text>
                   {tab === 'unread' && unreadCount > 0 && (
                     <View style={styles.filterBadge}>
                       <Text style={styles.filterBadgeText}>{unreadCount}</Text>
+                    </View>
+                  )}
+                  {tab === 'mentions' && mentionsCount > 0 && (
+                    <View style={styles.filterBadge}>
+                      <Text style={styles.filterBadgeText}>{mentionsCount}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -856,6 +918,16 @@ export default function ChatGroupsListScreen() {
         onJoin={() => joinGroupSheet.group && handleJoinGroup(joinGroupSheet.group)}
         group={joinGroupSheet.group}
         isJoining={isJoining}
+      />
+
+      {/* Create Group Sheet — admins only */}
+      <CreateGroupSheet
+        visible={createGroupSheetVisible}
+        onClose={() => setCreateGroupSheetVisible(false)}
+        onCreated={(_groupId, groupName) => {
+          void loadGroups();
+          legacyAlert('הצלחה', `הקבוצה "${groupName}" נוצרה בהצלחה!`);
+        }}
       />
 
       {/* Add Story – מסך מלא בסגנון Instagram/WhatsApp */}

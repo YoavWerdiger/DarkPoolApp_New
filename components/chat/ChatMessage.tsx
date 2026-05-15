@@ -613,8 +613,14 @@ function ChatMessage({
                   <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>נערך · </Text>
                 )}
                 <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText]}>{timeText}</Text>
-                {isMe && isSending && (
-                  <ActivityIndicator size={10} color={DesignTokens.colors.text.tertiary} style={styles.statusIcon} />
+                {isMe && (
+                  isSending
+                    ? <ActivityIndicator size={10} color={DesignTokens.colors.text.tertiary} style={styles.statusIcon} />
+                    : (message.read_by_count ?? 0) > 0
+                      /* Double tick (blue) = read by at least one person */
+                      ? <Ionicons name="checkmark-done" size={14} color={DesignTokens.colors.primary.main} style={styles.statusIcon} />
+                      /* Single tick (gray) = sent, not yet read */
+                      : <Ionicons name="checkmark" size={14} color={DesignTokens.colors.text.tertiary} style={styles.statusIcon} />
                 )}
               </View>
             )}

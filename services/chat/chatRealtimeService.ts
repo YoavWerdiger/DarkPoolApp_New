@@ -43,8 +43,9 @@ const activeChannels = new Map<string, RealtimeChannel>();
 const typingTimers = new Map<string, NodeJS.Timeout>();
 const retryTimers = new Map<string, NodeJS.Timeout>();
 const failedChannels = new Map<string, number>();
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 10;
 const BASE_RETRY_DELAY_MS = 2000;
+const MAX_RETRY_DELAY_MS = 30_000;
 
 const USER_CACHE_TTL = 5 * 60 * 1000;
 const USER_CACHE_MAX_SIZE = 200;
@@ -114,9 +115,9 @@ function scheduleRetry(groupId: string, retryFn: () => void) {
     return;
   }
   failedChannels.set(groupId, retries + 1);
-  // Exponential backoff with jitter to prevent thundering herd
-  const base = BASE_RETRY_DELAY_MS * Math.pow(2, retries);
-  const jitter = Math.random() * base * 0.3;
+  // Exponential backoff with jitter, capped at MAX_RETRY_DELAY_MS
+  const base = Math.min(BASE_RETRY_DELAY_MS * Math.pow(2, retries), MAX_RETRY_DELAY_MS);
+  const jitter = Math.random() * base * 0.25;
   const delay = Math.floor(base + jitter);
   logger.debug(TAG, `Scheduling retry #${retries + 1} for ${groupId} in ${delay}ms`);
   connectionStatusCallback?.('RECONNECTING');

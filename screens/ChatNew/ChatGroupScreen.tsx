@@ -173,6 +173,12 @@ export default function ChatGroupScreen() {
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<ChatMessageType | null>(null);
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const scrollBtnOpacity = useRef(new RNAnimated.Value(0)).current;
+  // Stable extraData object — only changes when visible UX state changes
+  const flatListExtraData = useMemo(() => ({
+    h: highlightedMessageId,
+    u: initialUnreadInfo?.count,
+    uid: user?.id,
+  }), [highlightedMessageId, initialUnreadInfo?.count, user?.id]);
   const [longPressMessage, setLongPressMessage] = useState<MessageSnapshot | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -780,14 +786,20 @@ export default function ChatGroupScreen() {
     ({ item, index }: { item: ChatMessageType; index: number }) => {
       const isMe = item.sender_id === user?.id;
       // C6: use ref so renderMessage doesn't need `messages` in its dependency array
-      const prevMessage = index < messagesRef.current.length - 1 ? messagesRef.current[index + 1] : null;
-      // L1: break grouping after 5 min gap (WhatsApp-style sub-grouping)
-      const timeDiff = prevMessage
-        ? Math.abs(new Date(item.created_at).getTime() - new Date(prevMessage.created_at).getTime())
+      // Inverted list: index+1 = older message (above visually), index-1 = newer (below visually)
+      const olderMessage = index < messagesRef.current.length - 1 ? messagesRef.current[index + 1] : null;
+      const newerMessage = index > 0 ? messagesRef.current[index - 1] : null;
+      // Date divider: compare against older neighbor (chronological order)
+      // Avatar: show on BOTTOMMOST message of a sender run = when no newer neighbor from same sender
+      // WhatsApp shows avatar on the newest message of each consecutive run.
+      const timeDiff = olderMessage
+        ? Math.abs(new Date(item.created_at).getTime() - new Date(olderMessage.created_at).getTime())
         : Infinity;
-      const showAvatar = !prevMessage || prevMessage.sender_id !== item.sender_id || timeDiff > 5 * 60 * 1000;
+      const showAvatar = !newerMessage || newerMessage.sender_id !== item.sender_id || timeDiff > 5 * 60 * 1000;
       const showSenderName = !isMe && showAvatar;
-      const showDivider = shouldShowDateDivider(item, prevMessage);
+      const showDivider = shouldShowDateDivider(item, olderMessage);
+      // Keep prevMessage alias for date divider (expects older message)
+      const prevMessage = olderMessage;
       const showUnreadDivider = shouldShowUnreadDivider(item.id);
 
       // No inner `key` props: FlatList already keys cells via `keyExtractor`,
@@ -941,7 +953,7 @@ export default function ChatGroupScreen() {
           inverted
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
-          extraData={highlightedMessageId}
+          extraData={flatListExtraData}
           removeClippedSubviews={Platform.OS === 'android'}
           // Inverted: "end" of data = oldest messages = user scrolled to the top.
           // Guard: only fire after initial render is settled (prevents spurious

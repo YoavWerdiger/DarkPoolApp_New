@@ -88,13 +88,16 @@ export default function ChatGroupScreen() {
     setShowScrollToBottomButton(false);
     RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
     isAtBottomRef.current = true;
-    // Triple-call pattern needed in RN 0.81 with inverted FlatList:
-    // scrollToOffset(0) alone sometimes fails when the layout hasn't settled.
-    // scrollToIndex({index:0}) is the most specific and forces item 0 (newest) into view.
-    list.scrollToOffset({ offset: 0, animated: false });
+    // Wait one frame so React has finished rendering new items before we scroll.
+    // Without this, scrollToOffset(0) reaches the bottom of the *previous* layout
+    // and the newly added item appears below the viewport.
     requestAnimationFrame(() => {
-      list.scrollToOffset({ offset: 0, animated: false });
-      try { list.scrollToIndex({ index: 0, animated, viewPosition: 0 }); } catch { /* noop */ }
+      list.scrollToOffset({ offset: 0, animated });
+      // Safety: second call after 80ms in case the first frame wasn't enough
+      // (slow devices, large messages, media thumbnails still loading).
+      setTimeout(() => {
+        list.scrollToOffset({ offset: 0, animated: false });
+      }, 80);
     });
   }, [messages.length]);
 
@@ -103,22 +106,24 @@ export default function ChatGroupScreen() {
   const isSendingRef = useRef(false);
 
   const lastScrollLogRef = useRef(0);
+  const showScrollBtnRef = useRef(false);
   const handleScroll = useCallback((event: any) => {
     const { contentOffset } = event.nativeEvent;
     // Inverted list: offset 0 = bottom (newest messages). Higher offset = scrolled toward older.
     const offsetY = contentOffset.y;
     isAtBottomRef.current = offsetY < 80;
     const shouldShow = offsetY > 200;
-    setShowScrollToBottomButton(prev => {
-      if (prev !== shouldShow) {
-        RNAnimated.timing(scrollBtnOpacity, {
-          toValue: shouldShow ? 1 : 0,
-          duration: 180,
-          useNativeDriver: true,
-        }).start();
-      }
-      return shouldShow;
-    });
+    // Separate animation from state update — calling Animated.timing inside a
+    // state updater is a side effect and breaks in React 18 strict mode.
+    if (shouldShow !== showScrollBtnRef.current) {
+      showScrollBtnRef.current = shouldShow;
+      setShowScrollToBottomButton(shouldShow);
+      RNAnimated.timing(scrollBtnOpacity, {
+        toValue: shouldShow ? 1 : 0,
+        duration: 180,
+        useNativeDriver: true,
+      }).start();
+    }
     const now = Date.now();
     if (now - lastScrollLogRef.current > 500) {
       lastScrollLogRef.current = now;
@@ -966,9 +971,21 @@ export default function ChatGroupScreen() {
           onScroll={handleScroll}
           onScrollToIndexFailed={(info) => {
             if (!isMountedRef.current) return;
-            logger.warn('ChatGroupScreen', `onScrollToIndexFailed index=${info.index}`);
-            const offset = info.index * (info.averageItemLength || 100);
-            flatListRef.current?.scrollToOffset({ offset, animated: true });
+            logger.warn('ChatGroupScreen', `onScrollToIndexFailed index=${info.index} avg=${info.averageItemLength?.toFixed(0)}`);
+            // Scroll to estimated offset immediately, then retry the index scroll
+            // once the FlatList has measured more items.
+            const offset = info.index * (info.averageItemLength || averageItemHeight);
+            flatListRef.current?.scrollToOffset({ offset, animated: false });
+            setTimeout(() => {
+              if (!isMountedRef.current) return;
+              try {
+                flatListRef.current?.scrollToIndex({
+                  index: info.index,
+                  animated: true,
+                  viewPosition: 0.5,
+                });
+              } catch { /* give up gracefully */ }
+            }, 150);
           }}
         />
 
@@ -1012,7 +1029,7 @@ export default function ChatGroupScreen() {
         "rubber-banded" while the keyboard slid in.
       */}
       <KeyboardAvoidingView
-        behavior="translate-with-padding"
+        behavior="padding"
         keyboardVerticalOffset={Platform.OS === 'ios' ? 6 : 0}
         style={{ flex: 1, backgroundColor: 'transparent' }}
       >

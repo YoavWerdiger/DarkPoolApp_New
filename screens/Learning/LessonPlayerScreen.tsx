@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Pressable, ActivityIndicator, Dimensions, TextInput } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,11 +13,16 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import { useAuth } from '../../context/AuthContext';
+import { learningProgressService } from '../../services/learningProgressService';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 /** רקע אטום (לא rgba חצי־שקוף) — אחרת רואים את הגרדיאנט הירוק של מסכי האקדמיה מתחת */
 const LESSON_BG_GRADIENT = ['#080808', '#0A0A0A', '#0B0B0B', '#0B0B0B', '#0A0A0A', '#080808'] as const;
+
+const SPEEDS = [0.5, 1, 1.25, 1.5, 2] as const;
+type PlaybackSpeed = typeof SPEEDS[number];
 
 export const LessonPlayerScreen: React.FC = () => {
   const route = useRoute();
@@ -25,11 +30,13 @@ export const LessonPlayerScreen: React.FC = () => {
   const DesignTokens = useDesignTokens();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
-  const { lessonId, initialBlockIndex = 0 } = route.params as { 
-    lessonId: string; 
+  const { user } = useAuth();
+  const { lessonId, initialBlockIndex = 0, courseId } = route.params as {
+    lessonId: string;
     initialBlockIndex?: number;
+    courseId?: string;
   };
-  
+
   const [currentBlockIndex, setCurrentBlockIndex] = useState(initialBlockIndex);
   const [videoPosition, setVideoPosition] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -40,10 +47,80 @@ export const LessonPlayerScreen: React.FC = () => {
   const [lessonProgress, setLessonProgress] = useState(0);
   const [notesExpanded, setNotesExpanded] = useState(false);
   const [notes, setNotes] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
   const [timelineWidth, setTimelineWidth] = useState(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
+  const [showSpeedPicker, setShowSpeedPicker] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [resumePosition, setResumePosition] = useState<number | null>(null);
   const videoRef = useRef<Video>(null);
 
   const { data: lesson, isLoading, error } = useLesson(lessonId);
+
+  // Load existing notes + resume position on mount
+  useEffect(() => {
+    if (!user?.id || !lessonId) return;
+    const cid = courseId || (lesson as any)?.course_id;
+    if (cid) {
+      learningProgressService.getUserNotes(user.id, cid, lessonId)
+        .then(n => { if (n?.notes_content) setNotes(n.notes_content); })
+        .catch(() => {});
+    }
+    // Load last saved position for resume
+    learningProgressService.getUserProgress(user.id, cid || '', lessonId)
+      .then((p: any) => {
+        if (p?.last_position_seconds && p.last_position_seconds > 5) {
+          setResumePosition(p.last_position_seconds);
+        }
+      })
+      .catch(() => {});
+  }, [user?.id, lessonId, courseId, lesson]);
+
+  // Seek to resume position after video loads
+  useEffect(() => {
+    if (resumePosition !== null && videoRef.current) {
+      videoRef.current.setPositionAsync(resumePosition * 1000).catch(() => {});
+      setProgress(resumePosition);
+      setResumePosition(null);
+    }
+  }, [resumePosition, signedUrl]);
+
+  const saveNotes = useCallback(async () => {
+    if (!user?.id || !lessonId) return;
+    const cid = courseId || (lesson as any)?.course_id;
+    if (!cid) return;
+    setNotesSaving(true);
+    try {
+      await learningProgressService.saveUserNotes({
+        user_id: user.id,
+        course_id: cid,
+        lesson_id: lessonId,
+        notes_content: notes,
+      });
+    } catch {
+      // non-critical
+    } finally {
+      setNotesSaving(false);
+    }
+  }, [user?.id, lessonId, courseId, lesson, notes]);
+
+  const toggleFullscreen = useCallback(async () => {
+    if (!videoRef.current) return;
+    try {
+      if (isFullscreen) {
+        await (videoRef.current as any).dismissFullscreenPlayer?.();
+      } else {
+        await (videoRef.current as any).presentFullscreenPlayer?.();
+      }
+      setIsFullscreen(f => !f);
+    } catch { /* noop */ }
+  }, [isFullscreen]);
+
+  const changeSpeed = useCallback((speed: PlaybackSpeed) => {
+    setPlaybackSpeed(speed);
+    setShowSpeedPicker(false);
+    videoRef.current?.setRateAsync(speed, true).catch(() => {});
+  }, []);
 
   const formatTime = (seconds: number) => {
     if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
@@ -199,13 +276,13 @@ export const LessonPlayerScreen: React.FC = () => {
           posterSource={currentBlock.video_poster_url ? { uri: currentBlock.video_poster_url } : undefined}
           usePoster={true}
         />
-        {/* נגן מותאם: טיימליין + play/pause */}
+        {/* נגן מותאם: play/pause + timeline + speed + fullscreen */}
         <View style={styles.playerControls}>
           <TouchableOpacity style={styles.playerPlayButton} onPress={togglePlayPause} activeOpacity={0.8}>
             {isPlaying ? (
-              <Ionicons name="pause" size={24} color={DesignTokens.colors.background.primary} />
+              <Ionicons name="pause" size={22} color={DesignTokens.colors.background.primary} />
             ) : (
-              <Ionicons name="play" size={24} color={DesignTokens.colors.background.primary} />
+              <Ionicons name="play" size={22} color={DesignTokens.colors.background.primary} />
             )}
           </TouchableOpacity>
           <Text style={styles.playerTimeText}>{formatTime(progress)}</Text>
@@ -217,7 +294,29 @@ export const LessonPlayerScreen: React.FC = () => {
             <View style={[styles.timelineFill, { width: `${duration > 0 ? (progress / duration) * 100 : 0}%` }]} />
           </Pressable>
           <Text style={styles.playerTimeText}>{formatTime(duration)}</Text>
+          {/* Speed picker */}
+          <TouchableOpacity
+            style={styles.speedBtn}
+            onPress={() => setShowSpeedPicker(s => !s)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.speedBtnText}>{playbackSpeed}x</Text>
+          </TouchableOpacity>
+          {/* Fullscreen */}
+          <TouchableOpacity onPress={toggleFullscreen} activeOpacity={0.8} style={styles.fullscreenBtn}>
+            <Ionicons name={isFullscreen ? 'contract' : 'expand'} size={18} color="#fff" />
+          </TouchableOpacity>
         </View>
+        {/* Speed picker popup */}
+        {showSpeedPicker && (
+          <View style={styles.speedPicker}>
+            {SPEEDS.map(s => (
+              <TouchableOpacity key={s} style={[styles.speedOption, playbackSpeed === s && styles.speedOptionActive]} onPress={() => changeSpeed(s)}>
+                <Text style={[styles.speedOptionText, playbackSpeed === s && styles.speedOptionTextActive]}>{s}x</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
     );
   };
@@ -404,26 +503,6 @@ export const LessonPlayerScreen: React.FC = () => {
             </UICard>
           </View>
 
-          {/* Video Controls */}
-          {currentBlock?.type === 'video' && (
-            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
-              <UICard variant="elevated" padding="lg" style={styles.lessonPanel}>
-                <View style={styles.videoControls}>
-                  <TouchableOpacity
-                    style={styles.playButton}
-                    onPress={() => setIsPlaying(!isPlaying)}
-                  >
-                    {isPlaying ? (
-                      <Pause size={24} color={DesignTokens.colors.background.primary} strokeWidth={2} />
-                    ) : (
-                      <Play size={24} color={DesignTokens.colors.background.primary} strokeWidth={2} />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </UICard>
-            </View>
-          )}
-
           {/* Personal Notes Card */}
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
             <UICard variant="elevated" padding="md" style={styles.lessonPanel}>
@@ -432,29 +511,32 @@ export const LessonPlayerScreen: React.FC = () => {
                 onPress={() => setNotesExpanded(!notesExpanded)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.notesTitle}>הערות אישיות על השיעור</Text>
+                <Text style={styles.notesTitle}>הערות אישיות</Text>
                 <View style={styles.notesHeaderIcons}>
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      // TODO: Open notes editor
-                    }}
-                    style={styles.notesEditButton}
-                  >
-                    <Edit3 size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                  </TouchableOpacity>
-                  <ChevronDown 
-                    size={20} 
-                    color={DesignTokens.colors.text.tertiary} 
+                  {notesSaving && <ActivityIndicator size="small" color={DesignTokens.colors.text.tertiary} />}
+                  <ChevronDown
+                    size={20}
+                    color={DesignTokens.colors.text.tertiary}
                     strokeWidth={2}
                     style={{ transform: [{ rotate: notesExpanded ? '180deg' : '0deg' }] }}
                   />
                 </View>
               </TouchableOpacity>
-              
+
               {notesExpanded && (
                 <View style={styles.notesContent}>
-                  <Text style={styles.notesPlaceholder}>לחץ לכתיבת הערות...</Text>
+                  <TextInput
+                    style={styles.notesInput}
+                    multiline
+                    value={notes}
+                    onChangeText={setNotes}
+                    onBlur={saveNotes}
+                    placeholder="כתוב הערות לשיעור זה..."
+                    placeholderTextColor={DesignTokens.colors.text.tertiary}
+                    textAlign="right"
+                    textAlignVertical="top"
+                    returnKeyType="default"
+                  />
                 </View>
               )}
             </UICard>
@@ -745,24 +827,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontWeight: tokens.typography.fontWeight.semibold as any,
     color: tokens.colors.text.inverse,
   },
-  videoControls: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: tokens.colors.primary.main,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: tokens.colors.primary.main,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
+  videoControls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+  playButton: { width: 60, height: 60, borderRadius: 30, backgroundColor: tokens.colors.primary.main, justifyContent: 'center', alignItems: 'center' },
   lessonInfoStack: {
     gap: tokens.spacing.sm,
     width: '100%',
@@ -822,15 +888,12 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   notesTitle: {
     fontSize: tokens.typography.fontSize.base,
     fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.danger.main,
+    color: tokens.colors.text.primary,
   },
   notesHeaderIcons: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: tokens.spacing.sm,
-  },
-  notesEditButton: {
-    padding: tokens.spacing.xs,
   },
   notesContent: {
     marginTop: tokens.spacing.md,
@@ -838,10 +901,55 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
-  notesPlaceholder: {
+  notesInput: {
     fontSize: tokens.typography.fontSize.base,
-    color: tokens.colors.text.tertiary,
+    color: tokens.colors.text.primary,
+    minHeight: 100,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    paddingTop: 4,
+  },
+  // Speed + Fullscreen controls
+  speedBtn: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  speedBtnText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  fullscreenBtn: {
+    padding: 4,
+  },
+  speedPicker: {
+    position: 'absolute',
+    bottom: 52,
+    left: 8,
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    borderRadius: 10,
+    padding: 8,
+    zIndex: 10,
+  },
+  speedOption: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  speedOptionActive: {
+    backgroundColor: tokens.colors.primary.main,
+  },
+  speedOptionText: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  speedOptionTextActive: {
+    color: '#fff',
+    fontWeight: '700',
   },
 });
 

@@ -82,22 +82,20 @@ export default function ChatGroupScreen() {
   // onEndReached fires when scrolled to index N-1 (oldest) = user wants older history.
   const hasInitiallyRenderedRef = useRef(false);
 
-  const scrollToBottom = useCallback((animated: boolean = true) => {
+  const scrollToBottom = useCallback((forceAnimated: boolean = false) => {
     const list = flatListRef.current;
     if (!list || messages.length === 0) return;
     setShowScrollToBottomButton(false);
     RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
     isAtBottomRef.current = true;
-    // Wait one frame so React has finished rendering new items before we scroll.
-    // Without this, scrollToOffset(0) reaches the bottom of the *previous* layout
-    // and the newly added item appears below the viewport.
+    // Always use animated: false for programmatic auto-scroll.
+    // animated: true + simultaneous React re-render (message confirmed) causes
+    // the scroll position to jump to unpredictable values (observed: ~3000px).
+    // The snap at offset 0 is instant enough to feel natural.
+    // Only use animated: true when the FAB button is explicitly tapped (forceAnimated=true)
+    // and there are no pending re-renders.
     requestAnimationFrame(() => {
-      list.scrollToOffset({ offset: 0, animated });
-      // Safety: second call after 80ms in case the first frame wasn't enough
-      // (slow devices, large messages, media thumbnails still loading).
-      setTimeout(() => {
-        list.scrollToOffset({ offset: 0, animated: false });
-      }, 80);
+      list.scrollToOffset({ offset: 0, animated: forceAnimated });
     });
   }, [messages.length]);
 
@@ -145,9 +143,7 @@ export default function ChatGroupScreen() {
 
     if (newLength > 0 && !hasInitiallyRenderedRef.current) {
       hasInitiallyRenderedRef.current = true;
-      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength}), ensuring offset=0`);
-      // Force offset 0 on initial load — inverted FlatList in RN 0.81 sometimes
-      // doesn't auto-position at the bottom when data arrives asynchronously.
+      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength})`);
       scrollToBottom(false);
       return;
     }
@@ -157,7 +153,8 @@ export default function ChatGroupScreen() {
 
     const shouldScroll = isSendingRef.current || isAtBottomRef.current;
     if (shouldScroll) {
-      scrollToBottom(true);
+      // animated: false — prevents scroll conflicts with simultaneous re-renders
+      scrollToBottom(false);
     }
   }, [messages.length, scrollToBottom]);
 
@@ -946,8 +943,12 @@ export default function ChatGroupScreen() {
           keyExtractor={(item) => item.id}
           extraData={highlightedMessageId}
           removeClippedSubviews={Platform.OS === 'android'}
-          // Inverted: "end" of data = oldest messages = user scrolled to the top
-          onEndReached={loadMoreMessages}
+          // Inverted: "end" of data = oldest messages = user scrolled to the top.
+          // Guard: only fire after initial render is settled (prevents spurious
+          // load on mount before scrollToBottom(false) corrects the position).
+          onEndReached={() => {
+            if (hasInitiallyRenderedRef.current) loadMoreMessages();
+          }}
           onEndReachedThreshold={0.3}
           // ListFooterComponent appears at the visual TOP (oldest end) in inverted list
           ListFooterComponent={renderFooter}
@@ -1082,7 +1083,7 @@ export default function ChatGroupScreen() {
         ]}
       >
         <Pressable
-          onPress={() => scrollToBottom()}
+          onPress={() => scrollToBottom(true)}
           hitSlop={14}
           style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
         >

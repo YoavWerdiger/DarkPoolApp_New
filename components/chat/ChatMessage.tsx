@@ -547,20 +547,8 @@ function ChatMessage({
             message.message_type === MessageType.AUDIO
               ? { sentTimeText: timeText, isEdited: !!message.is_edited, isSending }
               : undefined,
-            /* timeOverlay: IMAGE/VIDEO ללא caption — timestamp overlay על התמונה כמו WhatsApp */
-            (message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) && !message.content
-              ? (
-                <View style={styles.imageTimeOverlay}>
-                  {message.is_edited && (
-                    <Text style={styles.imageTimeText}>נערך · </Text>
-                  )}
-                  <Text style={styles.imageTimeText}>{timeText}</Text>
-                  {isMe && isSending && (
-                    <ActivityIndicator size={8} color="rgba(255,255,255,0.7)" />
-                  )}
-                </View>
-              )
-              : undefined,
+            /* No time overlay — timestamp always in footer below the bubble */
+            undefined,
           )}
 
           {/* Text Content */}
@@ -597,9 +585,8 @@ function ChatMessage({
             );
           })()}
 
-          {/* Metadata — לאודיו: זמן בתוך AudioPlayer; לתמונה/וידאו ללא caption: overlay על התמונה */}
-          {(message.send_error || message.message_type !== MessageType.AUDIO) &&
-           !((message.message_type === MessageType.IMAGE || message.message_type === MessageType.VIDEO) && !message.content) && (
+          {/* Metadata footer — timestamp + checkmarks always below the bubble */}
+          {(message.send_error || message.message_type !== MessageType.AUDIO) && (
           <View style={[styles.metadata,
             (message.message_type === MessageType.IMAGE ||
              message.message_type === MessageType.VIDEO ||
@@ -757,9 +744,10 @@ function renderMediaContent(
               </View>
             </View>
 
-            {/* משך הסרטון */}
+            {/* משך הסרטון — WhatsApp style: ▶ 0:12 bottom-left */}
             {message.media_duration && message.media_duration > 0 && (
               <View style={styles.videoDuration}>
+                <Ionicons name="play" size={10} color="rgba(255,255,255,0.93)" />
                 <Text style={styles.videoDurationText}>
                   {formatDuration(message.media_duration)}
                 </Text>
@@ -1704,7 +1692,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   imageTimeOverlay: {
     position: 'absolute',
     bottom: 6,
-    left: 8,
+    right: 8,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.48)',
@@ -1741,16 +1729,20 @@ const createStyles = (tokens: any) => StyleSheet.create({
   videoDuration: {
     position: 'absolute',
     bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 10,
   },
   videoDurationText: {
-    color: tokens.colors.text.primary,
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.medium,
+    color: 'rgba(255,255,255,0.93)',
+    fontSize: 11,
+    fontWeight: '500',
+    writingDirection: 'ltr',
   },
   playIcon: {
     fontSize: 24,

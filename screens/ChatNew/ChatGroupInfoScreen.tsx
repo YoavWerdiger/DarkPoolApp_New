@@ -16,6 +16,7 @@ import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
+import AddMemberSheet from '../../components/chat/AddMemberSheet';
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
@@ -44,6 +45,7 @@ export default function ChatGroupInfoScreen() {
     setPromptVisible(true);
   };
   const [searchVisible, setSearchVisible] = useState(false);
+  const [addMemberSheetVisible, setAddMemberSheetVisible] = useState(false);
   
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   
@@ -128,16 +130,18 @@ export default function ChatGroupInfoScreen() {
   };
 
   const handleAddMembers = () => {
-    showPrompt('הוסף חבר', '', async (inputUserId) => {
-      if (!inputUserId?.trim() || !user?.id) return;
-      const { error } = await chatGroupService.addGroupMember(groupId, inputUserId.trim(), user.id);
-      if (error) {
-        legacyAlert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
-      } else {
-        legacyAlert('הצלחה', 'המשתמש נוסף לקבוצה');
-        void refreshCurrentGroupDetails();
-      }
-    });
+    setAddMemberSheetVisible(true);
+  };
+
+  const handleAddMemberFromSheet = async (userId: string, displayName: string) => {
+    if (!user?.id) return;
+    const { error } = await chatGroupService.addGroupMember(groupId, userId, user.id);
+    if (error) {
+      legacyAlert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
+    } else {
+      legacyAlert('הצלחה', `${displayName} נוסף לקבוצה`);
+      void refreshCurrentGroupDetails();
+    }
   };
 
   const handleMemberPress = (member: ChatGroupMember) => {
@@ -281,11 +285,12 @@ export default function ChatGroupInfoScreen() {
             try {
               const result = await leaveGroup(groupId);
               if (result.success) {
-                // Go back to previous screen (Chat screen), which should automatically handle navigation
-                // The ChatContext will clear the group, causing navigation to go back to groups list
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                }
+                // Pop entire chat stack back to the groups list.
+                // goBack() only goes to ChatGroupScreen which still holds the
+                // old groupId — we must pop all the way to ChatGroupsList.
+                (navigation as any).reset
+                  ? (navigation as any).reset({ index: 0, routes: [{ name: 'ChatGroupsList' }] })
+                  : (navigation as any).navigate('ChatGroupsList');
               } else {
                 legacyAlert('שגיאה', result.error || 'לא הצלחנו לעזוב את הקבוצה');
               }
@@ -587,6 +592,14 @@ export default function ChatGroupInfoScreen() {
         onClose={() => setSearchVisible(false)}
         groupId={groupId}
         onMessagePress={handleJumpToMessage}
+      />
+
+      {/* Add Member Sheet — חיפוש שם במקום UUID */}
+      <AddMemberSheet
+        visible={addMemberSheetVisible}
+        onClose={() => setAddMemberSheetVisible(false)}
+        onAdd={handleAddMemberFromSheet}
+        existingMemberIds={(currentGroup?.members || []).map((m: any) => m.user_id)}
       />
 
       {/* Cross-platform prompt modal */}

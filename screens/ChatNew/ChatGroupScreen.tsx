@@ -222,6 +222,17 @@ export default function ChatGroupScreen() {
     }
   }, [groupId]);
 
+  // Auto-navigate to groups list when removed from group by an admin.
+  // ChatContext clears currentGroup when membership DELETE event fires.
+  useEffect(() => {
+    if (!groupId) return;
+    if (currentGroup === null && !isLoadingMessages) {
+      // Group was cleared — check if it's still in the groups list
+      // If not, we were removed → go back to groups list
+      (navigation as any).navigate('ChatGroupsList');
+    }
+  }, [currentGroup, isLoadingMessages, groupId]);
+
   // רענון הודעות רק כשחוזרים למסך (לא בהתמקדות הראשונה)
   const isFirstFocusRef = useRef(true);
   useEffect(() => {

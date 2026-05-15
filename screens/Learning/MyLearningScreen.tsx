@@ -6,7 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
+import UICard from '../../components/ui/UICard';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ScreenChrome, MAIN_SCREEN_HEADER_HP } from '../../components/ui';
@@ -63,6 +65,7 @@ export const MyLearningScreen: React.FC = () => {
     if (course.progress?.last_lesson_id) {
       navigation.navigate('LessonPlayerScreen', {
         lessonId: course.progress.last_lesson_id,
+        courseId: course.id,
       });
     } else {
       // אם זה קורס הלוויתנים או קורס דוד איראל, נוביל ל-LearningScreen
@@ -75,26 +78,37 @@ export const MyLearningScreen: React.FC = () => {
     }
   }, [navigation]);
 
-  const renderCourse = useCallback(({ item }: { item: CourseWithProgress }) => (
-    <View style={styles.courseContainer}>
-      <CourseCard
-        course={item}
-        onPress={handleCoursePress}
-      />
-      
-      {/* Continue Learning Button */}
-      {item.progress && item.progress.progress_percentage > 0 && (
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={() => handleContinueLearning(item)}
-        >
-          <Text style={styles.continueButtonText}>
-            {item.progress.last_lesson_id ? 'המשך למידה' : 'התחל למידה'}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  ), [handleCoursePress, handleContinueLearning]);
+  const renderCourse = useCallback(({ item }: { item: CourseWithProgress }) => {
+    const pct = item.progress?.progress_percentage ?? 0;
+    return (
+      <View style={styles.courseContainer}>
+        <CourseCard course={item} onPress={handleCoursePress} />
+
+        {/* Progress bar + continue button */}
+        {item.enrollment && (
+          <View style={styles.courseFooter}>
+            {pct > 0 && (
+              <View style={styles.progressBarWrap}>
+                <View style={styles.progressBarTrack}>
+                  <View style={[styles.progressBarFill, { width: `${Math.min(pct, 100)}%` as any }]} />
+                </View>
+                <Text style={styles.progressPct}>{Math.round(pct)}%</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={() => handleContinueLearning(item)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.continueButtonText}>
+                {pct > 0 ? 'המשך למידה ←' : 'התחל ←'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    );
+  }, [handleCoursePress, handleContinueLearning]);
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -114,33 +128,28 @@ export const MyLearningScreen: React.FC = () => {
 
   const renderStats = () => {
     if (!enrollments || enrollments.length === 0) return null;
-
     const totalCourses = enrollments.length;
-    const completedCourses = enrollments.filter(course => 
-      course.progress?.progress_percentage === 100
+    const completedCourses = enrollments.filter(c => c.progress?.progress_percentage === 100).length;
+    const inProgressCourses = enrollments.filter(c =>
+      c.progress && c.progress.progress_percentage > 0 && c.progress.progress_percentage < 100
     ).length;
-    const inProgressCourses = enrollments.filter(course => 
-      course.progress && course.progress.progress_percentage > 0 && course.progress.progress_percentage < 100
-    ).length;
-
     return (
-      <View style={styles.statsContainer}>
+      <UICard variant="glass" glassIntensity="light" padding="lg"
+        style={{ marginHorizontal: MAIN_SCREEN_HEADER_HP, marginBottom: 16, borderRadius: 20 }}>
         <Text style={styles.statsTitle}>התקדמות הלמידה</Text>
         <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{totalCourses}</Text>
-            <Text style={styles.statLabel}>קורסים נרשמים</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{inProgressCourses}</Text>
-            <Text style={styles.statLabel}>בתהליך</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{completedCourses}</Text>
-            <Text style={styles.statLabel}>הושלמו</Text>
-          </View>
+          {[
+            { value: totalCourses, label: 'קורסים' },
+            { value: inProgressCourses, label: 'בתהליך' },
+            { value: completedCourses, label: 'הושלמו' },
+          ].map(s => (
+            <View key={s.label} style={styles.statItem}>
+              <Text style={styles.statValue}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
+            </View>
+          ))}
         </View>
-      </View>
+      </UICard>
     );
   };
 
@@ -205,13 +214,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
       backgroundColor: tokens.colors.background.primary,
     },
-    statsContainer: {
-      marginHorizontal: MAIN_SCREEN_HEADER_HP,
-      marginBottom: tokens.spacing.lg,
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-      borderRadius: tokens.borderRadius['2xl'],
-      padding: tokens.spacing.lg,
-    },
     statsTitle: {
       fontSize: tokens.typography.fontSize.base,
       fontWeight: tokens.typography.fontWeight.semibold as any,
@@ -245,17 +247,44 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     courseContainer: {
       marginBottom: tokens.spacing.lg,
     },
+    courseFooter: {
+      marginTop: -tokens.spacing.sm,
+      gap: tokens.spacing.sm,
+    },
+    progressBarWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: tokens.spacing.sm,
+      paddingHorizontal: 2,
+    },
+    progressBarTrack: {
+      flex: 1,
+      height: 4,
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      borderRadius: 2,
+      overflow: 'hidden',
+    },
+    progressBarFill: {
+      height: '100%',
+      backgroundColor: tokens.colors.primary.main,
+      borderRadius: 2,
+    },
+    progressPct: {
+      fontSize: 11,
+      color: tokens.colors.text.secondary,
+      minWidth: 32,
+      textAlign: 'right',
+    },
     continueButton: {
-      backgroundColor: tokens.colors.success.main,
-      marginTop: tokens.spacing.sm,
+      backgroundColor: tokens.colors.primary.main,
       paddingVertical: tokens.spacing.md,
       borderRadius: tokens.borderRadius.lg,
       alignItems: 'center',
     },
     continueButtonText: {
       fontSize: tokens.typography.fontSize.base,
-      fontWeight: tokens.typography.fontWeight.semibold,
-      color: tokens.colors.text.inverse,
+      fontWeight: tokens.typography.fontWeight.semibold as any,
+      color: '#fff',
     },
     emptyState: {
       alignItems: 'center',

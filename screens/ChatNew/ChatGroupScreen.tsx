@@ -665,18 +665,23 @@ export default function ChatGroupScreen() {
     setForwardModalVisible(true);
   };
 
+  const isForwardingRef = useRef(false);
   const handleForwardMessage = async (groupIds: string[]) => {
-    if (!selectedMessageForForward) return;
+    if (!selectedMessageForForward || isForwardingRef.current) return;
+    isForwardingRef.current = true;
+    try {
+      const result = await forwardMessage(selectedMessageForForward.id, groupIds);
 
-    const result = await forwardMessage(selectedMessageForForward.id, groupIds);
-
-    if (result.success) {
-      void HapticFeedback.impactLight();
-      legacyAlert('הצלחה', 'ההודעה הועברה בהצלחה');
-      setForwardModalVisible(false);
-      setSelectedMessageForForward(null);
-    } else {
-      legacyAlert('שגיאה', result.error || 'לא ניתן להעביר את ההודעה');
+      if (result.success) {
+        void HapticFeedback.impactLight();
+        legacyAlert('הצלחה', 'ההודעה הועברה בהצלחה');
+        setForwardModalVisible(false);
+        setSelectedMessageForForward(null);
+      } else {
+        legacyAlert('שגיאה', result.error || 'לא ניתן להעביר את ההודעה');
+      }
+    } finally {
+      isForwardingRef.current = false;
     }
   };
 

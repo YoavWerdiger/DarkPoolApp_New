@@ -1034,6 +1034,7 @@ export default function ChatGroupScreen() {
             onTyping={handleTyping}
             replyTo={replyTo}
             onCancelReply={handleCancelReply}
+            disabled={isSendingMessage}
           />
         )}
       </View>

@@ -101,13 +101,24 @@ export default function ChatGroupScreen() {
     disableLoadMoreRef.current = true;
     setTimeout(() => { disableLoadMoreRef.current = false; }, 800);
 
-    try {
-      list.scrollToEnd({ animated });
-    } catch (e) {
-      // fallback — index-based scroll to last item
-      try {
-        list.scrollToIndex({ index: messages.length - 1, animated, viewPosition: 1 });
-      } catch { /* noop */ }
+    // scrollToEnd({ animated: true }) is unreliable on non-inverted FlatList when
+    // content is still laying out — the target offset is computed before the new
+    // item height is known, so the scroll lands short. Two rapid animated:false
+    // calls (one immediate, one after a frame) are more reliable and visually
+    // indistinguishable from animated:true because they execute in <16ms.
+    const doScroll = () => {
+      try { list.scrollToEnd({ animated: false }); } catch { /* noop */ }
+    };
+    if (animated) {
+      // First call: snap to where the list thinks the end is right now
+      doScroll();
+      // Second call: after one frame, once the new item height is measured
+      requestAnimationFrame(doScroll);
+      // Third call: safety net for slow devices / large items
+      setTimeout(doScroll, 80);
+    } else {
+      doScroll();
+      requestAnimationFrame(doScroll);
     }
   }, [messages.length]);
 
@@ -993,12 +1004,6 @@ export default function ChatGroupScreen() {
           onStartReachedThreshold={0.2}
           onContentSizeChange={(_w, h) => {
             lastContentHeightRef.current = h;
-            // אם המשתמש "בתחתית" (הודעה אחרונה גלויה) – ודא שגלילה תישאר שם כשתוכן גדל.
-            // Logger.debug is intentionally NOT called here — onContentSizeChange
-            // fires on every scroll/layout pass and floods the dev console.
-            if (isAtBottomRef.current) {
-              flatListRef.current?.scrollToEnd({ animated: false });
-            }
           }}
           ListHeaderComponent={renderFooter}
           ListEmptyComponent={renderEmpty}

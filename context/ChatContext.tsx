@@ -36,8 +36,18 @@ import {
   chatRealtimeService,
 } from '../services/chat';
 import { stopRateLimitCleanup } from '../services/chat/chatValidation';
+import {
+  enqueue as enqueueOffline,
+  remove as removeOffline,
+  recordAttempt as recordOfflineAttempt,
+  peek as peekOffline,
+  makeLocalId,
+  makeClientMessageId,
+} from '../services/chat/chatOfflineQueue';
 import { supabase } from '../services/supabase';
-import { Audio } from 'expo-av';
+// Audio import removed — notification sound is not yet implemented (no mp3 asset in repo)
+
+const MAX_OFFLINE_RETRY_ATTEMPTS = 5;
 
 // ============================================
 // Types
@@ -133,7 +143,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const messagesOffset = useRef(0);
   const hasMoreMessages = useRef(true);
   const currentGroupId = useRef<string | null>(null);
-  const notificationSound = useRef<Audio.Sound | null>(null);
   const personalDeletedIds = useRef<Set<string>>(new Set());
   // C1: version counter to abort stale selectGroup calls
   const selectVersion = useRef(0);
@@ -142,12 +151,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // C4: ref-based lock to prevent concurrent loadMoreMessages calls
   const isLoadingMoreRef = useRef(false);
   const isLoadingAroundRef = useRef(false);
-  // L4: תור הודעות offline – נשמרות כשאין חיבור ונשלחות כשהחיבור חוזר
-  const offlineQueueRef = useRef<SendChatMessageInput[]>([]);
+  // L4: outbound queue is persisted to AsyncStorage (chatOfflineQueue).
+  // A single in-flight guard prevents two flushers running concurrently.
   const isFlushing = useRef(false);
 
   // Keep messagesRef in sync with state
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+
+  // Clear pending read timer when user logs out to avoid stale API calls
+  useEffect(() => {
+    if (!user) {
+      if (readTimerRef.current) {
+        clearTimeout(readTimerRef.current);
+        readTimerRef.current = null;
+      }
+      pendingReadRef.current = null;
+    }
+  }, [user?.id]);
 
   // Read Receipts (debounced - batches calls within 500ms)
   const pendingReadRef = useRef<{ groupId: string; messageIds: Set<string> } | null>(null);
@@ -196,15 +216,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // ============================================
-  // צליל התראה (אופציונלי) — אין קובץ mp3 ב-repo; כשתוסיף assets/sounds/notification.mp3 אפשר לטעון כאן עם Audio.Sound.createAsync(require(...))
-  // ============================================
-
-  useEffect(() => {
-    return () => {
-      notificationSound.current?.unloadAsync();
-    };
-  }, []);
 
   // ============================================
   // Load groups
@@ -471,11 +482,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               });
             }
 
-            // Play sound if not from me
-            if (enrichedMessage.sender_id !== user.id) {
-              notificationSound.current?.replayAsync();
-            }
-
             // Auto mark as read
             if (currentGroupId.current === groupId) {
               markAsRead(groupId, [enrichedMessage.id]);
@@ -513,7 +519,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             logger.debug('ChatContext', 'Skipping own reaction event - handled optimistically');
             return;
           }
-          
+
+          // Validate emoji — reject non-string or suspiciously long values
+          if (typeof reaction.emoji !== 'string' || reaction.emoji.length === 0 || reaction.emoji.length > 20) {
+            logger.warn('ChatContext', 'Dropping reaction event with invalid emoji', reaction.emoji);
+            return;
+          }
+
           logger.debug('ChatContext', `Processing other user reaction: ${eventType} ${reaction.emoji}`);
           
           setMessages(prev => prev.map(m => {
@@ -675,6 +687,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Hard memory cap — stop loading history when we have enough in RAM
+    if (messagesRef.current.length >= MAX_MESSAGES_IN_MEMORY) {
+      hasMoreMessages.current = false;
+      return;
+    }
+
     isLoadingMoreRef.current = true;
     setIsLoadingMessages(true);
     try {
@@ -694,7 +712,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           const combined = [...prev, ...newMessages];
           // C4: sliding window – trim oldest messages (end of array) when history grows too large.
           // In inverted FlatList index 0 = newest, so slice from the start keeps the newest.
+          // Never trim while there are in-flight optimistic messages.
           if (combined.length > MAX_MESSAGES_IN_MEMORY) {
+            const hasPendingOptimistic = combined.some(m => m.id.startsWith('temp-') && (m.is_sending || m.is_uploading));
+            if (hasPendingOptimistic) return combined;
             return combined.slice(0, MAX_MESSAGES_IN_MEMORY);
           }
           return combined;
@@ -871,7 +892,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     // הודעה אופטימיסטית – או חדשה או עדכון לקיימת (מדיה - כבר נוספה ב-ChatInput)
-    const tempId = input.existing_optimistic_id ?? `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const tempId = input.existing_optimistic_id ?? makeLocalId();
+    // Stable client-generated id. Travels with every retry so the server (once
+    // the chat_messages.client_message_id unique index ships) can dedupe.
+    const clientMessageId =
+      (input as SendChatMessageInput & { client_message_id?: string }).client_message_id ??
+      makeClientMessageId();
+    const enrichedInput: SendChatMessageInput & { client_message_id: string } = {
+      ...input,
+      client_message_id: clientMessageId,
+    };
     const optimisticMessage: ChatMessage = {
       id: tempId,
       group_id: input.group_id,
@@ -920,7 +950,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { data, error } = await chatMessageService.sendChatMessage(input, user.id);
+      const { data, error } = await chatMessageService.sendChatMessage(enrichedInput, user.id);
 
       if (data) {
         processedMessageIds.current.add(data.id);
@@ -964,8 +994,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           error?.code === 'NETWORK_ERROR';
 
         if (isNetworkError) {
-          // L4: שמור בתור offline + הצג error על האופטימיסטי
-          offlineQueueRef.current.push({ ...input, sender_id: user.id });
+          // L4: persist to AsyncStorage so app-kill / device reboot does not
+          // lose the message. Mark the optimistic bubble as "waiting for
+          // connection" but keep it on screen.
+          await enqueueOffline({
+            local_id: tempId,
+            client_message_id: clientMessageId,
+            sender_id: user.id,
+            payload: { ...input, sender_id: user.id },
+          });
           setMessages(prev => prev.map(m =>
             m.id === tempId ? { ...m, is_sending: false, send_error: 'ממתין לחיבור...' } : m
           ));
@@ -991,6 +1028,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const editMessage = useCallback(async (messageId: string, content: string, mentions?: any[]) => {
     if (!user) return { success: false, error: 'לא מחובר' };
 
+    // Optimistic update — show edited content immediately
+    const originalMessage = messagesRef.current.find(m => m.id === messageId);
+    setMessages(prev => prev.map(m =>
+      m.id === messageId
+        ? { ...m, content, is_edited: true, edited_at: new Date().toISOString() }
+        : m
+    ));
+
     const mentionedUserIds = mentions?.map((m: any) => m.id).filter(Boolean);
     const { data, error } = await chatMessageService.editChatMessage(
       { message_id: messageId, content, mentioned_users: mentionedUserIds },
@@ -1002,6 +1047,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     }
 
+    // Rollback on failure
+    if (originalMessage) {
+      setMessages(prev => prev.map(m => m.id === messageId ? originalMessage : m));
+    }
     return { success: false, error: error?.message };
   }, [user]);
 
@@ -1242,49 +1291,91 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setRealtimeConnectionState('offline');
       }
 
-      // L4: flush offline queue when connection is restored
-      if (status === 'CONNECTED' && offlineQueueRef.current.length > 0 && !isFlushing.current) {
+      // L4: flush persisted offline queue when connection is restored.
+      // Per-message attempt counter (persisted) prevents one bad message from
+      // blocking the rest; exponential backoff between consecutive failures.
+      if (status === 'CONNECTED' && !isFlushing.current) {
         isFlushing.current = true;
         const flush = async () => {
-          let failCount = 0;
-          while (offlineQueueRef.current.length > 0) {
-            const next = offlineQueueRef.current[0];
-            try {
-              const { data, error } = await chatMessageService.sendChatMessage(next, next.sender_id!);
-              if (data) {
-                offlineQueueRef.current.shift();
-                processedMessageIds.current.add(data.id);
-                if (data.group_id === currentGroupId.current) {
-                  setMessages(prev => {
-                    if (prev.some(m => m.id === data.id)) return prev;
-                    return [{ ...data }, ...prev];
-                  });
-                }
-                failCount = 0;
-              } else if (error) {
-                failCount++;
-                if (failCount >= 3) {
-                  offlineQueueRef.current.shift();
-                  logger.error('ChatContext', 'Dropping message after 3 failed attempts', error);
-                  failCount = 0;
-                } else {
-                  await new Promise(r => setTimeout(r, 1000 * failCount));
-                }
+          try {
+            while (true) {
+              const queued = await peekOffline();
+              if (queued.length === 0) break;
+              const next = queued[0];
+
+              // Safety: discard queued messages that don't belong to the current user.
+              // This can happen if the user logged out and someone else logged in
+              // before the connection was restored.
+              if (!user || next.sender_id !== user.id) {
+                logger.warn('ChatContext', 'Discarding offline message from different user, dropping', next.local_id);
+                await removeOffline(next.local_id);
+                setMessages(prev => prev.filter(m => m.id !== next.local_id));
+                continue;
               }
-            } catch (e) {
-              failCount++;
-              logger.error('ChatContext', 'Offline queue flush error', e);
-              if (failCount >= 3) {
-                offlineQueueRef.current.shift();
-                failCount = 0;
-              } else {
-                await new Promise(r => setTimeout(r, 1000 * failCount));
+
+              try {
+                const enrichedPayload: SendChatMessageInput & { client_message_id: string } = {
+                  ...next.payload,
+                  client_message_id: next.client_message_id,
+                };
+                const { data, error } = await chatMessageService.sendChatMessage(
+                  enrichedPayload,
+                  next.sender_id
+                );
+                if (data) {
+                  await removeOffline(next.local_id);
+                  processedMessageIds.current.add(data.id);
+                  if (data.group_id === currentGroupId.current) {
+                    setMessages(prev => {
+                      const tempIdx = prev.findIndex(m => m.id === next.local_id);
+                      if (tempIdx !== -1) {
+                        return prev.map((m, idx) => (idx === tempIdx ? { ...data } : m));
+                      }
+                      if (prev.some(m => m.id === data.id)) return prev;
+                      return [{ ...data }, ...prev];
+                    });
+                  }
+                } else {
+                  await recordOfflineAttempt(next.local_id, error?.message);
+                  const attempts = next.attempts + 1;
+                  if (attempts >= MAX_OFFLINE_RETRY_ATTEMPTS) {
+                    await removeOffline(next.local_id);
+                    setMessages(prev => prev.map(m =>
+                      m.id === next.local_id
+                        ? { ...m, is_sending: false, send_error: error?.message || 'נכשל בשליחה לאחר ניסיונות חוזרים' }
+                        : m
+                    ));
+                    logger.error('ChatContext', 'Dropping queued message after max attempts', { local_id: next.local_id, error });
+                  } else {
+                    // Exponential backoff: 1s, 2s, 4s, 8s, 16s. Cap at 30s.
+                    const delay = Math.min(1000 * Math.pow(2, attempts - 1), 30_000);
+                    await new Promise(r => setTimeout(r, delay));
+                  }
+                }
+              } catch (e) {
+                logger.error('ChatContext', 'Offline queue flush threw', e);
+                await recordOfflineAttempt(next.local_id, e instanceof Error ? e.message : String(e));
+                const attempts = next.attempts + 1;
+                if (attempts >= MAX_OFFLINE_RETRY_ATTEMPTS) {
+                  await removeOffline(next.local_id);
+                  setMessages(prev => prev.map(m =>
+                    m.id === next.local_id
+                      ? { ...m, is_sending: false, send_error: 'נכשל בשליחה' }
+                      : m
+                  ));
+                } else {
+                  await new Promise(r => setTimeout(r, Math.min(1000 * Math.pow(2, attempts - 1), 30_000)));
+                }
               }
             }
+          } finally {
+            isFlushing.current = false;
           }
-          isFlushing.current = false;
         };
-        flush();
+        flush().catch(e => {
+          logger.error('ChatContext', 'Offline flush failed completely', e);
+          isFlushing.current = false;
+        });
       }
     });
 

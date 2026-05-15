@@ -836,21 +836,27 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const { error } = await chatGroupService.removeGroupMember(groupId, user.id, user.id);
 
     if (!error) {
+      // Always unsubscribe — don't rely on currentGroup state which may be stale
+      // when the user is on a nested screen (e.g. ChatGroupInfoScreen)
+      chatRealtimeService.unsubscribeFromGroup(groupId);
+
       // Remove from groups list
       setGroups(prev => prev.filter(g => g.id !== groupId));
 
-      // Clear current group if selected
-      if (currentGroup?.id === groupId) {
+      // Clear current group using the ref (always up-to-date) instead of state
+      if (currentGroupId.current === groupId) {
+        currentGroupId.current = null;
         setCurrentGroup(null);
         setMessages([]);
-        chatRealtimeService.unsubscribeFromGroup(groupId);
+        setTypingUsers([]);
       }
 
       return { success: true };
     }
 
+    logger.error('ChatContext', 'leaveGroup failed', error);
     return { success: false, error: error.message };
-  }, [user, currentGroup]);
+  }, [user]);
 
   // ============================================
   // Send message

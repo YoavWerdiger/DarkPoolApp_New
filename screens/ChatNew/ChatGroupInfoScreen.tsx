@@ -285,11 +285,10 @@ export default function ChatGroupInfoScreen() {
             try {
               const result = await leaveGroup(groupId);
               if (result.success) {
-                // Pop entire chat stack back to the groups list.
-                // goBack() only goes to ChatGroupScreen which still holds the
-                // old groupId — we must pop all the way to ChatGroupsList.
-                (navigation as any).reset
-                  ? (navigation as any).reset({ index: 0, routes: [{ name: 'ChatGroupsList' }] })
+                // popToTop() pops all screens in the ChatStack back to
+                // ChatGroupsList — more reliable than reset() in nested stacks.
+                (navigation as any).popToTop
+                  ? (navigation as any).popToTop()
                   : (navigation as any).navigate('ChatGroupsList');
               } else {
                 legacyAlert('שגיאה', result.error || 'לא הצלחנו לעזוב את הקבוצה');

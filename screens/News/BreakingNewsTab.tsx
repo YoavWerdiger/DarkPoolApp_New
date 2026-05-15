@@ -1304,43 +1304,48 @@ export default function BreakingNewsTab() {
           table: 'app_news_clean'
         },
         (payload) => {
-          // המרת הנתונים לפורמט NewsArticle עם מיפוי גמיש
           const row = payload.new;
-          
+          // Validate required fields before processing
+          if (!row || typeof row !== 'object') return;
+          const title = row.text_content || row.title || row.headline || row.subject ||
+                        row.tweet_text || row.text || row.content || '';
+          if (!title) return; // drop malformed payloads with no content
+
           const newArticle: NewsArticle = {
             id: row.id || row.uuid || row.tweet_id || String(Date.now()),
             label: row.label || '',
-            title: row.text_content || row.title || row.headline || row.subject || row.name || 
-                   row.tweet_text || row.text || row.content || 'כתבה חדשה',
-            content: row.text_content || row.content || row.text || row.description || 
+            title,
+            content: row.text_content || row.content || row.text || row.description ||
                      row.body || row.message || row.tweet_text || '',
-            summary: row.summary || row.excerpt || row.description || 
+            summary: row.summary || row.excerpt || row.description ||
                      row.snippet || row.abstract || '',
-            source: row.source || row.origin || row.publisher || 
+            source: row.source || row.origin || row.publisher ||
                     row.author || row.username || row.screen_name || 'לא ידוע',
             source_url: row.source_url || row.url || row.link || row.tweet_url || '',
             author: row.author || row.writer || row.username || row.screen_name || '',
-            image_url: row.img || row.image_url || row.image || row.thumbnail || 
-                      row.media_url || row.photo || row.picture || 
+            image_url: row.img || row.image_url || row.image || row.thumbnail ||
+                      row.media_url || row.photo || row.picture ||
                       row.profile_image || null,
-            published_at: row.time || row.published_at || row.created_at || row.date || row.timestamp || row.posted_at || new Date().toISOString(),
-            created_at: row.time || row.created_at || row.date || row.timestamp || new Date().toISOString(),
+            published_at: row.time || row.published_at || row.created_at || row.date || new Date().toISOString(),
+            created_at: row.time || row.created_at || row.date || new Date().toISOString(),
             updated_at: row.updated_at || row.modified_at || null,
-            category: row.category || row.type || row.topic || 
-                     row.section || row.tag || 'כללי',
-            tags: row.tags || row.hashtags || [],
+            category: row.category || row.type || row.topic || row.section || row.tag || 'כללי',
+            tags: Array.isArray(row.tags) ? row.tags : Array.isArray(row.hashtags) ? row.hashtags : [],
             is_featured: row.is_featured || row.featured || false,
-            view_count: row.view_count || row.views || row.retweet_count || 0,
+            view_count: row.view_count || row.views || 0,
             sentiment: row.sentiment || row.mood || 'neutral',
             relevance_score: row.relevance_score || row.score || 0,
             reading_time: row.reading_time || row.read_time || 1
           };
-          
-          // הוספת הכתבה החדשה לתחילת הרשימה
+
           setArticles(prev => [newArticle, ...prev.slice(0, 49)]);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.warn('[BreakingNews] Realtime subscription error — live updates unavailable');
+        }
+      });
 
     return () => {
       subscription.unsubscribe();

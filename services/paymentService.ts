@@ -396,7 +396,7 @@ class PaymentService {
 
         return;
       } catch (edgeFunctionError) {
-        
+        console.warn('[PaymentService] Edge function failed, falling back to direct insert:', edgeFunctionError);
         // ניסיון 2: הכנסה ישירה (fallback)
         const { error: directError } = await supabase
           .from('payment_transactions')
@@ -414,10 +414,13 @@ class PaymentService {
           });
 
         if (directError) {
+          console.error('[PaymentService] Direct insert also failed:', directError);
           throw directError;
         }
+        console.warn('[PaymentService] Transaction saved via direct insert fallback. id=', transaction.id);
       }
     } catch (error) {
+      console.error('[PaymentService] saveTransaction failed completely:', error);
       throw error;
     }
   }

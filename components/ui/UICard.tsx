@@ -126,15 +126,15 @@ const UICard: React.FC<UICardProps> = ({
               style={[StyleSheet.absoluteFill, { borderRadius: clipCornerRadius, overflow: 'hidden' }]}
             />
           ) : (
+            // Android: use cardSolid as backdrop so the glass overlay on top
+            // produces the same dark-card appearance as iOS blur at ~85% opacity.
             <View
               style={[
                 StyleSheet.absoluteFill,
                 {
                   borderRadius: clipCornerRadius,
                   overflow: 'hidden',
-                  backgroundColor: isDarkMode
-                    ? 'rgba(22, 32, 24, 0.72)'
-                    : 'rgba(245, 245, 247, 0.88)',
+                  backgroundColor: isDarkMode ? colors.background.cardSolid : colors.background.secondary,
                 },
               ]}
             />

@@ -53,8 +53,12 @@ export default function RegisterScreen({ navigation }: any) {
       return false;
     }
     
-    if (password.length < 6) {
-      legacyAlert('שגיאה', 'הסיסמה חייבת להיות לפחות 6 תווים');
+    if (password.length < 8) {
+      legacyAlert('שגיאה', 'הסיסמה חייבת להיות לפחות 8 תווים');
+      return false;
+    }
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      legacyAlert('שגיאה', 'הסיסמה חייבת לכלול אותיות ומספרים');
       return false;
     }
     if (password !== confirmPassword) {

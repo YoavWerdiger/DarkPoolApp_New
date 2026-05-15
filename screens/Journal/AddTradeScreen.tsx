@@ -49,6 +49,9 @@ export default function AddTradeScreen() {
   const [entryPrice, setEntryPrice] = useState('');
   const [exitPrice, setExitPrice] = useState('');
   const [quantity, setQuantity] = useState('1');
+  const [stopLoss, setStopLoss] = useState('');
+  const [targetPrice, setTargetPrice] = useState('');
+  const [strategyName, setStrategyName] = useState('');
   const [entryDateText, setEntryDateText] = useState('');
   const [exitDateText, setExitDateText] = useState('');
   const [entryTimeText, setEntryTimeText] = useState('');
@@ -102,23 +105,23 @@ export default function AddTradeScreen() {
       const [day, month, year] = dateParts.map(Number);
       const [hour, minute] = timeText.split(':').map(Number);
       if (
-        isNaN(day) ||
-        isNaN(month) ||
-        isNaN(year) ||
-        isNaN(hour) ||
-        isNaN(minute) ||
-        day < 1 ||
-        day > 31 ||
-        month < 1 ||
-        month > 12 ||
-        hour < 0 ||
-        hour > 23 ||
-        minute < 0 ||
-        minute > 59
+        isNaN(day) || isNaN(month) || isNaN(year) ||
+        isNaN(hour) || isNaN(minute) ||
+        day < 1 || day > 31 || month < 1 || month > 12 ||
+        hour < 0 || hour > 23 || minute < 0 || minute > 59
       ) {
         return null;
       }
-      return new Date(year, month - 1, day, hour, minute);
+      const date = new Date(year, month - 1, day, hour, minute);
+      // Verify the date is real — new Date(2024, 1, 30) silently overflows to March 1
+      if (
+        date.getFullYear() !== year ||
+        date.getMonth() !== month - 1 ||
+        date.getDate() !== day
+      ) {
+        return null;
+      }
+      return date;
     } catch {
       return null;
     }
@@ -201,6 +204,9 @@ export default function AddTradeScreen() {
         exit_date: parsedExitDate.toISOString(),
         notes: null,
         journal_details: buildJournalDetails(),
+        stop_loss: stopLoss.trim() ? parseFloat(stopLoss) : null,
+        target_price: targetPrice.trim() ? parseFloat(targetPrice) : null,
+        strategy_name: strategyName.trim() || null,
       });
 
       if (error) throw error;
@@ -377,6 +383,20 @@ export default function AddTradeScreen() {
                     </UICard>
                   </View>
                 </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>שם אסטרטגיה</Text>
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={strategyName}
+                      onChangeText={setStrategyName}
+                      placeholder="למשל: Breakout, Mean Reversion..."
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      autoCorrect={false}
+                      textAlign="right"
+                    />
+                  </UICard>
+                </View>
               </>
             )}
 
@@ -418,6 +438,34 @@ export default function AddTradeScreen() {
                       value={quantity}
                       onChangeText={setQuantity}
                       placeholder="1"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      keyboardType="decimal-pad"
+                      textAlign="right"
+                    />
+                  </UICard>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Stop Loss</Text>
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={stopLoss}
+                      onChangeText={setStopLoss}
+                      placeholder="0.00"
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      keyboardType="decimal-pad"
+                      textAlign="right"
+                    />
+                  </UICard>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Target Price</Text>
+                  <UICard variant="inputGlass" padding="none" style={styles.inputGlassShell}>
+                    <TextInput
+                      style={styles.inputGlassInner}
+                      value={targetPrice}
+                      onChangeText={setTargetPrice}
+                      placeholder="0.00"
                       placeholderTextColor={DesignTokens.colors.text.tertiary}
                       keyboardType="decimal-pad"
                       textAlign="right"
@@ -574,7 +622,7 @@ export default function AddTradeScreen() {
                     [
                       { v: true as const, label: 'כן' },
                       { v: false as const, label: 'לא' },
-                      { v: null as const, label: 'לא צוין' },
+                      { v: null as null, label: 'לא צוין' },
                     ] as const
                   ).map((opt) => {
                     const selected = followedPlan === opt.v;

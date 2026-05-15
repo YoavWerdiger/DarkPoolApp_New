@@ -5,21 +5,9 @@
 // ============================================
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useAuth } from './AuthContext';
 import { logger } from '../utils/logger';
 import * as Clipboard from 'expo-clipboard';
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
-const SMOOTH_INSERT = {
-  duration: 220,
-  create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-  update: { type: LayoutAnimation.Types.easeInEaseOut },
-};
 
 import {
   ChatGroup,
@@ -477,7 +465,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                 if (existingIndex !== -1) {
                   return prev.map((m, idx) => idx === existingIndex ? enrichedMessage : m);
                 }
-                LayoutAnimation.configureNext(SMOOTH_INSERT);
                 return [enrichedMessage, ...prev];
               });
             }
@@ -945,7 +932,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         m.id === tempId ? { ...m, ...optimisticMessage } : m
       ));
     } else {
-      LayoutAnimation.configureNext(SMOOTH_INSERT);
       setMessages(prev => [optimisticMessage, ...prev]);
     }
 
@@ -1456,7 +1442,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const addOptimisticMediaMessage = useCallback((message: ChatMessage) => {
-    LayoutAnimation.configureNext(SMOOTH_INSERT);
     setMessages(prev => [message, ...prev]);
   }, []);
 

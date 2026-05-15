@@ -4,7 +4,7 @@
 // שדה הקלדה ושליחת הודעות עם כל התכונות
 // ============================================
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, memo } from 'react';
 import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Alert, Animated, Easing } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -27,6 +27,8 @@ import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useMentions } from '../../hooks/useMentions';
+import { useChatDraft } from '../../hooks/useChatDraft';
+import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
 import MentionPicker from './MentionPicker';
 import { logger } from '../../utils/logger';
 
@@ -43,7 +45,7 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-export default function ChatInput({
+function ChatInputImpl({
   groupId,
   onSendMessage,
   onTyping,
@@ -66,7 +68,13 @@ export default function ChatInput({
     return createStyles(DesignTokens, insets.bottom);
   }, [DesignTokens, insets.bottom]);
 
-  const [text, setText] = useState('');
+  // Per-group draft autosave: text typed but not sent survives screen exits,
+  // app background, and process death. The hook restores any saved draft
+  // when the user re-enters the same chat.
+  const { draft, setDraft, clearDraft } = useChatDraft(groupId);
+  const text = draft;
+  const setText = setDraft;
+
   const [isRecording, setIsRecording] = useState(false);
 
   // Mentions hook
@@ -80,6 +88,11 @@ export default function ChatInput({
     closeMentionPicker,
     clearAllMentions,
   } = useMentions(text);
+
+  // Throttled typing broadcaster: first keystroke fires immediately, then at
+  // most once every 1.5s. Idle → fires `false` once after 2s of inactivity.
+  const { reportKeystroke: reportTypingKeystroke, flushStop: stopTyping } =
+    useTypingBroadcast(onTyping);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioLevel, setAudioLevel] = useState(0); // רמת קול אמיתית
@@ -104,7 +117,6 @@ export default function ChatInput({
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const waveformIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const previewPositionInterval = useRef<NodeJS.Timeout | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordingDotOpacity = useRef(new Animated.Value(1)).current;
   const timelineProgress = useRef(new Animated.Value(0)).current;
   const sendBtnScale = useRef(new Animated.Value(1)).current;
@@ -146,15 +158,12 @@ export default function ChatInput({
 
   useEffect(() => {
     return () => {
-      // נקה timeout ו-שלח stop typing כשיוצאים מהמסך
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      if (onTyping) {
-        onTyping(false);
-      }
+      // useTypingBroadcast already publishes onTyping(false) on unmount,
+      // so we don't need to duplicate that here. Kept as a defence in depth
+      // in case parents swap onTyping at runtime.
+      stopTyping();
     };
-  }, [onTyping]);
+  }, [stopTyping]);
 
   // הרשאות גלריה/מצלמה מראש – הפicker נפתח מיד בלחיצה
   useEffect(() => {
@@ -171,34 +180,13 @@ export default function ChatInput({
   // ============================================
 
   const handleTextChange = (newText: string) => {
-    const previousText = text;
     setText(newText);
 
     // Handle mentions (@)
     handleMentionInputChange(newText);
 
-    // Typing indicator
-    if (onTyping) {
-      // Clear existing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
-
-      // אם הטקסט ריק - הפסק להקליד מיד
-      if (newText.trim().length === 0) {
-        onTyping(false);
-        return;
-      }
-
-      // יש טקסט - שלח typing status
-      onTyping(true);
-
-      // Stop typing after 2 seconds of inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        onTyping(false);
-      }, 2000);
-    }
+    // Throttled typing-indicator broadcast (≤ 1Hz to the realtime channel).
+    reportTypingKeystroke(newText);
   };
 
   // Handle mention selection
@@ -225,12 +213,12 @@ export default function ChatInput({
     const mentionedUserIds = mentions.map(m => m.user_id);
 
     const textToSend = messageText;
-    setText('');
-    clearAllMentions(); // Clear mentions after sending
-
-    if (onTyping) {
-      onTyping(false);
-    }
+    // Clear local draft state AND persisted AsyncStorage draft. We do this
+    // BEFORE awaiting the send: optimistic UI means the bubble shows up
+    // instantly, and the user expects the input to clear instantly too.
+    clearDraft();
+    clearAllMentions();
+    stopTyping();
 
     // Keep reference to input for refocus
     const inputRef = textInputRef.current;
@@ -243,7 +231,8 @@ export default function ChatInput({
       }).catch((error) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
         Alert.alert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
-        // Restore text on error
+        // Restore draft on send error so the user can edit and retry. This
+        // also re-persists it via useChatDraft's debounce.
         setText(textToSend);
       });
 
@@ -1524,9 +1513,6 @@ export default function ChatInput({
       if (previewPositionInterval.current) {
         clearInterval(previewPositionInterval.current);
       }
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
       pulseAnimationRef.current?.stop();
       pulseAnimationRef.current = null;
     };
@@ -1557,7 +1543,7 @@ export default function ChatInput({
       ) : null}
 
       <View style={styles.container}>
-        {/* Input Container - glass pill */}
+        {/* Input Container - glass pill (no send button inside) */}
         <UICard
           variant="glass"
           glassIntensity="light"
@@ -1722,118 +1708,77 @@ export default function ChatInput({
               )}
             </>
           )}
-          {/* במצב נעול כל הבקרות בשורת ההקלטה המרכזית — כאן רק מיקרופון/שליחה כשאין הקלטה */}
-          {!isLocked ? (
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'visible',
-                zIndex: 2,
-                elevation: 2,
-              }}
-            >
-              <View
-                style={{
-                  width: 44,
-                  height: 44,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {/* רקע ירוק קבוע — לא בתוך אנימציית opacity (שהייתה מעיפה את הירוק) */}
-                <View
-                  pointerEvents="none"
-                  style={[
-                    styles.sendButton,
-                    {
-                      position: 'absolute',
-                      width: 40,
-                      height: 40,
-                      left: 2,
-                      top: 2,
-                    },
-                  ]}
-                />
-
-                <Animated.View
-                  pointerEvents={text.trim().length === 0 ? 'auto' : 'none'}
-                  style={{
-                    position: 'absolute',
-                    width: 44,
-                    height: 44,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    opacity: iconAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
-                    transform: [
-                      { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.5], extrapolate: 'clamp' }) },
-                      { rotate: iconAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-30deg'], extrapolate: 'clamp' }) },
-                    ],
-                  }}
-                >
-                  <Pressable
-                    onPress={handleMicTapToRecord}
-                    disabled={disabled || isUploading}
-                    accessibilityRole="button"
-                    accessibilityLabel="הקלטת הודעה קולית"
-                    style={({ pressed }) => ({
-                      width: 40,
-                      height: 40,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      opacity: pressed && !disabled && !isUploading ? 0.88 : 1,
-                    })}
-                  >
-                    <Ionicons name="mic-outline" size={26} color={micOnGreenColor} />
-                  </Pressable>
-                </Animated.View>
-
-                <Animated.View
-                  pointerEvents={text.trim().length > 0 ? 'auto' : 'none'}
-                  style={{
-                    position: 'absolute',
-                    width: 44,
-                    height: 44,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    opacity: iconAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
-                    transform: [
-                      { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1], extrapolate: 'clamp' }) },
-                      { rotate: iconAnim.interpolate({ inputRange: [0, 1], outputRange: ['30deg', '0deg'], extrapolate: 'clamp' }) },
-                    ],
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => {
-                      Animated.sequence([
-                        Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
-                        Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
-                      ]).start();
-                      handleSend();
-                    }}
-                    style={{
-                      width: 40,
-                      height: 40,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      backgroundColor: 'transparent',
-                    }}
-                    disabled={disabled || isUploading || text.trim().length === 0}
-                    activeOpacity={1}
-                  >
-                    <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
-                      <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
-                    </Animated.View>
-                  </TouchableOpacity>
-                </Animated.View>
-              </View>
-            </View>
-          ) : null}
         </UICard>
 
-        {/* Uploading indicator removed – upload progress is shown on the optimistic message itself */}
+        {/* Send / Mic button — OUTSIDE the pill, WhatsApp-style floating circle */}
+        {!isLocked && !isRecording && !isPaused && (
+          <View style={styles.sendBtnOuter}>
+            {/* Mic button (fades out when text present) */}
+            <Animated.View
+              pointerEvents={text.trim().length === 0 ? 'auto' : 'none'}
+              style={{
+                position: 'absolute',
+                width: 46,
+                height: 46,
+                justifyContent: 'center',
+                alignItems: 'center',
+                opacity: iconAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
+                transform: [
+                  { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7], extrapolate: 'clamp' }) },
+                ],
+              }}
+            >
+              <Pressable
+                onPress={handleMicTapToRecord}
+                disabled={disabled || isUploading}
+                accessibilityRole="button"
+                accessibilityLabel="הקלטת הודעה קולית"
+                style={({ pressed }) => ({
+                  width: 46,
+                  height: 46,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  opacity: pressed && !disabled && !isUploading ? 0.82 : 1,
+                })}
+              >
+                <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
+              </Pressable>
+            </Animated.View>
+
+            {/* Send button (fades in when text present) */}
+            <Animated.View
+              pointerEvents={text.trim().length > 0 ? 'auto' : 'none'}
+              style={{
+                position: 'absolute',
+                width: 46,
+                height: 46,
+                justifyContent: 'center',
+                alignItems: 'center',
+                opacity: iconAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
+                transform: [
+                  { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1], extrapolate: 'clamp' }) },
+                ],
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => {
+                  Animated.sequence([
+                    Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
+                    Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
+                  ]).start();
+                  handleSend();
+                }}
+                style={{ width: 46, height: 46, justifyContent: 'center', alignItems: 'center' }}
+                disabled={disabled || isUploading || text.trim().length === 0}
+                activeOpacity={1}
+              >
+                <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
+                  <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
+                </Animated.View>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        )}
       </View>
 
       {/* Media Preview Modal */}
@@ -1880,6 +1825,26 @@ export default function ChatInput({
     </>
   );
 }
+
+// PERF: ChatInput hosts a lot of internal state (recording, animations,
+// pickers, mention dropdown) that should NOT remount every time the parent
+// screen re-renders. With React.memo + memoised handler props in
+// ChatGroupScreen, the entire input subtree stays stable while the user
+// types — which is what makes the send button feel instant.
+const ChatInput = memo(ChatInputImpl, (prev, next) => {
+  return (
+    prev.groupId === next.groupId &&
+    prev.onSendMessage === next.onSendMessage &&
+    prev.onTyping === next.onTyping &&
+    prev.onCancelReply === next.onCancelReply &&
+    prev.disabled === next.disabled &&
+    prev.replyTo?.id === next.replyTo?.id &&
+    prev.replyTo?.content === next.replyTo?.content &&
+    prev.replyTo?.senderName === next.replyTo?.senderName
+  );
+});
+
+export default ChatInput;
 
 // ============================================
 // Styles - Modern Design from Reference
@@ -1959,7 +1924,7 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     paddingHorizontal: tokens.spacing.sm + 1,
     paddingVertical: tokens.spacing.xs + 1,
     gap: tokens.spacing.xs,
-    minHeight: 52,
+    minHeight: 46,
   },
   iconButton: {
     width: 40,
@@ -2086,11 +2051,25 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     top: -1.5,
   },
 
+  /** Standalone circular send/mic button outside the input pill — WhatsApp style */
+  sendBtnOuter: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: tokens.colors.primary.main,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginStart: 8,
+    alignSelf: 'flex-end',
+    marginBottom: 3,
+  },
+
+  /** Used only inside recording rows */
   sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    /** ירוק מותג מלא — לא צבע בועה (הבועה עדינה; הכפתור נשאר “פעמון”) */
     backgroundColor: tokens.colors.primary.main,
     justifyContent: 'center',
     alignItems: 'center',

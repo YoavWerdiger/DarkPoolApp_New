@@ -477,14 +477,8 @@ export async function removeGroupMember(
       return { error: { code: 'REMOVE_MEMBER_ERROR', message: error.message } };
     }
 
-    if (groupResult?.data?.settings?.showJoinMessages) {
-      await createSystemMessage(
-        groupId,
-        userIdToRemove,
-        isSelf ? SystemMessageType.USER_LEFT : SystemMessageType.MEMBER_REMOVED,
-        { user_id: userIdToRemove, admin_id: isSelf ? undefined : removedBy }
-      );
-    }
+    // System messages for user_left / member_removed are disabled by design.
+    // The group settings showJoinMessages flag is intentionally ignored for leave events.
 
     return { error: null };
   } catch (error: any) {

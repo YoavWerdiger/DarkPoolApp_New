@@ -1411,7 +1411,37 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    // Listen for own membership being removed from any group.
+    // When another admin removes this user, the Realtime DELETE event fires here
+    // and we immediately clean up — no need to wait for reload.
+    const membershipChannel = supabase
+      .channel(`own-membership-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'chat_group_members',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const removedGroupId = (payload.old as any)?.group_id;
+          if (!removedGroupId) return;
+          logger.debug('ChatContext', `Removed from group ${removedGroupId} — cleaning up`);
+          setGroups(prev => prev.filter(g => g.id !== removedGroupId));
+          chatRealtimeService.unsubscribeFromGroup(removedGroupId);
+          // If currently viewing that group, clear it
+          if (currentGroupId.current === removedGroupId) {
+            setCurrentGroup(null);
+            setMessages([]);
+            setTypingUsers([]);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
+      membershipChannel.unsubscribe();
       chatRealtimeService.updateOnlineStatus(user.id, false);
       chatRealtimeService.stopTypingCleanup();
       chatRealtimeService.unsubscribeAll();

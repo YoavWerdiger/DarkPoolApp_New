@@ -83,11 +83,19 @@ export default function ChatGroupScreen() {
   const hasInitiallyRenderedRef = useRef(false);
 
   const scrollToBottom = useCallback((animated: boolean = true) => {
-    if (!flatListRef.current || messages.length === 0) return;
+    const list = flatListRef.current;
+    if (!list || messages.length === 0) return;
     setShowScrollToBottomButton(false);
     RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
     isAtBottomRef.current = true;
-    flatListRef.current.scrollToOffset({ offset: 0, animated });
+    // Triple-call pattern needed in RN 0.81 with inverted FlatList:
+    // scrollToOffset(0) alone sometimes fails when the layout hasn't settled.
+    // scrollToIndex({index:0}) is the most specific and forces item 0 (newest) into view.
+    list.scrollToOffset({ offset: 0, animated: false });
+    requestAnimationFrame(() => {
+      list.scrollToOffset({ offset: 0, animated: false });
+      try { list.scrollToIndex({ index: 0, animated, viewPosition: 0 }); } catch { /* noop */ }
+    });
   }, [messages.length]);
 
   // עוקב אחרי האם המשתמש נמצא בתחתית הרשימה
@@ -132,7 +140,11 @@ export default function ChatGroupScreen() {
 
     if (newLength > 0 && !hasInitiallyRenderedRef.current) {
       hasInitiallyRenderedRef.current = true;
-      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength})`);
+      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength}), ensuring offset=0`);
+      // Force offset 0 on initial load — inverted FlatList in RN 0.81 sometimes
+      // doesn't auto-position at the bottom when data arrives asynchronously.
+      scrollToBottom(false);
+      return;
     }
 
     const isNewMessage = newLength > prevLength && newLength - prevLength <= 3;

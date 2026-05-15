@@ -136,26 +136,25 @@ export default function LoginScreen({ navigation }: any) {
 
   const loadSavedCredentials = async () => {
     try {
+      // Migrate: clear any legacy plaintext password from older versions
+      await AsyncStorage.removeItem('saved_password');
+
       const savedEmail    = await AsyncStorage.getItem('saved_email');
-      const savedPassword = await AsyncStorage.getItem('saved_password');
       const savedRemember = await AsyncStorage.getItem('remember_me');
-      if (savedRemember === 'true' && savedEmail && savedPassword) {
+      if (savedRemember === 'true' && savedEmail) {
         setEmail(savedEmail);
-        setPassword(savedPassword);
         setRememberMe(true);
       }
     } catch {}
   };
 
-  const saveCredentials = async (e: string, p: string, remember: boolean) => {
+  const saveCredentials = async (e: string, remember: boolean) => {
     try {
       if (remember) {
-        await AsyncStorage.setItem('saved_email',    e);
-        await AsyncStorage.setItem('saved_password', p);
-        await AsyncStorage.setItem('remember_me',    'true');
+        await AsyncStorage.setItem('saved_email', e);
+        await AsyncStorage.setItem('remember_me', 'true');
       } else {
         await AsyncStorage.removeItem('saved_email');
-        await AsyncStorage.removeItem('saved_password');
         await AsyncStorage.removeItem('remember_me');
       }
     } catch {}
@@ -169,9 +168,9 @@ export default function LoginScreen({ navigation }: any) {
     const { error } = await signIn({ email: email.trim(), password });
     if (error) {
       legacyAlert('שגיאה בהתחברות', error);
-      await saveCredentials('', '', false);
+      await saveCredentials('', false);
     } else {
-      await saveCredentials(email.trim(), password, rememberMe);
+      await saveCredentials(email.trim(), rememberMe);
     }
   };
 

@@ -1,8 +1,9 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabase';
@@ -11,18 +12,32 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { Trade } from './tradeTypes';
 import { TradeListCard, createTradeCardStyles } from './TradeListCard';
+import type { JournalStackParamList } from '../../navigation/JournalStack';
+import UICard from '../../components/ui/UICard';
 
 export type { Trade } from './tradeTypes';
+
+type Nav = NativeStackNavigationProp<JournalStackParamList, 'JournalMain'>;
+type FilterId = 'all' | 'long' | 'short' | 'win' | 'loss' | string;
+const BASE_FILTERS: { id: FilterId; label: string }[] = [
+  { id: 'all', label: 'הכל' },
+  { id: 'long', label: 'Long' },
+  { id: 'short', label: 'Short' },
+  { id: 'win', label: 'Win ✓' },
+  { id: 'loss', label: 'Loss ✗' },
+];
 
 export default function TradesListTab() {
   const DesignTokens = useDesignTokens();
   const { user } = useAuth();
+  const navigation = useNavigation<Nav>();
   const mainTabsHeight = useMainTabsHeight();
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const styles = useMemo(() => createStyles(DesignTokens, mainTabsHeight), [DesignTokens, mainTabsHeight]);
   const tradeCardStyles = useMemo(() => createTradeCardStyles(DesignTokens), [DesignTokens]);
 
@@ -108,23 +123,68 @@ export default function TradesListTab() {
 
   const renderTrade = useCallback(
     ({ item }: { item: Trade }) => (
-      <TradeListCard
-        item={item}
-        styles={tradeCardStyles}
-        onShare={openShareForTrade}
-        onDelete={handleDeleteTrade}
-        formatDate={formatDate}
-        formatUsd={formatCurrencyWithColor}
-      />
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => navigation.navigate('TradeDetail', { tradeId: item.id })}
+      >
+        <TradeListCard
+          item={item}
+          styles={tradeCardStyles}
+          onShare={openShareForTrade}
+          onDelete={handleDeleteTrade}
+          formatDate={formatDate}
+          formatUsd={formatCurrencyWithColor}
+        />
+      </TouchableOpacity>
     ),
-    [tradeCardStyles, handleDeleteTrade, openShareForTrade]
+    [tradeCardStyles, handleDeleteTrade, openShareForTrade, navigation]
   );
 
   const q = searchQuery.trim().toLowerCase();
   const filteredTrades = useMemo(() => {
-    if (!q) return trades;
-    return trades.filter((trade) => trade.symbol.toLowerCase().includes(q));
-  }, [trades, q]);
+    let result = trades;
+    if (q) result = result.filter((t) => t.symbol.toLowerCase().includes(q));
+    switch (activeFilter) {
+      case 'long': result = result.filter((t) => t.direction === 'long'); break;
+      case 'short': result = result.filter((t) => t.direction === 'short'); break;
+      case 'win': result = result.filter((t) => t.pnl >= 0); break;
+      case 'loss': result = result.filter((t) => t.pnl < 0); break;
+      default:
+        if (activeFilter !== 'all') {
+          result = result.filter((t) => t.strategy_name === activeFilter);
+        }
+        break;
+    }
+    return result;
+  }, [trades, q, activeFilter]);
+
+  // Unique strategy names
+  const strategyFilters = useMemo(() => {
+    const names = Array.from(
+      new Set(trades.map((t) => t.strategy_name).filter((n): n is string => !!n))
+    );
+    return names.map((n) => ({ id: n, label: `⚡ ${n}` }));
+  }, [trades]);
+
+  const allFilters = useMemo(
+    () => [...BASE_FILTERS, ...strategyFilters],
+    [strategyFilters]
+  );
+
+  // Summary KPIs — computed on filteredTrades so KPIs match what's visible
+  const summary = useMemo(() => {
+    if (filteredTrades.length === 0) return null;
+    const wins = filteredTrades.filter((t) => t.pnl >= 0);
+    const totalPnl = filteredTrades.reduce((s, t) => s + t.pnl, 0);
+    const winRate = (wins.length / filteredTrades.length) * 100;
+    const avgWin =
+      wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+    const losses = filteredTrades.filter((t) => t.pnl < 0);
+    const avgLoss =
+      losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+    const profitFactor = avgLoss > 0 ? avgWin / avgLoss : null;
+    return { totalPnl, winRate, totalTrades: filteredTrades.length, wins: wins.length, profitFactor };
+  }, [filteredTrades]);
 
   if (loading) {
     return (
@@ -136,6 +196,91 @@ export default function TradesListTab() {
   }
 
   const placeholderColor = 'rgba(255, 255, 255, 0.4)';
+  const pnlColor =
+    summary && summary.totalPnl >= 0
+      ? DesignTokens.colors.primary.main
+      : DesignTokens.colors.text.danger;
+
+  const listHeader = (
+    <View>
+      {/* Summary */}
+      {summary ? (
+        <UICard
+          variant="glass"
+          glassIntensity="light"
+          padding="md"
+          style={{ borderRadius: 16, marginBottom: 12 }}
+        >
+          <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 3 }}>
+                P&L כולל
+              </Text>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: pnlColor }}>
+                {summary.totalPnl >= 0 ? '+' : '-'}$
+                {Math.abs(summary.totalPnl).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </Text>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 3 }}>
+                Win Rate
+              </Text>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: summary.winRate >= 50 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
+                {summary.winRate.toFixed(0)}%
+              </Text>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 3 }}>
+                טריידים
+              </Text>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: DesignTokens.colors.text.primary }}>
+                {summary.totalTrades}
+              </Text>
+            </View>
+            {summary.profitFactor != null ? (
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 3 }}>
+                  Profit F.
+                </Text>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: summary.profitFactor >= 1 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger }}>
+                  {summary.profitFactor.toFixed(1)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </UICard>
+      ) : null}
+
+      {/* Filter chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ flexDirection: 'row-reverse', gap: 8, paddingBottom: 10 }}
+      >
+        {allFilters.map((f) => {
+          const active = activeFilter === f.id;
+          return (
+            <TouchableOpacity
+              key={f.id}
+              onPress={() => setActiveFilter(f.id)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 7,
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: active ? DesignTokens.colors.primary.main : DesignTokens.colors.border.subtle,
+                backgroundColor: active ? 'rgba(0,200,5,0.12)' : 'rgba(255,255,255,0.04)',
+              }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: active ? DesignTokens.colors.primary.main : DesignTokens.colors.text.secondary }}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
 
   return (
     <View style={[styles.container, styles.rtlRoot]}>
@@ -179,7 +324,6 @@ export default function TradesListTab() {
         </View>
       </View>
 
-      {/* Trades List */}
       {filteredTrades.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="document-outline" size={64} color={DesignTokens.colors.text.tertiary} />
@@ -191,7 +335,7 @@ export default function TradesListTab() {
           ) : (
             <>
               <Text style={styles.emptyText}>אין תוצאות</Text>
-              <Text style={styles.emptySubtext}>בדוק את הסמל או נקה את החיפוש</Text>
+              <Text style={styles.emptySubtext}>בדוק את הסמל, החיפוש או הפילטר</Text>
             </>
           )}
         </View>
@@ -199,6 +343,8 @@ export default function TradesListTab() {
         <View style={styles.listWrap}>
           <FlatList
             data={filteredTrades}
+            ListHeaderComponent={listHeader}
+
             renderItem={renderTrade}
             keyExtractor={(item) => item.id}
             contentContainerStyle={[styles.listContent, { paddingBottom: mainTabsHeight + 100 }]}

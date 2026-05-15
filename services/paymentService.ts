@@ -19,112 +19,118 @@ export const validateCardcomConfig = () => {
   return true;
 };
 
-// Subscription Plans Configuration - מסלולים חיים
+// Subscription Plans Configuration - מסלולים כמו בדף הנחיתה darkpool.site
 export const SUBSCRIPTION_PLANS = {
   // מסלול חינמי
   free: {
     id: 'free',
     name: 'חינמי',
-    description: 'גישה בסיסית לחדשות כלכליות',
+    description: 'גישה חינמית לתכנים הציבוריים',
     price: 0,
     period: 'monthly',
     features: [
       'חדשות כלכליות',
-      'הכרזות רשמיות של ברוך ודוד אריאל',
-      'קבוצה חינמית של מאות סוחרים ומשקיעים',
-      'לייב שבועי ביוטיוב'
+      'לייב מסחר יומי ביוטיוב',
+      'תמיכה בערוץ היוטיוב',
+      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
     ],
     excludedFeatures: [
+      'מענה על שאלות',
+      'יחס אישי וליווי קהילתי',
       'חדשות מתפרצות בזמן אמת',
-      'דיווחי תוצאות של חברות',
-      'יומן מסחר',
-      'גישה לחדר מקהילת הפרימיום של "השקעות וסווינגים"',
-      'גישה לקהילת הפרימיום',
-      'קורס הלוויתנים'
+      'רשימת מעקב למסחר יומי עם יעדים ברורים',
+      'ניתוחים וסטאפים לסווינגים',
+      'שיתוף תיק השקעות של הצוות',
+      'קורס הלוויתנים',
     ],
     role: 'free_user',
     popular: false,
-    color: '#E2E8F0'
+    color: '#E2E8F0',
+    badge: null as string | null,
   },
-  
-  // מסלול פלוס+ (חודשי)
-  plus_monthly: {
-    id: 'plus_monthly',
-    name: 'מסלול פלוס+',
-    description: 'מסלול פלוס+ חודשי',
-    price: 99,
+
+  // מסלול חודשי - ₪249 ללא התחייבות
+  monthly: {
+    id: 'monthly',
+    name: 'חודשי',
+    description: 'ללא התחייבות',
+    price: 249,
     period: 'monthly',
     features: [
-      'חדשות כלכליות',
-      'הכרזות רשמיות של ברוך ודוד אריאל',
-      'לייב שבועי ביוטיוב',
+      'מענה על שאלות',
+      'יחס אישי וליווי קהילתי',
       'חדשות מתפרצות בזמן אמת',
-      'דיווחי תוצאות של חברות',
-      'קבוצה חינמית של מאות סוחרים ומשקיעים',
-      'גישה לחדר מקהילת הפרימיום של "השקעות וסווינגים"',
-      'יומן מסחר'
-    ],
-    excludedFeatures: [
-      'גישה לקהילת הפרימיום',
-      'קורס הלוויתנים'
-    ],
-    role: 'plus_user',
-    popular: true,
-    color: '#3B82F6'
-  },
-  
-  // מסלול פרימיום (חודשי)
-  premium_monthly: {
-    id: 'premium_monthly',
-    name: 'מסלול פרימיום',
-    description: 'כל מה שבמסלול פלוס+ + קהילת פרימיום',
-    price: 149,
-    period: 'monthly',
-    features: [
       'חדשות כלכליות',
-      'הכרזות רשמיות של ברוך ודוד אריאל',
-      'לייב שבועי ביוטיוב',
-      'חדשות מתפרצות בזמן אמת',
-      'דיווחי תוצאות של חברות',
-      'קבוצה חינמית של מאות סוחרים ומשקיעים',
-      'גישה לחדר מקהילת הפרימיום של "השקעות וסווינגים"',
-      'יומן מסחר',
-      'גישה לקהילת הפרימיום'
+      'לייב מסחר יומי ביוטיוב',
+      'רשימת מעקב למסחר יומי עם יעדים ברורים',
+      'ניתוחים וסטאפים לסווינגים',
+      'שיתוף תיק השקעות של הצוות',
+      'תמיכה בערוץ היוטיוב',
+      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
+      'קורס הלוויתנים',
     ],
-    excludedFeatures: [
-      'קורס הלוויתנים'
-    ],
+    excludedFeatures: [],
     role: 'premium_user',
     popular: false,
-    color: '#8B5CF6'
+    color: '#3B82F6',
+    badge: null as string | null,
   },
-  
-  // מסלול עלית (שנתי בלבד)
-  elite_yearly: {
-    id: 'elite_yearly',
-    name: 'מסלול עלית',
-    description: 'הכל פלוס קורס הלוויתנים במתנה',
+
+  // מסלול רבעוני - ₪399 ל-3 חודשים (חסוך 47%)
+  quarterly: {
+    id: 'quarterly',
+    name: 'רבעוני',
+    description: 'חסוך 47% ברבעון',
+    price: 399,
+    period: 'quarterly',
+    features: [
+      'מענה על שאלות',
+      'יחס אישי וליווי קהילתי',
+      'חדשות מתפרצות בזמן אמת',
+      'חדשות כלכליות',
+      'לייב מסחר יומי ביוטיוב',
+      'רשימת מעקב למסחר יומי עם יעדים ברורים',
+      'ניתוחים וסטאפים לסווינגים',
+      'שיתוף תיק השקעות של הצוות',
+      'תמיכה בערוץ היוטיוב',
+      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
+      'קורס הלוויתנים',
+    ],
+    excludedFeatures: [],
+    role: 'premium_user',
+    popular: true,
+    color: '#10B981',
+    badge: 'מסלול חדש' as string | null,
+  },
+
+  // מסלול שנתי - ₪117/חודש (₪1,404/שנה) חסוך 53%
+  yearly: {
+    id: 'yearly',
+    name: 'חודשי - שנתי',
+    description: 'חסוך 53% בשנה',
     price: 1404,
     period: 'yearly',
     features: [
-      'חדשות כלכליות',
-      'הכרזות רשמיות של ברוך ודוד אריאל',
-      'לייב שבועי ביוטיוב',
+      'מענה על שאלות',
+      'יחס אישי וליווי קהילתי',
       'חדשות מתפרצות בזמן אמת',
-      'דיווחי תוצאות של חברות',
-      'קבוצה חינמית של מאות סוחרים ומשקיעים',
-      'גישה לחדר מקהילת הפרימיום של "השקעות וסווינגים"',
-      'יומן מסחר',
-      'גישה לקהילת הפרימיום',
-      'קורס הלוויתנים במתנה'
+      'חדשות כלכליות',
+      'לייב מסחר יומי ביוטיוב',
+      'רשימת מעקב למסחר יומי עם יעדים ברורים',
+      'ניתוחים וסטאפים לסווינגים',
+      'שיתוף תיק השקעות של הצוות',
+      'תמיכה בערוץ היוטיוב',
+      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
+      'קורס הלוויתנים',
     ],
     excludedFeatures: [],
-    role: 'elite_user',
+    role: 'premium_user',
     popular: false,
-    color: '#F59E0B'
+    color: '#F59E0B',
+    badge: 'המסלול החסכוני' as string | null,
   },
-  
-  // תוספת לייבים
+
+  // תוספת לייבים (אד-און)
   live_addon: {
     id: 'live_addon',
     name: 'תוספת לייבים',
@@ -139,9 +145,10 @@ export const SUBSCRIPTION_PLANS = {
     role: 'live_user',
     popular: false,
     color: '#10B981',
+    badge: null as string | null,
     isAddon: true
   },
-  
+
   // קורס הלוויתנים (תשלום חד פעמי)
   whales_course: {
     id: 'whales_course',
@@ -158,6 +165,7 @@ export const SUBSCRIPTION_PLANS = {
     role: 'whales_user',
     popular: false,
     color: '#F59E0B',
+    badge: null as string | null,
     isOneTime: true
   }
 };
@@ -307,11 +315,26 @@ class PaymentService {
    */
   async processPaymentCallback(callback: PaymentCallback): Promise<boolean> {
     try {
+      // Idempotency: check if this Cardcom transaction was already processed
+      if (callback.cardcomTransactionId) {
+        const { data: existing } = await supabase
+          .from('payment_transactions')
+          .select('id, status')
+          .eq('cardcom_transaction_id', callback.cardcomTransactionId)
+          .maybeSingle();
+
+        if (existing && existing.status === 'success') {
+          // Already processed — return true without re-extending subscription
+          return true;
+        }
+      }
+
       // עדכון סטטוס העסקה
       const { error: updateError } = await supabase
         .from('payment_transactions')
         .update({
           status: callback.status,
+          cardcom_transaction_id: callback.cardcomTransactionId ?? null,
           updated_at: new Date().toISOString()
         })
         .eq('id', callback.transactionId);
@@ -322,7 +345,7 @@ class PaymentService {
 
       // אם התשלום הצליח, עדכון המנוי של המשתמש
       if (callback.status === 'success') {
-        await this.updateUserSubscription(callback.userId, callback.planId);
+        await this.updateUserSubscription(callback.userId, callback.planId, callback.transactionId);
       }
 
       return true;
@@ -402,11 +425,21 @@ class PaymentService {
   /**
    * מעדכן את המנוי של המשתמש
    */
-  private async updateUserSubscription(userId: string, planId: string) {
+  private async updateUserSubscription(userId: string, planId: string, sourceTransactionId?: string) {
     try {
       const plan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
       if (!plan) {
         throw new Error('Plan not found');
+      }
+
+      // Idempotency: skip if this transaction already granted a subscription
+      if (sourceTransactionId) {
+        const { data: existing } = await supabase
+          .from('user_subscriptions')
+          .select('id')
+          .eq('source_transaction_id', sourceTransactionId)
+          .maybeSingle();
+        if (existing) return; // already processed
       }
 
       // חישוב תאריך התפוגה לפי התקופה
@@ -418,7 +451,7 @@ class PaymentService {
       } else if (plan.period === 'yearly') {
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);
       } else {
-        expiresAt.setMonth(expiresAt.getMonth() + 1); // ברירת מחדל
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
       }
 
       // עדכון פרטי המשתמש
@@ -432,11 +465,9 @@ class PaymentService {
         })
         .eq('id', userId);
 
-      if (userError) {
-        throw userError;
-      }
+      if (userError) throw userError;
 
-      // יצירת רשומת מנוי
+      // יצירת רשומת מנוי (עם source_transaction_id למניעת כפילויות)
       const { error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .insert({
@@ -445,12 +476,11 @@ class PaymentService {
           status: 'active',
           starts_at: new Date().toISOString(),
           expires_at: expiresAt.toISOString(),
+          source_transaction_id: sourceTransactionId ?? null,
           created_at: new Date().toISOString()
         });
 
-      if (subscriptionError) {
-        throw subscriptionError;
-      }
+      if (subscriptionError) throw subscriptionError;
     } catch (error) {
       throw error;
     }

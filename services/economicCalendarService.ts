@@ -1,11 +1,11 @@
 // EconomicCalendarService.ts - גרסה נקייה ומהירה
 import { supabase } from '../lib/supabase';
 
-const FRED_API_KEY = 'f4d63bd9fddd00b175c1c99ca49b4247';
+const FRED_API_KEY = process.env.EXPO_PUBLIC_FRED_API_KEY ?? '';
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred';
 
 // EOD Historical Data API לאירועים עתידיים
-const EOD_API_KEY = '68c99499978585.44924748';
+const EOD_API_KEY = process.env.EXPO_PUBLIC_EODHD_API_KEY ?? '';
 const EOD_ECONOMIC_EVENTS_API = 'https://eodhd.com/api/economic-events';
 
 // Trading Economics API לנתונים כלכליים

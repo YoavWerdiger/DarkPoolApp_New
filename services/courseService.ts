@@ -539,12 +539,15 @@ class CourseService {
         { title: 'שיעור 39 - עונת הדוחות בבורסה🔥', duration: '0', order: 40 },
       ];
 
-      // פונקציה להמרת זמן מפורמט MM:SS לדקות
+      // פונקציה להמרת זמן מפורמט MM:SS לדקות (מעוגל כלפי מטה)
+      // '11:58' → 11 דקות, '0:54' → 0 דקות (פחות מדקה)
       const parseDuration = (duration: string): number => {
         if (!duration || duration === '0') return 0;
         const parts = duration.split(':');
         if (parts.length === 2) {
-          return parseInt(parts[0]) + parseInt(parts[1]) / 60;
+          // החזר דקות מדויקות (שניות / 60, לא דקות + שניות/60)
+          const totalSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          return Math.floor(totalSeconds / 60);
         }
         return 0;
       };
@@ -565,7 +568,7 @@ class CourseService {
             course_id: courseId,
             title: lesson.title,
             description: `שיעור ${i + 1} בקורס הכשרה של דוד אריאל`,
-            duration_minutes: Math.round(parseDuration(lesson.duration)),
+            duration_minutes: parseDuration(lesson.duration),
             order_index: lesson.order,
             is_completed: false,
             is_active: true,
@@ -580,7 +583,7 @@ class CourseService {
               lesson.title,
               youtubeLinks[i],
               `שיעור ${i + 1} בקורס הכשרה של דוד אריאל`,
-              Math.round(parseDuration(lesson.duration))
+              parseDuration(lesson.duration)
             );
           }
         }

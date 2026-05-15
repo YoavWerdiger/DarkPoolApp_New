@@ -90,6 +90,9 @@ export default function ChatGroupScreen() {
   const hasInitiallyScrolledRef = useRef(false);
   // ה-content height האחרון – משמש להבדיל בין "תוכן גדל בסוף" לבין "תוכן הוסף בראש"
   const lastContentHeightRef = useRef(0);
+  // כשה-flag דלוק, כל onContentSizeChange ינסה שוב לגלול לתחתית
+  // (נדרש כי FlatList מרנדר הודעות ב-batches — scrollToEnd הראשון לא מכיר את כל הגובה)
+  const pendingScrollToBottomRef = useRef(false);
 
   const scrollToBottom = useCallback((animated: boolean = true) => {
     const list = flatListRef.current;
@@ -98,27 +101,20 @@ export default function ChatGroupScreen() {
     setShowScrollToBottomButton(false);
     RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
     isAtBottomRef.current = true;
+    pendingScrollToBottomRef.current = true;
     disableLoadMoreRef.current = true;
     setTimeout(() => { disableLoadMoreRef.current = false; }, 800);
 
-    // scrollToEnd({ animated: true }) is unreliable on non-inverted FlatList when
-    // content is still laying out — the target offset is computed before the new
-    // item height is known, so the scroll lands short. Two rapid animated:false
-    // calls (one immediate, one after a frame) are more reliable and visually
-    // indistinguishable from animated:true because they execute in <16ms.
+    // scrollToOffset(999999) is more reliable than scrollToEnd when item heights
+    // aren't fully measured yet — RN clamps it to the actual max scroll offset.
+    // We fire it immediately + after one frame to catch the post-layout position.
     const doScroll = () => {
-      try { list.scrollToEnd({ animated: false }); } catch { /* noop */ }
+      try { list.scrollToOffset({ offset: 999999, animated: false }); } catch { /* noop */ }
     };
+    doScroll();
+    requestAnimationFrame(doScroll);
     if (animated) {
-      // First call: snap to where the list thinks the end is right now
-      doScroll();
-      // Second call: after one frame, once the new item height is measured
-      requestAnimationFrame(doScroll);
-      // Third call: safety net for slow devices / large items
       setTimeout(doScroll, 80);
-    } else {
-      doScroll();
-      requestAnimationFrame(doScroll);
     }
   }, [messages.length]);
 
@@ -132,6 +128,7 @@ export default function ChatGroupScreen() {
     const offsetY = contentOffset.y;
     const distanceFromBottom = contentSize.height - layoutMeasurement.height - offsetY;
     isAtBottomRef.current = distanceFromBottom < 80;
+    if (distanceFromBottom < 10) pendingScrollToBottomRef.current = false;
     const shouldShow = distanceFromBottom > 200;
     setShowScrollToBottomButton(prev => {
       if (prev !== shouldShow) {
@@ -1004,6 +1001,12 @@ export default function ChatGroupScreen() {
           onStartReachedThreshold={0.2}
           onContentSizeChange={(_w, h) => {
             lastContentHeightRef.current = h;
+            // Continue scrolling to bottom as FlatList renders more batches.
+            // pendingScrollToBottomRef is set by scrollToBottom() and cleared
+            // once onScroll confirms we actually reached distanceFromBottom < 10.
+            if (pendingScrollToBottomRef.current) {
+              flatListRef.current?.scrollToOffset({ offset: 999999, animated: false });
+            }
           }}
           ListHeaderComponent={renderFooter}
           ListEmptyComponent={renderEmpty}

@@ -496,7 +496,15 @@ function ChatMessage({
           >
           {/* Sender Name - בתוך הבועה – צבע ייחודי לכל משתמש */}
           {!isMe && showSenderName && (
-            <Text style={[styles.senderNameInside, { color: senderColor }]}>
+            <Text style={[
+              styles.senderNameInside,
+              { color: senderColor },
+              // Media bubbles have reduced padding — compensate so name isn't cramped
+              (message.message_type === MessageType.IMAGE ||
+               message.message_type === MessageType.VIDEO ||
+               message.message_type === MessageType.MEDIA_GROUP)
+                && { paddingHorizontal: 8, paddingTop: 4 },
+            ]}>
               {message.sender?.display_name || 'משתמש'}
             </Text>
           )}

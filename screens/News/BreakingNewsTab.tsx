@@ -1082,6 +1082,7 @@ export default function BreakingNewsTab() {
       const newLikedArticles = new Set(likedArticles);
       
       if (isCurrentlyLiked) {
+        void HapticFeedback.selection();
         // הסרת אהבתי
         newLikedArticles.delete(articleId);
         setLikedArticles(newLikedArticles);
@@ -1095,6 +1096,7 @@ export default function BreakingNewsTab() {
           legacyAlert('שגיאה', 'לא ניתן להסיר את האהבתי');
         }
       } else {
+        void HapticFeedback.impactLight();
         // הוספת אהבתי
         newLikedArticles.add(articleId);
         setLikedArticles(newLikedArticles);

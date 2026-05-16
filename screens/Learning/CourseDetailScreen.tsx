@@ -49,10 +49,11 @@ export const CourseDetailScreen: React.FC = () => {
   }, []);
 
   const handleLessonPress = useCallback((lesson: LessonWithProgress) => {
-    (navigation as any).navigate('LessonPlayerScreen', { 
-      lessonId: lesson.id 
+    (navigation as any).navigate('LessonPlayerScreen', {
+      lessonId: lesson.id,
+      courseId,
     });
-  }, [navigation]);
+  }, [navigation, courseId]);
 
   const handleEnroll = useCallback(async () => {
     if (!course) return;
@@ -84,11 +85,12 @@ export const CourseDetailScreen: React.FC = () => {
 
   const handleContinueLearning = useCallback(() => {
     if (lastLessonId) {
-      (navigation as any).navigate('LessonPlayerScreen', { 
-        lessonId: lastLessonId 
+      (navigation as any).navigate('LessonPlayerScreen', {
+        lessonId: lastLessonId,
+        courseId,
       });
     }
-  }, [lastLessonId, navigation]);
+  }, [lastLessonId, navigation, courseId]);
 
   if (isLoading) {
     return (
@@ -258,7 +260,7 @@ export const CourseDetailScreen: React.FC = () => {
                 activeOpacity={0.8}
               >
                 <Text style={styles.continueButtonText}>
-                  {lastLessonId ? 'המשך למידה' : 'התחל למידה'}
+                  {lastLessonId ? 'המשך למידה ←' : 'התחל ←'}
                 </Text>
               </TouchableOpacity>
             ) : (

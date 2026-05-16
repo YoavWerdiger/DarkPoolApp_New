@@ -413,7 +413,8 @@ class CourseService {
       if (!duration || duration === '0') return 0;
       const parts = duration.split(':');
       if (parts.length === 2) {
-        return parseInt(parts[0]) + parseInt(parts[1]) / 60;
+        // MM:SS → total seconds / 60 = decimal minutes (preserves precision for formatDuration)
+        return (parseInt(parts[0]) * 60 + parseInt(parts[1])) / 60;
       }
       return 0;
     };
@@ -547,7 +548,7 @@ class CourseService {
         if (parts.length === 2) {
           // החזר דקות מדויקות (שניות / 60, לא דקות + שניות/60)
           const totalSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-          return Math.floor(totalSeconds / 60);
+          return totalSeconds / 60; // decimal minutes — formatDuration reconstructs MM:SS correctly
         }
         return 0;
       };

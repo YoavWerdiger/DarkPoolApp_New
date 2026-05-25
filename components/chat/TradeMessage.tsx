@@ -113,14 +113,24 @@ function TradeSymbolLogo({
   );
 }
 
-export default function TradeMessage({ trade: tradeRaw, isMe: _isMe, embeddedInBubble }: TradeMessageProps) {
+export default function TradeMessage({ trade: tradeRaw, isMe, embeddedInBubble }: TradeMessageProps) {
   const DesignTokens = useDesignTokens();
+  const lightOnBubble = !!embeddedInBubble && isMe;
   const styles = useMemo(
-    () => createStyles(DesignTokens, !!embeddedInBubble),
-    [DesignTokens, embeddedInBubble]
+    () => createStyles(DesignTokens, !!embeddedInBubble, lightOnBubble),
+    [DesignTokens, embeddedInBubble, lightOnBubble]
   );
 
   const trade = useMemo(() => normalizeTrade(tradeRaw), [tradeRaw]);
+
+  const isProfit = trade.pnl >= 0;
+  const directionColor = lightOnBubble
+    ? trade.direction === 'long'
+      ? '#A7F3A9'
+      : '#FCA5A5'
+    : trade.direction === 'long'
+      ? DesignTokens.colors.primary.main
+      : DesignTokens.colors.text.danger;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -139,11 +149,7 @@ export default function TradeMessage({ trade: tradeRaw, isMe: _isMe, embeddedInB
     });
   };
 
-  const isProfit = trade.pnl >= 0;
-  const directionColor =
-    trade.direction === 'long' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
   const returnPct = resolveTradeReturnPercent(trade);
-
   const pnlLabel = isProfit ? 'רווח נטו' : 'הפסד נטו';
 
   return (
@@ -163,7 +169,7 @@ export default function TradeMessage({ trade: tradeRaw, isMe: _isMe, embeddedInB
           <TradeSymbolLogo
             symbol={trade.symbol}
             size={44}
-            fallbackColor={DesignTokens.colors.text.primary}
+            fallbackColor={lightOnBubble ? '#FFFFFF' : DesignTokens.colors.text.primary}
             backgroundColor="rgba(255,255,255,0.1)"
           />
         </View>
@@ -231,7 +237,11 @@ export default function TradeMessage({ trade: tradeRaw, isMe: _isMe, embeddedInB
   );
 }
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>, embeddedInBubble: boolean) =>
+const createStyles = (
+  tokens: ReturnType<typeof useDesignTokens>,
+  embeddedInBubble: boolean,
+  lightOnBubble: boolean,
+) =>
   StyleSheet.create({
     container: embeddedInBubble
       ? {
@@ -260,7 +270,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, embeddedInBubb
       marginBottom: tokens.spacing.md,
       paddingBottom: tokens.spacing.sm,
       borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: tokens.colors.border.primary,
+      borderBottomColor: lightOnBubble ? 'rgba(255,255,255,0.2)' : tokens.colors.border.primary,
     },
     logoWrap: {
       flexShrink: 0,
@@ -278,7 +288,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, embeddedInBubb
     symbol: {
       fontSize: tokens.typography.fontSize.lg,
       fontWeight: tokens.typography.fontWeight.bold,
-      color: tokens.colors.text.primary,
+      color: lightOnBubble ? '#FFFFFF' : tokens.colors.text.primary,
       textAlign: 'right',
     },
     directionBadge: {
@@ -302,20 +312,20 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, embeddedInBubb
     },
     label: {
       fontSize: tokens.typography.fontSize.sm,
-      color: tokens.colors.text.secondary,
+      color: lightOnBubble ? 'rgba(255,255,255,0.75)' : tokens.colors.text.secondary,
       textAlign: 'right',
       flexShrink: 0,
       fontWeight: tokens.typography.fontWeight.medium,
     },
     labelProfit: {
-      color: tokens.colors.primary.main,
+      color: lightOnBubble ? 'rgba(255,255,255,0.9)' : tokens.colors.primary.main,
     },
     labelLoss: {
-      color: tokens.colors.text.danger,
+      color: lightOnBubble ? 'rgba(255,255,255,0.9)' : tokens.colors.text.danger,
     },
     price: {
       fontSize: tokens.typography.fontSize.sm,
-      color: tokens.colors.primary.main,
+      color: lightOnBubble ? '#FFFFFF' : tokens.colors.primary.main,
       fontWeight: tokens.typography.fontWeight.semibold,
       textAlign: 'left',
       writingDirection: 'ltr',
@@ -323,7 +333,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, embeddedInBubb
     },
     value: {
       fontSize: tokens.typography.fontSize.sm,
-      color: tokens.colors.text.primary,
+      color: lightOnBubble ? '#FFFFFF' : tokens.colors.text.primary,
       fontWeight: tokens.typography.fontWeight.medium,
       textAlign: 'left',
       flex: 1,
@@ -336,20 +346,20 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>, embeddedInBubb
       flex: 1,
     },
     valueProfit: {
-      color: tokens.colors.primary.main,
+      color: lightOnBubble ? '#86EFAC' : tokens.colors.primary.main,
     },
     valueLoss: {
-      color: tokens.colors.text.danger,
+      color: lightOnBubble ? '#FCA5A5' : tokens.colors.text.danger,
     },
     notesContainer: {
       marginTop: tokens.spacing.md,
       paddingTop: tokens.spacing.sm,
       borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: tokens.colors.border.primary,
+      borderTopColor: lightOnBubble ? 'rgba(255,255,255,0.2)' : tokens.colors.border.primary,
     },
     notesText: {
       fontSize: tokens.typography.fontSize.sm,
-      color: tokens.colors.text.secondary,
+      color: lightOnBubble ? 'rgba(255,255,255,0.8)' : tokens.colors.text.secondary,
       fontStyle: 'italic',
       textAlign: 'right',
       writingDirection: 'rtl',

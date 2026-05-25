@@ -109,26 +109,13 @@ export default function ChatGroupScreen() {
   // scrollToOffset(0) is always "go to newest" — simple and reliable.
   // onEndReached fires when scrolled to index N-1 (oldest) = user wants older history.
   const hasInitiallyRenderedRef = useRef(false);
-
-  const scrollToBottom = useCallback((animated: boolean = false) => {
-    const list = flatListRef.current;
-    if (!list) return;
-    setShowScrollToBottomButton(false);
-    RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
-    isAtBottomRef.current = true;
-    // animated: false prevents the ~3000px jump seen with inverted FlatList + concurrent re-renders.
-    // For FAB taps we still use false — the snap is fast enough to feel intentional.
-    requestAnimationFrame(() => {
-      list.scrollToOffset({ offset: 0, animated: false });
-    });
-  }, []);
-
-  // עוקב אחרי האם המשתמש נמצא בתחתית הרשימה
+  const prevGroupIdRef = useRef<string | null>(null);
   const isAtBottomRef = useRef(true);
   const isSendingRef = useRef(false);
-
   const lastScrollLogRef = useRef(0);
   const showScrollBtnRef = useRef(false);
+  const scrollBtnOpacity = useRef(new RNAnimated.Value(0)).current;
+
   const handleScroll = useCallback((event: any) => {
     const { contentOffset } = event.nativeEvent;
     // Inverted list: offset 0 = bottom (newest messages). Higher offset = scrolled toward older.
@@ -158,29 +145,7 @@ export default function ChatGroupScreen() {
   // Adding Keyboard listeners here would fight the controller's animation.
 
   // With inverted list, newest messages appear at offset 0 automatically.
-  // No initial scroll needed — just track new messages for auto-scroll.
   const prevMessagesLengthRef = useRef(0);
-  useEffect(() => {
-    const newLength = messages.length;
-    const prevLength = prevMessagesLengthRef.current;
-    prevMessagesLengthRef.current = newLength;
-
-    if (newLength > 0 && !hasInitiallyRenderedRef.current) {
-      hasInitiallyRenderedRef.current = true;
-      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength})`);
-      scrollToBottom(false);
-      return;
-    }
-
-    const isNewMessage = newLength > prevLength && newLength - prevLength <= 3;
-    if (!isNewMessage) return;
-
-    const shouldScroll = isSendingRef.current || isAtBottomRef.current;
-    if (shouldScroll) {
-      // animated: false — prevents scroll conflicts with simultaneous re-renders
-      scrollToBottom(false);
-    }
-  }, [messages.length, scrollToBottom]);
 
   const [replyTo, setReplyTo] = useState<{
     id: string;
@@ -196,7 +161,6 @@ export default function ChatGroupScreen() {
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<ChatMessageType | null>(null);
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
-  const scrollBtnOpacity = useRef(new RNAnimated.Value(0)).current;
   // Stable extraData object — only changes when visible UX state changes
   const flatListExtraData = useMemo(() => ({
     h: highlightedMessageId,
@@ -217,6 +181,7 @@ export default function ChatGroupScreen() {
     handleScrollToIndexFailed,
     handleContentSizeChange,
     onMessageCellLayout,
+    scrollToBottom: scrollToBottomCore,
   } = useChatMessageScroll({
     flatListRef,
     messagesRef,
@@ -224,6 +189,41 @@ export default function ChatGroupScreen() {
     loadMessagesAround,
     onHighlight: setHighlightedMessageId,
   });
+
+  const scrollToBottom = useCallback((animated: boolean = false) => {
+    isAtBottomRef.current = true;
+    scrollToBottomCore(animated);
+    // Hide FAB after scroll — setState before scroll breaks inverted FlatList jumps.
+    requestAnimationFrame(() => {
+      showScrollBtnRef.current = false;
+      setShowScrollToBottomButton(false);
+      RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
+    });
+  }, [scrollToBottomCore, scrollBtnOpacity]);
+
+  useEffect(() => {
+    const newLength = messages.length;
+    const prevLength = prevMessagesLengthRef.current;
+    prevMessagesLengthRef.current = newLength;
+
+    if (newLength > 0 && !hasInitiallyRenderedRef.current) {
+      hasInitiallyRenderedRef.current = true;
+      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength})`);
+      isAtBottomRef.current = true;
+      scrollToBottomCore(false);
+      return;
+    }
+
+    const isNewMessage = newLength > prevLength && newLength - prevLength <= 3;
+    if (!isNewMessage) return;
+
+    const shouldScroll = isSendingRef.current || isAtBottomRef.current;
+    if (shouldScroll) {
+      isAtBottomRef.current = true;
+      scrollToBottomCore(false);
+    }
+  }, [messages.length, scrollToBottomCore]);
+
   // Track IDs loaded at initial load – only animate truly new messages
   useEffect(() => {
     messagesRef.current = messages;
@@ -243,11 +243,15 @@ export default function ChatGroupScreen() {
 
   useEffect(() => {
     if (groupId) {
+      const isNewGroup = prevGroupIdRef.current !== groupId;
+      prevGroupIdRef.current = groupId;
       selectGroup(groupId);
-      hasInitiallyRenderedRef.current = false;
-      prevMessagesLengthRef.current = 0;
+      if (isNewGroup) {
+        hasInitiallyRenderedRef.current = false;
+        prevMessagesLengthRef.current = 0;
+      }
     }
-  }, [groupId]);
+  }, [groupId, selectGroup]);
 
   // Auto-navigate to groups list when removed from group by an admin.
   // ChatContext clears currentGroup when membership DELETE event fires.
@@ -956,31 +960,7 @@ export default function ChatGroupScreen() {
       />
 
       {/* Messages area — minHeight:0 נדרש כדי שה-FlatList יקבל גלילה אמיתית בתוך עמודת flex */}
-      <View style={styles.messagesAreaFlex}>
-        {/* Scroll-to-bottom FAB — inside messagesAreaFlex so it rises with the keyboard */}
-        <RNAnimated.View
-          pointerEvents={showScrollToBottomButton ? 'auto' : 'none'}
-          style={[
-            styles.scrollToBottomButton,
-            { bottom: 12, opacity: scrollBtnOpacity },
-          ]}
-        >
-          <Pressable
-            onPress={() => { void HapticFeedback.selection(); scrollToBottom(true); }}
-            hitSlop={14}
-            style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
-          >
-            <Ionicons name="chevron-down" size={20} color="#fff" />
-            {(initialUnreadInfo?.count ?? 0) > 0 && (
-              <View style={styles.scrollBadge} pointerEvents="none">
-                <Text style={styles.scrollBadgeText}>
-                  {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-        </RNAnimated.View>
-
+      <View style={styles.messagesAreaFlex} pointerEvents="box-none">
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -1020,6 +1000,30 @@ export default function ChatGroupScreen() {
           onScrollToIndexFailed={handleScrollToIndexFailed}
         />
 
+        {/* Scroll-to-bottom FAB — after FlatList so touches reach the button */}
+        <RNAnimated.View
+          pointerEvents={showScrollToBottomButton ? 'box-none' : 'none'}
+          style={[
+            styles.scrollToBottomButton,
+            { bottom: 12, opacity: scrollBtnOpacity },
+          ]}
+        >
+          <Pressable
+            onPress={() => { void HapticFeedback.selection(); scrollToBottom(true); }}
+            hitSlop={14}
+            style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
+          >
+            <Ionicons name="chevron-down" size={20} color="#fff" />
+            {(initialUnreadInfo?.count ?? 0) > 0 && (
+              <View style={styles.scrollBadge} pointerEvents="none">
+                <Text style={styles.scrollBadgeText}>
+                  {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </RNAnimated.View>
+
       </View>
 
       {/* Input area */}
@@ -1051,15 +1055,8 @@ export default function ChatGroupScreen() {
 
   return (
     <ChatScreenShell>
-      {/*
-        keyboardVerticalOffset compensates for ChatInput's own insets.bottom
-        padding so the input sits flush with the keyboard (no dead gap).
-        Value = insets.bottom so the remaining max(sm,6) ≈ 6-8px appears
-        as a natural small margin above the keyboard, matching WhatsApp.
-      */}
       <KeyboardAvoidingView
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom : 0}
+        behavior="translate-with-padding"
         style={{ flex: 1, backgroundColor: 'transparent' }}
       >
         {chatMainColumn}

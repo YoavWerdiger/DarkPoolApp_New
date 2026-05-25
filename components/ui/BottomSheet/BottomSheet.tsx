@@ -286,9 +286,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         collapsable={false}
       >
         {showBrandBackground ? (
-          <>
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 0 }]}>
             <View
-              pointerEvents="none"
               style={[StyleSheet.absoluteFill, { backgroundColor: '#0A0E0A' }]}
             />
             <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
@@ -300,7 +299,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
                   : SCREEN_HEIGHT * 0.5
               }
             />
-          </>
+          </View>
         ) : (
           <View
             pointerEvents="none"
@@ -316,7 +315,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             <View 
               style={[
                 styles.content,
-                { paddingBottom: contentPaddingBottom },
+                { paddingBottom: contentPaddingBottom, zIndex: 2 },
               ]}
             >
               {edgeToEdge ? (

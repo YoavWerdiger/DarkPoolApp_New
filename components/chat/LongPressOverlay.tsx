@@ -6,16 +6,47 @@ import ReactionBar from './ReactionBar';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
 import BottomSheet from '../ui/BottomSheet/BottomSheet';
-import { useDesignTokens, DesignTokens as CoreDesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
+import TradeMessage from './TradeMessage';
 
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-/** handle indicator ב-edgeToEdge (padding + bar) */
-const SHEET_HANDLE_HEIGHT = 22;
+/** אזור handle סטנדרטי — תואם BottomSheet (paddingVertical 22 + minHeight 88) */
+const SHEET_HANDLE_HEIGHT = 88;
+
+type ParsedTrade = {
+  id: string;
+  symbol: string;
+  direction: 'long' | 'short';
+  entry_price: number;
+  exit_price: number;
+  quantity: number;
+  entry_date: string;
+  exit_date: string;
+  pnl: number;
+  return_percentage?: number;
+  notes?: string;
+};
+
+function isTradeMessageType(type?: string): boolean {
+  return (type ?? '').toLowerCase() === 'trade';
+}
+
+function parseTradeFromContent(content: string): ParsedTrade | null {
+  if (!content?.trim()) return null;
+  try {
+    const o = JSON.parse(content.trim()) as { trade?: ParsedTrade };
+    const t = o.trade;
+    if (!t || typeof t.symbol !== 'string') return null;
+    return t;
+  } catch {
+    return null;
+  }
+}
 
 interface LongPressOverlayProps {
   visible: boolean;
@@ -36,6 +67,20 @@ export default function LongPressOverlay({
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   const DesignTokens = useDesignTokens();
   const messagePreviewStyles = useMemo(() => createMessagePreviewStyles(DesignTokens), [DesignTokens]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          paddingHorizontal: DesignTokens.spacing.md,
+          paddingTop: DesignTokens.spacing.sm,
+        },
+        reactionWrapper: {
+          alignItems: 'center',
+          marginVertical: DesignTokens.spacing.md,
+        },
+      }),
+    [DesignTokens],
+  );
 
   const sheetBottomPad = useMemo(() => {
     const minBottom = Platform.OS === 'android' ? 24 : 20;
@@ -116,7 +161,10 @@ export default function LongPressOverlay({
       + (isAdmin ? 1 : 0);
     const dangerCount = (message.isMe ? 1 : 0) + (message.isMe || isAdmin ? 1 : 0);
     const previewLines = message.content ? Math.min(4, message.content.split('\n').length + Math.ceil(message.content.length / 40)) : 0;
-    const previewPx = 72 + previewLines * 22 + (message.mediaUrl ? 24 : 0);
+    const isTrade = isTradeMessageType(message.type) || !!parseTradeFromContent(message.content);
+    const previewPx = isTrade
+      ? 240
+      : 72 + previewLines * 22 + (message.mediaUrl ? 24 : 0);
     const reactionPx = 58;
     const menuRowPx = 82;
     const mainRows = Math.ceil(mainCount / 4);
@@ -150,48 +198,60 @@ export default function LongPressOverlay({
     const isMedia = !!(message.mediaUrl && (message.type === 'image' || message.type === 'video'));
     const mediaIcon = message.type === 'video' ? 'videocam' : 'image';
     const mediaLabel = message.type === 'video' ? 'סרטון' : 'תמונה';
+    const tradeFromContent = parseTradeFromContent(message.content);
+    const isTrade = isTradeMessageType(message.type) || !!tradeFromContent;
+    const tradePayload = tradeFromContent;
 
     const isMe = message.isMe;
     const p = messagePreviewStyles;
+    const mediaIconColor = isMe ? 'rgba(255,255,255,0.75)' : DesignTokens.colors.text.secondary;
 
     return (
-      <View style={p.row}>
-        {!isMe && (
-          <View style={p.avatarCol}>
-            {message.senderAvatar ? (
-              <Image source={{ uri: message.senderAvatar }} style={p.avatar} />
-            ) : (
-              <View style={[p.avatar, p.avatarFallback]}>
-                <Text style={p.avatarLetter}>
-                  {(message.senderName ?? '?').charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <View style={[p.bubble, isMe ? p.myBubble : p.theirBubble]}>
-          {!isMe && message.senderName ? (
-            <Text style={p.senderName} numberOfLines={1}>{message.senderName}</Text>
-          ) : null}
-
-          {isMedia && (
-            <View style={p.mediaRow}>
-              <Ionicons name={mediaIcon as any} size={16} color={DesignTokens.colors.text.secondary} />
-              <Text style={p.mediaText}>{mediaLabel}</Text>
+      <View style={[p.previewWrap, isMe ? p.previewWrapMe : p.previewWrapOther]}>
+        <View style={p.row}>
+          {!isMe && (
+            <View style={p.avatarCol}>
+              {message.senderAvatar ? (
+                <Image source={{ uri: message.senderAvatar }} style={p.avatar} />
+              ) : (
+                <View style={[p.avatar, p.avatarFallback]}>
+                  <Text style={p.avatarLetter}>
+                    {(message.senderName ?? '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
-          {message.content ? (
-            <Text style={[p.msgText, isMe ? p.myText : p.theirText]} numberOfLines={4}>
-              {message.content}
+          <View style={[p.bubble, isMe ? p.myBubble : p.theirBubble, isTrade && p.tradeBubble]}>
+            {!isMe && message.senderName ? (
+              <Text style={p.senderName} numberOfLines={1}>{message.senderName}</Text>
+            ) : null}
+
+            {isTrade && tradePayload ? (
+              <TradeMessage trade={tradePayload} isMe={!!isMe} embeddedInBubble />
+            ) : (
+              <>
+                {isMedia && (
+                  <View style={p.mediaRow}>
+                    <Ionicons name={mediaIcon as any} size={16} color={mediaIconColor} />
+                    <Text style={[p.mediaText, isMe && p.myMediaText]}>{mediaLabel}</Text>
+                  </View>
+                )}
+
+                {message.content ? (
+                  <Text style={[p.msgText, isMe ? p.myText : p.theirText]} numberOfLines={4}>
+                    {message.content}
+                  </Text>
+                ) : null}
+              </>
+            )}
+
+            <Text style={[p.timeText, isMe ? p.myTime : p.theirTime, isTrade && p.timeInTradeBubble]}>
+              {timeText}
             </Text>
-          ) : null}
-
-          <Text style={[p.timeText, isMe ? p.myTime : p.theirTime]}>{timeText}</Text>
+          </View>
         </View>
-
-        {!isMe && <View style={p.spacer} />}
       </View>
     );
   };
@@ -201,15 +261,13 @@ export default function LongPressOverlay({
       isOpen={visible}
       onClose={onClose}
       snapPoints={[snapPoint]}
-      showHandle={true}
-      enablePanDownToClose={true}
-      backdropOpacity={0.5}
-      useModal={true}
-      edgeToEdge={true}
-      fitContent={true}
+      showHandle
+      enablePanDownToClose
+      backdropOpacity={0.15}
+      useModal
     >
       <View
-        style={styles.sheet}
+        style={styles.container}
         onLayout={(e) => handleContentLayout(e.nativeEvent.layout.height)}
       >
         {renderMessagePreview()}
@@ -230,63 +288,80 @@ export default function LongPressOverlay({
 }
 
 const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
-  row: {
-    flexDirection: 'row-reverse',
+  previewWrap: {
+    paddingTop: tokens.spacing.xs,
+    paddingBottom: tokens.spacing.xs,
+  },
+  previewWrapMe: {
     alignItems: 'flex-end',
-    paddingHorizontal: 14,
-    paddingTop: 16,
-    paddingBottom: 4,
-    gap: 8,
+  },
+  previewWrapOther: {
+    alignItems: 'flex-start',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    maxWidth: '82%',
+    gap: 6,
   },
   avatarCol: {
-    alignSelf: 'flex-end',
     marginBottom: 2,
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   avatarFallback: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: tokens.colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarLetter: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: tokens.colors.text.primary,
   },
-  spacer: { width: 34 + 8 },
   bubble: {
-    flex: 1,
-    borderRadius: 18,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    gap: 5,
+    flexShrink: 1,
+    borderRadius: 16,
+    paddingTop: 4,
+    paddingBottom: 5,
+    paddingHorizontal: 9,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.16,
+    shadowRadius: 3,
+    elevation: 2,
   },
   myBubble: {
-    backgroundColor: tokens.colors.primary.dim,
+    backgroundColor: tokens.colors.bubbleMe,
     borderBottomRightRadius: 4,
-    borderWidth: 1,
-    borderColor: tokens.colors.border.active,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   theirBubble: {
-    backgroundColor: tokens.colors.background.cardSolid ?? 'rgba(255,255,255,0.08)',
+    backgroundColor: tokens.colors.bubbleOther,
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  tradeBubble: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    overflow: 'hidden',
   },
   senderName: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: tokens.colors.primary.main,
     textAlign: 'right',
+    alignSelf: 'stretch',
+    marginTop: 0,
+    marginBottom: 1,
+    lineHeight: 16,
   },
   mediaRow: {
     flexDirection: 'row-reverse',
@@ -297,13 +372,17 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
     fontSize: 14,
     color: tokens.colors.text.secondary,
   },
+  myMediaText: {
+    color: 'rgba(255,255,255,0.75)',
+  },
   msgText: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 21,
     textAlign: 'right',
+    marginTop: 0,
   },
   myText: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
   theirText: {
     color: tokens.colors.text.primary,
@@ -311,6 +390,7 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
   timeText: {
     fontSize: 11,
     alignSelf: 'flex-end',
+    marginTop: 3,
   },
   myTime: {
     color: 'rgba(255,255,255,0.5)',
@@ -318,14 +398,8 @@ const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
   theirTime: {
     color: tokens.colors.text.tertiary,
   },
-});
-
-const styles = StyleSheet.create({
-  sheet: {
-    // paddingBottom מוסר — BottomSheet כבר מוסיף contentPaddingBottom (~54px)
-  },
-  reactionWrapper: {
-    alignItems: 'center',
-    marginVertical: 10,
+  timeInTradeBubble: {
+    paddingHorizontal: 9,
+    paddingBottom: 2,
   },
 });

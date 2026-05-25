@@ -6,7 +6,7 @@ export interface MessageSnapshot {
   senderAvatar?: string;
   timestamp?: string;
   reactions?: any[];
-  type?: 'text' | 'image' | 'video' | 'audio' | 'document' | 'poll';
+  type?: 'text' | 'image' | 'video' | 'audio' | 'document' | 'poll' | 'trade';
   createdAt?: string;
   isMe?: boolean;
   channelId?: string;

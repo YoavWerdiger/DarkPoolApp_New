@@ -26,6 +26,7 @@ export function useChatMessageScroll({
 }: UseChatMessageScrollOptions) {
   const pendingScrollIdRef = useRef<string | null>(null);
   const scrollRetryRef = useRef(0);
+  const scrollToBottomRetryRef = useRef(0);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const averageItemHeightRef = useRef(DEFAULT_ITEM_HEIGHT);
   const itemHeightsRef = useRef<Map<string, number>>(new Map());
@@ -217,6 +218,47 @@ export function useChatMessageScroll({
     }
   }, [attemptScroll]);
 
+  /** Inverted FlatList: index 0 = newest message at visual bottom. */
+  const scrollToBottom = useCallback(
+    (animated = true) => {
+      const list = flatListRef.current;
+      const count = messagesRef.current.length;
+      if (!list || count === 0) return;
+
+      pendingScrollIdRef.current = null;
+      scrollRetryRef.current = 0;
+      scrollToBottomRetryRef.current = 0;
+
+      const run = () => {
+        const current = flatListRef.current;
+        if (!current || !isMountedRef.current) return;
+
+        try {
+          current.scrollToIndex({
+            index: 0,
+            animated,
+            viewPosition: 0,
+          });
+        } catch {
+          current.scrollToOffset({ offset: 0, animated });
+        }
+
+        // Inverted lists often ignore the first programmatic scroll after variable-height cells.
+        if (scrollToBottomRetryRef.current < 2) {
+          scrollToBottomRetryRef.current += 1;
+          requestAnimationFrame(() => {
+            flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+          });
+        }
+      };
+
+      InteractionManager.runAfterInteractions(() => {
+        requestAnimationFrame(run);
+      });
+    },
+    [flatListRef, isMountedRef, messagesRef]
+  );
+
   const onMessageCellLayout = useCallback((messageId: string, height: number) => {
     if (height <= 0) return;
     itemHeightsRef.current.set(messageId, height);
@@ -234,5 +276,6 @@ export function useChatMessageScroll({
     handleScrollToIndexFailed,
     handleContentSizeChange,
     onMessageCellLayout,
+    scrollToBottom,
   };
 }

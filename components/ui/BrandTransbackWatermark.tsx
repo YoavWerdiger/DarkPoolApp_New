@@ -31,26 +31,22 @@ export function BrandTransbackWatermark({
 
   if (layout === 'sheetBottom') {
     const visibleH = Math.min(Math.max(sheetVisibleHeightPx ?? H * 0.5, 180), H);
-    // גדול יותר מהחלון הנראה — נחתך ב-overflow כדי לשמור על נוכחות ברקע גם בשיטים קטנים
-    const imgW = W * 2.85;
-    const imgH = Math.max(visibleH * 1.85, W * 1.38);
-    const top = visibleH - imgH * 0.62;
+    const imgW = W * 2.1;
+    const imgH = Math.max(visibleH * 1.35, W * 1.05);
 
     return (
       <View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFillObject, { overflow: 'hidden' }]}
+        style={[StyleSheet.absoluteFillObject, { overflow: 'hidden', zIndex: 1 }]}
       >
         <View
           style={{
             position: 'absolute',
             left: (W - imgW) / 2,
-            top,
+            bottom: Math.max(visibleH * 0.06, 12),
             width: imgW,
             height: imgH,
-            opacity: 0.28,
-            alignItems: 'center',
-            justifyContent: 'center',
+            opacity: 0.32,
           }}
         >
           <ImageBackground

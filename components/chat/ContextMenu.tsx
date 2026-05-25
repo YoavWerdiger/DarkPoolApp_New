@@ -27,6 +27,7 @@ export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, c
       { key: 'copy',    label: 'העתק',      icon: 'copy-outline',        danger: false },
       { key: 'star',    label: 'כוכב',      icon: 'star-outline',        danger: false },
       ...(isMe && canEdit ? [{ key: 'edit', label: 'ערוך', icon: 'create-outline', danger: false } as OptionDef] : []),
+      ...(isMe ? [{ key: 'info', label: 'מידע', icon: 'information-circle-outline', danger: false } as OptionDef] : []),
       ...(isAdmin ? [{ key: 'pin', label: 'הצמד', icon: 'pin-outline', danger: false } as OptionDef] : []),
     ];
     const danger: OptionDef[] = [

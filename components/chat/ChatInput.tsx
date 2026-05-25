@@ -23,7 +23,7 @@ import VoiceWaveform from './VoiceWaveform';
 import VoiceWaveformWithProgress from './VoiceWaveformWithProgress';
 import MediaPreviewModal from './MediaPreviewModal';
 import { MediaFile } from '../../services/mediaService';
-import { useChat } from '../../context/ChatContext';
+import { useChatActions } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useMentions } from '../../hooks/useMentions';
@@ -31,6 +31,7 @@ import { useChatDraft } from '../../hooks/useChatDraft';
 import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
 import MentionPicker from './MentionPicker';
 import { logger } from '../../utils/logger';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface ChatInputProps {
   groupId: string;
@@ -56,7 +57,7 @@ function ChatInputImpl({
   const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const { isDarkMode } = useTheme();
-  const { addOptimisticMediaMessage, updateOptimisticMessage } = useChat();
+  const { addOptimisticMediaMessage, updateOptimisticMessage } = useChatActions();
   const { user } = useAuth();
 
   /** על עיגול ירוק: כהה (לא לבן) — בבהיר inverse הוא לבן */
@@ -1529,7 +1530,10 @@ function ChatInputImpl({
         <View style={styles.replyPreviewContainer}>
           {/* X button on the LEFT — in RTL Hebrew it appears at the leading/far end */}
           <TouchableOpacity
-            onPress={() => onCancelReply?.()}
+            onPress={() => {
+              void HapticFeedback.selection();
+              onCancelReply?.();
+            }}
             style={styles.cancelReply}
             activeOpacity={0.7}
           >
@@ -1556,7 +1560,10 @@ function ChatInputImpl({
           {/* Attachment Button - hidden during recording */}
           {!isRecording && !isPaused && (
             <TouchableOpacity
-              onPress={showAttachmentOptions}
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                showAttachmentOptions();
+              }}
               style={styles.iconButton}
               disabled={disabled || isUploading}
               activeOpacity={0.85}
@@ -1585,15 +1592,36 @@ function ChatInputImpl({
             /* שורה אחת: משמאל עצירה+מחיקה · במרכז זמן+גלים · מימין שליחה */
             <View style={styles.recordingRowFull}>
               <View style={styles.recordingLeftCluster}>
-                <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton} activeOpacity={0.7}>
+                <TouchableOpacity
+                  onPress={() => {
+                    void HapticFeedback.warning();
+                    void cancelRecording();
+                  }}
+                  style={styles.cancelButton}
+                  activeOpacity={0.7}
+                >
                   <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.text.danger} />
                 </TouchableOpacity>
                 {isRecording ? (
-                  <TouchableOpacity onPress={pauseRecording} style={styles.pauseResumeButton} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      void pauseRecording();
+                    }}
+                    style={styles.pauseResumeButton}
+                    activeOpacity={0.7}
+                  >
                     <Ionicons name="pause" size={20} color={DesignTokens.colors.text.primary} />
                   </TouchableOpacity>
                 ) : (
-                  <TouchableOpacity onPress={resumeRecording} style={styles.pauseResumeButton} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      void resumeRecording();
+                    }}
+                    style={styles.pauseResumeButton}
+                    activeOpacity={0.7}
+                  >
                     <Ionicons name="mic" size={20} color={DesignTokens.colors.text.primary} />
                   </TouchableOpacity>
                 )}
@@ -1615,6 +1643,7 @@ function ChatInputImpl({
 
               <TouchableOpacity
                 onPress={() => {
+                  void HapticFeedback.medium();
                   setIsLocked(false);
                   isLockedRef.current = false;
                   if (recordedAudioUri) {
@@ -1634,11 +1663,25 @@ function ChatInputImpl({
             /* תצוגה לפני שליחה — אותה לוגיקה: שמאל ניגון+מחיקה · מרכז זמן+גלים · ימין שליחה */
             <View style={styles.recordingRowFull}>
               <View style={styles.recordingLeftCluster}>
-                <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton} activeOpacity={0.7}>
+                <TouchableOpacity
+                  onPress={() => {
+                    void HapticFeedback.warning();
+                    void cancelRecording();
+                  }}
+                  style={styles.cancelButton}
+                  activeOpacity={0.7}
+                >
                   <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.text.danger} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={isPlayingPreview ? pausePreview : playPreview}
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    if (isPlayingPreview) {
+                      void pausePreview();
+                    } else {
+                      void playPreview();
+                    }
+                  }}
                   style={styles.playButtonInside}
                   activeOpacity={0.7}
                 >
@@ -1669,6 +1712,7 @@ function ChatInputImpl({
 
               <TouchableOpacity
                 onPress={() => {
+                  void HapticFeedback.medium();
                   setIsLocked(false);
                   isLockedRef.current = false;
                   if (recordedAudioUri) {
@@ -1731,7 +1775,10 @@ function ChatInputImpl({
               }}
             >
               <Pressable
-                onPress={handleMicTapToRecord}
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  handleMicTapToRecord();
+                }}
                 disabled={disabled || isUploading}
                 accessibilityRole="button"
                 accessibilityLabel="הקלטת הודעה קולית"
@@ -1764,6 +1811,7 @@ function ChatInputImpl({
             >
               <TouchableOpacity
                 onPress={() => {
+                  void HapticFeedback.impactLight();
                   Animated.sequence([
                     Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
                     Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
@@ -1986,13 +2034,14 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
   waveformWrapper: {
     flex: 1,
     minWidth: 0,
-    height: 24,
+    height: 28,
     alignSelf: 'stretch',
     justifyContent: 'center',
   },
   waveformPreviewWrapper: {
     flex: 1,
     minWidth: 0,
+    height: 28,
     alignSelf: 'stretch',
     justifyContent: 'center',
   },

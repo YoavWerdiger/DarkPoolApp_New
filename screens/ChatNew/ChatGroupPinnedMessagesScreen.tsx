@@ -3,7 +3,7 @@
 // ============================================
 
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -11,20 +11,13 @@ import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawer
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { logger } from '../../utils/logger';
-
-interface PinnedMessage {
-  id: string;
-  message_id: string;
-  message_content: string;
-  message_type: string;
-  message_created_at: string;
-  pinned_by: string;
-  pinned_by_name: string;
-  pinned_at: string;
-}
+import {
+  getChatPinnedMessages,
+  unpinChatMessage,
+  type ChatPinnedMessage,
+} from '../../services/chat/chatPinnedService';
 
 export default function ChatGroupPinnedMessagesScreen() {
   const DesignTokens = useDesignTokens();
@@ -36,32 +29,31 @@ export default function ChatGroupPinnedMessagesScreen() {
 
   const { groupId } = route.params as { groupId: string };
 
-  const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
+  const [pinnedMessages, setPinnedMessages] = useState<ChatPinnedMessage[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadPinnedMessages();
-  }, [groupId]);
-
-  const loadPinnedMessages = async () => {
+  const loadPinnedMessages = useCallback(async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .rpc('get_pinned_messages', { channel_uuid: groupId });
+      const { data, error } = await getChatPinnedMessages(groupId);
 
       if (error) {
         legacyAlert('שגיאה', 'לא ניתן לטעון הודעות מוצמדות');
         return;
       }
 
-      setPinnedMessages(data || []);
+      setPinnedMessages(data);
     } catch (error: any) {
       logger.error('PinnedMessages', 'Failed to load pinned messages', error);
       legacyAlert('שגיאה', 'לא ניתן לטעון הודעות מוצמדות');
     } finally {
       setLoading(false);
     }
-  };
+  }, [groupId]);
+
+  useEffect(() => {
+    void loadPinnedMessages();
+  }, [loadPinnedMessages]);
 
   const handleBack = () => {
     navigation.goBack();
@@ -71,20 +63,14 @@ export default function ChatGroupPinnedMessagesScreen() {
     if (!user?.id) return;
 
     try {
-      const { error } = await supabase
-        .from('pinned_messages')
-        .delete()
-        .eq('channel_id', groupId)
-        .eq('message_id', messageId);
-
-      if (error) {
-        legacyAlert('שגיאה', 'לא ניתן להסיר את ההצמדה');
+      const { success, error } = await unpinChatMessage(groupId, messageId);
+      if (!success) {
+        legacyAlert('שגיאה', error || 'לא ניתן להסיר את ההצמדה');
         return;
       }
 
       await loadPinnedMessages();
-      legacyAlert('הצלחה', 'ההודעה הוסרה מההצמדה');
-    } catch (error) {
+    } catch {
       legacyAlert('שגיאה', 'שגיאה בהסרת ההצמדה');
     }
   };
@@ -94,18 +80,10 @@ export default function ChatGroupPinnedMessagesScreen() {
     const messageTime = new Date(timestamp);
     const diffInSeconds = Math.floor((now.getTime() - messageTime.getTime()) / 1000);
 
-    if (diffInSeconds < 60) {
-      return 'עכשיו';
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `לפני ${minutes} דקות`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `לפני ${hours} שעות`;
-    } else {
-      const days = Math.floor(diffInSeconds / 86400);
-      return `לפני ${days} ימים`;
-    }
+    if (diffInSeconds < 60) return 'עכשיו';
+    if (diffInSeconds < 3600) return `לפני ${Math.floor(diffInSeconds / 60)} דקות`;
+    if (diffInSeconds < 86400) return `לפני ${Math.floor(diffInSeconds / 3600)} שעות`;
+    return `לפני ${Math.floor(diffInSeconds / 86400)} ימים`;
   };
 
   return (

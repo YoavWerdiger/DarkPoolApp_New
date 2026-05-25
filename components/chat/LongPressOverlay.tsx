@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, Text, Image } from 'react-native';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, StyleSheet, Text, Image, Dimensions, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import ReactionBar from './ReactionBar';
@@ -12,6 +12,10 @@ import { format } from 'date-fns';
 
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+/** handle indicator ב-edgeToEdge (padding + bar) */
+const SHEET_HANDLE_HEIGHT = 22;
 
 interface LongPressOverlayProps {
   visible: boolean;
@@ -28,9 +32,17 @@ export default function LongPressOverlay({
   onAction
 }: LongPressOverlayProps) {
   const insets = useSafeAreaInsets();
-  const [isAdmin, setIsAdmin] = React.useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
   const DesignTokens = useDesignTokens();
   const messagePreviewStyles = useMemo(() => createMessagePreviewStyles(DesignTokens), [DesignTokens]);
+
+  const sheetBottomPad = useMemo(() => {
+    const minBottom = Platform.OS === 'android' ? 24 : 20;
+    const safeBottom = Math.max(insets.bottom, minBottom);
+    const extra = Platform.OS === 'android' ? 12 : 20;
+    return safeBottom + extra;
+  }, [insets.bottom]);
 
   // מצא את הריאקציה הנוכחית של המשתמש (רק אחת!)
   const currentUserReaction = React.useMemo(() => {
@@ -78,19 +90,41 @@ export default function LongPressOverlay({
     }
   }, [visible, message]);
 
-  // snap point דינמי — חייב להיות לפני כל early return (Rules of Hooks)
-  // edgeToEdge=true מקטין overhead של handle ל-~18px
-  const snapPoint = React.useMemo(() => {
-    if (!message) return 0.62;
+  useEffect(() => {
+    setContentHeight(null);
+  }, [message?.id, visible, isAdmin]);
+
+  const handleContentLayout = useCallback((height: number) => {
+    if (height > 0) {
+      setContentHeight((prev) => (prev === height ? prev : height));
+    }
+  }, []);
+
+  // snap point לפי גובה תוכן מדוד — לא אחוז קבוע מהמסך
+  const snapPoint = useMemo(() => {
+    if (!message) return 0.35;
+
+    if (contentHeight != null && contentHeight > 0) {
+      const totalPx = contentHeight + SHEET_HANDLE_HEIGHT + sheetBottomPad;
+      return Math.min(0.92, Math.max(0.14, totalPx / SCREEN_HEIGHT));
+    }
+
+    // הערכה ראשונית עד onLayout — שמרנית ונמוכה
     const mainCount = 4
-      + (message.isMe && !message.id?.toString().startsWith('temp-') ? 1 : 0) // edit
-      + (isAdmin ? 1 : 0); // pin
+      + (message.isMe && !message.id?.toString().startsWith('temp-') ? 1 : 0)
+      + (message.isMe ? 1 : 0)
+      + (isAdmin ? 1 : 0);
     const dangerCount = (message.isMe ? 1 : 0) + (message.isMe || isAdmin ? 1 : 0);
+    const previewLines = message.content ? Math.min(4, message.content.split('\n').length + Math.ceil(message.content.length / 40)) : 0;
+    const previewPx = 72 + previewLines * 22 + (message.mediaUrl ? 24 : 0);
+    const reactionPx = 58;
+    const menuRowPx = 82;
     const mainRows = Math.ceil(mainCount / 4);
     const dangerRows = dangerCount > 0 ? 1 : 0;
-    const totalRows = mainRows + dangerRows;
-    return Math.min(0.82, 0.52 + totalRows * 0.088);
-  }, [message, isAdmin]);
+    const menuPx = mainRows * menuRowPx + dangerRows * menuRowPx + 34;
+    const estimatedPx = previewPx + reactionPx + menuPx + SHEET_HANDLE_HEIGHT + sheetBottomPad;
+    return Math.min(0.88, Math.max(0.14, estimatedPx / SCREEN_HEIGHT));
+  }, [message, isAdmin, contentHeight, sheetBottomPad]);
 
   if (!message) {
     return null;
@@ -172,8 +206,12 @@ export default function LongPressOverlay({
       backdropOpacity={0.5}
       useModal={true}
       edgeToEdge={true}
+      fitContent={true}
     >
-      <View style={styles.sheet}>
+      <View
+        style={styles.sheet}
+        onLayout={(e) => handleContentLayout(e.nativeEvent.layout.height)}
+      >
         {renderMessagePreview()}
 
         <View style={styles.reactionWrapper}>

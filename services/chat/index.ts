@@ -14,4 +14,5 @@ export {
 } from './chatSignedMediaUrl';
 export * from './chatRealtimeService';
 export * from './chatSearchService';
+export * from './chatPinnedService';
 

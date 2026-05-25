@@ -52,6 +52,8 @@ interface ChatMessageProps {
   onReactionDetailsPress?: (message: ChatMessageType) => void;
   onAvatarPress?: () => void;
   onJumpToMessage?: (messageId: string) => void;
+  onRetry?: () => void;
+  onStatusPress?: () => void;
   isHighlighted?: boolean;
 }
 
@@ -164,6 +166,24 @@ const REPLY_SWIPE_THRESHOLD = 44;
 /** חזרה רכה אחרי שחרור — ease-out ארוך במקום spring קשיח */
 const REPLY_SWIPE_RESET_MS = 360;
 
+function MessageStatusIcon({
+  isMe,
+  isSending,
+  hasError,
+  styles,
+  tertiaryColor,
+}: {
+  isMe: boolean;
+  isSending: boolean;
+  hasError: boolean;
+  styles: any;
+  tertiaryColor: string;
+}) {
+  if (!isMe || hasError || !isSending) return null;
+
+  return <ActivityIndicator size={10} color={tertiaryColor} style={styles.statusIcon} />;
+}
+
 function ChatMessage({
   message,
   isMe,
@@ -176,6 +196,8 @@ function ChatMessage({
   onReactionDetailsPress,
   onAvatarPress,
   onJumpToMessage,
+  onRetry,
+  onStatusPress,
   isHighlighted = false,
 }: ChatMessageProps) {
   const DesignTokens = useDesignTokens();
@@ -377,6 +399,13 @@ function ChatMessage({
     return DesignTokens.colors.text.secondary;
   }, [message.sender_id, DesignTokens]);
 
+  const replyTargetId = message.reply_to?.message_id || message.reply_to_message_id;
+  const handleReplyJump = useCallback(() => {
+    if (replyTargetId && onJumpToMessage) {
+      onJumpToMessage(replyTargetId);
+    }
+  }, [replyTargetId, onJumpToMessage]);
+
   // הודעת מערכת
   if (message.is_system_message) {
     return (
@@ -434,25 +463,22 @@ function ChatMessage({
         <View style={styles.avatarSpacer} />
       ))}
 
-      {/* Message Content — החלקה אופקית לריפליי; View נייטיבי עוטף לפי דרישת RNGH (מניעת NativeViewGestureHandler error) */}
-      <GestureDetector gesture={replyPanGesture}>
+      {/* Message Content — reply tap uses native Touchable (outside pan) so jump-to-message works reliably */}
+      <View
+        collapsable={false}
+        style={[
+          styles.gestureSwipeWrapper,
+          isMe ? styles.gestureSwipeWrapperMe : styles.gestureSwipeWrapperThem,
+          message.message_type === MessageType.AUDIO && styles.gestureSwipeWrapperAudio,
+        ]}
+      >
         <View
-          collapsable={false}
-          style={[
-            styles.gestureSwipeWrapper,
-            isMe ? styles.gestureSwipeWrapperMe : styles.gestureSwipeWrapperThem,
-            message.message_type === MessageType.AUDIO && styles.gestureSwipeWrapperAudio,
-          ]}
-        >
-        <Reanimated.View
           style={[
             styles.messageContent,
             isMe && styles.messageContentMe,
             message.message_type === MessageType.AUDIO && styles.audioMessageContent,
-            swipeReplyAnimatedStyle,
           ]}
         >
-        {/* Bubble — ריפליי וגוף ההודעה מופרדים: מקונן Touchable רגיל חוסם לחיצה על הריפליי + RNGH משתלב עם Pan */}
         <View
           style={[
             styles.bubble,
@@ -466,16 +492,14 @@ function ChatMessage({
           ]}
         >
           {message.reply_to && (
-            <GHTouchableOpacity
-              key={`reply-${message.id}-${message.reply_to.message_id}`}
+            <TouchableOpacity
+              key={`reply-${message.id}-${replyTargetId}`}
               style={[styles.replyContainer, isMe ? styles.replyContainerMe : styles.replyContainerThem]}
-              onPress={() => {
-                if (message.reply_to?.message_id && onJumpToMessage) {
-                  onJumpToMessage(message.reply_to.message_id);
-                }
-              }}
+              onPress={handleReplyJump}
               onLongPress={onLongPress}
-              activeOpacity={0.7}
+              activeOpacity={0.65}
+              accessibilityRole="button"
+              accessibilityLabel="קפוץ להודעה המקורית"
             >
               <View key={`reply-bar-${message.id}`} style={styles.replyBar} />
               <View key={`reply-content-${message.id}`} style={styles.replyContent}>
@@ -486,9 +510,11 @@ function ChatMessage({
                   {getReplyPreviewText(message.reply_to)}
                 </Text>
               </View>
-            </GHTouchableOpacity>
+            </TouchableOpacity>
           )}
 
+          <GestureDetector gesture={replyPanGesture}>
+          <Reanimated.View style={swipeReplyAnimatedStyle}>
           <GHTouchableOpacity
             activeOpacity={0.7}
             onPress={onPress}
@@ -561,6 +587,9 @@ function ChatMessage({
               : undefined,
             /* No time overlay — timestamp always in footer below the bubble */
             undefined,
+            imgOpacity,
+            imgOpacitySet,
+            onStatusPress,
           )}
 
           {/* Text Content */}
@@ -605,35 +634,44 @@ function ChatMessage({
              message.message_type === MessageType.MEDIA_GROUP) && { paddingHorizontal: 6, paddingBottom: 2 }
           ]}>
             {message.send_error ? (
-              <Text style={styles.sendErrorText}>⚠ שגיאה · לחץ לחיצה ארוכה לנסות שוב</Text>
+              <TouchableOpacity
+                style={styles.retryRow}
+                onPress={onRetry}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="refresh" size={13} color="#EF4444" />
+                <Text style={styles.sendErrorText}>שגיאה בשליחה · נסה שוב</Text>
+              </TouchableOpacity>
             ) : (
               <View style={styles.metadataRow}>
                 {message.is_edited && (
                   <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>נערך · </Text>
                 )}
                 <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText]}>{timeText}</Text>
-                {isMe && (
-                  isSending
-                    ? <ActivityIndicator size={10} color={DesignTokens.colors.text.tertiary} style={styles.statusIcon} />
-                    : (message.read_by_count ?? 0) > 0
-                      /* Double tick (blue) = read by at least one person */
-                      ? <Ionicons name="checkmark-done" size={14} color={DesignTokens.colors.primary.main} style={styles.statusIcon} />
-                      /* Single tick (gray) = sent, not yet read */
-                      : <Ionicons name="checkmark" size={14} color={DesignTokens.colors.text.tertiary} style={styles.statusIcon} />
-                )}
+                <MessageStatusIcon
+                  isMe={isMe}
+                  isSending={isSending}
+                  hasError={!!message.send_error}
+                  styles={styles}
+                  tertiaryColor={DesignTokens.colors.text.tertiary}
+                />
               </View>
             )}
           </View>
           )}
           </GHTouchableOpacity>
+          </Reanimated.View>
+          </GestureDetector>
         </View>
 
-        {/* Reactions - חופפות על הבועה, עד 3 ואז +X */}
+        {/* Reactions */}
         {message.reactions && message.reactions.length > 0 && (
-          <GHTouchableOpacity
-            style={[styles.reactionsContainer, { alignSelf: isMe ? 'flex-end' : 'flex-start' }]}
+          <AnimatedReactionBubble
+            isMe={isMe}
+            reactionCount={message.reactions.length}
             onPress={() => onReactionDetailsPress?.(message)}
-            activeOpacity={0.7}
+            styles={styles}
           >
             <View style={styles.reactionBubble}>
               {/* הצג עד 3 אימוג'ים */}
@@ -651,11 +689,10 @@ function ChatMessage({
                 <Text style={styles.reactionMore}>+{message.reactions.length - 3}</Text>
               )}
             </View>
-          </GHTouchableOpacity>
+          </AnimatedReactionBubble>
         )}
-        </Reanimated.View>
         </View>
-      </GestureDetector>
+      </View>
 
       {/* Spacer for avatar on my messages */}
       {/* Media Viewer */}
@@ -688,7 +725,10 @@ function renderMediaContent(
   tokens: ReturnType<typeof useDesignTokens>,
   onMediaPress?: () => void,
   audioMeta?: AudioBubbleMeta,
-  timeOverlayNode?: React.ReactNode
+  timeOverlayNode?: React.ReactNode,
+  imgOpacity?: Animated.Value,
+  imgOpacitySet?: React.MutableRefObject<boolean>,
+  onStatusPress?: () => void,
 ) {
   const imageUri =
     message.local_media_uri || resolved.main || message.media_url;
@@ -810,6 +850,7 @@ function renderMediaContent(
           sentTimeText={audioMeta?.sentTimeText ?? ''}
           isEdited={audioMeta?.isEdited ?? false}
           isSending={isMe && (audioMeta?.isSending ?? false)}
+          onStatusPress={onStatusPress}
         />
       );
     }
@@ -1085,6 +1126,7 @@ interface AudioPlayerProps {
   sentTimeText: string;
   isEdited: boolean;
   isSending: boolean;
+  onStatusPress?: () => void;
 }
 
 function AudioPlayer({
@@ -1097,6 +1139,7 @@ function AudioPlayer({
   sentTimeText,
   isEdited,
   isSending,
+  onStatusPress,
 }: AudioPlayerProps) {
   const soundRef = useRef<Audio.Sound | null>(null);
   /** URI אחרי ניסיון חידוש חתימה (מפחית 400 כשהטוקן בקאש פג) */
@@ -1226,6 +1269,13 @@ function AudioPlayer({
   }, []);
 
   const togglePlayPause = async () => {
+    if (Platform.OS !== 'web') {
+      try {
+        Haptics.selectionAsync();
+      } catch {
+        /* noop */
+      }
+    }
     try {
       if (!soundRef.current) {
         // Load and play
@@ -1275,6 +1325,13 @@ function AudioPlayer({
   };
 
   const togglePlaybackRate = async () => {
+    if (Platform.OS !== 'web') {
+      try {
+        Haptics.selectionAsync();
+      } catch {
+        /* noop */
+      }
+    }
     const rates = [1.0, 1.5, 2.0];
     const currentIndex = rates.indexOf(playbackRate);
     const nextRate = rates[(currentIndex + 1) % rates.length];
@@ -1446,9 +1503,13 @@ function AudioPlayer({
           </Text>
         </View>
         <View style={styles.audioMetadataRight}>
-          {isSending && (
-            <ActivityIndicator size={10} color={tokens.colors.text.tertiary} style={styles.statusIcon} />
-          )}
+          <MessageStatusIcon
+            isMe={isMe}
+            isSending={isSending}
+            hasError={!!message.send_error}
+            styles={styles}
+            tertiaryColor={tokens.colors.text.tertiary}
+          />
           {!!sentTimeText && (
             <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.audioSentTimeText]}>
               {sentTimeText}
@@ -1499,6 +1560,49 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.isHighlighted === nextProps.isHighlighted
   );
 });
+
+// ─── Animated reaction container: spring-pops on first mount and on count change ───
+function AnimatedReactionBubble({
+  isMe,
+  reactionCount,
+  onPress,
+  styles,
+  children,
+}: {
+  isMe: boolean;
+  reactionCount: number;
+  onPress: () => void;
+  styles: any;
+  children: React.ReactNode;
+}) {
+  const scale = useRef(new Animated.Value(0.7)).current;
+  const prevCount = useRef(reactionCount);
+
+  useEffect(() => {
+    if (prevCount.current !== reactionCount) {
+      prevCount.current = reactionCount;
+      scale.setValue(0.7);
+    }
+    Animated.spring(scale, {
+      toValue: 1,
+      speed: 20,
+      bounciness: 14,
+      useNativeDriver: true,
+    }).start();
+  }, [reactionCount, scale]);
+
+  return (
+    <GHTouchableOpacity
+      style={[styles.reactionsContainer, { alignSelf: isMe ? 'flex-end' : 'flex-start' }]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        {children}
+      </Animated.View>
+    </GHTouchableOpacity>
+  );
+}
 
 // ============================================
 // Styles - Modern Design from Reference
@@ -1634,8 +1738,8 @@ const createStyles = (tokens: any) => StyleSheet.create({
 
   bubble: {
     borderRadius: 16,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
     maxWidth: '100%',
   },
   /** כשיש ריפליי — גוף ההודעה מתחת לרצועת הריפליי */
@@ -1652,6 +1756,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomLeftRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 2,
   },
   theirBubble: {
     backgroundColor: tokens.colors.bubbleOther,
@@ -1659,6 +1768,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     borderBottomRightRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.14,
+    shadowRadius: 3,
+    elevation: 2,
   },
   deletedBubble: {
     opacity: 0.6,
@@ -1987,7 +2101,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   metadata: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 1,
     gap: 4,
     justifyContent: 'flex-start',
   },
@@ -2017,9 +2131,14 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginLeft: 2,
     opacity: 0.8,
   },
+  retryRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+  },
   sendErrorText: {
     fontSize: tokens.typography.fontSize.xs,
-    color: tokens.colors.text.danger,
+    color: '#EF4444',
     fontStyle: 'italic',
   },
   // Reactions - bg-[#2a2a2a] border border-[#3a3a3a] rounded-full

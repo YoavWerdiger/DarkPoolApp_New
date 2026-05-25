@@ -1,26 +1,20 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Star, RefreshCw, XCircle } from 'lucide-react-native';
-import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
-
-interface PinnedMessage {
-  id: string;
-  message_id: string;
-  message_content: string;
-  message_type: string;
-  message_created_at: string;
-  pinned_by: string;
-  pinned_by_name: string;
-  pinned_at: string;
-}
+import {
+  getChatPinnedMessages,
+  unpinChatMessage,
+  type ChatPinnedMessage,
+} from '../../services/chat/chatPinnedService';
 
 interface PinnedMessagesHeaderProps {
-  channelId: string;
+  groupId: string;
+  refreshKey?: number;
   onMessagePress?: (messageId: string) => void;
 }
 
@@ -123,11 +117,11 @@ const createStyles = (tokens: any) =>
     },
   });
 
-export default function PinnedMessagesHeader({ channelId, onMessagePress }: PinnedMessagesHeaderProps) {
+export default function PinnedMessagesHeader({ groupId, refreshKey = 0, onMessagePress }: PinnedMessagesHeaderProps) {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const { user } = useAuth();
-  const [pinnedMessages, setPinnedMessages] = useState<PinnedMessage[]>([]);
+  const [pinnedMessages, setPinnedMessages] = useState<ChatPinnedMessage[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const isMountedRef = useRef(true);
 
@@ -136,52 +130,38 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
     return () => { isMountedRef.current = false; };
   }, []);
 
-  useEffect(() => {
-    if (channelId) {
-      loadPinnedMessages();
-    }
-  }, [channelId]);
-
-  const loadPinnedMessages = async () => {
+  const loadPinnedMessages = useCallback(async () => {
+    if (!groupId) return;
     try {
-      const { data, error } = await supabase
-        .rpc('get_pinned_messages', { channel_uuid: channelId });
-
+      const { data, error } = await getChatPinnedMessages(groupId);
       if (!isMountedRef.current) return;
-      
       if (error) {
         logger.error('PinnedMessagesHeader', 'Error loading pinned messages', error);
         return;
       }
-      
-      setPinnedMessages(data || []);
+      setPinnedMessages(data);
     } catch (error) {
       logger.error('PinnedMessagesHeader', 'Failed to load pinned messages', error);
     }
-  };
+  }, [groupId]);
+
+  useEffect(() => {
+    void loadPinnedMessages();
+  }, [groupId, refreshKey, loadPinnedMessages]);
 
   const handleUnpinMessage = async (messageId: string) => {
     if (!user?.id) return;
-    
+
     try {
-      const { error } = await supabase
-        .from('pinned_messages')
-        .delete()
-        .eq('channel_id', channelId)
-        .eq('message_id', messageId);
-      
-      if (error) {
-        legacyAlert('שגיאה', 'לא ניתן להסיר את ההצמדה');
+      const { success, error } = await unpinChatMessage(groupId, messageId);
+      if (!success) {
+        legacyAlert('שגיאה', error || 'לא ניתן להסיר את ההצמדה');
         return;
       }
-      
-      // Reload pinned messages
+
       await loadPinnedMessages();
-      legacyAlert('הצלחה', 'ההודעה הוסרה מההצמדה');
-      
-      // Notify parent component about the change
       onMessagePress?.('refresh_pinned');
-    } catch (error) {
+    } catch {
       legacyAlert('שגיאה', 'שגיאה בהסרת ההצמדה');
     }
   };
@@ -190,39 +170,24 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
     const now = new Date();
     const messageTime = new Date(timestamp);
     const diffInSeconds = Math.floor((now.getTime() - messageTime.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) {
-      return 'עכשיו';
-    } else if (diffInSeconds < 3600) {
-      const minutes = Math.floor(diffInSeconds / 60);
-      return `לפני ${minutes} דקות`;
-    } else if (diffInSeconds < 86400) {
-      const hours = Math.floor(diffInSeconds / 3600);
-      return `לפני ${hours} שעות`;
-    } else {
-      const days = Math.floor(diffInSeconds / 86400);
-      return `לפני ${days} ימים`;
-    }
+
+    if (diffInSeconds < 60) return 'עכשיו';
+    if (diffInSeconds < 3600) return `לפני ${Math.floor(diffInSeconds / 60)} דקות`;
+    if (diffInSeconds < 86400) return `לפני ${Math.floor(diffInSeconds / 3600)} שעות`;
+    return `לפני ${Math.floor(diffInSeconds / 86400)} ימים`;
   };
 
   const getMessageIcon = (type: string) => {
     switch (type) {
-      case 'image':
-        return 'image';
-      case 'video':
-        return 'videocam';
+      case 'image': return 'image';
+      case 'video': return 'videocam';
       case 'audio':
-      case 'voice':
-        return 'mic';
+      case 'voice': return 'mic';
       case 'file':
-      case 'document':
-        return 'document';
-      case 'poll':
-        return 'list';
-      case 'trade':
-        return 'trending-up';
-      default:
-        return 'chatbubble';
+      case 'document': return 'document';
+      case 'poll': return 'list';
+      case 'trade': return 'trending-up';
+      default: return 'chatbubble';
     }
   };
 
@@ -235,7 +200,6 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
 
   return (
     <View style={styles.root}>
-      {/* Header */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
           <Star size={20} color={starColor} strokeWidth={2} />
@@ -243,96 +207,60 @@ export default function PinnedMessagesHeader({ channelId, onMessagePress }: Pinn
             הודעות מוצמדות ({pinnedMessages.length})
           </Text>
         </View>
-        
+
         <View style={styles.headerActions}>
-          <Pressable
-            onPress={() => setIsExpanded(!isExpanded)}
-            style={styles.expandHit}
-          >
-            <Ionicons 
-              name={isExpanded ? "chevron-up" : "chevron-down"} 
-              size={20} 
-              color={DesignTokens.colors.text.tertiary} 
+          <Pressable onPress={() => setIsExpanded(!isExpanded)} style={styles.expandHit}>
+            <Ionicons
+              name={isExpanded ? 'chevron-up' : 'chevron-down'}
+              size={20}
+              color={DesignTokens.colors.text.tertiary}
             />
           </Pressable>
-          
           <Pressable onPress={loadPinnedMessages}>
             <RefreshCw size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
           </Pressable>
         </View>
       </View>
 
-      {/* Pinned Messages */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.scrollRow}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollRow}>
         {displayMessages.map((pinnedMsg) => (
-          <View 
+          <View
             key={pinnedMsg.id}
-            style={[
-              styles.card,
-              { backgroundColor: DesignTokens.colors.background.secondary },
-            ]}
+            style={[styles.card, { backgroundColor: DesignTokens.colors.background.secondary }]}
           >
-            {/* Message Header */}
             <View style={styles.cardHeader}>
               <View style={styles.cardHeaderLeft}>
-                <Ionicons 
-                  name={getMessageIcon(pinnedMsg.message_type) as any} 
-                  size={16} 
-                  color={DesignTokens.colors.accent.main} 
+                <Ionicons
+                  name={getMessageIcon(pinnedMsg.message_type) as any}
+                  size={16}
+                  color={DesignTokens.colors.accent.main}
                 />
-                <Text style={styles.pinnedByText}>
-                  {pinnedMsg.pinned_by_name}
-                </Text>
+                <Text style={styles.pinnedByText}>{pinnedMsg.pinned_by_name}</Text>
               </View>
-              
-              <Pressable
-                onPress={() => handleUnpinMessage(pinnedMsg.message_id)}
-                style={styles.unpinHit}
-              >
+              <Pressable onPress={() => handleUnpinMessage(pinnedMsg.message_id)} style={styles.unpinHit}>
                 <XCircle size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
               </Pressable>
             </View>
 
-            {/* Message Content */}
-            <Pressable
-              onPress={() => onMessagePress?.(pinnedMsg.message_id)}
-              style={styles.messagePreview}
-            >
-              <Text 
-                style={styles.messageBody} 
-                numberOfLines={2}
-              >
+            <Pressable onPress={() => onMessagePress?.(pinnedMsg.message_id)} style={styles.messagePreview}>
+              <Text style={styles.messageBody} numberOfLines={2}>
                 {pinnedMsg.message_content}
               </Text>
             </Pressable>
 
-            {/* Message Footer */}
             <View style={styles.cardFooter}>
-              <Text style={styles.metaText}>
-                {formatTimeAgo(pinnedMsg.pinned_at)}
-              </Text>
-              
+              <Text style={styles.metaText}>{formatTimeAgo(pinnedMsg.pinned_at)}</Text>
               <View style={styles.metaRow}>
                 <Star size={12} color={starColor} strokeWidth={2} />
-                <Text style={styles.metaLabel}>
-                  מוצמד
-                </Text>
+                <Text style={styles.metaLabel}>מוצמד</Text>
               </View>
             </View>
           </View>
         ))}
       </ScrollView>
 
-      {/* Show More/Less Button */}
       {pinnedMessages.length > 2 && (
-        <Pressable
-          onPress={() => setIsExpanded(!isExpanded)}
-          style={styles.showMoreWrap}
-        >
+        <Pressable onPress={() => setIsExpanded(!isExpanded)} style={styles.showMoreWrap}>
           <Text style={styles.showMoreText}>
             {isExpanded ? 'הצג פחות' : `הצג עוד ${pinnedMessages.length - 2} הודעות`}
           </Text>

@@ -49,6 +49,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   dragAreaHeight,
   showBrandBackground = true,
   topCornerRadius,
+  fitContent = false,
 }) => {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -326,7 +327,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
                       <View style={[styles.handle, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
                     </View>
                   )}
-                  <View style={{ flex: 1 }}>{children}</View>
+                  <View style={fitContent ? undefined : { flex: 1 }}>{children}</View>
                 </>
               ) : (
                 <>

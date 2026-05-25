@@ -31,10 +31,10 @@ export function BrandTransbackWatermark({
 
   if (layout === 'sheetBottom') {
     const visibleH = Math.min(Math.max(sheetVisibleHeightPx ?? H * 0.5, 180), H);
-    // גדול כמו fullscreen אבל מותאם לגובה ה-sheet
-    const imgW = W * 1.1;
-    const imgH = visibleH * 0.75;
-    const top = (visibleH - imgH) / 2;
+    // גדול יותר מהחלון הנראה — נחתך ב-overflow כדי לשמור על נוכחות ברקע גם בשיטים קטנים
+    const imgW = W * 2.85;
+    const imgH = Math.max(visibleH * 1.85, W * 1.38);
+    const top = visibleH - imgH * 0.62;
 
     return (
       <View
@@ -48,7 +48,9 @@ export function BrandTransbackWatermark({
             top,
             width: imgW,
             height: imgH,
-            opacity: 0.18,
+            opacity: 0.28,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <ImageBackground

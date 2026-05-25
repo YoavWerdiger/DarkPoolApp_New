@@ -161,7 +161,7 @@ export default function ChatGroupsListScreen() {
   const tokens = useDesignTokens();
   const navigation = useNavigation();
   const { user } = useAuth();
-  const { groups: contextGroups, realtimeConnectionState } = useChat();
+  const { groups: contextGroups, realtimeConnectionState, loadGroups: syncContextGroups } = useChat();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const openMainDrawer = useCallback(() => {
@@ -353,6 +353,7 @@ export default function ChatGroupsListScreen() {
 
   useEffect(() => {
     loadGroups();
+    void syncContextGroups();
   }, [user]);
 
   useEffect(() => {

@@ -18,6 +18,8 @@ export interface BottomSheetProps {
   showBrandBackground?: boolean;
   /** פינות עליונות של לוח השיט (ברירת מחדל מ־styles). למשל 28 כמו מודאל טופס */
   topCornerRadius?: number;
+  /** כש־true: התוכן לא נמתח לגובה מלא — מתאים לשיטים שגובהם נקבע לפי snapPoints מדודים */
+  fitContent?: boolean;
 }
 
 

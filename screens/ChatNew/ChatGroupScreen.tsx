@@ -25,14 +25,17 @@ import ForwardMessageModal from '../../components/chat/ForwardMessageModal';
 import UnreadDivider from '../../components/chat/UnreadDivider';
 import LongPressOverlay from '../../components/chat/LongPressOverlay';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
+import PinnedMessagesHeader from '../../components/chat/PinnedMessagesHeader';
+import SeenBySheet from '../../components/chat/SeenBySheet';
+import { pinChatMessage } from '../../services/chat/chatPinnedService';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
-import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
 
 // ── Skeleton bubble — shown while messages are loading ──────────────────────
 const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; width: string; delay: number }) => {
@@ -92,6 +95,7 @@ export default function ChatGroupScreen() {
     unstarMessage,
     setTyping,
     initialUnreadInfo,
+    retrySendMessage,
   } = useChat();
 
   // בדיקה אם זו קבוצת הכרזות
@@ -106,22 +110,18 @@ export default function ChatGroupScreen() {
   // onEndReached fires when scrolled to index N-1 (oldest) = user wants older history.
   const hasInitiallyRenderedRef = useRef(false);
 
-  const scrollToBottom = useCallback((forceAnimated: boolean = false) => {
+  const scrollToBottom = useCallback((animated: boolean = false) => {
     const list = flatListRef.current;
-    if (!list || messages.length === 0) return;
+    if (!list) return;
     setShowScrollToBottomButton(false);
     RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
     isAtBottomRef.current = true;
-    // Always use animated: false for programmatic auto-scroll.
-    // animated: true + simultaneous React re-render (message confirmed) causes
-    // the scroll position to jump to unpredictable values (observed: ~3000px).
-    // The snap at offset 0 is instant enough to feel natural.
-    // Only use animated: true when the FAB button is explicitly tapped (forceAnimated=true)
-    // and there are no pending re-renders.
+    // animated: false prevents the ~3000px jump seen with inverted FlatList + concurrent re-renders.
+    // For FAB taps we still use false — the snap is fast enough to feel intentional.
     requestAnimationFrame(() => {
-      list.scrollToOffset({ offset: 0, animated: forceAnimated });
+      list.scrollToOffset({ offset: 0, animated: false });
     });
-  }, [messages.length]);
+  }, []);
 
   // עוקב אחרי האם המשתמש נמצא בתחתית הרשימה
   const isAtBottomRef = useRef(true);
@@ -188,7 +188,6 @@ export default function ChatGroupScreen() {
     content: string;
   } | undefined>();
 
-  const [averageItemHeight, setAverageItemHeight] = useState(120);
   const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
   const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<ChatMessageType | null>(null);
   const [reactionDetailsModalVisible, setReactionDetailsModalVisible] = useState(false);
@@ -196,6 +195,7 @@ export default function ChatGroupScreen() {
   const [forwardModalVisible, setForwardModalVisible] = useState(false);
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<ChatMessageType | null>(null);
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const scrollBtnOpacity = useRef(new RNAnimated.Value(0)).current;
   // Stable extraData object — only changes when visible UX state changes
   const flatListExtraData = useMemo(() => ({
@@ -205,14 +205,25 @@ export default function ChatGroupScreen() {
   }), [highlightedMessageId, initialUnreadInfo?.count, user?.id]);
   const [longPressMessage, setLongPressMessage] = useState<MessageSnapshot | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
-  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [seenByMessage, setSeenByMessage] = useState<ChatMessageType | null>(null);
+  const [pinnedRefreshKey, setPinnedRefreshKey] = useState(0);
 
-  const lastJumpedMessageRef = useRef<string | null>(null);
-  const jumpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef<boolean>(true);
   const messagesRef = useRef(messages);
+
+  const {
+    handleJumpToMessage,
+    handleScrollToIndexFailed,
+    handleContentSizeChange,
+    onMessageCellLayout,
+  } = useChatMessageScroll({
+    flatListRef,
+    messagesRef,
+    isMountedRef,
+    loadMessagesAround,
+    onHighlight: setHighlightedMessageId,
+  });
   // Track IDs loaded at initial load – only animate truly new messages
   useEffect(() => {
     messagesRef.current = messages;
@@ -223,14 +234,6 @@ export default function ChatGroupScreen() {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      if (jumpTimeoutRef.current) {
-        clearTimeout(jumpTimeoutRef.current);
-        jumpTimeoutRef.current = null;
-      }
-      if (highlightTimeoutRef.current) {
-        clearTimeout(highlightTimeoutRef.current);
-        highlightTimeoutRef.current = null;
-      }
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
         scrollTimeoutRef.current = null;
@@ -299,16 +302,12 @@ export default function ChatGroupScreen() {
       const timer = setTimeout(() => handleJumpToMessage(scrollToMessageId), 400);
       return () => clearTimeout(timer);
     }
-  }, [scrollToMessageId, messages.length > 0]);
+  }, [scrollToMessageId, handleJumpToMessage]);
 
   // ============================================
   // Handlers
   // ============================================
 
-  // PERF: All handlers that flow into ChatInput or ChatMessage MUST be
-  // useCallback'd with stable deps. Without it the children are forced to
-  // re-render on every parent state update (new message arriving, scroll
-  // event, anything), which is the root cause of "send button feels delayed".
   const handleSendMessage = useCallback(async (
     content: string,
     mediaUrl?: string,
@@ -357,85 +356,6 @@ export default function ChatGroupScreen() {
     }
   }, [groupId, replyTo?.id, sendMessage]);
 
-  const handleJumpToMessage = useCallback(async (messageId: string) => {
-    if (!isMountedRef.current) return;
-
-    if (jumpTimeoutRef.current) {
-      clearTimeout(jumpTimeoutRef.current);
-      jumpTimeoutRef.current = null;
-    }
-
-    let messageIndex = messagesRef.current.findIndex(msg => msg.id === messageId);
-
-    if (messageIndex === -1) {
-      const result = await loadMessagesAround(messageId);
-
-      if (!isMountedRef.current) return;
-
-      if (!result.success) {
-        return;
-      }
-
-      let attempts = 0;
-      const maxAttempts = 30;
-
-      while (attempts < maxAttempts && isMountedRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        if (!isMountedRef.current) return;
-
-        messageIndex = messagesRef.current.findIndex(msg => msg.id === messageId);
-
-        if (messageIndex !== -1) {
-          break;
-        }
-
-        attempts++;
-      }
-
-      if (messageIndex === -1 || !isMountedRef.current) {
-        return;
-      }
-    }
-
-    if (!isMountedRef.current || !flatListRef.current) {
-      return;
-    }
-
-    const scrollToMessage = () => {
-      if (!isMountedRef.current || !flatListRef.current) return;
-
-      // With inverted list, index in messages array = index in FlatList data
-      try {
-        flatListRef.current.scrollToIndex({
-          index: messageIndex,
-          animated: true,
-          viewPosition: 0.5,
-        });
-      } catch {
-        // onScrollToIndexFailed callback will handle the fallback
-      }
-
-      setHighlightedMessageId(messageId);
-      if (highlightTimeoutRef.current) clearTimeout(highlightTimeoutRef.current);
-      highlightTimeoutRef.current = setTimeout(() => {
-        if (isMountedRef.current) {
-          setHighlightedMessageId(null);
-          lastJumpedMessageRef.current = null;
-        }
-      }, 2000);
-    };
-
-    if (lastJumpedMessageRef.current === messageId) {
-      lastJumpedMessageRef.current = null;
-    }
-
-    lastJumpedMessageRef.current = messageId;
-
-    jumpTimeoutRef.current = setTimeout(() => {
-      scrollToMessage();
-    }, 50);
-  }, [loadMessagesAround]);
-
   const handleTyping = useCallback((isTyping: boolean) => {
     if (groupId) {
       setTyping(groupId, isTyping);
@@ -443,6 +363,7 @@ export default function ChatGroupScreen() {
   }, [groupId, setTyping]);
 
   const handleMessageLongPress = useCallback((message: ChatMessageType) => {
+    void HapticFeedback.medium();
     const isMe = message.sender_id === user?.id;
 
     const snapshot: MessageSnapshot = {
@@ -501,6 +422,12 @@ export default function ChatGroupScreen() {
         case 'pin':
           handlePinMessage(message);
           break;
+        case 'info':
+          handleMessageInfo(message);
+          break;
+        case 'retry':
+          void retrySendMessage(message.id);
+          break;
       }
     }, 300);
   };
@@ -547,23 +474,22 @@ export default function ChatGroupScreen() {
   const handlePinMessage = async (message: ChatMessageType) => {
     if (!user?.id) return;
     try {
-      const { error } = await supabase
-        .from('pinned_messages')
-        .upsert({
-          channel_id: groupId,
-          message_id: message.id,
-          pinned_by: user.id,
-        }, { onConflict: 'channel_id,message_id' });
-
-      if (error) {
-        legacyAlert('שגיאה', 'לא ניתן להצמיד את ההודעה');
+      const { success, error } = await pinChatMessage(groupId, message.id, user.id);
+      if (!success) {
+        legacyAlert('שגיאה', error || 'לא ניתן להצמיד את ההודעה');
       } else {
         void HapticFeedback.impactLight();
+        setPinnedRefreshKey((k) => k + 1);
       }
     } catch {
       legacyAlert('שגיאה', 'שגיאה בהצמדת ההודעה');
     }
   };
+
+  const handleMessageInfo = useCallback((message: ChatMessageType) => {
+    if (message.id.startsWith('temp-')) return;
+    setSeenByMessage(message);
+  }, []);
 
   const handleCopy = async (message: ChatMessageType) => {
     let textToCopy = message.content || message.media_url || '';
@@ -841,7 +767,9 @@ export default function ChatGroupScreen() {
       // and child elements inside a renderItem return are NOT in an array —
       // adding keys here costs reconciliation time without any benefit.
       return (
-        <View>
+        <View
+          onLayout={(e) => onMessageCellLayout(item.id, e.nativeEvent.layout.height)}
+        >
           {showDivider && renderDateDivider(new Date(item.created_at))}
           <ChatMessage
             message={item}
@@ -853,6 +781,19 @@ export default function ChatGroupScreen() {
             onReactionPress={(emoji) => handleReactionPress(item, emoji)}
             onReactionDetailsPress={() => handleReactionDetailsPress(item)}
             onJumpToMessage={handleJumpToMessage}
+            onRetry={
+              item.send_error
+                ? () => {
+                    void HapticFeedback.impactLight();
+                    void retrySendMessage(item.id);
+                  }
+                : undefined
+            }
+            onStatusPress={
+              isMe && !item.id.startsWith('temp-')
+                ? () => handleMessageInfo(item)
+                : undefined
+            }
             isHighlighted={item.id === highlightedMessageId}
           />
           {showUnreadDivider && (
@@ -874,6 +815,9 @@ export default function ChatGroupScreen() {
       shouldShowDateDivider,
       shouldShowUnreadDivider,
       renderDateDivider,
+      retrySendMessage,
+      handleMessageInfo,
+      onMessageCellLayout,
     ]
   );
 
@@ -999,8 +943,44 @@ export default function ChatGroupScreen() {
         </View>
       )}
 
+      <PinnedMessagesHeader
+        groupId={groupId}
+        refreshKey={pinnedRefreshKey}
+        onMessagePress={(messageId) => {
+          if (messageId === 'refresh_pinned') {
+            setPinnedRefreshKey((k) => k + 1);
+            return;
+          }
+          handleJumpToMessage(messageId);
+        }}
+      />
+
       {/* Messages area — minHeight:0 נדרש כדי שה-FlatList יקבל גלילה אמיתית בתוך עמודת flex */}
       <View style={styles.messagesAreaFlex}>
+        {/* Scroll-to-bottom FAB — inside messagesAreaFlex so it rises with the keyboard */}
+        <RNAnimated.View
+          pointerEvents={showScrollToBottomButton ? 'auto' : 'none'}
+          style={[
+            styles.scrollToBottomButton,
+            { bottom: 12, opacity: scrollBtnOpacity },
+          ]}
+        >
+          <Pressable
+            onPress={() => { void HapticFeedback.selection(); scrollToBottom(true); }}
+            hitSlop={14}
+            style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
+          >
+            <Ionicons name="chevron-down" size={20} color="#fff" />
+            {(initialUnreadInfo?.count ?? 0) > 0 && (
+              <View style={styles.scrollBadge} pointerEvents="none">
+                <Text style={styles.scrollBadgeText}>
+                  {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        </RNAnimated.View>
+
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -1008,7 +988,7 @@ export default function ChatGroupScreen() {
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           extraData={flatListExtraData}
-          removeClippedSubviews={Platform.OS === 'android'}
+          removeClippedSubviews={true}
           // Inverted: "end" of data = oldest messages = user scrolled to the top.
           // Guard: only fire after initial render is settled (prevents spurious
           // load on mount before scrollToBottom(false) corrects the position).
@@ -1036,24 +1016,8 @@ export default function ChatGroupScreen() {
           style={styles.flatListTransparent}
           scrollEventThrottle={16}
           onScroll={handleScroll}
-          onScrollToIndexFailed={(info) => {
-            if (!isMountedRef.current) return;
-            logger.warn('ChatGroupScreen', `onScrollToIndexFailed index=${info.index} avg=${info.averageItemLength?.toFixed(0)}`);
-            // Scroll to estimated offset immediately, then retry the index scroll
-            // once the FlatList has measured more items.
-            const offset = info.index * (info.averageItemLength || averageItemHeight);
-            flatListRef.current?.scrollToOffset({ offset, animated: false });
-            setTimeout(() => {
-              if (!isMountedRef.current) return;
-              try {
-                flatListRef.current?.scrollToIndex({
-                  index: info.index,
-                  animated: true,
-                  viewPosition: 0.5,
-                });
-              } catch { /* give up gracefully */ }
-            }, 150);
-          }}
+          onContentSizeChange={handleContentSizeChange}
+          onScrollToIndexFailed={handleScrollToIndexFailed}
         />
 
       </View>
@@ -1088,17 +1052,14 @@ export default function ChatGroupScreen() {
   return (
     <ChatScreenShell>
       {/*
-        KEYBOARD: `translate-with-padding` is the recommended `behavior` for
-        chat screens per react-native-keyboard-controller's docs. It moves
-        the view up using a Reanimated transform AND applies a one-shot
-        paddingTop — the cheapest possible animation path, identical on
-        iOS and Android. Compared to the old `padding` mode it eliminates
-        the per-frame layout pass that caused the input area to feel
-        "rubber-banded" while the keyboard slid in.
+        keyboardVerticalOffset compensates for ChatInput's own insets.bottom
+        padding so the input sits flush with the keyboard (no dead gap).
+        Value = insets.bottom so the remaining max(sm,6) ≈ 6-8px appears
+        as a natural small margin above the keyboard, matching WhatsApp.
       */}
       <KeyboardAvoidingView
         behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 6 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.bottom : 0}
         style={{ flex: 1, backgroundColor: 'transparent' }}
       >
         {chatMainColumn}
@@ -1141,35 +1102,18 @@ export default function ChatGroupScreen() {
         onAction={handleMessageAction}
       />
 
-      {/* Scroll-to-bottom FAB — outside KAV so it never shifts with keyboard */}
-      <RNAnimated.View
-        pointerEvents={showScrollToBottomButton ? 'auto' : 'none'}
-        style={[
-          styles.scrollToBottomButton,
-          { bottom: Math.max(72, insets.bottom + 66), opacity: scrollBtnOpacity },
-        ]}
-      >
-        <Pressable
-          onPress={() => { void HapticFeedback.selection(); scrollToBottom(true); }}
-          hitSlop={14}
-          style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
-        >
-          <Ionicons name="chevron-down" size={20} color="#fff" />
-          {(initialUnreadInfo?.count ?? 0) > 0 && (
-            <View style={styles.scrollBadge} pointerEvents="none">
-              <Text style={styles.scrollBadgeText}>
-                {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-      </RNAnimated.View>
-
       <ChatSearchBottomSheet
         visible={searchVisible}
         onClose={() => setSearchVisible(false)}
         groupId={groupId}
         onMessagePress={handleJumpToMessage}
+      />
+
+      <SeenBySheet
+        visible={!!seenByMessage}
+        onClose={() => setSeenByMessage(null)}
+        messageId={seenByMessage?.id || ''}
+        messageTimestamp={seenByMessage?.created_at || ''}
       />
 
       {/* Edit Message Modal – תואם לעיצוב האפליקציה */}
@@ -1545,7 +1489,7 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   inputArea: {
     paddingHorizontal: 10,
     paddingTop: 4,
-    paddingBottom: 6,
+    paddingBottom: 0,
     backgroundColor: 'transparent',
     borderTopWidth: 0,
   },

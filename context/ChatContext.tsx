@@ -98,6 +98,9 @@ interface ChatContextType {
   updateOptimisticMessage: (tempId: string, updates: Partial<ChatMessage>) => void;
   removeOptimisticMessage: (tempId: string) => void;
 
+  // Retry failed message
+  retrySendMessage: (tempId: string) => Promise<void>;
+
   // Read Receipts
   markAsRead: (groupId: string, messageIds: string[]) => Promise<void>;
 
@@ -106,6 +109,34 @@ interface ChatContextType {
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
+
+type ChatActionsType = Pick<
+  ChatContextType,
+  | 'loadGroups'
+  | 'selectGroup'
+  | 'refreshCurrentGroupDetails'
+  | 'createGroup'
+  | 'updateGroup'
+  | 'leaveGroup'
+  | 'sendMessage'
+  | 'loadMoreMessages'
+  | 'loadMessagesAround'
+  | 'editMessage'
+  | 'deleteMessage'
+  | 'forwardMessage'
+  | 'addReaction'
+  | 'removeReaction'
+  | 'starMessage'
+  | 'unstarMessage'
+  | 'setTyping'
+  | 'markAsRead'
+  | 'addOptimisticMediaMessage'
+  | 'updateOptimisticMessage'
+  | 'removeOptimisticMessage'
+  | 'retrySendMessage'
+>;
+
+const ChatActionsContext = createContext<ChatActionsType | undefined>(undefined);
 
 // ============================================
 // Provider
@@ -625,6 +656,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             }
           });
         },
+        onReadReceipt: (read) => {
+          if (read.user_id === user.id) return;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === read.message_id && m.sender_id === user.id
+                ? { ...m, read_by_count: (m.read_by_count || 0) + 1 }
+                : m
+            )
+          );
+        },
         onGroup: (data) => {
           // Use functional update to avoid stale closure on currentGroup
           setCurrentGroup(prev => prev ? { ...prev, ...data } : prev);
@@ -722,9 +763,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: 'לא מחובר או אין קבוצה נבחרת' };
     }
 
-    if (isLoadingAroundRef.current) {
-      return { success: false, error: 'טעינה בתהליך' };
+    if (messagesRef.current.some((m) => m.id === messageId)) {
+      return { success: true };
     }
+
+    if (isLoadingAroundRef.current) {
+      // Allow a second jump target while load is in flight — don't block scroll-to-reply
+      await new Promise((r) => setTimeout(r, 150));
+      if (messagesRef.current.some((m) => m.id === messageId)) {
+        return { success: true };
+      }
+    }
+
     isLoadingAroundRef.current = true;
 
     try {
@@ -764,18 +814,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       ];
 
       if (combined.length > 0) {
-        setMessages(prev => {
-          const existingIds = new Set(prev.map(m => m.id));
-          const fresh = combined.filter(m => !existingIds.has(m.id));
-          if (fresh.length === 0) return prev;
-
-          const all = [...prev, ...fresh].sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          );
-          messagesOffset.current = all.length;
-          return all;
+        const byId = new Map<string, ChatMessage>();
+        for (const m of [...messagesRef.current, ...combined]) {
+          byId.set(m.id, m);
+        }
+        const all = Array.from(byId.values()).sort((a, b) => {
+          const dt = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          if (dt !== 0) return dt;
+          return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
         });
 
+        setMessages(all);
+        messagesOffset.current = all.length;
         return { success: true };
       }
 
@@ -1503,6 +1553,28 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setMessages(prev => prev.filter(m => m.id !== tempId));
   }, []);
 
+  const retrySendMessage = useCallback(async (tempId: string) => {
+    const failed = messagesRef.current.find(m => m.id === tempId && m.send_error);
+    if (!failed || !currentGroupId.current) return;
+    // Reset error state and re-attempt send with same content
+    setMessages(prev => prev.map(m =>
+      m.id === tempId ? { ...m, send_error: undefined, is_sending: true } : m
+    ));
+    try {
+      await sendMessage({
+        content: failed.content ?? '',
+        message_type: failed.message_type as any,
+        reply_to_id: (failed as any).reply_to?.id,
+      });
+      // Remove the failed optimistic copy (the real one will arrive via realtime)
+      removeOptimisticMessage(tempId);
+    } catch {
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, is_sending: false, send_error: 'שגיאה בשליחה חוזרת' } : m
+      ));
+    }
+  }, [sendMessage, removeOptimisticMessage]);
+
   // ============================================
   // Context value
   // ============================================
@@ -1540,6 +1612,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     addOptimisticMediaMessage,
     updateOptimisticMessage,
     removeOptimisticMessage,
+    retrySendMessage,
   }), [
     groups, currentGroup, messages, typingUsers,
     isLoadingGroups, isLoadingMessages, isSendingMessage,
@@ -1548,13 +1621,66 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     sendMessage, loadMoreMessages, loadMessagesAround, editMessage,
     deleteMessage, forwardMessage, addReaction, removeReaction,
     starMessage, unstarMessage, setTyping, markAsRead,
-    addOptimisticMediaMessage, updateOptimisticMessage, removeOptimisticMessage,
+    addOptimisticMediaMessage, updateOptimisticMessage, removeOptimisticMessage, retrySendMessage,
   ]);
 
+  const actionsRef = useRef<ChatActionsType>({} as ChatActionsType);
+  actionsRef.current = {
+    loadGroups,
+    selectGroup,
+    refreshCurrentGroupDetails,
+    createGroup,
+    updateGroup,
+    leaveGroup,
+    sendMessage,
+    loadMoreMessages,
+    loadMessagesAround,
+    editMessage,
+    deleteMessage,
+    forwardMessage,
+    addReaction,
+    removeReaction,
+    starMessage,
+    unstarMessage,
+    setTyping,
+    markAsRead,
+    addOptimisticMediaMessage,
+    updateOptimisticMessage,
+    removeOptimisticMessage,
+    retrySendMessage,
+  };
+
+  const stableActions = useMemo<ChatActionsType>(() => ({
+    loadGroups: (...args) => actionsRef.current.loadGroups(...args),
+    selectGroup: (...args) => actionsRef.current.selectGroup(...args),
+    refreshCurrentGroupDetails: (...args) => actionsRef.current.refreshCurrentGroupDetails(...args),
+    createGroup: (...args) => actionsRef.current.createGroup(...args),
+    updateGroup: (...args) => actionsRef.current.updateGroup(...args),
+    leaveGroup: (...args) => actionsRef.current.leaveGroup(...args),
+    sendMessage: (...args) => actionsRef.current.sendMessage(...args),
+    loadMoreMessages: (...args) => actionsRef.current.loadMoreMessages(...args),
+    loadMessagesAround: (...args) => actionsRef.current.loadMessagesAround(...args),
+    editMessage: (...args) => actionsRef.current.editMessage(...args),
+    deleteMessage: (...args) => actionsRef.current.deleteMessage(...args),
+    forwardMessage: (...args) => actionsRef.current.forwardMessage(...args),
+    addReaction: (...args) => actionsRef.current.addReaction(...args),
+    removeReaction: (...args) => actionsRef.current.removeReaction(...args),
+    starMessage: (...args) => actionsRef.current.starMessage(...args),
+    unstarMessage: (...args) => actionsRef.current.unstarMessage(...args),
+    setTyping: (...args) => actionsRef.current.setTyping(...args),
+    markAsRead: (...args) => actionsRef.current.markAsRead(...args),
+    addOptimisticMediaMessage: (...args) => actionsRef.current.addOptimisticMediaMessage(...args),
+    updateOptimisticMessage: (...args) => actionsRef.current.updateOptimisticMessage(...args),
+    removeOptimisticMessage: (...args) => actionsRef.current.removeOptimisticMessage(...args),
+    retrySendMessage: (...args) => actionsRef.current.retrySendMessage(...args),
+  }), []);
+
   return (
-    <ChatContext.Provider value={value}>
-      {children}
-    </ChatContext.Provider>
+    <ChatActionsContext.Provider value={stableActions}>
+      <ChatContext.Provider value={value}>
+        {children}
+      </ChatContext.Provider>
+    </ChatActionsContext.Provider>
   );
 }
 
@@ -1566,6 +1692,15 @@ export function useChat() {
   const context = useContext(ChatContext);
   if (context === undefined) {
     throw new Error('useChat must be used within a ChatProvider');
+  }
+  return context;
+}
+
+/** Stable action callbacks — does not re-render when messages/groups change */
+export function useChatActions(): ChatActionsType {
+  const context = useContext(ChatActionsContext);
+  if (context === undefined) {
+    throw new Error('useChatActions must be used within a ChatProvider');
   }
   return context;
 }

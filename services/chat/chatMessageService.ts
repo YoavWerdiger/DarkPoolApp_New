@@ -201,6 +201,13 @@ export async function sendChatMessage(
             // Note: metadata column needs to be added to Supabase first
             // metadata: input.metadata || null,
             // M7: let the DB set created_at via DEFAULT now() so server clock is authoritative
+            //
+            // NOTE: input.client_message_id is intentionally NOT forwarded to
+            // the insert yet. It travels with retries inside the client
+            // offline queue (chatOfflineQueue.ts) so the UI can match the
+            // server's eventual response back to the placeholder bubble.
+            // Persistent server-side dedupe requires migration 018 +
+            // refactoring to an idempotent upsert; tracked in DELIVERY_PLAN.
           })
           .select(`
             *,

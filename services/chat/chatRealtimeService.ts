@@ -38,6 +38,7 @@ type ReactionListener = (reaction: ChatReaction, eventType: 'INSERT' | 'DELETE')
 type TypingListener = (indicators: ChatTypingIndicator[]) => void;
 type MemberListener = (data: any, eventType: 'INSERT' | 'UPDATE' | 'DELETE') => void;
 type GroupListener = (data: any, eventType: 'UPDATE') => void;
+type ReadReceiptListener = (read: { message_id: string; user_id: string; group_id: string }) => void;
 
 const activeChannels = new Map<string, RealtimeChannel>();
 const typingTimers = new Map<string, NodeJS.Timeout>();
@@ -50,6 +51,37 @@ const MAX_RETRY_DELAY_MS = 30_000;
 const USER_CACHE_TTL = 5 * 60 * 1000;
 const USER_CACHE_MAX_SIZE = 200;
 const userCache = new Map<string, { data: any; expiresAt: number }>();
+
+let membershipSubscribeGeneration = 0;
+let membershipCallbacksUserId: string | null = null;
+let membershipCallbacks: {
+  onNewMessage: (groupId: string, message: ChatMessage) => void;
+  onGroupUpdate: (groupId: string, data: any) => void;
+  onMembershipRemoved?: (groupId: string) => void;
+} | null = null;
+
+async function waitForRealtimeSession(): Promise<void> {
+  try {
+    await supabase.auth.getSession();
+  } catch (e) {
+    logger.warn(TAG, 'waitForRealtimeSession failed', e);
+  }
+}
+
+async function removeChannelByKey(key: string): Promise<void> {
+  const channel = activeChannels.get(key);
+  if (!channel) return;
+  activeChannels.delete(key);
+  try {
+    await supabase.removeChannel(channel);
+  } catch {
+    try {
+      await channel.unsubscribe();
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 function evictExpiredUserCache(): void {
   if (userCache.size <= USER_CACHE_MAX_SIZE) return;
@@ -129,7 +161,72 @@ function scheduleRetry(groupId: string, retryFn: () => void) {
 // Subscribe to group
 // ============================================
 
-export function subscribeToGroup(
+function groupChannelPrefix(groupId: string): string {
+  return `group:${groupId}:`;
+}
+
+function listGroupChannelKeys(groupId: string): string[] {
+  const prefix = groupChannelPrefix(groupId);
+  return [...activeChannels.keys()].filter((key) => key.startsWith(prefix));
+}
+
+/** True when at least one realtime slot for this group is active. */
+export function isGroupRealtimeSubscribed(groupId: string): boolean {
+  return listGroupChannelKeys(groupId).length > 0;
+}
+
+/** postgres_changes rows omit joins — attach sender for list UI. */
+export async function enrichChatMessageSender(
+  message: ChatMessage
+): Promise<ChatMessage> {
+  if (message.sender?.display_name || !message.sender_id) {
+    return message;
+  }
+  const userRow = await getCachedUser(message.sender_id);
+  if (!userRow) return message;
+  return {
+    ...message,
+    sender: {
+      id: userRow.id,
+      display_name: userRow.display_name,
+      profile_picture: userRow.profile_picture,
+      is_online: true,
+    },
+  };
+}
+
+function teardownGroupChannels(groupId: string): Promise<void> {
+  return Promise.all(listGroupChannelKeys(groupId).map(removeChannelByKey)).then(() => undefined);
+}
+
+function teardownMembershipChannels(userId: string): Promise<void> {
+  const baseName = `user-membership:${userId}`;
+  return Promise.all([
+    removeChannelByKey(`${baseName}:messages`),
+    removeChannelByKey(`${baseName}:members`),
+  ]).then(() => undefined);
+}
+
+function subscribeGroupSlot(
+  channelKey: string,
+  build: () => RealtimeChannel,
+  onSubscribed: () => void,
+  onError: (err: unknown) => void
+): RealtimeChannel {
+  const channel = build();
+  channel.subscribe((status, err) => {
+    if (status === 'SUBSCRIBED') {
+      logger.debug(TAG, `Subscribed: ${channelKey}`);
+      onSubscribed();
+    } else if (status === 'CHANNEL_ERROR') {
+      onError(err);
+    }
+  });
+  activeChannels.set(channelKey, channel);
+  return channel;
+}
+
+export async function subscribeToGroup(
   groupId: string,
   userId: string,
   listeners: {
@@ -138,9 +235,12 @@ export function subscribeToGroup(
     onTyping?: TypingListener;
     onMember?: MemberListener;
     onGroup?: GroupListener;
+    onReadReceipt?: ReadReceiptListener;
   }
-): RealtimeChannel | null {
+): Promise<RealtimeChannel | null> {
   logger.debug(TAG, `Subscribing to group: ${groupId}`);
+
+  await waitForRealtimeSession();
 
   const retryCount = failedChannels.get(groupId) ?? 0;
   if (retryCount >= MAX_RETRIES) {
@@ -148,150 +248,244 @@ export function subscribeToGroup(
     return null;
   }
 
-  if (activeChannels.has(groupId)) {
-    return activeChannels.get(groupId)!;
+  const slotKeys: string[] = [];
+  if (listeners.onMessage) slotKeys.push(`${groupChannelPrefix(groupId)}messages`);
+  if (listeners.onReaction) slotKeys.push(`${groupChannelPrefix(groupId)}reactions`);
+  if (listeners.onReadReceipt) slotKeys.push(`${groupChannelPrefix(groupId)}reads`);
+  if (listeners.onTyping) slotKeys.push(`${groupChannelPrefix(groupId)}typing`);
+  if (listeners.onMember) {
+    slotKeys.push(`${groupChannelPrefix(groupId)}members-in`);
+    slotKeys.push(`${groupChannelPrefix(groupId)}members-out`);
+  }
+  if (listeners.onGroup) slotKeys.push(`${groupChannelPrefix(groupId)}group`);
+
+  if (slotKeys.length === 0) {
+    logger.warn(TAG, `No listeners for group ${groupId} — skipping subscription`);
+    return null;
   }
 
-  const channel = supabase.channel(`group:${groupId}`, {
-    config: {
-      broadcast: { self: false },
-      presence: { key: userId },
-    },
-  });
+  if (slotKeys.every((key) => activeChannels.has(key))) {
+    return activeChannels.get(slotKeys[0]) ?? null;
+  }
+
+  await teardownGroupChannels(groupId);
+
+  let subscribedSlots = 0;
+  let errorHandled = false;
+  const requiredSlots = slotKeys.length;
+
+  const onSlotSubscribed = () => {
+    subscribedSlots += 1;
+    if (subscribedSlots === requiredSlots) {
+      failedChannels.delete(groupId);
+      connectionStatusCallback?.('CONNECTED');
+      logger.debug(TAG, `All ${requiredSlots} realtime slots ready for group ${groupId}`);
+    }
+  };
+
+  const onSlotError = (slotKey: string, err: unknown) => {
+    if (errorHandled) return;
+    errorHandled = true;
+    logger.error(TAG, `Error subscribing to ${slotKey}: ${formatRealtimeSubscribeErr(err)}`);
+    void teardownGroupChannels(groupId).then(() => {
+      scheduleRetry(groupId, () => {
+        void subscribeToGroup(groupId, userId, listeners);
+      });
+    });
+  };
+
+  let primaryChannel: RealtimeChannel | null = null;
 
   if (listeners.onMessage) {
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'chat_messages',
-        filter: `group_id=eq.${groupId}`,
-      },
-      (payload: RealtimePostgresChangesPayload<any>) => {
-        try {
-          logger.debug(TAG, `Message event: ${payload.eventType} ${payload.new?.id}`);
-
-          if (payload.eventType === 'INSERT') {
-            listeners.onMessage!(payload.new as ChatMessage, 'INSERT');
-          } else if (payload.eventType === 'UPDATE') {
-            listeners.onMessage!(payload.new as ChatMessage, 'UPDATE');
-          } else if (payload.eventType === 'DELETE') {
-            listeners.onMessage!(payload.old as ChatMessage, 'DELETE');
+    const key = `${groupChannelPrefix(groupId)}messages`;
+    primaryChannel = subscribeGroupSlot(
+      key,
+      () =>
+        supabase.channel(key).on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `group_id=eq.${groupId}`,
+          },
+          (payload: RealtimePostgresChangesPayload<any>) => {
+            try {
+              logger.debug(TAG, `Message event: ${payload.eventType} ${payload.new?.id}`);
+              if (payload.eventType === 'INSERT') {
+                listeners.onMessage!(payload.new as ChatMessage, 'INSERT');
+              } else if (payload.eventType === 'UPDATE') {
+                listeners.onMessage!(payload.new as ChatMessage, 'UPDATE');
+              } else if (payload.eventType === 'DELETE') {
+                listeners.onMessage!(payload.old as ChatMessage, 'DELETE');
+              }
+            } catch (e) {
+              logger.error(TAG, 'onMessage callback error', e);
+            }
           }
-        } catch (e) {
-          logger.error(TAG, 'onMessage callback error', e);
-        }
-      }
+        ),
+      onSlotSubscribed,
+      (err) => onSlotError(key, err)
     );
   }
 
   if (listeners.onReaction) {
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'chat_message_reactions',
-        filter: `group_id=eq.${groupId}`,
-      },
-      async (payload: RealtimePostgresChangesPayload<any>) => {
-        try {
-          const reactionData = payload.new || payload.old;
-          if (!reactionData?.message_id) return;
-
-          logger.debug(TAG, `Reaction event: ${payload.eventType}`);
-
-          if (payload.eventType === 'INSERT') {
-            const reaction = payload.new as ChatReaction;
-            if (reaction.user_id) {
-              const userData = await getCachedUser(reaction.user_id);
-              if (userData) {
-                reaction.user = {
-                  id: userData.id,
-                  display_name: userData.display_name,
-                  profile_picture: userData.profile_picture,
-                };
+    const key = `${groupChannelPrefix(groupId)}reactions`;
+    const ch = subscribeGroupSlot(
+      key,
+      () =>
+        supabase.channel(key).on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'chat_message_reactions',
+            filter: `group_id=eq.${groupId}`,
+          },
+          async (payload: RealtimePostgresChangesPayload<any>) => {
+            try {
+              const reactionData = payload.new || payload.old;
+              if (!reactionData?.message_id) return;
+              logger.debug(TAG, `Reaction event: ${payload.eventType}`);
+              if (payload.eventType === 'INSERT') {
+                const reaction = payload.new as ChatReaction;
+                if (reaction.user_id) {
+                  const userData = await getCachedUser(reaction.user_id);
+                  if (userData) {
+                    reaction.user = {
+                      id: userData.id,
+                      display_name: userData.display_name,
+                      profile_picture: userData.profile_picture,
+                    };
+                  }
+                }
+                listeners.onReaction!(reaction, 'INSERT');
+              } else if (payload.eventType === 'DELETE') {
+                listeners.onReaction!(payload.old as ChatReaction, 'DELETE');
               }
+            } catch (e) {
+              logger.error(TAG, 'onReaction callback error', e);
             }
-            listeners.onReaction!(reaction, 'INSERT');
-          } else if (payload.eventType === 'DELETE') {
-            listeners.onReaction!(payload.old as ChatReaction, 'DELETE');
           }
-        } catch (e) {
-          logger.error(TAG, 'onReaction callback error', e);
-        }
-      }
+        ),
+      onSlotSubscribed,
+      (err) => onSlotError(key, err)
+    );
+    if (!primaryChannel) primaryChannel = ch;
+  }
+
+  if (listeners.onReadReceipt) {
+    const key = `${groupChannelPrefix(groupId)}reads`;
+    subscribeGroupSlot(
+      key,
+      () =>
+        supabase.channel(key).on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_message_reads',
+            filter: `group_id=eq.${groupId}`,
+          },
+          (payload: RealtimePostgresChangesPayload<any>) => {
+            try {
+              const read = payload.new as { message_id: string; user_id: string; group_id: string };
+              if (read?.message_id && read?.user_id) {
+                listeners.onReadReceipt!(read);
+              }
+            } catch (e) {
+              logger.error(TAG, 'onReadReceipt callback error', e);
+            }
+          }
+        ),
+      onSlotSubscribed,
+      (err) => onSlotError(key, err)
     );
   }
 
   if (listeners.onTyping) {
-    channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'chat_typing_indicators',
-        filter: `group_id=eq.${groupId}`,
-      },
-      async () => {
-        try {
-          const { data } = await supabase
-            .from('chat_typing_indicators')
-            .select(`*, user:users (id, display_name)`)
-            .eq('group_id', groupId)
-            .neq('user_id', userId);
-
-          if (data) {
-            listeners.onTyping!(data as any);
+    const key = `${groupChannelPrefix(groupId)}typing`;
+    subscribeGroupSlot(
+      key,
+      () =>
+        supabase.channel(key).on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'chat_typing_indicators',
+            filter: `group_id=eq.${groupId}`,
+          },
+          async () => {
+            try {
+              const { data } = await supabase
+                .from('chat_typing_indicators')
+                .select(`*, user:users (id, display_name)`)
+                .eq('group_id', groupId)
+                .neq('user_id', userId);
+              if (data) {
+                listeners.onTyping!(data as any);
+              }
+            } catch (e) {
+              logger.error(TAG, 'onTyping callback error', e);
+            }
           }
-        } catch (e) {
-          logger.error(TAG, 'onTyping callback error', e);
-        }
-      }
+        ),
+      onSlotSubscribed,
+      (err) => onSlotError(key, err)
     );
   }
 
   if (listeners.onMember) {
-    channel.on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'chat_group_members', filter: `group_id=eq.${groupId}` },
-      (payload: RealtimePostgresChangesPayload<any>) => { listeners.onMember!(payload.new, 'INSERT'); }
+    const keyIn = `${groupChannelPrefix(groupId)}members-in`;
+    subscribeGroupSlot(
+      keyIn,
+      () =>
+        supabase.channel(keyIn).on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chat_group_members', filter: `group_id=eq.${groupId}` },
+          (payload: RealtimePostgresChangesPayload<any>) => {
+            listeners.onMember!(payload.new, 'INSERT');
+          }
+        ),
+      onSlotSubscribed,
+      (err) => onSlotError(keyIn, err)
     );
-    channel.on(
-      'postgres_changes',
-      { event: 'DELETE', schema: 'public', table: 'chat_group_members', filter: `group_id=eq.${groupId}` },
-      (payload: RealtimePostgresChangesPayload<any>) => { listeners.onMember!(payload.old, 'DELETE'); }
+
+    const keyOut = `${groupChannelPrefix(groupId)}members-out`;
+    subscribeGroupSlot(
+      keyOut,
+      () =>
+        supabase.channel(keyOut).on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'chat_group_members', filter: `group_id=eq.${groupId}` },
+          (payload: RealtimePostgresChangesPayload<any>) => {
+            listeners.onMember!(payload.old, 'DELETE');
+          }
+        ),
+      onSlotSubscribed,
+      (err) => onSlotError(keyOut, err)
     );
   }
 
   if (listeners.onGroup) {
-    channel.on(
-      'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'chat_groups', filter: `id=eq.${groupId}` },
-      (payload: RealtimePostgresChangesPayload<any>) => {
-        listeners.onGroup!(payload.new, 'UPDATE');
-      }
+    const key = `${groupChannelPrefix(groupId)}group`;
+    subscribeGroupSlot(
+      key,
+      () =>
+        supabase.channel(key).on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'chat_groups', filter: `id=eq.${groupId}` },
+          (payload: RealtimePostgresChangesPayload<any>) => {
+            listeners.onGroup!(payload.new, 'UPDATE');
+          }
+        ),
+      onSlotSubscribed,
+      (err) => onSlotError(key, err)
     );
   }
 
-  channel.subscribe((status, err) => {
-    if (status === 'SUBSCRIBED') {
-      logger.debug(TAG, `Subscribed to group ${groupId}`);
-      failedChannels.delete(groupId);
-      connectionStatusCallback?.('CONNECTED');
-    } else if (status === 'CHANNEL_ERROR') {
-      logger.error(TAG, `Error subscribing to group ${groupId}: ${formatRealtimeSubscribeErr(err)}`);
-      activeChannels.delete(groupId);
-      try { channel.unsubscribe(); } catch (_) { /* ignore */ }
-      scheduleRetry(groupId, () => {
-        subscribeToGroup(groupId, userId, listeners);
-      });
-    }
-  });
-
-  activeChannels.set(groupId, channel);
-  return channel;
+  return primaryChannel ?? activeChannels.get(slotKeys[0]) ?? null;
 }
 
 // ============================================
@@ -301,12 +495,7 @@ export function subscribeToGroup(
 export function unsubscribeFromGroup(groupId: string): void {
   cancelRetry(groupId);
   failedChannels.delete(groupId);
-
-  const channel = activeChannels.get(groupId);
-  if (channel) {
-    channel.unsubscribe();
-    activeChannels.delete(groupId);
-  }
+  void teardownGroupChannels(groupId);
 
   // Clean up all typing timers for this group (keyed as groupId-userId)
   for (const [key, timer] of typingTimers.entries()) {
@@ -318,11 +507,16 @@ export function unsubscribeFromGroup(groupId: string): void {
 }
 
 export function unsubscribeAll(): void {
+  membershipSubscribeGeneration += 1;
+  membershipCallbacks = null;
+  membershipCallbacksUserId = null;
   retryTimers.forEach((timer) => { clearTimeout(timer); });
   retryTimers.clear();
   failedChannels.clear();
-  activeChannels.forEach((channel) => { channel.unsubscribe(); });
   activeChannels.clear();
+  void supabase.removeAllChannels().catch(() => {
+    /* ignore */
+  });
   typingTimers.forEach((timer) => { clearTimeout(timer); });
   typingTimers.clear();
   userGroupsCache.clear();
@@ -487,7 +681,9 @@ const userGroupsCache = new Map<string, Set<string>>();
 export async function subscribeToAllUserGroups(
   userId: string,
   onNewMessage: (groupId: string, message: ChatMessage) => void,
-  onGroupUpdate: (groupId: string, data: any) => void
+  onGroupUpdate: (groupId: string, data: any) => void,
+  onMembershipRemoved?: (groupId: string) => void,
+  options?: { force?: boolean }
 ): Promise<RealtimeChannel | null> {
   /**
    * שני מנויי postgres_changes על אותו channel מפיקים אצל Supabase
@@ -498,21 +694,36 @@ export async function subscribeToAllUserGroups(
   const nameMessages = `${baseName}:messages`;
   const nameMembers = `${baseName}:members`;
 
+  membershipCallbacks = { onNewMessage, onGroupUpdate, onMembershipRemoved };
+  membershipCallbacksUserId = userId;
+
   const retryCount = failedChannels.get(baseName) ?? 0;
-  if (retryCount >= MAX_RETRIES) {
+  if (retryCount >= MAX_RETRIES && !options?.force) {
     logger.warn(TAG, `Skipping subscription to ${baseName} - max retries reached`);
     return null;
   }
 
-  for (const k of [nameMessages, nameMembers] as const) {
-    if (activeChannels.has(k)) {
-      try {
-        activeChannels.get(k)?.unsubscribe();
-      } catch {
-        /* ignore */
-      }
-      activeChannels.delete(k);
-    }
+  const alreadyLive =
+    activeChannels.has(nameMessages) &&
+    activeChannels.has(nameMembers) &&
+    !retryTimers.has(baseName);
+
+  if (!options?.force && alreadyLive) {
+    logger.debug(TAG, `Membership channels already live for ${userId}`);
+    return activeChannels.get(nameMessages) ?? null;
+  }
+
+  const generation = ++membershipSubscribeGeneration;
+  cancelRetry(baseName);
+  if (options?.force) {
+    failedChannels.delete(baseName);
+  }
+  await teardownMembershipChannels(userId);
+
+  await waitForRealtimeSession();
+  if (generation !== membershipSubscribeGeneration) {
+    logger.debug(TAG, `Stale membership subscribe aborted for ${userId}`);
+    return null;
   }
 
   const { data: memberships } = await supabase
@@ -523,6 +734,11 @@ export async function subscribeToAllUserGroups(
   const userGroups = new Set<string>(memberships?.map(m => m.group_id) || []);
   userGroupsCache.set(userId, userGroups);
 
+  if (generation !== membershipSubscribeGeneration) {
+    logger.debug(TAG, `Stale membership subscribe aborted after fetch for ${userId}`);
+    return null;
+  }
+
   logger.debug(TAG, `User is member of ${userGroups.size} groups`);
 
   let errorTeardownOnce = false;
@@ -531,18 +747,17 @@ export async function subscribeToAllUserGroups(
     errorTeardownOnce = true;
     const msg = formatRealtimeSubscribeErr(err);
     logger.error(TAG, `Error subscribing to ${from}: ${msg}`);
-    for (const k of [nameMessages, nameMembers] as const) {
-      if (activeChannels.has(k)) {
-        try {
-          activeChannels.get(k)?.unsubscribe();
-        } catch {
-          /* ignore */
-        }
-        activeChannels.delete(k);
-      }
-    }
-    scheduleRetry(baseName, () => {
-      void subscribeToAllUserGroups(userId, onNewMessage, onGroupUpdate);
+    void teardownMembershipChannels(userId).then(() => {
+      scheduleRetry(baseName, () => {
+        const cb = membershipCallbacks;
+        if (!cb || membershipCallbacksUserId !== userId) return;
+        void subscribeToAllUserGroups(
+          userId,
+          cb.onNewMessage,
+          cb.onGroupUpdate,
+          cb.onMembershipRemoved
+        );
+      });
     });
   };
 
@@ -596,7 +811,11 @@ export async function subscribeToAllUserGroups(
         if (payload.eventType === 'INSERT') {
           userGroupsCache.get(userId)?.add(payload.new.group_id);
         } else if (payload.eventType === 'DELETE') {
-          userGroupsCache.get(userId)?.delete(payload.old.group_id);
+          const removedGroupId = payload.old?.group_id;
+          if (removedGroupId) {
+            userGroupsCache.get(userId)?.delete(removedGroupId);
+            onMembershipRemoved?.(removedGroupId);
+          }
         } else if (payload.eventType === 'UPDATE') {
           onGroupUpdate(payload.new.group_id, {
             unread_count: payload.new.unread_count,
@@ -679,12 +898,38 @@ export function clearFailedChannels(): void {
   connectionStatusCallback?.('DISCONNECTED');
 }
 
+/** איפוס מונה כשלונות וניסיון חיבור מחדש (למשל אחרי חזרה ל-foreground) */
+export function reconnectChatRealtime(
+  userId: string,
+  onNewMessage: (groupId: string, message: ChatMessage) => void,
+  onGroupUpdate: (groupId: string, data: any) => void,
+  onMembershipRemoved?: (groupId: string) => void,
+  activeGroupId?: string | null,
+  activeGroupListeners?: Parameters<typeof subscribeToGroup>[2]
+): void {
+  clearFailedChannels();
+  void subscribeToAllUserGroups(
+    userId,
+    onNewMessage,
+    onGroupUpdate,
+    onMembershipRemoved,
+    { force: true }
+  );
+  if (activeGroupId && activeGroupListeners) {
+    clearFailedChannel(activeGroupId);
+    unsubscribeFromGroup(activeGroupId);
+    void subscribeToGroup(activeGroupId, userId, activeGroupListeners);
+  }
+}
+
 export function clearFailedChannel(groupId: string): void {
   failedChannels.delete(groupId);
 }
 
 export const chatRealtimeService = {
   subscribeToGroup,
+  isGroupRealtimeSubscribed,
+  enrichChatMessageSender,
   unsubscribeFromGroup,
   unsubscribeAll,
   setTypingStatus,
@@ -699,6 +944,7 @@ export const chatRealtimeService = {
   getConnectionStatus,
   clearFailedChannels,
   clearFailedChannel,
+  reconnectChatRealtime,
   onConnectionStatusChange,
   clearUserGroupsCache,
 };

@@ -5,6 +5,7 @@
 // ============================================
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from './AuthContext';
 import { logger } from '../utils/logger';
 import * as Clipboard from 'expo-clipboard';
@@ -17,11 +18,14 @@ import {
   SendChatMessageInput,
   CreateChatGroupInput,
   UpdateChatGroupInput,
+  ChatMessageType,
 } from '../types/chat.types';
 import {
   chatGroupService,
   chatMessageService,
   chatRealtimeService,
+  chatMediaService,
+  prefetchChatMediaForMessages,
 } from '../services/chat';
 import { stopRateLimitCleanup } from '../services/chat/chatValidation';
 import {
@@ -37,6 +41,28 @@ import * as Haptics from 'expo-haptics';
 // Audio import removed — notification sound is not yet implemented (no mp3 asset in repo)
 
 const MAX_OFFLINE_RETRY_ATTEMPTS = 5;
+
+function warmChatMediaCache(messages: ChatMessage[]): void {
+  if (!messages.length) return;
+  void prefetchChatMediaForMessages(messages).catch((e) =>
+    logger.warn('ChatContext', 'prefetchChatMediaForMessages failed', e)
+  );
+}
+
+/** הודעה שחזרה מהשרת — נקה דגלים אופטימיסטיים שלא אמורים להישאר */
+function asServerMessage(
+  message: ChatMessage,
+  extras?: Partial<ChatMessage>,
+): ChatMessage {
+  return {
+    ...message,
+    ...extras,
+    is_sending: false,
+    is_uploading: false,
+    local_media_uri: undefined,
+    upload_progress: undefined,
+  };
+}
 
 // ============================================
 // Types
@@ -163,6 +189,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const messagesOffset = useRef(0);
   const hasMoreMessages = useRef(true);
   const currentGroupId = useRef<string | null>(null);
+  const resubscribeActiveGroupRef = useRef<(() => void) | null>(null);
   const personalDeletedIds = useRef<Set<string>>(new Set());
   // C1: version counter to abort stale selectGroup calls
   const selectVersion = useRef(0);
@@ -225,6 +252,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (readTimerRef.current) clearTimeout(readTimerRef.current);
     readTimerRef.current = setTimeout(flushMarkAsRead, 500);
   }, [user, flushMarkAsRead]);
+
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Typing
   const setTyping = useCallback(async (groupId: string, isTyping: boolean) => {
@@ -308,6 +340,92 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     return undefined;
   }, []);
 
+  /** מוסיף הודעה חדשה ל-thread הפעיל (realtime קבוצה + גיבוי membership). */
+  const ingestIncomingInsert = useCallback(async (rawMessage: ChatMessage) => {
+    const me = userRef.current;
+    if (!me || rawMessage.group_id !== currentGroupId.current) return;
+    if (rawMessage.is_silent || rawMessage.is_system_message) return;
+
+    let enrichedMessage = rawMessage;
+    if (enrichedMessage.reply_to_message_id && !enrichedMessage.reply_to) {
+      const replyTo = await fetchReplyToData(enrichedMessage.reply_to_message_id);
+      if (replyTo) {
+        enrichedMessage = { ...enrichedMessage, reply_to: replyTo };
+      }
+    }
+    enrichedMessage = await chatRealtimeService.enrichChatMessageSender(enrichedMessage);
+
+    if (processedMessageIds.current.has(enrichedMessage.id)) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === enrichedMessage.id ? asServerMessage(m, enrichedMessage) : m
+        )
+      );
+      return;
+    }
+
+    if (enrichedMessage.sender_id === me.id) {
+      processedMessageIds.current.add(enrichedMessage.id);
+      setMessages((prev) => {
+        const optimisticIndex = prev.findIndex((m) => {
+          if (!m.id.startsWith('temp-') || m.sender_id !== me.id) return false;
+          if (enrichedMessage.reply_to_message_id && m.reply_to_message_id) {
+            return (
+              m.reply_to_message_id === enrichedMessage.reply_to_message_id &&
+              Math.abs(
+                new Date(m.created_at).getTime() -
+                  new Date(enrichedMessage.created_at).getTime()
+              ) < 10000
+            );
+          }
+          return (
+            m.content === enrichedMessage.content &&
+            Math.abs(
+              new Date(m.created_at).getTime() -
+                new Date(enrichedMessage.created_at).getTime()
+            ) < 10000
+          );
+        });
+
+        if (optimisticIndex !== -1) {
+          const optimisticMsg = prev[optimisticIndex];
+          const finalMessage = asServerMessage(enrichedMessage, {
+            reply_to: optimisticMsg.reply_to || enrichedMessage.reply_to,
+          });
+          return prev.map((m, idx) => (idx === optimisticIndex ? finalMessage : m));
+        }
+
+        const existingIndex = prev.findIndex((m) => m.id === enrichedMessage.id);
+        if (existingIndex !== -1) {
+          return prev.map((m, idx) =>
+            idx === existingIndex ? asServerMessage(m, enrichedMessage) : m
+          );
+        }
+        return [asServerMessage(enrichedMessage), ...prev];
+      });
+    } else {
+      processedMessageIds.current.add(enrichedMessage.id);
+      setMessages((prev) => {
+        const existingIndex = prev.findIndex((m) => m.id === enrichedMessage.id);
+        if (existingIndex !== -1) {
+          return prev.map((m, idx) => (idx === existingIndex ? enrichedMessage : m));
+        }
+        return [enrichedMessage, ...prev];
+      });
+      Haptics.selectionAsync().catch(() => {});
+    }
+
+    if (currentGroupId.current === enrichedMessage.group_id) {
+      markAsRead(enrichedMessage.group_id, [enrichedMessage.id]);
+    }
+    warmChatMediaCache([enrichedMessage]);
+  }, [fetchReplyToData, markAsRead]);
+
+  const ingestIncomingInsertRef = useRef(ingestIncomingInsert);
+  useEffect(() => {
+    ingestIncomingInsertRef.current = ingestIncomingInsert;
+  }, [ingestIncomingInsert]);
+
   // ============================================
   // Select group
   // ============================================
@@ -315,9 +433,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const selectGroup = useCallback(async (groupId: string) => {
     if (!user) return;
 
-    // Unsubscribe from previous group to prevent memory leak
-    if (currentGroupId.current && currentGroupId.current !== groupId) {
+    const isSameGroup = currentGroupId.current === groupId;
+    const keepVisibleThread = isSameGroup && messagesRef.current.length > 0;
+
+    const groupAlreadySubscribed =
+      isSameGroup && chatRealtimeService.isGroupRealtimeSubscribed(groupId);
+
+    if (!isSameGroup && currentGroupId.current) {
       chatRealtimeService.unsubscribeFromGroup(currentGroupId.current);
+    } else if (isSameGroup && !groupAlreadySubscribed && !keepVisibleThread) {
+      chatRealtimeService.unsubscribeFromGroup(groupId);
     }
 
     // C2: bump version so any prior in-flight selectGroup call detects it's stale
@@ -326,7 +451,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     // שימור הודעות אופטימיסטיות (בשליחה) לפני איפוס – מונע "היעלמות" כשחוזרים למסך
     const optimisticsToKeep =
-      currentGroupId.current === groupId
+      isSameGroup
         ? messagesRef.current.filter(
             (m) =>
               m.id.startsWith('temp-') &&
@@ -336,12 +461,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         : [];
 
     currentGroupId.current = groupId;
-    setIsLoadingMessages(true);
-    setMessages([]);
-    setTypingUsers([]);
-    messagesOffset.current = 0;
-    hasMoreMessages.current = true;
-    setInitialUnreadInfo(null);
+
+    if (!keepVisibleThread) {
+      setIsLoadingMessages(true);
+      setMessages([]);
+      setTypingUsers([]);
+      messagesOffset.current = 0;
+      hasMoreMessages.current = true;
+      setInitialUnreadInfo(null);
+    }
+
+    // כבר בצ'אט עם הודעות טעונות — בלי reload/markAsRead (מונע קפיצות גלילה)
+    const skipMessageReload = isSameGroup && keepVisibleThread;
 
     // משתנים שישמשו גם מחוץ ל-blocks
     let savedUnreadCount = 0;
@@ -357,20 +488,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (groupData) {
         setCurrentGroup(groupData);
 
-        // שמירת מידע על הודעות לא נקראות לפני איפוס
-        savedUnreadCount = groupData.unread_count || 0;
-        savedLastReadMessageId = groupData.last_read_message_id || null;
+        if (!skipMessageReload) {
+          savedUnreadCount = groupData.unread_count || 0;
+          savedLastReadMessageId = groupData.last_read_message_id || null;
 
-        if (savedUnreadCount > 0) {
-          setInitialUnreadInfo({
-            count: savedUnreadCount,
-            lastReadMessageId: savedLastReadMessageId,
-          });
+          if (savedUnreadCount > 0) {
+            setInitialUnreadInfo({
+              count: savedUnreadCount,
+              lastReadMessageId: savedLastReadMessageId,
+            });
+          }
         }
       }
 
-      // Load messages
-      const { data: messagesData } = await chatMessageService.getChatMessages(
+      if (!skipMessageReload) {
+        // Load messages
+        const { data: messagesData } = await chatMessageService.getChatMessages(
         groupId,
         user.id,
         { limit: 50, offset: 0 }
@@ -402,6 +535,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         setMessages(merged);
         messagesOffset.current = merged.length;
         hasMoreMessages.current = messagesData.has_more;
+        warmChatMediaCache(merged);
 
         // ✅ ספירה אמיתית של הודעות לא נקראות (לא סומכים על unread_count מהשרת)
         if (savedLastReadMessageId && messagesData.messages.length > 0) {
@@ -435,77 +569,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           ));
         }
       }
+      } // skipMessageReload
 
       if (selectVersion.current !== version) return; // C2: stale call, abort before subscribing
+
+      if (skipMessageReload && groupAlreadySubscribed) {
+        chatRealtimeService.startTypingCleanup();
+        return;
+      }
 
       // M5: start typing cleanup only when actively in a chat room
       chatRealtimeService.startTypingCleanup();
 
       // Subscribe to realtime updates
-      chatRealtimeService.subscribeToGroup(groupId, user.id, {
+      const groupRealtimeListeners = {
         onMessage: async (message, eventType) => {
           if (eventType === 'INSERT') {
-            // New message - מילוי reply_to אם יש
-            let enrichedMessage = message;
-            if (message.reply_to_message_id && !message.reply_to) {
-              const replyTo = await fetchReplyToData(message.reply_to_message_id);
-              if (replyTo) {
-                enrichedMessage = { ...message, reply_to: replyTo };
-              }
-            }
-
-            // C3: if server response already processed this message, skip realtime duplicate
-            if (processedMessageIds.current.has(enrichedMessage.id)) {
-              // Still update the message in-place (e.g., updated reply_to) but don't duplicate
-              setMessages(prev => prev.map(m => m.id === enrichedMessage.id ? { ...m, ...enrichedMessage } : m));
-            } else if (enrichedMessage.sender_id === user.id) {
-              // My message – find and replace its optimistic placeholder
-              processedMessageIds.current.add(enrichedMessage.id);
-              setMessages(prev => {
-                const optimisticIndex = prev.findIndex(m => {
-                  if (!m.id.startsWith('temp-') || m.sender_id !== user.id) return false;
-
-                  if (enrichedMessage.reply_to_message_id && m.reply_to_message_id) {
-                    return m.reply_to_message_id === enrichedMessage.reply_to_message_id &&
-                      Math.abs(new Date(m.created_at).getTime() - new Date(enrichedMessage.created_at).getTime()) < 10000;
-                  }
-
-                  return m.content === enrichedMessage.content &&
-                    Math.abs(new Date(m.created_at).getTime() - new Date(enrichedMessage.created_at).getTime()) < 10000;
-                });
-
-                if (optimisticIndex !== -1) {
-                  const optimisticMsg = prev[optimisticIndex];
-                  const finalMessage = {
-                    ...enrichedMessage,
-                    reply_to: optimisticMsg.reply_to || enrichedMessage.reply_to,
-                  };
-                  return prev.map((m, idx) => idx === optimisticIndex ? finalMessage : m);
-                } else {
-                  const existingIndex = prev.findIndex(m => m.id === enrichedMessage.id);
-                  if (existingIndex !== -1) {
-                    return prev.map((m, idx) => idx === existingIndex ? enrichedMessage : m);
-                  }
-                  return [enrichedMessage, ...prev];
-                }
-              });
-            } else {
-              // Someone else's message — subtle haptic like WhatsApp/Telegram
-              processedMessageIds.current.add(enrichedMessage.id);
-              setMessages(prev => {
-                const existingIndex = prev.findIndex(m => m.id === enrichedMessage.id);
-                if (existingIndex !== -1) {
-                  return prev.map((m, idx) => idx === existingIndex ? enrichedMessage : m);
-                }
-                return [enrichedMessage, ...prev];
-              });
-              Haptics.selectionAsync().catch(() => {});
-            }
-
-            // Auto mark as read
-            if (currentGroupId.current === groupId) {
-              markAsRead(groupId, [enrichedMessage.id]);
-            }
+            await ingestIncomingInsertRef.current(message);
           } else if (eventType === 'UPDATE') {
             // Updated message - מילוי reply_to אם יש
             let enrichedMessage = message;
@@ -670,7 +750,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           // Use functional update to avoid stale closure on currentGroup
           setCurrentGroup(prev => prev ? { ...prev, ...data } : prev);
         },
-      });
+      };
+      resubscribeActiveGroupRef.current = () => {
+        const gid = currentGroupId.current;
+        if (!user || !gid) return;
+        chatRealtimeService.clearFailedChannel(gid);
+        chatRealtimeService.unsubscribeFromGroup(gid);
+        void chatRealtimeService.subscribeToGroup(gid, user.id, groupRealtimeListeners);
+      };
+      void chatRealtimeService.subscribeToGroup(groupId, user.id, groupRealtimeListeners);
     } catch (error) {
       logger.error('ChatContext', 'Error selecting group', error);
     } finally {
@@ -724,7 +812,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     isLoadingMoreRef.current = true;
-    setIsLoadingMessages(true);
+    logger.info('ChatContext', `loadMoreMessages start (have ${messagesRef.current.length})`);
     try {
       const oldestMessage = messagesRef.current[messagesRef.current.length - 1];
       const cursor = oldestMessage?.created_at;
@@ -736,10 +824,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (data) {
+        const existingIds = new Set(messagesRef.current.map(m => m.id));
+        const newMessages = data.messages.filter(m => !existingIds.has(m.id));
+        warmChatMediaCache(newMessages);
+
         setMessages(prev => {
-          const existingIds = new Set(prev.map(m => m.id));
-          const newMessages = data.messages.filter(m => !existingIds.has(m.id));
-          const combined = [...prev, ...newMessages];
+          const prevIds = new Set(prev.map(m => m.id));
+          const toAppend = data.messages.filter(m => !prevIds.has(m.id));
+          const combined = [...prev, ...toAppend];
           // C4: sliding window – trim oldest messages (end of array) when history grows too large.
           // In inverted FlatList index 0 = newest, so slice from the start keeps the newest.
           // Never trim while there are in-flight optimistic messages.
@@ -751,10 +843,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           return combined;
         });
         hasMoreMessages.current = data.has_more;
+        logger.info(
+          'ChatContext',
+          `loadMoreMessages +${newMessages.length} total=${messagesRef.current.length + newMessages.length} hasMore=${data.has_more}`,
+        );
       }
     } finally {
       isLoadingMoreRef.current = false;
-      setIsLoadingMessages(false);
     }
   }, [user]);
 
@@ -826,6 +921,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         setMessages(all);
         messagesOffset.current = all.length;
+        warmChatMediaCache(combined);
         return { success: true };
       }
 
@@ -1008,10 +1104,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (data) {
         processedMessageIds.current.add(data.id);
 
-        const finalMessage: ChatMessage = {
-          ...data,
+        const finalMessage = asServerMessage(data, {
           reply_to: data.reply_to || replyToData,
-        };
+        });
 
         // החלף את האופטימיסטי בהודעה האמיתית
         setMessages(prev => {
@@ -1330,8 +1425,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // טעינת קבוצות ראשונית
     loadGroups();
+  }, [user?.id, loadGroups]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
 
     setRealtimeConnectionState('connecting');
 
@@ -1438,85 +1538,118 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     // הרשמה לכל הקבוצות של המשתמש דרך Realtime בלבד
     logger.debug('ChatContext', `Setting up realtime subscription for user: ${user.id}`);
-    chatRealtimeService.subscribeToAllUserGroups(
-      user.id,
-      (groupId, message) => {
-        // הודעה חדשה בקבוצה - עדכון last_message בלבד, unread_count מגיע מהשרת
-        logger.debug('ChatContext', `onNewMessage: group=${groupId} msg=${message.id}`);
-        setGroups(prev => {
-          return prev.map(g =>
-            g.id === groupId
-              ? {
-                ...g,
-                last_message_at: message.created_at,
-                last_message_preview: message.content || '📎 מדיה',
-              }
-              : g
-          );
-        });
 
-        // Sound is played only in subscribeToGroup for the active chat.
-        // Here we only update the groups list preview.
-      },
-      (groupId, data) => {
-        // עדכון קבוצות (כולל unread_count מהשרת)
-        logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
-        setGroups(prev => prev.map(g => {
-          if (g.id !== groupId) return g;
-          
-          const newUnread = data.unread_count ?? g.unread_count;
-          const newMentioned = data.mentioned_count ?? g.mentioned_count;
-          
-          // אם אין שינוי אמיתי, לא מעדכנים
-          if (newUnread === g.unread_count && 
-              newMentioned === g.mentioned_count &&
-              !data.last_message_at && !data.name && !data.avatar_url) {
-            return g;
-          }
-          
-          return { ...g, ...data };
-        }));
+    const handleMembershipRemoved = (removedGroupId: string) => {
+      logger.debug('ChatContext', `Removed from group ${removedGroupId} — cleaning up`);
+      setGroups(prev => prev.filter(g => g.id !== removedGroupId));
+      chatRealtimeService.unsubscribeFromGroup(removedGroupId);
+      if (currentGroupId.current === removedGroupId) {
+        setCurrentGroup(null);
+        setMessages([]);
+        setTypingUsers([]);
+        currentGroupId.current = null;
+        resubscribeActiveGroupRef.current = null;
       }
-    );
+    };
 
-    // Listen for own membership being removed from any group.
-    // When another admin removes this user, the Realtime DELETE event fires here
-    // and we immediately clean up — no need to wait for reload.
-    const membershipChannel = supabase
-      .channel(`own-membership-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'chat_group_members',
-          filter: `user_id=eq.${user.id}`,
+    const handleGlobalNewMessage = (groupId: string, message: ChatMessage) => {
+      logger.debug('ChatContext', `onNewMessage: group=${groupId} msg=${message.id}`);
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.id === groupId
+            ? {
+              ...g,
+              last_message_at: message.created_at,
+              last_message_preview: message.content || '📎 מדיה',
+            }
+            : g
+        )
+      );
+      // גיבוי: אם מנוי הקבוצה הפעילה נכשל — עדיין להציג הודעות במסך הפתוח
+      if (currentGroupId.current === groupId) {
+        void ingestIncomingInsertRef.current(message);
+      }
+    };
+
+    const subscribeAllGroups = () => {
+      chatRealtimeService.subscribeToAllUserGroups(
+        user.id,
+        handleGlobalNewMessage,
+        (groupId, data) => {
+          // עדכון קבוצות (כולל unread_count מהשרת)
+          logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
+          setGroups(prev => prev.map(g => {
+            if (g.id !== groupId) return g;
+
+            const newUnread = data.unread_count ?? g.unread_count;
+            const newMentioned = data.mentioned_count ?? g.mentioned_count;
+
+            // אם אין שינוי אמיתי, לא מעדכנים
+            if (newUnread === g.unread_count &&
+                newMentioned === g.mentioned_count &&
+                !data.last_message_at && !data.name && !data.avatar_url) {
+              return g;
+            }
+
+            return { ...g, ...data };
+          }));
         },
-        (payload) => {
-          const removedGroupId = (payload.old as any)?.group_id;
-          if (!removedGroupId) return;
-          logger.debug('ChatContext', `Removed from group ${removedGroupId} — cleaning up`);
-          setGroups(prev => prev.filter(g => g.id !== removedGroupId));
-          chatRealtimeService.unsubscribeFromGroup(removedGroupId);
-          // If currently viewing that group, clear it
-          if (currentGroupId.current === removedGroupId) {
-            setCurrentGroup(null);
-            setMessages([]);
-            setTypingUsers([]);
-          }
-        }
-      )
-      .subscribe();
+        handleMembershipRemoved
+      );
+    };
+
+    subscribeAllGroups();
+
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    const appStateRef = { current: AppState.currentState };
+
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      const prevState = appStateRef.current;
+      appStateRef.current = nextState;
+
+      if (!prevState.match(/inactive|background/) || nextState !== 'active') {
+        return;
+      }
+
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        chatRealtimeService.clearFailedChannels();
+        void chatRealtimeService.subscribeToAllUserGroups(
+          user.id,
+          handleGlobalNewMessage,
+          (groupId, data) => {
+            logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
+            setGroups(prev => prev.map(g => {
+              if (g.id !== groupId) return g;
+              const newUnread = data.unread_count ?? g.unread_count;
+              const newMentioned = data.mentioned_count ?? g.mentioned_count;
+              if (newUnread === g.unread_count &&
+                  newMentioned === g.mentioned_count &&
+                  !data.last_message_at && !data.name && !data.avatar_url) {
+                return g;
+              }
+              return { ...g, ...data };
+            }));
+          },
+          handleMembershipRemoved,
+          { force: true }
+        );
+        resubscribeActiveGroupRef.current?.();
+      }, 800);
+    });
 
     return () => {
-      membershipChannel.unsubscribe();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      appStateSub.remove();
       chatRealtimeService.updateOnlineStatus(user.id, false);
       chatRealtimeService.stopTypingCleanup();
       chatRealtimeService.unsubscribeAll();
       chatRealtimeService.onConnectionStatusChange(null);
       setRealtimeConnectionState('connecting');
+      resubscribeActiveGroupRef.current = null;
     };
-  }, [user, loadGroups]);
+  }, [user?.id]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1555,25 +1688,108 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   const retrySendMessage = useCallback(async (tempId: string) => {
     const failed = messagesRef.current.find(m => m.id === tempId && m.send_error);
-    if (!failed || !currentGroupId.current) return;
-    // Reset error state and re-attempt send with same content
+    if (!failed || !currentGroupId.current || !user) return;
+
+    const groupId = currentGroupId.current;
     setMessages(prev => prev.map(m =>
-      m.id === tempId ? { ...m, send_error: undefined, is_sending: true } : m
+      m.id === tempId
+        ? { ...m, send_error: undefined, is_sending: true, is_uploading: !!m.local_media_uri }
+        : m
     ));
+
     try {
-      await sendMessage({
+      let mediaUrl = failed.media_url;
+      let thumbUrl = failed.media_thumbnail_url;
+      const metadata: Record<string, unknown> = { existing_optimistic_id: tempId };
+
+      if (failed.local_media_uri) {
+        const onProgress = (progress: { progress: number }) => {
+          setMessages(prev => prev.map(m =>
+            m.id === tempId ? { ...m, upload_progress: progress.progress } : m
+          ));
+        };
+
+        let uploadResult: {
+          url: string | null;
+          thumbnail_url?: string | null;
+          error: { message?: string } | null;
+        };
+
+        switch (failed.message_type) {
+          case ChatMessageType.VIDEO:
+            uploadResult = await chatMediaService.uploadVideo(failed.local_media_uri, groupId, onProgress);
+            break;
+          case ChatMessageType.AUDIO:
+            uploadResult = await chatMediaService.uploadAudio(
+              failed.local_media_uri,
+              groupId,
+              failed.media_duration || 0,
+              onProgress,
+            );
+            break;
+          case ChatMessageType.DOCUMENT:
+            uploadResult = await chatMediaService.uploadDocument(
+              failed.local_media_uri,
+              failed.media_file_name || 'document',
+              groupId,
+              onProgress,
+            );
+            break;
+          default:
+            uploadResult = await chatMediaService.uploadImage(failed.local_media_uri, groupId, onProgress);
+        }
+
+        if (uploadResult.error || !uploadResult.url) {
+          throw new Error(uploadResult.error?.message || 'שגיאה בהעלאה');
+        }
+
+        mediaUrl = uploadResult.url;
+        if (uploadResult.thumbnail_url) {
+          thumbUrl = uploadResult.thumbnail_url;
+          metadata.media_thumbnail_url = uploadResult.thumbnail_url;
+        }
+
+        setMessages(prev => prev.map(m =>
+          m.id === tempId
+            ? {
+                ...m,
+                media_url: mediaUrl,
+                media_thumbnail_url: thumbUrl,
+                local_media_uri: undefined,
+                is_uploading: false,
+                upload_progress: 100,
+              }
+            : m
+        ));
+      }
+
+      const result = await sendMessage({
+        group_id: groupId,
         content: failed.content ?? '',
-        message_type: failed.message_type as any,
-        reply_to_id: (failed as any).reply_to?.id,
+        message_type: failed.message_type,
+        media_url: mediaUrl,
+        media_thumbnail_url: thumbUrl,
+        media_file_name: failed.media_file_name,
+        media_size: failed.media_size,
+        media_duration: failed.media_duration,
+        media_urls: failed.media_urls,
+        reply_to_message_id: failed.reply_to_message_id,
+        metadata,
+        existing_optimistic_id: tempId,
       });
-      // Remove the failed optimistic copy (the real one will arrive via realtime)
-      removeOptimisticMessage(tempId);
-    } catch {
+
+      if (!result.success && !(result as { queued?: boolean }).queued) {
+        throw new Error(result.error || 'שגיאה בשליחה חוזרת');
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'שגיאה בשליחה חוזרת';
       setMessages(prev => prev.map(m =>
-        m.id === tempId ? { ...m, is_sending: false, send_error: 'שגיאה בשליחה חוזרת' } : m
+        m.id === tempId
+          ? { ...m, is_sending: false, is_uploading: false, send_error: message }
+          : m
       ));
     }
-  }, [sendMessage, removeOptimisticMessage]);
+  }, [sendMessage, user]);
 
   // ============================================
   // Context value

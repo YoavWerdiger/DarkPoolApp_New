@@ -4,12 +4,13 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, InteractionManager } from 'react-native';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 import { useChat } from '../../context/ChatContext';
@@ -70,7 +71,22 @@ export default function ChatGroupScreen() {
   const insets = useSafeAreaInsets();
   useLockParentDrawerWhileFocused();
 
-  const flatListRef = useRef<FlatList<any>>(null);
+  const listRef = useRef<FlatList<ChatMessageType>>(null);
+  const loadMoreLockRef = useRef(false);
+  const scrollYRef = useRef(0);
+  const distFromBottomRef = useRef(0);
+  const maxScrollOffsetRef = useRef(0);
+  const layoutHeightRef = useRef(0);
+  const contentHeightRef = useRef(0);
+  const endReachedReadyRef = useRef(false);
+  const userScrolledUpRef = useRef(false);
+  const endReachedMomentumRef = useRef(true);
+  const programmaticScrollRef = useRef(false);
+  const ignoreFabUntilRef = useRef(0);
+  const scrollToBottomLockRef = useRef(false);
+  /** חוסם גלילה אוטומטית ל-lastRead אחרי FAB / גלילה ידנית לתחתית */
+  const blockUnreadAutoScrollUntilRef = useRef(0);
+  const unreadAutoScrollAppliedForGroupRef = useRef<string | null>(null);
 
   const { groupId = '', scrollToMessageId } = (route.params || {}) as { groupId: string; scrollToMessageId?: string };
 
@@ -105,46 +121,125 @@ export default function ChatGroupScreen() {
     return lowerName.includes('הכרזות') || lowerName.includes('announcement');
   }, [currentGroup?.name]);
 
-  // With inverted={true}: messages[0] (newest) renders at the BOTTOM.
-  // scrollToOffset(0) is always "go to newest" — simple and reliable.
-  // onEndReached fires when scrolled to index N-1 (oldest) = user wants older history.
+  // messages[0]=חדש — FlatList inverted (API רשמי של RN, יציב יותר מ-scaleY)
   const hasInitiallyRenderedRef = useRef(false);
+  const initialScrollDoneRef = useRef(false);
   const prevGroupIdRef = useRef<string | null>(null);
   const isAtBottomRef = useRef(true);
   const isSendingRef = useRef(false);
   const lastScrollLogRef = useRef(0);
   const showScrollBtnRef = useRef(false);
-  const scrollBtnOpacity = useRef(new RNAnimated.Value(0)).current;
 
-  const handleScroll = useCallback((event: any) => {
-    const { contentOffset } = event.nativeEvent;
-    // Inverted list: offset 0 = bottom (newest messages). Higher offset = scrolled toward older.
-    const offsetY = contentOffset.y;
-    isAtBottomRef.current = offsetY < 80;
-    const shouldShow = offsetY > 200;
-    // Separate animation from state update — calling Animated.timing inside a
-    // state updater is a side effect and breaks in React 18 strict mode.
+  /** inverted FlatList: offsetY≈0 = תחתית (הודעות חדשות), distFromBottom=offsetY */
+  const SCROLL_AT_BOTTOM_PX = 80;
+  const SCROLL_SHOW_FAB_PX = 120;
+
+  const handleLoadMore = useCallback(() => {
+    if (
+      !endReachedReadyRef.current ||
+      !userScrolledUpRef.current ||
+      programmaticScrollRef.current ||
+      loadMoreLockRef.current
+    ) {
+      return;
+    }
+    if (distFromBottomRef.current <= SCROLL_SHOW_FAB_PX) return;
+    loadMoreLockRef.current = true;
+    logger.info('ChatGroupScreen', 'loadMoreMessages triggered');
+    void loadMoreMessages().finally(() => {
+      setTimeout(() => {
+        loadMoreLockRef.current = false;
+      }, 600);
+    });
+  }, [loadMoreMessages]);
+
+  const handleEndReached = useCallback(() => {
+    if (!endReachedReadyRef.current || !userScrolledUpRef.current || endReachedMomentumRef.current) return;
+    handleLoadMore();
+  }, [handleLoadMore]);
+
+  const applyScrollMetrics = useCallback((event?: {
+    nativeEvent?: {
+      contentOffset?: { y?: number };
+      contentSize?: { height?: number };
+      layoutMeasurement?: { height?: number };
+    };
+  }) => {
+    const native = event?.nativeEvent;
+    const rawOffsetY = native?.contentOffset?.y ?? scrollYRef.current;
+    const contentH = native?.contentSize?.height ?? contentHeightRef.current;
+    const layoutH = native?.layoutMeasurement?.height ?? layoutHeightRef.current;
+    if (layoutH > 0) layoutHeightRef.current = layoutH;
+    if (contentH > 0) contentHeightRef.current = contentH;
+
+    const maxOffset = Math.max(0, contentH - layoutH);
+    maxScrollOffsetRef.current = maxOffset;
+    const offsetY = Math.max(0, Math.min(rawOffsetY, maxOffset));
+    scrollYRef.current = offsetY;
+    const distFromBottom = offsetY;
+    distFromBottomRef.current = distFromBottom;
+
+    const atBottom = distFromBottom <= SCROLL_AT_BOTTOM_PX;
+    isAtBottomRef.current = atBottom;
+    if (atBottom) {
+      programmaticScrollRef.current = false;
+      userScrolledUpRef.current = false;
+      hasInitiallyRenderedRef.current = true;
+      if (!initialScrollDoneRef.current) {
+        initialScrollDoneRef.current = true;
+      }
+    } else if (distFromBottom > SCROLL_SHOW_FAB_PX) {
+      userScrolledUpRef.current = true;
+    }
+
+    return { distFromBottom, atBottom, offsetY };
+  }, []);
+
+  const syncScrollFab = useCallback((event?: {
+    nativeEvent?: {
+      contentOffset?: { y?: number };
+      contentSize?: { height?: number };
+      layoutMeasurement?: { height?: number };
+    };
+  }) => {
+    const { distFromBottom, atBottom, offsetY } = applyScrollMetrics(event);
+    const shouldShow = distFromBottom > SCROLL_SHOW_FAB_PX;
+
+    const now = Date.now();
+    if (now - lastScrollLogRef.current > 800) {
+      lastScrollLogRef.current = now;
+      logger.debug(
+        'ChatGroupScreen',
+        `onScroll offsetY=${offsetY.toFixed(0)} distBottom=${distFromBottom.toFixed(0)} atBottom=${atBottom}`,
+      );
+    }
+
+    // רק FAB — לא לחסום עדכון metrics (distFromBottomRef)
+    if (Date.now() < ignoreFabUntilRef.current) return;
+
     if (shouldShow !== showScrollBtnRef.current) {
       showScrollBtnRef.current = shouldShow;
       setShowScrollToBottomButton(shouldShow);
-      RNAnimated.timing(scrollBtnOpacity, {
-        toValue: shouldShow ? 1 : 0,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
+      logger.info(
+        'ChatGroupScreen',
+        `scrollFab ${shouldShow ? 'show' : 'hide'} dist=${distFromBottom.toFixed(0)}`,
+      );
     }
-    const now = Date.now();
-    if (now - lastScrollLogRef.current > 500) {
-      lastScrollLogRef.current = now;
-      logger.debug('ChatGroupScreen', `onScroll offsetY=${offsetY.toFixed(0)} atBottom=${offsetY < 80}`);
-    }
-  }, []);
+  }, [applyScrollMetrics]);
+
+  const handleScroll = useCallback((event: any) => {
+    syncScrollFab(event);
+  }, [syncScrollFab]);
+
+  const handleScrollEnd = useCallback((event: any) => {
+    syncScrollFab(event);
+  }, [syncScrollFab]);
 
   // react-native-keyboard-controller (behavior="translate-with-padding") handles
   // keyboard show/hide natively via Reanimated — no manual scroll listeners needed.
   // Adding Keyboard listeners here would fight the controller's animation.
 
-  // With inverted list, newest messages appear at offset 0 automatically.
+  // FlatList flip: offset 0 = הודעות חדשות
   const prevMessagesLengthRef = useRef(0);
 
   const [replyTo, setReplyTo] = useState<{
@@ -166,7 +261,8 @@ export default function ChatGroupScreen() {
     h: highlightedMessageId,
     u: initialUnreadInfo?.count,
     uid: user?.id,
-  }), [highlightedMessageId, initialUnreadInfo?.count, user?.id]);
+    n: messages.length,
+  }), [highlightedMessageId, initialUnreadInfo?.count, user?.id, messages.length]);
   const [longPressMessage, setLongPressMessage] = useState<MessageSnapshot | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const [seenByMessage, setSeenByMessage] = useState<ChatMessageType | null>(null);
@@ -183,34 +279,50 @@ export default function ChatGroupScreen() {
     onMessageCellLayout,
     scrollToBottom: scrollToBottomCore,
   } = useChatMessageScroll({
-    flatListRef,
+    listRef,
     messagesRef,
+    distFromBottomRef,
+    programmaticScrollRef,
     isMountedRef,
     loadMessagesAround,
     onHighlight: setHighlightedMessageId,
   });
 
-  const scrollToBottom = useCallback((animated: boolean = false) => {
+  const hideScrollFab = useCallback(() => {
+    if (!showScrollBtnRef.current) return;
+    showScrollBtnRef.current = false;
+    setShowScrollToBottomButton(false);
+  }, []);
+
+  const scrollToBottom = useCallback((animated: boolean = true) => {
+    if (scrollToBottomLockRef.current) return;
+    scrollToBottomLockRef.current = true;
+    programmaticScrollRef.current = true;
+
+    logger.info(
+      'ChatGroupScreen',
+      `scrollToBottom pressed animated=${animated} dist=${distFromBottomRef.current.toFixed(0)}`,
+    );
     isAtBottomRef.current = true;
+    distFromBottomRef.current = 0;
+    ignoreFabUntilRef.current = Date.now() + 400;
+    blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
+    userScrolledUpRef.current = false;
+    hideScrollFab();
     scrollToBottomCore(animated);
-    // Hide FAB after scroll — setState before scroll breaks inverted FlatList jumps.
-    requestAnimationFrame(() => {
-      showScrollBtnRef.current = false;
-      setShowScrollToBottomButton(false);
-      RNAnimated.timing(scrollBtnOpacity, { toValue: 0, duration: 120, useNativeDriver: true }).start();
-    });
-  }, [scrollToBottomCore, scrollBtnOpacity]);
+
+    setTimeout(() => {
+      scrollToBottomLockRef.current = false;
+      programmaticScrollRef.current = false;
+    }, 800);
+  }, [scrollToBottomCore, hideScrollFab]);
 
   useEffect(() => {
     const newLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     prevMessagesLengthRef.current = newLength;
 
-    if (newLength > 0 && !hasInitiallyRenderedRef.current) {
-      hasInitiallyRenderedRef.current = true;
-      logger.debug('ChatGroupScreen', `initial messages loaded (${newLength})`);
-      isAtBottomRef.current = true;
-      scrollToBottomCore(false);
+    if (newLength > 0 && !initialScrollDoneRef.current) {
       return;
     }
 
@@ -242,16 +354,42 @@ export default function ChatGroupScreen() {
   }, []);
 
   useEffect(() => {
-    if (groupId) {
-      const isNewGroup = prevGroupIdRef.current !== groupId;
-      prevGroupIdRef.current = groupId;
-      selectGroup(groupId);
-      if (isNewGroup) {
-        hasInitiallyRenderedRef.current = false;
-        prevMessagesLengthRef.current = 0;
-      }
-    }
+    if (!groupId) return;
+
+    const isNewGroup = prevGroupIdRef.current !== groupId;
+    prevGroupIdRef.current = groupId;
+    selectGroup(groupId);
+
+    if (!isNewGroup) return;
+
+    hasInitiallyRenderedRef.current = false;
+    initialScrollDoneRef.current = false;
+    endReachedReadyRef.current = false;
+    userScrolledUpRef.current = false;
+    endReachedMomentumRef.current = true;
+    programmaticScrollRef.current = false;
+    prevMessagesLengthRef.current = 0;
+    scrollYRef.current = 0;
+    distFromBottomRef.current = 0;
+    maxScrollOffsetRef.current = 0;
+    layoutHeightRef.current = 0;
+    contentHeightRef.current = 0;
+    showScrollBtnRef.current = false;
+    setShowScrollToBottomButton(false);
+    blockUnreadAutoScrollUntilRef.current = 0;
+    unreadAutoScrollAppliedForGroupRef.current = null;
+
+    const t = setTimeout(() => {
+      endReachedReadyRef.current = true;
+    }, 800);
+    return () => clearTimeout(t);
   }, [groupId, selectGroup]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      logger.debug('ChatGroupScreen', `messages ready (${messages.length})`);
+    }
+  }, [messages.length, groupId]);
 
   // Auto-navigate to groups list when removed from group by an admin.
   // ChatContext clears currentGroup when membership DELETE event fires.
@@ -280,26 +418,46 @@ export default function ChatGroupScreen() {
     }, [groupId, user, selectGroup])
   );
 
+  // גלילה ל-divider של unread — פעם אחת בכניסה לקבוצה בלבד (לא על כל עדכון last_read)
   useEffect(() => {
-    if (messages.length > 0 && currentGroup?.last_read_message_id) {
-      // With inverted list, messages[0]=newest. If lastRead is not at index 0,
-      // there are newer messages — scroll to show the last read message.
-      const lastReadIndex = messages.findIndex(m => m.id === currentGroup.last_read_message_id);
-      if (lastReadIndex > 0) {
-        const timeoutId = setTimeout(() => {
-          if (!isMountedRef.current) return;
-          try {
-            flatListRef.current?.scrollToIndex({
-              index: lastReadIndex,
-              animated: false,
-              viewPosition: 0.5,
-            });
-          } catch { /* onScrollToIndexFailed will handle */ }
-        }, 300);
-        return () => clearTimeout(timeoutId);
-      }
+    if (!groupId || messages.length === 0) return;
+    if (!initialUnreadInfo?.lastReadMessageId || !initialUnreadInfo.count) return;
+    if (unreadAutoScrollAppliedForGroupRef.current === groupId) return;
+    if (Date.now() < blockUnreadAutoScrollUntilRef.current) return;
+    if (userScrolledUpRef.current || distFromBottomRef.current <= SCROLL_AT_BOTTOM_PX) {
+      unreadAutoScrollAppliedForGroupRef.current = groupId;
+      return;
     }
-  }, [currentGroup?.last_read_message_id, messages.length]);
+
+    const lastReadIndex = messages.findIndex(
+      (m) => m.id === initialUnreadInfo.lastReadMessageId,
+    );
+    unreadAutoScrollAppliedForGroupRef.current = groupId;
+    if (lastReadIndex <= 0) return;
+
+    const timeoutId = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      if (Date.now() < blockUnreadAutoScrollUntilRef.current) return;
+      if (userScrolledUpRef.current) return;
+      programmaticScrollRef.current = true;
+      try {
+        listRef.current?.scrollToIndex({
+          index: lastReadIndex,
+          animated: false,
+          viewPosition: 0.5,
+        });
+      } catch {
+        listRef.current?.scrollToOffset({
+          offset: Math.min(distFromBottomRef.current, maxScrollOffsetRef.current),
+          animated: false,
+        });
+      }
+      setTimeout(() => {
+        programmaticScrollRef.current = false;
+      }, 400);
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [groupId, initialUnreadInfo?.lastReadMessageId, initialUnreadInfo?.count, messages.length]);
 
   useEffect(() => {
     if (scrollToMessageId && messages.length > 0) {
@@ -350,7 +508,7 @@ export default function ChatGroupScreen() {
       }
 
       setReplyTo(undefined);
-      setShowScrollToBottomButton(false);
+      hideScrollFab();
       // הגלילה עצמה תקרה דרך ה-useEffect של messages.length (שיורה כשה-optimistic message נכנס)
       // – זה מונע מספר פקודות scrollToOffset במקביל שמתבטלות זו את זו ב-iOS.
     } catch (e) {
@@ -358,7 +516,7 @@ export default function ChatGroupScreen() {
     } finally {
       setTimeout(() => { isSendingRef.current = false; }, 500);
     }
-  }, [groupId, replyTo?.id, sendMessage]);
+  }, [groupId, replyTo?.id, sendMessage, hideScrollFab]);
 
   const handleTyping = useCallback((isTyping: boolean) => {
     if (groupId) {
@@ -750,10 +908,9 @@ export default function ChatGroupScreen() {
   const renderMessage = useCallback(
     ({ item, index }: { item: ChatMessageType; index: number }) => {
       const isMe = item.sender_id === user?.id;
-      // C6: use ref so renderMessage doesn't need `messages` in its dependency array
-      // Inverted list: index+1 = older message (above visually), index-1 = newer (below visually)
-      const olderMessage = index < messagesRef.current.length - 1 ? messagesRef.current[index + 1] : null;
-      const newerMessage = index > 0 ? messagesRef.current[index - 1] : null;
+      const list = messagesRef.current;
+      const olderMessage = index < list.length - 1 ? list[index + 1] : null;
+      const newerMessage = index > 0 ? list[index - 1] : null;
       // Date divider: compare against older neighbor (chronological order)
       // Avatar: show on BOTTOMMOST message of a sender run = when no newer neighbor from same sender
       // WhatsApp shows avatar on the newest message of each consecutive run.
@@ -838,9 +995,8 @@ export default function ChatGroupScreen() {
 
   const renderEmpty = () => {
     if (isLoadingMessages) {
-      // Skeleton bubbles while messages load — never show blank screen
       return (
-        <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+        <View style={[styles.messageCellFlip, { paddingHorizontal: 12, paddingTop: 8 }]}>
           {[
             { isMe: false, w: '60%' }, { isMe: true, w: '45%' },
             { isMe: false, w: '75%' }, { isMe: false, w: '50%' },
@@ -959,71 +1115,105 @@ export default function ChatGroupScreen() {
         }}
       />
 
-      {/* Messages area — minHeight:0 נדרש כדי שה-FlatList יקבל גלילה אמיתית בתוך עמודת flex */}
-      <View style={styles.messagesAreaFlex} pointerEvents="box-none">
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          inverted
-          renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
-          extraData={flatListExtraData}
-          removeClippedSubviews={true}
-          // Inverted: "end" of data = oldest messages = user scrolled to the top.
-          // Guard: only fire after initial render is settled (prevents spurious
-          // load on mount before scrollToBottom(false) corrects the position).
-          onEndReached={() => {
-            if (hasInitiallyRenderedRef.current) loadMoreMessages();
-          }}
-          onEndReachedThreshold={0.3}
-          // ListFooterComponent appears at the visual TOP (oldest end) in inverted list
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={renderEmpty}
-          scrollEnabled={true}
-          bounces={true}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          initialNumToRender={20}
-          maxToRenderPerBatch={10}
-          windowSize={11}
-          updateCellsBatchingPeriod={50}
-          contentContainerStyle={[
-            messages.length === 0 ? styles.emptyList : styles.messagesList,
-            { paddingTop: 8, paddingBottom: 12 },
-          ]}
-          showsVerticalScrollIndicator
-          nestedScrollEnabled={Platform.OS === 'android'}
-          style={styles.flatListTransparent}
-          scrollEventThrottle={16}
-          onScroll={handleScroll}
-          onContentSizeChange={handleContentSizeChange}
-          onScrollToIndexFailed={handleScrollToIndexFailed}
-        />
+      {/* Messages + FAB overlay */}
+      <View style={styles.messagesSection}>
+        <View style={styles.messagesAreaFlex}>
+          <FlatList
+            ref={listRef}
+            data={messages}
+            inverted
+            maintainVisibleContentPosition={{
+              minIndexForVisible: 1,
+              autoscrollToTopThreshold: 80,
+            }}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id}
+            extraData={flatListExtraData}
+            ListFooterComponent={renderFooter}
+            ListEmptyComponent={renderEmpty}
+            scrollEnabled
+            bounces
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            initialNumToRender={20}
+            maxToRenderPerBatch={12}
+            windowSize={11}
+            updateCellsBatchingPeriod={50}
+            removeClippedSubviews={false}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.15}
+            onMomentumScrollBegin={() => {
+              endReachedMomentumRef.current = false;
+            }}
+            onMomentumScrollEnd={(e) => {
+              endReachedMomentumRef.current = true;
+              handleScrollEnd(e);
+            }}
+            contentContainerStyle={[
+              messages.length === 0 ? styles.emptyList : styles.messagesList,
+              { paddingTop: 8, paddingBottom: 12 },
+            ]}
+            showsVerticalScrollIndicator
+            nestedScrollEnabled={Platform.OS === 'android'}
+            style={styles.flatListTransparent}
+            scrollEventThrottle={16}
+            onScroll={handleScroll}
+            onScrollEndDrag={handleScrollEnd}
+            onLayout={(e) => {
+              const h = e.nativeEvent.layout.height;
+              if (h > 0) layoutHeightRef.current = h;
+            }}
+            onContentSizeChange={(_w, contentH) => {
+              handleContentSizeChange();
+              if (contentH > 0) contentHeightRef.current = contentH;
+              if (contentH > 0 && layoutHeightRef.current > 0) {
+                maxScrollOffsetRef.current = Math.max(0, contentH - layoutHeightRef.current);
+              }
+              if (
+                !initialScrollDoneRef.current &&
+                messages.length > 0 &&
+                !userScrolledUpRef.current &&
+                Date.now() >= blockUnreadAutoScrollUntilRef.current &&
+                !(initialUnreadInfo?.count && initialUnreadInfo?.lastReadMessageId)
+              ) {
+                initialScrollDoneRef.current = true;
+                listRef.current?.scrollToOffset({ offset: 0, animated: false });
+                distFromBottomRef.current = 0;
+                logger.debug('ChatGroupScreen', 'initial scroll to bottom offset=0');
+              }
+            }}
+            onScrollToIndexFailed={handleScrollToIndexFailed}
+          />
+        </View>
 
-        {/* Scroll-to-bottom FAB — after FlatList so touches reach the button */}
-        <RNAnimated.View
-          pointerEvents={showScrollToBottomButton ? 'box-none' : 'none'}
-          style={[
-            styles.scrollToBottomButton,
-            { bottom: 12, opacity: scrollBtnOpacity },
-          ]}
-        >
-          <Pressable
-            onPress={() => { void HapticFeedback.selection(); scrollToBottom(true); }}
-            hitSlop={14}
-            style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
-          >
-            <Ionicons name="chevron-down" size={20} color="#fff" />
-            {(initialUnreadInfo?.count ?? 0) > 0 && (
-              <View style={styles.scrollBadge} pointerEvents="none">
-                <Text style={styles.scrollBadgeText}>
-                  {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
-                </Text>
-              </View>
-            )}
-          </Pressable>
-        </RNAnimated.View>
-
+        {showScrollToBottomButton && (
+          <View style={styles.scrollFabOverlay} pointerEvents="box-none">
+            <View style={styles.scrollFabButtonWrap}>
+              <DayNavBlurButton
+                size={46}
+                glassIntensity="medium"
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  scrollToBottom(true);
+                }}
+                accessibilityLabel="גלול להודעות האחרונות"
+              >
+                <Ionicons
+                  name="chevron-down"
+                  size={22}
+                  color={DesignTokens.colors.text.primary}
+                />
+              </DayNavBlurButton>
+              {(initialUnreadInfo?.count ?? 0) > 0 && (
+                <View style={styles.scrollBadge} pointerEvents="none">
+                  <Text style={styles.scrollBadgeText}>
+                    {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Input area */}
@@ -1383,11 +1573,15 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     backgroundColor: 'transparent',
     overflow: 'hidden',
   },
-  /** עמודת flex עם minHeight:0 — בלי זה FlatList לעיתים לא מגלגל ו-scrollToBottom לא משפיע */
-  messagesAreaFlex: {
+  messagesSection: {
     flex: 1,
     minHeight: 0,
     position: 'relative',
+  },
+  /** minHeight:0 — בלי זה FlatList לא מגלגל בתוך עמודת flex */
+  messagesAreaFlex: {
+    flex: 1,
+    minHeight: 0,
   },
   flatListTransparent: {
     backgroundColor: 'transparent',
@@ -1491,37 +1685,37 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     borderTopWidth: 0,
   },
 
-  /* ── Scroll to bottom ── */
-  scrollToBottomButton: {
+  /* ── Scroll to bottom FAB ── */
+  scrollFabOverlay: {
     position: 'absolute',
-    right: 10,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(0,200,5,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: tokens.colors.primary.main,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 6,
-    zIndex: 1000,
+    left: 0,
+    right: 0,
+    bottom: 12,
+    alignItems: 'flex-end',
+    paddingHorizontal: 14,
+    zIndex: 2000,
+    elevation: 20,
+  },
+  scrollFabButtonWrap: {
+    position: 'relative',
   },
   scrollBadge: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: tokens.colors.danger.main,
+    top: -4,
+    right: -4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: tokens.colors.primary.main,
+    borderWidth: 2,
+    borderColor: tokens.colors.background.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 3,
+    paddingHorizontal: 4,
+    zIndex: 1,
   },
   scrollBadgeText: {
-    color: '#fff',
+    color: tokens.colors.text.inverse,
     fontSize: 10,
     fontWeight: '700',
     textAlign: 'center',

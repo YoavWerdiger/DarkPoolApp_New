@@ -591,7 +591,6 @@ export default function ChatGroupsListScreen() {
                 <Ionicons name={iconName} size={22} color={tokens.colors.text.secondary} />
               </View>
             )}
-            {item.is_member && hasUnread && <View style={styles.unreadDot} />}
           </View>
 
           {/* Text content */}
@@ -1186,17 +1185,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  unreadDot: {
-    position: 'absolute',
-    bottom: 1,
-    right: 1,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: tokens.colors.primary.main,
-    borderWidth: 2,
-    borderColor: tokens.colors.background.primary,
   },
   chatBody: { flex: 1, minWidth: 0 },
   chatRow1: {

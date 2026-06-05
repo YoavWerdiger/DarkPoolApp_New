@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { FlatList, InteractionManager } from 'react-native';
+import { InteractionManager, type FlatList } from 'react-native';
 import { HapticFeedback } from '../utils/hapticFeedback';
 import { logger } from '../utils/logger';
 import type { ChatMessage } from '../types/chat.types';
@@ -10,23 +10,27 @@ const MAX_SCROLL_RETRIES = 12;
 type LoadAroundFn = (messageId: string) => Promise<{ success: boolean; error?: string }>;
 
 interface UseChatMessageScrollOptions {
-  flatListRef: React.RefObject<FlatList<any> | null>;
+  listRef: React.RefObject<FlatList<ChatMessage> | null>;
   messagesRef: React.MutableRefObject<ChatMessage[]>;
+  distFromBottomRef: React.MutableRefObject<number>;
+  programmaticScrollRef: React.MutableRefObject<boolean>;
   isMountedRef: React.MutableRefObject<boolean>;
   loadMessagesAround: LoadAroundFn;
   onHighlight: (messageId: string | null) => void;
 }
 
+/** FlatList inverted: offsetY≈0 = תחתית (הודעות חדשות), scrollToOffset(0) */
 export function useChatMessageScroll({
-  flatListRef,
+  listRef,
   messagesRef,
+  distFromBottomRef,
+  programmaticScrollRef,
   isMountedRef,
   loadMessagesAround,
   onHighlight,
 }: UseChatMessageScrollOptions) {
   const pendingScrollIdRef = useRef<string | null>(null);
   const scrollRetryRef = useRef(0);
-  const scrollToBottomRetryRef = useRef(0);
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const averageItemHeightRef = useRef(DEFAULT_ITEM_HEIGHT);
   const itemHeightsRef = useRef<Map<string, number>>(new Map());
@@ -54,38 +58,30 @@ export function useChatMessageScroll({
     [messagesRef]
   );
 
-  const estimateOffsetForIndex = useCallback(
-    (index: number) => {
-      const msgs = messagesRef.current;
-      let offset = 0;
-      for (let i = 0; i < index; i++) {
-        const id = msgs[i]?.id;
-        offset += id ? itemHeightsRef.current.get(id) ?? averageItemHeightRef.current : averageItemHeightRef.current;
-      }
-      return Math.max(0, offset);
-    },
-    [messagesRef]
-  );
+  const estimateOffsetForIndex = useCallback((index: number) => {
+    const msgs = messagesRef.current;
+    let offset = 0;
+    for (let i = 0; i < index; i++) {
+      const id = msgs[i]?.id;
+      offset += id ? itemHeightsRef.current.get(id) ?? averageItemHeightRef.current : averageItemHeightRef.current;
+    }
+    return Math.max(0, offset);
+  }, [messagesRef]);
 
   const scrollToIndexNow = useCallback(
     (index: number, animated: boolean): boolean => {
-      const list = flatListRef.current;
+      const list = listRef.current;
       if (!list || index < 0) return false;
 
       try {
-        list.scrollToIndex({
-          index,
-          animated,
-          viewPosition: 0.5,
-        });
+        list.scrollToIndex({ index, animated, viewPosition: 0.5 });
         return true;
       } catch {
-        const offset = estimateOffsetForIndex(index);
-        list.scrollToOffset({ offset, animated: false });
+        list.scrollToOffset({ offset: estimateOffsetForIndex(index), animated });
         return false;
       }
     },
-    [estimateOffsetForIndex, flatListRef]
+    [estimateOffsetForIndex, listRef]
   );
 
   const attemptScroll = useCallback(
@@ -121,6 +117,25 @@ export function useChatMessageScroll({
       }
     },
     [findMessageIndex, flashHighlight, isMountedRef, scrollToIndexNow]
+  );
+
+  const handleScrollToIndexFailed = useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      const list = listRef.current;
+      if (!list) return;
+
+      averageItemHeightRef.current = Math.round(info.averageItemLength) || DEFAULT_ITEM_HEIGHT;
+      list.scrollToOffset({
+        offset: estimateOffsetForIndex(info.index),
+        animated: false,
+      });
+
+      const pendingId = pendingScrollIdRef.current;
+      if (pendingId) {
+        setTimeout(() => attemptScroll(pendingId, true), 120);
+      }
+    },
+    [attemptScroll, estimateOffsetForIndex, listRef]
   );
 
   const queueScrollToMessage = useCallback(
@@ -169,46 +184,44 @@ export function useChatMessageScroll({
     [findMessageIndex, isMountedRef, loadMessagesAround, queueScrollToMessage, waitForMessageInList]
   );
 
-  const handleScrollToIndexFailed = useCallback(
-    (info: { index: number; averageItemLength: number; highestMeasuredFrameIndex: number }) => {
-      if (!isMountedRef.current) return;
+  const scrollToBottom = useCallback(
+    (animated = true) => {
+      const list = listRef.current;
+      const count = messagesRef.current.length;
+      if (!list || count === 0) return;
 
-      const avg = info.averageItemLength || averageItemHeightRef.current || DEFAULT_ITEM_HEIGHT;
-      averageItemHeightRef.current = avg;
+      programmaticScrollRef.current = true;
 
-      const list = flatListRef.current;
-      if (!list) return;
-
-      logger.debug(
+      const fromDist = distFromBottomRef.current;
+      logger.info(
         'useChatMessageScroll',
-        `scrollToIndexFailed index=${info.index} avg=${avg.toFixed(0)} measured=${info.highestMeasuredFrameIndex}`
+        `scrollToBottom animated=${animated} count=${count} dist=${fromDist.toFixed(0)}`,
       );
 
-      const pendingId = pendingScrollIdRef.current;
-      const targetIndex = pendingId != null ? findMessageIndex(pendingId) : info.index;
-      const safeIndex = targetIndex >= 0 ? targetIndex : info.index;
-      const offset = estimateOffsetForIndex(safeIndex);
-
-      list.scrollToOffset({ offset: Math.max(0, offset - avg * 0.5), animated: false });
-
-      setTimeout(() => {
-        if (!isMountedRef.current || !flatListRef.current) return;
+      const go = (useAnimation: boolean) => {
+        const current = listRef.current;
+        if (!current) return;
+        // inverted + data[0]=newest → index 0 / offset 0 = תחתית ויזואלית
         try {
-          flatListRef.current.scrollToIndex({
-            index: safeIndex,
-            animated: true,
-            viewPosition: 0.5,
-          });
-          if (pendingId) {
-            pendingScrollIdRef.current = null;
-            flashHighlight(pendingId);
-          }
+          current.scrollToIndex({ index: 0, animated: useAnimation, viewPosition: 0 });
         } catch {
-          if (pendingId) attemptScroll(pendingId, true);
+          current.scrollToOffset({ offset: 0, animated: useAnimation });
         }
-      }, 100);
+      };
+
+      InteractionManager.runAfterInteractions(() => {
+        go(animated);
+        requestAnimationFrame(() => {
+          go(false);
+          distFromBottomRef.current = 0;
+          logger.info(
+            'useChatMessageScroll',
+            `scrollToBottom done dist=${distFromBottomRef.current.toFixed(0)} nearBottom=true`,
+          );
+        });
+      });
     },
-    [attemptScroll, estimateOffsetForIndex, findMessageIndex, flashHighlight, flatListRef, isMountedRef]
+    [distFromBottomRef, isMountedRef, listRef, messagesRef, programmaticScrollRef]
   );
 
   const handleContentSizeChange = useCallback(() => {
@@ -217,47 +230,6 @@ export function useChatMessageScroll({
       attemptScroll(pendingId, true);
     }
   }, [attemptScroll]);
-
-  /** Inverted FlatList: index 0 = newest message at visual bottom. */
-  const scrollToBottom = useCallback(
-    (animated = true) => {
-      const list = flatListRef.current;
-      const count = messagesRef.current.length;
-      if (!list || count === 0) return;
-
-      pendingScrollIdRef.current = null;
-      scrollRetryRef.current = 0;
-      scrollToBottomRetryRef.current = 0;
-
-      const run = () => {
-        const current = flatListRef.current;
-        if (!current || !isMountedRef.current) return;
-
-        try {
-          current.scrollToIndex({
-            index: 0,
-            animated,
-            viewPosition: 0,
-          });
-        } catch {
-          current.scrollToOffset({ offset: 0, animated });
-        }
-
-        // Inverted lists often ignore the first programmatic scroll after variable-height cells.
-        if (scrollToBottomRetryRef.current < 2) {
-          scrollToBottomRetryRef.current += 1;
-          requestAnimationFrame(() => {
-            flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
-          });
-        }
-      };
-
-      InteractionManager.runAfterInteractions(() => {
-        requestAnimationFrame(run);
-      });
-    },
-    [flatListRef, isMountedRef, messagesRef]
-  );
 
   const onMessageCellLayout = useCallback((messageId: string, height: number) => {
     if (height <= 0) return;

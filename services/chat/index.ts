@@ -9,8 +9,11 @@ export * from './chatMessageService';
 export * from './chatMediaService';
 export {
   getChatMediaDisplayUri,
+  getCachedChatMediaDisplayUri,
   chatMediaStoragePathFromRef,
   clearChatMediaPathCache,
+  prefetchChatMediaForMessages,
+  signMediaGroupItemsForDisplay,
 } from './chatSignedMediaUrl';
 export * from './chatRealtimeService';
 export * from './chatSearchService';

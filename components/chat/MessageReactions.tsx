@@ -1,149 +1,157 @@
 import React, { useMemo, useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { ReactionSummary } from '../../services/supabase';
+import type { ChatReactionGroup } from '../../types/chat.types';
+
+/** רווח בין בועת ההודעה לשורת הריאקציה */
+export const CHAT_REACTION_ROW_GAP = 4;
+
+const MAX_EMOJI_TYPES = 3;
 
 interface MessageReactionsProps {
-  reactions: ReactionSummary[];
+  reactions: ChatReactionGroup[];
   onReactionDetails: () => void;
   isMe?: boolean;
-  currentUserId?: string;
 }
 
-function MessageReactions({ reactions, onReactionDetails, isMe = false, currentUserId }: MessageReactionsProps) {
-  const DesignTokens = useDesignTokens();
-  
-  // אנימציות - מתחילים מ-1 כדי שריאקציות קיימות יופיעו מיד
+function MessageReactions({ reactions, onReactionDetails, isMe = false }: MessageReactionsProps) {
+  const tokens = useDesignTokens();
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const prevReactionsCount = useRef(reactions?.length || 0);
+  const prevSignature = useRef('');
   const isFirstRender = useRef(true);
-  
-  // אנימציה כשיש ריאקציות חדשות
+
+  const bubbleBg = isMe ? tokens.colors.bubbleMe : tokens.colors.bubbleOther;
+  const countColor = isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.secondary;
+  const borderColor = isMe ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.08)';
+
+  const signature = useMemo(
+    () =>
+      reactions
+        .map((r) => `${r.emoji}:${r.count}:${r.reacted_by_me ? 1 : 0}`)
+        .join('|'),
+    [reactions],
+  );
+
   useEffect(() => {
-    const currentCount = reactions?.length || 0;
-    
-    // דלג על render ראשון - לא צריך אנימציה
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      prevReactionsCount.current = currentCount;
+      prevSignature.current = signature;
       return;
     }
-    
-    // אם השתנה מספר הריאקציות - הפעל אנימציה קלה
-    if (currentCount > 0 && currentCount !== prevReactionsCount.current) {
-      // אנימציית "pop" קלה
-      scaleAnim.setValue(0.8);
-      
+    if (signature !== prevSignature.current) {
+      prevSignature.current = signature;
+      scaleAnim.setValue(0.92);
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 5,
-        tension: 150,
+        speed: 32,
+        bounciness: 4,
         useNativeDriver: true,
       }).start();
     }
-    
-    prevReactionsCount.current = currentCount;
-  }, [reactions]);
-  
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      position: 'absolute',
-      bottom: -14,
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      zIndex: 10,
-    },
-    containerMe: {
-      left: 8,
-    },
-    containerOther: {
-      right: 8,
-    },
-    // בועה אחת לכל האימוג'ים
-    singleBubble: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: DesignTokens.spacing.sm,
-      paddingVertical: DesignTokens.spacing.xs,
-      borderRadius: DesignTokens.borderRadius.lg,
-      backgroundColor: DesignTokens.colors.background.secondary,
-      minHeight: 28,
-      gap: 2,
-    },
-    emoji: {
-      fontSize: DesignTokens.typography.bodySmall.size,
-    },
-    count: {
-      color: DesignTokens.colors.text.secondary,
-      fontSize: DesignTokens.typography.fontSize.xs,
-      fontWeight: '500' as any,
-      marginLeft: 1,
-      marginRight: 4,
-    },
-    moreText: {
-      color: DesignTokens.colors.text.secondary,
-      fontSize: 11,
-      fontWeight: '600' as any,
-      marginLeft: 2,
-    },
-  }), [DesignTokens]);
+  }, [signature, scaleAnim]);
 
-  if (!reactions || reactions.length === 0) return null;
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        row: {
+          marginTop: CHAT_REACTION_ROW_GAP,
+          maxWidth: '100%',
+        },
+        rowMe: {
+          alignSelf: 'flex-end',
+        },
+        rowOther: {
+          alignSelf: 'flex-start',
+        },
+        pill: {
+          flexDirection: 'row',
+          direction: 'ltr',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 22,
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          borderRadius: 11,
+          borderWidth: StyleSheet.hairlineWidth,
+          gap: 1,
+        },
+        pillMine: {
+          borderWidth: 1,
+          borderColor: isMe ? 'rgba(255,255,255,0.28)' : tokens.colors.primary.main + '55',
+        },
+        chip: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 1,
+        },
+        emoji: {
+          fontSize: 13,
+          lineHeight: 16,
+        },
+        count: {
+          fontSize: 11,
+          fontWeight: '600',
+          color: countColor,
+          marginLeft: 1,
+          minWidth: 8,
+          textAlign: 'center',
+        },
+        more: {
+          fontSize: 10,
+          fontWeight: '600',
+          color: countColor,
+          marginLeft: 1,
+          paddingHorizontal: 1,
+        },
+      }),
+    [tokens, countColor, isMe],
+  );
 
-  // עד 3 אימוג'ים שונים
-  const displayReactions = reactions.slice(0, 3);
-  
-  // אם יש יותר מ-3 סוגי אימוג'ים, מציגים "+N" סוגים נוספים
-  const additionalReactionsCount = Math.max(0, reactions.length - 3);
+  if (!reactions?.length) return null;
 
-  const handlePress = () => {
-    onReactionDetails();
-  };
+  const displayReactions = reactions.slice(0, MAX_EMOJI_TYPES);
+  const extraTypes = Math.max(0, reactions.length - MAX_EMOJI_TYPES);
+  const hasMyReaction = reactions.some((r) => r.reacted_by_me);
 
   return (
-    <Pressable 
-      onPress={handlePress}
-      style={[
-        styles.container,
-        isMe ? styles.containerMe : styles.containerOther
-      ]}
+    <TouchableOpacity
+      onPress={onReactionDetails}
+      activeOpacity={0.75}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+      style={[styles.row, isMe ? styles.rowMe : styles.rowOther]}
     >
-      {/* בועה אחת עם כל האימוג'ים - עם אנימציה */}
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.singleBubble,
+          styles.pill,
           {
+            backgroundColor: bubbleBg,
+            borderColor,
             transform: [{ scale: scaleAnim }],
-          }
+          },
+          hasMyReaction && styles.pillMine,
         ]}
       >
-        {/* האימוג'ים - עם מספר אם יש יותר מ-1 */}
-        {displayReactions.map((reaction, index) => {
-          const reactedByMe = currentUserId
-            ? reaction.user_ids?.includes(currentUserId)
-            : false;
-          return (
-            <View
-              key={`${reaction.emoji}-${index}`}
-              style={[
-                { flexDirection: 'row', alignItems: 'center', borderRadius: DesignTokens.borderRadius.sm, paddingHorizontal: DesignTokens.spacing.micro },
-                reactedByMe && { backgroundColor: DesignTokens.colors.primary.dim },
-              ]}
-            >
-              <Text style={styles.emoji}>{reaction.emoji}</Text>
-              {reaction.count > 1 && (
-                <Text style={[styles.count, reactedByMe && { color: DesignTokens.colors.primary.main }]}>{reaction.count}</Text>
-              )}
-            </View>
-          );
-        })}
-        
-        {/* +X אם יש יותר מ-3 סוגי אימוג'ים */}
-        {additionalReactionsCount > 0 && (
-          <Text style={styles.moreText}>+{additionalReactionsCount}</Text>
-        )}
+        {displayReactions.map((reaction) => (
+          <View key={reaction.emoji} style={styles.chip}>
+            <Text style={styles.emoji} allowFontScaling={false}>
+              {reaction.emoji}
+            </Text>
+            {reaction.count > 1 ? (
+              <Text style={styles.count} allowFontScaling={false}>
+                {reaction.count}
+              </Text>
+            ) : null}
+          </View>
+        ))}
+        {extraTypes > 0 ? (
+          <Text style={styles.more} allowFontScaling={false}>
+            +{extraTypes}
+          </Text>
+        ) : null}
       </Animated.View>
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 

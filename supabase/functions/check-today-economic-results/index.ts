@@ -7,10 +7,6 @@ import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
 const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
 const EODHD_BASE_URL = 'https://eodhd.com/api'
-const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send'
-
-// 🔑 Expo Access Token נדרש לשליחת התראות ל-production builds
-const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || ''
 
 // כמה דקות לחכות לפני שמוותרים על אירוע שעבר בלי actual
 const MINUTES_AFTER_EVENT_TO_WAIT = 180 // 3 שעות
@@ -376,126 +372,9 @@ serve(async (req) => {
       }
     }
     
-    // שליחת Push Notifications על תוצאות חדשות (רק לאירועים חשובים)
+    // Push נשלח דרך טריגר DB על economic_events (send_economic_calendar_notification)
     if (newResults.length > 0) {
-      console.log(`📱 Sending push notifications for ${newResults.length} new results`)
-      
-      // קבלת כל ה-users שיש להם device tokens
-      const { data: allUsers, error: usersError } = await supabase
-        .from('device_tokens')
-        .select('user_id, expo_push_token')
-        .eq('is_active', true)
-        .not('expo_push_token', 'is', null)
-      
-      if (!usersError && allUsers && allUsers.length > 0) {
-        // יצירת הודעות push רק לתוצאות חשובות (high importance)
-        const importantResults = newResults.filter(r => {
-          const eventTitle = r.event.title?.toLowerCase() || ''
-          const isImportant = eventTitle.includes('cpi') || 
-                             eventTitle.includes('nfp') || 
-                             eventTitle.includes('fomc') ||
-                             eventTitle.includes('ppi') ||
-                             eventTitle.includes('gdp') ||
-                             eventTitle.includes('unemployment') ||
-                             r.event.importance === 'high'
-          return isImportant
-        })
-        
-        if (importantResults.length > 0) {
-          // קבוצת tokens לפי user
-          const userTokens = new Map<string, string[]>()
-          for (const user of allUsers) {
-            if (!userTokens.has(user.user_id)) {
-              userTokens.set(user.user_id, [])
-            }
-            userTokens.get(user.user_id)!.push(user.expo_push_token)
-          }
-          
-          // יצירת הודעות push לכל תוצאה חשובה
-          const messages: any[] = []
-          
-          for (const result of importantResults) {
-            const eventTitle = result.event.title || 'Economic Event'
-            const actualValue = result.newActual
-            
-            // יצירת הודעה יפה
-            let notificationTitle = '📊 תוצאה כלכלית חדשה'
-            let notificationBody = `${eventTitle}: ${actualValue}`
-            
-            // השוואה לתחזית (אם יש)
-            if (result.event.forecast) {
-              const forecast = parseFloat(result.event.forecast)
-              const actual = parseFloat(actualValue)
-              if (!isNaN(forecast) && !isNaN(actual)) {
-                const diff = actual - forecast
-                const percentDiff = ((diff / Math.abs(forecast)) * 100).toFixed(1)
-                
-                if (diff > 0) {
-                  notificationBody = `${eventTitle}: ${actualValue} ✅ (תחזית: ${result.event.forecast}, +${percentDiff}%)`
-                } else if (diff < 0) {
-                  notificationBody = `${eventTitle}: ${actualValue} ⬇️ (תחזית: ${result.event.forecast}, ${percentDiff}%)`
-                } else {
-                  notificationBody = `${eventTitle}: ${actualValue} = (תחזית: ${result.event.forecast})`
-                }
-              }
-            }
-            
-            // הוספת הודעה לכל token
-            for (const tokens of userTokens.values()) {
-              for (const token of tokens) {
-                messages.push({
-                  to: token,
-                  sound: 'default',
-                  title: notificationTitle,
-                  body: notificationBody,
-                  data: {
-                    type: 'economic_result',
-                    eventId: result.event.id,
-                    eventTitle: eventTitle,
-                    actual: actualValue,
-                    forecast: result.event.forecast || null,
-                    date: result.event.date
-                  },
-                  priority: 'high',
-                  channelId: 'economic_events'
-                })
-              }
-            }
-          }
-          
-          // שליחת התראות דרך Expo Push API
-          if (messages.length > 0) {
-            try {
-              // 🔑 Access Token נדרש עבור production builds
-              const pushHeaders: Record<string, string> = {
-                'Accept': 'application/json',
-                'Accept-Encoding': 'gzip, deflate',
-                'Content-Type': 'application/json',
-              }
-              if (EXPO_ACCESS_TOKEN) {
-                pushHeaders['Authorization'] = `Bearer ${EXPO_ACCESS_TOKEN}`
-              }
-              
-              const pushResponse = await fetch(EXPO_PUSH_API_URL, {
-                method: 'POST',
-                headers: pushHeaders,
-                body: JSON.stringify(messages),
-              })
-              
-              if (pushResponse.ok) {
-                const pushResult = await pushResponse.json()
-                const successCount = pushResult.data?.filter((r: any) => r.status === 'ok').length || 0
-                notificationsSent = successCount
-                console.log(`📱 Sent ${successCount}/${messages.length} push notifications`)
-              } else {
-                console.error('❌ Failed to send push notifications:', await pushResponse.text())
-              }
-            } catch (pushError) {
-              console.error('❌ Error sending push notifications:', pushError)
-            }
-          }
-        }
-      }
+      console.log(`📱 ${newResults.length} new results — notifications queued via DB trigger`);
     }
     
     // סיכום סטטיסטיקות

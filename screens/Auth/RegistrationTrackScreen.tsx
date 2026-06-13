@@ -16,6 +16,7 @@ import { useRegistration } from '../../context/RegistrationContext';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const { width, height } = Dimensions.get('window');
 
@@ -143,7 +144,10 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
           {/* Back */}
           <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                navigation.goBack();
+              }}
               activeOpacity={0.75}
               style={{
                 width: 40,
@@ -199,7 +203,10 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
 
               return (
                 <TouchableOpacity
-                  onPress={() => setSelectedTrack(item.id)}
+                  onPress={() => {
+                    if (selectedTrack !== item.id) void HapticFeedback.selection();
+                    setSelectedTrack(item.id);
+                  }}
                   activeOpacity={0.8}
                   style={{
                     borderRadius: 20,
@@ -341,7 +348,7 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
 
                     {/* Features */}
                     <View style={{ gap: 7 }}>
-                      {item.features.slice(0, 5).map((feature, i) => (
+                      {item.features.map((feature, i) => (
                         <View
                           key={i}
                           style={{ flexDirection: 'row', alignItems: 'center' }}
@@ -364,19 +371,6 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
                           </Text>
                         </View>
                       ))}
-                      {item.features.length > 5 && (
-                        <Text
-                          style={{
-                            color: DesignTokens.colors.primary.main,
-                            fontSize: 12,
-                            textAlign: 'right',
-                            fontWeight: '600',
-                            marginTop: 2,
-                          }}
-                        >
-                          + עוד {item.features.length - 5} יתרונות
-                        </Text>
-                      )}
                     </View>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -404,7 +398,10 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
               }}
             >
               <TouchableOpacity
-                onPress={handleNext}
+                onPress={() => {
+                  void HapticFeedback.medium();
+                  handleNext();
+                }}
                 disabled={!selectedTrack}
                 activeOpacity={0.85}
                 style={{ paddingVertical: 17, alignItems: 'center' }}

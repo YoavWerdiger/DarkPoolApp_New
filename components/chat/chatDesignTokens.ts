@@ -38,3 +38,21 @@ export const chatGlassCardOutline = {
   borderWidth: 1,
   borderColor: chatPalette.glassBorder,
 } as const;
+
+/**
+ * מסכי צ'אט רצים תחת NavigationContainer ב-LTR (מגירה).
+ * עוטף RTL + row (לא row-reverse) — כמו darkPoolLayout / TradeListCard.
+ */
+export const chatRtlRoot = {
+  flex: 1,
+  direction: 'rtl',
+} as const;
+
+export const chatRtlRow = {
+  flexDirection: 'row',
+} as const;
+
+export const chatRtlText = {
+  writingDirection: 'rtl' as const,
+  textAlign: 'left' as const,
+};

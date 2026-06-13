@@ -19,6 +19,9 @@ export const validateCardcomConfig = () => {
   return true;
 };
 
+/** תשלום מנוי — פעיל רק כש-Cardcom מוגדר (סולק) */
+export const isSubscriptionCheckoutEnabled = () => validateCardcomConfig();
+
 // Subscription Plans Configuration - מסלולים כמו בדף הנחיתה darkpool.site
 export const SUBSCRIPTION_PLANS = {
   // מסלול חינמי

@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '../../context/RegistrationContext';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const { width, height } = Dimensions.get('window');
 
@@ -70,10 +71,15 @@ const Chip: React.FC<ChipProps> = ({ label, selected, onPress }) => {
   const pressOut = () =>
     Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true, easing: Easing.out(Easing.quad) }).start();
 
+  const handlePress = () => {
+    void HapticFeedback.selection();
+    onPress();
+  };
+
   return (
     <Animated.View style={{ transform: [{ scale }], margin: 4 }}>
       <TouchableOpacity
-        onPress={onPress}
+        onPress={handlePress}
         onPressIn={pressIn}
         onPressOut={pressOut}
         activeOpacity={1}
@@ -230,7 +236,10 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
             {/* Back button */}
             <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
               <TouchableOpacity
-                onPress={() => navigation.goBack()}
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  navigation.goBack();
+                }}
                 activeOpacity={0.75}
                 style={{
                   width: 40,
@@ -391,7 +400,10 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={handleNext}
+                    onPress={() => {
+                      void HapticFeedback.medium();
+                      handleNext();
+                    }}
                     activeOpacity={0.85}
                     style={{ paddingVertical: 17, alignItems: 'center' }}
                   >

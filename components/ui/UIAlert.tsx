@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export type UIAlertType = 'info' | 'success' | 'warning' | 'error';
 
@@ -84,6 +85,13 @@ const UIAlert: React.FC<UIAlertProps> = ({
   const typeConfig = getTypeConfig();
 
   const handleButtonPress = (button: UIAlertButton) => {
+    if (button.style === 'destructive') {
+      void HapticFeedback.warning();
+    } else if (button.style === 'cancel') {
+      void HapticFeedback.selection();
+    } else {
+      void HapticFeedback.impactLight();
+    }
     if (button.onPress) {
       button.onPress();
     }

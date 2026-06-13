@@ -10,6 +10,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const PREVIEW_SIZE = 280;
 
@@ -83,7 +84,10 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
       currentStep={2}
       totalSteps={5}
       showBack={true}
-      onBack={() => navigation.goBack()}
+      onBack={() => {
+        void HapticFeedback.impactLight();
+        navigation.goBack();
+      }}
     >
       {/* Avatar */}
       <View style={{ alignItems: 'center', marginBottom: 44 }}>
@@ -136,7 +140,10 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
           {/* Camera badge */}
           {!loading && (
             <TouchableOpacity
-              onPress={pickImageFromGallery}
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                pickImageFromGallery();
+              }}
               activeOpacity={0.85}
               style={{
                 position: 'absolute',
@@ -166,7 +173,10 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
         {/* Source buttons */}
         <View style={{ flexDirection: 'row', gap: 12 }}>
           <TouchableOpacity
-            onPress={pickImageFromGallery}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              pickImageFromGallery();
+            }}
             disabled={loading}
             activeOpacity={0.75}
             style={{
@@ -186,7 +196,10 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={takePhoto}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              takePhoto();
+            }}
             disabled={loading}
             activeOpacity={0.75}
             style={{

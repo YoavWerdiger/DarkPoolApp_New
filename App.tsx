@@ -192,9 +192,27 @@ function AppContent() {
             screen: 'News',
             params: { articleId: data.articleId, tab: 'breaking' }
           });
-        } else if (notificationType === 'economic_calendar') {
+        } else if (
+          notificationType === 'economic_calendar' ||
+          notificationType === 'economic_result'
+        ) {
           rootNavigationRef.navigate('Main', {
             screen: 'NewsCalendar',
+          });
+        } else if (
+          notificationType === 'earnings' ||
+          notificationType === 'earnings_results'
+        ) {
+          rootNavigationRef.navigate('Main', {
+            screen: 'NewsEarnings',
+          });
+        } else if (data?.kind === 'dark_pool_signal' && data?.ticker) {
+          rootNavigationRef.navigate('Main', {
+            screen: 'DarkPool',
+            params: {
+              screen: 'DarkPoolTicker',
+              params: { ticker: String(data.ticker), tab: 'darkpool' },
+            },
           });
         } else {
           rootNavigationRef.navigate('Main');

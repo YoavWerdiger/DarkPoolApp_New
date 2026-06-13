@@ -1,11 +1,11 @@
 -- ============================================================
--- שיפור טריגר התראות חדשות מתפרצות
+-- טריגר התראות Push לחדשות (app_news_clean)
 -- ============================================================
--- שיפורים:
---   ✅ כותרת מקצועית: שם המקור (Benzinga, Reuters וכו')
---   ✅ גוף: label/title של המאמר (כותרת הכתבה)
---   ✅ תמונה: image_url מועבר ל-process-pending-notifications
---   ✅ data מלא: type, articleId, source, imageUrl
+-- מה ב-Push:
+--   ✅ כותרת = NEW.title (כותרת הכתבה)
+--   ✅ גוף   = NEW.content (תוכן הכתבה, מקוצץ ל-200 תווים)
+--   ✅ תמונה = NEW.image_url (מועבר ב-data.imageUrl ל-Edge Function)
+--   ✅ data: type, articleId, source, imageUrl
 -- ============================================================
 
 DROP FUNCTION IF EXISTS send_news_notification_immediately() CASCADE;
@@ -19,10 +19,10 @@ DECLARE
   supabase_service_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTIwNzM1MSwiZXhwIjoyMDY2NzgzMzUxfQ.waqI1C-t6gthSCf8jP1v_gFRRVhhvaIcQG0effqsA1A';
   http_response_id    BIGINT;
 BEGIN
-  -- כותרת: כותרת החדשה עצמה
+  -- כותרת: title (modern) או label (legacy)
   notification_title := COALESCE(
-    NULLIF(TRIM(NEW.label), ''),
     NULLIF(TRIM(NEW.title), ''),
+    NULLIF(TRIM(NEW.label), ''),
     'DarkPool'
   );
 
@@ -30,10 +30,12 @@ BEGIN
     notification_title := LEFT(notification_title, 97) || '...';
   END IF;
 
-  -- גוף: התוכן המלא של החדשה
+  -- גוף: content / text / text_content (legacy)
   notification_body := COALESCE(
-    NULLIF(TRIM(NEW.summary), ''),
     NULLIF(TRIM(NEW.content), ''),
+    NULLIF(TRIM(NEW.text), ''),
+    NULLIF(TRIM(NEW.text_content), ''),
+    NULLIF(TRIM(NEW.label), ''),
     ''
   );
 
@@ -53,7 +55,7 @@ BEGIN
       'type',      'news',
       'articleId', NEW.id::TEXT,
       'source',    COALESCE(NEW.source, ''),
-      'imageUrl',  COALESCE(NEW.image_url, '')
+      'imageUrl',  COALESCE(NEW.image_url, NEW.img, '')
     ),
     'news',
     NEW.id::TEXT
@@ -89,7 +91,7 @@ EXCEPTION
         'type',      'news',
         'articleId', NEW.id::TEXT,
         'source',    COALESCE(NEW.source, ''),
-        'imageUrl',  COALESCE(NEW.image_url, '')
+        'imageUrl',  COALESCE(NEW.image_url, NEW.img, '')
       ),
       'news',
       NEW.id::TEXT
@@ -114,7 +116,7 @@ CREATE TRIGGER on_new_news_article
 
 -- ============================================================
 -- דוגמת פלט:
---   כותרת: "📰 Benzinga"
---   גוף:   "Apple reports record Q1 earnings, beating estimates..."
+--   כותרת: "Apple reports record Q1 earnings"  (= NEW.title)
+--   גוף:   "Apple Inc. announced today that..." (= NEW.content)
 --   data:  { type: 'news', articleId: 'xxx', source: 'Benzinga', imageUrl: 'https://...' }
 -- ============================================================

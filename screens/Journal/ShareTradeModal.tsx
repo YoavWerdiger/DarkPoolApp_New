@@ -9,6 +9,7 @@ import type { Trade } from './tradeTypes';
 import { getChatGroups } from '../../services/chat/chatGroupService';
 import { sendChatMessage } from '../../services/chat/chatMessageService';
 import { ChatMessageType } from '../../types/chat.types';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface ShareTradeModalProps {
   trade: Trade | null;
@@ -129,7 +130,13 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>שתף טרייד לצ׳אט</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+          <TouchableOpacity
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              onClose();
+            }}
+            style={styles.closeButton}
+          >
             <Ionicons name="close" size={24} color={DesignTokens.colors.text.primary} />
           </TouchableOpacity>
         </View>
@@ -184,7 +191,10 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.groupItem}
-                onPress={() => shareToGroup(item.id, item.name)}
+                onPress={() => {
+                  void HapticFeedback.medium();
+                  shareToGroup(item.id, item.name);
+                }}
               >
                 {item.avatar_url ? (
                   <Image source={{ uri: item.avatar_url }} style={styles.groupAvatar} />

@@ -7,8 +7,6 @@ import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from './DayNavBlurButton';
 /** כמו מסך שווקים (בית) / רשימת צ׳אטים — מרווח אופקי לכותרת ול־section */
 export const MAIN_SCREEN_HEADER_HP = 20;
 
-const HEADER_SIDE = 72;
-
 export type MainDrawerScreenHeaderProps = {
   title: string;
   /** כותרת משנה מתחת לכותרת (למשל מדד פחד במסך שווקים) */
@@ -21,6 +19,11 @@ export type MainDrawerScreenHeaderProps = {
   style?: ViewStyle;
   /** כפתור/אייקון בצד ימין (מיושר ל־minWidth כמו כפתור התפריט) */
   rightAccessory?: React.ReactNode;
+  /**
+   * מסך בתוך עץ `direction: 'rtl'` (למשל Dark Pool) — האפל ב-LTR גלובלי,
+   * אז הכותרת משתמשת ב-row במקום row-reverse.
+   */
+  inRtlTree?: boolean;
 };
 
 /**
@@ -34,14 +37,16 @@ export function MainDrawerScreenHeader({
   sectionContainerStyle,
   style,
   rightAccessory,
+  inRtlTree = false,
 }: MainDrawerScreenHeaderProps) {
   const tokens = useDesignTokens();
-  const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const styles = useMemo(() => createStyles(tokens, inRtlTree), [tokens, inRtlTree]);
+  const row = inRtlTree ? styles.rowLtrInRtlTree : styles.rowAppLtr;
 
   return (
     <View style={style}>
-      <View style={styles.appHeader}>
-        <View style={styles.appHeaderActions}>
+      <View style={[styles.appHeader, row]}>
+        <View style={styles.appHeaderActionsMenu}>
           <DayNavBlurButton
             onPress={onMenuPress}
             glassIntensity="subtle"
@@ -61,8 +66,8 @@ export function MainDrawerScreenHeader({
             </Text>
           ) : null}
         </View>
-        <View style={styles.appHeaderActions} pointerEvents="box-none">
-          {rightAccessory}
+        <View style={styles.appHeaderActionsEnd} pointerEvents="box-none">
+          {rightAccessory ?? <View style={styles.headerActionSpacer} />}
         </View>
       </View>
       {section != null ? (
@@ -72,18 +77,42 @@ export function MainDrawerScreenHeader({
   );
 }
 
-function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
+function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boolean) {
+  const menuEdgeMargin = inRtlTree
+    ? { marginLeft: MAIN_SCREEN_HEADER_HP }
+    : { marginRight: MAIN_SCREEN_HEADER_HP };
+  const accessoryEdgeMargin = inRtlTree
+    ? { marginRight: MAIN_SCREEN_HEADER_HP }
+    : { marginLeft: MAIN_SCREEN_HEADER_HP };
+
   return StyleSheet.create({
-    appHeader: {
+    rowAppLtr: {
       flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
-      paddingVertical: 14,
     },
-    appHeaderActions: {
-      flexDirection: 'row-reverse',
+    rowLtrInRtlTree: {
+      flexDirection: 'row',
+    },
+    appHeader: {
       alignItems: 'center',
-      minWidth: HEADER_SIDE,
+      paddingVertical: 14,
+      gap: 8,
+    },
+    /** תפריט — מרווח נפרד מקצה המסך */
+    appHeaderActionsMenu: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...menuEdgeMargin,
+    },
+    /** צד נגדי (rightAccessory) — מרווח נפרד מהקצה השני */
+    appHeaderActionsEnd: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...accessoryEdgeMargin,
+    },
+    headerActionSpacer: {
+      width: DRAWER_MENU_BUTTON_SIZE,
+      height: DRAWER_MENU_BUTTON_SIZE,
     },
     titleBlock: {
       flex: 1,

@@ -28,6 +28,7 @@ import type {
 import {
   DARK_POOL_FREE_DELAY_MINUTES,
   DARK_POOL_FREE_TOP_N,
+  DARK_POOL_INSIDER_UW_ONLY,
 } from '../../types/darkpool.types';
 import { logger } from '../../utils/logger';
 
@@ -225,9 +226,9 @@ export async function getTickerInsiderBuys(
 }
 
 // ---------------------------------------------------------------------------
-// Insider trade feed (Form4Api)
-//   מציג את ה־"LATEST TRADES" — רכישות/מכירות בכירים שזרמו דרך
-//   sync-insider-buys (Form4Api). כשהמשתמש סומן watchlist, יש סינון
+// Insider trade feed (Unusual Whales + אופציונלי Form4)
+//   מציג את ה־"LATEST TRADES" — רכישות בכירים מ-sync-insider-buys.
+//   כשהמשתמש סומן watchlist, יש סינון
 //   לטיקרים שבעבירה (Following).
 // ---------------------------------------------------------------------------
 
@@ -260,6 +261,10 @@ export async function listRecentInsiderTrades(
     ? params.transactionTypes
     : (['P'] as InsiderBuyRow['transaction_type'][]);
   q = q.in('transaction_type', types);
+
+  if (DARK_POOL_INSIDER_UW_ONLY) {
+    q = q.eq('source', 'unusualwhales');
+  }
 
   if (!params.isPremium) {
     q = q.lte('filed_at', buildDelayedCutoff());

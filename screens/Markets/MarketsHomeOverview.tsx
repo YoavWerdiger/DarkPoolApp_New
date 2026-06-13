@@ -1,37 +1,41 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import FearAndGreedCard from '../../components/News/FearAndGreedCard';
+import FearAndGreedMiniCard from '../../components/News/FearAndGreedMiniCard';
 import { MarketsIndicesCard } from './tabs/MarketsIndicesTab';
+import { MarketsTopMoversCard } from './components/MarketsTopMoversCard';
 
 /**
- * סקירת שווקים — מדדים (TradingView) ואחריהם כרטיס מדד הפחד והתאווה עם כותרת בכרטיס.
+ * סקירת שווקים — Fear & Greed מינימליסטי בראש, גרף מדדים וחוזים גבוה,
+ * ולסיום כרטיס Top Gainers / Losers / Most Active.
  */
 export function MarketsHomeOverview() {
   const tokens = useDesignTokens();
   const hp = tokens.layout.screenPadding;
 
   return (
-    <ScrollView
-      style={styles.flex}
-      contentContainerStyle={{
-        paddingHorizontal: hp,
-        paddingTop: tokens.spacing.sm,
-        paddingBottom: tokens.spacing['2xl'],
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      <MarketsIndicesCard />
+    <View style={styles.flex}>
+      <ScrollView
+        style={styles.flex}
+        contentContainerStyle={{
+          paddingHorizontal: hp,
+          paddingTop: tokens.spacing.sm,
+          paddingBottom: tokens.spacing['2xl'],
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Fear & Greed — מינימליסטי, בראש העמוד */}
+        <View style={{ marginBottom: tokens.spacing.md }}>
+          <FearAndGreedMiniCard />
+        </View>
 
-      <View style={{ marginTop: tokens.spacing.md, marginBottom: tokens.spacing.sm }}>
-        <FearAndGreedCard
-          initialExpanded
-          disableToggle
-          fullWidth
-          cardPadding="none"
-        />
-      </View>
-    </ScrollView>
+        {/* Top Movers — מי זז היום בשוק (Gainers / Losers / Most Active) */}
+        <MarketsTopMoversCard />
+
+        {/* מדדים וחוזים עתידיים — גרף גבוה יותר */}
+        <MarketsIndicesCard />
+      </ScrollView>
+    </View>
   );
 }
 

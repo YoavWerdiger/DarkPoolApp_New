@@ -3,7 +3,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
@@ -12,10 +12,22 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
-import { AcademyScreenHeader, CourseCard } from '../../components/learning';
+import {
+  AcademyScreenHeader,
+  CourseCard,
+  AcademyYouTubeCTA,
+} from '../../components/learning';
+import { ACADEMY_CARD_HP } from '../../components/learning/academyCardLayout';
+import {
+  getAcademyCourseTier,
+  isNativeLearningCourse,
+  DAVID_TRAINING_COURSE_ID,
+} from '../../components/learning/academyCourses';
 import { ScreenChrome, MAIN_SCREEN_HEADER_HP } from '../../components/ui';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { MarketsEmbedSwitcher } from '../Markets/components/MarketsEmbedSwitcher';
+import type { SegmentedOption } from '../Markets/components/MarketsSegmentedControl';
 import { CourseWithProgress } from '../../types/learning';
 import { courseService } from '../../services/courseService';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
@@ -25,12 +37,15 @@ import UICard from '../../components/ui/UICard';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
+type TabId = 'free' | 'premium';
+
 export const CoursesScreen: React.FC = () => {
   const navigation = useNavigation();
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>('free');
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -43,25 +58,38 @@ export const CoursesScreen: React.FC = () => {
 
   const { data: coursesData, isLoading, error, refetch } = useCourses();
   const courses = coursesData?.courses ?? [];
-  const courseCount = courses.length;
 
   useEffect(() => {
     let isMounted = true;
     const initializeCourses = async () => {
       try {
-        const davidCourse = await courseService.getCourseById('david-training-course');
+        const [davidCourse, whalesCourse] = await Promise.all([
+          courseService.getCourseById(DAVID_TRAINING_COURSE_ID),
+          courseService.getCourseById('whales-course-1'),
+        ]);
         if (!isMounted) return;
+
+        let needsRefetch = false;
         if (!davidCourse) {
           try {
             const created = await courseService.createDavidTrainingCourse();
-            if (created && isMounted) {
-              setTimeout(() => {
-                if (isMounted) refetch();
-              }, 1000);
-            }
+            if (created) needsRefetch = true;
           } catch {
             /* noop */
           }
+        }
+        if (!whalesCourse) {
+          try {
+            const created = await courseService.createWhalesCourse();
+            if (created) needsRefetch = true;
+          } catch {
+            /* noop */
+          }
+        }
+        if (needsRefetch && isMounted) {
+          setTimeout(() => {
+            if (isMounted) refetch();
+          }, 1000);
         }
       } catch {
         /* noop */
@@ -87,13 +115,7 @@ export const CoursesScreen: React.FC = () => {
 
   const handleCoursePress = useCallback(
     (course: CourseWithProgress) => {
-      if (
-        course.slug === 'whales-course' ||
-        course.id === 'whales-course-1' ||
-        course.title === 'קורס הלוויתנים' ||
-        course.id === 'david-training-course' ||
-        course.title === 'הכשרה של דוד אריאל'
-      ) {
+      if (isNativeLearningCourse(course)) {
         (navigation as { navigate: (n: string, p?: object) => void }).navigate('LearningScreen', {
           courseId: course.id,
         });
@@ -108,7 +130,7 @@ export const CoursesScreen: React.FC = () => {
 
   const handleEnroll = useCallback(
     async (course: CourseWithProgress) => {
-      if (course.access === 'paid') {
+      if (getAcademyCourseTier(course as CourseWithProgress & { price?: number }) === 'premium') {
         legacyAlert('קורס בתשלום', 'קורס זה דורש תשלום. התכונה תהיה זמינה בקרוב.', [{ text: 'אישור' }]);
         return;
       }
@@ -123,41 +145,42 @@ export const CoursesScreen: React.FC = () => {
     [enrollMutation]
   );
 
-  const renderCourse = useCallback(
-    ({ item }: { item: CourseWithProgress }) => (
-      <View style={styles.courseRow}>
-        <CourseCard
-          course={item}
-          onPress={handleCoursePress}
-          onEnroll={item.enrollment ? undefined : handleEnroll}
-          hideBadges={true}
-        />
-      </View>
-    ),
-    [handleCoursePress, handleEnroll, styles]
+  const freeCourses = useMemo(
+    () =>
+      courses.filter(
+        (c) => getAcademyCourseTier(c as CourseWithProgress & { price?: number }) === 'free'
+      ),
+    [courses]
+  );
+  const premiumCourses = useMemo(
+    () =>
+      courses.filter(
+        (c) => getAcademyCourseTier(c as CourseWithProgress & { price?: number }) === 'premium'
+      ),
+    [courses]
+  );
+  const filteredCourses = activeTab === 'free' ? freeCourses : premiumCourses;
+  const featuredCourse = filteredCourses[0] ?? null;
+
+  const academySegments: SegmentedOption<TabId>[] = useMemo(
+    () => [
+      { id: 'free', label: `חינמי · ${freeCourses.length}` },
+      { id: 'premium', label: `פרמיום · ${premiumCourses.length}` },
+    ],
+    [freeCourses.length, premiumCourses.length]
   );
 
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <View style={[styles.emptyIconWrap, { borderColor: DesignTokens.colors.border.primary }]}>
-        <Ionicons name="library-outline" size={40} color={DesignTokens.colors.text.tertiary} />
-      </View>
-      <Text style={styles.emptyStateTitle}>לא נמצאו קורסים</Text>
-      <Text style={styles.emptyStateSubtitle}>משוך לרענון או נסה שוב מאוחר יותר</Text>
-    </View>
-  );
-
+  // Section title + total count are intentionally omitted: the free/premium
+  // tabs below already show per-category counts, so duplicating "קורסים N"
+  // in the header would just be visual noise.
   const listHeader = useMemo(
     () => (
       <AcademyScreenHeader
         onMenuPress={openMainDrawer}
         title="אקדמיה"
-        sectionTitle="קורסים זמינים"
-        sectionCount={courseCount}
-        sectionCountPending={isLoading}
       />
     ),
-    [openMainDrawer, isLoading, courseCount]
+    [openMainDrawer]
   );
 
   if (error) {
@@ -191,32 +214,60 @@ export const CoursesScreen: React.FC = () => {
     <ScreenChrome withBrandWatermark>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.flex} edges={['top']}>
-        <View style={[styles.flex, { marginBottom: mainTabsHeight - 12 }]}>
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={{ paddingBottom: mainTabsHeight + 16 }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={DesignTokens.colors.primary.main}
+            />
+          }
+        >
+          {listHeader}
+
           {isLoading && courses.length === 0 ? (
             <View style={styles.loadingWrap}>
-              {listHeader}
               <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
               <Text style={[styles.loadingHint, { color: DesignTokens.colors.text.secondary }]}>טוען קורסים…</Text>
             </View>
           ) : (
-            <FlatList
-              data={courses}
-              renderItem={renderCourse}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContainer}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handleRefresh}
-                  tintColor={DesignTokens.colors.primary.main}
+            <>
+              <View style={styles.tabBarWrap}>
+                <MarketsEmbedSwitcher
+                  options={academySegments}
+                  value={activeTab}
+                  onChange={setActiveTab}
+                  accessibilityGroupLabel="אקדמיה"
                 />
-              }
-              ListEmptyComponent={!isLoading ? renderEmptyState : null}
-              showsVerticalScrollIndicator={false}
-              ListHeaderComponent={listHeader}
-            />
+              </View>
+
+              <View style={styles.academyCardsSection}>
+                {!featuredCourse ? (
+                  <View style={styles.emptyState}>
+                    <View style={[styles.emptyIconWrap, { borderColor: DesignTokens.colors.border.primary }]}>
+                      <Ionicons name="library-outline" size={40} color={DesignTokens.colors.text.tertiary} />
+                    </View>
+                    <Text style={styles.emptyStateTitle}>
+                      {activeTab === 'free' ? 'אין קורסים חינמיים' : 'אין קורסי פרמיום'}
+                    </Text>
+                    <Text style={styles.emptyStateSubtitle}>נסה שוב מאוחר יותר</Text>
+                  </View>
+                ) : (
+                  <CourseCard
+                    course={featuredCourse}
+                    onPress={handleCoursePress}
+                    onEnroll={featuredCourse.enrollment ? undefined : handleEnroll}
+                  />
+                )}
+
+                <AcademyYouTubeCTA />
+              </View>
+            </>
           )}
-        </View>
+        </ScrollView>
       </RNSafeAreaView>
     </ScreenChrome>
   );
@@ -227,9 +278,16 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     flex: {
       flex: 1,
     },
-    listContainer: {
-      paddingBottom: tokens.spacing['3xl'],
+    academyCardsSection: {
+      width: '100%',
+      paddingHorizontal: ACADEMY_CARD_HP,
+      gap: tokens.spacing.md,
     },
+    tabBarWrap: {
+      marginBottom: tokens.spacing.md,
+      marginHorizontal: MAIN_SCREEN_HEADER_HP,
+    },
+    // legacy courseRow kept for TS
     courseRow: {
       paddingHorizontal: MAIN_SCREEN_HEADER_HP,
     },

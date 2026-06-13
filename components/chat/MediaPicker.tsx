@@ -6,7 +6,7 @@ import { MediaMetadata } from '../../services/mediaService';
 import * as ImagePicker from 'expo-image-picker';
 import { logger } from '../../utils/logger';
 import * as DocumentPicker from 'expo-document-picker';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { ChatBottomSheet, ChatSheetTitle } from './ChatBottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
@@ -259,17 +259,9 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   }), [DesignTokens]);
 
   return (
-    <BottomSheet
-      isOpen={visible}
-      onClose={onClose}
-      snapPoints={[0.38]}
-      showHandle={true}
-      enablePanDownToClose={true}
-      useModal={true}
-      backdropOpacity={0.15}
-    >
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.38]}>
       <View style={styles.container}>
-        <Text style={styles.title}>שתף</Text>
+        <ChatSheetTitle title="שתף" />
         <View style={styles.optionsGrid}>
           {mediaOptions.map((option) => (
             <View key={option.action} style={styles.optionItem}>
@@ -292,6 +284,6 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
           ))}
         </View>
       </View>
-    </BottomSheet>
+    </ChatBottomSheet>
   );
 }

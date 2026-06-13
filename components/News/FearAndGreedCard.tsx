@@ -12,7 +12,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { fearAndGreedService, FearAndGreedData } from '../../services/fearAndGreedService';
+import {
+  fearAndGreedService,
+  FearAndGreedData,
+  FEAR_GREED_GAUGE_SEGMENTS,
+} from '../../services/fearAndGreedService';
 import UICard from '../ui/UICard';
 
 interface FearAndGreedCardProps {
@@ -63,10 +67,14 @@ export default function FearAndGreedCard({
   /** קואורדינטות לוגיות של הגייג' (viewBox) — הרינדור מוקטן לרוחב המסך כדי שלא ייחתך עם overflow:hidden */
   const LOGICAL_GAUGE = 380;
   const hp = DesignTokens.layout?.screenPadding ?? DesignTokens.spacing.lg;
-  const gaugeViewportW = Math.min(
-    LOGICAL_GAUGE,
-    Math.max(220, windowWidth - (fullWidth ? hp * 2 + 12 : hp * 2 + DesignTokens.spacing.lg * 2 + 12))
+  // The card is now split horizontally: gauge column (~58%) on the right,
+  // history column (~42%) on the left. We size the gauge to fit its column,
+  // not the whole card width.
+  const cardInnerWidth = Math.max(
+    220,
+    windowWidth - (fullWidth ? hp * 2 + 12 : hp * 2 + DesignTokens.spacing.lg * 2 + 12)
   );
+  const gaugeViewportW = Math.min(LOGICAL_GAUGE, Math.round(cardInnerWidth * 0.58) - 12);
 
   const styles = useMemo(() => {
     const headerJustifyContent: ViewStyle['justifyContent'] = disableToggle ? 'center' : 'space-between';
@@ -87,7 +95,7 @@ export default function FearAndGreedCard({
         flexDirection: 'row' as const,
         alignItems: 'center' as const,
         justifyContent: headerJustifyContent,
-        marginBottom: -60,
+        marginBottom: DesignTokens.spacing.sm,
         zIndex: 10,
         paddingHorizontal: DesignTokens.spacing.sm,
       },
@@ -164,7 +172,7 @@ export default function FearAndGreedCard({
       gaugeContainer: {
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
-        marginTop: -DesignTokens.spacing.base,
+        marginTop: 0,
         marginBottom: 0,
         position: 'relative' as const,
         width: '100%' as const,
@@ -207,18 +215,18 @@ export default function FearAndGreedCard({
         paddingVertical: DesignTokens.spacing.xs,
       },
       currentValueText: {
-        fontSize: DesignTokens.typography.fontSize['3xl'] * 1.2,
+        fontSize: DesignTokens.typography.fontSize['3xl'],
         fontWeight: DesignTokens.typography.fontWeight.bold as any,
         fontFamily: DesignTokens.typography.fontFamily.assistant?.[0] || 'System',
         textAlign: 'center' as const,
-        lineHeight: DesignTokens.typography.fontSize['3xl'] * 1.2,
+        lineHeight: DesignTokens.typography.fontSize['3xl'] * 1.05,
       },
       currentValueDescription: {
-        fontSize: DesignTokens.typography.fontSize.base,
+        fontSize: DesignTokens.typography.fontSize.sm,
         fontWeight: DesignTokens.typography.fontWeight.medium as any,
         textAlign: 'center' as const,
-        marginTop: DesignTokens.spacing.xs,
-        lineHeight: DesignTokens.typography.fontSize.base * 1.2,
+        marginTop: 2,
+        lineHeight: DesignTokens.typography.fontSize.sm * 1.2,
       },
       historicalDataContainer: {
         marginTop: 0,
@@ -283,8 +291,11 @@ export default function FearAndGreedCard({
   }, []);
 
   const loadFearAndGreedIndex = async () => {
+    // אם כבר יש לנו נתון, לא נראה את ספינר ה"טעינה" — נטען ברקע ונחליף
+    // את הערכים רק אם הצלחנו. זה מונע "הבזק" של מצב טעינה ושל ערך 50 דיפולטי.
+    const hadDataBefore = data != null;
     try {
-      setLoading(true);
+      if (!hadDataBefore) setLoading(true);
       setError(null);
       // שליפת כל הנתונים כולל היסטוריים
       const fullData = await fearAndGreedService.getFearAndGreedIndex();
@@ -296,15 +307,12 @@ export default function FearAndGreedCard({
         oneYearAgo: fullData.fgi.oneYearAgo,
       });
     } catch (err: any) {
-      setError(err.message || 'שגיאה בטעינת המדד');
-      // נסה לטעון רק את הערך הנוכחי (או ברירת מחדל) — ואז להציג כרטיס מלא, לא מסך שגיאה קבוע
-      try {
-        const currentValue = await fearAndGreedService.getCurrentValue();
-        setData(currentValue);
+      // אם הייתה לנו תצוגה קודמת תקינה — נשאיר אותה ולא נראה הודעת שגיאה,
+      // אבל גם **לא** נציג ערך 50 מזויף.
+      if (!hadDataBefore) {
+        setError(err?.message || 'שגיאה בטעינת המדד');
+        setData(null);
         setHistoricalData(null);
-        setError(null);
-      } catch {
-        /* נשארים עם error מהקריאה המלאה */
       }
     } finally {
       setLoading(false);
@@ -421,12 +429,11 @@ export default function FearAndGreedCard({
   const description = fearAndGreedService.getValueDescription(value);
   const color = fearAndGreedService.getValueColor(value);
   const icon = fearAndGreedService.getValueIcon(value);
-
   // פרמטרים לגייג' חצי עגול - מותאם לגודל (הוגדל)
   const centerX = LOGICAL_GAUGE / 2;
   const centerY = LOGICAL_GAUGE * 0.88; // מיקום נמוך יותר ליצירת חצי עיגול
   const radius = 100; // הוגדל
-  const strokeWidth = 28; // עובי הקשת (הוגדל)
+  const strokeWidth = 32;
   const startAngle = -180; // מתחיל משמאל
   const endAngle = 0; // מסתיים בימין
   const totalAngle = 180; // 180 מעלות
@@ -471,12 +478,7 @@ export default function FearAndGreedCard({
 
   // קטעים של הגייג' - עם הפרדה מדויקת (בלי חופפים)
   // כל קטע מקבל 45 מעלות בדיוק
-  const segments = [
-    { start: -180, end: -135, color: '#FF0000', label: 'פחד קיצוני' }, // 0-25
-    { start: -135, end: -90, color: '#FF8C00', label: 'פחד' }, // 25-50
-    { start: -90, end: -45, color: '#FFD700', label: 'ניטרלי' }, // 50-75
-    { start: -45, end: 0, color: '#00FF00', label: 'תאווה' }, // 75-100
-  ];
+  const segments = FEAR_GREED_GAUGE_SEGMENTS;
 
   const CardContent = (
     <View style={styles.container}>
@@ -497,10 +499,16 @@ export default function FearAndGreedCard({
             </Text>
           </View>
         ) : (
-          <>
-
-            {/* גייג' במרכז */}
-            <View style={{ alignItems: 'center' }}>
+          <View
+            style={{
+              flexDirection: 'row-reverse',
+              alignItems: 'stretch',
+              gap: DesignTokens.spacing.sm,
+              paddingHorizontal: DesignTokens.spacing.sm,
+            }}
+          >
+            {/* — Right column: gauge + value — */}
+            <View style={{ flex: 0.58, alignItems: 'center', justifyContent: 'flex-start' }}>
               <View style={styles.gaugeContainer}>
                 <Svg
                   width={gaugeViewportW}
@@ -515,13 +523,12 @@ export default function FearAndGreedCard({
                     strokeWidth={strokeWidth}
                     fill="transparent"
                     strokeLinecap="round"
-                    opacity={0.2}
+                    opacity={0.12}
                   />
 
                   {/* קשתות צבעוניות - עם הפרדות קטנות למניעת גלישה */}
                   {segments.map((segment, index) => {
-                    // הפרדה קטנה מאוד (0.3 מעלות) למניעת גלישה אבל בלי רווח גדול
-                    const gap = 0.3;
+                    const gap = 0.4;
                     const adjustedStart = segment.start + gap;
                     const adjustedEnd = segment.end - gap;
 
@@ -583,34 +590,36 @@ export default function FearAndGreedCard({
                     );
                   })}
 
-                  {/* מחט - מודרנית עם קצה מעוגל */}
+                  {/* מחט — בצבע האזור הנוכחי */}
                   <Line
                     x1={centerX}
                     y1={centerY}
                     x2={needleEndX}
                     y2={needleEndY}
-                    stroke="#FFFFFF"
-                    strokeWidth={4}
+                    stroke={color}
+                    strokeWidth={5}
                     strokeLinecap="round"
                   />
 
-                  {/* נקודת מרכז - מודרנית */}
+                  {/* נקודת מרכז */}
                   <Circle
                     cx={centerX}
                     cy={centerY}
                     r={10}
-                    fill="#FFFFFF"
+                    fill={DesignTokens.colors.background.secondary}
+                    stroke={color}
+                    strokeWidth={2}
                   />
                   <Circle
                     cx={centerX}
                     cy={centerY}
-                    r={6}
-                    fill={DesignTokens.colors.background.secondary}
+                    r={5}
+                    fill={color}
                   />
                 </Svg>
               </View>
 
-              {/* ערך עדכני - מתחת לגייג' */}
+              {/* ערך נוכחי — מתחת לגייג' */}
               <View style={styles.currentValueContainer}>
                 <Text style={[styles.currentValueText, { color }]}>
                   {value}
@@ -619,126 +628,132 @@ export default function FearAndGreedCard({
                   {description}
                 </Text>
               </View>
+
+              {/* Timestamp under the gauge column */}
+              {data.timestamp && (
+                <Text
+                  style={[
+                    styles.description,
+                    {
+                      fontSize: DesignTokens.typography.fontSize.xs,
+                      marginTop: DesignTokens.spacing.xs,
+                      textAlign: 'center',
+                      color: DesignTokens.colors.text.tertiary,
+                    },
+                  ]}
+                >
+                  עודכן:{' '}
+                  {new Date(data.timestamp * 1000).toLocaleString('he-IL', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              )}
             </View>
 
-            {/* תוויות קטעים - אופקי ממורכז */}
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              flexWrap: 'wrap',
-              gap: DesignTokens.spacing.md,
-              marginBottom: DesignTokens.spacing.lg,
-              paddingHorizontal: DesignTokens.spacing.sm,
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF0000' }} />
-                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary }}>פחד קיצוני</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF8C00' }} />
-                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary }}>פחד</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FFD700' }} />
-                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary }}>ניטרלי</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#00FF00' }} />
-                <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary }}>תאווה</Text>
-              </View>
-            </View>
-
-            {/* היסטוריה - פרושה למטה */}
-            {historicalData && (
-              <View style={{
-                borderTopWidth: 1,
-                borderTopColor: DesignTokens.colors.border.primary,
-                paddingTop: DesignTokens.spacing.md,
-                marginTop: DesignTokens.spacing.sm,
-              }}>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.base,
+            {/* — Left column: history list — */}
+            <View
+              style={{
+                flex: 0.42,
+                justifyContent: 'flex-start',
+                paddingTop: DesignTokens.spacing.sm,
+                paddingRight: DesignTokens.spacing.xs,
+                borderRightWidth: 1,
+                borderRightColor: DesignTokens.colors.border.primary,
+                paddingLeft: DesignTokens.spacing.sm,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: DesignTokens.typography.fontSize.sm,
                   fontWeight: DesignTokens.typography.fontWeight.bold as any,
                   color: DesignTokens.colors.text.primary,
-                  textAlign: 'center',
-                  marginBottom: DesignTokens.spacing.md,
-                }}>היסטוריה</Text>
-
-                <View style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-around',
-                  gap: DesignTokens.spacing.md,
-                }}>
-                  {historicalData.oneYearAgo && (
-                    <View style={{ alignItems: 'center', minWidth: 70 }}>
-                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary, marginBottom: 4 }}>לפני שנה</Text>
-                      <Text style={{
-                        fontSize: 18,
-                        fontWeight: 'bold' as any,
-                        color: fearAndGreedService.getValueColor(historicalData.oneYearAgo.value)
-                      }}>
-                        {historicalData.oneYearAgo.value}
-                      </Text>
-                    </View>
-                  )}
-                  {historicalData.oneMonthAgo && (
-                    <View style={{ alignItems: 'center', minWidth: 70 }}>
-                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary, marginBottom: 4 }}>לפני חודש</Text>
-                      <Text style={{
-                        fontSize: 18,
-                        fontWeight: 'bold' as any,
-                        color: fearAndGreedService.getValueColor(historicalData.oneMonthAgo.value)
-                      }}>
-                        {historicalData.oneMonthAgo.value}
-                      </Text>
-                    </View>
-                  )}
-                  {historicalData.oneWeekAgo && (
-                    <View style={{ alignItems: 'center', minWidth: 70 }}>
-                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary, marginBottom: 4 }}>לפני שבוע</Text>
-                      <Text style={{
-                        fontSize: 18,
-                        fontWeight: 'bold' as any,
-                        color: fearAndGreedService.getValueColor(historicalData.oneWeekAgo.value)
-                      }}>
-                        {historicalData.oneWeekAgo.value}
-                      </Text>
-                    </View>
-                  )}
-                  {historicalData.previousClose && (
-                    <View style={{ alignItems: 'center', minWidth: 70 }}>
-                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.secondary, marginBottom: 4 }}>סגירה קודמת</Text>
-                      <Text style={{
-                        fontSize: 18,
-                        fontWeight: 'bold' as any,
-                        color: fearAndGreedService.getValueColor(historicalData.previousClose.value)
-                      }}>
-                        {historicalData.previousClose.value}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {/* Timestamp */}
-            {data.timestamp && (
-              <Text style={[styles.description, {
-                fontSize: DesignTokens.typography.fontSize.xs,
-                marginTop: DesignTokens.spacing.sm,
-                textAlign: 'center',
-                color: DesignTokens.colors.text.tertiary,
-              }]}>
-                עודכן: {new Date(data.timestamp * 1000).toLocaleString('he-IL', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                  textAlign: 'right',
+                  writingDirection: 'rtl',
+                  marginBottom: DesignTokens.spacing.sm,
+                }}
+              >
+                היסטוריה
               </Text>
-            )}
-          </>
+
+              {[
+                { key: 'previousClose' as const, label: 'סגירה קודמת' },
+                { key: 'oneWeekAgo' as const, label: 'לפני שבוע' },
+                { key: 'oneMonthAgo' as const, label: 'לפני חודש' },
+                { key: 'oneYearAgo' as const, label: 'לפני שנה' },
+              ].map(({ key, label }) => {
+                const item = historicalData?.[key];
+                return (
+                  <View
+                    key={key}
+                    style={{
+                      flexDirection: 'row-reverse',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: DesignTokens.spacing.xs,
+                      borderBottomWidth: 1,
+                      borderBottomColor: 'rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: DesignTokens.typography.fontSize.xs,
+                        color: DesignTokens.colors.text.secondary,
+                        textAlign: 'right',
+                        writingDirection: 'rtl',
+                      }}
+                    >
+                      {label}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: DesignTokens.typography.fontSize.base,
+                        fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                        color: item
+                          ? fearAndGreedService.getValueColor(item.value)
+                          : DesignTokens.colors.text.tertiary,
+                      }}
+                    >
+                      {item ? item.value : '–'}
+                    </Text>
+                  </View>
+                );
+              })}
+
+              {/* Segment legend — vertical, fits under the history list */}
+              <View style={{ marginTop: DesignTokens.spacing.sm, gap: 6 }}>
+                {FEAR_GREED_GAUGE_SEGMENTS.map((seg) => (
+                  <View
+                    key={seg.label}
+                    style={{
+                      flexDirection: 'row-reverse',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: seg.color,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: DesignTokens.colors.text.secondary,
+                      }}
+                    >
+                      {seg.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
         )}
       </UICard>
     </View>

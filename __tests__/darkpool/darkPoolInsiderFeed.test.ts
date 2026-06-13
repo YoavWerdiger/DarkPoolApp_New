@@ -8,6 +8,7 @@
 import {
   buildFeedItem,
   calcSinceTradePct,
+  formatInsiderTradeSummary,
   type InsiderTradeFeedItem,
 } from '../../screens/DarkPool/utils/insiderFeedCalc';
 import type { InsiderBuyRow } from '../../types/darkpool.types';
@@ -75,6 +76,26 @@ describe('calcSinceTradePct', () => {
     const pct = calcSinceTradePct(198.87, 235.73);
     expect(pct).not.toBeNull();
     expect(Math.round((pct as number) * 10000) / 100).toBeCloseTo(18.53, 2);
+  });
+});
+
+describe('formatInsiderTradeSummary', () => {
+  it('formats purchase with shares and price', () => {
+    expect(formatInsiderTradeSummary(makeTrade())).toBe(
+      'רכש 50 מניות ב-NVDA במחיר $198.87 למניה'
+    );
+  });
+
+  it('formats sale', () => {
+    expect(
+      formatInsiderTradeSummary(makeTrade({ transaction_type: 'S' }))
+    ).toBe('מכר 50 מניות ב-NVDA במחיר $198.87 למניה');
+  });
+
+  it('omits price when zero', () => {
+    expect(formatInsiderTradeSummary(makeTrade({ price: 0 }))).toBe(
+      'רכש 50 מניות ב-NVDA'
+    );
   });
 });
 

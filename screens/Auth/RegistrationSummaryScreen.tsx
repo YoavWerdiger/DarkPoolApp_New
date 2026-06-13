@@ -13,6 +13,7 @@ import { DesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const { width, height } = Dimensions.get('window');
 
@@ -415,7 +416,10 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
                 }}
               >
                 <TouchableOpacity
-                  onPress={handleFinish}
+                  onPress={() => {
+                    void HapticFeedback.success();
+                    handleFinish();
+                  }}
                   disabled={loading}
                   activeOpacity={0.85}
                   style={{
@@ -440,7 +444,10 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
               </LinearGradient>
 
               <TouchableOpacity
-                onPress={() => navigation.goBack()}
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  navigation.goBack();
+                }}
                 activeOpacity={0.7}
                 style={{ paddingVertical: 16, alignItems: 'center' }}
               >

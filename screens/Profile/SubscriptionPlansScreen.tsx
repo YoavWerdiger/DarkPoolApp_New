@@ -1,991 +1,463 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
   TouchableOpacity,
   Dimensions,
   Animated,
   FlatList,
+  Platform,
 } from 'react-native';
-import {
-  Check,
-  X,
-  Star,
-  Crown,
-  Zap,
-  Users,
-  TrendingUp,
-  Calendar,
-  Gift
-} from 'lucide-react-native';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
-import AnimatedCard from '../../components/ui/AnimatedCard';
-import AnimatedToggle from '../../components/ui/AnimatedToggle';
+import { Check, X, Users, Zap, TrendingUp, Crown } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { SUBSCRIPTION_PLANS, isSubscriptionCheckoutEnabled } from '../../services/paymentService';
+import { legacyAlert } from '../../utils/appDialog';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
-const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = Math.round(screenWidth * 0.78);
-const CARD_SPACING = 16; // space between cards
-const SNAP_INTERVAL = CARD_WIDTH + CARD_SPACING;
-const RTL_FLIP = { transform: [{ scaleX: -1 }] };
+const { width: SCREEN_W } = Dimensions.get('window');
+const CARD_W = Math.round(SCREEN_W * 0.76);
+const GAP = 14;
+const SNAP = CARD_W + GAP;
+// RTL: נהפוך את הFlatList כדי שיגלול ימין → שמאל
+const RTL = { transform: [{ scaleX: -1 }] };
 
-const CROSS_COLOR = '#FF0000';
+// מסלולים ראשיים (ללא אד-אונים)
+const PLANS = [
+  SUBSCRIPTION_PLANS.free,
+  SUBSCRIPTION_PLANS.monthly,
+  SUBSCRIPTION_PLANS.quarterly,
+  SUBSCRIPTION_PLANS.yearly,
+] as const;
 
-const hexToRgba = (hex: string, alpha = 1) => {
-  try {
-    const sanitized = hex.replace('#', '');
-    const isShort = sanitized.length === 3;
-    const normalized = isShort
-      ? sanitized.split('').map((char) => char + char).join('')
-      : sanitized;
-    const value = parseInt(normalized || '000000', 16);
-    const r = (value >> 16) & 255;
-    const g = (value >> 8) & 255;
-    const b = value & 255;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  } catch (error) {
-    return hex;
-  }
+// תכונות לטבלת השוואה
+const COMPARISON_FEATURES = [
+  'מענה על שאלות',
+  'יחס אישי וליווי קהילתי',
+  'חדשות מתפרצות בזמן אמת',
+  'חדשות כלכליות',
+  'לייב מסחר יומי ביוטיוב',
+  'רשימת מעקב למסחר יומי',
+  'ניתוחים וסטאפים לסווינגים',
+  'שיתוף תיק השקעות',
+  'תמיכה בערוץ היוטיוב',
+  'קבוצת השקעות 🇮🇱',
+  'קורס הלוויתנים',
+];
+
+const ra = (hex: string, a: number) => {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3
+    ? h.split('').map(c => c + c).join('')
+    : h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 };
 
-interface SubscriptionPlan {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  period: string;
-  features: string[];
-  excludedFeatures: string[];
-  role: string;
-  popular: boolean;
-  color: string;
-}
-
-type BillingPeriod = 'monthly' | 'yearly';
-const BILLING_TABS: BillingPeriod[] = ['yearly', 'monthly'];
+const PLAN_ICONS = {
+  free: Users,
+  monthly: Zap,
+  quarterly: TrendingUp,
+  yearly: Crown,
+} as const;
 
 export default function SubscriptionPlansScreen({ navigation }: any) {
-  const { theme, isDarkMode } = useTheme();
-  const { user } = useAuth();
-  const DesignTokens = useDesignTokens();
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [scrollX] = useState(new Animated.Value(0));
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [tableAnimValue] = useState(new Animated.Value(1));
-  const [scrollY] = useState(new Animated.Value(0));
+  const tokens = useDesignTokens();
+  const { colors, spacing, borderRadius, typography, shadows } = tokens;
+
+  const [activePlanId, setActivePlanId] = useState<string>(PLANS[0].id);
+  // useNativeDriver:false נדרש כי יש listener + interpolation על width (dots)
+  const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
 
-  // רשימת כל התכונות האפשריות
-  const allFeatures = [
-    'חדשות כלכליות',
-    'הכרזות רשמיות של ברוך ודוד אריאל',
-    'קבוצה חינמית של מאות סוחרים ומשקיעים',
-    'לייב שבועי ביוטיוב',
-    'חדשות מתפרצות בזמן אמת',
-    'דיווחי תוצאות של חברות',
-    'גישה לחדר מקהילת הפרימיום של "השקעות וסווינגים"',
-    'יומן מסחר',
-    'גישה לקהילת הפרימיום',
-    'קורס הלוויתנים במתנה'
-  ];
-
-  // קבלת המסלולים לפי תקופת החיוב
-  const getPlansForPeriod = (period: BillingPeriod): SubscriptionPlan[] => {
-    if (period === 'monthly') {
-      return [
-        SUBSCRIPTION_PLANS.free,
-        SUBSCRIPTION_PLANS.plus_monthly,
-        SUBSCRIPTION_PLANS.premium_monthly,
-      ];
-    }
-    
-    return [SUBSCRIPTION_PLANS.elite_yearly];
-  };
-
-  const plans = getPlansForPeriod(billingPeriod);
-  const comparisonPlans = useMemo(
-    () => [
-      SUBSCRIPTION_PLANS.free,
-      SUBSCRIPTION_PLANS.plus_monthly,
-      SUBSCRIPTION_PLANS.premium_monthly,
-      SUBSCRIPTION_PLANS.elite_yearly,
-    ],
-    []
-  );
-
-  // בחירת הכרטיסיה הראשונה בהתחלה או כשמשנים תקופת חיוב
-  useEffect(() => {
-    if (plans.length > 0) {
-      // בוחרים את המסלול הראשון (יכול להיות חינמי או אחר)
-      const firstPlan = plans[0];
-      setSelectedPlan(firstPlan.id);
-      const firstIndex = 0;
-      setCurrentIndex(firstIndex);
-      // גלילה לכרטיסיה הראשונה
-      setTimeout(() => {
-        try {
-          flatListRef.current?.scrollToIndex({ index: firstIndex, animated: false });
-        } catch (error) {
-          // אם scrollToIndex נכשל, נשתמש ב-scrollToOffset
-          flatListRef.current?.scrollToOffset({ offset: firstIndex * SNAP_INTERVAL, animated: false });
-        }
-      }, 100);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [billingPeriod]);
-
-  // אנימציה לטבלת ההשוואה (הטבלה תמיד גלויה, האנימציה רק כשמשנים תקופת חיוב)
-  useEffect(() => {
-    // מאפסים את האנימציה ואז מריצים אותה מחדש
-    tableAnimValue.setValue(0);
-    Animated.timing(tableAnimValue, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-  }, [billingPeriod]);
-
-  const handlePlanSelection = (planId: string) => {
-    // מאפשרים בחירה בכל מסלול, כולל החינמי
-    setSelectedPlan(planId);
-    // לא נכנס ישר לדף הרשמה - רק כשלוחצים על "הצטרפות למסלול"
-  };
-
-  // עדכון הכרטיסיה הנבחרת לפי הגרירה
-  const handleScrollEnd = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    // חישוב האינדקס - כל כרטיסיה תופסת SNAP_INTERVAL
-    const index = Math.round(offsetX / SNAP_INTERVAL);
-    
-    if (index >= 0 && index < plans.length) {
-      const selectedPlanId = plans[index].id;
-      setSelectedPlan(selectedPlanId);
-      setCurrentIndex(index);
-    }
-  };
-
-  const handleJoinPlan = (planId: string) => {
-    if (planId === 'free') {
+  const handleJoin = (planId: string) => {
+    if (planId === 'free') return;
+    if (!isSubscriptionCheckoutEnabled()) {
+      legacyAlert(
+        'תשלום בקרוב',
+        'רכישת מנוי תיפתח לאחר חיבור מלא לסולק התשלומים. בינתיים ניתן לצפות במסלולים.',
+        [{ text: 'הבנתי' }],
+      );
       return;
     }
-    
-    // מעבר למסך התשלום רק כשלוחצים על "הצטרפות למסלול"
-    navigation.navigate('CreditCardCheckout', { 
-      planId: planId,
-      fromRegistration: false 
-    });
+    navigation.navigate('CreditCardCheckout', { planId, fromRegistration: false });
   };
 
-  const getPlanIcon = (planName: string) => {
-    switch (planName) {
-      case 'חינמי':
-        return Users;
-      case 'מסלול פלוס+':
-        return Star;
-      case 'מסלול פרימיום':
-        return Crown;
-      case 'מסלול עלית':
-        return Gift;
-      default:
-        return Users;
-    }
-  };
+  /* ─── כרטיסיית מסלול ─── */
+  const PlanCard = ({ plan, idx }: { plan: (typeof PLANS)[number]; idx: number }) => {
+    const Icon = PLAN_ICONS[plan.id as keyof typeof PLAN_ICONS] ?? Users;
+    const color = plan.color;
+    const isActive = activePlanId === plan.id;
 
-  const getPeriodText = (period: BillingPeriod) => {
-    switch (period) {
-      case 'monthly':
-        return 'חודשי';
-      case 'yearly':
-        return 'שנתי';
-      default:
-        return 'חודשי';
-    }
-  };
+    const inputRange = [(idx - 1) * SNAP, idx * SNAP, (idx + 1) * SNAP];
+    const cardScale = scrollX.interpolate({ inputRange, outputRange: [0.91, 1, 0.91], extrapolate: 'clamp' });
+    const cardOpacity = scrollX.interpolate({ inputRange, outputRange: [0.62, 1, 0.62], extrapolate: 'clamp' });
+    const cardTranslateY = scrollX.interpolate({ inputRange, outputRange: [10, 0, 10], extrapolate: 'clamp' });
 
-  const getSavingsText = (plan: SubscriptionPlan) => {
-    if (plan.features.includes('הנחה של 16%')) {
-      return 'חיסכון 16%';
-    } else if (plan.features.includes('הנחה של 11%')) {
-      return 'חיסכון 11%';
-    } else if (plan.features.includes('הנחה של 8%')) {
-      return 'חיסכון 8%';
-    } else if (plan.features.includes('חיסכון של ₪350')) {
-      return 'חיסכון ₪350';
-    }
-    return null;
-  };
+    const renderPrice = () => {
+      if (plan.price === 0) return (
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ fontSize: 36, fontWeight: '800', color: colors.text.primary, letterSpacing: -1 }}>חינם</Text>
+          <Text style={{ fontSize: 13, color: colors.text.tertiary, fontWeight: '500', marginTop: 2 }}>לתמיד</Text>
+        </View>
+      );
+      if (plan.id === 'yearly') return (
+        <View style={{ alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
+            <Text style={{ fontSize: 36, fontWeight: '800', color, letterSpacing: -1 }}>₪117</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 6, fontWeight: '500' }}>/חודש</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 2 }}>(מחויב שנתי — ₪{plan.price.toLocaleString()})</Text>
+        </View>
+      );
+      if (plan.id === 'quarterly') return (
+        <View style={{ alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
+            <Text style={{ fontSize: 36, fontWeight: '800', color, letterSpacing: -1 }}>₪{plan.price}</Text>
+          </View>
+          <Text style={{ fontSize: 13, color: colors.text.secondary, marginTop: 3, fontWeight: '500' }}>לשלושה חודשים</Text>
+          <View style={{ marginTop: 8, backgroundColor: ra(color, 0.18), paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, borderWidth: 1, borderColor: ra(color, 0.4) }}>
+            <Text style={{ fontSize: 11, color, fontWeight: '700' }}>חסוך 47% ברבעון</Text>
+          </View>
+        </View>
+      );
+      // monthly
+      return (
+        <View style={{ alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
+            <Text style={{ fontSize: 36, fontWeight: '800', color, letterSpacing: -1 }}>₪{plan.price}</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 6, fontWeight: '500' }}>/חודש</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 2 }}>ללא התחייבות</Text>
+        </View>
+      );
+    };
 
-  // קומפוננט לקלף בודד עם אפקט 3D עדין (שכנים קטנים ושקועים קלות)
-  const PlanCard = ({ plan, index, scrollX }: { plan: SubscriptionPlan, index: number, scrollX: Animated.Value }) => {
-    const IconComponent = getPlanIcon(plan.name);
-    const savings = getSavingsText(plan);
-    const isSelected = selectedPlan === plan.id;
-    const cardBackground = 'rgba(255, 255, 255, 0.05)';
-    const accentColor = plan.color;
-    const borderColor = isSelected
-      ? plan.color
-      : 'rgba(255, 255, 255, 0.1)';
-    const textColor = DesignTokens.colors.text.primary;
-    const secondaryTextColor = DesignTokens.colors.text.secondary;
-    const tertiaryTextColor = DesignTokens.colors.text.tertiary;
-    const buttonTextColor = plan.price === 0
-      ? DesignTokens.colors.text.secondary
-      : DesignTokens.colors.text.primary;
-    
-    const inputRange = [
-      (index - 1) * SNAP_INTERVAL,
-      index * SNAP_INTERVAL,
-      (index + 1) * SNAP_INTERVAL,
-    ];
-    
-    // Scale - הקלף הנוכחי גדול, האחרים קטנים מעט
-    const scale = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.92, 1, 0.92],
-      extrapolate: 'clamp',
-    });
-    
-    // Opacity - הקלף הנוכחי מלא, האחרים דהויים מעט
-    const opacity = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.7, 1, 0.7],
-      extrapolate: 'clamp',
-    });
-    
-    // TranslateY - קלפים שכנים שקועים מעט מאוד
-    const translateY = scrollX.interpolate({
-      inputRange,
-      outputRange: [12, 0, 12],
-      extrapolate: 'clamp',
-    });
-
-    // RotateY עדין מאוד לקלפים שכנים - פחות מוטות
-    const rotateY = scrollX.interpolate({
-      inputRange,
-      outputRange: ['2deg', '0deg', '-2deg'],
-      extrapolate: 'clamp',
-    });
-    
     return (
-      <Animated.View
-        style={{
-          width: CARD_WIDTH,
-          alignItems: 'center',
-          justifyContent: 'center',
-          transform: [
-            { perspective: 1200 },
-            { translateY },
-            { scale },
-            { rotateY },
-          ],
-          opacity,
-          marginHorizontal: CARD_SPACING / 2,
-          paddingBottom: 20,
-        }}
-      >
-        <AnimatedCard
-          onPress={() => handlePlanSelection(plan.id)}
-          scaleValue={0.98}
+      <Animated.View style={{
+        width: CARD_W,
+        marginHorizontal: GAP / 2,
+        transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
+        opacity: cardOpacity,
+        paddingBottom: 16,
+      }}>
+        <UICard
+          variant="glass"
+          glassIntensity="medium"
+          padding="none"
+          pressable
+          onPress={() => {
+            if (activePlanId !== plan.id) void HapticFeedback.selection();
+            setActivePlanId(plan.id);
+          }}
           style={{
-            width: CARD_WIDTH,
-            borderRadius: DesignTokens.borderRadius['2xl'],
-            padding: 0,
-            borderWidth: isSelected ? 2 : 1,
-            borderColor,
-            shadowColor: accentColor,
-            shadowOffset: { width: 0, height: isSelected ? 16 : 8 },
-            shadowOpacity: isSelected ? 0.3 : 0.15,
-            shadowRadius: isSelected ? 24 : 16,
-            elevation: isSelected ? 16 : 8,
-            position: 'relative',
-            overflow: 'hidden',
+            borderRadius: borderRadius['2xl'],
+            borderWidth: isActive ? 1.5 : 1,
+            borderColor: isActive ? ra(color, 0.7) : colors.border.subtle,
+            shadowColor: color,
+            shadowOffset: { width: 0, height: isActive ? 12 : 4 },
+            shadowOpacity: isActive ? 0.28 : 0.08,
+            shadowRadius: isActive ? 20 : 8,
+            elevation: isActive ? 14 : 4,
           }}
         >
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="lg"
-            style={{
-              borderRadius: DesignTokens.borderRadius['2xl'],
-              paddingBottom: DesignTokens.spacing['2xl'],
-            }}
-          >
-          <View style={{ position: 'relative' }}>
+          {/* Glow top strip */}
+          {isActive && (
+            <LinearGradient
+              colors={[ra(color, 0.22), 'transparent']}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 80, borderTopLeftRadius: borderRadius['2xl'], borderTopRightRadius: borderRadius['2xl'] }}
+            />
+          )}
 
-          {/* Plan Header */}
-          <View style={{ alignItems: 'center', marginBottom: 24, marginTop: plan.popular ? 12 : 0 }}>
-            <View style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30,
-              backgroundColor: hexToRgba(accentColor, 0.2),
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 16,
-              borderWidth: 2,
-              borderColor: hexToRgba(accentColor, 0.4)
-            }}>
-              <IconComponent size={24} color={accentColor} strokeWidth={2.5} />
-            </View>
-            
-            <Text style={{
-              fontSize: 22,
-              fontWeight: '600',
-              color: textColor,
-              marginBottom: 8,
-              textAlign: 'center'
-            }}>
-              {plan.name}
-            </Text>
-            
-            <Text style={{
-              fontSize: 13,
-              color: secondaryTextColor,
-              textAlign: 'center',
-              lineHeight: 18,
-              fontWeight: '500',
-              maxWidth: 200
-            }}>
-              {plan.description}
-            </Text>
-          </View>
-
-          {/* Price */}
-          <View style={{ alignItems: 'center', marginBottom: 24 }}>
-            {plan.price === 0 ? (
-              <View style={{ alignItems: 'center' }}>
-                <Text style={{
-                  fontSize: 34,
-                  fontWeight: '700',
-                  color: textColor,
-                  marginBottom: 4
-                }}>
-                  חינם
-                </Text>
-                <Text style={{
-                  fontSize: 14,
-                  color: secondaryTextColor,
-                  fontWeight: '500'
-                }}>
-                  לתמיד
-                </Text>
+          <View style={{ padding: spacing.xl }}>
+            {/* Badge */}
+            {plan.badge && (
+              <View style={{ position: 'absolute', top: -1, right: -1, backgroundColor: color, paddingHorizontal: 10, paddingVertical: 4, borderTopRightRadius: borderRadius['2xl'], borderBottomLeftRadius: borderRadius.md, zIndex: 2 }}>
+                <Text style={{ fontSize: 10, fontWeight: '800', color: plan.id === 'quarterly' ? '#fff' : '#000' }}>{plan.badge}</Text>
               </View>
-            ) : plan.period === 'yearly' && plan.id === 'elite_yearly' ? (
-              <View style={{ alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 4 }}>
-                  <Text style={{
-                    fontSize: 34,
-                    fontWeight: '700',
-                    color: accentColor
+            )}
+
+            {/* Icon + name */}
+            <View style={{ alignItems: 'center', marginBottom: spacing.xl, marginTop: plan.badge ? spacing.base : 0 }}>
+              <View style={{
+                width: 56, height: 56, borderRadius: 28,
+                backgroundColor: ra(color, 0.15),
+                borderWidth: 1.5, borderColor: ra(color, 0.35),
+                alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+              }}>
+                <Icon size={24} color={color} strokeWidth={2} />
+              </View>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary, textAlign: 'center', letterSpacing: -0.3 }}>
+                {plan.name}
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 4, textAlign: 'center' }}>
+                {plan.description}
+              </Text>
+            </View>
+
+            {/* Price */}
+            <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+              {renderPrice()}
+            </View>
+
+            {/* Divider */}
+            <View style={{ height: 1, backgroundColor: colors.border.subtle, marginBottom: spacing.lg }} />
+
+            {/* Features */}
+            <View style={{ gap: 10, marginBottom: spacing.xl }}>
+              {plan.features.map((f, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{
+                    width: 18, height: 18, borderRadius: 9,
+                    backgroundColor: ra(color, 0.18),
+                    borderWidth: 1, borderColor: ra(color, 0.4),
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                   }}>
-                    ₪117
-                  </Text>
-                  <Text style={{
-                    fontSize: 16,
-                    color: secondaryTextColor,
-                    marginRight: 6,
-                    fontWeight: '500'
-                  }}>
-                    / לחודש
+                    <Check size={10} color={color} strokeWidth={3} />
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 13, color: colors.text.secondary, textAlign: 'right', lineHeight: 18, fontWeight: '500' }}>
+                    {f}
                   </Text>
                 </View>
-                <Text style={{
-                  fontSize: 12,
-                  color: tertiaryTextColor,
-                  fontWeight: '500',
-                  marginBottom: 4
-                }}>
-                  (מחויב מדי שנה)
-                </Text>
-                <Text style={{
-                  fontSize: 14,
-                  color: secondaryTextColor,
-                  fontWeight: '500'
-                }}>
-                  ₪{plan.price} לשנה
-                </Text>
+              ))}
+            </View>
+
+            {/* CTA */}
+            {plan.price === 0 ? (
+              <View style={{
+                paddingVertical: 13, borderRadius: borderRadius.lg,
+                backgroundColor: ra(color, 0.1), borderWidth: 1, borderColor: ra(color, 0.2),
+                alignItems: 'center',
+              }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.tertiary }}>מסלול נוכחי</Text>
               </View>
             ) : (
-              <View style={{ alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginBottom: 8 }}>
-                  <Text style={{
-                    fontSize: 34,
-                    fontWeight: '700',
-                    color: accentColor
-                  }}>
-                    ₪{plan.price}
+              <TouchableOpacity
+                onPress={() => {
+                  void HapticFeedback.medium();
+                  handleJoin(plan.id);
+                }}
+                activeOpacity={0.82}
+                style={{ borderRadius: borderRadius.lg, overflow: 'hidden' }}
+              >
+                <LinearGradient
+                  colors={[color, ra(color, 0.75)]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  style={{ paddingVertical: 14, alignItems: 'center' }}
+                >
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff', letterSpacing: 0.2 }}>
+                    הצטרפות למסלול
                   </Text>
-                  <Text style={{
-                    fontSize: 16,
-                    color: secondaryTextColor,
-                    marginRight: 6,
-                    fontWeight: '500'
-                  }}>
-                    / {getPeriodText(plan.period as BillingPeriod)}
-                  </Text>
-                </View>
-                {savings && (
-                  <View style={{
-                    backgroundColor: hexToRgba(accentColor, 0.2),
-                    paddingHorizontal: 12,
-                    paddingVertical: 4,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: hexToRgba(accentColor, 0.45)
-                  }}>
-                    <Text style={{
-                      fontSize: 12,
-                      color: accentColor,
-                      fontWeight: '700'
-                    }}>
-                      {savings}
-                    </Text>
-                  </View>
-                )}
-              </View>
+                </LinearGradient>
+              </TouchableOpacity>
             )}
           </View>
-
-          {/* Features Preview */}
-          <View style={{ gap: 12, marginBottom: 24 }}>
-            {(plan.price === 0 ? plan.features : plan.features.slice(0, 3)).map((feature, featureIndex) => (
-              <View key={featureIndex} style={{ 
-                flexDirection: 'row', 
-                alignItems: 'center'
-              }}>
-                <View style={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor: hexToRgba(accentColor, 0.2),
-                  borderWidth: 1,
-                  borderColor: hexToRgba(accentColor, 0.5),
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginLeft: 0,
-                  marginRight: 14
-                }}>
-                  <Check size={12} color={accentColor} strokeWidth={3} />
-                </View>
-                <Text style={{
-                  flex: 1,
-                  fontSize: 15,
-                  color: secondaryTextColor,
-                  textAlign: 'right',
-                  lineHeight: 20,
-                  fontWeight: '500',
-                  paddingRight: 4
-                }}>
-                  {feature}
-                </Text>
-              </View>
-            ))}
-            {plan.price !== 0 && plan.features.length > 3 && (
-              <Text style={{
-                fontSize: 13,
-                color: tertiaryTextColor,
-                textAlign: 'center',
-                marginTop: 4,
-                fontWeight: '500'
-              }}>
-                +{plan.features.length - 3} תכונות נוספות
-              </Text>
-            )}
-          </View>
-
-          {/* CTA Button */}
-          <View style={{ marginTop: 12 }}>
-            <TouchableOpacity
-              onPress={() => plan.price > 0 && handleJoinPlan(plan.id)}
-              disabled={plan.price === 0}
-              style={{
-                backgroundColor: plan.price === 0 
-                  ? hexToRgba(accentColor, 0.18) 
-                  : accentColor,
-                paddingVertical: 14,
-                paddingHorizontal: 24,
-                borderRadius: 16,
-                alignItems: 'center',
-                borderWidth: 2,
-                borderColor: hexToRgba(accentColor, 0.5),
-                opacity: plan.price === 0 ? 0.85 : 1
-              }}
-            >
-              <Text style={{
-                fontSize: 16,
-                fontWeight: '700',
-                color: buttonTextColor
-              }}>
-                {plan.price === 0 ? 'מסלול נוכחי' : 'הצטרפות למסלול'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          </View>
-          </UICard>
-        </AnimatedCard>
+        </UICard>
       </Animated.View>
     );
   };
 
-  return (
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="בחר מסלול" onBack={() => navigation.goBack()} />
+  /* ─── טבלת השוואה ─── */
+  const ComparisonTable = () => (
+    <View style={{ paddingHorizontal: spacing.base, marginTop: spacing['2xl'] }}>
+      <Text style={{ fontSize: typography.fontSize.lg, fontWeight: '700', color: colors.text.primary, textAlign: 'center', marginBottom: 4 }}>
+        מה כלול בכל מסלול?
+      </Text>
+      <Text style={{ fontSize: typography.fontSize.sm, color: colors.text.tertiary, textAlign: 'center', marginBottom: spacing.lg }}>
+        השוואה מהירה
+      </Text>
 
-      <View style={{ flex: 1 }}>
-        <Animated.ScrollView 
+      <UICard variant="glass" glassIntensity="light" padding="none" style={{ borderRadius: borderRadius.xl, overflow: 'hidden' }}>
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row', paddingVertical: spacing.md, paddingHorizontal: spacing.md,
+          borderBottomWidth: 1, borderBottomColor: colors.border.subtle,
+          backgroundColor: ra('#ffffff', 0.03),
+        }}>
+          <View style={{ width: '30%' }}>
+            <Text style={{ fontSize: typography.fontSize.xs, fontWeight: '600', color: colors.text.tertiary, textAlign: 'right' }}>תכונה</Text>
+          </View>
+          {PLANS.map(p => (
+            <View key={p.id} style={{ flex: 1, alignItems: 'center' }}>
+              <Text style={{ fontSize: 9, fontWeight: '700', color: p.color, textAlign: 'center', lineHeight: 13 }}>
+                {p.id === 'yearly' ? 'שנתי' : p.name}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Rows */}
+        {COMPARISON_FEATURES.map((feat, i) => (
+          <View key={i} style={{
+            flexDirection: 'row', alignItems: 'center',
+            paddingVertical: 11, paddingHorizontal: spacing.md,
+            borderBottomWidth: i < COMPARISON_FEATURES.length - 1 ? 1 : 0,
+            borderBottomColor: colors.border.subtle,
+            backgroundColor: i % 2 === 0 ? 'transparent' : ra('#ffffff', 0.015),
+          }}>
+            <View style={{ width: '30%' }}>
+              <Text style={{ fontSize: 11, color: colors.text.secondary, textAlign: 'right', lineHeight: 16, fontWeight: '500' }}>
+                {feat}
+              </Text>
+            </View>
+            {PLANS.map(plan => {
+              const has = plan.features.some(f => f.includes(feat) || feat.includes(f.replace(' 🇮🇱', '')));
+              return (
+                <View key={plan.id} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  {has ? (
+                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: ra(plan.color, 0.18), borderWidth: 1, borderColor: ra(plan.color, 0.45), alignItems: 'center', justifyContent: 'center' }}>
+                      <Check size={11} color={plan.color} strokeWidth={3} />
+                    </View>
+                  ) : (
+                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: ra('#FF4444', 0.1), borderWidth: 1, borderColor: ra('#FF4444', 0.35), alignItems: 'center', justifyContent: 'center' }}>
+                      <X size={11} color="#FF4444" strokeWidth={2.5} />
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        ))}
+      </UICard>
+    </View>
+  );
+
+  /* ─── כיצד זה עובד ─── */
+  const HowItWorks = () => (
+    <View style={{ paddingHorizontal: spacing.base, marginTop: spacing['2xl'], marginBottom: spacing['3xl'] }}>
+      <UICard variant="glass" glassIntensity="light" padding="lg" style={{ borderRadius: borderRadius.xl }}>
+        <Text style={{ fontSize: typography.fontSize.base, fontWeight: '700', color: colors.text.primary, textAlign: 'right', marginBottom: spacing.lg }}>
+          איך זה עובד?
+        </Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          {[
+            { n: '1', title: 'בחר מסלול', sub: 'מצא את הרמה שמתאימה לך' },
+            { n: '2', title: 'אשר פרטים', sub: 'מילוי קצר ותשלום מאובטח' },
+            { n: '3', title: 'מתחילים!', sub: 'פותחים את כל התוכן מיד' },
+          ].map(s => (
+            <View key={s.n} style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
+              <View style={{
+                width: 40, height: 40, borderRadius: 20, marginBottom: spacing.sm,
+                backgroundColor: colors.primary.dim, borderWidth: 1, borderColor: colors.primary.subtle,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ fontSize: typography.fontSize.lg, fontWeight: '800', color: colors.primary.main }}>{s.n}</Text>
+              </View>
+              <Text style={{ fontSize: typography.fontSize.sm, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 3 }}>{s.title}</Text>
+              <Text style={{ fontSize: 11, color: colors.text.tertiary, textAlign: 'center', lineHeight: 15 }}>{s.sub}</Text>
+            </View>
+          ))}
+        </View>
+        <View style={{ marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border.subtle }}>
+          <Text style={{ fontSize: 12, color: colors.text.tertiary, textAlign: 'right', lineHeight: 19 }}>
+            ניתן לשנות מסלול בכל עת — שדרוג נכנס לתוקף מיידית. ביטול פשוט, ללא קנסות.
+          </Text>
+        </View>
+      </UICard>
+    </View>
+  );
+
+  return (
+    <View style={{ flex: 1 }}>
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <ChatSubScreenHeader
+          title="בחר מסלול"
+          onBack={() => {
+            void HapticFeedback.impactLight();
+            navigation.goBack();
+          }}
+        />
+
+        <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: false }
-          )}
-          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          overScrollMode="never"
+          bounces={Platform.OS === 'ios'}
         >
-        {/* Title */}
-        <Animated.View style={{ 
-          paddingHorizontal: DesignTokens.spacing.lg, 
-          paddingTop: DesignTokens.spacing.lg, 
-          marginBottom: DesignTokens.spacing.lg,
-          transform: [{
-            translateY: scrollY.interpolate({
-              inputRange: [0, 100],
-              outputRange: [0, -20],
-              extrapolate: 'clamp',
-            }),
-          }],
-        }}>
-          <View style={{ alignItems: 'center', marginBottom: DesignTokens.spacing.md }}>
+          {/* ─── Header ─── */}
+          <View style={{ alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.lg, paddingHorizontal: spacing.xl }}>
+            {/* Accent glow */}
             <View style={{
-              width: 60,
-              height: 4,
-              backgroundColor: DesignTokens.colors.primary.main,
-              borderRadius: 2,
-              marginBottom: DesignTokens.spacing.md
+              position: 'absolute', top: 0, left: SCREEN_W * 0.2, right: SCREEN_W * 0.2, height: 120,
+              borderRadius: 60, backgroundColor: colors.primary.glow,
+              opacity: 0.18,
+              // blur workaround
+              ...(Platform.OS === 'ios' ? {} : {}),
             }} />
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize['2xl'],
-              fontWeight: DesignTokens.typography.fontWeight.bold as any,
-              color: DesignTokens.colors.text.primary,
-              textAlign: 'center',
-              marginBottom: DesignTokens.spacing.xs,
-              letterSpacing: -0.5
-            }}>
+            <View style={{ width: 48, height: 3, backgroundColor: colors.primary.main, borderRadius: 2, marginBottom: spacing.md }} />
+            <Text style={{ fontSize: typography.fontSize['3xl'], fontWeight: '800', color: colors.text.primary, textAlign: 'center', letterSpacing: -0.8, lineHeight: 36 }}>
               בחר את המסלול שלך
             </Text>
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.base,
-              color: DesignTokens.colors.text.secondary,
-              textAlign: 'center',
-              lineHeight: 22,
-              maxWidth: 280
-            }}>
+            <Text style={{ fontSize: typography.fontSize.base, color: colors.text.secondary, textAlign: 'center', marginTop: spacing.sm, lineHeight: 22, maxWidth: 260 }}>
               כל סוחר מתחיל איפשהו.{'\n'}איפה אתה רוצה להתחיל?
             </Text>
           </View>
-        </Animated.View>
 
-        {/* Billing Period Toggle - Like Reaction Tabs */}
-        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.lg }}>
-          <View style={{
-            flexDirection: 'row',
-            backgroundColor: 'rgba(6, 18, 12, 0.8)',
-            paddingHorizontal: DesignTokens.spacing.md,
-            paddingVertical: DesignTokens.spacing.sm,
-            borderRadius: 50,
-            alignItems: 'center',
-            gap: DesignTokens.spacing.xs,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.1)',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 3,
-            alignSelf: 'center',
-            width: '100%',
-            maxWidth: 400,
-          }}>
-            {BILLING_TABS.map((period) => {
-              const isSelected = billingPeriod === period;
-              return (
-                <TouchableOpacity
-                  key={period}
-                  onPress={() => setBillingPeriod(period)}
-                  activeOpacity={0.7}
-                  style={{
-                    flex: 1,
-                    height: 44,
-                    borderRadius: 22,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: isSelected ? 'rgba(5, 209, 87, 0.25)' : 'transparent',
-                    transform: isSelected ? [{ scale: 1.05 }] : [{ scale: 1 }],
-                  }}
-                >
-                  <View style={{ alignItems: 'center' }}>
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: isSelected ? '700' : '600',
-                      color: isSelected 
-                        ? DesignTokens.colors.primary.main
-                        : DesignTokens.colors.text.secondary,
-                      textAlign: 'center',
-                    }}>
-                      {getPeriodText(period)}
-                    </Text>
-                    {period === 'yearly' && (
-                      <Text style={{
-                        fontSize: 10,
-                        color: isSelected 
-                          ? DesignTokens.colors.primary.main
-                          : DesignTokens.colors.text.tertiary,
-                        fontWeight: '500',
-                        marginTop: 2
-                      }}>
-                        🎁 קורס חינם
-                      </Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Plans 3D Carousel (מרכזי) */}
-        <View style={{ marginBottom: DesignTokens.spacing.lg }}>
-          <Animated.FlatList
-            ref={flatListRef}
-            data={plans}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: (screenWidth - CARD_WIDTH) / 2,
-            }}
-            style={RTL_FLIP}
-            snapToInterval={SNAP_INTERVAL}
-            decelerationRate="fast"
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-              { 
-                useNativeDriver: false,
-                listener: (event: any) => {
-                  // עדכון בזמן אמת במהלך הגרירה
-                  const offsetX = event.nativeEvent.contentOffset.x;
-                  const index = Math.round(offsetX / SNAP_INTERVAL);
-                  
-                  if (index >= 0 && index < plans.length) {
-                    const selectedPlanId = plans[index].id;
-                    if (selectedPlanId !== selectedPlan) {
-                      setSelectedPlan(selectedPlanId);
-                      setCurrentIndex(index);
+          {/* ─── Carousel ─── */}
+          <View>
+            <Animated.FlatList
+              ref={flatListRef}
+              data={PLANS as any}
+              keyExtractor={item => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: (SCREEN_W - CARD_W) / 2 }}
+              style={RTL}
+              snapToInterval={SNAP}
+              decelerationRate={Platform.OS === 'ios' ? 0.992 : 'fast'}
+              disableIntervalMomentum
+              onScroll={Animated.event(
+                [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                {
+                  useNativeDriver: false,
+                  listener: (e: any) => {
+                    const x = e.nativeEvent.contentOffset.x;
+                    const idx = Math.round(x / SNAP);
+                    if (idx >= 0 && idx < PLANS.length) {
+                      const id = (PLANS as any)[idx].id;
+                      if (id !== activePlanId) setActivePlanId(id);
                     }
-                  }
+                  },
                 }
-              }
-            )}
-            onMomentumScrollEnd={handleScrollEnd}
-            onScrollEndDrag={handleScrollEnd}
-            scrollEventThrottle={16}
-            pagingEnabled={false}
-            renderItem={({ item: plan, index }) => (
-              <View style={RTL_FLIP}>
-                <PlanCard plan={plan} index={index} scrollX={scrollX} />
-              </View>
-            )}
-            getItemLayout={(data, index) => ({
-              length: SNAP_INTERVAL,
-              offset: SNAP_INTERVAL * index,
-              index,
-            })}
-          />
-          
-          {/* Page Indicators */}
-          <View style={{
-            flexDirection: 'row',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: 20,
-            gap: 8
-          }}>
-            {plans.map((_, index) => {
-              const inputRange = [
-                (index - 1) * SNAP_INTERVAL,
-                index * SNAP_INTERVAL,
-                (index + 1) * SNAP_INTERVAL,
-              ];
-              
-              const scale = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.8, 1.2, 0.8],
-                extrapolate: 'clamp',
-              });
-              
-              const opacity = scrollX.interpolate({
-                inputRange,
-                outputRange: [0.4, 1, 0.4],
-                extrapolate: 'clamp',
-              });
-              
-              return (
-                <Animated.View
-                  key={index}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: '#00C805',
-                    transform: [{ scale }],
-                    opacity,
-                  }}
-                />
-              );
-            })}
+              )}
+              onMomentumScrollEnd={(e: any) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / SNAP);
+                if (idx >= 0 && idx < PLANS.length) setActivePlanId((PLANS as any)[idx].id);
+              }}
+              scrollEventThrottle={16}
+              removeClippedSubviews={false}
+              initialNumToRender={4}
+              getItemLayout={(_: any, index: number) => ({ length: SNAP, offset: SNAP * index, index })}
+              renderItem={({ item, index }: any) => (
+                <View style={RTL}>
+                  <PlanCard plan={item} idx={index} />
+                </View>
+              )}
+            />
+
+            {/* Dots */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8, gap: 6 }}>
+              {PLANS.map((p, i) => {
+                const inputRange = [(i - 1) * SNAP, i * SNAP, (i + 1) * SNAP];
+                const dotW = scrollX.interpolate({ inputRange, outputRange: [7, 18, 7], extrapolate: 'clamp' });
+                const dotOp = scrollX.interpolate({ inputRange, outputRange: [0.35, 1, 0.35], extrapolate: 'clamp' });
+                return (
+                  <Animated.View
+                    key={p.id}
+                    style={{ width: dotW, height: 7, borderRadius: 4, backgroundColor: p.color, opacity: dotOp }}
+                  />
+                );
+              })}
+            </View>
           </View>
-        </View>
 
-        {/* Detailed Comparison Table */}
-        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing['2xl'] }}>
-          <View style={{ alignItems: 'center', marginBottom: DesignTokens.spacing.lg }}>
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.lg,
-              fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-              color: DesignTokens.colors.text.primary,
-              textAlign: 'center',
-              marginBottom: DesignTokens.spacing.xs
-            }}>
-              מה כלול בכל מסלול?
-            </Text>
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.sm,
-              color: DesignTokens.colors.text.secondary,
-              textAlign: 'center'
-            }}>
-              השוואה מהירה של התכונות
-            </Text>
-          </View>
-          
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="none"
-            style={{
-              overflow: 'hidden',
-              borderRadius: DesignTokens.borderRadius.lg,
-            }}
-          >
-            {/* Table Header */}
-            <View style={{
-              flexDirection: 'row',
-              backgroundColor: 'rgba(255, 255, 255, 0.03)',
-              paddingVertical: DesignTokens.spacing.md,
-              paddingHorizontal: DesignTokens.spacing.md,
-              borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-              alignItems: 'center'
-            }}>
-              <View style={{ width: '32%', paddingLeft: DesignTokens.spacing.xs }}>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.sm,
-                  fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                  color: DesignTokens.colors.text.primary,
-                  textAlign: 'right'
-                }}>
-                  תכונה
-                </Text>
-              </View>
-              {comparisonPlans.map((plan) => (
-                <View key={plan.id} style={{ flex: 1, alignItems: 'center' }}>
-                  <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                    color: plan.color,
-                    textAlign: 'center'
-                  }}>
-                    {plan.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Table Rows */}
-            {allFeatures.map((feature, featureIndex) => (
-              <View 
-                key={featureIndex}
-                style={{
-                  flexDirection: 'row',
-                  paddingVertical: DesignTokens.spacing.md,
-                  paddingHorizontal: DesignTokens.spacing.md,
-                  borderBottomWidth: featureIndex === allFeatures.length - 1 ? 0 : 1,
-                  borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-                  backgroundColor: featureIndex % 2 === 0 
-                    ? 'transparent' 
-                    : 'rgba(255, 255, 255, 0.02)',
-                  alignItems: 'center'
-                }}
-              >
-                <View style={{ width: '32%', paddingLeft: DesignTokens.spacing.xs }}>
-                  <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.sm,
-                    color: DesignTokens.colors.text.secondary,
-                    textAlign: 'right',
-                    lineHeight: 20,
-                    fontWeight: DesignTokens.typography.fontWeight.medium as any
-                  }}>
-                    {feature}
-                  </Text>
-                </View>
-                {comparisonPlans.map((plan) => {
-                  const featureMapping: Record<string, string[]> = {
-                    'גישה לקהילת הפרימיום': ['גישה לקהילת הפרימיום', 'גישה לקהילה הפרימיום', 'קהילת הפרימיום', 'קהילה פרימיום'],
-                    'גישה לחדר מקהילת הפרימיום של "השקעות וסווינגים"': ['גישה לחדר מקהילת הפרימיום של "השקעות וסווינגים"', 'חדר סווינגים והשקעות', 'חדר השקעות וסווינגים'],
-                    'קורס הלוויתנים במתנה': ['קורס הלוויתנים במתנה', 'קורס הלוויתנים']
-                  };
-                  
-                  const mappedFeatures = featureMapping[feature] || [feature];
-                  const hasFeature = plan.features.some((f: string) => 
-                    mappedFeatures.some(mapped => f.includes(mapped) || mapped.includes(f))
-                  );
-                  
-                  const mappedExcluded = featureMapping[feature] || [feature];
-                  const isExcluded = plan.excludedFeatures && plan.excludedFeatures.some((excluded: string) => 
-                    mappedExcluded.some(mapped => excluded.includes(mapped) || mapped.includes(excluded))
-                  );
-                  
-                  const featureExists = hasFeature && !isExcluded;
-                  const accentColor = plan.color;
-                  
-                  return (
-                    <View key={plan.id} style={{
-                      flex: 1,
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      {featureExists ? (
-                        <View style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 12,
-                          backgroundColor: hexToRgba(accentColor, 0.2),
-                          borderWidth: 1,
-                          borderColor: hexToRgba(accentColor, 0.5),
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <Check size={14} color={accentColor} strokeWidth={2.5} />
-                        </View>
-                      ) : (
-                        <View style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 12,
-                          backgroundColor: hexToRgba(CROSS_COLOR, 0.15),
-                          borderWidth: 1,
-                          borderColor: CROSS_COLOR,
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <X size={14} color={CROSS_COLOR} strokeWidth={2.5} />
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            ))}
-          </UICard>
-        </View>
-
-        {/* How It Works */}
-        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing['2xl'] }}>
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="lg"
-            style={{ borderRadius: DesignTokens.borderRadius.lg }}
-          >
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.base,
-              fontWeight: DesignTokens.typography.fontWeight.bold as any,
-              color: DesignTokens.colors.text.primary,
-              textAlign: 'right',
-              marginBottom: DesignTokens.spacing.md
-            }}>
-              איך זה עובד?
-            </Text>
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              gap: DesignTokens.spacing.sm
-            }}>
-              {[
-                { title: 'בחר מסלול', subtitle: 'מצא את הרמה שמתאימה לך' },
-                { title: 'אשר פרטים', subtitle: 'מילוי קצר והמשך לתשלום' },
-                { title: 'מתחילים ללמוד', subtitle: 'פותחים את כל התוכן בלחיצה' }
-              ].map((step, index) => (
-                <View key={step.title} style={{ flex: 1, alignItems: 'center' }}>
-                  <View style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: `${DesignTokens.colors.primary.main}20`,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginBottom: DesignTokens.spacing.sm,
-                    borderWidth: 1,
-                    borderColor: `${DesignTokens.colors.primary.main}40`
-                  }}>
-                    <Text style={{
-                      fontSize: DesignTokens.typography.fontSize.lg,
-                      fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                      color: DesignTokens.colors.primary.main
-                    }}>
-                      {index + 1}
-                    </Text>
-                  </View>
-                  <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.sm,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                    color: DesignTokens.colors.text.primary,
-                    textAlign: 'center',
-                    marginBottom: DesignTokens.spacing.xs / 2
-                  }}>
-                    {step.title}
-                  </Text>
-                  <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    color: DesignTokens.colors.text.secondary,
-                    textAlign: 'center',
-                    lineHeight: 18
-                  }}>
-                    {step.subtitle}
-                  </Text>
-                </View>
-              ))}
-            </View>
-            <View style={{ marginTop: DesignTokens.spacing.lg }}>
-              <Text style={{
-                fontSize: DesignTokens.typography.fontSize.sm,
-                color: DesignTokens.colors.text.secondary,
-                textAlign: 'right',
-                lineHeight: 20
-              }}>
-                ניתן לעבור בין המסלולים בכל רגע – שדרוג או הורדה נכנסים לתוקף מידית, החיוב מתעדכן אוטומטית ואנחנו שומרים על כל ההטבות שכבר קיבלת. הכל מנוהל בצורה מאובטחת ושקופה, כדי שתוכל למקד את הזמן בלמידה ולא בבירוקרטיה.
-              </Text>
-            </View>
-          </UICard>
-        </View>
-        </Animated.ScrollView>
-      </View>
+          <ComparisonTable />
+          <HowItWorks />
+        </ScrollView>
       </RNSafeAreaView>
     </View>
   );

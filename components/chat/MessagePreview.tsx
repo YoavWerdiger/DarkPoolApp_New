@@ -17,8 +17,8 @@ export default function MessagePreview({ message }: MessagePreviewProps) {
       paddingVertical: 8,
       maxWidth: 280,
       minWidth: 60,
-      backgroundColor: message.isMe ? DesignTokens.colors.primary.main : DesignTokens.colors.bubbleOther,
-      shadowColor: message.isMe ? DesignTokens.colors.primary.main : '#000',
+      backgroundColor: message.isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
+      shadowColor: message.isMe ? DesignTokens.colors.bubbleMe : '#000',
       shadowOffset: {
         width: 0,
         height: 2,

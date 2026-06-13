@@ -59,6 +59,12 @@ export function useChatDraft(groupId: string | undefined) {
     }
     loadDraft(groupId).then((saved) => {
       if (cancelled) return;
+      // אם המשתמש כבר התחיל להקליד לפני שהטיוטה נטענה — לא לדרוס
+      const pending = latestTextRef.current;
+      if (pending.length > 0 && pending !== lastFlushedRef.current) {
+        setIsHydrated(true);
+        return;
+      }
       setDraft(saved);
       latestTextRef.current = saved;
       lastFlushedRef.current = saved;

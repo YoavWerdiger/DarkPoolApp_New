@@ -48,8 +48,11 @@ const darkColors = {
    * בועות צ'אט — אטימות מלאה (α=1) עם **מראה כמו** ה־rgba הישן
    * (ריקוד אלפא על גבי רקע #0A0E0A — כמו ChatSessionBackdrop).
    */
-  bubbleMe: '#0F4D12', // מעט יותר בהיר/חי מ־#083B09, עדיין אותו DNA
-  bubbleOther: '#2C322F', // מעט יותר בהיר מ־#202324
+  bubbleMe: '#134D37',
+  bubbleOther: '#242625',
+  /** טקסט על בועת "שלי" — ניגודיות מלאה (לא text.inverse שכהה) */
+  bubbleMeText: '#FFFFFF',
+  bubbleMeMetaText: 'rgba(255, 255, 255, 0.65)',
 
   text: {
     primary: '#FFFFFF',
@@ -152,6 +155,8 @@ const lightColors = {
   /** light: אותו עיקרון — מרכיבים rgba כמו בקודם מעל רקע #F5F5F7 */
   bubbleMe: '#C8F4CA', // מעט יותר “פגז” / בולט
   bubbleOther: '#FAFAFA',
+  bubbleMeText: '#0A0E0A',
+  bubbleMeMetaText: 'rgba(10, 14, 10, 0.55)',
 
   text: {
     primary: '#000000',

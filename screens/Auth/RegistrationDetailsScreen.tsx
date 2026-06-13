@@ -7,6 +7,7 @@ import { DesignTokens } from '../../components/ui/DesignTokens';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 import OnboardingInput from '../../components/onboarding/OnboardingInput';
 import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
@@ -79,7 +80,10 @@ const RegistrationDetailsScreen = ({ navigation }: { navigation: any }) => {
       currentStep={1}
       totalSteps={5}
       showBack={true}
-      onBack={() => navigation.goBack()}
+      onBack={() => {
+        void HapticFeedback.impactLight();
+        navigation.goBack();
+      }}
       scrollable={true}
     >
       {/* Error Banner */}

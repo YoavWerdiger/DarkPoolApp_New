@@ -1,12 +1,39 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  useWindowDimensions,
+  Dimensions,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { Crown } from 'lucide-react-native';
 import { CourseWithProgress } from '../../types/learning';
 import { ProgressRing } from './ProgressRing';
-import { AccessBadge } from './AccessBadge';
-import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  ACADEMY_CARD_RADIUS,
+  ACADEMY_CARD_BORDER_WIDTH,
+  academyCardWidth,
+} from './academyCardLayout';
+import {
+  ACADEMY_BADGE_MIN_WIDTH,
+  getAcademyCourseTier,
+  getCourseDurationMinutes,
+  isDavidTrainingCourse,
+} from './academyCourses';
+
+const BADGE_H = 32;
+const PREMIUM_GOLD = '#F59E0B';
+const PREMIUM_GOLD_DARK = '#D97706';
+
+/** @deprecated השתמשו ב־academyCardWidth — נשמר לתאימות */
+export const CARD_WIDTH = academyCardWidth(Dimensions.get('window').width);
 
 interface CourseCardProps {
   course: CourseWithProgress;
@@ -19,338 +46,362 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   course,
   onPress,
   onEnroll,
-  hideBadges = false
+  hideBadges = false,
 }) => {
-  const DesignTokens = useDesignTokens();
-  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
-  
+  const T = useDesignTokens();
+  const { width: screenWidth } = useWindowDimensions();
+  const cardWidth = academyCardWidth(screenWidth);
+  const coverHeight = Math.round(cardWidth * 0.7);
+  const styles = React.useMemo(
+    () => createStyles(T, coverHeight),
+    [T, coverHeight]
+  );
+
   const isEnrolled = !!course.enrollment;
   const lessonsFromModules =
-    course.modules?.reduce((sum, mod) => sum + (mod.lessons?.length ?? 0), 0) ?? 0;
-  const fromProgressTotal = course.progress?.total_lessons;
-  const fromMetaTotal = (course as any).total_lessons as number | undefined;
-  const fromLessonsArr = Array.isArray((course as any).lessons) ? (course as any).lessons.length : 0;
+    course.modules?.reduce((s, m) => s + (m.lessons?.length ?? 0), 0) ?? 0;
   const totalLessons =
-    [fromProgressTotal, fromMetaTotal, fromLessonsArr, lessonsFromModules].find(
-      (n) => typeof n === 'number' && n > 0
-    ) ?? 0;
+    [
+      course.progress?.total_lessons,
+      (course as any).total_lessons,
+      Array.isArray((course as any).lessons) ? (course as any).lessons.length : 0,
+      lessonsFromModules,
+    ].find((n) => typeof n === 'number' && n > 0) ?? 0;
+
   const completedLessons = course.progress?.completed_lessons || 0;
-  const progressPercentage =
+  const progressPct =
     totalLessons > 0
       ? (completedLessons / totalLessons) * 100
       : course.progress?.progress_percentage || 0;
-  const showProgressRing = isEnrolled || totalLessons > 0;
 
-  // קבלת מחיר מהקורס (אם יש)
-  const coursePrice = (course as any).price || 0;
-  const hasTopRightBadge = coursePrice > 0 || (!hideBadges && coursePrice === 0);
-  const originalPrice = (course as any).original_price || 0;
-  const hasDiscount = originalPrice > 0 && originalPrice > coursePrice;
+  const tier = getAcademyCourseTier(course as CourseWithProgress & { price?: number });
+  const isPremium = tier === 'premium';
+  const isFree = tier === 'free';
+  const isPaid = isPremium;
+  const accentColor = isPremium ? PREMIUM_GOLD : T.colors.primary.dark;
+  const frameBorderColor = isPremium
+    ? 'rgba(245, 158, 11, 0.35)'
+    : 'rgba(0, 160, 4, 0.35)';
+  const freeBadgeLabel = isDavidTrainingCourse(course) ? 'קורס בסיסי' : 'חינמי';
+  const durationMinutes = getCourseDurationMinutes(course as CourseWithProgress & { duration_hours?: number });
+
+  const descText = course.description || course.subtitle || null;
 
   return (
     <TouchableOpacity
+      style={styles.wrapper}
       onPress={() => {
         void HapticFeedback.impactLight();
         onPress(course);
       }}
-      activeOpacity={0.7}
+      activeOpacity={0.84}
     >
       <UICard
         variant="blur"
         padding="none"
-        style={[styles.container, { borderColor: `${DesignTokens.colors.primary.main}18` }]}
+        showGlassBorder={false}
+        style={[
+          styles.card,
+          {
+            borderWidth: ACADEMY_CARD_BORDER_WIDTH,
+            borderColor: frameBorderColor,
+          },
+        ]}
       >
-        {/* Cover Image - Full Width */}
-        <View style={styles.coverContainer}>
+        {/* Cover image */}
+        <View style={styles.cover}>
           {course.cover_url ? (
             <Image
               source={{ uri: course.cover_url }}
-              style={styles.coverImage}
+              style={styles.coverImg as any}
               resizeMode="cover"
             />
           ) : (
             <View style={styles.coverPlaceholder}>
-              <Ionicons name="school-outline" size={48} color={DesignTokens.colors.text.tertiary} />
-            </View>
-          )}
-          
-          {/* Price Badge - Top Right */}
-          {coursePrice > 0 && (
-            <View style={styles.priceBadge}>
-              {hasDiscount && (
-                <Text style={styles.originalPriceBadge}>
-                  ₪{originalPrice.toFixed(0)}
-                </Text>
-              )}
-              <Text style={styles.currentPriceBadge}>
-                ₪{coursePrice.toFixed(0)}
-              </Text>
+              <Ionicons name="school-outline" size={64} color={T.colors.text.tertiary} />
             </View>
           )}
 
-          {/* Free Badge */}
-          {!hideBadges && coursePrice === 0 && (
-            <View style={styles.freeBadgeOverlay}>
-              <Text style={styles.freeBadgeOverlayText}>חינם</Text>
-            </View>
-          )}
+          {/* Smooth fade from the cover image into the body. Uses real
+             multi-stop linear gradient (transparent → glass color) instead
+             of a hard dark band, so there's no visible seam between the
+             image and the card body. */}
+          <LinearGradient
+            colors={[
+              'rgba(12,18,14,0)',
+              'rgba(12,18,14,0.35)',
+              'rgba(12,18,14,0.7)',
+            ]}
+            locations={[0, 0.55, 1]}
+            style={styles.coverGradient}
+            pointerEvents="none"
+          />
 
-          {/* טבעת התקדמות — גם כשיש ספירת שיעורים מהמודולים בלי enrollment בלבד */}
-          {showProgressRing && (
-            <View
-              style={[
-                styles.progressContainer,
-                hasTopRightBadge && { top: 56 },
-              ]}
-            >
+          {/* Progress ring — top-left when enrolled */}
+          {isEnrolled && (
+            <View style={styles.ringWrap}>
               <ProgressRing
-                progress={Math.min(100, Math.max(0, progressPercentage))}
-                size={48}
-                strokeWidth={3}
-                color={DesignTokens.colors.primary.main}
-                centerLabel={`${Math.round(progressPercentage)}%`}
+                progress={Math.min(100, Math.max(0, progressPct))}
+                size={46}
+                strokeWidth={4}
+                color={accentColor}
+                centerLabel={`${Math.round(progressPct)}%`}
               />
             </View>
           )}
-
-          {/* Access Badge */}
-          {!hideBadges && (
-            <View style={styles.badgeContainer}>
-              <AccessBadge access={course.access} />
-            </View>
-          )}
         </View>
 
-        {/* Content */}
-        <View style={styles.content}>
+        {/* Body */}
+        <View style={styles.body}>
+          {/* Title */}
           <Text style={styles.title} numberOfLines={2}>
             {course.title}
           </Text>
-          
-          {course.subtitle && (
-            <Text style={styles.subtitle} numberOfLines={2}>
-              {course.subtitle}
-            </Text>
-          )}
 
           {/* Description */}
-          {course.description && (
-            <Text style={styles.description} numberOfLines={2}>
-              {course.description}
+          {descText ? (
+            <Text style={styles.desc} numberOfLines={3}>
+              {descText}
             </Text>
+          ) : null}
+
+          {/* Stats row */}
+          <View style={styles.statsRow}>
+            {totalLessons > 0 && (
+              <View style={styles.stat}>
+                <Ionicons name="play-circle-outline" size={14} color={accentColor} />
+                <Text style={styles.statText}>{totalLessons} שיעורים</Text>
+              </View>
+            )}
+            {course.instructor_name && (
+              <View style={styles.stat}>
+                <Ionicons name="person-outline" size={14} color={accentColor} />
+                <Text style={styles.statText}>{course.instructor_name}</Text>
+              </View>
+            )}
+            {durationMinutes > 0 && (
+              <View style={styles.stat}>
+                <Ionicons name="time-outline" size={14} color={accentColor} />
+                <Text style={styles.statText}>
+                  {durationMinutes >= 60
+                    ? `${Math.round(durationMinutes / 60)} שע׳`
+                    : `${durationMinutes} דק׳`}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Progress bar (enrolled) */}
+          {isEnrolled && (
+            <View style={styles.progressSection}>
+              <View style={styles.progressRow}>
+                <Text style={styles.progressLabel}>
+                  {completedLessons}/{totalLessons} הושלמו
+                </Text>
+                <Text style={[styles.progressPct, { color: accentColor }]}>
+                  {Math.round(progressPct)}%
+                </Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.min(progressPct, 100)}%` as any, backgroundColor: accentColor },
+                  ]}
+                />
+              </View>
+            </View>
           )}
 
-          {/* סיכום שיעורים — בלי פס התקדמות (האחוז בטבעת) */}
-          {totalLessons > 0 && (
-            <View style={styles.progressInfo}>
-              <Text style={styles.progressText}>
-                {completedLessons}/{totalLessons} שיעורים הושלמו
+          {/* CTA */}
+          {!isEnrolled && onEnroll ? (
+            <TouchableOpacity
+              style={[styles.cta, { backgroundColor: accentColor }]}
+              onPress={(e) => {
+                e.stopPropagation();
+                void HapticFeedback.impactLight();
+                onEnroll(course);
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.ctaText}>
+                {isFree ? 'הירשם בחינם' : isPaid ? 'קנה קורס' : 'הירשם'}
+              </Text>
+            </TouchableOpacity>
+          ) : isEnrolled ? (
+            <View style={styles.enrolledBadge}>
+              <Ionicons name="checkmark-circle" size={17} color={accentColor} />
+              <Text style={[styles.enrolledText, { color: accentColor }]}>
+                נרשמת לקורס
               </Text>
             </View>
-          )}
-
-          {/* Tags */}
-          {course.tags && course.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              {course.tags.slice(0, 3).map((tag, index) => (
-                <View key={index} style={styles.tag}>
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
+          ) : null}
         </View>
       </UICard>
+
+      {!hideBadges && (
+        <View style={styles.badgeAnchor} pointerEvents="none">
+          {isPremium ? (
+            <View style={[styles.badge, styles.badgePremium]}>
+              <LinearGradient
+                colors={[PREMIUM_GOLD, PREMIUM_GOLD_DARK]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Crown size={16} color="#fff" strokeWidth={2.5} />
+            </View>
+          ) : (
+            <View style={[styles.badge, { backgroundColor: T.colors.primary.dark }]}>
+              <Text style={styles.badgeText}>{freeBadgeLabel}</Text>
+            </View>
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   );
 };
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  container: {
-    overflow: 'hidden',
-    borderRadius: tokens.borderRadius['2xl'],
-    marginBottom: tokens.spacing.lg,
-    borderWidth: 1,
-  },
-  coverContainer: {
-    position: 'relative',
-    height: 180,
-    width: '100%',
-    borderTopLeftRadius: tokens.borderRadius['2xl'],
-    borderTopRightRadius: tokens.borderRadius['2xl'],
-    overflow: 'hidden',
-  },
-  coverImage: {
-    width: '100%',
-    height: '100%',
-  } as any,
-  coverPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressContainer: {
-    position: 'absolute',
-    top: tokens.spacing.md,
-    right: tokens.spacing.md,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: tokens.borderRadius.full,
-    padding: tokens.spacing.xs,
-  },
-  badgeContainer: {
-    position: 'absolute',
-    top: tokens.spacing.md,
-    left: tokens.spacing.md,
-  },
-  priceBadge: {
-    position: 'absolute',
-    top: tokens.spacing.md,
-    right: tokens.spacing.md,
-    backgroundColor: tokens.colors.overlay || 'rgba(0,0,0,0.7)',
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.sm,
-    borderRadius: tokens.borderRadius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.spacing.sm,
-  },
-  originalPriceBadge: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.tertiary,
-    textDecorationLine: 'line-through',
-  },
-  currentPriceBadge: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    color: tokens.colors.success.main || tokens.colors.primary.main,
-  },
-  freeBadgeOverlay: {
-    position: 'absolute',
-    top: tokens.spacing.md,
-    right: tokens.spacing.md,
-    backgroundColor: tokens.colors.primary.main + 'E6',
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.sm,
-    borderRadius: tokens.borderRadius.md,
-  },
-  freeBadgeOverlayText: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    color: tokens.colors.text.primary,
-  },
-  content: {
-    paddingHorizontal: tokens.spacing.lg,
-    paddingTop: tokens.spacing.md,
-    paddingBottom: tokens.spacing.lg,
-    gap: tokens.spacing.sm,
-  },
-  title: {
-    fontSize: tokens.typography.fontSize.xl,
-    fontWeight: '800' as any,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-    lineHeight: 28,
-  },
-  subtitle: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.medium as any,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-  },
-  description: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.tertiary,
-    lineHeight: 20,
-    textAlign: 'right',
-  },
-  instructorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: tokens.spacing.sm,
-  },
-  instructorLabel: {
-    fontSize: tokens.typography.fontSize.xs,
-    color: tokens.colors.text.tertiary,
-    marginLeft: tokens.spacing.xs,
-  },
-  instructorName: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    fontWeight: tokens.typography.fontWeight.medium as any,
-  },
-  progressInfo: {
-    marginBottom: tokens.spacing.sm,
-    marginTop: tokens.spacing.sm,
-  },
-  progressText: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.primary.main,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    textAlign: 'right',
-  },
-  tagsContainer: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: tokens.spacing.xs,
-  },
-  tag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    paddingHorizontal: tokens.spacing.sm,
-    paddingVertical: tokens.spacing.xs,
-    borderRadius: tokens.borderRadius.sm,
-  },
-  tagText: {
-    fontSize: tokens.typography.fontSize.xs,
-    color: tokens.colors.text.primary,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: tokens.spacing.sm,
-    paddingTop: tokens.spacing.md,
-    borderTopWidth: tokens.layout?.borderWidth?.thin || 1,
-    borderTopColor: tokens.colors.border.primary,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: tokens.spacing.sm,
-  },
-  originalPrice: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.tertiary,
-    textDecorationLine: 'line-through',
-  },
-  currentPrice: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.bold as any,
-    color: tokens.colors.primary.main,
-  },
-  freeBadge: {
-    backgroundColor: tokens.colors.primary.main + '20',
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.xs,
-    borderRadius: tokens.borderRadius.md,
-  },
-  freeBadgeText: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.primary.main,
-  },
-  premiumBadge: {
-    backgroundColor: tokens.colors.danger.main + '20',
-    paddingHorizontal: tokens.spacing.md,
-    paddingVertical: tokens.spacing.xs,
-    borderRadius: tokens.borderRadius.md,
-  },
-  premiumBadgeText: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.danger.main,
-  },
-});
+const createStyles = (T: ReturnType<typeof useDesignTokens>, coverHeight: number) =>
+  StyleSheet.create({
+    wrapper: {
+      width: '100%',
+      paddingTop: BADGE_H / 2,
+    },
 
+    card: {
+      width: '100%',
+      borderRadius: ACADEMY_CARD_RADIUS,
+      shadowColor: '#000',
+      shadowOpacity: 0.4,
+      shadowOffset: { width: 0, height: 8 },
+      shadowRadius: 20,
+      elevation: 10,
+    },
+
+    /* Pill badge — half outside the top edge of the card. */
+    badgeAnchor: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      zIndex: 20,
+    },
+    badge: {
+      height: BADGE_H,
+      minWidth: ACADEMY_BADGE_MIN_WIDTH,
+      paddingHorizontal: 20,
+      borderRadius: 999,
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOpacity: 0.35,
+      shadowOffset: { width: 0, height: 4 },
+      shadowRadius: 10,
+      elevation: 6,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.22)',
+      overflow: 'hidden',
+    },
+    badgePremium: {
+      paddingHorizontal: 0,
+    },
+    badgeText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#fff',
+      letterSpacing: 0.5,
+    },
+
+    cover: {
+      width: '100%',
+      height: coverHeight,
+      position: 'relative',
+      backgroundColor: 'rgba(255,255,255,0.04)',
+    },
+    coverImg: { width: '100%', height: '100%' },
+    coverPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    coverGradient: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      // Tall, soft gradient — ~40% of cover height — eliminates the previous
+      // hard dark line at the bottom of the image and blends image into body.
+      height: Math.round(coverHeight * 0.4),
+    },
+
+    ringWrap: {
+      position: 'absolute',
+      top: 10,
+      right: 12,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      borderRadius: 28,
+      padding: 3,
+    },
+
+    body: {
+      padding: 24,
+      paddingTop: 20,
+      gap: 14,
+    },
+
+    title: {
+      fontSize: 21,
+      fontWeight: '800',
+      color: T.colors.text.primary,
+      textAlign: 'right',
+      lineHeight: 28,
+    },
+
+    desc: {
+      fontSize: 14,
+      color: T.colors.text.secondary,
+      textAlign: 'right',
+      lineHeight: 21,
+    },
+
+    statsRow: {
+      flexDirection: 'row-reverse',
+      gap: 14,
+      flexWrap: 'wrap',
+    },
+    stat: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4 },
+    statText: { fontSize: 12, color: T.colors.text.secondary },
+
+    divider: {
+      height: 1,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+
+    progressSection: { gap: 6 },
+    progressRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    progressLabel: { fontSize: 12, color: T.colors.text.secondary },
+    progressPct: { fontSize: 12, fontWeight: '700' },
+    progressTrack: {
+      height: 4,
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      borderRadius: 2,
+      overflow: 'hidden',
+    },
+    progressFill: { height: '100%', borderRadius: 2 },
+
+    cta: {
+      paddingVertical: 14,
+      borderRadius: 14,
+      alignItems: 'center',
+    },
+    ctaText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+    enrolledBadge: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 6,
+    },
+    enrolledText: { fontSize: 14, fontWeight: '600' },
+  });

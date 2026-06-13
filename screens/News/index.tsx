@@ -1,9 +1,14 @@
-import React, { useState, ErrorInfo, ReactNode, useEffect } from 'react';
+import React, { useState, ErrorInfo, ReactNode, useEffect, useCallback } from 'react';
 import { View, Text, ActivityIndicator, type TextStyle, type ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import BreakingNewsTab from './BreakingNewsTab';
 import { NewsScreenShell } from './NewsScreenShell';
+import CreateNewsSheet from './CreateNewsSheet';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type ErrorBoundaryProps = {
   children: ReactNode;
@@ -49,6 +54,8 @@ export default function NewsScreen({ route }: { route?: any }) {
   const navigation = useNavigation();
   const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const [isReady, setIsReady] = useState(false);
+  const [createSheetVisible, setCreateSheetVisible] = useState(false);
+  const { isAdmin } = useIsAdmin();
 
   /** תאימות לאחור: params.tab מנווט למסכי המגירה */
   useEffect(() => {
@@ -65,19 +72,50 @@ export default function NewsScreen({ route }: { route?: any }) {
     return () => clearTimeout(t);
   }, []);
 
+  const handleOpenCreateSheet = useCallback(() => {
+    void HapticFeedback.impactLight();
+    setCreateSheetVisible(true);
+  }, []);
+
+  const handleCloseCreateSheet = useCallback(() => {
+    setCreateSheetVisible(false);
+  }, []);
+
+  /** כפתור "+" — בצד הנגדי לכפתור ההמבורגר; מוצג רק ל-admins.
+   *  אותו רכיב + אותו גודל כמו כפתור התפריט, כדי שיהיה מראה זהה. */
+  const adminCreateButton = isAdmin ? (
+    <DayNavBlurButton
+      onPress={handleOpenCreateSheet}
+      glassIntensity="subtle"
+      size={DRAWER_MENU_BUTTON_SIZE}
+      accessibilityLabel="הוסף חדשה"
+    >
+      <Ionicons name="add" size={24} color={DesignTokens.colors.text.primary} />
+    </DayNavBlurButton>
+  ) : null;
+
   return (
-    <NewsScreenShell title="חדשות">
-      {!isReady ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={styles.loadingText}>טוען...</Text>
-        </View>
-      ) : (
-        <ErrorBoundary errorStyles={styles.errorBoundary}>
-          <BreakingNewsTab />
-        </ErrorBoundary>
-      )}
-    </NewsScreenShell>
+    <>
+      <NewsScreenShell title="חדשות" headerRight={adminCreateButton}>
+        {!isReady ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+            <Text style={styles.loadingText}>טוען...</Text>
+          </View>
+        ) : (
+          <ErrorBoundary errorStyles={styles.errorBoundary}>
+            <BreakingNewsTab />
+          </ErrorBoundary>
+        )}
+      </NewsScreenShell>
+
+      {isAdmin ? (
+        <CreateNewsSheet
+          visible={createSheetVisible}
+          onClose={handleCloseCreateSheet}
+        />
+      ) : null}
+    </>
   );
 }
 

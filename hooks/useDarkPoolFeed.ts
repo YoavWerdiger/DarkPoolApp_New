@@ -28,7 +28,10 @@ import type {
   DarkPoolTradeRow,
   TopAccumulationRow,
 } from '../types/darkpool.types';
-import { DARK_POOL_PREMIUM_GATING_ENABLED } from '../types/darkpool.types';
+import {
+  DARK_POOL_FORM4_ONLY,
+  DARK_POOL_PREMIUM_GATING_ENABLED,
+} from '../types/darkpool.types';
 import { useSubscription } from './useSubscription';
 
 interface UseDarkPoolFeedState {
@@ -50,7 +53,7 @@ export function useDarkPoolFeed() {
     topAccumulation: [],
     whaleOrders: [],
     confluence: [],
-    loading: true,
+    loading: !DARK_POOL_FORM4_ONLY,
     refreshing: false,
     error: null,
   });
@@ -59,6 +62,18 @@ export function useDarkPoolFeed() {
   useEffect(() => () => { mounted.current = false; }, []);
 
   const load = useCallback(async (refresh = false) => {
+    if (DARK_POOL_FORM4_ONLY) {
+      setState({
+        liveSignals: [],
+        topAccumulation: [],
+        whaleOrders: [],
+        confluence: [],
+        loading: false,
+        refreshing: false,
+        error: null,
+      });
+      return;
+    }
     setState((s) => ({
       ...s,
       loading: refresh ? s.loading : true,
@@ -99,7 +114,7 @@ export function useDarkPoolFeed() {
 
   // Realtime updates — only Premium clients (free is delayed 15min anyway).
   useEffect(() => {
-    if (!isPremium) return;
+    if (DARK_POOL_FORM4_ONLY || !isPremium) return;
     const unsub = subscribeDarkPool((e: DarkPoolRealtimeEvent) => {
       if (e.type !== 'signal') return;
       setState((s) => {

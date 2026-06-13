@@ -16,10 +16,15 @@ export interface BottomSheetProps {
   dragAreaHeight?: number;
   /** גרדיאנט מסך + שור־דוב (כמו ChatSessionBackdrop). ברירת מחדל: true */
   showBrandBackground?: boolean;
+  /** שכבת שור־דוב בלבד — false = גרדיאנט בלי watermark. ברירת מחדל: כמו showBrandBackground */
+  showBrandWatermark?: boolean;
   /** פינות עליונות של לוח השיט (ברירת מחדל מ־styles). למשל 28 כמו מודאל טופס */
   topCornerRadius?: number;
   /** כש־true: התוכן לא נמתח לגובה מלא — מתאים לשיטים שגובהם נקבע לפי snapPoints מדודים */
-  fitContent?: boolean;
+  /** מכפיל גודל שור־דוב בשכבת sheetBottom (1 = רגיל) */
+  brandWatermarkScale?: number;
+  /** דריסת ריפוד תחתון לתוכן השיט (למשל 0 כשה-footer מטפל ב-safe area בעצמו) */
+  contentPaddingBottom?: number;
 }
 
 

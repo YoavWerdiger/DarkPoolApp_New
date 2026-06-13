@@ -48,20 +48,27 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   edgeToEdge = false,
   dragAreaHeight,
   showBrandBackground = true,
+  showBrandWatermark,
+  brandWatermarkScale = 1,
   topCornerRadius,
   fitContent = false,
+  contentPaddingBottom: contentPaddingBottomOverride,
 }) => {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
+  const showWatermark = showBrandWatermark ?? showBrandBackground;
   const dragStripPaddingV = showHandle ? 22 : 8;
   const dragStripMinHeight = showHandle ? 88 : 36;
   /** באנדרואיד לפעמים insets.bottom=0 למרות סרגל ניווט/מחוות — מגנים על ריפוד תחתון */
   const contentPaddingBottom = useMemo(() => {
+    if (contentPaddingBottomOverride != null) {
+      return contentPaddingBottomOverride;
+    }
     const minBottom = Platform.OS === 'android' ? 24 : 20;
     const safeBottom = Math.max(insets.bottom, minBottom);
     const extra = Platform.OS === 'android' ? 12 : 20;
     return safeBottom + extra;
-  }, [insets.bottom]);
+  }, [insets.bottom, contentPaddingBottomOverride]);
   const translateY = useSharedValue(SCREEN_HEIGHT); // מתחיל ב-SCREEN_HEIGHT (מחוץ למסך למטה)
   const startY = useSharedValue(0);
   const currentSnapIndex = useSharedValue(0);
@@ -291,14 +298,17 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
               style={[StyleSheet.absoluteFill, { backgroundColor: '#0A0E0A' }]}
             />
             <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
-            <BrandTransbackWatermark
-              layout="sheetBottom"
-              sheetVisibleHeightPx={
-                snapValues.length > 0
-                  ? SCREEN_HEIGHT - snapValues[0]
-                  : SCREEN_HEIGHT * 0.5
-              }
-            />
+            {showWatermark ? (
+              <BrandTransbackWatermark
+                layout="sheetBottom"
+                scale={brandWatermarkScale}
+                sheetVisibleHeightPx={
+                  snapValues.length > 0
+                    ? SCREEN_HEIGHT - snapValues[0]
+                    : SCREEN_HEIGHT * 0.5
+                }
+              />
+            ) : null}
           </View>
         ) : (
           <View

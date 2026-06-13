@@ -2,6 +2,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, Modal, Pressable, TextInput, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated, // React Native Animated for modal animations
   KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -29,7 +30,8 @@ interface MediaPreviewModalProps {
   mediaFiles: MediaFile[];
 }
 
-import { chatPalette as COLORS } from './chatDesignTokens';
+import { chatPalette as COLORS, chatRtlText } from './chatDesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -39,6 +41,7 @@ export default function MediaPreviewModal({
   onSend,
   mediaFiles
 }: MediaPreviewModalProps) {
+  const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
   
@@ -593,26 +596,32 @@ export default function MediaPreviewModal({
           {renderMediaContent()}
         </View>
 
-        {/* Top Controls - Glass Style */}
-        <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-          <GlassButton onPress={onClose}>
-            <X size={24} color={COLORS.text} strokeWidth={2} />
-          </GlassButton>
+        {/* Top Controls - Glass Style + gradient */}
+        <LinearGradient
+          colors={['rgba(0,0,0,0.72)', 'rgba(0,0,0,0.0)']}
+          style={[styles.topBarGradient, { paddingTop: insets.top }]}
+          pointerEvents="box-none"
+        >
+          <View style={[styles.topBar, { paddingTop: 8 }]}>
+            <GlassButton onPress={onClose}>
+              <X size={24} color={COLORS.text} strokeWidth={2} />
+            </GlassButton>
 
-          {localFiles.length > 1 && (
-            <View style={styles.counterBadge}>
-              <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
-                <View style={styles.counterInner}>
-                  <Text style={styles.counterText}>{currentIndex + 1}/{localFiles.length}</Text>
+            {localFiles.length > 1 && (
+              <View style={styles.counterBadge}>
+                <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+                  <View style={styles.counterInner}>
+                    <Text style={styles.counterText}>{currentIndex + 1}/{localFiles.length}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
+            )}
 
-          <GlassButton onPress={() => removeMedia(currentMedia.id)}>
-            <Trash2 size={22} color={COLORS.danger} strokeWidth={2} />
-          </GlassButton>
-        </View>
+            <GlassButton onPress={() => removeMedia(currentMedia.id)}>
+              <Trash2 size={22} color={COLORS.danger} strokeWidth={2} />
+            </GlassButton>
+          </View>
+        </LinearGradient>
 
         {/* Navigation Arrows */}
         {localFiles.length > 1 && (
@@ -638,8 +647,14 @@ export default function MediaPreviewModal({
           </>
         )}
 
-        {/* Bottom Controls - Glass Style with keyboard animation */}
-        <Animated.View style={[styles.bottomBar, animatedBottomBarStyle]}>
+        {/* Bottom Controls - Glass Style with keyboard animation + gradient */}
+        <Animated.View style={[styles.bottomBarWrapper, animatedBottomBarStyle]}>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.0)', 'rgba(0,0,0,0.82)']}
+          style={styles.bottomGradient}
+          pointerEvents="none"
+        />
+        <View style={styles.bottomBar}>
           {/* נגן וידאו מותאם: טיימליין + play/pause */}
           {currentMedia?.type === 'video' && (
             <View style={styles.videoControlsRow}>
@@ -661,28 +676,30 @@ export default function MediaPreviewModal({
             </View>
           )}
 
-          {/* Caption Input */}
+          {/* Caption Input — onboarding glass surface כמו שאר האפליקציה */}
           <View style={styles.captionRow}>
-            <View style={styles.captionGlass}>
-              <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
-                <View style={styles.captionInner}>
-                  <TextInput
-                    placeholder="הוסף כיתוב..."
-                    placeholderTextColor={COLORS.textSecondary}
-                    value={captions[currentMedia.id] || ''}
-                    onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
-                    style={styles.captionInput}
-                    multiline
-                    maxLength={500}
-                  />
-                </View>
-              </View>
+            <View
+              style={[
+                styles.captionGlass,
+                DesignTokens.onboardingInputSurface,
+                { borderRadius: DesignTokens.borderRadius.xl },
+              ]}
+            >
+              <TextInput
+                placeholder="הוסף כיתוב..."
+                placeholderTextColor={DesignTokens.colors.text.tertiary}
+                value={captions[currentMedia.id] || ''}
+                onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
+                style={[styles.captionInput, chatRtlText, { color: DesignTokens.colors.text.primary }]}
+                multiline
+                maxLength={500}
+              />
             </View>
 
             {/* Send Button */}
             <Pressable onPress={handleSend} style={styles.sendBtn}>
-              <View style={styles.sendBtnInner}>
-                <Send size={22} color="#000" strokeWidth={2.5} style={{ marginLeft: 2 }} />
+              <View style={[styles.sendBtnInner, { backgroundColor: DesignTokens.colors.primary.main }]}>
+                <Send size={22} color={DesignTokens.colors.text.inverse} strokeWidth={2.5} style={{ marginLeft: 2 }} />
               </View>
             </Pressable>
           </View>
@@ -744,6 +761,7 @@ export default function MediaPreviewModal({
               ))}
             </ScrollView>
           )}
+        </View>
         </Animated.View>
       </RNAnimatedView>
       </GestureHandlerRootView>
@@ -780,17 +798,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 5,
   },
-  topBar: {
+  topBarGradient: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
+    zIndex: 10,
+    paddingBottom: 24,
+  },
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
-    zIndex: 10,
   },
   glassButton: {
     overflow: 'hidden',
@@ -851,14 +872,24 @@ const styles = StyleSheet.create({
   navRight: {
     right: 16,
   },
-  bottomBar: {
+  bottomBarWrapper: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    zIndex: 10,
+  },
+  bottomGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 220,
+  },
+  bottomBar: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    zIndex: 10,
+    zIndex: 1,
   },
   videoControlsRow: {
     flexDirection: 'row',
@@ -926,22 +957,13 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 48,
     maxHeight: 100,
-    borderRadius: 24,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.glassBorder,
-  },
-  captionInner: {
-    flex: 1,
-    backgroundColor: COLORS.glass,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     justifyContent: 'center',
   },
   captionInput: {
-    color: COLORS.text,
     fontSize: 16,
-    textAlign: 'right',
     maxHeight: 76,
   },
   sendBtn: {
@@ -952,7 +974,6 @@ const styles = StyleSheet.create({
   },
   sendBtnInner: {
     flex: 1,
-    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

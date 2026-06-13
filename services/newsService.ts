@@ -205,14 +205,14 @@ export class NewsService {
 
   // הגדרת realtime subscription לעדכונים חדשים
   subscribeToNewsUpdates(callback: (newArticle: NewsArticle) => void): () => void {
-
-    // ביטול subscription קיים אם קיים
     if (this.realtimeSubscription) {
-      this.realtimeSubscription.unsubscribe();
+      void supabase.removeChannel(this.realtimeSubscription);
+      this.realtimeSubscription = null;
     }
 
+    const channelName = `app_news_clean_svc_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     this.realtimeSubscription = supabase
-      .channel('app_news_clean_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -226,10 +226,9 @@ export class NewsService {
       )
       .subscribe();
 
-    // פונקציה לביטול ה-subscription
     return () => {
       if (this.realtimeSubscription) {
-        this.realtimeSubscription.unsubscribe();
+        void supabase.removeChannel(this.realtimeSubscription);
         this.realtimeSubscription = null;
       }
     };
@@ -268,6 +267,115 @@ export class NewsService {
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * יצירת חדשה ידנית על־ידי admin (נכנסת ל-`app_news_clean` ומפעילה את הטריגר ל-Push).
+   *
+   * סכימת הטבלה (מבוסס SQL היסטורי בפרויקט): id, label, text, source, time, img.
+   * (אין `content` / `image_url` / `published_at` כעמודות אמיתיות — אלו רק כינויים שהטריגר מצפה להם.)
+   *
+   * אם הטריגר ל-Push דורש `NEW.content` / `NEW.image_url` והם לא קיימים — צריך לעדכן את הטריגר
+   * בצד השרת כך שיקרא ל-`NEW.text` / `NEW.img`. אנחנו מצידנו מכניסים לעמודות שקיימות.
+   */
+  async createNews(input: {
+    title: string;
+    content: string;
+    source?: string;
+    image_url?: string | null;
+    author?: string;
+  }): Promise<NewsArticle> {
+    const trimmedTitle = (input.title || '').trim();
+    const trimmedContent = (input.content || '').trim();
+
+    if (!trimmedTitle) {
+      throw new Error('חובה להזין כותרת');
+    }
+    if (!trimmedContent) {
+      throw new Error('חובה להזין תוכן');
+    }
+
+    const nowIso = new Date().toISOString();
+    const id = `admin_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const source = (input.source || '').trim() || 'DarkPool';
+    const imageUrl = input.image_url || null;
+
+    // PostgREST מחזיר שגיאת "column does not exist" כ-PGRST204.
+    // הטבלה כיום משתמשת בעמודות label/text/time/img (לפי ה-SQL ההיסטורי בפרויקט).
+    // ננסה קודם עם השמות הישנים — הם הקיימים בפועל.
+    const legacyPayload: Record<string, unknown> = {
+      id,
+      label: trimmedTitle,
+      text: trimmedContent,
+      source,
+      time: nowIso,
+      img: imageUrl,
+    };
+
+    let { data, error } = await supabase
+      .from('app_news_clean')
+      .insert(legacyPayload)
+      .select('*')
+      .single();
+
+    // אם דווקא העמודות הישנות לא קיימות — ננסה את הסכימה המודרנית.
+    const isColumnMissingError = (e: typeof error) =>
+      !!e &&
+      ((e as { code?: string }).code === '42703' ||
+        (e as { code?: string }).code === 'PGRST204' ||
+        /column .* does not exist|Could not find the .* column/i.test(e.message || ''));
+
+    if (isColumnMissingError(error)) {
+      const modernPayload: Record<string, unknown> = {
+        id,
+        title: trimmedTitle,
+        content: trimmedContent,
+        source,
+        image_url: imageUrl,
+        published_at: nowIso,
+      };
+      const retry = await supabase
+        .from('app_news_clean')
+        .insert(modernPayload)
+        .select('*')
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error) {
+      const code = (error as { code?: string }).code;
+      if (code === '42501') {
+        throw new Error('אין הרשאה לכתוב לטבלת החדשות. צריך להריץ RLS policy בצד השרת.');
+      }
+      if (code === '23505') {
+        throw new Error('כבר קיימת חדשה עם אותו מזהה. נסה שוב.');
+      }
+      throw new Error(
+        `שגיאה מ-Supabase (${code || 'unknown'}): ${error.message || 'שגיאה לא ידועה'}`,
+      );
+    }
+
+    return {
+      id: data?.id ?? id,
+      label: data?.label ?? trimmedTitle,
+      title: data?.title ?? data?.label ?? trimmedTitle,
+      content: data?.content ?? data?.text ?? trimmedContent,
+      summary: data?.summary ?? undefined,
+      source: data?.source ?? source,
+      source_url: data?.source_url ?? '',
+      author: data?.author ?? (input.author || ''),
+      image_url: data?.image_url ?? data?.img ?? imageUrl ?? undefined,
+      published_at: data?.published_at ?? data?.time ?? nowIso,
+      created_at: data?.created_at ?? nowIso,
+      category: data?.category ?? 'כללי',
+      tags: data?.tags ?? [],
+      is_featured: data?.is_featured ?? false,
+      view_count: data?.view_count ?? 0,
+      sentiment: data?.sentiment ?? 'neutral',
+      relevance_score: data?.relevance_score ?? 0,
+      reading_time: data?.reading_time ?? 1,
+    } as NewsArticle;
   }
 
   // עדכון מספר צפיות

@@ -2,7 +2,6 @@ import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, Linking, Modal, Share, ScrollView, Animated, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 // import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -536,8 +535,9 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
     if (!visible) setMeasuredContentH(null);
   }, [visible, article?.id]);
 
-  // Snap point דינמי לפי כמות התוכן — שהsheet ייפתח בדיוק בגובה שצריך,
-  // ועדיין אפשר לגרור למעלה לתצוגה מלאה
+  // Snap point דינמי — strictly to content height. A single snap means the
+  // sheet opens at exactly the size needed for the article and doesn't
+  // stretch up to a "full" snap that the user has to drag back down from.
   const dynamicSnapPoints = useMemo(() => {
     const screenH = Dimensions.get('window').height;
     const safeTop = insets.top + 20;
@@ -550,7 +550,7 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
     if (measuredContentH != null) {
       desiredAbs = imageH + measuredContentH + safeBottom;
     } else {
-      // הערכה זמנית עד שתהיה מדידה
+      // Estimate before onLayout has measured the content
       const titleText = article?.label || article?.title || '';
       const bodyText = article?.content || article?.summary || '';
       const CHARS_PER_LINE = 36;
@@ -561,9 +561,10 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
     }
 
     const clampedAbs = Math.min(maxAbs, desiredAbs);
-    const primary = Math.max(0.35, Math.min(0.9, clampedAbs / screenH));
-    const expanded = 0.95;
-    return primary >= expanded - 0.03 ? [primary] : [primary, expanded];
+    // Lower min clamp (0.25) lets short articles open as compact sheets
+    // instead of being forced to ~35% of the screen.
+    const primary = Math.max(0.25, Math.min(0.9, clampedAbs / screenH));
+    return [primary];
   }, [article?.label, article?.title, article?.content, article?.summary, article?.image_url, measuredContentH, insets.top, insets.bottom]);
 
   if (!article) return null;
@@ -817,9 +818,13 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
     article.id?.length > 15;
 
   const hasImage = !!article.image_url;
-  const thumbnailHeight = 196;
+  // Square thumbnail on the right side — compact, doesn't dominate the card.
+  const THUMB_SIZE = 92;
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   const cardRadius = DesignTokens.borderRadius['2xl'];
+
+  const headline = article.label || article.title;
+  const summary = article.summary;
 
   return (
     <Pressable
@@ -835,101 +840,121 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
           overflow: 'hidden',
         }}
       >
-      {/* Thumbnail + גרדיאנט רגיל לקריאת כותרת על התמונה */}
-      <View style={{ height: thumbnailHeight, width: '100%', position: 'relative' }}>
-        {hasImage ? (
-          <>
-            <Image
-              source={{ uri: article.image_url }}
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="cover"
-            />
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.75)']}
-              locations={[0.25, 1]}
-              start={{ x: 0.5, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            {/* כותרת על ה-gradient */}
-            <View
+        {/* Top row — square image on the right, headline + summary on the left */}
+        <View
+          style={{
+            flexDirection: 'row-reverse',
+            alignItems: 'stretch',
+            padding: DesignTokens.spacing.md,
+            gap: DesignTokens.spacing.md,
+          }}
+        >
+          {/* Square thumbnail */}
+          <View
+            style={{
+              width: THUMB_SIZE,
+              height: THUMB_SIZE,
+              borderRadius: DesignTokens.borderRadius.lg,
+              overflow: 'hidden',
+              backgroundColor: DesignTokens.colors.background.tertiary,
+            }}
+          >
+            {hasImage ? (
+              <Image
+                source={{ uri: article.image_url }}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons
+                  name={isTwitterPost ? 'logo-twitter' : 'newspaper-outline'}
+                  size={36}
+                  color={DesignTokens.colors.text.tertiary}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Headline + summary column. Title and summary sit tightly
+             together at the top; the category is pushed to the bottom of
+             the column with marginTop:'auto'. */}
+          <View style={{ flex: 1, minHeight: THUMB_SIZE }}>
+            <Text
               style={{
-                position: 'absolute',
-                bottom: 12,
-                left: 12,
-                right: 12,
+                fontSize: 16,
+                fontWeight: '700',
+                color: DesignTokens.colors.text.primary,
+                textAlign: 'right',
+                lineHeight: 22,
+                writingDirection: 'rtl',
               }}
+              numberOfLines={summary ? 2 : 3}
             >
+              {headline}
+            </Text>
+
+            {summary ? (
               <Text
                 style={{
-                  fontSize: 17,
-                  fontWeight: '600',
-                  color: '#FFFFFF',
+                  fontSize: 13,
+                  color: DesignTokens.colors.text.secondary,
                   textAlign: 'right',
-                  lineHeight: 22,
+                  lineHeight: 19,
                   writingDirection: 'rtl',
+                  marginTop: 2,
                 }}
                 numberOfLines={2}
               >
-                {article.label || article.title}
+                {summary}
               </Text>
-            </View>
-          </>
-        ) : (
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: DesignTokens.colors.background.tertiary,
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <Ionicons
-              name={isTwitterPost ? 'logo-twitter' : 'newspaper-outline'}
-              size={48}
-              color={DesignTokens.colors.text.tertiary}
-            />
-            <Text
-              style={{
-                fontSize: 17,
-                fontWeight: '600',
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'right',
-                marginTop: 12,
-                marginHorizontal: 16,
-              }}
-              numberOfLines={2}
-            >
-              {article.label || article.title}
-            </Text>
+            ) : null}
+
+            {/* Category — pinned to the bottom of the text column */}
+            {article.category && article.category !== 'כללי' ? (
+              <View
+                style={{
+                  marginTop: 'auto',
+                  alignSelf: 'flex-end',
+                  backgroundColor: categoryColor + '25',
+                  paddingHorizontal: 10,
+                  paddingVertical: 3,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '600', color: categoryColor }}>
+                  {article.category}
+                </Text>
+              </View>
+            ) : null}
           </View>
-        )}
-      </View>
+        </View>
 
-      <View style={{ height: 1, backgroundColor: SHEET_DIVIDER }} />
+        <View style={{ height: 1, backgroundColor: SHEET_DIVIDER }} />
 
-      {/* תוכן מתחת לתמונה — padding כמו כרטיסי יומן */}
-      <View
-        style={{
-          paddingHorizontal: DesignTokens.spacing.lg,
-          paddingTop: DesignTokens.spacing.md,
-          paddingBottom: DesignTokens.spacing.lg,
-        }}
-      >
+        {/* Footer — actions on the left, source + time on the right */}
         <View
           style={{
+            paddingHorizontal: DesignTokens.spacing.lg,
+            paddingVertical: DesignTokens.spacing.sm,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          {/* כפתורי פעולה */}
+          {/* Action buttons */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TouchableOpacity
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
+                width: 32,
+                height: 32,
+                borderRadius: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: isLiked ? 'rgba(255, 59, 92, 0.15)' : 'rgba(255,255,255,0.06)',
@@ -942,15 +967,15 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             >
               <Ionicons
                 name={isLiked ? 'heart' : 'heart-outline'}
-                size={18}
+                size={16}
                 color={isLiked ? '#FF3B5C' : DesignTokens.colors.text.secondary}
               />
             </TouchableOpacity>
             <TouchableOpacity
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
+                width: 32,
+                height: 32,
+                borderRadius: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: 'rgba(255,255,255,0.06)',
@@ -960,11 +985,11 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
                 handleSharePress();
               }}
             >
-              <Ionicons name="share-outline" size={18} color={DesignTokens.colors.text.secondary} />
+              <Ionicons name="share-outline" size={16} color={DesignTokens.colors.text.secondary} />
             </TouchableOpacity>
           </View>
 
-          {/* מקור וזמן — תמיד, בכיוון RTL מימין לשמאל */}
+          {/* Source + time — RTL */}
           <View
             style={{
               flexDirection: 'row-reverse',
@@ -1004,25 +1029,6 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
             </Text>
           </View>
         </View>
-
-        {/* קטגוריה */}
-        {article.category && article.category !== 'כללי' && (
-          <View
-            style={{
-              marginTop: 10,
-              alignSelf: 'flex-end',
-              backgroundColor: categoryColor + '25',
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 8,
-            }}
-          >
-            <Text style={{ fontSize: 12, fontWeight: '500', color: categoryColor }}>
-              {article.category}
-            </Text>
-          </View>
-        )}
-      </View>
       </UICard>
     </Pressable>
   );
@@ -1296,8 +1302,9 @@ export default function BreakingNewsTab() {
 
   // הגדרת realtime subscription לעדכונים חדשים
   useEffect(() => {
+    const channelName = `app_news_clean_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const subscription = supabase
-      .channel('app_news_clean_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -1350,7 +1357,7 @@ export default function BreakingNewsTab() {
       });
 
     return () => {
-      subscription.unsubscribe();
+      void supabase.removeChannel(subscription);
     };
   }, []);
 

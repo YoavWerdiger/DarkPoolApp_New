@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { supabase } from '../../lib/supabase';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
@@ -25,12 +24,14 @@ import PortfolioActionsBottomSheet from './components/PortfolioActionsBottomShee
 import { PortfolioSummaryHeader } from './components/PortfolioSummaryHeader';
 import {
   PORTFOLIO_DETAIL_TABS,
+  PORTFOLIO_BROKER_TAB,
   type PortfolioDetailTab,
 } from './portfolioConstants';
 import {
   getPortfolio,
   loadPortfolioHoldings,
   loadPortfolioSummary,
+  updatePortfolio,
 } from '../../services/portfolios';
 import type {
   Portfolio,
@@ -40,8 +41,12 @@ import type {
 import OverviewTab from './tabs/OverviewTab';
 import HoldingsTab from './tabs/HoldingsTab';
 import TransactionsTab from './tabs/TransactionsTab';
-import AnalysisTab from './tabs/AnalysisTab';
+import BrokerOrdersTab from './tabs/BrokerOrdersTab';
+import OpenTradesTab from './tabs/OpenTradesTab';
+import HistoryTab from './tabs/HistoryTab';
+import CalendarTab from './tabs/CalendarTab';
 import { useRealtimeHoldings } from './hooks/useRealtimeHoldings';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
 type Route = RouteProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -60,12 +65,15 @@ export default function PortfolioDetailScreen() {
   const [activeTab, setActiveTab] = useState<PortfolioDetailTab>('overview');
   const [portfolioActionsOpen, setPortfolioActionsOpen] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
+  const tabsScrollRef = useRef<ScrollView | null>(null);
 
   const isOwner = useMemo(
     () =>
       !!(portfolio && viewerUserId && portfolio.user_id === viewerUserId),
     [portfolio, viewerUserId]
   );
+  const isBrokerSynced = portfolio?.source === 'colmex_pro';
+  const canAddTransaction = isOwner && !isBrokerSynced;
 
   const { holdings: liveHoldings, summary: liveSummary } = useRealtimeHoldings({
     baseHoldings: holdings,
@@ -121,6 +129,57 @@ export default function PortfolioDetailScreen() {
     navigation.navigate('AddTransaction', { portfolioId, initialMode: 'asset' });
   }, [navigation, portfolioId]);
 
+  const handleImport = useCallback(() => {
+    navigation.navigate('ImportTransactions', { portfolioId });
+  }, [navigation, portfolioId]);
+
+  const handleShare = useCallback(() => {
+    if (!portfolio) return;
+    const isPublic = portfolio.is_public === true;
+    if (isPublic) {
+      Alert.alert(
+        'הפסקת שיתוף',
+        `התיק "${portfolio.name}" משותף כעת עם הקהילה. האם להסיר אותו?`,
+        [
+          { text: 'ביטול', style: 'cancel' },
+          {
+            text: 'הסר שיתוף',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await updatePortfolio(portfolio.id, { is_public: false });
+                await load();
+              } catch (e) {
+                console.error('toggle public:', e);
+                Alert.alert('שגיאה', 'לא הצלחנו לעדכן את הגדרת השיתוף.');
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+    Alert.alert(
+      'שיתוף עם הקהילה',
+      `לשתף את "${portfolio.name}" עם הקהילה? משתמשים מאומתים אחרים יראו את התיק בלשונית «מהקהילה» (צפייה בלבד).`,
+      [
+        { text: 'ביטול', style: 'cancel' },
+        {
+          text: 'שתף',
+          onPress: async () => {
+            try {
+              await updatePortfolio(portfolio.id, { is_public: true });
+              await load();
+            } catch (e) {
+              console.error('toggle public:', e);
+              Alert.alert('שגיאה', 'לא הצלחנו לעדכן את הגדרת השיתוף.');
+            }
+          },
+        },
+      ]
+    );
+  }, [portfolio, load]);
+
   const openPortfolioActions = useCallback(() => {
     setPortfolioActionsOpen(true);
   }, []);
@@ -134,28 +193,26 @@ export default function PortfolioDetailScreen() {
           alignItems: 'center',
           justifyContent: 'center',
         },
-        tabsRow: {
-          flexDirection: 'row-reverse',
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          gap: 6,
-        },
-        tabsCard: {
-          marginHorizontal: 16,
+        tabsScroll: {
+          marginTop: 6,
           marginBottom: 2,
-          marginTop: 2,
+        },
+        tabsScrollContent: {
+          flexDirection: 'row-reverse',
+          paddingHorizontal: 16,
+          gap: 8,
         },
         tabBtn: {
-          flex: 1,
-          alignItems: 'center',
-          paddingVertical: 10,
-          borderRadius: 18,
-          borderWidth: 1,
-          borderColor: 'transparent',
+          paddingHorizontal: 16,
+          paddingVertical: 7,
+          borderRadius: 999,
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: 'rgba(255,255,255,0.08)',
         },
         tabBtnActive: {
-          backgroundColor: 'rgba(0, 200, 5, 0.12)',
-          borderColor: tokens.colors.primary.main,
+          backgroundColor: `${tokens.colors.primary.main}24`,
+          borderColor: `${tokens.colors.primary.main}55`,
         },
         tabText: {
           fontSize: 13,
@@ -164,16 +221,7 @@ export default function PortfolioDetailScreen() {
         },
         tabTextActive: {
           color: tokens.colors.primary.main,
-        },
-        addBtn: {
-          width: 38,
-          height: 38,
-          borderRadius: 19,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(0, 200, 5, 0.18)',
-          borderWidth: 1,
-          borderColor: tokens.colors.primary.main,
+          fontWeight: '700',
         },
         moreBtn: {
           width: 38,
@@ -184,11 +232,6 @@ export default function PortfolioDetailScreen() {
           backgroundColor: 'rgba(255,255,255,0.06)',
           borderWidth: 1,
           borderColor: tokens.colors.border.subtle,
-        },
-        headerActions: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          gap: 8,
         },
       }),
     [tokens]
@@ -218,37 +261,25 @@ export default function PortfolioDetailScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <PortfolioScreenHeader
           title={portfolio?.name ?? ''}
-          subtitle={
-            portfolio
-              ? isOwner
-                ? `${portfolio.currency} · benchmark ${portfolio.benchmark_symbol}`
-                : `צפייה בלבד · ${portfolio.currency} · benchmark ${portfolio.benchmark_symbol}`
-              : undefined
-          }
+          subtitle={portfolio && !isOwner ? 'צפייה בלבד' : undefined}
           onBack={() => navigation.goBack()}
-          rightAction={
+          moreAction={
             isOwner ? (
-              <View style={styles.headerActions}>
-                <TouchableOpacity
-                  style={styles.addBtn}
-                  onPress={handleAddTransaction}
-                  hitSlop={10}
-                >
-                  <Ionicons name="add" size={20} color={tokens.colors.primary.main} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.moreBtn}
-                  onPress={openPortfolioActions}
-                  hitSlop={10}
-                  accessibilityLabel="פעולות תיק"
-                >
-                  <Ionicons
-                    name="ellipsis-horizontal"
-                    size={18}
-                    color={tokens.colors.text.primary}
-                  />
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={styles.moreBtn}
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  openPortfolioActions();
+                }}
+                hitSlop={10}
+                accessibilityLabel="פעולות תיק"
+              >
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={18}
+                  color={tokens.colors.text.primary}
+                />
+              </TouchableOpacity>
             ) : undefined
           }
         />
@@ -264,34 +295,51 @@ export default function PortfolioDetailScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          <PortfolioSummaryHeader summary={liveSummary ?? summary} />
+          <PortfolioSummaryHeader
+            summary={liveSummary ?? summary}
+            portfolio={portfolio}
+            isOwner={isOwner}
+            onAddAsset={canAddTransaction ? handleAddTransaction : undefined}
+            onImport={canAddTransaction ? handleImport : undefined}
+            onShare={handleShare}
+          />
 
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="none"
-            style={[styles.tabsCard, { borderRadius: tokens.borderRadius.xl }]}
+          <ScrollView
+            ref={tabsScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tabsScroll}
+            contentContainerStyle={styles.tabsScrollContent}
+            onContentSizeChange={() =>
+              tabsScrollRef.current?.scrollToEnd({ animated: false })
+            }
           >
-            <View style={styles.tabsRow}>
-              {PORTFOLIO_DETAIL_TABS.map((tab) => {
-                const active = tab.id === activeTab;
-                return (
-                  <TouchableOpacity
-                    key={tab.id}
-                    onPress={() => setActiveTab(tab.id)}
-                    style={[styles.tabBtn, active && styles.tabBtnActive]}
-                    activeOpacity={0.85}
+            {(portfolio?.source === 'colmex_pro'
+              ? [...PORTFOLIO_DETAIL_TABS, PORTFOLIO_BROKER_TAB]
+              : PORTFOLIO_DETAIL_TABS
+            ).map((tab) => {
+              const active = tab.id === activeTab;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  onPress={() => {
+                    if (!active) void HapticFeedback.selection();
+                    setActiveTab(tab.id);
+                  }}
+                  style={[styles.tabBtn, active && styles.tabBtnActive]}
+                  activeOpacity={0.85}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text
+                    style={[styles.tabText, active && styles.tabTextActive]}
                   >
-                    <Text
-                      style={[styles.tabText, active && styles.tabTextActive]}
-                    >
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </UICard>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
           <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 60 }}>
             {activeTab === 'overview' && portfolio && (
@@ -301,24 +349,41 @@ export default function PortfolioDetailScreen() {
                 holdings={liveHoldings.length ? liveHoldings : holdings}
               />
             )}
+            {activeTab === 'open_trades' && portfolio && (
+              <OpenTradesTab
+                portfolioId={portfolio.id}
+                holdings={liveHoldings.length ? liveHoldings : holdings}
+                onChanged={() => void load()}
+                readOnly={!canAddTransaction}
+              />
+            )}
+            {activeTab === 'history' && portfolio && (
+              <HistoryTab
+                portfolioId={portfolio.id}
+                holdings={liveHoldings.length ? liveHoldings : holdings}
+              />
+            )}
             {activeTab === 'holdings' && portfolio && (
               <HoldingsTab
                 portfolio={portfolio}
                 holdings={liveHoldings.length ? liveHoldings : holdings}
               />
             )}
+            {activeTab === 'calendar' && portfolio && (
+              <CalendarTab
+                portfolioId={portfolio.id}
+                currency={portfolio.currency}
+              />
+            )}
             {activeTab === 'transactions' && portfolio && (
               <TransactionsTab
                 portfolio={portfolio}
                 onAddPress={handleAddTransaction}
-                readOnly={!isOwner}
+                readOnly={!canAddTransaction}
               />
             )}
-            {activeTab === 'analysis' && portfolio && (
-              <AnalysisTab
-                portfolio={portfolio}
-                holdings={liveHoldings.length ? liveHoldings : holdings}
-              />
+            {activeTab === 'broker' && portfolio && portfolio.source === 'colmex_pro' && (
+              <BrokerOrdersTab portfolioId={portfolio.id} currency={portfolio.currency} />
             )}
           </View>
         </ScrollView>

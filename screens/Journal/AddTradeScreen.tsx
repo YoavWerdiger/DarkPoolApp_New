@@ -229,6 +229,7 @@ export default function AddTradeScreen() {
   };
 
   const goBackStep = () => {
+    void HapticFeedback.impactLight();
     if (step > 0) setStep((x) => x - 1);
     else navigation.goBack();
   };
@@ -341,7 +342,10 @@ export default function AddTradeScreen() {
                     >
                       <TouchableOpacity
                         style={styles.directionTouch}
-                        onPress={() => setDirection('long')}
+                        onPress={() => {
+                          if (direction !== 'long') void HapticFeedback.selection();
+                          setDirection('long');
+                        }}
                         activeOpacity={0.85}
                       >
                         <Text
@@ -366,7 +370,10 @@ export default function AddTradeScreen() {
                     >
                       <TouchableOpacity
                         style={styles.directionTouch}
-                        onPress={() => setDirection('short')}
+                        onPress={() => {
+                          if (direction !== 'short') void HapticFeedback.selection();
+                          setDirection('short');
+                        }}
                         activeOpacity={0.85}
                       >
                         <Text
@@ -545,7 +552,10 @@ export default function AddTradeScreen() {
                     return (
                       <TouchableOpacity
                         key={opt.id}
-                        onPress={() => setTimeframe(selected ? null : opt.id)}
+                        onPress={() => {
+                          void HapticFeedback.selection();
+                          setTimeframe(selected ? null : opt.id);
+                        }}
                         activeOpacity={0.85}
                       >
                         <UICard
@@ -571,7 +581,10 @@ export default function AddTradeScreen() {
                     return (
                       <TouchableOpacity
                         key={`b-${opt.id}`}
-                        onPress={() => setMoodBefore(selected ? null : opt.id)}
+                        onPress={() => {
+                          void HapticFeedback.selection();
+                          setMoodBefore(selected ? null : opt.id);
+                        }}
                         activeOpacity={0.85}
                       >
                         <UICard
@@ -597,7 +610,10 @@ export default function AddTradeScreen() {
                     return (
                       <TouchableOpacity
                         key={`a-${opt.id}`}
-                        onPress={() => setMoodAfter(selected ? null : opt.id)}
+                        onPress={() => {
+                          void HapticFeedback.selection();
+                          setMoodAfter(selected ? null : opt.id);
+                        }}
                         activeOpacity={0.85}
                       >
                         <UICard
@@ -629,7 +645,10 @@ export default function AddTradeScreen() {
                     return (
                       <TouchableOpacity
                         key={String(opt.v)}
-                        onPress={() => setFollowedPlan(opt.v)}
+                        onPress={() => {
+                          if (followedPlan !== opt.v) void HapticFeedback.selection();
+                          setFollowedPlan(opt.v);
+                        }}
                         activeOpacity={0.85}
                       >
                         <UICard
@@ -697,7 +716,10 @@ export default function AddTradeScreen() {
                     return (
                       <TouchableOpacity
                         key={m.id}
-                        onPress={() => toggleMistake(m.id)}
+                        onPress={() => {
+                          void HapticFeedback.selection();
+                          toggleMistake(m.id);
+                        }}
                         activeOpacity={0.85}
                       >
                         <UICard
@@ -725,7 +747,10 @@ export default function AddTradeScreen() {
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
-              onPress={goNext}
+              onPress={() => {
+                void HapticFeedback.medium();
+                goNext();
+              }}
               disabled={loading}
               activeOpacity={0.85}
             >

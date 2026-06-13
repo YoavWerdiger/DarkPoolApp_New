@@ -18,6 +18,7 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import OnboardingInput from '../../components/onboarding/OnboardingInput';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, updateProfile } = useAuth();
@@ -152,7 +153,13 @@ export default function EditProfileScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="עריכת פרופיל" onBack={() => navigation.goBack()} />
+        <ChatSubScreenHeader
+          title="עריכת פרופיל"
+          onBack={() => {
+            void HapticFeedback.impactLight();
+            navigation.goBack();
+          }}
+        />
 
         <KeyboardAvoidingView 
           style={{ flex: 1 }}
@@ -182,8 +189,11 @@ export default function EditProfileScreen({ navigation }: any) {
                     paddingVertical: DesignTokens.spacing.sm,
                   }}
                 >
-                  <TouchableOpacity 
-                    onPress={handleImagePicker}
+                  <TouchableOpacity
+                    onPress={() => {
+                      void HapticFeedback.impactLight();
+                      handleImagePicker();
+                    }}
                     style={{ position: 'relative' }}
                     activeOpacity={0.8}
                   >
@@ -272,7 +282,10 @@ export default function EditProfileScreen({ navigation }: any) {
                     מין
                   </Text>
                   <TouchableOpacity
-                    onPress={() => setShowGenderPicker(true)}
+                    onPress={() => {
+                      void HapticFeedback.impactLight();
+                      setShowGenderPicker(true);
+                    }}
                     activeOpacity={0.7}
                     style={{
                       backgroundColor: 'rgba(255,255,255,0.05)',
@@ -345,7 +358,10 @@ export default function EditProfileScreen({ navigation }: any) {
               marginBottom: DesignTokens.spacing.lg
             }}>
               <TouchableOpacity
-                onPress={handleSave}
+                onPress={() => {
+                  void HapticFeedback.medium();
+                  handleSave();
+                }}
                 disabled={isSaving}
                 activeOpacity={0.8}
                 style={{
@@ -417,6 +433,7 @@ export default function EditProfileScreen({ navigation }: any) {
             
             <TouchableOpacity
               onPress={() => {
+                if (gender !== 'male') void HapticFeedback.selection();
                 setGender('male');
                 setShowGenderPicker(false);
               }}
@@ -444,6 +461,7 @@ export default function EditProfileScreen({ navigation }: any) {
 
             <TouchableOpacity
               onPress={() => {
+                if (gender !== 'female') void HapticFeedback.selection();
                 setGender('female');
                 setShowGenderPicker(false);
               }}
@@ -470,7 +488,10 @@ export default function EditProfileScreen({ navigation }: any) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => setShowGenderPicker(false)}
+              onPress={() => {
+                void HapticFeedback.selection();
+                setShowGenderPicker(false);
+              }}
               style={{
                 paddingVertical: DesignTokens.spacing.sm,
                 paddingHorizontal: DesignTokens.spacing.lg,

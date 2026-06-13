@@ -8,8 +8,6 @@ import {
   MessageSquare,
   Newspaper,
   Calendar,
-  ChevronLeft,
-  Mic
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -44,14 +42,6 @@ interface NotificationOption {
   key: keyof NotificationSettings;
 }
 
-const SOUND_OPTIONS = [
-  { value: 'default', label: 'ברירת מחדל' },
-  { value: 'sound1', label: 'צליל 1' },
-  { value: 'sound2', label: 'צליל 2' },
-  { value: 'sound3', label: 'צליל 3' },
-  { value: 'none', label: 'ללא צליל' }
-];
-
 export default function NotificationsScreen({ navigation }: any) {
   const { user } = useAuth();
   const { theme } = useTheme();
@@ -68,8 +58,6 @@ export default function NotificationsScreen({ navigation }: any) {
     recordingSound: 'default'
   });
   const [loading, setLoading] = useState(true);
-  const [showNewsSoundPicker, setShowNewsSoundPicker] = useState(false);
-  const [showRecordingSoundPicker, setShowRecordingSoundPicker] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -306,21 +294,6 @@ export default function NotificationsScreen({ navigation }: any) {
     }
   };
 
-  const handleSoundChange = async (key: 'newsSound' | 'recordingSound', value: string) => {
-    const newSettings = {
-      ...settings,
-      [key]: value
-    };
-    
-    setSettings(newSettings);
-    
-    try {
-      await AsyncStorage.setItem('notificationSettings', JSON.stringify(newSettings));
-      await saveSettingsToDatabase(newSettings);
-    } catch (error) {
-    }
-  };
-
   const systemNotificationOptions: NotificationOption[] = [
     {
       id: 'notifications',
@@ -388,7 +361,13 @@ export default function NotificationsScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="התראות" onBack={() => navigation.goBack()} />
+        <ChatSubScreenHeader
+          title="התראות"
+          onBack={() => {
+            void HapticFeedback.impactLight();
+            navigation.goBack();
+          }}
+        />
 
         <View style={{ flex: 1 }}>
           <ScrollView 
@@ -570,230 +549,6 @@ export default function NotificationsScreen({ navigation }: any) {
               )}
             </View>
             ))}
-            </UICard>
-
-            {/* Sounds Section */}
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.xs,
-              fontWeight: DesignTokens.typography.fontWeight.bold as any,
-              color: DesignTokens.colors.text.tertiary,
-              marginBottom: DesignTokens.spacing.sm,
-              textAlign: 'right',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5
-            }}>
-              צלילים
-            </Text>
-
-            <UICard
-              variant="glass"
-              glassIntensity="light"
-              padding="none"
-              style={{ marginBottom: DesignTokens.spacing.lg, borderRadius: DesignTokens.borderRadius.lg }}
-            >
-            {/* צליל לחדשות */}
-            <TouchableOpacity
-              onPress={() => setShowNewsSoundPicker(!showNewsSoundPicker)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingTop: DesignTokens.spacing.md,
-                paddingBottom: DesignTokens.spacing.sm,
-                paddingHorizontal: DesignTokens.spacing.md,
-              }}
-            >
-              <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              <View style={{ flex: 1, marginLeft: DesignTokens.spacing.sm, marginRight: DesignTokens.spacing.sm }}>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.base,
-                  fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                  color: DesignTokens.colors.text.primary,
-                  marginBottom: DesignTokens.spacing.xs,
-                  textAlign: 'right'
-                }}>
-                  צליל לחדשות
-                </Text>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.sm,
-                  color: DesignTokens.colors.text.tertiary,
-                  textAlign: 'right'
-                }}>
-                  {SOUND_OPTIONS.find(opt => opt.value === settings.newsSound)?.label || 'ברירת מחדל'}
-                </Text>
-              </View>
-              <View style={{
-                width: 40,
-                height: 40,
-                borderRadius: DesignTokens.borderRadius.md,
-                backgroundColor: `${DesignTokens.colors.primary.main}1A`,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Newspaper size={22} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-            
-            {showNewsSoundPicker && (
-              <View style={{
-                paddingHorizontal: DesignTokens.spacing.md,
-                paddingBottom: DesignTokens.spacing.sm,
-                borderTopWidth: 1,
-                borderTopColor: 'rgba(255, 255, 255, 0.15)',
-              }}>
-                {SOUND_OPTIONS.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    onPress={() => {
-                      handleSoundChange('newsSound', option.value);
-                      setShowNewsSoundPicker(false);
-                    }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: DesignTokens.spacing.sm,
-                      paddingHorizontal: DesignTokens.spacing.sm,
-                      borderRadius: DesignTokens.borderRadius.md,
-                      backgroundColor: settings.newsSound === option.value ? `${DesignTokens.colors.primary.main}1A` : 'transparent',
-                    }}
-                  >
-                    <Text style={{
-                      flex: 1,
-                      fontSize: DesignTokens.typography.fontSize.sm,
-                      fontWeight: settings.newsSound === option.value 
-                        ? DesignTokens.typography.fontWeight.semibold as any
-                        : DesignTokens.typography.fontWeight.normal as any,
-                      color: settings.newsSound === option.value ? DesignTokens.colors.primary.main : DesignTokens.colors.text.primary,
-                      textAlign: 'right'
-                    }}>
-                      {option.label}
-                    </Text>
-                    {settings.newsSound === option.value && (
-                      <View style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        backgroundColor: DesignTokens.colors.primary.main,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginLeft: 8
-                      }}>
-                        <View style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          backgroundColor: DesignTokens.colors.background.primary
-                        }} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-            
-            <View style={{
-              height: 1,
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
-              marginHorizontal: DesignTokens.spacing.md,
-            }} />
-            
-            {/* צליל להקלטה */}
-            <TouchableOpacity
-              onPress={() => setShowRecordingSoundPicker(!showRecordingSoundPicker)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingTop: DesignTokens.spacing.sm,
-                paddingBottom: DesignTokens.spacing.md,
-                paddingHorizontal: DesignTokens.spacing.md,
-              }}
-            >
-              <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              <View style={{ flex: 1, marginLeft: DesignTokens.spacing.sm, marginRight: DesignTokens.spacing.sm }}>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.base,
-                  fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                  color: DesignTokens.colors.text.primary,
-                  marginBottom: DesignTokens.spacing.xs,
-                  textAlign: 'right'
-                }}>
-                  צליל להקלטה
-                </Text>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.sm,
-                  color: DesignTokens.colors.text.tertiary,
-                  textAlign: 'right'
-                }}>
-                  {SOUND_OPTIONS.find(opt => opt.value === settings.recordingSound)?.label || 'ברירת מחדל'}
-                </Text>
-              </View>
-              <View style={{
-                width: 40,
-                height: 40,
-                borderRadius: DesignTokens.borderRadius.md,
-                backgroundColor: `${DesignTokens.colors.primary.main}1A`,
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Mic size={22} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-              </View>
-            </TouchableOpacity>
-            
-            {showRecordingSoundPicker && (
-              <View style={{
-                paddingHorizontal: DesignTokens.spacing.md,
-                paddingBottom: DesignTokens.spacing.md,
-                borderTopWidth: 1,
-                borderTopColor: 'rgba(255, 255, 255, 0.15)',
-              }}>
-                {SOUND_OPTIONS.map((option) => (
-                  <TouchableOpacity
-                    key={option.value}
-                    onPress={() => {
-                      handleSoundChange('recordingSound', option.value);
-                      setShowRecordingSoundPicker(false);
-                    }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: DesignTokens.spacing.sm,
-                      paddingHorizontal: DesignTokens.spacing.sm,
-                      borderRadius: DesignTokens.borderRadius.md,
-                      backgroundColor: settings.recordingSound === option.value ? `${DesignTokens.colors.primary.main}1A` : 'transparent',
-                    }}
-                  >
-                    <Text style={{
-                      flex: 1,
-                      fontSize: DesignTokens.typography.fontSize.sm,
-                      fontWeight: settings.recordingSound === option.value 
-                        ? DesignTokens.typography.fontWeight.semibold as any
-                        : DesignTokens.typography.fontWeight.normal as any,
-                      color: settings.recordingSound === option.value ? DesignTokens.colors.primary.main : DesignTokens.colors.text.primary,
-                      textAlign: 'right'
-                    }}>
-                      {option.label}
-                    </Text>
-                    {settings.recordingSound === option.value && (
-                      <View style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        backgroundColor: DesignTokens.colors.primary.main,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginLeft: DesignTokens.spacing.xs
-                      }}>
-                        <View style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: 4,
-                          backgroundColor: DesignTokens.colors.background.primary
-                        }} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
             </UICard>
           </View>
           </ScrollView>

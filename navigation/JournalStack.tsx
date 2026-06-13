@@ -2,10 +2,12 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import TradingScreen from '../screens/Journal/TradingScreen';
 import AddTradeScreen from '../screens/Journal/AddTradeScreen';
+import TradeDetailScreen from '../screens/Journal/TradeDetailScreen';
 
 export type JournalStackParamList = {
   JournalMain: undefined;
   AddTrade: undefined;
+  TradeDetail: { tradeId: string };
 };
 
 const Stack = createNativeStackNavigator<JournalStackParamList>();
@@ -22,9 +24,12 @@ export default function JournalStack() {
       <Stack.Screen
         name="AddTrade"
         component={AddTradeScreen}
-        options={{
-          animation: 'slide_from_right',
-        }}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="TradeDetail"
+        component={TradeDetailScreen}
+        options={{ animation: 'slide_from_right' }}
       />
     </Stack.Navigator>
   );

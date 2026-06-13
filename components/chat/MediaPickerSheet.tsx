@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { ChatBottomSheet, ChatSheetContent, ChatSheetTitle } from './ChatBottomSheet';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface MediaPickerSheetProps {
@@ -76,20 +76,6 @@ export default function MediaPickerSheet({
   ];
 
   const styles = useMemo(() => StyleSheet.create({
-    container: {
-      paddingHorizontal: DesignTokens.spacing.md,
-    },
-    header: {
-      alignItems: 'center',
-      paddingTop: DesignTokens.spacing.xs,
-      paddingBottom: DesignTokens.spacing.sm,
-    },
-    title: {
-      color: DesignTokens.colors.text.primary,
-      fontSize: 20,
-      fontWeight: '700',
-      textAlign: 'center',
-    },
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -120,22 +106,10 @@ export default function MediaPickerSheet({
   }), [DesignTokens]);
 
   return (
-    <BottomSheet
-      isOpen={visible}
-      onClose={onClose}
-      snapPoints={[0.38]}
-      showHandle={true}
-      enablePanDownToClose={true}
-      useModal={true}
-      backdropOpacity={0.15}
-    >
-      <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>צרף קובץ</Text>
-        </View>
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.38]}>
+      <ChatSheetContent style={{ paddingBottom: insets.bottom + 20 }}>
+        <ChatSheetTitle title="צרף קובץ" />
 
-        {/* Options Grid */}
         <View style={styles.grid}>
           {options.map((option) => (
             <TouchableOpacity
@@ -170,8 +144,8 @@ export default function MediaPickerSheet({
             </TouchableOpacity>
           ))}
         </View>
-      </View>
-    </BottomSheet>
+      </ChatSheetContent>
+    </ChatBottomSheet>
   );
 }
 

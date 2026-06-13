@@ -7,6 +7,7 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { chatPalette } from './chatDesignTokens';
 
 type OptionDef = { key: string; label: string; icon: string; danger: boolean };
 
@@ -109,8 +110,8 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     borderRadius: 20,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: chatPalette.glassBorder,
     overflow: 'hidden',
     paddingVertical: 10,
     paddingHorizontal: 4,

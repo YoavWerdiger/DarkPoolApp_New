@@ -7,13 +7,8 @@ import {
   type HeatmapKind,
 } from '../embeds/tradingViewEmbeds';
 import { MarketsTradingView } from '../components/MarketsTradingView';
-import { MarketsSegmentedControl } from '../components/MarketsSegmentedControl';
-
-const HEATMAP_SEGMENTS: { id: HeatmapKind; label: string }[] = [
-  { id: 'crypto', label: 'קריפטו' },
-  { id: 'nasdaq', label: 'Nasdaq' },
-  { id: 'sp500', label: 'S&P500' },
-];
+import { MarketsEmbedSwitcher } from '../components/MarketsEmbedSwitcher';
+import type { SegmentedOption } from '../components/MarketsSegmentedControl';
 
 export function MarketsHeatmapsTab() {
   const tokens = useDesignTokens();
@@ -23,24 +18,25 @@ export function MarketsHeatmapsTab() {
 
   const hp = tokens.layout.screenPadding;
 
+  const heatmapSegments: SegmentedOption<HeatmapKind>[] = useMemo(
+    () => [
+      { id: 'sp500', label: 'S&P 500' },
+      { id: 'nasdaq', label: 'נאסד״ק' },
+      { id: 'crypto', label: 'קריפטו' },
+    ],
+    []
+  );
+
   return (
     <View style={{ flex: 1, minHeight: 0, paddingHorizontal: hp }}>
-      <UICard
-        variant="blur"
-        padding="none"
-        style={{
-          borderRadius: tokens.borderRadius['3xl'],
-          overflow: 'hidden',
-          marginBottom: tokens.spacing.md,
-        }}
-      >
-        <MarketsSegmentedControl
-          options={HEATMAP_SEGMENTS}
+      <View style={{ marginBottom: tokens.spacing.sm }}>
+        <MarketsEmbedSwitcher
+          options={heatmapSegments}
           value={heatmapType}
           onChange={setHeatmapType}
           accessibilityGroupLabel="מפת חום"
         />
-      </UICard>
+      </View>
 
       <UICard
         variant="blur"

@@ -11,6 +11,7 @@ import {
   I18nManager,
 } from 'react-native';
 import { createDrawerNavigator, DrawerContentComponentProps } from '@react-navigation/drawer';
+import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import NewsScreen from '../screens/News';
@@ -18,6 +19,8 @@ import NewsEconomicCalendarScreen from '../screens/News/NewsEconomicCalendarScre
 import NewsEarningsScreen from '../screens/News/NewsEarningsScreen';
 import LikedArticlesScreen from '../screens/News/LikedArticlesScreen';
 import JournalStack from './JournalStack';
+import PortfoliosStack from './PortfoliosStack';
+import DarkPoolStack from './DarkPoolStack';
 import MarketsScreen from '../screens/Markets/MarketsScreen';
 import MarketsScreenerScreen from '../screens/Markets/MarketsScreenerScreen';
 import MarketsHeatmapScreen from '../screens/Markets/MarketsHeatmapScreen';
@@ -46,18 +49,48 @@ const DRAWER_PAD_OUTER = 17;
 const DRAWER_ITEMS = [
   { name: 'Chat' as const, title: 'קהילה', icon: 'chatbubbles-outline' as const },
   { name: 'Courses' as const, title: 'אקדמיה', icon: 'school-outline' as const },
-  { name: 'Journal' as const, title: 'יומן מסחר', icon: 'book-outline' as const },
-  { name: 'Markets' as const, title: 'שווקים', icon: 'pulse-outline' as const },
-  { name: 'NewsEarnings' as const, title: 'דיווחי רווח', icon: 'notifications-outline' as const },
+  {
+    name: 'Portfolios' as const,
+    title: 'יומן מסחר',
+    icon: 'book-outline' as const,
+  },
+  { name: 'DarkPool' as const, title: 'Dark Pool', icon: 'water-outline' as const },
   { name: 'News' as const, title: 'חדשות', icon: 'newspaper-outline' as const },
+  { name: 'Markets' as const, title: 'שווקים', icon: 'trending-up-outline' as const },
+  { name: 'NewsEarnings' as const, title: 'דיווחי רווח', icon: 'notifications-outline' as const },
   { name: 'NewsCalendar' as const, title: 'יומן כלכלי', icon: 'calendar-outline' as const },
-  { name: 'MarketsHeatmap' as const, title: 'מפת חום', icon: 'map-outline' as const },
   { name: 'MarketsScreener' as const, title: 'סורק', icon: 'search-outline' as const },
+  { name: 'MarketsHeatmap' as const, title: 'מפת חום', icon: 'map-outline' as const },
 ];
 
 const ACCENT = '#00C805';
 /** טאבים לא פעילים — לבן מלא (ברירת מחדל) */
 const LABEL = '#FFFFFF';
+
+/** מגירה → מסכי Stack מקוננים — ניווט מפורש למסך הבית של כל Stack (מונע מסך ריק / state תקוע). */
+function navigateDrawerItem(
+  navigation: DrawerContentComponentProps['navigation'],
+  routeName: string
+) {
+  const stackHome: Record<string, { screen: string }> = {
+    Portfolios: { screen: 'PortfoliosHub' },
+    Journal: { screen: 'JournalMain' },
+    Courses: { screen: 'CoursesScreen' },
+    Chat: { screen: 'ChatGroupsList' },
+    DarkPool: { screen: 'DarkPoolHome' },
+  };
+  const nest = stackHome[routeName];
+  if (nest) {
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: routeName,
+        params: nest,
+      } as never)
+    );
+  } else {
+    navigation.dispatch(CommonActions.navigate({ name: routeName } as never));
+  }
+}
 
 /**
  * פרודקשן — הפרדה מפורשת לפלטפורמה:
@@ -133,7 +166,7 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
               activeOpacity={0.75}
               onPress={() => {
                 void HapticFeedback.selection();
-                navigation.navigate(item.name as any);
+                navigateDrawerItem(navigation, item.name);
                 navigation.closeDrawer();
               }}
               accessibilityRole="button"
@@ -338,14 +371,29 @@ export default function MainTabs() {
       >
         <Drawer.Screen name="Chat" component={ChatStack} options={{ title: 'קהילה' }} />
         <Drawer.Screen name="Courses" component={LearningStack} options={{ title: 'אקדמיה' }} />
-        <Drawer.Screen name="Journal" component={JournalStack} options={{ title: 'יומן מסחר' }} />
+        {/* Journal stack kept registered for backward-compat deep links, hidden from drawer menu. */}
+        <Drawer.Screen
+          name="Journal"
+          component={JournalStack}
+          options={{ title: 'יומן מסחר (legacy)', drawerItemStyle: { display: 'none' } }}
+        />
+        <Drawer.Screen
+          name="Portfolios"
+          component={PortfoliosStack}
+          options={{ title: 'יומן מסחר' }}
+        />
+        <Drawer.Screen
+          name="DarkPool"
+          component={DarkPoolStack}
+          options={{ title: 'Dark Pool' }}
+        />
+        <Drawer.Screen name="News" component={NewsScreen} options={{ title: 'חדשות' }} />
         <Drawer.Screen name="Markets" component={MarketsScreen} options={{ title: 'שווקים' }} />
         <Drawer.Screen
           name="NewsEarnings"
           component={NewsEarningsScreen}
           options={{ title: 'דיווחי רווח' }}
         />
-        <Drawer.Screen name="News" component={NewsScreen} options={{ title: 'חדשות' }} />
         <Drawer.Screen
           name="NewsCalendar"
           component={NewsEconomicCalendarScreen}

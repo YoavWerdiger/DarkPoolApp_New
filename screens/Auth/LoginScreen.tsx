@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const { width, height } = Dimensions.get('window');
 const WELCOME_LOGO_URI = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/app-media/image%20(3).png';
@@ -264,7 +265,10 @@ export default function LoginScreen({ navigation }: any) {
                       }}
                     >
                       <TouchableOpacity
-                        onPress={() => navigation.navigate('Onboarding')}
+                        onPress={() => {
+                          void HapticFeedback.medium();
+                          navigation.navigate('Onboarding');
+                        }}
                         activeOpacity={0.86}
                         style={{ paddingVertical: 17, alignItems: 'center' }}
                       >
@@ -275,7 +279,10 @@ export default function LoginScreen({ navigation }: any) {
                     </LinearGradient>
 
                     <TouchableOpacity
-                      onPress={() => setShowForm(true)}
+                      onPress={() => {
+                        void HapticFeedback.impactLight();
+                        setShowForm(true);
+                      }}
                       activeOpacity={0.85}
                       style={{
                         borderRadius: 28,
@@ -337,7 +344,10 @@ export default function LoginScreen({ navigation }: any) {
                   tokens={tokens}
                   rightEl={
                     <Pressable
-                      onPress={() => setShowPassword(!showPassword)}
+                      onPress={() => {
+                        void HapticFeedback.selection();
+                        setShowPassword(!showPassword);
+                      }}
                       style={{ padding: 6 }}
                     >
                       <Ionicons
@@ -360,7 +370,10 @@ export default function LoginScreen({ navigation }: any) {
                   }}
                 >
                   <Pressable
-                    onPress={() => setRememberMe(!rememberMe)}
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setRememberMe(!rememberMe);
+                    }}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
@@ -400,7 +413,12 @@ export default function LoginScreen({ navigation }: any) {
                     </Text>
                   </Pressable>
 
-                  <Pressable onPress={handleForgotPassword}>
+                  <Pressable
+                    onPress={() => {
+                      void HapticFeedback.impactLight();
+                      handleForgotPassword();
+                    }}
+                  >
                     <Text
                       style={{
                         color: colors.primary.main,
@@ -429,7 +447,10 @@ export default function LoginScreen({ navigation }: any) {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={handleSignIn}
+                    onPress={() => {
+                      void HapticFeedback.medium();
+                      handleSignIn();
+                    }}
                     disabled={isLoading}
                     activeOpacity={0.85}
                     style={{
@@ -498,7 +519,10 @@ export default function LoginScreen({ navigation }: any) {
 
                 {/* Google */}
                 <TouchableOpacity
-                  onPress={handleGoogleSignIn}
+                  onPress={() => {
+                    void HapticFeedback.medium();
+                    handleGoogleSignIn();
+                  }}
                   disabled={isLoading || googleLoading}
                   activeOpacity={0.8}
                   style={{
@@ -540,7 +564,10 @@ export default function LoginScreen({ navigation }: any) {
 
                 {/* Register */}
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('Onboarding')}
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    navigation.navigate('Onboarding');
+                  }}
                   activeOpacity={0.75}
                   style={{
                     borderRadius: 30,
@@ -577,7 +604,10 @@ export default function LoginScreen({ navigation }: any) {
                 </Text>
 
                 <TouchableOpacity
-                  onPress={() => setShowForm(false)}
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    setShowForm(false);
+                  }}
                   activeOpacity={0.75}
                   style={{ alignItems: 'center', marginTop: 18 }}
                 >

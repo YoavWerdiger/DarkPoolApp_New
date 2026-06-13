@@ -4,8 +4,8 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Modal, TextInput, KeyboardAvoidingView, Platform, I18nManager } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -14,12 +14,12 @@ import { ChatGroupMember, ChatMemberRole } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
-import AddMemberSheet from '../../components/chat/AddMemberSheet';
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
-import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { chatRtlRoot, chatRtlRow, chatRtlText } from '../../components/chat/chatDesignTokens';
 
 export default function ChatGroupInfoScreen() {
   const navigation = useNavigation();
@@ -30,7 +30,6 @@ export default function ChatGroupInfoScreen() {
 
   const { groupId } = route.params as { groupId: string };
   const { currentGroup, leaveGroup, updateGroup, messages, refreshCurrentGroupDetails } = useChat();
-  const insets = useSafeAreaInsets();
 
   const [isMuted, setIsMuted] = useState(currentGroup?.is_muted || false);
   const [promptVisible, setPromptVisible] = useState(false);
@@ -45,7 +44,6 @@ export default function ChatGroupInfoScreen() {
     setPromptVisible(true);
   };
   const [searchVisible, setSearchVisible] = useState(false);
-  const [addMemberSheetVisible, setAddMemberSheetVisible] = useState(false);
   
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   
@@ -70,22 +68,16 @@ export default function ChatGroupInfoScreen() {
 
   const [gallerySignedThumbs, setGallerySignedThumbs] = useState<Record<string, string>>({});
 
-  const avatarOnlineCornerStyle = useMemo(
-    () => ({ ...(I18nManager.isRTL ? { left: 8 } : { right: 8 }) }),
-    [],
-  );
   const galleryVideoCornerStyle = useMemo(
     () => ({
       top: DesignTokens.spacing.xs,
-      ...(I18nManager.isRTL
-        ? { left: DesignTokens.spacing.xs }
-        : { right: DesignTokens.spacing.xs }),
+      right: DesignTokens.spacing.xs,
     }),
     [DesignTokens.spacing.xs],
   );
 
-  /** בשורות הגדרות ממוסגרות ב־RTL האייקון צריך להצביע כמו בשאר האפליקציה */
-  const settingsDisclosureIcon = I18nManager.isRTL ? 'chevron-forward' : 'chevron-back';
+  /** בתוך עץ RTL — chevron-back בקצה השמאלי (סוף השורה) */
+  const settingsDisclosureIcon = 'chevron-back' as const;
 
   useFocusEffect(
     useCallback(() => {
@@ -115,33 +107,33 @@ export default function ChatGroupInfoScreen() {
   // ============================================
 
   const handleBack = () => {
+    void HapticFeedback.impactLight();
     navigation.goBack();
   };
 
-  const handleEditGroup = () => {
-    if (!currentGroup) return;
-    showPrompt('ערוך תיאור קבוצה', currentGroup.description || '', async (newDesc) => {
-      if (!newDesc.trim()) return;
-      const { success, error } = await updateGroup(groupId, { description: newDesc.trim() });
-      if (!success) {
-        legacyAlert('שגיאה', error || 'לא ניתן לעדכן את הקבוצה');
-      }
-    });
-  };
+  const renderSectionCaption = (label: string, inline = false) => (
+    <View style={inline ? styles.membersCaptionWrap : styles.sectionCaptionWrap}>
+      <Text style={[styles.sectionCaption, inline && styles.sectionCaptionInline]}>{label}</Text>
+    </View>
+  );
+
+  const renderSettingIcon = (name: keyof typeof Ionicons.glyphMap) => (
+    <View style={styles.settingIconWrap}>
+      <Ionicons name={name} size={20} color={DesignTokens.colors.primary.main} />
+    </View>
+  );
 
   const handleAddMembers = () => {
-    setAddMemberSheetVisible(true);
-  };
-
-  const handleAddMemberFromSheet = async (userId: string, displayName: string) => {
-    if (!user?.id) return;
-    const { error } = await chatGroupService.addGroupMember(groupId, userId, user.id);
-    if (error) {
-      legacyAlert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
-    } else {
-      legacyAlert('הצלחה', `${displayName} נוסף לקבוצה`);
-      void refreshCurrentGroupDetails();
-    }
+    showPrompt('הוסף חבר', '', async (inputUserId) => {
+      if (!inputUserId?.trim() || !user?.id) return;
+      const { error } = await chatGroupService.addGroupMember(groupId, inputUserId.trim(), user.id);
+      if (error) {
+        legacyAlert('שגיאה', error.message || 'לא ניתן להוסיף את המשתמש');
+      } else {
+        legacyAlert('הצלחה', 'המשתמש נוסף לקבוצה');
+        void refreshCurrentGroupDetails();
+      }
+    });
   };
 
   const handleMemberPress = (member: ChatGroupMember) => {
@@ -285,8 +277,6 @@ export default function ChatGroupInfoScreen() {
             try {
               const result = await leaveGroup(groupId);
               if (result.success) {
-                // popToTop() pops all screens in the ChatStack back to
-                // ChatGroupsList — more reliable than reset() in nested stacks.
                 (navigation as any).popToTop
                   ? (navigation as any).popToTop()
                   : (navigation as any).navigate('ChatGroupsList');
@@ -311,25 +301,13 @@ export default function ChatGroupInfoScreen() {
     return null;
   }
 
-  const exitBtnTop = insets.top + 8;
-
   if (!currentGroup) {
     return (
       <ChatScreenShell>
-        <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-          <View style={styles.container}>
-            <View style={styles.errorStateBody}>
-              <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
-            </View>
-            <DayNavBlurButton
-              onPress={handleBack}
-              size={DAY_NAV_BUTTON_SIZE}
-              glassIntensity="subtle"
-              style={[styles.exitBtnFullScreen, { top: exitBtnTop }]}
-              accessibilityLabel="חזרה"
-            >
-              <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
-            </DayNavBlurButton>
+        <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+          <ChatSubScreenHeader title="פרטי קבוצה" onBack={handleBack} />
+          <View style={styles.errorStateBody}>
+            <Text style={styles.errorText}>לא נמצאה קבוצה</Text>
           </View>
         </SafeAreaView>
       </ChatScreenShell>
@@ -345,22 +323,17 @@ export default function ChatGroupInfoScreen() {
 
   return (
     <ChatScreenShell>
-      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-        <View style={styles.container}>
-          <ScrollView 
-            style={styles.scrollView} 
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <ChatSubScreenHeader title="פרטי קבוצה" onBack={handleBack} />
+
+        <View style={styles.rtlRoot}>
+          <ScrollView
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{
-              paddingHorizontal: DesignTokens.spacing.lg,
-              paddingTop: exitBtnTop + 44,
-              paddingBottom: DesignTokens.spacing['3xl'],
-              direction: 'rtl',
-            }}
+            contentContainerStyle={styles.scrollContent}
           >
-          {/* Profile Header — glass כמו טוקני הצ'אט */}
-          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
-            <View style={styles.profileHeaderContent}>
-              {/* Avatar */}
+          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, styles.sectionBlock]}>
+            <View style={styles.heroBlock}>
               <View style={styles.avatarContainer}>
                 {currentGroup.avatar_url ? (
                   <Image source={{ uri: currentGroup.avatar_url }} style={styles.avatar} />
@@ -369,219 +342,195 @@ export default function ChatGroupInfoScreen() {
                     <Ionicons name="people" size={48} color={DesignTokens.colors.text.secondary} />
                   </View>
                 )}
-                {/* Online indicator - for groups, show if there are online members */}
-                <View style={[styles.onlineIndicator, avatarOnlineCornerStyle]} />
               </View>
-
-              {/* Name & Status */}
-              <Text style={styles.groupName}>{currentGroup.name}</Text>
-              <Text style={styles.groupStatus}>
-                {sortedMembers.length} חברים
+              <Text style={styles.groupName} numberOfLines={2}>
+                {currentGroup.name}
               </Text>
+              <Text style={styles.groupStatus}>{sortedMembers.length} חברים</Text>
             </View>
           </UICard>
 
-          {/* תיאור הקבוצה */}
-          {currentGroup.description && (
-            <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
-              <Text style={[styles.sectionLabel, styles.sectionLabelStandalone]}>תיאור הקבוצה</Text>
-              <Text style={styles.aboutText}>{currentGroup.description}</Text>
-            </UICard>
-          )}
-
-          {/* גלריית המדיה */}
-          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
-            <Text style={[styles.sectionLabel, styles.sectionLabelStandalone]}>גלריית הקבוצה</Text>
-            {groupMediaItems.length > 0 ? (
-              <View style={styles.mediaGrid}>
-                {groupMediaItems.map((item, index) => (
-                  <TouchableOpacity key={item.id} style={styles.mediaItem}>
-                    <Image source={{ uri: gallerySignedThumbs[item.id] || item.thumbnail }} style={styles.mediaImage} />
-                    {item.type === 'video' && (
-                      <View style={[styles.videoBadge, galleryVideoCornerStyle]}>
-                        <Ionicons name="play" size={12} color="#FFFFFF" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : (
-              <Text style={styles.emptyMediaText}>אין מדיה בקבוצה זו</Text>
-            )}
-          </UICard>
-
-          {/* הגדרות */}
-          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
-            <TouchableOpacity style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="notifications-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.settingText}>השתק התראות</Text>
-              </View>
-              <Switch
-                value={isMuted}
-                onValueChange={handleToggleMute}
-                trackColor={{ false: DesignTokens.colors.background.tertiary, true: DesignTokens.colors.primary.main }}
-                thumbColor="#FFFFFF"
-              />
-            </TouchableOpacity>
-            <View style={styles.separator} />
-            <TouchableOpacity style={styles.settingRow} onPress={handlePinnedMessages}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="pin-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.settingText}>הודעות מוצמדות</Text>
-              </View>
-              <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
-            </TouchableOpacity>
-            <View style={styles.separator} />
-            <TouchableOpacity style={styles.settingRow} onPress={handleSearchMessages}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="search-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.settingText}>חפש בהודעות</Text>
-              </View>
-              <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
-            </TouchableOpacity>
-            <View style={styles.separator} />
-            <TouchableOpacity style={styles.settingRow} onPress={handleSavedMedia}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="folder-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.settingText}>שמירת מדיה</Text>
-              </View>
-              <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
-            </TouchableOpacity>
-            {isAdmin && (
-              <>
-                <View style={styles.separator} />
-                <TouchableOpacity style={styles.settingRow} onPress={handleGroupSettings}>
-                  <View style={styles.settingLeft}>
-                    <Ionicons name="settings-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                    <Text style={styles.settingText}>הגדרות קבוצה</Text>
-                  </View>
-                  <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
-                </TouchableOpacity>
-              </>
-            )}
-            <View style={styles.separator} />
-            <TouchableOpacity style={styles.settingRow} onPress={handlePrivacyAndSupport}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="shield-outline" size={20} color={DesignTokens.colors.text.secondary} />
-                <Text style={styles.settingText}>פרטיות ותמיכה</Text>
-              </View>
-              <Ionicons name={settingsDisclosureIcon} size={18} color={DesignTokens.colors.text.tertiary} />
-            </TouchableOpacity>
-          </UICard>
-
-          {/* חברים */}
-          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, { marginBottom: DesignTokens.spacing.lg }]}>
-            <View style={styles.membersSectionHeader}>
-              <View style={styles.membersHeaderSide} />
-              <Text
-                style={styles.membersSectionTitle}
-                numberOfLines={1}
-              >
-                חברים ({sortedMembers.length})
-              </Text>
-              <View style={styles.membersHeaderSide}>
-                {isAdmin ? (
-                  <TouchableOpacity onPress={handleAddMembers} style={styles.addButton} hitSlop={8}>
-                    <Ionicons name="add" size={18} color={DesignTokens.colors.primary.main} />
-                    <Text style={styles.addButtonText}>הוסף</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
+          {currentGroup.description ? (
+            <View style={styles.sectionBlock}>
+              {renderSectionCaption('תיאור')}
+              <UICard variant="glass" glassIntensity="light" padding="lg" style={styles.sectionCard}>
+                <Text style={styles.aboutText}>{currentGroup.description}</Text>
+              </UICard>
             </View>
+          ) : null}
 
-            {sortedMembers.map((member, index) => (
-              <React.Fragment key={member.id}>
-                <TouchableOpacity
-                  style={styles.memberRow}
-                  onPress={() => handleMemberPress(member)}
-                  disabled={!isAdmin && member.user_id !== user?.id}
-                >
-                  {member.user?.profile_picture ? (
-                    <Image
-                      source={{ uri: member.user.profile_picture }}
-                      style={styles.memberAvatar}
-                    />
-                  ) : (
-                    <View style={styles.memberAvatarPlaceholder}>
-                      <Text style={styles.memberAvatarText}>
-                        {member.user?.display_name?.charAt(0) || '?'}
-                      </Text>
-                    </View>
-                  )}
-                  
-                  <View style={styles.memberInfo}>
-                    <View style={styles.memberNameRow}>
-                      <Text style={styles.memberName}>
-                        {member.user?.display_name || 'משתמש'}
-                      </Text>
-                      {member.role === 'admin' && (
-                        <View style={styles.adminBadge}>
-                          <Ionicons name="star" size={10} color={DesignTokens.colors.warning.main} />
-                          <Text style={styles.adminBadgeText}>אדמין</Text>
+          <View style={styles.sectionBlock}>
+            {renderSectionCaption('גלריה')}
+            <UICard variant="glass" glassIntensity="light" padding="lg" style={styles.sectionCard}>
+              {groupMediaItems.length > 0 ? (
+                <View style={styles.mediaGrid}>
+                  {groupMediaItems.map((item) => (
+                    <TouchableOpacity key={item.id} style={styles.mediaItem} activeOpacity={0.85}>
+                      <Image
+                        source={{ uri: gallerySignedThumbs[item.id] || item.thumbnail }}
+                        style={styles.mediaImage}
+                      />
+                      {item.type === 'video' && (
+                        <View style={[styles.videoBadge, galleryVideoCornerStyle]}>
+                          <Ionicons name="play" size={12} color="#FFFFFF" />
                         </View>
                       )}
-                      {member.user_id === user?.id && (
-                        <Text style={styles.youLabel}>(אתה)</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptyMediaText}>אין מדיה בקבוצה זו</Text>
+              )}
+            </UICard>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            {renderSectionCaption('הגדרות')}
+            <UICard variant="glass" glassIntensity="light" padding="none" style={styles.sectionCard}>
+              <View style={styles.settingRow}>
+                {renderSettingIcon('notifications-outline')}
+                <Text style={styles.settingText}>השתק התראות</Text>
+                <Switch
+                  value={isMuted}
+                  onValueChange={handleToggleMute}
+                  trackColor={{
+                    false: DesignTokens.colors.background.tertiary,
+                    true: DesignTokens.colors.primary.main,
+                  }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+              <View style={styles.separator} />
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={() => { void HapticFeedback.selection(); handlePinnedMessages(); }}
+                activeOpacity={0.7}
+              >
+                {renderSettingIcon('pin-outline')}
+                <Text style={styles.settingText}>הודעות מוצמדות</Text>
+                <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
+              </TouchableOpacity>
+              <View style={styles.separator} />
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={() => { void HapticFeedback.selection(); handleSearchMessages(); }}
+                activeOpacity={0.7}
+              >
+                {renderSettingIcon('search-outline')}
+                <Text style={styles.settingText}>חפש בהודעות</Text>
+                <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
+              </TouchableOpacity>
+              <View style={styles.separator} />
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={() => { void HapticFeedback.selection(); handleSavedMedia(); }}
+                activeOpacity={0.7}
+              >
+                {renderSettingIcon('folder-outline')}
+                <Text style={styles.settingText}>שמירת מדיה</Text>
+                <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
+              </TouchableOpacity>
+              {isAdmin && (
+                <>
+                  <View style={styles.separator} />
+                  <TouchableOpacity
+                    style={styles.settingRow}
+                    onPress={() => { void HapticFeedback.selection(); handleGroupSettings(); }}
+                    activeOpacity={0.7}
+                  >
+                    {renderSettingIcon('settings-outline')}
+                    <Text style={styles.settingText}>הגדרות קבוצה</Text>
+                    <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
+                  </TouchableOpacity>
+                </>
+              )}
+              <View style={styles.separator} />
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={() => { void HapticFeedback.selection(); handlePrivacyAndSupport(); }}
+                activeOpacity={0.7}
+              >
+                {renderSettingIcon('shield-outline')}
+                <Text style={styles.settingText}>פרטיות ותמיכה</Text>
+                <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
+              </TouchableOpacity>
+            </UICard>
+          </View>
+
+          <View style={styles.sectionBlock}>
+            <View style={styles.membersSectionHeader}>
+              {renderSectionCaption(`חברים (${sortedMembers.length})`, true)}
+              {isAdmin ? (
+                <TouchableOpacity
+                  onPress={() => { void HapticFeedback.selection(); handleAddMembers(); }}
+                  style={styles.addButton}
+                  hitSlop={8}
+                >
+                  <Ionicons name="add" size={18} color={DesignTokens.colors.primary.main} />
+                  <Text style={styles.addButtonText}>הוסף</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <UICard variant="glass" glassIntensity="light" padding="none" style={styles.sectionCard}>
+              {sortedMembers.map((member, index) => (
+                <React.Fragment key={member.id}>
+                  <TouchableOpacity
+                    style={styles.memberRow}
+                    onPress={() => handleMemberPress(member)}
+                    disabled={!isAdmin && member.user_id !== user?.id}
+                    activeOpacity={0.7}
+                  >
+                    {member.user?.profile_picture ? (
+                      <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
+                    ) : (
+                      <View style={styles.memberAvatarPlaceholder}>
+                        <Text style={styles.memberAvatarText}>
+                          {member.user?.display_name?.charAt(0) || '?'}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.memberInfo}>
+                      <View style={styles.memberNameRow}>
+                        <Text style={styles.memberName} numberOfLines={1}>
+                          {member.user?.display_name || 'משתמש'}
+                        </Text>
+                        {member.role === 'admin' && (
+                          <View style={styles.adminBadge}>
+                            <Ionicons name="star" size={10} color={DesignTokens.colors.warning.main} />
+                            <Text style={styles.adminBadgeText}>אדמין</Text>
+                          </View>
+                        )}
+                        {member.user_id === user?.id && (
+                          <Text style={styles.youLabel}>(אתה)</Text>
+                        )}
+                      </View>
+                      {member.user?.is_online ? (
+                        <View style={styles.onlineStatus}>
+                          <View style={styles.onlineDot} />
+                          <Text style={styles.onlineText}>מחובר</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.offlineText}>אופליין</Text>
                       )}
                     </View>
-                    {member.user?.is_online ? (
-                      <View style={styles.onlineStatus}>
-                        <View style={styles.onlineDot} />
-                        <Text style={styles.onlineText}>מחובר</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.offlineText}>אופליין</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-                {index < sortedMembers.length - 1 && <View style={styles.separator} />}
-              </React.Fragment>
-            ))}
-          </UICard>
+                  </TouchableOpacity>
+                  {index < sortedMembers.length - 1 && <View style={styles.separator} />}
+                </React.Fragment>
+              ))}
+            </UICard>
+          </View>
 
-          {/* עזיבת קבוצה — glass עם מסגרת סכנה עדינה */}
           <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleLeaveGroup}
-            style={{
-              marginTop: DesignTokens.spacing.lg,
-              marginBottom: DesignTokens.spacing.lg,
-              marginHorizontal: DesignTokens.spacing.lg,
-            }}
+            activeOpacity={0.75}
+            onPress={() => { void HapticFeedback.impactLight(); handleLeaveGroup(); }}
+            style={styles.leaveButtonWrap}
           >
-            <UICard
-              variant="glass"
-              glassIntensity="light"
-              padding="md"
-              style={{
-                borderRadius: DesignTokens.borderRadius['2xl'],
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: `${DesignTokens.colors.danger.main}40`,
-              }}
-            >
-              <Text style={{
-                fontSize: DesignTokens.typography.fontSize.base,
-                fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                color: DesignTokens.colors.danger.main,
-              }}>
-                עזוב קבוצה
-              </Text>
+            <UICard variant="glass" glassIntensity="light" padding="md" style={styles.leaveCard}>
+              <Text style={styles.leaveButtonText}>עזוב קבוצה</Text>
             </UICard>
           </TouchableOpacity>
           </ScrollView>
-
-          <DayNavBlurButton
-            onPress={handleBack}
-            size={DAY_NAV_BUTTON_SIZE}
-            glassIntensity="subtle"
-            style={[styles.exitBtnFullScreen, { top: exitBtnTop }]}
-            accessibilityLabel="חזרה"
-          >
-            <Ionicons name="chevron-forward" size={24} color={DesignTokens.colors.text.primary} />
-          </DayNavBlurButton>
         </View>
       </SafeAreaView>
 
@@ -591,14 +540,6 @@ export default function ChatGroupInfoScreen() {
         onClose={() => setSearchVisible(false)}
         groupId={groupId}
         onMessagePress={handleJumpToMessage}
-      />
-
-      {/* Add Member Sheet — חיפוש שם במקום UUID */}
-      <AddMemberSheet
-        visible={addMemberSheetVisible}
-        onClose={() => setAddMemberSheetVisible(false)}
-        onAdd={handleAddMemberFromSheet}
-        existingMemberIds={(currentGroup?.members || []).map((m: any) => m.user_id)}
       />
 
       {/* Cross-platform prompt modal */}
@@ -638,118 +579,112 @@ export default function ChatGroupInfoScreen() {
 // Styles - Exact Design from Reference
 // ============================================
 
-const createStyles = (DesignTokens: any) => StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
+  rtlRoot: chatRtlRoot,
   safeArea: {
     flex: 1,
     backgroundColor: 'transparent',
   },
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    direction: 'rtl',
-  },
-
   scrollView: {
     flex: 1,
   },
-  /** כפתור חזרה קבוע למעלה-שמאל */
-  exitBtnFullScreen: {
-    position: 'absolute',
-    left: DesignTokens.spacing.md,
-    zIndex: 100,
+  scrollContent: {
+    paddingHorizontal: tokens.spacing.base,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: tokens.spacing['3xl'],
   },
   errorStateBody: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.base,
   },
-  /** רדיוס בלבד — צבע/מסגרת מגיעים מ־UICard variant="glass" + DesignTokens.glassmorphism */
-  sectionCard: {
-    borderRadius: DesignTokens.borderRadius['2xl'],
-  },
-
-  // Profile Header Content
-  profileHeaderContent: {
+  heroBlock: {
     alignItems: 'center',
+    paddingBottom: 0,
+  },
+  sectionBlock: {
+    marginBottom: tokens.spacing.lg,
+  },
+  sectionCard: {
+    borderRadius: tokens.borderRadius.lg,
+  },
+  sectionCaptionWrap: {
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  sectionCaption: {
+    ...chatRtlText,
+    fontSize: tokens.typography.caption.size,
+    fontWeight: tokens.typography.fontWeight.bold as '700',
+    lineHeight: tokens.typography.caption.lineHeight,
+    color: tokens.colors.text.tertiary,
+    marginBottom: tokens.spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: tokens.typography.letterSpacing.wide,
+  },
+  sectionCaptionInline: {
+    marginBottom: 0,
+  },
+  membersCaptionWrap: {
+    flex: 1,
+    alignSelf: 'stretch',
   },
   avatarContainer: {
-    position: 'relative',
-    marginBottom: DesignTokens.spacing.md,
-    alignSelf: 'center',
+    marginBottom: tokens.spacing.md,
   },
   avatar: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: tokens.colors.border.subtle,
   },
   avatarPlaceholder: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: DesignTokens.colors.success.main,
-    borderWidth: 4,
-    borderColor: DesignTokens.colors.background.secondary,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: tokens.colors.border.subtle,
   },
   groupName: {
-    fontSize: DesignTokens.typography.fontSize['2xl'],
-    fontWeight: DesignTokens.typography.fontWeight.bold as any,
-    color: DesignTokens.colors.text.primary,
-    marginBottom: DesignTokens.spacing.xs,
+    ...chatRtlText,
+    fontSize: tokens.typography.title2.size,
+    fontWeight: tokens.typography.title2.weight as '700',
+    lineHeight: tokens.typography.title2.lineHeight,
+    letterSpacing: tokens.typography.title2.letterSpacing,
+    color: tokens.colors.text.primary,
+    marginBottom: tokens.spacing.xs,
     textAlign: 'center',
-    alignSelf: 'center',
-    width: '100%',
+    paddingHorizontal: tokens.spacing.sm,
   },
   groupStatus: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.secondary,
+    ...chatRtlText,
+    fontSize: tokens.typography.subhead.size,
+    fontWeight: tokens.typography.subhead.weight as '500',
+    lineHeight: tokens.typography.subhead.lineHeight,
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
-    alignSelf: 'center',
-    width: '100%',
   },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DesignTokens.spacing.md,
-    paddingVertical: DesignTokens.spacing.sm,
-  },
-  infoContent: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  infoLabel: {
-    fontSize: DesignTokens.typography.fontSize.xs,
-    color: DesignTokens.colors.text.tertiary,
-    marginBottom: DesignTokens.spacing.xs / 2,
-  },
-  infoValue: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.medium as any,
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'left',
+  aboutText: {
+    ...chatRtlText,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.body.weight as '400',
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
   },
   mediaGrid: {
-    flexDirection: 'row',
+    ...chatRtlRow,
     flexWrap: 'wrap',
-    gap: DesignTokens.spacing.xs,
-    marginTop: DesignTokens.spacing.md,
+    gap: tokens.spacing.xs,
   },
   mediaItem: {
     width: '31%',
     aspectRatio: 1,
-    borderRadius: DesignTokens.borderRadius.md,
+    borderRadius: tokens.borderRadius.md,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -760,263 +695,232 @@ const createStyles = (DesignTokens: any) => StyleSheet.create({
   videoBadge: {
     position: 'absolute',
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: DesignTokens.borderRadius.sm,
+    borderRadius: tokens.borderRadius.sm,
     padding: 4,
   },
   emptyMediaText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.tertiary,
-    textAlign: 'left',
-    marginTop: DesignTokens.spacing.sm,
-    fontStyle: 'italic',
-    writingDirection: 'rtl',
+    ...chatRtlText,
+    fontSize: tokens.typography.bodySmall.size,
+    fontWeight: tokens.typography.bodySmall.weight as '400',
+    lineHeight: tokens.typography.bodySmall.lineHeight,
+    color: tokens.colors.text.tertiary,
   },
-  leaveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DesignTokens.spacing.xs,
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.sm,
-    borderRadius: DesignTokens.borderRadius.md,
-    borderWidth: 1,
-    borderColor: DesignTokens.colors.danger.main + '40',
-    backgroundColor: DesignTokens.colors.danger.main + '10',
-  },
-  leaveButtonText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.medium as any,
-    color: DesignTokens.colors.danger.main,
-  },
-
-  membersSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: DesignTokens.spacing.md,
-    width: '100%',
-  },
-  membersHeaderSide: {
-    minWidth: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  membersSectionTitle: {
-    flex: 1,
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.medium as any,
-    color: DesignTokens.colors.text.secondary,
-    textAlign: 'center',
-  },
-  sectionLabel: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.medium as any,
-    color: DesignTokens.colors.text.secondary,
-    textAlign: 'left',
-    marginBottom: DesignTokens.spacing.md,
-    writingDirection: 'rtl',
-  },
-  /** כותרת מלאה ברוחב הכרטיס (תיאור / גלריה) */
-  sectionLabelStandalone: {
-    alignSelf: 'stretch',
-  },
-  aboutText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'left',
-    lineHeight: 22,
-    writingDirection: 'rtl',
-  },
-
-  // Settings
   settingRow: {
-    flexDirection: 'row',
+    ...chatRtlRow,
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: DesignTokens.spacing.md,
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.base,
+    gap: tokens.spacing.md,
   },
-  settingLeft: {
-    flexDirection: 'row',
+  settingIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: tokens.borderRadius.sm,
+    backgroundColor: `${tokens.colors.primary.main}1A`,
     alignItems: 'center',
-    gap: DesignTokens.spacing.md,
+    justifyContent: 'center',
   },
   settingText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'left',
+    ...chatRtlText,
+    flex: 1,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.fontWeight.semibold as '600',
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
   },
   separator: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: DesignTokens.colors.border.divider,
-    marginVertical: DesignTokens.spacing.xs,
+    backgroundColor: tokens.colors.border.divider,
+    marginHorizontal: tokens.spacing.base,
   },
-
-  // Members
-  memberRow: {
-    flexDirection: 'row',
+  membersSectionHeader: {
+    ...chatRtlRow,
     alignItems: 'center',
-    paddingVertical: DesignTokens.spacing.md,
+    justifyContent: 'space-between',
+    gap: tokens.spacing.sm,
+    marginBottom: tokens.spacing.sm,
+  },
+  memberRow: {
+    ...chatRtlRow,
+    alignItems: 'center',
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.base,
+    gap: tokens.spacing.md,
   },
   memberAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginEnd: DesignTokens.spacing.md,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   memberAvatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: DesignTokens.colors.primary.main,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: tokens.colors.primary.dim,
     justifyContent: 'center',
     alignItems: 'center',
-    marginEnd: DesignTokens.spacing.md,
   },
   memberAvatarText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.bold as any,
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.subhead.size,
+    fontWeight: tokens.typography.fontWeight.semibold as '600',
+    color: tokens.colors.primary.main,
   },
   memberInfo: {
     flex: 1,
-    alignItems: 'stretch',
+    alignItems: 'flex-start',
   },
   memberNameRow: {
-    flexDirection: 'row',
+    ...chatRtlRow,
     alignItems: 'center',
-    justifyContent: 'flex-start',
     flexWrap: 'wrap',
-    gap: DesignTokens.spacing.xs,
-    marginBottom: DesignTokens.spacing.xs,
+    gap: tokens.spacing.xs,
+    marginBottom: 2,
   },
   memberName: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.medium as any,
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'left',
+    ...chatRtlText,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.fontWeight.semibold as '600',
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
   },
   adminBadge: {
-    flexDirection: 'row',
+    ...chatRtlRow,
     alignItems: 'center',
-    backgroundColor: DesignTokens.colors.warning.main + '20',
-    paddingHorizontal: DesignTokens.spacing.xs,
+    backgroundColor: tokens.colors.warning.main + '20',
+    paddingHorizontal: tokens.spacing.xs,
     paddingVertical: 2,
-    borderRadius: DesignTokens.borderRadius.md,
-    gap: DesignTokens.spacing.xs,
+    borderRadius: tokens.borderRadius.md,
+    gap: 4,
   },
   adminBadgeText: {
-    fontSize: DesignTokens.typography.fontSize.xs,
-    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-    color: DesignTokens.colors.warning.main,
+    ...chatRtlText,
+    fontSize: tokens.typography.caption2.size,
+    fontWeight: tokens.typography.fontWeight.semibold as '600',
+    color: tokens.colors.warning.main,
   },
   youLabel: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.tertiary,
-    textAlign: 'left',
+    ...chatRtlText,
+    fontSize: tokens.typography.footnote.size,
+    color: tokens.colors.text.tertiary,
   },
   onlineStatus: {
-    flexDirection: 'row',
+    ...chatRtlRow,
     alignItems: 'center',
-    gap: DesignTokens.spacing.xs,
-    alignSelf: 'flex-start',
+    gap: tokens.spacing.xs,
   },
   onlineDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: DesignTokens.colors.success.main,
+    backgroundColor: tokens.colors.success.main,
   },
   onlineText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.success.main,
-    textAlign: 'left',
+    ...chatRtlText,
+    fontSize: tokens.typography.footnote.size,
+    lineHeight: tokens.typography.footnote.lineHeight,
+    color: tokens.colors.success.main,
   },
   offlineText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.tertiary,
-    textAlign: 'left',
+    ...chatRtlText,
+    fontSize: tokens.typography.footnote.size,
+    lineHeight: tokens.typography.footnote.lineHeight,
+    color: tokens.colors.text.tertiary,
   },
   addButton: {
-    flexDirection: 'row',
+    ...chatRtlRow,
     alignItems: 'center',
-    gap: DesignTokens.spacing.xs,
+    gap: tokens.spacing.xs,
   },
   addButtonText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-    color: DesignTokens.colors.primary.main,
+    ...chatRtlText,
+    fontSize: tokens.typography.buttonSmall.size,
+    fontWeight: tokens.typography.buttonSmall.weight as '600',
+    lineHeight: tokens.typography.buttonSmall.lineHeight,
+    color: tokens.colors.primary.main,
   },
-
-  // Danger Zone
-  dangerRow: {
-    flexDirection: 'row',
+  leaveButtonWrap: {
+    marginTop: tokens.spacing.sm,
+    marginBottom: tokens.spacing.lg,
+  },
+  leaveCard: {
+    borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
-    gap: DesignTokens.spacing.md,
-    paddingVertical: DesignTokens.spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: `${tokens.colors.danger.main}40`,
   },
-  dangerText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.danger.main,
-  },
-
-  errorText: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.text.secondary,
+  leaveButtonText: {
+    ...chatRtlText,
+    fontSize: tokens.typography.buttonSmall.size,
+    fontWeight: tokens.typography.buttonSmall.weight as '600',
+    lineHeight: tokens.typography.buttonSmall.lineHeight,
+    color: tokens.colors.danger.main,
     textAlign: 'center',
-    marginTop: DesignTokens.spacing.xl,
   },
-
+  errorText: {
+    ...chatRtlText,
+    fontSize: tokens.typography.body.size,
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.secondary,
+    textAlign: 'center',
+  },
   promptOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: tokens.colors.background.overlay,
   },
   promptContainer: {
     width: '85%',
-    backgroundColor: DesignTokens.colors.background.tertiary,
-    borderRadius: 16,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: DesignTokens.colors.border.main,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: tokens.borderRadius.lg,
+    padding: tokens.spacing.xl,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: tokens.colors.border.subtle,
+    direction: 'rtl',
   },
   promptTitle: {
-    fontSize: 17,
-    fontWeight: '600' as const,
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'left',
-    marginBottom: 16,
+    ...chatRtlText,
+    fontSize: tokens.typography.subtitle.size,
+    fontWeight: tokens.typography.subtitle.weight as '600',
+    lineHeight: tokens.typography.subtitle.lineHeight,
+    color: tokens.colors.text.primary,
+    marginBottom: tokens.spacing.base,
   },
   promptInput: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 10,
-    padding: 12,
-    color: DesignTokens.colors.text.primary,
-    fontSize: 15,
-    textAlign: 'left',
-    borderWidth: 1,
-    borderColor: DesignTokens.colors.border.main,
+    ...chatRtlText,
+    backgroundColor: tokens.colors.background.input,
+    borderRadius: tokens.borderRadius.md,
+    padding: tokens.spacing.md,
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    lineHeight: tokens.typography.body.lineHeight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: tokens.colors.border.subtle,
   },
   promptButtons: {
-    flexDirection: 'row',
+    ...chatRtlRow,
     justifyContent: 'flex-start',
-    gap: 12,
-    marginTop: 20,
+    gap: tokens.spacing.md,
+    marginTop: tokens.spacing.lg,
   },
   promptBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: tokens.spacing.sm + 2,
+    borderRadius: tokens.borderRadius.md,
   },
   promptBtnCancel: {
-    color: DesignTokens.colors.text.secondary,
-    fontSize: 15,
+    ...chatRtlText,
+    color: tokens.colors.text.secondary,
+    fontSize: tokens.typography.callout.size,
+    fontWeight: tokens.typography.fontWeight.medium as '500',
   },
   promptBtnConfirmBg: {
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
   },
   promptBtnConfirm: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600' as const,
+    color: tokens.colors.text.inverse,
+    fontSize: tokens.typography.callout.size,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
   },
 });

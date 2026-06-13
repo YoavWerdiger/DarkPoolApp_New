@@ -1,4 +1,5 @@
 import 'react-native-get-random-values'; // Must be first for WebCrypto support (PKCE OAuth)
+import 'react-native-url-polyfill/auto';
 import 'react-native-gesture-handler';
 import * as WebBrowser from 'expo-web-browser';
 import { registerRootComponent } from 'expo';

@@ -6,6 +6,14 @@ import { supabase } from '../../lib/supabase';
 import { ChatError } from '../../types/chat.types';
 import { logger } from '../../utils/logger';
 
+const PINNED_CACHE_TTL_MS = 45_000;
+const pinnedCache = new Map<string, { data: ChatPinnedMessage[]; at: number }>();
+let rpcMissingLogged = false;
+
+export function invalidateChatPinnedCache(groupId: string): void {
+  pinnedCache.delete(groupId);
+}
+
 export interface ChatPinnedMessage {
   id: string;
   message_id: string;
@@ -103,21 +111,36 @@ async function fetchPinnedFromTable(
 }
 
 export async function getChatPinnedMessages(
-  groupId: string
+  groupId: string,
+  options?: { force?: boolean }
 ): Promise<{ data: ChatPinnedMessage[]; error: ChatError | null }> {
+  const cached = pinnedCache.get(groupId);
+  if (!options?.force && cached && Date.now() - cached.at < PINNED_CACHE_TTL_MS) {
+    return { data: cached.data, error: null };
+  }
+
   try {
     const { data, error } = await supabase.rpc('get_chat_pinned_messages', {
       p_group_id: groupId,
     });
 
     if (!error) {
-      return { data: (data as ChatPinnedMessage[]) || [], error: null };
+      const rows = (data as ChatPinnedMessage[]) || [];
+      pinnedCache.set(groupId, { data: rows, at: Date.now() });
+      return { data: rows, error: null };
     }
 
     // RPC not deployed yet — fall back to direct table query
     if (error.code === 'PGRST202') {
-      logger.debug('ChatPinned', 'RPC missing — using table fallback');
-      return fetchPinnedFromTable(groupId);
+      if (!rpcMissingLogged) {
+        rpcMissingLogged = true;
+        logger.debug('ChatPinned', 'RPC missing — using table fallback');
+      }
+      const tableResult = await fetchPinnedFromTable(groupId);
+      if (!tableResult.error) {
+        pinnedCache.set(groupId, { data: tableResult.data, at: Date.now() });
+      }
+      return tableResult;
     }
 
     logger.error('ChatPinned', 'Failed to load pinned messages', error);
@@ -148,6 +171,7 @@ export async function pinChatMessage(
       return { success: false, error: error.message };
     }
 
+    invalidateChatPinnedCache(groupId);
     return { success: true };
   } catch (error: any) {
     logger.error('ChatPinned', 'Unexpected error pinning message', error);
@@ -171,6 +195,7 @@ export async function unpinChatMessage(
       return { success: false, error: error.message };
     }
 
+    invalidateChatPinnedCache(groupId);
     return { success: true };
   } catch (error: any) {
     logger.error('ChatPinned', 'Unexpected error unpinning message', error);

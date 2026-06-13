@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet, I18nManager } from 'react-native';
+import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet, I18nManager, Linking } from 'react-native';
 import {
   User,
   Settings,
@@ -9,17 +9,17 @@ import {
   Bell,
   CreditCard,
   Edit3,
-  Shield,
-  Info,
 } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useSubscription } from '../../hooks/useSubscription';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
-import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
+import { getStoreReviewUrl } from '../../utils/appMeta';
 
 interface MenuItem {
   id: string;
@@ -31,6 +31,7 @@ interface MenuItem {
 
 export default function UserProfileScreen({ navigation }: any) {
   const { user, isLoading, signOut } = useAuth();
+  const { planName, isLoading: subscriptionLoading } = useSubscription();
   const DesignTokens = useDesignTokens();
 
   const openMainDrawer = useCallback(() => {
@@ -92,65 +93,19 @@ export default function UserProfileScreen({ navigation }: any) {
     {
       id: 'subscription',
       title: 'מנוי ומסלול',
-      subtitle: 'ניהול מנוי ותשלומים',
+      subtitle: 'צפייה במסלולים (תשלום בקרוב)',
       icon: CreditCard,
       onPress: () => navigation.navigate('SubscriptionPlans')
     },
     {
       id: 'rate',
       title: 'דרג אותנו',
-      subtitle: 'שתף את החוויה שלך',
+      subtitle: 'שתף את החוויה שלך בחנות',
       icon: Star,
       onPress: () => {
-        legacyAlert(
-          'דרג אותנו',
-          'איך תרצה לדרג אותנו?',
-          [
-            {
-              text: 'דירוג אנונימי',
-              onPress: () => {
-                // פתיחת סקר אנונימי בגוגל פורמס
-                const anonymousFormUrl = 'https://forms.gle/YOUR_ANONYMOUS_FORM_ID';
-                // כאן צריך להוסיף קישור לסקר אנונימי
-                legacyAlert('תודה!', 'הסקר האנונימי יפתח בקרוב');
-              }
-            },
-            {
-              text: 'דירוג לא אנונימי',
-              onPress: () => {
-                // פתיחת סקר לא אנונימי בגוגל פורמס
-                const namedFormUrl = 'https://forms.gle/YOUR_NAMED_FORM_ID';
-                // כאן צריך להוסיף קישור לסקר לא אנונימי
-                legacyAlert('תודה!', 'הסקר יפתח בקרוב');
-              }
-            },
-            {
-              text: 'ביטול',
-              style: 'cancel'
-            }
-          ]
-        );
-      }
-    }
-  ];
-
-  const secondaryMenuItems: MenuItem[] = [
-    {
-      id: 'security',
-      title: 'אבטחה',
-      subtitle: 'סיסמה ואימות',
-      icon: Shield,
-      onPress: () => {
-        legacyAlert('אבטחה', 'אבטחה - בקרוב!');
-      }
-    },
-    {
-      id: 'about',
-      title: 'אודות',
-      subtitle: 'מידע על האפליקציה',
-      icon: Info,
-      onPress: () => {
-        legacyAlert('אודות', 'DarkPool App v1.0.0');
+        void Linking.openURL(getStoreReviewUrl()).catch(() => {
+          legacyAlert('שגיאה', 'לא הצלחנו לפתוח את דף החנות.');
+        });
       }
     }
   ];
@@ -276,7 +231,7 @@ export default function UserProfileScreen({ navigation }: any) {
             textAlign: 'right',
           }}
         >
-          מנוי חודשי
+          מסלול {subscriptionLoading ? '...' : (planName ?? 'חינמי')}
         </Text>
         <View
           style={{
@@ -393,7 +348,10 @@ export default function UserProfileScreen({ navigation }: any) {
             {mainMenuItems.map((item, index) => (
               <View key={item.id}>
                 <TouchableOpacity
-                  onPress={item.onPress}
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    item.onPress();
+                  }}
                   activeOpacity={0.7}
                   style={{
                     flexDirection: 'row',
@@ -465,96 +423,11 @@ export default function UserProfileScreen({ navigation }: any) {
             ))}
         </UICard>
 
-        {/* תפריט משני — זכוכית */}
-        <UICard
-          variant="glass"
-          glassIntensity="light"
-          padding="none"
-          style={{
-            marginBottom: DesignTokens.spacing.md,
-            borderRadius: DesignTokens.borderRadius.lg,
-          }}
-        >
-            {secondaryMenuItems.map((item, index) => (
-              <View key={item.id}>
-                <TouchableOpacity
-                  onPress={item.onPress}
-                  activeOpacity={0.7}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingTop: DesignTokens.spacing.md,
-                    paddingBottom: index < secondaryMenuItems.length - 1 ? DesignTokens.spacing.sm : DesignTokens.spacing.md,
-                    paddingHorizontal: DesignTokens.spacing.base,
-                  }}
-                >
-                {/* Chevron - שמאל */}
-                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-
-                {/* Text Content - מרכז */}
-                <View style={{
-                  flex: 1,
-                  marginLeft: DesignTokens.spacing.sm,
-                  marginRight: DesignTokens.spacing.sm,
-                  gap: DesignTokens.spacing.micro,
-                }}>
-                  <Text style={{
-                    fontSize: DesignTokens.typography.body.size,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                    lineHeight: DesignTokens.typography.body.lineHeight,
-                    color: DesignTokens.colors.text.primary,
-                    textAlign: 'right',
-                  }}>
-                    {item.title}
-                  </Text>
-                  {item.subtitle && (
-                    <Text style={{
-                      fontSize: DesignTokens.typography.bodySmall.size,
-                      fontWeight: DesignTokens.typography.bodySmall.weight as any,
-                      lineHeight: DesignTokens.typography.bodySmall.lineHeight,
-                      color: DesignTokens.colors.text.tertiary,
-                      textAlign: 'right',
-                    }}>
-                      {item.subtitle}
-                    </Text>
-                  )}
-                </View>
-
-                {/* Icon - ימין - עם Glassmorphism עדין */}
-                <View style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: DesignTokens.borderRadius.md,
-                  backgroundColor: `${DesignTokens.colors.primary.main}20`,
-                  borderWidth: DesignTokens.layout.borderWidth.normal,
-                  borderColor: DesignTokens.colors.border.primary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  ...DesignTokens.shadows.xs,
-                }}>
-                  <item.icon 
-                    size={20} 
-                    color={DesignTokens.colors.primary.main} 
-                    strokeWidth={2.5} 
-                  />
-                </View>
-              </TouchableOpacity>
-              {index < secondaryMenuItems.length - 1 && (
-                <View style={{
-                  height: 1,
-                  backgroundColor: DesignTokens.colors.border.divider,
-                  marginLeft: DesignTokens.spacing.base,
-                  marginRight: DesignTokens.spacing.base,
-                }} />
-              )}
-            </View>
-            ))}
-        </UICard>
-
         {/* Logout Button - כפתור נורמלי */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => {
+            void HapticFeedback.warning();
             legacyAlert(
               'התנתקות',
               'האם אתה בטוח שברצונך להתנתק?',

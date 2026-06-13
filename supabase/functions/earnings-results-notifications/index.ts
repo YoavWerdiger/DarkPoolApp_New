@@ -1,9 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import {
+  buildEarningsMetricLine,
+  earningsResultsTitle,
+} from '../_shared/notificationBidi.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+async function flushPendingNotifications(supabaseUrl: string, serviceKey: string): Promise<void> {
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/process-pending-notifications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+      body: '{}',
+    })
+    if (!res.ok) {
+      console.warn('⚠️ process-pending-notifications returned', res.status, await res.text())
+    }
+  } catch (e) {
+    console.warn('⚠️ Failed to invoke process-pending-notifications:', e)
+  }
 }
 
 serve(async (req) => {
@@ -130,50 +152,38 @@ serve(async (req) => {
       return `$${val.toFixed(2)}`
     }
 
-    // ─── עזר: סמל עליה/ירידה
-    const surpriseIcon = (pct: number | null | undefined): string => {
-      if (pct == null) return ''
-      return pct >= 0 ? ' ✅' : ' ❌'
-    }
-
-    // ─── עזר: פורמט אחוז הפתעה
-    const formatPct = (pct: number | null | undefined): string => {
-      if (pct == null) return ''
-      const sign = pct >= 0 ? '+' : ''
-      return ` (${sign}${pct.toFixed(1)}%)`
-    }
-
     // יצירת התראות לכל דיווח שפורסם
     for (const report of publishedReports) {
       const ticker = report.ticker || report.code.replace('.US', '')
       const companyName = report.company_name || ticker
 
-      // ─── אמוג'י כותרת לפי ה-EPS surprise
-      const epsSurprise: number | null = report.percent ?? null
-      let titleEmoji = '📊'
-      if (epsSurprise != null) {
-        if (epsSurprise > 5)  titleEmoji = '🚀'
-        else if (epsSurprise < -5) titleEmoji = '📉'
-      }
+      const epsLine = buildEarningsMetricLine(
+        'רווחיות',
+        'EPS',
+        formatEps(report.actual),
+        formatEps(report.estimate),
+        report.percent ?? null,
+      )
 
-      // ─── כותרת: "Apple דיווחה דוח רבעוני 🚀"
-      const notificationTitle = `${companyName} דיווחה דוח רבעוני ${titleEmoji}`
-
-      // ─── שורת EPS
-      const epsActual   = formatEps(report.actual)
-      const epsEstimate = formatEps(report.estimate)
-      const epsLine = `EPS: ${epsActual} vs ${epsEstimate} צפוי${formatPct(epsSurprise)}${surpriseIcon(epsSurprise)}`
-
-      // ─── שורת Revenue (אם קיים)
-      const revActual   = report.revenue_actual   ?? null
+      const revActual = report.revenue_actual ?? null
       const revEstimate = report.revenue_estimate_avg ?? report.revenue_estimate ?? null
       const revSurprisePct: number | null = report.revenue_surprise_percent ?? null
-      let revLine = ''
+
+      const lines = [epsLine]
       if (revActual != null) {
-        revLine = `\nRevenue: ${formatRevenue(revActual)} vs ${revEstimate != null ? formatRevenue(revEstimate) : 'N/A'} צפוי${formatPct(revSurprisePct)}${surpriseIcon(revSurprisePct)}`
+        lines.push(
+          buildEarningsMetricLine(
+            'הכנסות',
+            'Revenue',
+            formatRevenue(revActual),
+            revEstimate != null ? formatRevenue(revEstimate) : null,
+            revSurprisePct,
+          ),
+        )
       }
 
-      const notificationBody = epsLine + revLine
+      const notificationTitle = earningsResultsTitle(companyName)
+      const notificationBody = lines.join('\n')
 
       // יצירת התראה לכל משתמש
       for (const user of usersWithNotifications) {
@@ -202,6 +212,7 @@ serve(async (req) => {
               type: 'earnings_results',
               earnings_report_id: report.id,
               ticker: ticker,
+              company_name: companyName,
               code: report.code,
               report_date: report.report_date,
               actual: report.actual,
@@ -230,6 +241,10 @@ serve(async (req) => {
     }
 
     console.log(`✅ Created ${notificationsCreated} result notifications`)
+
+    if (notificationsCreated > 0) {
+      await flushPendingNotifications(supabaseUrl, supabaseServiceKey)
+    }
 
     return new Response(
       JSON.stringify({

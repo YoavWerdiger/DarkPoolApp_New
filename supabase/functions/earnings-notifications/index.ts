@@ -1,9 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import {
+  buildEarningsUpcomingBody,
+  earningsUpcomingTitle,
+} from '../_shared/notificationBidi.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+async function flushPendingNotifications(supabaseUrl: string, serviceKey: string): Promise<void> {
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/process-pending-notifications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceKey}`,
+      },
+      body: '{}',
+    })
+    if (!res.ok) {
+      console.warn('⚠️ process-pending-notifications returned', res.status, await res.text())
+    }
+  } catch (e) {
+    console.warn('⚠️ Failed to invoke process-pending-notifications:', e)
+  }
 }
 
 interface EarningsReport {
@@ -54,7 +76,7 @@ serve(async (req) => {
     // חיפוש דיווחים שעדיין לא פורסמו (אין actual) ושצפויים ב-15 דקות הקרובות
     const { data: upcomingReports, error: reportsError } = await supabase
       .from('earnings_calendar')
-      .select('id, code, ticker, company_name, report_date, earnings_date_time, before_after_market, actual, estimate')
+      .select('id, code, ticker, company_name, report_date, earnings_date_time, before_after_market, actual, estimate, revenue_estimate_avg, revenue_estimate')
       .eq('report_date', now.toISOString().split('T')[0])
       .is('actual', null) // רק דיווחים שעדיין לא פורסמו
       .gte('importance', 3) // רק חשובים
@@ -105,6 +127,16 @@ serve(async (req) => {
 
     let notificationsCreated = 0
 
+    const formatRevenue = (val: number | null | undefined): string => {
+      if (val == null || isNaN(val)) return ''
+      const abs = Math.abs(val)
+      if (abs >= 1e12) return `$${(val / 1e12).toFixed(2)}T`
+      if (abs >= 1e9) return `$${(val / 1e9).toFixed(2)}B`
+      if (abs >= 1e6) return `$${(val / 1e6).toFixed(1)}M`
+      if (abs >= 1e3) return `$${(val / 1e3).toFixed(1)}K`
+      return `$${val.toFixed(2)}`
+    }
+
     // יצירת התראות לכל דיווח קרוב
     for (const report of upcomingReports) {
       // בדיקת זמן הדיווח
@@ -145,6 +177,24 @@ serve(async (req) => {
       const ticker = report.ticker || report.code.replace('.US', '')
       const companyName = report.company_name || ticker
 
+      const revEstimate = report.revenue_estimate_avg ?? report.revenue_estimate ?? null
+      let revenueEstimateStr: string | null = null
+      if (revEstimate != null && !isNaN(Number(revEstimate))) {
+        revenueEstimateStr = formatRevenue(Number(revEstimate))
+      }
+
+      const epsEstimateStr =
+        report.estimate != null && !isNaN(Number(report.estimate))
+          ? `$${Number(report.estimate).toFixed(2)}`
+          : null
+
+      const body = buildEarningsUpcomingBody(
+        timeDisplay,
+        minutesDiff,
+        epsEstimateStr,
+        revenueEstimateStr,
+      )
+
       // יצירת התראה לכל משתמש
       for (const user of usersWithNotifications) {
         // בדיקת כפילות לפי מזהה דיווח (לא is_sent) — אחרי שליחה השורה נשארת is_sent=true
@@ -167,12 +217,13 @@ serve(async (req) => {
           .insert({
             user_id: user.user_id,
             notification_type: 'earnings',
-            title: `דיווח רווחים ${timeDisplay}`,
-            body: `${companyName} (${ticker}) - דיווח ${timeDisplay} בעוד ${minutesDiff} דקות`,
+            title: earningsUpcomingTitle(companyName),
+            body,
             data: {
               type: 'earnings',
               earnings_report_id: report.id,
               ticker: ticker,
+              company_name: companyName,
               code: report.code,
               report_date: report.report_date,
               before_after_market: report.before_after_market,
@@ -196,6 +247,10 @@ serve(async (req) => {
     }
 
     console.log(`✅ Created ${notificationsCreated} notifications`)
+
+    if (notificationsCreated > 0) {
+      await flushPendingNotifications(supabaseUrl, supabaseServiceKey)
+    }
 
     return new Response(
       JSON.stringify({

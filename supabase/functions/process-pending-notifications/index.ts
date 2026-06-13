@@ -1,10 +1,15 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
+import { ensurePushBidi, formatPushMultiline } from '../_shared/notificationBidi.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
 // 🔑 Expo Access Token נדרש לשליחת התראות ל-production builds
 const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || '';
+
+/** התראות ישנות יותר מזה לא נשלחות — מונע הצפה כשהתור נצבר */
+const MAX_AGE_HOURS = 2;
+const BATCH_LIMIT = 50;
 
 async function ensureNotificationImageUrl(
   supabase: ReturnType<typeof createClient>,
@@ -28,6 +33,11 @@ async function ensureNotificationImageUrl(
 }
 
 serve(async (req) => {
+  let lockAcquired = false;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
     // CORS headers
     if (req.method === 'OPTIONS') {
@@ -57,19 +67,63 @@ serve(async (req) => {
       // אם אין body או שגיאה, נמשיך בלי פרמטרים - נשלח לכל הטוקנים
     }
 
-    // יצירת Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // יצירת Supabase client — כבר אותחל למעלה
 
-    // קבלת כל ההתראות הממתינות
+    const { data: acquired, error: lockError } = await supabase.rpc('push_processor_try_lock');
+    if (lockError) {
+      console.warn('⚠️ Could not acquire push processor lock:', lockError.message);
+    } else if (!acquired) {
+      console.log('⏭️ Another process-pending-notifications run is active — skipping');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Processor already running',
+          skipped: true,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    } else {
+      lockAcquired = true;
+    }
+
+    const { data: skippedEconomic, error: skipError } = await supabase.rpc(
+      'skip_stale_economic_pending_notifications',
+      { p_max_age_hours: MAX_AGE_HOURS },
+    );
+    if (skipError) {
+      console.warn('⚠️ Could not skip stale economic notifications:', skipError.message);
+    } else if (skippedEconomic && Number(skippedEconomic) > 0) {
+      console.log(`⏭️ Skipped ${skippedEconomic} older economic notifications in queue`);
+    }
+
+    const cutoffIso = new Date(Date.now() - MAX_AGE_HOURS * 60 * 60 * 1000).toISOString();
+
+    // פסול תור ישן — לא לשלוח אלפי התראות שנצברו
+    const { data: expiredRows, error: expireError } = await supabase
+      .from('pending_notifications')
+      .update({
+        is_sent: true,
+        sent_at: new Date().toISOString(),
+      })
+      .eq('is_sent', false)
+      .lt('created_at', cutoffIso)
+      .select('id');
+
+    if (expireError) {
+      console.warn('⚠️ Could not expire stale notifications:', expireError.message);
+    } else if (expiredRows && expiredRows.length > 0) {
+      console.log(`🗑️ Expired ${expiredRows.length} stale notifications (older than ${MAX_AGE_HOURS}h)`);
+    }
+
+    // קבלת התראות ממתינות — רק מהשעות האחרונות, מהחדש לישן
     console.log('🔍 Fetching pending notifications...');
     const { data: pendingNotifications, error: notificationsError } = await supabase
       .from('pending_notifications')
       .select('*')
       .eq('is_sent', false)
-      .order('created_at', { ascending: true })
-      .limit(100); // הגבלה ל-100 התראות בכל פעם
+      .gte('created_at', cutoffIso)
+      .order('created_at', { ascending: false })
+      .limit(BATCH_LIMIT);
 
     if (notificationsError) {
       console.error('❌ Error fetching pending notifications:', notificationsError);
@@ -96,15 +150,77 @@ serve(async (req) => {
       );
     }
 
-    // קיבוץ התראות לפי user_id
+    // קיבוץ התראות לפי user_id — dedup לחדשות וליומן כלכלי
     const notificationsByUser = new Map<string, any[]>();
+    const dedupeSeen = new Set<string>();
+
     for (const notification of pendingNotifications) {
       if (!notification.user_id) continue;
+
+      const eventKey =
+        notification.notification_type === 'news' && notification.article_id
+          ? `news:${notification.user_id}:${notification.article_id}`
+          : notification.notification_type === 'economic_calendar'
+            ? `econ:${notification.user_id}:${notification.article_id || notification.data?.eventId}`
+            : notification.notification_type === 'earnings' &&
+                notification.data?.earnings_report_id
+              ? `earn:${notification.user_id}:${notification.data.earnings_report_id}:${notification.data?.type || 'earnings'}`
+              : null;
+
+      if (eventKey) {
+        if (dedupeSeen.has(eventKey)) continue;
+        dedupeSeen.add(eventKey);
+      }
 
       if (!notificationsByUser.has(notification.user_id)) {
         notificationsByUser.set(notification.user_id, []);
       }
       notificationsByUser.get(notification.user_id)!.push(notification);
+    }
+
+    const MAX_ECONOMIC_PER_USER = 1;
+
+    // לחדשות: מקסימום אחת למשתמש. ליומן כלכלי: מקסימום 3 האחרונות.
+    for (const [userId, list] of notificationsByUser) {
+      const newsOnly = list.filter((n) => n.notification_type === 'news');
+      const econOnly = list.filter((n) => n.notification_type === 'economic_calendar');
+      const other = list.filter(
+        (n) => n.notification_type !== 'news' && n.notification_type !== 'economic_calendar',
+      );
+
+      let trimmed = [...other];
+
+      if (newsOnly.length > 1) {
+        const latestNews = newsOnly[0];
+        const skippedNewsIds = newsOnly.slice(1).map((n) => n.id);
+        if (skippedNewsIds.length > 0) {
+          await supabase
+            .from('pending_notifications')
+            .update({ is_sent: true, sent_at: new Date().toISOString() })
+            .in('id', skippedNewsIds);
+          console.log(`⏭️ Skipped ${skippedNewsIds.length} older news for user ${userId}`);
+        }
+        trimmed = [latestNews, ...trimmed];
+      } else if (newsOnly.length === 1) {
+        trimmed = [newsOnly[0], ...trimmed];
+      }
+
+      if (econOnly.length > MAX_ECONOMIC_PER_USER) {
+        const toSend = econOnly.slice(0, MAX_ECONOMIC_PER_USER);
+        const skippedEconIds = econOnly.slice(MAX_ECONOMIC_PER_USER).map((n) => n.id);
+        if (skippedEconIds.length > 0) {
+          await supabase
+            .from('pending_notifications')
+            .update({ is_sent: true, sent_at: new Date().toISOString() })
+            .in('id', skippedEconIds);
+          console.log(`⏭️ Skipped ${skippedEconIds.length} older economic for user ${userId}`);
+        }
+        trimmed = [...trimmed, ...toSend];
+      } else {
+        trimmed = [...trimmed, ...econOnly];
+      }
+
+      notificationsByUser.set(userId, trimmed);
     }
 
     let totalSent = 0;
@@ -118,7 +234,7 @@ serve(async (req) => {
         // אחרת, נשלח לכל הטוקנים הפעילים (התנהגות ברירת מחדל)
         let query = supabase
           .from('device_tokens')
-          .select('expo_push_token')
+          .select('expo_push_token, platform')
           .eq('user_id', userId)
           .eq('is_active', true);
         
@@ -131,7 +247,7 @@ serve(async (req) => {
           // אם יש device_id, נצטרך לשאול גם את device_id
           query = supabase
             .from('device_tokens')
-            .select('expo_push_token')
+            .select('expo_push_token, platform')
             .eq('user_id', userId)
             .eq('is_active', true)
             .eq('device_id', specificDeviceId);
@@ -162,6 +278,17 @@ serve(async (req) => {
 
         console.log(`✅ Found ${deviceTokens.length} active device token(s) for user ${userId}`);
 
+        const uniqueTokens = Array.from(
+          new Map(
+            deviceTokens.map((token) => [token.expo_push_token, token]),
+          ).values(),
+        );
+        if (uniqueTokens.length < deviceTokens.length) {
+          console.log(
+            `⏭️ Deduped ${deviceTokens.length - uniqueTokens.length} duplicate device token(s) for user ${userId}`,
+          );
+        }
+
         // יצירת הודעות push לכל התראה (תמונת ההתראה – signed URL כדי שלא יוצג ריבוע אפור)
         const messages = [];
         for (const notification of notifications) {
@@ -169,30 +296,83 @@ serve(async (req) => {
           const rawImageUrl = notificationData.imageUrl || null;
           const imageUrl = rawImageUrl ? await ensureNotificationImageUrl(supabase, rawImageUrl) : null;
 
-          for (const token of deviceTokens) {
+          const isNews = notification.notification_type === 'news';
+          const isEconomic = notification.notification_type === 'economic_calendar';
+          const isEarnings = notification.notification_type === 'earnings';
+          const channelId = isNews
+            ? 'news'
+            : isEconomic
+              ? 'economic_events'
+              : isEarnings
+                ? 'earnings'
+                : 'default';
+          const threadId = isNews
+            ? 'darkpool-news'
+            : isEconomic
+              ? 'darkpool-economic'
+              : isEarnings
+                ? 'darkpool-earnings'
+                : 'darkpool-general';
+          const collapseId = isEconomic
+            ? `darkpool-economic-${userId}`
+            : isEarnings
+              ? `darkpool-earnings-${userId}`
+              : isNews && notification.article_id
+                ? `darkpool-news-${notification.article_id}`
+                : threadId;
+
+          let subtitle: string | undefined;
+          const economicEventName = isEconomic
+            ? ensurePushBidi(String(notificationData.title || '').trim()) || undefined
+            : undefined;
+          if (isEconomic) {
+            subtitle = economicEventName;
+          } else if (isNews) {
+            subtitle = ensurePushBidi(String(notificationData.source || '').trim()) || undefined;
+          }
+
+          const pushTitle = formatPushMultiline(notification.title);
+          const pushBody = formatPushMultiline(notification.body);
+          const pushBodyWithEconomicName =
+            isEconomic && economicEventName
+              ? formatPushMultiline(
+                  `${String(notificationData.title || '').trim()}\n${notification.body}`,
+                )
+              : pushBody;
+
+          for (const token of uniqueTokens) {
+            const isAndroid = String(token.platform || '').toLowerCase() === 'android';
+            const messageSubtitle =
+              isAndroid && (isEconomic || isNews) ? undefined : subtitle;
+            const messageBody =
+              isAndroid && isEconomic && economicEventName ? pushBodyWithEconomicName : pushBody;
+
             messages.push({
               to: token.expo_push_token,
               sound: 'default',
-              title: notification.title,
-              body: notification.body,
-              subtitle: 'DarkPool',
+              title: pushTitle,
+              body: messageBody,
+              ...(messageSubtitle ? { subtitle: messageSubtitle } : {}),
+              collapseId,
+              ...(isAndroid && (isEconomic || isEarnings) ? { tag: collapseId } : {}),
               data: {
                 ...notificationData,
                 appName: 'DarkPool',
+                notificationType: notification.notification_type,
                 ...(imageUrl ? { image: imageUrl } : {}),
               },
-              priority: 'high',
-              channelId: 'default',
+              priority: isNews ? 'default' : 'high',
+              channelId,
               icon: 'ic_notification',
               ...(imageUrl ? { richContent: { image: imageUrl } } : {}),
               android: {
-                channelId: 'default',
-                priority: 'high',
+                channelId,
+                priority: isNews ? 'default' : 'high',
                 ...(imageUrl ? { imageUrl: imageUrl } : {}),
               },
               ios: {
                 sound: 'default',
-                badge: 1,
+                threadId: collapseId,
                 ...(imageUrl ? { attachments: [{ url: imageUrl }] } : {}),
               },
             });
@@ -288,5 +468,12 @@ serve(async (req) => {
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
+  } finally {
+    if (lockAcquired) {
+      const { error: releaseError } = await supabase.rpc('push_processor_release_lock');
+      if (releaseError) {
+        console.warn('⚠️ Could not release push processor lock:', releaseError.message);
+      }
+    }
   }
 });

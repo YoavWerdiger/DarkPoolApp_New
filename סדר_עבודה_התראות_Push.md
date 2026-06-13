@@ -1,6 +1,7 @@
 # 📋 סדר עבודה - הפעלת התראות Push לחדשות
 
 ## ✅ מה כבר מוכן:
+
 - ✅ Device token נרשם במסד הנתונים
 - ✅ RLS Policies תקינים
 - ✅ Edge Function `process-pending-notifications` קיימת
@@ -13,35 +14,30 @@
 ### שלב 1: הרצת הפונקציה SQL (5 דקות)
 
 1. **פתח Supabase Dashboard**
-   - לך ל: https://supabase.com/dashboard
-   - בחר את הפרויקט שלך
-
+  - לך ל: [https://supabase.com/dashboard](https://supabase.com/dashboard)
+  - בחר את הפרויקט שלך
 2. **פתח SQL Editor**
-   - לחץ על "SQL Editor" בתפריט השמאלי
-
+  - לחץ על "SQL Editor" בתפריט השמאלי
 3. **העתק את הקובץ**
-   - פתח את הקובץ: `פונקציה_תקינה_התראות_חדשות.sql`
-   - העתק את כל התוכן (Ctrl+A, Ctrl+C)
-
+  - פתח את הקובץ: `פונקציה_תקינה_התראות_חדשות.sql`
+  - העתק את כל התוכן (Ctrl+A, Ctrl+C)
 4. **הדבק והרץ**
-   - הדבק ב-SQL Editor (Ctrl+V)
-   - לחץ על "Run" או F5
-
+  - הדבק ב-SQL Editor (Ctrl+V)
+  - לחץ על "Run" או F5
 5. **בדוק שהכל עבד**
-   - אמור לראות:
-     - ✅ "הפונקציה נוצרה בהצלחה!"
-     - ✅ "ה-trigger קיים!"
+  - אמור לראות:
+    - ✅ "הפונקציה נוצרה בהצלחה!"
+    - ✅ "ה-trigger קיים!"
 
 ---
 
 ### שלב 2: וידוא שה-Edge Function קיימת (2 דקות)
 
 1. **לך ל-Edge Functions**
-   - Supabase Dashboard > Edge Functions
-
+  - Supabase Dashboard > Edge Functions
 2. **בדוק אם `process-pending-notifications` קיימת**
-   - אם קיימת - מעולה! ✅
-   - אם לא קיימת - צריך להעלות אותה (ראה שלב 3)
+  - אם קיימת - מעולה! ✅
+  - אם לא קיימת - צריך להעלות אותה (ראה שלב 3)
 
 ---
 
@@ -50,34 +46,31 @@
 **אם ה-Edge Function לא קיימת:**
 
 1. **פתח Terminal**
-   ```bash
+  ```bash
    cd /Users/yoavwerdiger/DarkPoolApp_New-1
-   ```
-
+  ```
 2. **התחבר ל-Supabase**
-   ```bash
+  ```bash
    supabase login
-   ```
-
+  ```
 3. **קשר את הפרויקט**
-   ```bash
+  ```bash
    supabase link --project-ref wpmrtczbfcijoocguime
-   ```
-
+  ```
 4. **העלה את ה-Edge Function**
-   ```bash
+  ```bash
    supabase functions deploy process-pending-notifications
-   ```
-
+  ```
 5. **בדוק שהעלאה הצליחה**
-   - לך ל-Supabase Dashboard > Edge Functions
-   - אמור לראות `process-pending-notifications` ✅
+  - לך ל-Supabase Dashboard > Edge Functions
+  - אמור לראות `process-pending-notifications` ✅
 
 ---
 
 ### שלב 4: בדיקת Trigger (1 דקה)
 
 **הרץ את זה ב-SQL Editor:**
+
 ```sql
 -- בדוק שה-trigger קיים על app_news_clean
 SELECT 
@@ -92,6 +85,7 @@ WHERE event_object_table = 'app_news_clean'
 ```
 
 **אמור לראות:**
+
 - ✅ trigger_name: `on_new_news_article`
 - ✅ event_object_table: `app_news_clean`
 - ✅ action_statement: `EXECUTE FUNCTION send_news_notification_immediately()`
@@ -101,7 +95,7 @@ WHERE event_object_table = 'app_news_clean'
 ### שלב 5: בדיקת התראות - הוספת חדשה לבדיקה (3 דקות)
 
 1. **הוסף חדשה חדשה ל-`app_news_clean`**
-   ```sql
+  ```sql
    INSERT INTO app_news_clean (title, content, source, label, text_content)
    VALUES (
      'בדיקת התראות - ' || NOW()::TEXT,
@@ -111,10 +105,9 @@ WHERE event_object_table = 'app_news_clean'
      'חדשה לבדיקת מערכת התראות Push - ' || NOW()::TEXT
    )
    RETURNING id, title, created_at;
-   ```
-
+  ```
 2. **בדוק אם נוצרה התראה ב-`pending_notifications`**
-   ```sql
+  ```sql
    SELECT 
      pn.id,
      pn.user_id,
@@ -128,34 +121,28 @@ WHERE event_object_table = 'app_news_clean'
    LEFT JOIN auth.users u ON pn.user_id = u.id
    ORDER BY pn.created_at DESC
    LIMIT 5;
-   ```
-
+  ```
    **אמור לראות:**
-   - ✅ התראה חדשה עם `notification_type = 'news'`
-   - ✅ `is_sent = false` (עדיין לא נשלחה)
-
+  - ✅ התראה חדשה עם `notification_type = 'news'`
+  - ✅ `is_sent = false` (עדיין לא נשלחה)
 3. **בדוק את הלוגים של Edge Function**
-   - לך ל: Supabase Dashboard > Edge Functions > `process-pending-notifications` > Logs
-   - אמור לראות:
-     - ✅ קריאה ל-Function
-     - ✅ `Processing pending notifications...`
-     - ✅ `Sent X/Y notifications`
+  - לך ל: Supabase Dashboard > Edge Functions > `process-pending-notifications` > Logs
+  - אמור לראות:
+    - ✅ קריאה ל-Function
+    - ✅ `Processing pending notifications...`
+    - ✅ `Sent X/Y notifications`
 
 ---
 
 ### שלב 6: בדיקת התראות בפועל (5 דקות)
 
 1. **פתח את האפליקציה**
-   - התחבר עם המשתמש שיש לו device token
-
+  - התחבר עם המשתמש שיש לו device token
 2. **ודא שההתראות מופעלות**
-   - לך למסך הגדרות התראות
-   - ודא ש-"התראות חדשות" מופעלות ✅
-
+  - לך למסך הגדרות התראות
+  - ודא ש-"התראות חדשות" מופעלות ✅
 3. **סגור את האפליקציה** (או תן לה להיות ברקע)
-
 4. **הוסף חדשה חדשה** (דרך Supabase או דרך האפליקציה)
-
 5. **אמור לקבל התראה Push!** 📱
 
 ---
@@ -163,6 +150,7 @@ WHERE event_object_table = 'app_news_clean'
 ## 🔍 בדיקות נוספות (אופציונלי):
 
 ### בדיקה 1: כמה device tokens יש?
+
 ```sql
 SELECT 
   COUNT(*) as total_tokens,
@@ -172,6 +160,7 @@ FROM device_tokens;
 ```
 
 ### בדיקה 2: כמה התראות נשלחו?
+
 ```sql
 SELECT 
   COUNT(*) as total_notifications,
@@ -181,6 +170,7 @@ FROM pending_notifications;
 ```
 
 ### בדיקה 3: התראות אחרונות
+
 ```sql
 SELECT 
   pn.id,
@@ -201,19 +191,25 @@ LIMIT 10;
 ## ❌ פתרון בעיות:
 
 ### בעיה 1: אין התראות ב-`pending_notifications`
+
 **פתרון:**
+
 - בדוק שה-trigger קיים (שלב 4)
 - בדוק שהפונקציה `send_news_notification_immediately()` קיימת
 - בדוק שהוספת חדשה ל-`app_news_clean` (לא `app_news`)
 
 ### בעיה 2: התראות לא נשלחות
+
 **פתרון:**
+
 - בדוק את הלוגים של Edge Function
 - בדוק שה-Edge Function קיימת ומועלת
 - בדוק שיש device tokens פעילים
 
 ### בעיה 3: לא מקבל התראות במכשיר
+
 **פתרון:**
+
 - בדוק שהמשתמש נתן הרשאות להתראות
 - בדוק שיש device token פעיל למשתמש
 - בדוק שההתראות מופעלות בהגדרות המשתמש
@@ -238,5 +234,3 @@ LIMIT 10;
 4. שלח את התוצאות לבדיקה
 
 **הכל מוכן! בואו נתחיל! 🚀**
-
-

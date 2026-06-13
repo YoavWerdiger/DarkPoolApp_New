@@ -34,13 +34,14 @@ supabase functions deploy process-pending-notifications
 1. היכנס ל-Supabase Dashboard
 2. עבור ל-Edge Functions > Cron Jobs
 3. הוסף cron job חדש:
-   - **Function**: `process-pending-notifications`
-   - **Schedule**: `*/5 * * * *` (כל 5 דקות)
-   - **Method**: POST
+  - **Function**: `process-pending-notifications`
+  - **Schedule**: `*/5 `* * * * (כל 5 דקות)
+  - **Method**: POST
 
 ### 4. הגדרת Expo Project ID
 
 ה-Projects ID כבר מוגדר ב-`app.json`:
+
 ```json
 "extra": {
   "eas": {
@@ -57,13 +58,14 @@ supabase functions deploy process-pending-notifications
 
 1. **רישום מכשירים**: כשמשתמש נכנס, ה-device token נרשם אוטומטית ב-`device_tokens`
 2. **חדשה חדשה**: כשנוספת חדשה ל-`app_news`, trigger יוצר רשומה ב-`pending_notifications`
-3. **שליחת התראות**: 
-   - דרך trigger: קורא ל-`send-push-notification` ישירות
-   - דרך cron: `process-pending-notifications` מטפל בהתראות ממתינות
+3. **שליחת התראות**:
+  - דרך trigger: קורא ל-`send-push-notification` ישירות
+  - דרך cron: `process-pending-notifications` מטפל בהתראות ממתינות
 
 ## בדיקת הגדרות משתמש
 
 המערכת בודקת את ההגדרות מ-`AsyncStorage`:
+
 - `newsNotifications`: האם להפעיל התראות חדשות
 - `notifications`: האם להפעיל התראות כלליות
 
@@ -78,10 +80,4 @@ supabase functions deploy process-pending-notifications
 - **אין התראות**: בדוק שה-device token נרשם ב-`device_tokens`
 - **התראות לא נשלחות**: בדוק את ה-logs של Edge Functions
 - **הרשאות**: ודא שהמשתמש נתן הרשאות להתראות
-
-
-
-
-
-
 

@@ -1,6 +1,6 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, Image, ScrollView, Dimensions, Animated } from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, ScrollView, Dimensions, Animated, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, Sun, Moon, ChevronUp } from 'lucide-react-native';
@@ -8,9 +8,10 @@ import { BlurView } from 'expo-blur';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 import { supabase } from '../../lib/supabase';
-import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
+import BottomSheet, { useBottomSheetClose } from '../../components/ui/BottomSheet/BottomSheet';
 import UICard from '../../components/ui/UICard';
-import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { TickerLogo } from '../Portfolios/components/TickerLogo';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const EarningsReportCard: React.FC<{ 
@@ -77,8 +78,8 @@ const EarningsReportCard: React.FC<{
   // פונקציה לעיצוב זמן
   const getTimeDisplay = (beforeAfterMarket: string | null): string => {
     const n = normalizeMarketTiming(beforeAfterMarket);
-    if (n === 'BeforeMarket') return 'מסחר מוקדם';
-    if (n === 'AfterMarket') return 'מסחר מאוחר';
+    if (n === 'BeforeMarket') return 'Pre Market';
+    if (n === 'AfterMarket') return 'After Market';
     return beforeAfterMarket ? beforeAfterMarket : 'טרם נקבע';
   };
 
@@ -86,10 +87,10 @@ const EarningsReportCard: React.FC<{
   const getTimeIcon = (beforeAfterMarket: string | null) => {
     const n = normalizeMarketTiming(beforeAfterMarket);
     if (n === 'BeforeMarket') {
-      return { icon: Sun, color: '#d1a11d', text: 'מסחר מוקדם' };
+      return { icon: Sun, color: '#d1a11d', text: 'Pre Market' };
     }
     if (n === 'AfterMarket') {
-      return { icon: Moon, color: '#007AFF', text: 'מסחר מאוחר' };
+      return { icon: Moon, color: '#007AFF', text: 'After Market' };
     }
     return { icon: Clock, color: DesignTokens.colors.text.secondary, text: beforeAfterMarket || 'טרם נקבע' };
   };
@@ -110,14 +111,8 @@ const EarningsReportCard: React.FC<{
     return cleanCode;
   };
 
-  // פונקציה לקבלת URL לוגו מ-Brandfetch
-  const getLogoUrl = (symbol: string): string => {
-    const cleanSymbol = getSymbolDisplay(symbol);
-    // Brandfetch CDN - הפורמט הנכון
-    return `https://cdn.brandfetch.io/${cleanSymbol}?c=1idgv-PUKssFHXQBcKA`;
-  };
-
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
+  const cardRadius = DesignTokens.borderRadius['2xl'];
   return (
     <Pressable onPress={() => onPress(report)} style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
       <UICard
@@ -127,6 +122,7 @@ const EarningsReportCard: React.FC<{
           flexDirection: 'row',
           alignItems: 'flex-start',
           overflow: 'hidden',
+          borderRadius: cardRadius,
         }}
       >
         {/* פס צבע משמאל */}
@@ -147,18 +143,9 @@ const EarningsReportCard: React.FC<{
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%', marginBottom: 8 }}>
           {/* לוגו + טיקר + שם חברה */}
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, marginRight: 8 }}>
-            <Image
-              source={{ uri: getLogoUrl(report.code) }}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                marginRight: 12,
-                backgroundColor: DesignTokens.colors.background.tertiary
-              }}
-              onError={(error) => {
-              }}
-            />
+            <View style={{ marginRight: 12 }}>
+              <TickerLogo symbol={getSymbolDisplay(report.code)} size={40} />
+            </View>
             <View style={{ flex: 1, justifyContent: 'flex-start' }}>
               <Text style={{ 
                 fontSize: 16, 
@@ -197,9 +184,9 @@ const EarningsReportCard: React.FC<{
                 backgroundColor: timeInfo.color === '#d1a11d' ? 'rgba(209, 161, 29, 0.15)' : 
                                 timeInfo.color === '#007AFF' ? 'rgba(0, 122, 255, 0.15)' : 
                                 `${DesignTokens.colors.success.main}26`,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-                borderRadius: 16
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: DesignTokens.borderRadius.full,
               }}>
                 <IconComponent 
                   size={11} 
@@ -372,6 +359,7 @@ const SectionDivider: React.FC<{
   marginTop?: number;
 }> = ({ label, icon: Icon, iconColor, marginTop = 12 }) => {
   const DesignTokens = useDesignTokens();
+  const pillRadius = DesignTokens.borderRadius.full;
   return (
     <View
       style={{
@@ -386,13 +374,13 @@ const SectionDivider: React.FC<{
       <View
         style={{
           marginHorizontal: 10,
-          borderRadius: 14,
+          borderRadius: pillRadius,
           overflow: 'hidden',
           borderWidth: 1,
           borderColor: 'rgba(255, 255, 255, 0.14)',
         }}
       >
-        <BlurView intensity={40} tint="dark" style={{ paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+        <BlurView intensity={40} tint="dark" style={{ paddingHorizontal: 14, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' }}>
           {Icon && (
             <Icon size={11} color={iconColor || DesignTokens.colors.text.secondary} strokeWidth={2.2} />
           )}
@@ -424,6 +412,7 @@ function toDateKey(d: Date): string {
 
 export default function EarningsReportsTab() {
   const DesignTokens = useDesignTokens();
+  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   // Map of date string → reports for that day. נטען הדרגתית.
   const [reportsByDate, setReportsByDate] = useState<Record<string, EarningsReport[]>>({});
   // tracking של אילו ימים כבר נטענו, כדי למנוע קריאות כפולות.
@@ -463,20 +452,60 @@ export default function EarningsReportsTab() {
 
   // פונקציות ניווט יומי
   const goToPreviousDay = () => {
+    void HapticFeedback.impactLight();
     const previousDay = new Date(selectedDate);
     previousDay.setDate(selectedDate.getDate() - 1);
     setSelectedDate(previousDay);
   };
 
   const goToNextDay = () => {
+    void HapticFeedback.impactLight();
     const nextDay = new Date(selectedDate);
     nextDay.setDate(selectedDate.getDate() + 1);
     setSelectedDate(nextDay);
   };
 
-  const goToToday = () => {
+  const goToToday = useCallback(() => {
+    void HapticFeedback.medium();
     setSelectedDate(new Date());
-  };
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+
+  const isSelectedToday = selectedDate.toDateString() === new Date().toDateString();
+
+  const fabBottomInset = DesignTokens.spacing.lg;
+  const listBottomPad = isSelectedToday ? DesignTokens.spacing.md : fabBottomInset + 68;
+
+  const fabStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrap: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          alignItems: 'center',
+          paddingBottom: fabBottomInset,
+          zIndex: 40,
+        },
+        btn: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: 22,
+          paddingVertical: 14,
+          borderRadius: 28,
+          backgroundColor: DesignTokens.colors.primary.main,
+          ...DesignTokens.shadows.md,
+        },
+        btnText: {
+          fontSize: 16,
+          fontWeight: '700',
+          color: DesignTokens.colors.text.inverse,
+        },
+      }),
+    [DesignTokens, fabBottomInset],
+  );
 
   // טעינת חלון ימים סביב תאריך נתון (ברירת מחדל: selectedDate).
   // שליפה בודדת לטווח קטן (~11 ימים) → ~100-300 רשומות בלבד → טעינה מהירה מאוד.
@@ -662,6 +691,78 @@ export default function EarningsReportsTab() {
     setSelectedReport(null);
   }, []);
 
+  const renderDateNavigator = () => (
+    <View
+      style={{
+        paddingHorizontal: screenPad,
+        paddingTop: 10,
+        paddingBottom: 20,
+        marginBottom: 4,
+      }}
+    >
+      <UICard
+        variant="blur"
+        glassIntensity="subtle"
+        padding="none"
+        style={{
+          borderRadius: DesignTokens.borderRadius.full,
+          overflow: 'hidden',
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            direction: 'ltr',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <DayNavBlurButton onPress={goToPreviousDay} glassIntensity="subtle">
+            <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
+
+          <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: '600',
+                lineHeight: 21,
+                color: DesignTokens.colors.text.primary,
+                textAlign: 'center',
+              }}
+              numberOfLines={2}
+            >
+              {selectedDate.toLocaleDateString('he-IL', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </Text>
+            {isSelectedToday && (
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: DesignTokens.colors.primary.main,
+                  fontWeight: '600',
+                  marginTop: 2,
+                }}
+              >
+                היום
+              </Text>
+            )}
+          </View>
+
+          <DayNavBlurButton onPress={goToNextDay} glassIntensity="subtle">
+            <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
+        </View>
+      </UICard>
+    </View>
+  );
+
   // רינדור דיווח עם מרווח בין סוגים
   const renderReport = ({ item, index }: { item: EarningsReport; index: number }) => {
     const reports = filteredReports;
@@ -670,6 +771,7 @@ export default function EarningsReportsTab() {
     
     // בדיקה אם זה הפריט הראשון של BeforeMarket
     const isFirstBeforeMarket = currentType === 'BeforeMarket' && (index === 0 || prevType !== 'BeforeMarket');
+    const isListHead = index === 0;
     
     // בדיקה אם צריך להוסיף הפרדה - מעבר מ-BeforeMarket ל-AfterMarket
     const showDivider = currentType === 'AfterMarket' && prevType === 'BeforeMarket';
@@ -677,15 +779,22 @@ export default function EarningsReportsTab() {
     return (
       <>
         {isFirstBeforeMarket && (
-          <SectionDivider label="מסחר מוקדם" icon={Sun} iconColor="#d1a11d" marginTop={12} />
+          <SectionDivider
+            label="מסחר מוקדם"
+            icon={Sun}
+            iconColor="#d1a11d"
+            marginTop={isListHead ? 4 : 12}
+          />
         )}
         {showDivider && (
           <SectionDivider label="מסחר מאוחר" icon={Moon} iconColor="#007AFF" marginTop={14} />
         )}
-        <EarningsReportCard
-          report={item}
-          onPress={handleReportPress}
-        />
+        <View style={isListHead && !isFirstBeforeMarket ? { marginTop: 8 } : undefined}>
+          <EarningsReportCard
+            report={item}
+            onPress={handleReportPress}
+          />
+        </View>
       </>
     );
   };
@@ -763,7 +872,7 @@ export default function EarningsReportsTab() {
               marginTop: 16,
               paddingHorizontal: 24,
               paddingVertical: 12,
-              borderRadius: 14,
+              borderRadius: DesignTokens.borderRadius.full,
               backgroundColor: DesignTokens.colors.primary.main
             }}
             onPress={() => setSelectedDate(closestDate)}
@@ -778,7 +887,7 @@ export default function EarningsReportsTab() {
             marginTop: 12,
             paddingHorizontal: 28,
             paddingVertical: 14,
-            borderRadius: 14,
+            borderRadius: DesignTokens.borderRadius.full,
             backgroundColor: DesignTokens.colors.background.secondary
           }}
           onPress={handleRefresh}
@@ -811,102 +920,6 @@ export default function EarningsReportsTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ניווט תאריכים — קומפקטי ואחיד ליומן כלכלי */}
-      <View
-        style={{
-          paddingHorizontal: DesignTokens.layout?.screenPadding ?? 20,
-          paddingVertical: 11,
-        }}
-      >
-        <UICard
-          variant="blur"
-          glassIntensity="subtle"
-          padding="none"
-          style={{
-            borderRadius: 16,
-            marginBottom: 10,
-            padding: 12,
-          }}
-        >
-          <View style={{ 
-            flexDirection: 'row', 
-            direction: 'ltr',
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: selectedDate.toDateString() !== new Date().toDateString() ? 6 : 0,
-          }}>
-            <DayNavBlurButton onPress={goToPreviousDay} glassIntensity="subtle">
-              <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
-            </DayNavBlurButton>
-
-            <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 8 }}>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: '600',
-                  lineHeight: 21,
-                  color: DesignTokens.colors.text.primary,
-                  textAlign: 'center',
-                }}
-                numberOfLines={2}
-              >
-                {selectedDate.toLocaleDateString('he-IL', { 
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </Text>
-              {selectedDate.toDateString() === new Date().toDateString() && (
-                <Text style={{
-                  fontSize: 11,
-                  color: DesignTokens.colors.primary.main,
-                  fontWeight: '600',
-                  marginTop: 1,
-                }}>
-                  היום
-                </Text>
-              )}
-            </View>
-
-            <DayNavBlurButton onPress={goToNextDay} glassIntensity="subtle">
-              <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
-            </DayNavBlurButton>
-          </View>
-
-          {selectedDate.toDateString() !== new Date().toDateString() && (
-            <View style={{ 
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              marginTop: 0,
-            }}>
-              <TouchableOpacity
-                onPress={goToToday}
-                activeOpacity={0.85}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 5,
-                  borderRadius: 14,
-                  backgroundColor: DesignTokens.colors.primary.dim,
-                  borderWidth: 1,
-                  borderColor: 'rgba(0, 200, 80, 0.35)',
-                }}
-              >
-                <Text style={{
-                  fontSize: 11,
-                  color: DesignTokens.colors.primary.main,
-                  fontWeight: '700',
-                }}>
-                  היום
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </UICard>
-      </View>
-
-      {/* רשימת דיווחים */}
       <View style={{ flex: 1, minHeight: 0 }}>
         <FlatList
           ref={flatListRef}
@@ -914,6 +927,7 @@ export default function EarningsReportsTab() {
           keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={({ item, index }) => renderReport({ item, index })}
           style={{ flex: 1 }}
+          ListHeaderComponent={renderDateNavigator}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -924,7 +938,7 @@ export default function EarningsReportsTab() {
         }
         ListEmptyComponent={renderEmptyState}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingTop: 6, paddingBottom: listBottomPad }}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         // אופטימיזציות ביצועים
@@ -934,13 +948,28 @@ export default function EarningsReportsTab() {
         removeClippedSubviews={false}
         />
       </View>
+
+      {!isSelectedToday ? (
+        <View style={fabStyles.wrap} pointerEvents="box-none">
+          <TouchableOpacity
+            style={fabStyles.btn}
+            onPress={goToToday}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="חזרה להיום"
+          >
+            <Ionicons name="today-outline" size={24} color={DesignTokens.colors.text.inverse} />
+            <Text style={fabStyles.btnText}>חזרה להיום</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       
       {/* כפתור גלילה לראש */}
       {showScrollToTop && (
         <Animated.View
           style={{
             position: 'absolute',
-            bottom: 90,
+            bottom: isSelectedToday ? 90 : fabBottomInset + 72,
             right: 16,
             opacity: scrollButtonOpacity,
             transform: [
@@ -1049,15 +1078,10 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
     return cleanCode.trim();
   };
 
-  const getLogoUrl = (symbol: string): string => {
-    const cleanSymbol = getSymbolDisplay(symbol);
-    return `https://cdn.brandfetch.io/${cleanSymbol}?c=1idgv-PUKssFHXQBcKA`;
-  };
-
   const getTimeDisplay = (beforeAfterMarket: string | null): string => {
     if (!beforeAfterMarket) return 'טרם נקבע';
-    if (beforeAfterMarket === 'BeforeMarket') return 'מסחר מוקדם';
-    if (beforeAfterMarket === 'AfterMarket') return 'מסחר מאוחר';
+    if (beforeAfterMarket === 'BeforeMarket') return 'Pre Market';
+    if (beforeAfterMarket === 'AfterMarket') return 'After Market';
     return beforeAfterMarket;
   };
 
@@ -1066,10 +1090,10 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       return { icon: Clock, color: DesignTokens.colors.text.secondary, text: 'טרם נקבע' };
     }
     if (beforeAfterMarket === 'BeforeMarket') {
-      return { icon: Sun, color: '#d1a11d', text: 'מסחר מוקדם' };
+      return { icon: Sun, color: '#d1a11d', text: 'Pre Market' };
     }
     if (beforeAfterMarket === 'AfterMarket') {
-      return { icon: Moon, color: '#007AFF', text: 'מסחר מאוחר' };
+      return { icon: Moon, color: '#007AFF', text: 'After Market' };
     }
     return { icon: Clock, color: DesignTokens.colors.text.secondary, text: beforeAfterMarket };
   };
@@ -1116,18 +1140,58 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
     
     const bgRgba = hexToRgba(backgroundColor, 0);
     const gridColor = hexToRgba(backgroundColor, 0);
-    
+
+    const config = {
+      allow_symbol_change: true,
+      calendar: false,
+      details: false,
+      enabled_features: ['pre_post_market_sessions'],
+      hide_side_toolbar: true,
+      hide_top_toolbar: true,
+      hide_legend: true,
+      hide_volume: true,
+      hotlist: false,
+      interval: '5',
+      locale: 'he_IL',
+      overrides: {
+        'mainSeriesProperties.sessionId': 'extended',
+      },
+      save_image: false,
+      style: '1',
+      symbol: symbolForChart,
+      theme: 'dark',
+      timezone: 'Asia/Jerusalem',
+      isTransparent: true,
+      backgroundColor: bgRgba,
+      gridColor,
+      watchlist: [],
+      withdateranges: false,
+      compareSymbols: [],
+      studies: [],
+      autosize: false,
+      height: 400,
+      width: '100%',
+    };
+
+    // הזרקה ידנית של script TradingView חיונית ב-iOS WKWebView:
+    // הסקריפט החיצוני קורא את ה-config מתוך textContent של תג ה-script שמצורף
+    // אליו. עם <script src async> שכולל JSON inline, document.currentScript עלול
+    // להיות null ב-WebKit וה-config לא ייטען — וכתוצאה הגרף לא מאותחל ב-iOS.
     return `
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     html, body {
       margin: 0;
       padding: 0;
+      height: 100%;
+      width: 100%;
       background-color: transparent;
       overflow: hidden;
+      -webkit-overflow-scrolling: touch;
     }
     .tradingview-widget-container {
       height: 100%;
@@ -1138,6 +1202,13 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
     .tradingview-widget-container__widget {
       flex: 1;
       min-height: 0;
+      position: relative;
+    }
+    .tradingview-widget-container__widget iframe,
+    .tradingview-widget-container__widget > div {
+      width: 100% !important;
+      height: 100% !important;
+      border: none !important;
     }
     .tradingview-widget-copyright {
       display: none !important;
@@ -1149,47 +1220,26 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
   </style>
 </head>
 <body>
-  <div class="tradingview-widget-container" style="height:400px;width:100%">
-    <div class="tradingview-widget-container__widget" style="flex:1;min-height:0;width:100%"></div>
-    <div class="tradingview-widget-copyright" style="display:none;visibility:hidden;height:0;overflow:hidden;">
-      <a href="https://il.tradingview.com/symbols/${symbolForChart}/" rel="noopener nofollow" target="_blank">
-        <span class="blue-text">Track all markets on TradingView</span>
-      </a>
-    </div>
-    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-    {
-      "allow_symbol_change": true,
-      "calendar": false,
-      "details": false,
-      "enabled_features": ["pre_post_market_sessions"],
-      "hide_side_toolbar": true,
-      "hide_top_toolbar": true,
-      "hide_legend": true,
-      "hide_volume": true,
-      "hotlist": false,
-      "interval": "5",
-      "locale": "he_IL",
-      "overrides": {
-        "mainSeriesProperties.sessionId": "extended"
-      },
-      "save_image": false,
-      "style": "1",
-      "symbol": "${symbolForChart}",
-      "theme": "dark",
-      "timezone": "Asia/Jerusalem",
-      "isTransparent": true,
-      "backgroundColor": "${bgRgba}",
-      "gridColor": "${gridColor}",
-      "watchlist": [],
-      "withdateranges": false,
-      "compareSymbols": [],
-      "studies": [],
-      "autosize": false,
-      "height": 400,
-      "width": "100%"
-    }
+  <div class="tradingview-widget-container">
+    <div class="tradingview-widget-container__widget"></div>
+    <script type="application/json" id="tv-config">${JSON.stringify(config)}</script>
+    <script>
+      (function () {
+        try {
+          var cfg = document.getElementById('tv-config').textContent;
+          var s = document.createElement('script');
+          s.type = 'text/javascript';
+          s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+          s.async = true;
+          s.text = cfg;
+          document.querySelector('.tradingview-widget-container').appendChild(s);
+        } catch (err) {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage('tv-init-error: ' + (err && err.message ? err.message : err));
+          }
+        }
+      })();
     </script>
-  </div>
 </body>
 </html>
     `;
@@ -1207,476 +1257,510 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
   }
   const surpriseColor = getSurpriseColor(calculatedPercent);
   const timeInfo = getTimeIcon(report.before_after_market);
-  const IconComponent = timeInfo.icon;
+  const TimeIcon = timeInfo.icon;
+  const animatedClose = useBottomSheetClose();
+  const sheetStyles = useMemo(() => createEarningsDetailSheetStyles(DesignTokens), [DesignTokens]);
+
+  const handleSheetClose = useCallback(() => {
+    if (animatedClose) animatedClose();
+    else onClose();
+  }, [animatedClose, onClose]);
+
+  const epsEstimate =
+    typeof report.estimate === 'number'
+      ? report.estimate
+      : typeof report.eps_estimate === 'number'
+        ? report.eps_estimate
+        : typeof report.eps_estimate === 'string'
+          ? parseFloat(report.eps_estimate)
+          : null;
+
+  const hasEpsActual = report.actual !== null && report.actual !== 0;
+  const hasEpsEstimate = epsEstimate !== null && !Number.isNaN(epsEstimate);
+  const epsPrior = (report as { eps_prior?: number }).eps_prior;
+
+  const revenueEstimate =
+    typeof report.revenue_estimate === 'number'
+      ? report.revenue_estimate
+      : typeof report.revenue_estimate_avg === 'number'
+        ? report.revenue_estimate_avg
+        : null;
+
+  const hasRevenueActual = report.revenue_actual !== null && report.revenue_actual !== 0;
+  const hasRevenueEstimate = revenueEstimate !== null && revenueEstimate !== 0;
+
+  let revenuePercent = report.revenue_surprise_percent;
+  if (
+    (revenuePercent === null || revenuePercent === undefined) &&
+    hasRevenueActual &&
+    hasRevenueEstimate &&
+    report.revenue_actual != null &&
+    revenueEstimate
+  ) {
+    revenuePercent = ((report.revenue_actual - revenueEstimate) / Math.abs(revenueEstimate)) * 100;
+  }
+  const revenueColor = getSurpriseColor(revenuePercent ?? null);
+  const revenuePrior = (report as { revenue_estimate_year_ago?: number }).revenue_estimate_year_ago;
+
+  const quarterLabel =
+    report.period ||
+    `Q${Math.floor(new Date(report.report_date).getMonth() / 3) + 1}`;
+  const quarterYear = report.period_year || new Date(report.report_date).getFullYear();
+
+  const preciseTimeLabel = report.earnings_date_time
+    ? new Intl.DateTimeFormat('he-IL', {
+        timeZone: 'Asia/Jerusalem',
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }).format(new Date(report.earnings_date_time))
+    : null;
 
   return (
     <BottomSheet
       isOpen={visible}
-      onClose={onClose}
+      onClose={handleSheetClose}
       snapPoints={[0.9]}
-      showHandle={true}
-      enablePanDownToClose={true}
-      backdropOpacity={0.7}
+      edgeToEdge
+      showHandle
+      enablePanDownToClose
+      backdropOpacity={0.5}
+      showBrandWatermark={false}
+      topCornerRadius={28}
     >
-      <View style={{ flex: 1 }}>
-        {/* כפתור סגירה */}
-        <View style={{ position: 'absolute', top: 8, right: 12, zIndex: 100 }}>
-          <TouchableOpacity
-            onPress={onClose}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: DesignTokens.colors.overlay,
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
+      <View style={sheetStyles.container}>
+        <View style={sheetStyles.header}>
+          <DayNavBlurButton
+            onPress={handleSheetClose}
+            size={DAY_NAV_BUTTON_SIZE}
+            glassIntensity="subtle"
+            accessibilityLabel="סגור"
           >
-            <Ionicons 
-              name="close" 
-              size={20} 
-              color={DesignTokens.colors.text.primary} 
-            />
-          </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
+
+          <View style={sheetStyles.headerMain}>
+            <TickerLogo symbol={getSymbolDisplay(report.code)} size={42} />
+            <View style={sheetStyles.headerTextCol}>
+              <Text style={[sheetStyles.ticker, { color: DesignTokens.colors.text.primary }]}>
+                {getSymbolDisplay(report.code)}
+              </Text>
+              {(report.company_name || report.asset_name) ? (
+                <Text
+                  numberOfLines={1}
+                  style={[sheetStyles.companyName, { color: DesignTokens.colors.text.secondary }]}
+                >
+                  {report.company_name || report.asset_name}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          <View
+            style={[
+              sheetStyles.timeBadge,
+              {
+                backgroundColor:
+                  timeInfo.color === '#d1a11d'
+                    ? 'rgba(209, 161, 29, 0.15)'
+                    : timeInfo.color === '#007AFF'
+                      ? 'rgba(0, 122, 255, 0.15)'
+                      : `${DesignTokens.colors.success.main}26`,
+              },
+            ]}
+          >
+            <TimeIcon size={13} color={timeInfo.color} strokeWidth={2.2} />
+            <Text style={[sheetStyles.timeBadgeText, { color: timeInfo.color }]}>
+              {timeInfo.text}
+            </Text>
+          </View>
         </View>
 
-        <ScrollView 
-          contentContainerStyle={{ paddingBottom: 20 }}
+        <ScrollView
+          style={sheetStyles.scroll}
+          contentContainerStyle={sheetStyles.scrollContent}
           showsVerticalScrollIndicator={false}
-          style={{ direction: 'rtl' }}
         >
-          {/* כותרת - לוגו + טיקר + שם חברה */}
-          <View style={{ paddingHorizontal: 16, paddingTop: 12, marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Image
-                source={{ uri: getLogoUrl(report.code) }}
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  marginLeft: 12,
-                  backgroundColor: DesignTokens.colors.background.tertiary
-                }}
-                onError={(error) => {
-                }}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={{ 
-                  fontSize: 20, 
-                  fontWeight: '700', 
-                  color: DesignTokens.colors.text.primary,
-                  marginBottom: 2
-                }}>
-                  {getSymbolDisplay(report.code)}
-                </Text>
-                {(report.company_name || report.asset_name) && (
-                  <Text style={{ 
-                    fontSize: 13, 
-                    color: DesignTokens.colors.text.secondary,
-                    fontWeight: '500'
-                  }}>
-                    {report.company_name || report.asset_name}
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
+          <UICard variant="blur" padding="none" style={sheetStyles.chartCard}>
+            <WebView
+              source={{
+                html: getTradingViewChartHTML(
+                  report.code,
+                  'transparent',
+                  report.earnings_date_time,
+                  report.before_after_market,
+                  (report as { exchange?: string }).exchange,
+                ),
+              }}
+              style={sheetStyles.chartWebView}
+              javaScriptEnabled
+              domStorageEnabled
+              thirdPartyCookiesEnabled
+              sharedCookiesEnabled
+              startInLoadingState
+              originWhitelist={['*']}
+              mixedContentMode="always"
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              setSupportMultipleWindows={false}
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+              scrollEnabled={false}
+              onError={(e) => {
+                if (__DEV__) console.warn('[TV chart] WebView error', e.nativeEvent);
+              }}
+              onHttpError={(e) => {
+                if (__DEV__) console.warn('[TV chart] WebView http error', e.nativeEvent);
+              }}
+            />
+          </UICard>
 
-          {/* פרטי דיווח */}
-          <View style={{ paddingHorizontal: 12 }}>
-            {/* גרף TradingView */}
-            <View style={{ 
-              backgroundColor: DesignTokens.colors.background.secondary,
-              borderRadius: 10,
-              paddingTop: 4,
-              paddingBottom: 8,
-              paddingHorizontal: 8,
-              marginBottom: 6,
-              height: 400
-            }}>
-              <WebView
-                source={{ html: getTradingViewChartHTML(report.code, DesignTokens.colors.background.secondary, report.earnings_date_time, report.before_after_market, (report as any).exchange) }}
-                style={{ 
-                  flex: 1,
-                  backgroundColor: 'transparent',
-                  borderRadius: 8,
-                  height: 392
-                }}
-                javaScriptEnabled={true}
-                domStorageEnabled={true}
-                startInLoadingState={true}
-                originWhitelist={['*']}
-                mixedContentMode="always"
-                allowsInlineMediaPlayback={true}
-                mediaPlaybackRequiresUserAction={false}
-                scalesPageToFit={true}
-                showsVerticalScrollIndicator={false}
-                showsHorizontalScrollIndicator={false}
-                scrollEnabled={false}
-                onLoadStart={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                }}
-                onLoadEnd={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                }}
-                onError={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                }}
-                onHttpError={(syntheticEvent) => {
-                  const { nativeEvent } = syntheticEvent;
-                }}
-                onShouldStartLoadWithRequest={(request) => {
-                  const shouldLoad = request.url.startsWith('about:blank') || request.url.includes('tradingview.com');
-                  return shouldLoad;
-                }}
-              />
-            </View>
-
-            {/* רווחיות (EPS) */}
-            <View style={{ 
-              backgroundColor: DesignTokens.colors.background.secondary,
-              borderRadius: 10,
-              paddingTop: 8,
-              paddingBottom: 12,
-              paddingHorizontal: 12,
-              marginBottom: 8,
-              marginTop: -12
-            }}>
-              <Text style={{ 
-                fontSize: 12, 
-                color: DesignTokens.colors.text.tertiary,
-                marginBottom: 6,
-                fontWeight: '600',
-                textAlign: 'center'
-              }}>
+          {(hasEpsEstimate || hasEpsActual) ? (
+            <UICard variant="blur" padding="md" style={sheetStyles.sectionCard}>
+              <Text style={[sheetStyles.sectionTitle, { color: DesignTokens.colors.text.secondary }]}>
                 רווחיות למניה (EPS)
               </Text>
-              
-              {/* פס הפרדה */}
-              <View style={{ height: 1, backgroundColor: DesignTokens.colors.background.tertiary, marginBottom: 10 }} />
-              
-              <View style={{ 
-                flexDirection: 'row', 
-                alignItems: 'flex-start',
-                width: '100%'
-              }}>
-                {/* תחזית */}
-                {(report.estimate || report.eps_estimate) && (
-                  <View style={{ flex: 1, alignItems: 'center' }}>
-                    <Text style={{ 
-                      fontSize: 11, 
-                      color: DesignTokens.colors.text.tertiary, 
-                      marginBottom: 6,
-                      fontWeight: '500'
-                    }}>
-                      תחזית
-                    </Text>
-                    <Text style={{ 
-                      fontSize: 22, 
-                      fontWeight: '700', 
-                      color: DesignTokens.colors.text.primary
-                    }}>
-                      ${typeof report.estimate === 'number' ? report.estimate.toFixed(2) : 
-                        typeof report.eps_estimate === 'number' ? report.eps_estimate.toFixed(2) :
-                        typeof report.eps_estimate === 'string' ? parseFloat(report.eps_estimate).toFixed(2) : '0.00'}
-                    </Text>
-                  </View>
-                )}
-
-                {/* פס הפרדה אנכי */}
-                {(report.estimate || report.eps_estimate) && report.actual !== null && report.actual !== 0 && (
-                  <View style={{ width: 1, height: 60, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 12 }} />
-                )}
-
-                {/* תוצאה */}
-                {report.actual !== null && report.actual !== 0 && (
-                  <View style={{ flex: 1, alignItems: 'center' }}>
-                    <Text style={{ 
-                      fontSize: 11, 
-                      color: DesignTokens.colors.text.tertiary, 
-                      marginBottom: 6,
-                      fontWeight: '500'
-                    }}>
-                      תוצאה
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginLeft: 4 }}>
-                      <Text style={{ 
-                        fontSize: 22, 
-                        fontWeight: '700', 
-                        color: surpriseColor,
-                        marginLeft: 6
-                      }}>
-                        ${report.actual.toFixed(2)}
-                      </Text>
-                      {calculatedPercent !== null && calculatedPercent !== undefined && (
-                        <Text style={{ 
-                          fontSize: 12, 
-                          fontWeight: '600', 
-                          color: surpriseColor,
-                          marginLeft: 6
-                        }}>
-                          {calculatedPercent > 0 ? '+' : ''}{calculatedPercent.toFixed(1)}%
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                )}
-
-                {/* פס הפרדה אנכי - רק אם אין תוצאה אבל יש תחזית */}
-                {(!report.actual || report.actual === 0) && (report.estimate || report.eps_estimate) && (
-                  <View style={{ width: 1, height: 45, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 12 }} />
-                )}
-
-                {/* ערך קודם - רק אם אין תוצאה אבל יש תחזית */}
-                {(!report.actual || report.actual === 0) && (report.estimate || report.eps_estimate) && (report as any).eps_prior !== null && (report as any).eps_prior !== undefined && (
+              <View style={sheetStyles.metricRow}>
+                {hasEpsEstimate ? (
+                  <MetricColumn
+                    label="תחזית"
+                    value={`$${epsEstimate!.toFixed(2)}`}
+                    valueColor={DesignTokens.colors.text.primary}
+                    styles={sheetStyles}
+                  />
+                ) : null}
+                {hasEpsEstimate && hasEpsActual ? <View style={sheetStyles.metricDivider} /> : null}
+                {hasEpsActual ? (
+                  <MetricColumn
+                    label="תוצאה"
+                    value={`$${report.actual!.toFixed(2)}`}
+                    valueColor={surpriseColor}
+                    subValue={
+                      calculatedPercent != null
+                        ? `${calculatedPercent > 0 ? '+' : ''}${calculatedPercent.toFixed(1)}%`
+                        : undefined
+                    }
+                    subValueColor={surpriseColor}
+                    styles={sheetStyles}
+                  />
+                ) : null}
+                {!hasEpsActual && hasEpsEstimate && epsPrior != null ? (
                   <>
-                    <View style={{ width: 1, height: 45, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 12 }} />
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                      <Text style={{ 
-                        fontSize: 11, 
-                        color: DesignTokens.colors.text.tertiary, 
-                        marginBottom: 6,
-                        fontWeight: '500'
-                      }}>
-                        תקופה קודמת
-                      </Text>
-                      <Text style={{ 
-                        fontSize: 22, 
-                        fontWeight: '700', 
-                        color: DesignTokens.colors.text.secondary
-                      }}>
-                        ${(report as any).eps_prior.toFixed(2)}
-                      </Text>
-                    </View>
+                    <View style={sheetStyles.metricDivider} />
+                    <MetricColumn
+                      label="תקופה קודמת"
+                      value={`$${epsPrior.toFixed(2)}`}
+                      valueColor={DesignTokens.colors.text.secondary}
+                      styles={sheetStyles}
+                    />
                   </>
-                )}
+                ) : null}
               </View>
-            </View>
+            </UICard>
+          ) : null}
 
-            {/* הכנסות (Revenue) */}
-            {(report.revenue_estimate || report.revenue_estimate_avg || report.revenue_actual) && (
-              <View style={{ 
-                backgroundColor: DesignTokens.colors.background.secondary,
-                borderRadius: 10,
-                paddingTop: 8,
-                paddingBottom: 12,
-                paddingHorizontal: 12,
-                marginBottom: 8,
-                marginTop: -12
-              }}>
-                <Text style={{ 
-                  fontSize: 12, 
-                  color: DesignTokens.colors.text.tertiary,
-                  marginBottom: 6,
-                  fontWeight: '600',
-                  textAlign: 'center'
-                }}>
-                  הכנסות (Revenue)
-                </Text>
-                
-                {/* פס הפרדה */}
-                <View style={{ height: 1, backgroundColor: DesignTokens.colors.background.tertiary, marginBottom: 10 }} />
-                
-                <View style={{ 
-                  flexDirection: 'row', 
-                  alignItems: 'flex-start',
-                  width: '100%'
-                }}>
-                  {/* תחזית */}
-                  {(report.revenue_estimate || report.revenue_estimate_avg) && (
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                      <Text style={{ 
-                        fontSize: 11, 
-                        color: DesignTokens.colors.text.tertiary, 
-                        marginBottom: 6,
-                        fontWeight: '500'
-                      }}>
-                        תחזית
-                      </Text>
-                      <Text style={{ 
-                        fontSize: 22, 
-                        fontWeight: '700', 
-                        color: DesignTokens.colors.text.primary
-                      }}>
-                        {formatRevenue(
-                          report.revenue_estimate || report.revenue_estimate_avg || 0
-                        )}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* פס הפרדה אנכי */}
-                  {(report.revenue_estimate || report.revenue_estimate_avg) && report.revenue_actual !== null && report.revenue_actual !== 0 && (
-                    <View style={{ width: 1, height: 60, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 12 }} />
-                  )}
-
-                  {/* תוצאה */}
-                  {report.revenue_actual !== null && report.revenue_actual !== 0 && (
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                      <Text style={{ 
-                        fontSize: 11, 
-                        color: DesignTokens.colors.text.tertiary, 
-                        marginBottom: 6,
-                        fontWeight: '500'
-                      }}>
-                        תוצאה
-                      </Text>
-                      {(() => {
-                        // חישוב surprise percent אם לא קיים (כמו בכרטיסיה)
-                        let revenuePercent = report.revenue_surprise_percent;
-                        if ((revenuePercent === null || revenuePercent === undefined) && report.revenue_actual !== null && report.revenue_actual !== undefined && report.revenue_actual !== 0 && (report.revenue_estimate || report.revenue_estimate_avg)) {
-                          const estimate = typeof report.revenue_estimate === 'number' ? report.revenue_estimate :
-                                         typeof report.revenue_estimate_avg === 'number' ? report.revenue_estimate_avg : null;
-                          if (estimate !== null && estimate !== 0 && report.revenue_actual !== null && report.revenue_actual !== undefined) {
-                            revenuePercent = ((report.revenue_actual - estimate) / Math.abs(estimate)) * 100;
-                          }
-                        }
-                        const revenueColor = getSurpriseColor(revenuePercent ?? null);
-                        return (
-                          <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginLeft: 6 }}>
-                            <Text style={{ 
-                              fontSize: 22, 
-                              fontWeight: '700', 
-                              color: revenueColor,
-                              marginLeft: 4
-                            }}>
-                              {formatRevenue(report.revenue_actual)}
-                            </Text>
-                            {revenuePercent !== null && revenuePercent !== undefined && (
-                              <Text style={{ 
-                                fontSize: 12, 
-                                fontWeight: '600', 
-                                color: revenueColor,
-                                marginLeft: 6
-                              }}>
-                                {revenuePercent > 0 ? '+' : ''}{revenuePercent.toFixed(1)}%
-                              </Text>
-                            )}
-                          </View>
-                        );
-                      })()}
-                    </View>
-                  )}
-
-                  {/* פס הפרדה אנכי - רק אם אין תוצאה אבל יש תחזית */}
-                  {(!report.revenue_actual || report.revenue_actual === 0) && (report.revenue_estimate || report.revenue_estimate_avg) && (
-                    <View style={{ width: 1, height: 45, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 12 }} />
-                  )}
-
-                  {/* ערך קודם - רק אם אין תוצאה אבל יש תחזית */}
-                  {(!report.revenue_actual || report.revenue_actual === 0) && (report.revenue_estimate || report.revenue_estimate_avg) && (report as any).revenue_estimate_year_ago !== null && (report as any).revenue_estimate_year_ago !== undefined && (
-                    <>
-                      <View style={{ width: 1, height: 45, backgroundColor: DesignTokens.colors.background.tertiary, marginHorizontal: 12 }} />
-                      <View style={{ flex: 1, alignItems: 'center' }}>
-                        <Text style={{ 
-                          fontSize: 11, 
-                          color: DesignTokens.colors.text.tertiary, 
-                          marginBottom: 6,
-                          fontWeight: '500'
-                        }}>
-                          תקופה קודמת
-                        </Text>
-                        <Text style={{ 
-                          fontSize: 22, 
-                          fontWeight: '700', 
-                          color: DesignTokens.colors.text.secondary
-                        }}>
-                          {formatRevenue((report as any).revenue_estimate_year_ago)}
-                        </Text>
-                      </View>
-                    </>
-                  )}
-                </View>
+          {(hasRevenueEstimate || hasRevenueActual) ? (
+            <UICard variant="blur" padding="md" style={sheetStyles.sectionCard}>
+              <Text style={[sheetStyles.sectionTitle, { color: DesignTokens.colors.text.secondary }]}>
+                הכנסות (Revenue)
+              </Text>
+              <View style={sheetStyles.metricRow}>
+                {hasRevenueEstimate ? (
+                  <MetricColumn
+                    label="תחזית"
+                    value={formatRevenue(revenueEstimate)}
+                    valueColor={DesignTokens.colors.text.primary}
+                    styles={sheetStyles}
+                  />
+                ) : null}
+                {hasRevenueEstimate && hasRevenueActual ? <View style={sheetStyles.metricDivider} /> : null}
+                {hasRevenueActual ? (
+                  <MetricColumn
+                    label="תוצאה"
+                    value={formatRevenue(report.revenue_actual)}
+                    valueColor={revenueColor}
+                    subValue={
+                      revenuePercent != null
+                        ? `${revenuePercent > 0 ? '+' : ''}${revenuePercent.toFixed(1)}%`
+                        : undefined
+                    }
+                    subValueColor={revenueColor}
+                    styles={sheetStyles}
+                  />
+                ) : null}
+                {!hasRevenueActual && hasRevenueEstimate && revenuePrior != null ? (
+                  <>
+                    <View style={sheetStyles.metricDivider} />
+                    <MetricColumn
+                      label="תקופה קודמת"
+                      value={formatRevenue(revenuePrior)}
+                      valueColor={DesignTokens.colors.text.secondary}
+                      styles={sheetStyles}
+                    />
+                  </>
+                ) : null}
               </View>
-            )}
+            </UICard>
+          ) : null}
 
-            {/* תאריכים - קומפקטי יותר */}
-            <View style={{ 
-              backgroundColor: DesignTokens.colors.background.secondary,
-              borderRadius: 10,
-              padding: 12,
-              margin: -4
-            }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
-                  תאריך דיווח:
-                </Text>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.primary, fontWeight: '600' }}>
-                  {new Date(report.report_date).toLocaleDateString('he-IL')}
-                </Text>
-              </View>
-              {/* זמן דיווח - מסחר מוקדם/מאוחר */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
-                  זמן דיווח:
-                </Text>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.primary, fontWeight: '600' }}>
-                  {getTimeDisplay(report.before_after_market)}
-                </Text>
-              </View>
-              {/* שעה מדויקת - זמן ישראל */}
-              {report.earnings_date_time && (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
-                    שעה מדויקת (זמן ישראל):
-                  </Text>
-                  <Text style={{ fontSize: 12, color: DesignTokens.colors.text.primary, fontWeight: '600' }}>
-                    {(() => {
-                      const date = new Date(report.earnings_date_time);
-                      const formatter = new Intl.DateTimeFormat('he-IL', {
-                        timeZone: 'Asia/Jerusalem',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                      });
-                      return formatter.format(date);
-                    })()}
-                  </Text>
-                </View>
-              )}
-              {report.date && report.date !== report.report_date && (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
-                    תקופת דיווח:
-                  </Text>
-                  <Text style={{ fontSize: 12, color: DesignTokens.colors.text.primary, fontWeight: '600' }}>
-                    {new Date(report.date).toLocaleDateString('he-IL')}
-                  </Text>
-                </View>
-              )}
-              {/* רבעון */}
-              {(report.period || report.period_year) && (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
-                    רבעון:
-                  </Text>
-                  <Text style={{ fontSize: 12, color: DesignTokens.colors.text.primary, fontWeight: '600' }}>
-                    {report.period || `Q${Math.floor((new Date(report.report_date).getMonth() / 3) + 1)}`} {report.period_year || new Date(report.report_date).getFullYear()}
-                  </Text>
-                </View>
-              )}
-              {/* חשיבות */}
-              {report.importance && (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
-                    חשיבות:
-                  </Text>
-                  <Text style={{ 
-                    fontSize: 12, 
-                    color: report.importance >= 4 ? '#FFC107' : DesignTokens.colors.text.primary, 
-                    fontWeight: '600' 
-                  }}>
-                    {report.importance}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-          </View>
+          <UICard variant="blur" padding="md" style={sheetStyles.sectionCard}>
+            <SheetMetaRow
+              label="תאריך דיווח"
+              value={new Date(report.report_date).toLocaleDateString('he-IL')}
+              styles={sheetStyles}
+              valueColor={DesignTokens.colors.text.primary}
+              labelColor={DesignTokens.colors.text.tertiary}
+            />
+            <SheetMetaRow
+              label="זמן דיווח"
+              value={getTimeDisplay(report.before_after_market)}
+              styles={sheetStyles}
+              valueColor={DesignTokens.colors.text.primary}
+              labelColor={DesignTokens.colors.text.tertiary}
+            />
+            {preciseTimeLabel ? (
+              <SheetMetaRow
+                label="שעה מדויקת (ישראל)"
+                value={preciseTimeLabel}
+                styles={sheetStyles}
+                valueColor={DesignTokens.colors.text.primary}
+                labelColor={DesignTokens.colors.text.tertiary}
+              />
+            ) : null}
+            {report.date && report.date !== report.report_date ? (
+              <SheetMetaRow
+                label="תקופת דיווח"
+                value={new Date(report.date).toLocaleDateString('he-IL')}
+                styles={sheetStyles}
+                valueColor={DesignTokens.colors.text.primary}
+                labelColor={DesignTokens.colors.text.tertiary}
+              />
+            ) : null}
+            {(report.period || report.period_year) ? (
+              <SheetMetaRow
+                label="רבעון"
+                value={`${quarterLabel} ${quarterYear}`}
+                styles={sheetStyles}
+                valueColor={DesignTokens.colors.text.primary}
+                labelColor={DesignTokens.colors.text.tertiary}
+              />
+            ) : null}
+            {report.importance ? (
+              <SheetMetaRow
+                label="חשיבות"
+                value={String(report.importance)}
+                styles={sheetStyles}
+                valueColor={report.importance >= 4 ? '#FFC107' : DesignTokens.colors.text.primary}
+                labelColor={DesignTokens.colors.text.tertiary}
+                isLast
+              />
+            ) : null}
+          </UICard>
         </ScrollView>
       </View>
     </BottomSheet>
   );
 };
+
+const rtlSheetText = {
+  writingDirection: 'rtl' as const,
+  textAlign: 'left' as const,
+};
+
+function MetricColumn({
+  label,
+  value,
+  valueColor,
+  subValue,
+  subValueColor,
+  styles,
+}: {
+  label: string;
+  value: string;
+  valueColor: string;
+  subValue?: string;
+  subValueColor?: string;
+  styles: ReturnType<typeof createEarningsDetailSheetStyles>;
+}) {
+  return (
+    <View style={styles.metricCol}>
+      <Text style={[styles.metricLabel, rtlSheetText]}>{label}</Text>
+      <View style={styles.metricValueRow}>
+        <Text style={[styles.metricValue, { color: valueColor }]}>{value}</Text>
+        {subValue ? (
+          <Text style={[styles.metricSubValue, { color: subValueColor ?? valueColor }]}>{subValue}</Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function SheetMetaRow({
+  label,
+  value,
+  styles,
+  valueColor,
+  labelColor,
+  isLast,
+}: {
+  label: string;
+  value: string;
+  styles: ReturnType<typeof createEarningsDetailSheetStyles>;
+  valueColor: string;
+  labelColor: string;
+  isLast?: boolean;
+}) {
+  return (
+    <View style={[styles.metaRow, !isLast && styles.metaRowBorder]}>
+      <Text style={[styles.metaLabel, rtlSheetText, { color: labelColor }]}>{label}</Text>
+      <Text style={[styles.metaValue, rtlSheetText, { color: valueColor }]}>{value}</Text>
+    </View>
+  );
+}
+
+const SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
+
+function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignTokens>) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      direction: 'rtl',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      gap: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: SHEET_BORDER,
+    },
+    headerMain: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      minWidth: 0,
+    },
+    logo: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: tokens.colors.background.tertiary,
+    },
+    headerTextCol: {
+      flex: 1,
+      minWidth: 0,
+      alignItems: 'flex-start',
+    },
+    ticker: {
+      fontSize: 18,
+      fontWeight: '800',
+      ...rtlSheetText,
+    },
+    companyName: {
+      marginTop: 2,
+      fontSize: 12,
+      fontWeight: '500',
+      ...rtlSheetText,
+    },
+    timeBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 9999,
+      flexShrink: 0,
+    },
+    timeBadgeText: {
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 24,
+      gap: 12,
+      direction: 'rtl',
+    },
+    chartCard: {
+      borderRadius: 24,
+      overflow: 'hidden',
+      height: 360,
+    },
+    chartWebView: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
+    sectionCard: {
+      borderRadius: 24,
+      overflow: 'hidden',
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      marginBottom: 12,
+      ...rtlSheetText,
+    },
+    metricRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+    },
+    metricCol: {
+      flex: 1,
+      alignItems: 'flex-start',
+      gap: 4,
+    },
+    metricLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: tokens.colors.text.tertiary,
+    },
+    metricValueRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: 6,
+      flexWrap: 'wrap',
+    },
+    metricValue: {
+      fontSize: 22,
+      fontWeight: '800',
+    },
+    metricSubValue: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    metricDivider: {
+      width: StyleSheet.hairlineWidth,
+      backgroundColor: SHEET_BORDER,
+      marginHorizontal: 10,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 8,
+      gap: 12,
+    },
+    metaRowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: SHEET_BORDER,
+    },
+    metaLabel: {
+      fontSize: 13,
+      fontWeight: '500',
+      flexShrink: 0,
+    },
+    metaValue: {
+      fontSize: 13,
+      fontWeight: '700',
+      flex: 1,
+    },
+  });
+}

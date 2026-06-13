@@ -1,0 +1,233 @@
+/**
+ * בניית שורות פיד קונגרס — Quiver (ברירת מחדל) או UW.
+ */
+
+import {
+  fetchYahooDaily,
+  parseCongressAmount,
+  parseTxnSide,
+  priceOnOrBefore,
+} from './congressPortfolio.ts';
+import {
+  dedupeCongressTrades,
+  fetchUwCongressRecent,
+  fetchUwCongressUnusualTrades,
+  fetchUwPoliticians,
+  mapUnusualTradeToCongress,
+  uwCongressPersonName,
+  type UwCongressTrade,
+} from './unusualWhales.ts';
+import {
+  fetchQuiverLiveCongressTrades,
+  getCongressTradesProvider,
+  isQuiverEquityTrade,
+  parseQuiverTxnSide,
+  resolveCongressApiKey,
+  type CongressTradesProvider,
+  type QuiverCongressTrade,
+} from './quiverQuant.ts';
+import type { CongressTradeRow } from './uwDbCache.ts';
+
+const CONGRESS_PHOTO = 'https://unitedstates.github.io/images/congress/225x275';
+
+export async function buildCongressTradeRows(
+  apiKey?: string,
+  limit = 60,
+  providerOverride?: CongressTradesProvider
+): Promise<CongressTradeRow[]> {
+  const provider = providerOverride ?? getCongressTradesProvider();
+  const key = apiKey?.trim() || resolveCongressApiKey(provider);
+  if (!key) {
+    throw new Error(
+      provider === 'quiverquant'
+        ? 'QUIVER_API_KEY missing (set CONGRESS_TRADES_PROVIDER=quiverquant)'
+        : 'UNUSUAL_WHALES_API_KEY missing'
+    );
+  }
+
+  if (provider === 'quiverquant') {
+    return buildFromQuiver(key, limit);
+  }
+  return buildFromUw(key, limit);
+}
+
+async function buildFromQuiver(apiKey: string, limit: number): Promise<CongressTradeRow[]> {
+  const raw = await fetchQuiverLiveCongressTrades(apiKey);
+  const sorted = raw
+    .filter(isQuiverEquityTrade)
+    .sort((a, b) => {
+      const da = String(a.ReportDate ?? a.TransactionDate ?? '');
+      const db = String(b.ReportDate ?? b.TransactionDate ?? '');
+      return db.localeCompare(da);
+    })
+    .slice(0, Math.min(120, limit * 2));
+
+  const tickers = Array.from(
+    new Set(sorted.map((t) => String(t.Ticker ?? '').toUpperCase()).filter(Boolean))
+  ).slice(0, 12);
+
+  const pricesByTicker = new Map<string, Map<string, number>>();
+  for (const sym of tickers) {
+    pricesByTicker.set(sym, await fetchYahooDaily(sym, '1y'));
+    await delay(40);
+  }
+
+  const out: CongressTradeRow[] = [];
+  const seenExt = new Set<string>();
+  for (const t of sorted) {
+    const row = quiverToCongressRow(t, pricesByTicker);
+    if (!row || seenExt.has(row.external_id)) continue;
+    seenExt.add(row.external_id);
+    out.push(row);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function quiverToCongressRow(
+  t: QuiverCongressTrade,
+  pricesByTicker: Map<string, Map<string, number>>
+): CongressTradeRow | null {
+  const politician_id = String(t.BioGuideID ?? '').trim();
+  const politician_name = String(t.Representative ?? '').trim() || 'פוליטיקאי';
+  const ticker = String(t.Ticker ?? '').toUpperCase().trim();
+  const side = parseQuiverTxnSide(t.Transaction);
+  if (!ticker || !side) return null;
+
+  const txDate = String(t.TransactionDate ?? '').slice(0, 10);
+  const filed = String(t.ReportDate ?? t.last_modified ?? txDate).slice(0, 10);
+  const amount_label = t.Range?.trim() || null;
+  const amountUsd = parseCongressAmount(amount_label ?? t.Amount);
+  const priceMap = pricesByTicker.get(ticker);
+  const price = priceMap ? priceOnOrBefore(priceMap, txDate || filed) : null;
+  const shares =
+    price && price > 0 && amountUsd > 0 ? Math.round(amountUsd / price) : null;
+
+  const politician_image_url = politician_id
+    ? `${CONGRESS_PHOTO}/${politician_id}.jpg`
+    : null;
+  const txn_label = side === 'sell' ? 'מכירה' : 'רכישה';
+  const txnSlug = String(t.Transaction ?? side).replace(/\s+/g, '_').slice(0, 40);
+  const external_id = `quiver:${politician_id}:${ticker}:${txDate}:${side}:${txnSlug}`;
+
+  return {
+    external_id,
+    politician_id: politician_id || external_id,
+    politician_name,
+    politician_image_url,
+    ticker,
+    company_name: t.Description?.trim() || null,
+    transaction_type: side,
+    shares,
+    price: price != null ? Math.round(price * 100) / 100 : null,
+    amount_label,
+    filed_at: filed ? `${filed}T12:00:00Z` : new Date().toISOString(),
+    transaction_date: txDate || filed,
+    txn_label,
+    source: 'quiverquant',
+  };
+}
+
+async function buildFromUw(apiKey: string, limit: number): Promise<CongressTradeRow[]> {
+  const [politicians, recent, unusual] = await Promise.all([
+    fetchUwPoliticians(apiKey, 36).catch(() => []),
+    fetchUwCongressRecent(apiKey, 120).catch(() => [] as UwCongressTrade[]),
+    fetchUwCongressUnusualTrades(apiKey, { limit: 80 }).catch(() => []),
+  ]);
+
+  const bioMap = new Map<string, string>();
+  for (const p of politicians) {
+    const id = String(p.politician_id ?? p.id ?? '').trim();
+    const bg = p.bioguide_id?.trim();
+    if (id && bg) bioMap.set(id, bg);
+  }
+
+  const merged = dedupeCongressTrades([
+    ...recent,
+    ...unusual.map(mapUnusualTradeToCongress),
+  ]);
+
+  const sorted = merged
+    .filter((t) => {
+      const ticker = String(t.ticker ?? t.symbol ?? '').toUpperCase().trim();
+      const side = parseTxnSide(t.txn_type);
+      return ticker.length >= 1 && ticker.length <= 5 && side != null;
+    })
+    .sort((a, b) => {
+      const da = String(a.filed_at_date ?? a.transaction_date ?? '');
+      const db = String(b.filed_at_date ?? b.transaction_date ?? '');
+      return db.localeCompare(da);
+    })
+    .slice(0, Math.min(80, limit * 2));
+
+  const tickers = Array.from(
+    new Set(sorted.map((t) => String(t.ticker ?? t.symbol ?? '').toUpperCase()))
+  ).slice(0, 12);
+
+  const pricesByTicker = new Map<string, Map<string, number>>();
+  for (const sym of tickers) {
+    pricesByTicker.set(sym, await fetchYahooDaily(sym, '1y'));
+    await delay(40);
+  }
+
+  const out: CongressTradeRow[] = [];
+  const seenExt = new Set<string>();
+  for (const t of sorted) {
+    const row = uwToCongressRow(t, bioMap, pricesByTicker);
+    if (!row || seenExt.has(row.external_id)) continue;
+    seenExt.add(row.external_id);
+    out.push(row);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+function uwToCongressRow(
+  t: UwCongressTrade,
+  bioMap: Map<string, string>,
+  pricesByTicker: Map<string, Map<string, number>>
+): CongressTradeRow | null {
+  const politician_id = String(t.politician_id ?? '').trim();
+  const politician_name = uwCongressPersonName(t) || 'פוליטיקאי';
+  const ticker = String(t.ticker ?? t.symbol ?? '').toUpperCase().trim();
+  const side = parseTxnSide(t.txn_type);
+  if (!ticker || !side) return null;
+
+  const txDate = String(t.transaction_date ?? t.filed_at_date ?? '').slice(0, 10);
+  const filed = String(t.filed_at_date ?? t.transaction_date ?? txDate).slice(0, 10);
+  const amountUsd = parseCongressAmount(t.amounts);
+  const priceMap = pricesByTicker.get(ticker);
+  const price = priceMap ? priceOnOrBefore(priceMap, txDate || filed) : null;
+  const shares =
+    price && price > 0 && amountUsd > 0 ? Math.round(amountUsd / price) : null;
+
+  const bg = bioMap.get(politician_id);
+  const stableId = bg || politician_id;
+  const politician_image_url = bg ? `${CONGRESS_PHOTO}/${bg}.jpg` : null;
+  const txn_label = side === 'sell' ? 'מכירה' : 'רכישה';
+  const amountKey = (t.amounts?.trim() || 'na').replace(/\s+/g, '_').slice(0, 48);
+  const external_id = `uw-congress:${stableId}:${ticker}:${txDate}:${side}:${amountKey}`;
+
+  return {
+    external_id,
+    politician_id: stableId || external_id,
+    politician_name,
+    politician_image_url,
+    ticker,
+    company_name: t.issuer?.trim() || null,
+    transaction_type: side,
+    shares,
+    price: price != null ? Math.round(price * 100) / 100 : null,
+    amount_label: t.amounts?.trim() || null,
+    filed_at: filed ? `${filed}T12:00:00Z` : new Date().toISOString(),
+    transaction_date: txDate || filed,
+    txn_label,
+    source: 'unusualwhales',
+  };
+}
+
+export { getCongressTradesProvider, resolveCongressApiKey, type CongressTradesProvider };
+
+function delay(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}

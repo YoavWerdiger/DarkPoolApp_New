@@ -1,0 +1,21 @@
+-- ============================================
+-- Fix Realtime DELETE events for chat_group_members
+-- ============================================
+-- The client subscribes to chat_group_members with filter `user_id=eq.<userId>`
+-- so it can keep `userGroupsCache` in sync (e.g. drop a group from the cache
+-- after the user leaves). With the default REPLICA IDENTITY only the PRIMARY
+-- KEY (`id`) is emitted on DELETE — neither `user_id` (needed for the filter)
+-- nor `group_id` (needed for the cache update) are available, so the DELETE
+-- event is either skipped entirely by Realtime or arrives without the data the
+-- client needs.
+--
+-- Setting REPLICA IDENTITY FULL causes Postgres to include the entire OLD row
+-- in the WAL on DELETE/UPDATE, which lets Supabase Realtime apply the filter
+-- correctly and lets the client read `payload.old.group_id`.
+--
+-- Note: REPLICA IDENTITY FULL increases WAL size for updates/deletes on this
+-- table. chat_group_members is small (rows scale with #members across groups,
+-- not with message volume), so the impact is negligible.
+-- ============================================
+
+ALTER TABLE public.chat_group_members REPLICA IDENTITY FULL;

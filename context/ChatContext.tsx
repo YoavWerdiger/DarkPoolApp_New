@@ -44,7 +44,7 @@ const MAX_OFFLINE_RETRY_ATTEMPTS = 5;
 
 function warmChatMediaCache(messages: ChatMessage[]): void {
   if (!messages.length) return;
-  void prefetchChatMediaForMessages(messages).catch((e) =>
+  void prefetchChatMediaForMessages(messages).catch((e: unknown) =>
     logger.warn('ChatContext', 'prefetchChatMediaForMessages failed', e)
   );
 }

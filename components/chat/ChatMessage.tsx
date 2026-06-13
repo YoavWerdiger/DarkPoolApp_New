@@ -572,6 +572,8 @@ function ChatMessage({
             styles,
             isMe,
             DesignTokens,
+            imgOpacity,
+            imgOpacitySet,
             () => {
             // Only open viewer for uploaded media, not during upload
             if ((message.media_url || message.local_media_uri) && !message.is_uploading) {
@@ -587,8 +589,6 @@ function ChatMessage({
               : undefined,
             /* No time overlay — timestamp always in footer below the bubble */
             undefined,
-            imgOpacity,
-            imgOpacitySet,
             onStatusPress,
           )}
 
@@ -723,11 +723,11 @@ function renderMediaContent(
   styles: any,
   isMe: boolean,
   tokens: ReturnType<typeof useDesignTokens>,
+  imgOpacity: Animated.Value,
+  imgOpacitySet: React.MutableRefObject<boolean>,
   onMediaPress?: () => void,
   audioMeta?: AudioBubbleMeta,
   timeOverlayNode?: React.ReactNode,
-  imgOpacity?: Animated.Value,
-  imgOpacitySet?: React.MutableRefObject<boolean>,
   onStatusPress?: () => void,
 ) {
   const imageUri =

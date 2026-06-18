@@ -2,7 +2,7 @@
  * useDarkPoolInsiderFeed.ts
  * -----------------------------------------------------------------------------
  * הוק לפיד "LATEST TRADES" של ה-Dark Pool — מציג רכישות בכירים אחרונות
- * שזרמו דרך Form4Api (`sync-insider-buys` → `dark_pool_insider_buys`).
+ * מ-`dark_pool_insider_buys` (סנכרון `sync-insider-buys`, מקור עיקרי Unusual Whales).
  *
  * לכל עסקה מצרפים quote נוכחי (Finnhub/Yahoo דרך `portfolioPriceFeed`) כדי
  * להציג "Since trade +X%" כמו במסך InsiderWave.
@@ -27,10 +27,16 @@ import {
   buildFeedItem,
   type InsiderTradeFeedItem,
 } from '../screens/DarkPool/utils/insiderFeedCalc';
-import { DARK_POOL_PREMIUM_GATING_ENABLED } from '../types/darkpool.types';
+import {
+  DARK_POOL_INSIDER_UW_ONLY,
+  DARK_POOL_PREMIUM_GATING_ENABLED,
+  DARK_POOL_FEED_ENRICH_QUOTES,
+} from '../types/darkpool.types';
+import { triggerInsiderSync } from '../services/darkpool/uwSignalsService';
+import { fetchUwLiveInsiderFeed } from '../services/darkpool/uwInsiderFeedService';
 import { useSubscription } from './useSubscription';
 
-export type DarkPoolFeedTab = 'all' | 'watchlist';
+export type DarkPoolFeedTab = 'congress' | 'all' | 'watchlist' | 'following';
 export type { InsiderTradeFeedItem };
 
 interface UseDarkPoolInsiderFeedState {
@@ -44,6 +50,8 @@ export interface UseDarkPoolInsiderFeedOptions {
   tab: DarkPoolFeedTab;
   /** אופציונלי — מגביל את גודל ה-fetch. */
   limit?: number;
+  /** כבה fetch (למשל כשמציגים רק פיד מעקב בכירים). */
+  enabled?: boolean;
 }
 
 const QUOTE_ENRICH_TIMEOUT_MS = 6_000;
@@ -51,6 +59,7 @@ const QUOTE_ENRICH_TIMEOUT_MS = 6_000;
 export function useDarkPoolInsiderFeed({
   tab,
   limit,
+  enabled = true,
 }: UseDarkPoolInsiderFeedOptions) {
   const { isPremium: subscriptionIsPremium } = useSubscription();
   // כש-Premium gating כבוי — כולם מקבלים גישה מלאה (ללא השהייה / מגבלת כמות).
@@ -66,6 +75,15 @@ export function useDarkPoolInsiderFeed({
   useEffect(() => () => { mounted.current = false; }, []);
 
   const load = useCallback(async (refresh = false) => {
+    if (!enabled) {
+      setState({
+        trades: [],
+        loading: false,
+        refreshing: false,
+        error: null,
+      });
+      return;
+    }
     setState((s) => ({
       ...s,
       loading: refresh ? s.loading : true,
@@ -89,14 +107,25 @@ export function useDarkPoolInsiderFeed({
         }
       }
 
-      const trades = await listRecentInsiderTrades({
+      let trades = await listRecentInsiderTrades({
         isPremium,
         watchedTickers,
         limit: limit ?? (isPremium ? 30 : 3),
       });
 
+      if (trades.length === 0 && DARK_POOL_INSIDER_UW_ONLY && tab !== 'watchlist') {
+        try {
+          const live = await fetchUwLiveInsiderFeed(limit ?? 40, refresh);
+          trades = live;
+        } catch (e) {
+          console.warn('uw live insider feed fallback', e);
+        }
+      }
+
       // העשרה במחירים שוטפים — עם timeout כדי לא לתקוע את ה-UI.
-      const symbols = Array.from(new Set(trades.map((t) => t.ticker)));
+      const symbols = DARK_POOL_FEED_ENRICH_QUOTES
+        ? Array.from(new Set(trades.map((t) => t.ticker)))
+        : [];
       const quotes = symbols.length
         ? await Promise.race([
             getQuotes(symbols),
@@ -122,12 +151,21 @@ export function useDarkPoolInsiderFeed({
         error: (e as Error).message || 'failed_to_load',
       }));
     }
-  }, [tab, limit, isPremium]);
+  }, [tab, limit, isPremium, enabled]);
 
   useEffect(() => {
     void load(false);
   }, [load]);
 
-  const refetch = useCallback(() => load(true), [load]);
+  const refetch = useCallback(async () => {
+    setState((s) => ({ ...s, refreshing: true, error: null }));
+    try {
+      await triggerInsiderSync();
+    } catch (e) {
+      console.warn('insider sync on refresh', e);
+    }
+    await load(true);
+  }, [load]);
+
   return { ...state, isPremium, refetch };
 }

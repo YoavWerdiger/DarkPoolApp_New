@@ -1,5 +1,5 @@
 // ============================================
-// Saved Media Screen - Media saved from group
+// Saved Media Screen - Starred media from group
 // ============================================
 
 import React, { useMemo, useState, useRef, useCallback, useEffect } from 'react';
@@ -11,25 +11,39 @@ import {
   TouchableOpacity,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useChat } from '../../context/ChatContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
+import { chatMessageService } from '../../services/chat';
+import { useAuth } from '../../context/AuthContext';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { logger } from '../../utils/logger';
+
+interface SavedMediaItem {
+  id: string;
+  url: string;
+  thumbnail: string;
+  type: string;
+  senderName: string;
+  createdAt: string;
+}
 
 export default function SavedMediaScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const DesignTokens = useDesignTokens();
+  const { user } = useAuth();
   useLockParentDrawerWhileFocused();
   const { groupId } = route.params as { groupId: string };
-  const { messages } = useChat();
 
+  const [savedMedia, setSavedMedia] = useState<SavedMediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: string } | null>(null);
   const videoRef = useRef<Video>(null);
 
@@ -43,26 +57,59 @@ export default function SavedMediaScreen() {
     setSelectedMedia(null);
   }, []);
 
-  // Extract saved media (images and videos) from group messages
-  // In a real app, this would filter by messages that user "saved"
-  const savedMedia = useMemo(() => {
-    if (!messages || messages.length === 0) return [];
-    
-    return messages
-      .filter(msg => 
-        msg.group_id === groupId && 
-        msg.media_url && 
-        (msg.message_type === 'image' || msg.message_type === 'video')
-      )
-      .map(msg => ({
-        id: msg.id,
-        url: msg.media_url!,
-        thumbnail: msg.media_thumbnail_url || msg.media_url!,
-        type: msg.message_type,
-        senderName: (msg.sender as any)?.display_name || 'משתמש',
-        createdAt: msg.created_at,
-      }));
-  }, [messages, groupId]);
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (!user?.id) {
+        setSavedMedia([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const { data, error } = await chatMessageService.getStarredMessages(user.id, groupId, {
+          limit: 100,
+        });
+
+        if (cancelled) return;
+
+        if (error || !data) {
+          setSavedMedia([]);
+          return;
+        }
+
+        const items: SavedMediaItem[] = data
+          .map((row: any) => row.message)
+          .filter(
+            (msg: any) =>
+              msg &&
+              msg.media_url &&
+              (msg.message_type === 'image' || msg.message_type === 'video')
+          )
+          .map((msg: any) => ({
+            id: msg.id,
+            url: msg.media_url,
+            thumbnail: msg.media_thumbnail_url || msg.media_url,
+            type: msg.message_type,
+            senderName: msg.sender?.display_name || 'משתמש',
+            createdAt: msg.created_at,
+          }));
+
+        setSavedMedia(items);
+      } catch (error) {
+        logger.error('SavedMediaScreen', 'Failed to load starred media', error);
+        if (!cancelled) setSavedMedia([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, groupId]);
 
   const [signedThumbs, setSignedThumbs] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -82,25 +129,22 @@ export default function SavedMediaScreen() {
 
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
-  const handleBack = () => {
-    navigation.goBack();
-  };
-
-  const handleMediaPress = async (item: typeof savedMedia[0]) => {
-    const full = (await getChatMediaDisplayUri(item.url)) || item.url;
-    setSelectedMedia({ url: full, type: item.type });
-  };
-
-  const renderMediaItem = ({ item }: { item: typeof savedMedia[0] }) => (
+  const renderItem = ({ item }: { item: SavedMediaItem }) => (
     <TouchableOpacity
-      style={styles.mediaItem}
-      onPress={() => handleMediaPress(item)}
-      activeOpacity={0.7}
+      style={styles.gridItem}
+      onPress={async () => {
+        const signed = await getChatMediaDisplayUri(item.url);
+        setSelectedMedia({ url: signed || item.url, type: item.type });
+      }}
     >
-      <Image source={{ uri: signedThumbs[item.id] || item.thumbnail }} style={styles.mediaImage} />
+      <Image
+        source={{ uri: signedThumbs[item.id] || item.thumbnail }}
+        style={styles.thumbnail}
+        resizeMode="cover"
+      />
       {item.type === 'video' && (
         <View style={styles.videoBadge}>
-          <Ionicons name="play" size={16} color="#FFFFFF" />
+          <Ionicons name="play" size={16} color="#fff" />
         </View>
       )}
     </TouchableOpacity>
@@ -109,55 +153,45 @@ export default function SavedMediaScreen() {
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="מדיה שמורה" onBack={handleBack} />
+        <ChatSubScreenHeader title="מדיה שמורה" onBack={() => navigation.goBack()} />
 
-        {/* Media Grid */}
-        {savedMedia.length > 0 ? (
+        {loading ? (
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
+            <Text style={styles.emptyText}>טוען מדיה...</Text>
+          </View>
+        ) : savedMedia.length === 0 ? (
+          <View style={styles.centerContent}>
+            <Ionicons name="images-outline" size={48} color={DesignTokens.colors.text.secondary} />
+            <Text style={styles.emptyTitle}>אין מדיה שמורה</Text>
+            <Text style={styles.emptyText}>סמן הודעות עם כוכב כדי לשמור אותן כאן</Text>
+          </View>
+        ) : (
           <FlatList
             data={savedMedia}
-            renderItem={renderMediaItem}
+            renderItem={renderItem}
             keyExtractor={(item) => item.id}
             numColumns={3}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.gridContainer}
           />
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="images-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-            <Text style={styles.emptyText}>אין מדיה שמורה</Text>
-            <Text style={styles.emptySubtext}>המדיה שתתחיל לשמור תופיע כאן</Text>
-          </View>
         )}
 
-        {/* Media Preview Modal */}
-        <Modal
-          visible={selectedMedia !== null}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={handleCloseModal}
-        >
-          <View style={styles.modalContainer}>
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={handleCloseModal}
-            >
-              <Ionicons name="close" size={28} color="#FFFFFF" />
+        <Modal visible={!!selectedMedia} transparent animationType="fade" onRequestClose={handleCloseModal}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={styles.modalClose} onPress={handleCloseModal}>
+              <Ionicons name="close" size={28} color="#fff" />
             </TouchableOpacity>
-            {selectedMedia && selectedMedia.type === 'video' ? (
+            {selectedMedia?.type === 'video' ? (
               <Video
                 ref={videoRef}
                 source={{ uri: selectedMedia.url }}
-                style={styles.modalImage}
-                resizeMode={ResizeMode.CONTAIN}
+                style={styles.fullMedia}
                 useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
                 shouldPlay
               />
             ) : selectedMedia ? (
-              <Image
-                source={{ uri: selectedMedia.url }}
-                style={styles.modalImage}
-                resizeMode="contain"
-              />
+              <Image source={{ uri: selectedMedia.url }} style={styles.fullMedia} resizeMode="contain" />
             ) : null}
           </View>
         </Modal>
@@ -166,71 +200,63 @@ export default function SavedMediaScreen() {
   );
 }
 
-const createStyles = (DesignTokens: any) => StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  listContainer: {
-    padding: DesignTokens.spacing.lg,
-    gap: DesignTokens.spacing.xs,
-  },
-  mediaItem: {
-    width: '31%',
-    aspectRatio: 1,
-    borderRadius: DesignTokens.borderRadius.md,
-    overflow: 'hidden',
-    marginHorizontal: '1%',
-    marginBottom: DesignTokens.spacing.xs,
-  },
-  mediaImage: {
-    width: '100%',
-    height: '100%',
-  },
-  videoBadge: {
-    position: 'absolute',
-    top: DesignTokens.spacing.xs,
-    right: DesignTokens.spacing.xs,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: DesignTokens.borderRadius.sm,
-    padding: 4,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.xl,
-  },
-  emptyText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-    color: DesignTokens.colors.text.primary,
-    marginTop: DesignTokens.spacing.lg,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.text.tertiary,
-    marginTop: DesignTokens.spacing.sm,
-    textAlign: 'center',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCloseButton: {
-    position: 'absolute',
-    top: 60,
-    right: 20,
-    zIndex: 1,
-    padding: DesignTokens.spacing.sm,
-  },
-  modalImage: {
-    width: '100%',
-    height: '100%',
-  },
-});
-
-
+const createStyles = (tokens: any) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: 'transparent' },
+    centerContent: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    emptyTitle: {
+      marginTop: 12,
+      color: tokens.colors.text.primary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    emptyText: {
+      marginTop: 8,
+      color: tokens.colors.text.secondary,
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    gridContainer: { padding: 4 },
+    gridItem: {
+      flex: 1 / 3,
+      aspectRatio: 1,
+      padding: 2,
+      position: 'relative',
+    },
+    thumbnail: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 8,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+    videoBadge: {
+      position: 'absolute',
+      bottom: 8,
+      right: 8,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      borderRadius: 12,
+      padding: 4,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.92)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalClose: {
+      position: 'absolute',
+      top: 56,
+      right: 20,
+      zIndex: 10,
+      padding: 8,
+    },
+    fullMedia: {
+      width: '100%',
+      height: '80%',
+    },
+  });

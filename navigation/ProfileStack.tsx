@@ -5,9 +5,7 @@ import UserProfileScreen from '../screens/Profile/UserProfileScreen';
 import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 import NotificationsScreen from '../screens/Profile/NotificationsScreen';
 import SettingsScreen from '../screens/Profile/SettingsScreen';
-import SubscriptionScreen from '../screens/Profile/SubscriptionScreen';
 import SubscriptionPlansScreen from '../screens/Profile/SubscriptionPlansScreen';
-import CheckoutScreen from '../screens/Payment/CheckoutScreen';
 import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
 import { ChatSessionBackdrop } from '../components/chat/ChatSessionBackdrop';
 
@@ -27,9 +25,7 @@ const ProfileMainScreen = withProfileChatShell(UserProfileScreen);
 const EditProfileWithShell = withProfileChatShell(EditProfileScreen);
 const NotificationsWithShell = withProfileChatShell(NotificationsScreen);
 const SettingsWithShell = withProfileChatShell(SettingsScreen);
-const SubscriptionWithShell = withProfileChatShell(SubscriptionScreen);
 const SubscriptionPlansWithShell = withProfileChatShell(SubscriptionPlansScreen);
-const CheckoutWithShell = withProfileChatShell(CheckoutScreen as any);
 const CreditCardCheckoutWithShell = withProfileChatShell(CreditCardCheckoutScreen as any);
 
 const Stack = createNativeStackNavigator();
@@ -49,9 +45,7 @@ export default function ProfileStack() {
       <Stack.Screen name="EditProfile" component={EditProfileWithShell} />
       <Stack.Screen name="Notifications" component={NotificationsWithShell} />
       <Stack.Screen name="Settings" component={SettingsWithShell} />
-      <Stack.Screen name="Subscription" component={SubscriptionWithShell} />
       <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansWithShell} />
-      <Stack.Screen name="Checkout" component={CheckoutWithShell} />
       <Stack.Screen name="CreditCardCheckout" component={CreditCardCheckoutWithShell} />
     </Stack.Navigator>
   );

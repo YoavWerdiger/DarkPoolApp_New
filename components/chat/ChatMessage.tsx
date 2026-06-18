@@ -21,17 +21,20 @@ import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import { Image as ExpoImage } from 'expo-image';
 import MediaViewer from './MediaViewer';
 import MediaGridBubble from './MediaGridBubble';
 import * as WebBrowser from 'expo-web-browser';
 import { logger } from '../../utils/logger';
 import {
   getChatMediaDisplayUri,
+  getCachedChatMediaDisplayUri,
   invalidateChatMediaPathCache,
   chatMediaStoragePathFromRef,
 } from '../../services/chat/chatSignedMediaUrl';
 import TradeMessage from './TradeMessage';
 import LinkPreview, { extractFirstUrl } from './LinkPreview';
+import MessageReactions from './MessageReactions';
 
 type ResolvedMessageMedia = {
   main: string | null;
@@ -39,6 +42,38 @@ type ResolvedMessageMedia = {
   audio: string | null;
   doc: string | null;
 };
+
+function buildInitialResolvedMedia(message: ChatMessageType): ResolvedMessageMedia {
+  if (message.local_media_uri) {
+    return {
+      main: message.local_media_uri,
+      thumb:
+        getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
+        message.media_thumbnail_url ||
+        message.local_media_uri,
+      audio: message.message_type === MessageType.AUDIO ? message.media_url : null,
+      doc: message.message_type === MessageType.DOCUMENT ? message.media_url : null,
+    };
+  }
+  return {
+    main:
+      getCachedChatMediaDisplayUri(message.media_url) ||
+      message.media_url ||
+      null,
+    thumb:
+      getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
+      message.media_thumbnail_url ||
+      null,
+    audio:
+      message.message_type === MessageType.AUDIO
+        ? getCachedChatMediaDisplayUri(message.media_url) || message.media_url
+        : null,
+    doc:
+      message.message_type === MessageType.DOCUMENT
+        ? getCachedChatMediaDisplayUri(message.media_url) || message.media_url
+        : null,
+  };
+}
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -204,15 +239,13 @@ function ChatMessage({
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
 
-  const [resolvedMedia, setResolvedMedia] = useState<ResolvedMessageMedia>(() => ({
-    main: message.local_media_uri || message.media_url || null,
-    thumb: message.media_thumbnail_url || null,
-    audio: message.media_url || null,
-    doc: message.media_url || null,
-  }));
+  const [resolvedMedia, setResolvedMedia] = useState<ResolvedMessageMedia>(() =>
+    buildInitialResolvedMedia(message),
+  );
 
   useEffect(() => {
     let cancelled = false;
+    setResolvedMedia(buildInitialResolvedMedia(message));
 
     const run = async () => {
       if (message.local_media_uri) {
@@ -288,23 +321,26 @@ function ChatMessage({
     !isMe && !isSendingOrUploading && Date.now() - new Date(message.created_at).getTime() < 8000
   ).current;
   const fadeAnim = useRef(new Animated.Value(isNewMessage ? 0 : 1)).current;
-  const slideAnim = useRef(new Animated.Value(isNewMessage ? 10 : 0)).current;
+  const slideAnim = useRef(new Animated.Value(isNewMessage ? 8 : 0)).current;
+  const entryScale = useRef(new Animated.Value(isMe ? 0.94 : 1)).current;
   const hasAnimated = useRef(false);
+  const hasEntryAnimated = useRef(false);
+
   useEffect(() => {
     if (!isNewMessage || hasAnimated.current) return;
     hasAnimated.current = true;
     fadeAnim.setValue(0);
-    slideAnim.setValue(10);
+    slideAnim.setValue(8);
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 220,
+        duration: 180,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 220,
+        duration: 180,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -312,9 +348,17 @@ function ChatMessage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Image progressive loading — must be at component top level (Rules of Hooks)
-  const imgOpacity = useRef(new Animated.Value(0)).current;
-  const imgOpacitySet = useRef(false);
+  useEffect(() => {
+    if (!isMe || hasEntryAnimated.current) return;
+    hasEntryAnimated.current = true;
+    entryScale.setValue(0.94);
+    Animated.spring(entryScale, {
+      toValue: 1,
+      speed: 24,
+      bounciness: 4,
+      useNativeDriver: true,
+    }).start();
+  }, [isMe, message.id, entryScale]);
 
   const swipeTranslateX = useSharedValue(0);
 
@@ -434,17 +478,19 @@ function ChatMessage({
 
   const timeText = format(new Date(message.created_at), 'HH:mm');
   const isSending = !!message.is_sending;
-
   // הודעות שלי – תמיד opacity 1 (מונע היעלמות כשמחליפים מ-temp ל-real)
   const effectiveOpacity = isMe ? 1 : fadeAnim;
   const effectiveTranslateY = isMe ? 0 : slideAnim;
+  const entryTransform = isMe
+    ? [{ translateY: 0 as const }, { scale: entryScale }]
+    : [{ translateY: effectiveTranslateY }];
 
   return (
     <Animated.View style={[
       styles.messageContainer,
       isMe ? styles.myMessage : styles.theirMessage,
       isHighlighted && styles.highlightedMessage,
-      { opacity: effectiveOpacity, transform: [{ translateY: effectiveTranslateY }] },
+      { opacity: effectiveOpacity, transform: entryTransform },
     ]}>
       {/* Avatar */}
       {!isMe && (showAvatar ? (
@@ -463,7 +509,7 @@ function ChatMessage({
         <View style={styles.avatarSpacer} />
       ))}
 
-      {/* Message Content — reply tap uses native Touchable (outside pan) so jump-to-message works reliably */}
+      {/* Message Content — כל הבועה (כולל reply) זזה עם swipe; TouchableOpacity native לא חוסם pan */}
       <View
         collapsable={false}
         style={[
@@ -479,18 +525,22 @@ function ChatMessage({
             message.message_type === MessageType.AUDIO && styles.audioMessageContent,
           ]}
         >
-        <View
-          style={[
-            styles.bubble,
-            isMe ? styles.myBubble : styles.theirBubble,
-            (message.message_type === MessageType.IMAGE ||
-              message.message_type === MessageType.VIDEO ||
-              message.message_type === MessageType.MEDIA_GROUP ||
-              message.message_type === MessageType.TRADE) &&
-              styles.mediaBubble,
-            message.reply_to && { minWidth: 200 },
-          ]}
-        >
+        <View style={[styles.bubbleStack, isMe && styles.bubbleStackMe]}>
+        <GestureDetector gesture={replyPanGesture}>
+          <Reanimated.View
+            collapsable={false}
+            style={[
+              swipeReplyAnimatedStyle,
+              styles.bubble,
+              isMe ? styles.myBubble : styles.theirBubble,
+              (message.message_type === MessageType.IMAGE ||
+                message.message_type === MessageType.VIDEO ||
+                message.message_type === MessageType.MEDIA_GROUP ||
+                message.message_type === MessageType.TRADE) &&
+                styles.mediaBubble,
+              message.reply_to && { minWidth: 200 },
+            ]}
+          >
           {message.reply_to && (
             <TouchableOpacity
               key={`reply-${message.id}-${replyTargetId}`}
@@ -513,9 +563,7 @@ function ChatMessage({
             </TouchableOpacity>
           )}
 
-          <GestureDetector gesture={replyPanGesture}>
-          <Reanimated.View style={swipeReplyAnimatedStyle}>
-          <GHTouchableOpacity
+          <TouchableOpacity
             activeOpacity={0.7}
             onPress={onPress}
             onLongPress={onLongPress}
@@ -533,7 +581,7 @@ function ChatMessage({
               (message.message_type === MessageType.IMAGE ||
                message.message_type === MessageType.VIDEO ||
                message.message_type === MessageType.MEDIA_GROUP)
-                && { paddingHorizontal: 8, paddingTop: 4 },
+                && { paddingHorizontal: 8, paddingTop: 2 },
             ]}>
               {message.sender?.display_name || 'משתמש'}
             </Text>
@@ -572,8 +620,6 @@ function ChatMessage({
             styles,
             isMe,
             DesignTokens,
-            imgOpacity,
-            imgOpacitySet,
             () => {
             // Only open viewer for uploaded media, not during upload
             if ((message.media_url || message.local_media_uri) && !message.is_uploading) {
@@ -608,8 +654,9 @@ function ChatMessage({
               { textAlign: detectTextDirection(displayContent) }
             ];
             const mentionStyle = {
-              /* הודעות שלי — בועה כהה, mention צריך להיות לבן bold; של אחרים — ירוק */
-              color: isMe ? 'rgba(255,255,255,0.95)' : DesignTokens.colors.primary.main,
+              color: isMe
+                ? DesignTokens.colors.bubbleMeText
+                : DesignTokens.colors.primary.main,
               fontWeight: '700' as const,
             };
 
@@ -654,43 +701,28 @@ function ChatMessage({
                   isSending={isSending}
                   hasError={!!message.send_error}
                   styles={styles}
-                  tertiaryColor={DesignTokens.colors.text.tertiary}
+                  tertiaryColor={
+                    isMe
+                      ? DesignTokens.colors.bubbleMeMetaText
+                      : DesignTokens.colors.text.tertiary
+                  }
                 />
               </View>
             )}
           </View>
           )}
-          </GHTouchableOpacity>
+          </TouchableOpacity>
           </Reanimated.View>
-          </GestureDetector>
-        </View>
+        </GestureDetector>
 
-        {/* Reactions */}
-        {message.reactions && message.reactions.length > 0 && (
-          <AnimatedReactionBubble
+        {message.reactions && message.reactions.length > 0 ? (
+          <MessageReactions
+            reactions={message.reactions}
             isMe={isMe}
-            reactionCount={message.reactions.length}
-            onPress={() => onReactionDetailsPress?.(message)}
-            styles={styles}
-          >
-            <View style={styles.reactionBubble}>
-              {/* הצג עד 3 אימוג'ים */}
-              {message.reactions.slice(0, 3).map((reaction, index) => (
-                <Text key={`${message.id}-emoji-${index}`} style={styles.reactionEmoji}>
-                  {reaction.emoji}
-                </Text>
-              ))}
-              {/* מספר כולל של ריאקציות */}
-              <Text style={styles.reactionCount}>
-                {message.reactions.reduce((sum, r) => sum + (r.count || 0), 0)}
-              </Text>
-              {/* אם יש יותר מ-3 סוגי ריאקציות, הצג +X */}
-              {message.reactions.length > 3 && (
-                <Text style={styles.reactionMore}>+{message.reactions.length - 3}</Text>
-              )}
-            </View>
-          </AnimatedReactionBubble>
-        )}
+            onReactionDetails={() => onReactionDetailsPress?.(message)}
+          />
+        ) : null}
+        </View>
         </View>
       </View>
 
@@ -723,8 +755,6 @@ function renderMediaContent(
   styles: any,
   isMe: boolean,
   tokens: ReturnType<typeof useDesignTokens>,
-  imgOpacity: Animated.Value,
-  imgOpacitySet: React.MutableRefObject<boolean>,
   onMediaPress?: () => void,
   audioMeta?: AudioBubbleMeta,
   timeOverlayNode?: React.ReactNode,
@@ -745,35 +775,35 @@ function renderMediaContent(
       const imgW = message.media_width;
       const imgH = message.media_height;
       const aspectRatio = imgW && imgH ? imgW / imgH : 4 / 3;
-      // imgOpacity ref is declared at component top level (Rules of Hooks)
-      const isLocalOrNoFull = imageUri === resolved.thumb || !message.media_url;
-      if (isLocalOrNoFull && !imgOpacitySet.current) {
-        imgOpacity.setValue(1);
-        imgOpacitySet.current = true;
-      }
-      const onImgLoad = () => {
-        imgOpacitySet.current = true;
-        Animated.timing(imgOpacity, { toValue: 1, duration: 250, useNativeDriver: true }).start();
-      };
+      const thumbUri =
+        resolved.thumb ||
+        getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
+        null;
+      const fullUri = imageUri || thumbUri || '';
+      const canShowFull =
+        !!fullUri &&
+        (fullUri.startsWith('http') ||
+          fullUri.startsWith('file:') ||
+          fullUri.startsWith('content:'));
+
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9} disabled={message.is_uploading}>
           <View style={{ position: 'relative' }}>
-            {/* Blur thumbnail shown first */}
-            {message.media_thumbnail_url && message.media_url && (
-              <Image
-                source={{ uri: message.media_thumbnail_url }}
-                style={[styles.mediaImage, { aspectRatio, position: 'absolute' }]}
-                resizeMode="cover"
-                blurRadius={6}
+            {canShowFull ? (
+              <ExpoImage
+                source={{ uri: fullUri }}
+                placeholder={thumbUri && thumbUri !== fullUri ? { uri: thumbUri } : undefined}
+                style={[styles.mediaImage, { aspectRatio }, message.is_uploading && { opacity: 0.7 }]}
+                contentFit="cover"
+                transition={200}
+                cachePolicy="memory-disk"
+                recyclingKey={`${message.id}-${fullUri}`}
               />
+            ) : (
+              <View style={[styles.mediaImage, styles.mediaImagePlaceholder, { aspectRatio }]}>
+                <ActivityIndicator size="small" color={tokens.colors.text.tertiary} />
+              </View>
             )}
-            {/* Full image fades in on load */}
-            <Animated.Image
-              source={{ uri: imageUri || '' }}
-              style={[styles.mediaImage, { aspectRatio }, message.is_uploading && { opacity: 0.7 }, { opacity: imgOpacity }]}
-              resizeMode="cover"
-              onLoad={onImgLoad}
-            />
             {timeOverlayNode}
             {message.is_uploading && (
               <View style={[styles.uploadOverlay, { aspectRatio }]}>
@@ -788,16 +818,28 @@ function renderMediaContent(
       );
     }
 
-    case MessageType.VIDEO:
+    case MessageType.VIDEO: {
+      const thumbUri =
+        resolved.thumb ||
+        getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
+        message.media_thumbnail_url ||
+        null;
+      const videoThumbOk =
+        !!thumbUri &&
+        (thumbUri.startsWith('http') ||
+          thumbUri.startsWith('file:') ||
+          thumbUri.startsWith('content:'));
+
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9}>
           <View style={styles.mediaVideo}>
-            {/* Thumbnail או placeholder */}
-            {resolved.thumb || message.media_thumbnail_url ? (
-              <Image
-                source={{ uri: resolved.thumb || message.media_thumbnail_url || '' }}
+            {videoThumbOk ? (
+              <ExpoImage
+                source={{ uri: thumbUri }}
                 style={styles.mediaImage}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                recyclingKey={`${message.id}-vid-${thumbUri}`}
               />
             ) : (
               <View style={styles.videoPlaceholder}>
@@ -830,6 +872,7 @@ function renderMediaContent(
           </View>
         </TouchableOpacity>
       );
+    }
 
     case MessageType.AUDIO: {
       let audioDuration = message.media_duration || 0;
@@ -841,7 +884,13 @@ function renderMediaContent(
       }
       return (
         <AudioPlayer
-          audioUrl={resolved.audio || message.media_url || ''}
+          audioUrl={
+            resolved.audio && isPlayableMediaUri(resolved.audio)
+              ? resolved.audio
+              : message.local_media_uri && isPlayableMediaUri(message.local_media_uri)
+                ? message.local_media_uri
+                : ''
+          }
           duration={audioDuration}
           isMe={isMe}
           styles={styles}
@@ -1116,6 +1165,19 @@ function getDocumentIcon(extension: string): IoniconsName {
 // ============================================
 // Audio Player Component
 // ============================================
+
+function isPlayableMediaUri(uri: string): boolean {
+  const t = uri.trim();
+  if (!t) return false;
+  return (
+    t.startsWith('http://') ||
+    t.startsWith('https://') ||
+    t.startsWith('file://') ||
+    t.startsWith('content://') ||
+    t.startsWith('blob:')
+  );
+}
+
 interface AudioPlayerProps {
   audioUrl: string;
   duration: number; // in seconds
@@ -1150,6 +1212,14 @@ function AudioPlayer({
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const positionIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const waveformContainerRef = useRef<View | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     currentUriRef.current = audioUrl;
@@ -1165,58 +1235,49 @@ function AudioPlayer({
   }, []);
 
   const createSoundWithSignedUrlRetry = async (initialUri: string) => {
+    let uri = initialUri;
+    if (!isPlayableMediaUri(uri) && message.media_url) {
+      const signed = await getChatMediaDisplayUri(message.media_url);
+      if (signed) {
+        uri = signed;
+        currentUriRef.current = signed;
+      }
+    }
     try {
-      return await Audio.Sound.createAsync({ uri: initialUri });
+      return await Audio.Sound.createAsync({ uri });
     } catch (first) {
       const ref = message.media_url;
       if (!ref) throw first;
       const path = chatMediaStoragePathFromRef(ref);
       if (path) invalidateChatMediaPathCache(path);
       const fresh = await getChatMediaDisplayUri(ref);
-      if (!fresh || fresh === initialUri) throw first;
+      if (!fresh || fresh === uri) throw first;
       currentUriRef.current = fresh;
       return await Audio.Sound.createAsync({ uri: fresh });
     }
   };
 
-  // Load audio duration on mount
+  // Duration from message metadata — avoid probing every voice bubble on mount (noisy AVFoundation errors).
   useEffect(() => {
-    if (!audioUrl) return;
-
-    const loadDuration = async () => {
-      try {
-        const { sound } = await createSoundWithSignedUrlRetry(currentUriRef.current);
-        const status = await sound.getStatusAsync();
-        if (status.isLoaded && status.durationMillis && status.durationMillis > 0) {
-          const durationInSeconds = status.durationMillis / 1000;
-          setActualDuration(durationInSeconds);
-        }
-        await sound.unloadAsync();
-      } catch (error) {
-        logger.error('ChatMessage', 'Audio playback error', error);
-        if (duration > 0) {
-          setActualDuration(duration);
-        }
-      }
-    };
-
-    loadDuration();
-  }, [audioUrl]);
+    if (duration > 0 && actualDuration === 0) {
+      setActualDuration(duration);
+    }
+  }, [duration, actualDuration]);
 
   // Update position while playing - עדכון מהיר יותר לחלקות
   useEffect(() => {
     if (isPlaying && soundRef.current) {
       positionIntervalRef.current = setInterval(async () => {
+        if (!isMountedRef.current) return;
         try {
           if (soundRef.current) {
             const status = await soundRef.current.getStatusAsync();
+            if (!isMountedRef.current) return;
             if (status.isLoaded) {
-              // שימוש ב-milliseconds לחלקות טובה יותר
               const posMillis = status.positionMillis || 0;
               const posSeconds = posMillis / 1000;
               setPosition(posSeconds);
 
-              // אם ה-duration לא נטען עדיין, ננסה לטעון אותו
               if (actualDuration === 0 && status.durationMillis && status.durationMillis > 0) {
                 setActualDuration(status.durationMillis / 1000);
               }
@@ -1224,12 +1285,13 @@ function AudioPlayer({
               if (status.didJustFinish) {
                 setIsPlaying(false);
                 setPosition(0);
-                // איפוס ה-sound כדי שניתן יהיה לנגן שוב
                 if (soundRef.current && status.isLoaded) {
                   try {
                     await soundRef.current.setPositionAsync(0);
                   } catch (e) {
-                    logger.error('ChatMessage', 'Audio playback error', e);
+                    if (isMountedRef.current) {
+                      logger.error('ChatMessage', 'Audio playback error', e);
+                    }
                   }
                 }
               } else if (!status.isPlaying && isPlaying) {
@@ -1238,9 +1300,11 @@ function AudioPlayer({
             }
           }
         } catch (error) {
-          logger.error('ChatMessage', 'Audio playback error', error);
+          if (isMountedRef.current) {
+            logger.error('ChatMessage', 'Audio playback error', error);
+          }
         }
-      }, 50); // עדכון כל 50ms במקום 100ms לחלקות טובה יותר
+      }, 100);
     } else {
       if (positionIntervalRef.current) {
         clearInterval(positionIntervalRef.current);
@@ -1259,8 +1323,10 @@ function AudioPlayer({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (soundRef.current) {
-        soundRef.current.unloadAsync();
+        void soundRef.current.unloadAsync();
+        soundRef.current = null;
       }
       if (positionIntervalRef.current) {
         clearInterval(positionIntervalRef.current);
@@ -1277,6 +1343,15 @@ function AudioPlayer({
       }
     }
     try {
+      if (!isPlayableMediaUri(currentUriRef.current) && message.media_url) {
+        const signed = await getChatMediaDisplayUri(message.media_url);
+        if (signed) currentUriRef.current = signed;
+      }
+      if (!isPlayableMediaUri(currentUriRef.current)) {
+        logger.warn('ChatMessage', 'Audio URL not ready', { messageId: message.id });
+        return;
+      }
+
       if (!soundRef.current) {
         // Load and play
         const { sound } = await createSoundWithSignedUrlRetry(currentUriRef.current);
@@ -1508,7 +1583,9 @@ function AudioPlayer({
             isSending={isSending}
             hasError={!!message.send_error}
             styles={styles}
-            tertiaryColor={tokens.colors.text.tertiary}
+            tertiaryColor={
+              isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.tertiary
+            }
           />
           {!!sentTimeText && (
             <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.audioSentTimeText]}>
@@ -1560,49 +1637,6 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.isHighlighted === nextProps.isHighlighted
   );
 });
-
-// ─── Animated reaction container: spring-pops on first mount and on count change ───
-function AnimatedReactionBubble({
-  isMe,
-  reactionCount,
-  onPress,
-  styles,
-  children,
-}: {
-  isMe: boolean;
-  reactionCount: number;
-  onPress: () => void;
-  styles: any;
-  children: React.ReactNode;
-}) {
-  const scale = useRef(new Animated.Value(0.7)).current;
-  const prevCount = useRef(reactionCount);
-
-  useEffect(() => {
-    if (prevCount.current !== reactionCount) {
-      prevCount.current = reactionCount;
-      scale.setValue(0.7);
-    }
-    Animated.spring(scale, {
-      toValue: 1,
-      speed: 20,
-      bounciness: 14,
-      useNativeDriver: true,
-    }).start();
-  }, [reactionCount, scale]);
-
-  return (
-    <GHTouchableOpacity
-      style={[styles.reactionsContainer, { alignSelf: isMe ? 'flex-end' : 'flex-start' }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <Animated.View style={{ transform: [{ scale }] }}>
-        {children}
-      </Animated.View>
-    </GHTouchableOpacity>
-  );
-}
 
 // ============================================
 // Styles - Modern Design from Reference
@@ -1683,15 +1717,23 @@ const createStyles = (tokens: any) => StyleSheet.create({
     width: '100%',
     alignSelf: 'stretch',
   },
+  bubbleStack: {
+    maxWidth: '100%',
+    alignItems: 'flex-start',
+  },
+  bubbleStackMe: {
+    alignItems: 'flex-end',
+  },
 
   senderNameInside: {
     fontSize: tokens.typography.label.size,
     fontWeight: tokens.typography.fontWeight.semibold,
     marginTop: 0,
-    marginBottom: 4,
+    marginBottom: 1,
     textAlign: 'right',
     alignSelf: 'flex-end',
     width: '100%',
+    lineHeight: 16,
   },
 
   replyContainer: {
@@ -1798,6 +1840,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginBottom: 4,
     overflow: 'hidden',
     alignSelf: 'flex-start',
+  },
+  mediaImagePlaceholder: {
+    backgroundColor: tokens.colors.background.tertiary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   uploadOverlay: {
     position: 'absolute',
@@ -2086,9 +2133,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 2,
   },
-  // Both sent and received have white text
+  // הודעות שלי — טקסט לבן/כהה מלא על בועה ירוקה (לא text.primary גנרי)
   myMessageText: {
-    color: tokens.colors.text.primary,
+    color: tokens.colors.bubbleMeText,
   },
   theirMessageText: {
     color: tokens.colors.text.primary,
@@ -2115,7 +2162,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     opacity: 0.8,
   },
   myTimeText: {
-    color: tokens.colors.text.tertiary,
+    color: tokens.colors.bubbleMeMetaText,
     opacity: 1,
   },
   theirTimeText: {
@@ -2141,46 +2188,6 @@ const createStyles = (tokens: any) => StyleSheet.create({
     color: '#EF4444',
     fontStyle: 'italic',
   },
-  // Reactions - bg-[#2a2a2a] border border-[#3a3a3a] rounded-full
-  reactionsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: tokens.spacing.xs,
-    marginTop: tokens.spacing.xs,
-    marginBottom: tokens.spacing.xs,
-    paddingHorizontal: tokens.spacing.xs,
-  },
-  reactionBubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: tokens.colors.selection.subtle,
-    borderRadius: tokens.borderRadius.full,
-    paddingHorizontal: tokens.spacing.sm,
-    paddingVertical: tokens.spacing.xs,
-    gap: tokens.spacing.xs,
-    borderWidth: 1,
-    borderColor: tokens.colors.border.primary,
-  },
-  myReaction: {
-    backgroundColor: tokens.colors.background.tertiary,
-    borderWidth: 1,
-    borderColor: tokens.colors.primary.main,
-  },
-  reactionEmoji: {
-    fontSize: tokens.typography.fontSize.sm,
-  },
-  reactionCount: {
-    fontSize: tokens.typography.fontSize.sm,
-    fontWeight: tokens.typography.fontWeight.medium,
-    color: tokens.colors.text.secondary,
-  },
-  reactionMore: {
-    fontSize: tokens.typography.fontSize.xs,
-    fontWeight: tokens.typography.fontWeight.medium,
-    color: tokens.colors.text.secondary,
-    marginLeft: 2,
-  },
-
   systemMessageContainer: {
     flexDirection: 'row',
     alignItems: 'center',

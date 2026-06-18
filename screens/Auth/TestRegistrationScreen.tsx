@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { AuthService } from '../../services/authService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const TestRegistrationScreen = () => {
   const [loading, setLoading] = useState(false);
@@ -52,7 +53,10 @@ const TestRegistrationScreen = () => {
       </Text>
 
       <TouchableOpacity
-        onPress={testEmailCheck}
+        onPress={() => {
+          void HapticFeedback.impactLight();
+          testEmailCheck();
+        }}
         style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >
@@ -66,7 +70,10 @@ const TestRegistrationScreen = () => {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={testPhoneCheck}
+        onPress={() => {
+          void HapticFeedback.impactLight();
+          testPhoneCheck();
+        }}
         style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >
@@ -80,7 +87,10 @@ const TestRegistrationScreen = () => {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={testCompleteRegistration}
+        onPress={() => {
+          void HapticFeedback.medium();
+          testCompleteRegistration();
+        }}
         style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >

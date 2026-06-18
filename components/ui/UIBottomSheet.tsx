@@ -22,6 +22,8 @@ export interface UIBottomSheetProps {
   dragToClose?: boolean;
   backdropOpacity?: number;
   contentStyle?: ViewStyle;
+  /** מיזוג ל־Animated.View של הגיליון (למשל backgroundColor: 'transparent' + רקע מותאם בתוך children) */
+  sheetStyle?: ViewStyle;
   closeOnBackdropPress?: boolean;
   maxHeight?: string | number;
 }
@@ -43,6 +45,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
   dragToClose = true,
   backdropOpacity = 0.7,
   contentStyle,
+  sheetStyle,
   closeOnBackdropPress = true,
   maxHeight = '80%',
 }) => {
@@ -156,27 +159,29 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
         
         {/* Sheet Container */}
         <Animated.View 
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: tokens.colors.background.sheet,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            minHeight: 200,
-            maxHeight: maxHeightValue,
-            paddingBottom: bottomPad,
-            overflow: 'hidden',
-            shadowColor: Platform.OS === 'ios' ? '#000' : 'transparent',
-            shadowOffset: { width: 0, height: -6 },
-            shadowOpacity: Platform.OS === 'ios' ? 0.22 : 0,
-            shadowRadius: 16,
-            elevation: Platform.OS === 'android' ? 22 : 10,
-            transform: [{ translateY }],
-          }}
+          style={[
+            {
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: tokens.colors.background.sheet,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              minHeight: 200,
+              maxHeight: maxHeightValue,
+              paddingBottom: bottomPad,
+              overflow: 'hidden',
+              shadowColor: Platform.OS === 'ios' ? '#000' : 'transparent',
+              shadowOffset: { width: 0, height: -6 },
+              shadowOpacity: Platform.OS === 'ios' ? 0.22 : 0,
+              shadowRadius: 16,
+              elevation: Platform.OS === 'android' ? 22 : 10,
+              transform: [{ translateY }],
+            },
+            sheetStyle,
+          ]}
         >
-          {/* Handle */}
           {showHandle && (
             <View 
               style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}

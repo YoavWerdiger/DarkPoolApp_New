@@ -126,29 +126,9 @@ CREATE POLICY "Members can update their own membership" ON chat_group_members
 CREATE POLICY "Members can insert their own membership" ON chat_group_members
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
--- 5. פונקציית RPC להגדלת unread_count (אופציונלי - יש fallback בקוד)
--- חשוב: הפונקציה משתמשת ב-SECURITY DEFINER כדי לעקוף RLS
-CREATE OR REPLACE FUNCTION public.increment_unread_count(
-  p_group_id uuid,
-  p_exclude_user_id uuid
-)
-RETURNS integer
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  updated_count integer;
-BEGIN
-  UPDATE chat_group_members
-  SET unread_count = COALESCE(unread_count, 0) + 1
-  WHERE group_id = p_group_id
-  AND user_id != p_exclude_user_id;
-  
-  GET DIAGNOSTICS updated_count = ROW_COUNT;
-  RETURN updated_count;
-END;
-$$;
+-- 5. פונקציית RPC להגדלת unread_count
+-- ⚠️ אל תריץ את הגרסה הישנה (2 פרמטרים) — גורמת ל-42725 "function is not unique".
+-- השתמש ב: database/fix_increment_unread_count_ambiguity.sql
 
 -- 6. פונקציה לאיפוס unread_count כשקוראים הודעות
 -- חשוב: הפונקציה משתמשת ב-SECURITY DEFINER כדי לעקוף RLS
@@ -175,8 +155,7 @@ END;
 $$;
 
 -- 6.1. הרשאות RPC לפונקציות
-GRANT EXECUTE ON FUNCTION public.increment_unread_count(uuid, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.increment_unread_count(uuid, uuid) TO anon;
+-- GRANT ל-increment_unread_count: ראה fix_increment_unread_count_ambiguity.sql
 GRANT EXECUTE ON FUNCTION public.reset_unread_count(uuid, uuid, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.reset_unread_count(uuid, uuid, uuid) TO anon;
 GRANT EXECUTE ON FUNCTION public.is_user_member_of_group(uuid, uuid) TO authenticated;

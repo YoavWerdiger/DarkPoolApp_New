@@ -13,7 +13,7 @@ import { chatGroupService } from '../../services/chat';
 import { ChatGroup } from '../../types/chat.types';
 import { useAuth } from '../../context/AuthContext';
 import { logger } from '../../utils/logger';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { ChatBottomSheet } from './ChatBottomSheet';
 
 interface ForwardMessageModalProps {
   visible: boolean;
@@ -147,12 +147,7 @@ export default function ForwardMessageModal({
   };
 
   return (
-    <BottomSheet
-      isOpen={visible}
-      onClose={onClose}
-      snapPoints={[0.7, 0.9]}
-      enablePanDownToClose={true}
-    >
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.7, 0.9]}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -223,7 +218,7 @@ export default function ForwardMessageModal({
           </View>
         )}
       </View>
-    </BottomSheet>
+    </ChatBottomSheet>
   );
 }
 

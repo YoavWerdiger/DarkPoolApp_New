@@ -5,6 +5,7 @@
 // ============================================
 
 import { supabase } from '../../lib/supabase';
+import { isOptimisticChatMessageId, isPersistedChatMessageId } from './chatOfflineQueue';
 import {
   ChatMessage,
   SendChatMessageInput,
@@ -836,8 +837,13 @@ export async function markMessagesAsRead(
   userId: string
 ): Promise<{ error: ChatError | null }> {
   try {
+    const persistedIds = input.message_ids.filter(isPersistedChatMessageId);
+    if (persistedIds.length === 0) {
+      return { error: null };
+    }
+
     // הוספת אישורי קריאה
-    const reads = input.message_ids.map(messageId => ({
+    const reads = persistedIds.map(messageId => ({
       message_id: messageId,
       user_id: userId,
       group_id: input.group_id,
@@ -853,8 +859,8 @@ export async function markMessagesAsRead(
     }
 
     // עדכון last_read בחברות
-    if (input.message_ids.length > 0) {
-      const lastMessageId = input.message_ids[input.message_ids.length - 1];
+    if (persistedIds.length > 0) {
+      const lastMessageId = persistedIds[persistedIds.length - 1];
       
       const { error: updateError } = await supabase
         .from('chat_group_members')
@@ -889,7 +895,10 @@ export async function markChatAsRead(
   lastMessageId?: string
 ): Promise<{ error: ChatError | null }> {
   try {
-    let messageIdToMark = lastMessageId;
+    let messageIdToMark =
+      lastMessageId && !isOptimisticChatMessageId(lastMessageId) && isPersistedChatMessageId(lastMessageId)
+        ? lastMessageId
+        : undefined;
     if (!messageIdToMark) {
       const { data: lastMessage } = await supabase
         .from('chat_messages')

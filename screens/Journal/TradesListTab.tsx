@@ -125,7 +125,10 @@ export default function TradesListTab() {
     ({ item }: { item: Trade }) => (
       <TouchableOpacity
         activeOpacity={0.9}
-        onPress={() => navigation.navigate('TradeDetail', { tradeId: item.id })}
+        onPress={() => {
+          void HapticFeedback.impactLight();
+          navigation.navigate('TradeDetail', { tradeId: item.id });
+        }}
       >
         <TradeListCard
           item={item}
@@ -262,7 +265,10 @@ export default function TradesListTab() {
           return (
             <TouchableOpacity
               key={f.id}
-              onPress={() => setActiveFilter(f.id)}
+              onPress={() => {
+                if (!active) void HapticFeedback.selection();
+                setActiveFilter(f.id);
+              }}
               style={{
                 paddingHorizontal: 14,
                 paddingVertical: 7,
@@ -308,7 +314,10 @@ export default function TradesListTab() {
           />
           {q.length > 0 ? (
             <TouchableOpacity
-              onPress={() => setSearchQuery('')}
+              onPress={() => {
+                void HapticFeedback.selection();
+                setSearchQuery('');
+              }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.clearSearchBtn}
               accessibilityRole="button"

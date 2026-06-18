@@ -64,6 +64,21 @@ async function setupNotificationChannels() {
       sound: 'default',
     });
 
+    // Channel ליומן כלכלי
+    await Notifications.setNotificationChannelAsync('economic_events', {
+      name: 'יומן כלכלי',
+      description: 'התראות על תוצאות דוחות כלכליים',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+    });
+
+    await Notifications.setNotificationChannelAsync('earnings', {
+      name: 'דיווחי רווח',
+      description: 'התראות לפני ואחרי דיווחי רווח',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+    });
+
   }
 }
 

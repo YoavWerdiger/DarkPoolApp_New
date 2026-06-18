@@ -10,16 +10,11 @@ import {
   StyleSheet,
 } from 'react-native';
 import { 
-  Moon, 
   Trash2,
   Info,
   ChevronLeft,
-  RefreshCcw,
-  HardDrive,
   Fingerprint
 } from 'lucide-react-native';
-import { supabase } from '../../lib/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -28,6 +23,8 @@ import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { loadAppSettings, saveAppSettings, clearAppCache } from '../../services/appSettings';
+import { getAppVersionLabel } from '../../utils/appMeta';
 
 interface SettingItem {
   id: string;
@@ -43,15 +40,9 @@ interface SettingItem {
 
 export default function SettingsScreen({ navigation }: any) {
   const { user } = useAuth();
-  const { theme, isDarkMode, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
-  const [settings, setSettings] = useState({
-    darkMode: true,
-    autoUpdate: true,
-    dataSaving: false,
-    biometricAuth: false
-  });
-
+  const [biometricAuth, setBiometricAuth] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -60,33 +51,19 @@ export default function SettingsScreen({ navigation }: any) {
 
   const loadSettings = async () => {
     try {
-      const saved = await AsyncStorage.getItem('appSettings');
-      if (saved) {
-        const parsedSettings = JSON.parse(saved);
-        setSettings(parsedSettings);
-      }
-      setIsLoading(false);
+      const saved = await loadAppSettings();
+      setBiometricAuth(saved.biometricAuth);
     } catch (error) {
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleToggle = async (key: string, value: boolean) => {
+  const persistBiometric = async (value: boolean) => {
     void HapticFeedback.selection();
-    const newSettings = {
-      ...settings,
-      [key]: value
-    };
-    
-    setSettings(newSettings);
-    
-    // Update theme immediately for dark mode
-    if (key === 'darkMode') {
-      toggleTheme();
-    }
-    
+    setBiometricAuth(value);
     try {
-      await AsyncStorage.setItem('appSettings', JSON.stringify(newSettings));
+      await saveAppSettings({ biometricAuth: value });
     } catch (error) {
     }
   };
@@ -102,20 +79,12 @@ export default function SettingsScreen({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Clear AsyncStorage cache
-              const keys = await AsyncStorage.getAllKeys();
-              const cacheKeys = keys.filter(key => 
-                key.startsWith('cache_') || 
-                key.startsWith('temp_') || 
-                key === 'offlineData'
-              );
-              
-              if (cacheKeys.length > 0) {
-                await AsyncStorage.multiRemove(cacheKeys);
-              }
-              
+              const removed = await clearAppCache();
               void HapticFeedback.success();
-              legacyAlert('הצלחה', 'המטמון נוקה בהצלחה');
+              legacyAlert(
+                'הצלחה',
+                removed > 0 ? `נוקו ${removed} פריטי מטמון` : 'אין מטמון לניקוי',
+              );
             } catch (error) {
               legacyAlert('שגיאה', 'שגיאה בניקוי המטמון');
             }
@@ -150,7 +119,7 @@ export default function SettingsScreen({ navigation }: any) {
         });
 
         if (result.success) {
-          handleToggle('biometricAuth', true);
+          await persistBiometric(true);
           void HapticFeedback.success();
           legacyAlert('הצלחה', 'אימות ביומטרי הופעל בהצלחה');
         } else {
@@ -160,48 +129,11 @@ export default function SettingsScreen({ navigation }: any) {
         legacyAlert('שגיאה', 'שגיאה בהפעלת אימות ביומטרי');
       }
     } else {
-      handleToggle('biometricAuth', false);
+      await persistBiometric(false);
     }
   };
 
   const settingSections = [
-    {
-      title: 'תצוגה',
-      items: [
-        {
-          id: 'darkMode',
-          title: 'מצב כהה',
-          subtitle: 'תצוגה כהה לעיניים',
-          icon: Moon,
-          type: 'switch' as const,
-          value: settings.darkMode,
-          onToggle: (value: boolean) => handleToggle('darkMode', value)
-        }
-      ]
-    },
-    {
-      title: 'אפליקציה',
-      items: [
-        {
-          id: 'autoUpdate',
-          title: 'עדכון אוטומטי',
-          subtitle: 'עדכן תוכן באופן אוטומטי',
-          icon: RefreshCcw,
-          type: 'switch' as const,
-          value: settings.autoUpdate,
-          onToggle: (value: boolean) => handleToggle('autoUpdate', value)
-        },
-        {
-          id: 'dataSaving',
-          title: 'חיסכון בנתונים',
-          subtitle: 'הפחת שימוש בנתונים סלולריים',
-          icon: HardDrive,
-          type: 'switch' as const,
-          value: settings.dataSaving,
-          onToggle: (value: boolean) => handleToggle('dataSaving', value)
-        }
-      ]
-    },
     {
       title: 'אבטחה',
       items: [
@@ -211,7 +143,7 @@ export default function SettingsScreen({ navigation }: any) {
           subtitle: 'השתמש ב-Face ID / Touch ID',
           icon: Fingerprint,
           type: 'switch' as const,
-          value: settings.biometricAuth,
+          value: biometricAuth,
           onToggle: handleBiometricAuth
         }
       ]
@@ -235,7 +167,7 @@ export default function SettingsScreen({ navigation }: any) {
           icon: Info,
           type: 'action' as const,
           onPress: () => {
-            legacyAlert('אודות', 'DarkPool App\nגרסה 1.0.0\n\n© 2025 DarkPool');
+            legacyAlert('אודות', `DarkPool App\nגרסה ${getAppVersionLabel()}\n\n© ${new Date().getFullYear()} DarkPool`);
           }
         }
       ]
@@ -260,7 +192,13 @@ export default function SettingsScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="הגדרות" onBack={() => navigation.goBack()} />
+        <ChatSubScreenHeader
+          title="הגדרות"
+          onBack={() => {
+            void HapticFeedback.impactLight();
+            navigation.goBack();
+          }}
+        />
 
         <View style={{ flex: 1 }}>
           <ScrollView 
@@ -298,7 +236,14 @@ export default function SettingsScreen({ navigation }: any) {
                 {section.items.map((item, itemIndex) => (
                   <View key={item.id}>
                     <TouchableOpacity
-                      onPress={item.type === 'action' ? item.onPress : undefined}
+                      onPress={
+                        item.type === 'action'
+                          ? () => {
+                              void HapticFeedback.impactLight();
+                              item.onPress?.();
+                            }
+                          : undefined
+                      }
                       disabled={item.type === 'switch'}
                       activeOpacity={item.type === 'action' ? 0.7 : 1}
                       style={{
@@ -387,7 +332,7 @@ export default function SettingsScreen({ navigation }: any) {
                 fontSize: DesignTokens.typography.caption.size,
                 fontWeight: DesignTokens.typography.caption.weight as any,
               }}>
-                DarkPool App · גרסה 1.0.0
+                DarkPool App · גרסה {getAppVersionLabel()}
               </Text>
             </View>
           </View>

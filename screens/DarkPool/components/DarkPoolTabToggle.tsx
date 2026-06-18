@@ -11,37 +11,63 @@ import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { DarkPoolFeedTab } from '../../../hooks/useDarkPoolInsiderFeed';
 
 interface DarkPoolTabToggleProps {
   value: DarkPoolFeedTab;
   onChange: (tab: DarkPoolFeedTab) => void;
-  /** האם הטאב 'watchlist' נעול (לא פרימיום). */
+  /** האם טאב מניות (watchlist) נעול. */
   watchlistLocked?: boolean;
+  /** האם טאב הכל נעול. */
+  allLocked?: boolean;
+  /** האם טאב בכירים במעקב נעול. */
+  followingLocked?: boolean;
+  /** הסתר טאב מניות (watchlist) */
+  hideWatchlist?: boolean;
+  /** הסתר טאב מעקב — יש טאב נפרד «מעקב» */
+  hideFollowing?: boolean;
 }
 
+/** RTL: קונגרס → בכירים → מניות */
 const TABS: Array<{ id: DarkPoolFeedTab; label: string }> = [
-  { id: 'all', label: 'הכל' },
-  { id: 'watchlist', label: 'מעקב' },
+  { id: 'congress', label: 'קונגרס' },
+  { id: 'all', label: 'בכירים' },
+  { id: 'watchlist', label: 'מניות' },
+  { id: 'following', label: 'מעקב' },
 ];
 
 export function DarkPoolTabToggle({
   value,
   onChange,
   watchlistLocked = false,
+  allLocked = false,
+  followingLocked = false,
+  hideWatchlist = false,
+  hideFollowing = true,
 }: DarkPoolTabToggleProps) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
+  let tabs = TABS;
+  if (hideWatchlist) tabs = tabs.filter((t) => t.id !== 'watchlist');
+  if (hideFollowing) tabs = tabs.filter((t) => t.id !== 'following');
 
   return (
     <View style={styles.row}>
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = value === tab.id;
-        const locked = tab.id === 'watchlist' && watchlistLocked;
+        const locked =
+          (tab.id === 'watchlist' && watchlistLocked) ||
+          (tab.id === 'all' && allLocked) ||
+          (tab.id === 'congress' && allLocked) ||
+          (tab.id === 'following' && followingLocked);
         return (
           <Pressable
             key={tab.id}
-            onPress={() => onChange(tab.id)}
+            onPress={() => {
+              if (!active) void HapticFeedback.selection();
+              onChange(tab.id);
+            }}
             style={[styles.tab, active && styles.tabActive]}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
@@ -72,7 +98,7 @@ export function DarkPoolTabToggle({
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     row: {
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       borderBottomWidth: 1,
@@ -82,7 +108,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
     tab: {
       flex: 1,
       paddingVertical: 12,
-      flexDirection: 'row-reverse',
+      flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,

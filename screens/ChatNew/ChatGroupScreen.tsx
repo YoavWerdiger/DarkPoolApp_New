@@ -5,25 +5,33 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import {
+  KeyboardAvoidingView,
+  KeyboardStickyView,
+  useKeyboardState,
+} from 'react-native-keyboard-controller';
+import {
+  chatComposerPaddingBottom,
+  chatComposerStickyOffset,
+} from '../../components/chat/chatInputLayout';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
+import { MAIN_SCREEN_HEADER_HP } from '../../components/ui/MainDrawerScreenHeader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 
-import { useChat } from '../../context/ChatContext';
+import { useChat, useChatActions } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
-import ChatMessage from '../../components/chat/ChatMessage';
 import ChatInput from '../../components/chat/ChatInput';
 
 import ReactionPicker from '../../components/chat/ReactionPicker';
 import ReactionDetailsModal from '../../components/chat/ReactionDetailsModal';
 import ForwardMessageModal from '../../components/chat/ForwardMessageModal';
-import UnreadDivider from '../../components/chat/UnreadDivider';
+import ChatListRow from '../../components/chat/ChatListRow';
 import LongPressOverlay from '../../components/chat/LongPressOverlay';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
 import PinnedMessagesHeader from '../../components/chat/PinnedMessagesHeader';
@@ -37,6 +45,7 @@ import { he } from 'date-fns/locale';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
+import { scrollChatListToBottom } from '../../utils/chatListScrollToBottom';
 
 // ── Skeleton bubble — shown while messages are loading ──────────────────────
 const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; width: string; delay: number }) => {
@@ -56,7 +65,7 @@ const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; widt
       {!isMe && <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', marginRight: 6, alignSelf: 'flex-end' }} />}
       <RNAnimated.View style={{
         width, height: 36, borderRadius: 14, opacity,
-        backgroundColor: isMe ? 'rgba(15,77,18,0.5)' : 'rgba(44,50,47,0.5)',
+        backgroundColor: isMe ? 'rgba(19,77,55,0.5)' : 'rgba(36,38,37,0.5)',
       }} />
     </View>
   );
@@ -69,9 +78,15 @@ export default function ChatGroupScreen() {
   const route = useRoute();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const composerStickyOffset = useMemo(
+    () => chatComposerStickyOffset(insets.bottom),
+    [insets.bottom],
+  );
   useLockParentDrawerWhileFocused();
 
   const listRef = useRef<FlatList<ChatMessageType>>(null);
+  const listLayoutReadyRef = useRef(false);
+  const verboseScrollLogUntilRef = useRef(0);
   const loadMoreLockRef = useRef(false);
   const scrollYRef = useRef(0);
   const distFromBottomRef = useRef(0);
@@ -87,18 +102,27 @@ export default function ChatGroupScreen() {
   /** חוסם גלילה אוטומטית ל-lastRead אחרי FAB / גלילה ידנית לתחתית */
   const blockUnreadAutoScrollUntilRef = useRef(0);
   const unreadAutoScrollAppliedForGroupRef = useRef<string | null>(null);
+  const initialScrollInFlightRef = useRef(false);
+  const loadingLastReadForInitialRef = useRef(false);
+  /** גלילה לתחתית אחרי שליחה — גם כשאורך הרשימה לא משתנה (עדכון אופטימיסטי) */
+  const pendingScrollAfterSendRef = useRef(false);
+  /** נשאר true אחרי גלילה לתחתית — מחזיק offset=0 גם כשגודל התוכן משתנה */
+  const pinScrollToBottomRef = useRef(false);
+  const pinScrollClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentSizePinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const readConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoScrollRafRef = useRef<number | null>(null);
 
   const { groupId = '', scrollToMessageId } = (route.params || {}) as { groupId: string; scrollToMessageId?: string };
+
+  const { selectGroup, refreshCurrentGroupDetails, confirmChatReadAtBottom } = useChatActions();
 
   const {
     currentGroup,
     messages,
     typingUsers,
     isLoadingMessages,
-    isSendingMessage,
-    isConnected,
     realtimeConnectionState,
-    selectGroup,
     sendMessage,
     loadMoreMessages,
     loadMessagesAround,
@@ -114,6 +138,14 @@ export default function ChatGroupScreen() {
     retrySendMessage,
   } = useChat();
 
+  const initialUnreadInfoRef = useRef(initialUnreadInfo);
+  const keyboardVisible = useKeyboardState((state) => state.isVisible);
+  const composerPaddingBottom = useMemo(
+    () => chatComposerPaddingBottom(insets.bottom, keyboardVisible),
+    [insets.bottom, keyboardVisible],
+  );
+  const prevKeyboardVisibleRef = useRef(false);
+
   // בדיקה אם זו קבוצת הכרזות
   const isAnnouncementGroup = useMemo(() => {
     if (!currentGroup?.name) return false;
@@ -121,7 +153,7 @@ export default function ChatGroupScreen() {
     return lowerName.includes('הכרזות') || lowerName.includes('announcement');
   }, [currentGroup?.name]);
 
-  // messages[0]=חדש — FlatList inverted (API רשמי של RN, יציב יותר מ-scaleY)
+  // Context + FlatList inverted: messages[0]=חדש בתחתית המסך
   const hasInitiallyRenderedRef = useRef(false);
   const initialScrollDoneRef = useRef(false);
   const prevGroupIdRef = useRef<string | null>(null);
@@ -130,33 +162,55 @@ export default function ChatGroupScreen() {
   const lastScrollLogRef = useRef(0);
   const showScrollBtnRef = useRef(false);
 
-  /** inverted FlatList: offsetY≈0 = תחתית (הודעות חדשות), distFromBottom=offsetY */
+  /** FlatList inverted: offsetY=0 ≈ תחתית (הודעות חדשות), distFromBottom = offsetY */
   const SCROLL_AT_BOTTOM_PX = 80;
   const SCROLL_SHOW_FAB_PX = 120;
+  /** קרוב לראש הרשימה הוויזואלי (הודעות ישנות) לפני loadMore */
+  const LOAD_MORE_TOP_OFFSET_PX = 180;
 
-  const handleLoadMore = useCallback(() => {
+  /** כמו ב-Context: [0]=חדש; inverted מציג ישן למעלה, חדש למטה */
+  const displayMessages = messages;
+
+  const listScrollRefs = useMemo(
+    () => ({
+      listRef,
+      contentHeightRef,
+      layoutHeightRef,
+      getDistFromBottom: () => distFromBottomRef.current,
+    }),
+    [],
+  );
+
+  const canLoadOlderMessages = useCallback(() => {
     if (
       !endReachedReadyRef.current ||
-      !userScrolledUpRef.current ||
       programmaticScrollRef.current ||
+      pinScrollToBottomRef.current ||
       loadMoreLockRef.current
     ) {
-      return;
+      return false;
     }
-    if (distFromBottomRef.current <= SCROLL_SHOW_FAB_PX) return;
+    if (!initialScrollDoneRef.current) return false;
+    if (!userScrolledUpRef.current) return false;
+    const max = maxScrollOffsetRef.current;
+    if (max <= 0) return false;
+    return scrollYRef.current >= max - LOAD_MORE_TOP_OFFSET_PX;
+  }, []);
+
+  const handleLoadMore = useCallback(() => {
+    if (!canLoadOlderMessages()) return;
     loadMoreLockRef.current = true;
-    logger.info('ChatGroupScreen', 'loadMoreMessages triggered');
+    const wasPinnedBottom = pinScrollToBottomRef.current;
+    logger.info('ChatGroupScreen', `loadMoreMessages triggered dist=${distFromBottomRef.current.toFixed(0)}`);
     void loadMoreMessages().finally(() => {
       setTimeout(() => {
         loadMoreLockRef.current = false;
+        if (wasPinnedBottom || isAtBottomRef.current) {
+          applyScrollToBottomRef.current?.(false);
+        }
       }, 600);
     });
-  }, [loadMoreMessages]);
-
-  const handleEndReached = useCallback(() => {
-    if (!endReachedReadyRef.current || !userScrolledUpRef.current || endReachedMomentumRef.current) return;
-    handleLoadMore();
-  }, [handleLoadMore]);
+  }, [loadMoreMessages, canLoadOlderMessages]);
 
   const applyScrollMetrics = useCallback((event?: {
     nativeEvent?: {
@@ -188,8 +242,26 @@ export default function ChatGroupScreen() {
       if (!initialScrollDoneRef.current) {
         initialScrollDoneRef.current = true;
       }
-    } else if (distFromBottom > SCROLL_SHOW_FAB_PX) {
+      if (pendingScrollAfterSendRef.current) {
+        pendingScrollAfterSendRef.current = false;
+      }
+      if (initialUnreadInfoRef.current?.count && !readConfirmTimerRef.current) {
+        readConfirmTimerRef.current = setTimeout(() => {
+          readConfirmTimerRef.current = null;
+          if (isAtBottomRef.current) {
+            void confirmReadRef.current();
+          }
+        }, 700);
+      }
+    } else if (
+      initialScrollDoneRef.current &&
+      distFromBottom > SCROLL_SHOW_FAB_PX + 60
+    ) {
+      // רק אחרי גלילה ראשונה לתחתית — מונע loadMore/FAB שגוי בפתיחה (offsetY=0)
       userScrolledUpRef.current = true;
+      if (!programmaticScrollRef.current) {
+        pinScrollToBottomRef.current = false;
+      }
     }
 
     return { distFromBottom, atBottom, offsetY };
@@ -228,16 +300,35 @@ export default function ChatGroupScreen() {
   }, [applyScrollMetrics]);
 
   const handleScroll = useCallback((event: any) => {
-    syncScrollFab(event);
-  }, [syncScrollFab]);
+    const metrics = applyScrollMetrics(event);
+
+    const shouldShow = metrics.distFromBottom > SCROLL_SHOW_FAB_PX;
+    const now = Date.now();
+    const forceLog = now < verboseScrollLogUntilRef.current;
+    if (forceLog || now - lastScrollLogRef.current > 800) {
+      lastScrollLogRef.current = now;
+      const logFn = forceLog ? logger.info.bind(logger) : logger.debug.bind(logger);
+      logFn(
+        'ChatGroupScreen',
+        `onScroll offsetY=${metrics.offsetY.toFixed(0)} distBottom=${metrics.distFromBottom.toFixed(0)} atBottom=${metrics.atBottom}`,
+      );
+    }
+
+    if (Date.now() < ignoreFabUntilRef.current) return;
+
+    if (shouldShow !== showScrollBtnRef.current) {
+      showScrollBtnRef.current = shouldShow;
+      setShowScrollToBottomButton(shouldShow);
+      logger.info(
+        'ChatGroupScreen',
+        `scrollFab ${shouldShow ? 'show' : 'hide'} dist=${metrics.distFromBottom.toFixed(0)}`,
+      );
+    }
+  }, [applyScrollMetrics, listScrollRefs]);
 
   const handleScrollEnd = useCallback((event: any) => {
     syncScrollFab(event);
   }, [syncScrollFab]);
-
-  // react-native-keyboard-controller (behavior="translate-with-padding") handles
-  // keyboard show/hide natively via Reanimated — no manual scroll listeners needed.
-  // Adding Keyboard listeners here would fight the controller's animation.
 
   // FlatList flip: offset 0 = הודעות חדשות
   const prevMessagesLengthRef = useRef(0);
@@ -257,12 +348,21 @@ export default function ChatGroupScreen() {
   const [showScrollToBottomButton, setShowScrollToBottomButton] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   // Stable extraData object — only changes when visible UX state changes
-  const flatListExtraData = useMemo(() => ({
+  const flatListExtraData = useMemo(
+    () => ({
     h: highlightedMessageId,
-    u: initialUnreadInfo?.count,
-    uid: user?.id,
-    n: messages.length,
-  }), [highlightedMessageId, initialUnreadInfo?.count, user?.id, messages.length]);
+      u: initialUnreadInfo?.count ?? 0,
+      ur: initialUnreadInfo?.lastReadMessageId ?? '',
+    }),
+    [highlightedMessageId, initialUnreadInfo?.count, initialUnreadInfo?.lastReadMessageId],
+  );
+
+  useEffect(() => {
+    initialUnreadInfoRef.current = initialUnreadInfo;
+  }, [initialUnreadInfo]);
+
+  const confirmReadRef = useRef(confirmChatReadAtBottom);
+  confirmReadRef.current = confirmChatReadAtBottom;
   const [longPressMessage, setLongPressMessage] = useState<MessageSnapshot | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const [seenByMessage, setSeenByMessage] = useState<ChatMessageType | null>(null);
@@ -277,16 +377,36 @@ export default function ChatGroupScreen() {
     handleScrollToIndexFailed,
     handleContentSizeChange,
     onMessageCellLayout,
-    scrollToBottom: scrollToBottomCore,
+    scrollToMessageInView,
+    queueScrollToMessage,
   } = useChatMessageScroll({
     listRef,
     messagesRef,
+    contentHeightRef,
+    layoutHeightRef,
     distFromBottomRef,
     programmaticScrollRef,
     isMountedRef,
     loadMessagesAround,
     onHighlight: setHighlightedMessageId,
+    maxScrollOffsetRef,
   });
+
+  const handleScrollToIndexFailedWithPin = useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      handleScrollToIndexFailed(info);
+      const count = displayMessages.length;
+      if (
+        count > 0 &&
+        (pinScrollToBottomRef.current || pendingScrollAfterSendRef.current) &&
+        info.index <= 1 &&
+        listRef.current
+      ) {
+        listRef.current.scrollToOffset({ offset: 0, animated: false });
+      }
+    },
+    [displayMessages.length, handleScrollToIndexFailed],
+  );
 
   const hideScrollFab = useCallback(() => {
     if (!showScrollBtnRef.current) return;
@@ -294,52 +414,236 @@ export default function ChatGroupScreen() {
     setShowScrollToBottomButton(false);
   }, []);
 
-  const scrollToBottom = useCallback((animated: boolean = true) => {
-    if (scrollToBottomLockRef.current) return;
-    scrollToBottomLockRef.current = true;
+  /** גלילה לתחתית — עם ניסיונות חוזרים עד שגובה התוכן מוכן */
+  const applyScrollToBottom = useCallback((animated: boolean, markInitialDone = false) => {
+    if (displayMessages.length === 0) return;
+
+    pinScrollToBottomRef.current = true;
     programmaticScrollRef.current = true;
+    userScrolledUpRef.current = false;
+    scrollChatListToBottom(
+      listScrollRefs,
+      displayMessages.length,
+      animated,
+      maxScrollOffsetRef.current,
+      {
+        maxAttempts: 12,
+        onDone: ({ maxOffset, reachedBottom }) => {
+          if (maxOffset > 0) {
+            maxScrollOffsetRef.current = maxOffset;
+          }
+          if (markInitialDone && reachedBottom) {
+            initialScrollDoneRef.current = true;
+          }
+        },
+      },
+    );
+
+    if (pinScrollClearTimerRef.current) {
+      clearTimeout(pinScrollClearTimerRef.current);
+    }
+    pinScrollClearTimerRef.current = setTimeout(() => {
+      pinScrollToBottomRef.current = false;
+      programmaticScrollRef.current = false;
+      pinScrollClearTimerRef.current = null;
+    }, 4500);
+  }, [displayMessages.length, listScrollRefs]);
+
+  const applyScrollToBottomRef = useRef(applyScrollToBottom);
+  applyScrollToBottomRef.current = applyScrollToBottom;
+
+  /** תמיד גולל לתחתית כששולחים — גם אחרי פתיחה עם unread (לא בתחתית) */
+  const scrollToBottomOnSend = useCallback(() => {
+    pendingScrollAfterSendRef.current = true;
+    pinScrollToBottomRef.current = true;
+    userScrolledUpRef.current = false;
+    isAtBottomRef.current = true;
+    hideScrollFab();
+    applyScrollToBottom(false);
+  }, [applyScrollToBottom, hideScrollFab]);
+
+  /**
+   * פתיחת צ'אט (WhatsApp-style):
+   * – יש unread + last_read → גלילה להודעה האחרונה שנקראה במרכז + מפריד
+   * – אחרת → תחתית (הודעות אחרונות)
+   */
+  const applyInitialOpenScroll = useCallback(async () => {
+    if (
+      !groupId ||
+      initialScrollDoneRef.current ||
+      initialScrollInFlightRef.current ||
+      !listLayoutReadyRef.current ||
+      displayMessages.length === 0 ||
+      scrollToMessageId
+    ) {
+      return;
+    }
+    if (Date.now() < blockUnreadAutoScrollUntilRef.current) return;
+    if (unreadAutoScrollAppliedForGroupRef.current === groupId) return;
+
+    const unreadCount = initialUnreadInfo?.count ?? 0;
+    const lastReadId = initialUnreadInfo?.lastReadMessageId;
+
+    if (unreadCount > 0 && lastReadId) {
+      initialScrollInFlightRef.current = true;
+      let index = displayMessages.findIndex((m) => m.id === lastReadId);
+
+      if (index === -1 && !loadingLastReadForInitialRef.current) {
+        loadingLastReadForInitialRef.current = true;
+        const result = await loadMessagesAround(lastReadId);
+        loadingLastReadForInitialRef.current = false;
+        initialScrollInFlightRef.current = false;
+        if (!result.success) {
+          unreadAutoScrollAppliedForGroupRef.current = groupId;
+          applyScrollToBottom(false);
+          logger.debug('ChatGroupScreen', 'initial scroll to bottom (last read not found)');
+        }
+        return;
+      }
+
+      if (index === -1) {
+        initialScrollInFlightRef.current = false;
+        return;
+      }
+
+      unreadAutoScrollAppliedForGroupRef.current = groupId;
+      pinScrollToBottomRef.current = false;
+      programmaticScrollRef.current = true;
+      ignoreFabUntilRef.current = Date.now() + 800;
+
+      scrollToMessageInView(lastReadId, {
+        viewPosition: 0.5,
+        animated: false,
+        highlight: false,
+      });
+
+      requestAnimationFrame(() => {
+        queueScrollToMessage(lastReadId, false, {
+          viewPosition: 0.5,
+          highlight: false,
+        });
+      });
+
+      initialScrollDoneRef.current = true;
+      userScrolledUpRef.current = true;
+      isAtBottomRef.current = false;
+      initialScrollInFlightRef.current = false;
+
+      showScrollBtnRef.current = true;
+      setShowScrollToBottomButton(true);
+      logger.debug(
+        'ChatGroupScreen',
+        `initial scroll to last read index=${index} unread=${unreadCount}`,
+      );
+      return;
+    }
+
+    unreadAutoScrollAppliedForGroupRef.current = groupId;
+    applyScrollToBottom(false, true);
+    logger.debug('ChatGroupScreen', 'initial scroll to bottom');
+  }, [
+    groupId,
+    displayMessages,
+    initialUnreadInfo,
+    scrollToMessageId,
+    loadMessagesAround,
+    applyScrollToBottom,
+    scrollToMessageInView,
+    queueScrollToMessage,
+  ]);
+
+  const applyInitialOpenScrollRef = useRef(applyInitialOpenScroll);
+  applyInitialOpenScrollRef.current = applyInitialOpenScroll;
+
+  const scrollToBottom = useCallback((animated: boolean = false) => {
+    if (scrollToBottomLockRef.current) return;
+    const count = displayMessages.length;
+    if (count === 0 || !listRef.current) return;
+
+    scrollToBottomLockRef.current = true;
 
     logger.info(
       'ChatGroupScreen',
-      `scrollToBottom pressed animated=${animated} dist=${distFromBottomRef.current.toFixed(0)}`,
+      `scrollToBottom pressed animated=${animated} dist=${distFromBottomRef.current.toFixed(0)} maxOffset=${maxScrollOffsetRef.current.toFixed(0)} count=${count} hasList=${!!listRef.current}`,
     );
-    isAtBottomRef.current = true;
-    distFromBottomRef.current = 0;
     ignoreFabUntilRef.current = Date.now() + 400;
     blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
-    userScrolledUpRef.current = false;
-    hideScrollFab();
-    scrollToBottomCore(animated);
+    verboseScrollLogUntilRef.current = Date.now() + 3000;
 
-    setTimeout(() => {
+    pinScrollToBottomRef.current = true;
+    programmaticScrollRef.current = true;
+    userScrolledUpRef.current = false;
+    pendingScrollAfterSendRef.current = false;
+
+    const releaseScrollLock = (reachedBottom: boolean) => {
+      logger.info(
+        'ChatGroupScreen',
+        `scrollToBottom done dist=${distFromBottomRef.current.toFixed(0)} offsetY=${scrollYRef.current.toFixed(0)} atBottom=${isAtBottomRef.current} maxOffset=${maxScrollOffsetRef.current.toFixed(0)} reached=${reachedBottom}`,
+      );
+      if (reachedBottom) {
+        hideScrollFab();
+        void confirmChatReadAtBottom();
+      }
       scrollToBottomLockRef.current = false;
+    };
+
+    const watchdog = setTimeout(() => {
+      releaseScrollLock(isAtBottomRef.current);
+    }, 2000);
+
+    scrollChatListToBottom(listScrollRefs, count, animated, undefined, {
+      maxAttempts: 24,
+      onDone: ({ reachedBottom }) => {
+        clearTimeout(watchdog);
+        releaseScrollLock(reachedBottom);
+      },
+    });
+
+    if (pinScrollClearTimerRef.current) {
+      clearTimeout(pinScrollClearTimerRef.current);
+    }
+    pinScrollClearTimerRef.current = setTimeout(() => {
+      pinScrollToBottomRef.current = false;
       programmaticScrollRef.current = false;
-    }, 800);
-  }, [scrollToBottomCore, hideScrollFab]);
+      pinScrollClearTimerRef.current = null;
+    }, 5000);
+  }, [confirmChatReadAtBottom, displayMessages.length, hideScrollFab, listScrollRefs]);
 
   useEffect(() => {
     const newLength = messages.length;
     const prevLength = prevMessagesLengthRef.current;
     prevMessagesLengthRef.current = newLength;
 
-    if (newLength > 0 && !initialScrollDoneRef.current) {
+    const sending = isSendingRef.current || pendingScrollAfterSendRef.current;
+    if (newLength > 0 && !initialScrollDoneRef.current && !sending) {
       return;
     }
 
     const isNewMessage = newLength > prevLength && newLength - prevLength <= 3;
-    if (!isNewMessage) return;
+    const shouldScroll = sending || isAtBottomRef.current;
 
-    const shouldScroll = isSendingRef.current || isAtBottomRef.current;
-    if (shouldScroll) {
-      isAtBottomRef.current = true;
-      scrollToBottomCore(false);
+    if (shouldScroll && (isNewMessage || sending)) {
+      if (autoScrollRafRef.current != null) {
+        cancelAnimationFrame(autoScrollRafRef.current);
+      }
+      autoScrollRafRef.current = requestAnimationFrame(() => {
+        autoScrollRafRef.current = null;
+        applyScrollToBottom(false);
+      });
     }
-  }, [messages.length, scrollToBottomCore]);
+  }, [messages.length, messages[0]?.id, applyScrollToBottom]);
 
-  // Track IDs loaded at initial load – only animate truly new messages
   useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
+    messagesRef.current = displayMessages;
+  }, [displayMessages]);
+
+  useEffect(() => {
+    const wasVisible = prevKeyboardVisibleRef.current;
+    prevKeyboardVisibleRef.current = keyboardVisible;
+    if (keyboardVisible && !wasVisible && (isAtBottomRef.current || pinScrollToBottomRef.current)) {
+      requestAnimationFrame(() => applyScrollToBottomRef.current?.(false));
+    }
+  }, [keyboardVisible]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -350,6 +654,22 @@ export default function ChatGroupScreen() {
         clearTimeout(scrollTimeoutRef.current);
         scrollTimeoutRef.current = null;
       }
+      if (pinScrollClearTimerRef.current) {
+        clearTimeout(pinScrollClearTimerRef.current);
+        pinScrollClearTimerRef.current = null;
+      }
+      if (contentSizePinTimerRef.current) {
+        clearTimeout(contentSizePinTimerRef.current);
+        contentSizePinTimerRef.current = null;
+      }
+      if (readConfirmTimerRef.current) {
+        clearTimeout(readConfirmTimerRef.current);
+        readConfirmTimerRef.current = null;
+      }
+      if (autoScrollRafRef.current != null) {
+        cancelAnimationFrame(autoScrollRafRef.current);
+        autoScrollRafRef.current = null;
+      }
     };
   }, []);
 
@@ -358,17 +678,18 @@ export default function ChatGroupScreen() {
 
     const isNewGroup = prevGroupIdRef.current !== groupId;
     prevGroupIdRef.current = groupId;
-    selectGroup(groupId);
+
+    void selectGroup(groupId);
 
     if (!isNewGroup) return;
 
-    hasInitiallyRenderedRef.current = false;
+      hasInitiallyRenderedRef.current = false;
     initialScrollDoneRef.current = false;
     endReachedReadyRef.current = false;
     userScrolledUpRef.current = false;
     endReachedMomentumRef.current = true;
     programmaticScrollRef.current = false;
-    prevMessagesLengthRef.current = 0;
+      prevMessagesLengthRef.current = 0;
     scrollYRef.current = 0;
     distFromBottomRef.current = 0;
     maxScrollOffsetRef.current = 0;
@@ -378,18 +699,16 @@ export default function ChatGroupScreen() {
     setShowScrollToBottomButton(false);
     blockUnreadAutoScrollUntilRef.current = 0;
     unreadAutoScrollAppliedForGroupRef.current = null;
+    initialScrollInFlightRef.current = false;
+    loadingLastReadForInitialRef.current = false;
+    pendingScrollAfterSendRef.current = false;
+    pinScrollToBottomRef.current = false;
 
     const t = setTimeout(() => {
       endReachedReadyRef.current = true;
     }, 800);
     return () => clearTimeout(t);
   }, [groupId, selectGroup]);
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      logger.debug('ChatGroupScreen', `messages ready (${messages.length})`);
-    }
-  }, [messages.length, groupId]);
 
   // Auto-navigate to groups list when removed from group by an admin.
   // ChatContext clears currentGroup when membership DELETE event fires.
@@ -414,50 +733,13 @@ export default function ChatGroupScreen() {
         isFirstFocusRef.current = false;
         return;
       }
-      selectGroup(groupId);
-    }, [groupId, user, selectGroup])
-  );
-
-  // גלילה ל-divider של unread — פעם אחת בכניסה לקבוצה בלבד (לא על כל עדכון last_read)
-  useEffect(() => {
-    if (!groupId || messages.length === 0) return;
-    if (!initialUnreadInfo?.lastReadMessageId || !initialUnreadInfo.count) return;
-    if (unreadAutoScrollAppliedForGroupRef.current === groupId) return;
-    if (Date.now() < blockUnreadAutoScrollUntilRef.current) return;
-    if (userScrolledUpRef.current || distFromBottomRef.current <= SCROLL_AT_BOTTOM_PX) {
-      unreadAutoScrollAppliedForGroupRef.current = groupId;
-      return;
-    }
-
-    const lastReadIndex = messages.findIndex(
-      (m) => m.id === initialUnreadInfo.lastReadMessageId,
-    );
-    unreadAutoScrollAppliedForGroupRef.current = groupId;
-    if (lastReadIndex <= 0) return;
-
-    const timeoutId = setTimeout(() => {
-      if (!isMountedRef.current) return;
-      if (Date.now() < blockUnreadAutoScrollUntilRef.current) return;
-      if (userScrolledUpRef.current) return;
-      programmaticScrollRef.current = true;
-      try {
-        listRef.current?.scrollToIndex({
-          index: lastReadIndex,
-          animated: false,
-          viewPosition: 0.5,
-        });
-      } catch {
-        listRef.current?.scrollToOffset({
-          offset: Math.min(distFromBottomRef.current, maxScrollOffsetRef.current),
-          animated: false,
-        });
+      if (messagesRef.current.length > 0) {
+        void refreshCurrentGroupDetails();
+      } else {
+        void selectGroup(groupId);
       }
-      setTimeout(() => {
-        programmaticScrollRef.current = false;
-      }, 400);
-    }, 400);
-    return () => clearTimeout(timeoutId);
-  }, [groupId, initialUnreadInfo?.lastReadMessageId, initialUnreadInfo?.count, messages.length]);
+    }, [groupId, user, selectGroup, refreshCurrentGroupDetails]),
+  );
 
   useEffect(() => {
     if (scrollToMessageId && messages.length > 0) {
@@ -483,6 +765,7 @@ export default function ChatGroupScreen() {
     }
 
     isSendingRef.current = true;
+    scrollToBottomOnSend();
 
     try {
       const result = await sendMessage({
@@ -508,15 +791,13 @@ export default function ChatGroupScreen() {
       }
 
       setReplyTo(undefined);
-      hideScrollFab();
-      // הגלילה עצמה תקרה דרך ה-useEffect של messages.length (שיורה כשה-optimistic message נכנס)
-      // – זה מונע מספר פקודות scrollToOffset במקביל שמתבטלות זו את זו ב-iOS.
+      scrollToBottomOnSend();
     } catch (e) {
       logger.error('ChatGroupScreen', 'Send message error', e);
     } finally {
       setTimeout(() => { isSendingRef.current = false; }, 500);
     }
-  }, [groupId, replyTo?.id, sendMessage, hideScrollFab]);
+  }, [groupId, replyTo?.id, sendMessage, scrollToBottomOnSend]);
 
   const handleTyping = useCallback((isTyping: boolean) => {
     if (groupId) {
@@ -784,13 +1065,11 @@ export default function ChatGroupScreen() {
     setReactionDetailsModalVisible(true);
   }, []);
 
-  /** חזרה — למסך הקודם בסטאק (לרוב רשימת הצ'אטים). */
   const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack();
       return;
     }
-    // fallback במצבי deeplink/stack חריג
     (navigation as any).navigate('ChatGroupsList');
   };
 
@@ -805,33 +1084,31 @@ export default function ChatGroupScreen() {
   const renderHeader = () => {
     if (!currentGroup) return null;
 
-    /**
-     * פס כלים LTR: חיפוש משמאל | במרכז טקסט ואז תמונה מימין לטקסט | חזרה מימין.
-     * אייקון החזרה מפוך (scaleX) כדי שיכוון נכון לעברית.
-     */
-    const searchButton = (
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="חיפוש בהודעות"
-        style={styles.searchButton}
-        onPress={() => setSearchVisible(true)}
+    const headerSideButton = (opts: {
+      icon: keyof typeof Ionicons.glyphMap;
+      label: string;
+      onPress: () => void;
+      flip?: boolean;
+    }) => (
+      <UICard
+        variant="glass"
+        glassIntensity="light"
+        padding="none"
+        onPress={opts.onPress}
+        accessibilityLabel={opts.label}
+        style={styles.headerSideGlass}
+        contentContainerStyle={styles.headerSideGlassInner}
       >
-        <Ionicons name="search" size={20} color={DesignTokens.colors.text.primary} />
-      </TouchableOpacity>
+        <View style={opts.flip ? styles.headerBackIconFlip : undefined}>
+          <Ionicons name={opts.icon} size={20} color={DesignTokens.colors.text.primary} />
+        </View>
+      </UICard>
     );
 
-    const backButton = (
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityLabel="חזרה"
-        style={styles.backButton}
-        onPress={handleBack}
-      >
-        <View style={styles.headerBackIconFlip}>
-          <Ionicons name="chevron-back" size={24} color={DesignTokens.colors.text.primary} />
-        </View>
-      </TouchableOpacity>
-    );
+    const typingLabel =
+      typingUsers.length > 0
+        ? `${typingUsers[0]?.user?.display_name || 'מישהו'} מקליד...`
+        : null;
 
     const center = (
       <TouchableOpacity style={styles.headerContent} onPress={handleGroupInfoPress} activeOpacity={0.7}>
@@ -839,37 +1116,45 @@ export default function ChatGroupScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {currentGroup.name}
           </Text>
+          {typingLabel ? (
           <Text style={styles.headerSubtitle} numberOfLines={1}>
-            {typingUsers.length > 0
-              ? `${typingUsers[0]?.user?.display_name || 'מישהו'} מקליד...`
-              : `${currentGroup.members_count} חברים`}
+              {typingLabel}
           </Text>
-        </View>
-        <View style={styles.avatarContainer}>
-          {currentGroup.avatar_url ? (
-            <Image source={{ uri: currentGroup.avatar_url }} style={styles.headerAvatar} resizeMode="cover" />
-          ) : (
-            <View style={styles.headerAvatarPlaceholder}>
-              <Ionicons name="people" size={18} color={DesignTokens.colors.text.secondary} />
-            </View>
-          )}
-          {isConnected && <View style={styles.onlineIndicator} />}
+          ) : null}
         </View>
       </TouchableOpacity>
     );
 
     return (
+      <View style={styles.headerOuterRow}>
+        <View style={styles.headerSideMarginStart}>
+          {headerSideButton({
+            icon: 'chevron-back',
+            label: 'חזרה',
+            onPress: handleBack,
+            flip: true,
+          })}
+        </View>
       <UICard
         variant="glass"
         glassIntensity="light"
         padding="none"
         style={styles.headerGlassOuter}
-        contentContainerStyle={styles.headerBarInner}
+          contentContainerStyle={[
+            styles.headerBarInner,
+            typingLabel ? styles.headerBarInnerTyping : null,
+          ]}
       >
-        {searchButton}
         {center}
-        {backButton}
       </UICard>
+        <View style={styles.headerSideMarginEnd}>
+          {headerSideButton({
+            icon: 'search',
+            label: 'חיפוש בהודעות',
+            onPress: () => setSearchVisible(true),
+          })}
+        </View>
+      </View>
     );
   };
 
@@ -886,23 +1171,15 @@ export default function ChatGroupScreen() {
     return format(date, 'd בMMMM yyyy', { locale: he });
   }, []);
 
-  const renderDateDivider = useCallback((date: Date) => {
-    const dateKey = date.toISOString();
-    return (
-      <View key={`date-divider-${dateKey}`} style={styles.dateDivider}>
-        <View style={styles.dateDividerLine} />
-        <View style={styles.dateDividerBadge}>
-          <Text style={styles.dateDividerText}>{formatDateDivider(date)}</Text>
-        </View>
-        <View style={styles.dateDividerLine} />
-      </View>
-    );
-  }, [formatDateDivider, styles]);
-
-  const shouldShowUnreadDivider = useCallback((messageId: string): boolean => {
+  const shouldShowUnreadDivider = useCallback((messageId: string, index: number): boolean => {
     if (!initialUnreadInfo || initialUnreadInfo.count === 0) return false;
     if (!initialUnreadInfo.lastReadMessageId) return false;
-    return messageId === initialUnreadInfo.lastReadMessageId;
+    const lastReadIdx = messagesRef.current.findIndex(
+      (m) => m.id === initialUnreadInfo.lastReadMessageId,
+    );
+    if (lastReadIdx <= 0) return false;
+    const firstUnreadIdx = lastReadIdx - 1;
+    return index === firstUnreadIdx && messagesRef.current[firstUnreadIdx]?.id === messageId;
   }, [initialUnreadInfo]);
 
   const renderMessage = useCallback(
@@ -911,63 +1188,51 @@ export default function ChatGroupScreen() {
       const list = messagesRef.current;
       const olderMessage = index < list.length - 1 ? list[index + 1] : null;
       const newerMessage = index > 0 ? list[index - 1] : null;
-      // Date divider: compare against older neighbor (chronological order)
-      // Avatar: show on BOTTOMMOST message of a sender run = when no newer neighbor from same sender
-      // WhatsApp shows avatar on the newest message of each consecutive run.
-      const timeDiff = olderMessage
-        ? Math.abs(new Date(item.created_at).getTime() - new Date(olderMessage.created_at).getTime())
+      const timeDiff = newerMessage
+        ? Math.abs(new Date(item.created_at).getTime() - new Date(newerMessage.created_at).getTime())
         : Infinity;
       const showAvatar = !newerMessage || newerMessage.sender_id !== item.sender_id || timeDiff > 5 * 60 * 1000;
       const showSenderName = !isMe && showAvatar;
       const showDivider = shouldShowDateDivider(item, olderMessage);
-      // Keep prevMessage alias for date divider (expects older message)
-      const prevMessage = olderMessage;
-      const showUnreadDivider = shouldShowUnreadDivider(item.id);
 
-      // No inner `key` props: FlatList already keys cells via `keyExtractor`,
-      // and child elements inside a renderItem return are NOT in an array —
-      // adding keys here costs reconciliation time without any benefit.
       return (
-        <View
-          onLayout={(e) => onMessageCellLayout(item.id, e.nativeEvent.layout.height)}
-        >
-          {showDivider && renderDateDivider(new Date(item.created_at))}
-          <ChatMessage
+        <ChatListRow
             message={item}
             isMe={isMe}
             showAvatar={showAvatar}
             showSenderName={showSenderName}
+          showDateDivider={showDivider}
+          dateDividerLabel={showDivider ? formatDateDivider(new Date(item.created_at)) : ''}
+          showUnreadDivider={shouldShowUnreadDivider(item.id, index)}
+          unreadCount={initialUnreadInfo?.count || 0}
+          isHighlighted={item.id === highlightedMessageId}
+          onLayout={(h) => onMessageCellLayout(item.id, h)}
             onLongPress={() => handleMessageLongPress(item)}
             onReply={() => handleReply(item)}
             onReactionPress={(emoji) => handleReactionPress(item, emoji)}
             onReactionDetailsPress={() => handleReactionDetailsPress(item)}
             onJumpToMessage={handleJumpToMessage}
-            onRetry={
-              item.send_error
-                ? () => {
-                    void HapticFeedback.impactLight();
-                    void retrySendMessage(item.id);
-                  }
-                : undefined
-            }
-            onStatusPress={
-              isMe && !item.id.startsWith('temp-')
-                ? () => handleMessageInfo(item)
-                : undefined
-            }
-            isHighlighted={item.id === highlightedMessageId}
-          />
-          {showUnreadDivider && (
-            <UnreadDivider unreadCount={initialUnreadInfo?.count || 0} />
-          )}
-        </View>
+          onRetry={
+            item.send_error
+              ? () => {
+                  void HapticFeedback.impactLight();
+                  void retrySendMessage(item.id);
+                }
+              : undefined
+          }
+          onStatusPress={
+            isMe && !item.id.startsWith('temp-')
+              ? () => handleMessageInfo(item)
+              : undefined
+          }
+          onUnreadDividerPress={() => scrollToBottom(false)}
+        />
       );
     },
     [
-      // C6: removed `messages` – accessed via messagesRef.current to prevent O(N) re-renders
       user?.id,
       highlightedMessageId,
-      initialUnreadInfo,
+      initialUnreadInfo?.count,
       handleMessageLongPress,
       handleReply,
       handleReactionPress,
@@ -975,15 +1240,17 @@ export default function ChatGroupScreen() {
       handleJumpToMessage,
       shouldShowDateDivider,
       shouldShowUnreadDivider,
-      renderDateDivider,
+      formatDateDivider,
       retrySendMessage,
       handleMessageInfo,
       onMessageCellLayout,
-    ]
+      scrollToBottom,
+    ],
   );
 
   const renderFooter = () => {
-    if (isLoadingMessages) {
+    // ב-inverted, Footer משנה את offset — רק בטעינה ראשונה (לא loadMore)
+    if (isLoadingMessages && messages.length === 0) {
       return (
         <View style={styles.loadingFooter}>
           <ActivityIndicator color={DesignTokens.colors.primary.main} />
@@ -1115,53 +1382,76 @@ export default function ChatGroupScreen() {
         }}
       />
 
-      {/* Messages + FAB overlay */}
+      <KeyboardAvoidingView behavior="padding" style={styles.messagesKeyboardAvoid}>
       <View style={styles.messagesSection}>
         <View style={styles.messagesAreaFlex}>
-          <FlatList
+        <FlatList
             ref={listRef}
-            data={messages}
-            inverted
+            data={displayMessages}
+          inverted
             maintainVisibleContentPosition={{
               minIndexForVisible: 1,
               autoscrollToTopThreshold: 80,
             }}
-            renderItem={renderMessage}
-            keyExtractor={(item) => item.id}
-            extraData={flatListExtraData}
-            ListFooterComponent={renderFooter}
-            ListEmptyComponent={renderEmpty}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          extraData={flatListExtraData}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={renderEmpty}
             scrollEnabled
             bounces
-            keyboardDismissMode="interactive"
-            keyboardShouldPersistTaps="handled"
-            initialNumToRender={20}
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
+          initialNumToRender={20}
             maxToRenderPerBatch={12}
-            windowSize={11}
-            updateCellsBatchingPeriod={50}
+          windowSize={11}
+          updateCellsBatchingPeriod={50}
             removeClippedSubviews={false}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.15}
+            onEndReached={() => {
+              if (canLoadOlderMessages()) {
+                handleLoadMore();
+              }
+            }}
+            onEndReachedThreshold={0.25}
             onMomentumScrollBegin={() => {
               endReachedMomentumRef.current = false;
             }}
             onMomentumScrollEnd={(e) => {
               endReachedMomentumRef.current = true;
               handleScrollEnd(e);
+              if (canLoadOlderMessages()) {
+                handleLoadMore();
+              }
             }}
-            contentContainerStyle={[
-              messages.length === 0 ? styles.emptyList : styles.messagesList,
-              { paddingTop: 8, paddingBottom: 12 },
-            ]}
-            showsVerticalScrollIndicator
-            nestedScrollEnabled={Platform.OS === 'android'}
-            style={styles.flatListTransparent}
-            scrollEventThrottle={16}
-            onScroll={handleScroll}
+          contentContainerStyle={[
+              displayMessages.length === 0 ? styles.emptyList : styles.messagesList,
+            { paddingTop: 8, paddingBottom: 12 },
+          ]}
+          showsVerticalScrollIndicator
+          nestedScrollEnabled={Platform.OS === 'android'}
+          style={styles.flatListTransparent}
+          scrollEventThrottle={16}
+          onScroll={handleScroll}
             onScrollEndDrag={handleScrollEnd}
             onLayout={(e) => {
               const h = e.nativeEvent.layout.height;
-              if (h > 0) layoutHeightRef.current = h;
+              if (h > 0) {
+                layoutHeightRef.current = h;
+                const wasReady = listLayoutReadyRef.current;
+                listLayoutReadyRef.current = true;
+                if (!wasReady && displayMessages.length > 0) {
+                  if (pinScrollToBottomRef.current) {
+                    scrollChatListToBottom(
+                      listScrollRefs,
+                      displayMessages.length,
+                      false,
+                      maxScrollOffsetRef.current,
+                    );
+                  } else if (!initialScrollDoneRef.current) {
+                    void applyInitialOpenScrollRef.current();
+                  }
+                }
+              }
             }}
             onContentSizeChange={(_w, contentH) => {
               handleContentSizeChange();
@@ -1169,20 +1459,37 @@ export default function ChatGroupScreen() {
               if (contentH > 0 && layoutHeightRef.current > 0) {
                 maxScrollOffsetRef.current = Math.max(0, contentH - layoutHeightRef.current);
               }
+              if (!listLayoutReadyRef.current) return;
+
+              const schedulePinScroll = () => {
+                if (contentSizePinTimerRef.current) {
+                  clearTimeout(contentSizePinTimerRef.current);
+                }
+                contentSizePinTimerRef.current = setTimeout(() => {
+                  contentSizePinTimerRef.current = null;
+                  if (
+                    (pinScrollToBottomRef.current || pendingScrollAfterSendRef.current) &&
+                    displayMessages.length > 0
+                  ) {
+                    scrollChatListToBottom(listScrollRefs, displayMessages.length, false);
+                  }
+                }, 64);
+              };
+
+              if (pinScrollToBottomRef.current || pendingScrollAfterSendRef.current) {
+                schedulePinScroll();
+                return;
+              }
               if (
                 !initialScrollDoneRef.current &&
-                messages.length > 0 &&
+                displayMessages.length > 0 &&
                 !userScrolledUpRef.current &&
-                Date.now() >= blockUnreadAutoScrollUntilRef.current &&
-                !(initialUnreadInfo?.count && initialUnreadInfo?.lastReadMessageId)
+                unreadAutoScrollAppliedForGroupRef.current !== groupId
               ) {
-                initialScrollDoneRef.current = true;
-                listRef.current?.scrollToOffset({ offset: 0, animated: false });
-                distFromBottomRef.current = 0;
-                logger.debug('ChatGroupScreen', 'initial scroll to bottom offset=0');
+                void applyInitialOpenScrollRef.current();
               }
             }}
-            onScrollToIndexFailed={handleScrollToIndexFailed}
+            onScrollToIndexFailed={handleScrollToIndexFailedWithPin}
           />
         </View>
 
@@ -1194,7 +1501,7 @@ export default function ChatGroupScreen() {
                 glassIntensity="medium"
                 onPress={() => {
                   void HapticFeedback.impactLight();
-                  scrollToBottom(true);
+                  scrollToBottom(false);
                 }}
                 accessibilityLabel="גלול להודעות האחרונות"
               >
@@ -1209,20 +1516,19 @@ export default function ChatGroupScreen() {
                   <Text style={styles.scrollBadgeText}>
                     {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
                   </Text>
-                </View>
+      </View>
               )}
             </View>
           </View>
         )}
       </View>
+      </KeyboardAvoidingView>
 
-      {/* Input area */}
-      <View style={styles.inputArea}>
-        {/* Typing indicator - מעל ה-input */}
+      <KeyboardStickyView offset={composerStickyOffset}>
+        <View style={[styles.inputArea, { paddingBottom: composerPaddingBottom }]}>
         {typingUsers.length > 0 && renderTypingIndicator()}
-        {/* בדיקה אם זו קבוצת הכרזות ואם המשתמש לא admin */}
         {isAnnouncementGroup && !currentGroup?.is_admin ? (
-          <View style={[styles.announcementOnlyView, { paddingBottom: 14 + insets.bottom }]}>
+            <View style={styles.announcementOnlyView}>
             <Ionicons name="megaphone-outline" size={18} color={DesignTokens.colors.text.tertiary} />
             <Text style={styles.announcementOnlyText}>
               רק מנהלי הקהילה יכולים לכתוב בצ'אט זה
@@ -1235,24 +1541,19 @@ export default function ChatGroupScreen() {
             onTyping={handleTyping}
             replyTo={replyTo}
             onCancelReply={handleCancelReply}
-            disabled={isSendingMessage}
           />
         )}
-      </View>
+        </View>
+      </KeyboardStickyView>
 
     </View>
   );
 
   return (
     <ChatScreenShell>
-      <KeyboardAvoidingView
-        behavior="translate-with-padding"
-        style={{ flex: 1, backgroundColor: 'transparent' }}
-      >
-        {chatMainColumn}
-      </KeyboardAvoidingView>
+      <View style={styles.screenRoot}>{chatMainColumn}</View>
 
-      {/* Modals - outside KeyboardAvoidingView */}
+      {/* Modals — מחוץ לעמודת המקלדת */}
       <ReactionPicker
         visible={reactionPickerVisible}
         onClose={() => {
@@ -1443,104 +1744,84 @@ const FadingDot = React.memo(({ delay, dotStyle }: { delay: number; dotStyle: Vi
 // ============================================
 
 const HP = 20;
+/** גובה אחיד לכפתורי צד ולכרטיס שם הקבוצה */
+const CHAT_GROUP_HEADER_HEIGHT = 44;
 
 const createChatGroupStyles = (tokens: any) => StyleSheet.create({
-  /* ── Header — UICard glass כמו כרטיסיות בפרטי קבוצה ── */
+  /* ── Header — כרטיסי זכוכית אחידים (כפתורים + קבוצה) ── */
+  headerOuterRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerSideMarginStart: {
+    marginRight: MAIN_SCREEN_HEADER_HP,
+  },
+  headerSideMarginEnd: {
+    marginLeft: MAIN_SCREEN_HEADER_HP,
+  },
   headerGlassOuter: {
-    marginHorizontal: 10,
-    borderRadius: 34,
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 28,
+  },
+  headerSideGlass: {
+    width: CHAT_GROUP_HEADER_HEIGHT,
+    height: CHAT_GROUP_HEADER_HEIGHT,
+    borderRadius: CHAT_GROUP_HEADER_HEIGHT / 2,
+    flexShrink: 0,
+  },
+  headerSideGlassInner: {
+    width: CHAT_GROUP_HEADER_HEIGHT,
+    height: CHAT_GROUP_HEADER_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBackIconFlip: {
+    transform: [{ scaleX: -1 }],
   },
   headerBarInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    /** מנע כפל RTL מול forceRTL — כפתורים ותמונה בסדר צפוי */
+    justifyContent: 'center',
     direction: 'ltr',
     paddingHorizontal: 12,
-    paddingTop: 9,
-    paddingBottom: 9,
-    minHeight: 58,
+    minHeight: CHAT_GROUP_HEADER_HEIGHT,
+    height: CHAT_GROUP_HEADER_HEIGHT,
   },
-  backButton: {
-    width: 38,
-    height: 38,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  headerBackIconFlip: {
-    transform: [{ scaleX: -1 }],
+  headerBarInnerTyping: {
+    height: undefined,
+    paddingVertical: 6,
   },
   headerContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 8,
     minWidth: 0,
-    direction: 'ltr',
-  },
-  avatarContainer: {
-    position: 'relative',
-  },
-  headerAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-  },
-  headerAvatarPlaceholder: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: tokens.colors.background.tertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-  },
-  onlineIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 11,
-    height: 11,
-    borderRadius: 5.5,
-    backgroundColor: tokens.colors.success.main,
-    borderWidth: 2,
-    borderColor: tokens.colors.background.primary,
   },
   headerTextWrap: {
     flex: 1,
     minWidth: 0,
-    alignItems: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: tokens.colors.text.primary,
     letterSpacing: -0.2,
-    textAlign: 'right',
+    textAlign: 'center',
     width: '100%',
+    lineHeight: 20,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: tokens.colors.text.tertiary,
-    marginTop: 1,
-    textAlign: 'right',
+    marginTop: 0,
+    textAlign: 'center',
     width: '100%',
+    lineHeight: 14,
   },
-  searchButton: {
-    width: 38,
-    height: 38,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-
   /* ── Connection banner ── */
   connectionBanner: {
     flexDirection: 'row',
@@ -1567,6 +1848,14 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
     overflow: 'hidden',
+  },
+  screenRoot: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  messagesKeyboardAvoid: {
+    flex: 1,
+    minHeight: 0,
   },
   messagesContainer: {
     flex: 1,

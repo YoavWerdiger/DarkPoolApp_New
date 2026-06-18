@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 export type SectionItem = {
   id: string;
@@ -43,7 +44,10 @@ export function MarketsSectionGrid({
     return (
       <TouchableOpacity
         key={item.id}
-        onPress={() => onSelect(item.id)}
+        onPress={() => {
+          if (!active) void HapticFeedback.selection();
+          onSelect(item.id);
+        }}
         activeOpacity={0.82}
         style={[styles.tileWrap, singleInRow && styles.tileWrapOrphan]}
         accessibilityRole="button"

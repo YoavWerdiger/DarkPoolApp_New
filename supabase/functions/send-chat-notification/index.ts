@@ -143,11 +143,43 @@ serve(async (req) => {
 
     console.log(`📱 Eligible users for notification: ${eligibleUserIds.length}`);
 
+    // 3b. כיבוי גלובלי / התראות הודעות — user_notification_settings
+    const { data: notifPrefs, error: prefsError } = await supabase
+      .from('user_notification_settings')
+      .select('user_id, notifications_enabled, message_notifications')
+      .in('user_id', eligibleUserIds);
+
+    if (prefsError) {
+      console.warn('⚠️ Could not load user_notification_settings:', prefsError.message);
+    }
+
+    const prefsByUser = new Map(
+      (notifPrefs ?? []).map((row) => [row.user_id, row]),
+    );
+
+    const filteredUserIds = eligibleUserIds.filter((userId) => {
+      const prefs = prefsByUser.get(userId);
+      if (!prefs) return true;
+      if (prefs.notifications_enabled === false) return false;
+      if (prefs.message_notifications === false) return false;
+      return true;
+    });
+
+    if (filteredUserIds.length === 0) {
+      console.log('ℹ️ All eligible users disabled message notifications globally');
+      return new Response(
+        JSON.stringify({ success: true, message: 'Users opted out of message notifications', sent: 0 }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    console.log(`📱 Users after global prefs filter: ${filteredUserIds.length}`);
+
     // 4. קבלת device tokens של המשתמשים הזכאים
     const { data: deviceTokens, error: tokensError } = await supabase
       .from('device_tokens')
       .select('expo_push_token, user_id')
-      .in('user_id', eligibleUserIds)
+      .in('user_id', filteredUserIds)
       .eq('is_active', true);
 
     if (tokensError) {
@@ -168,9 +200,9 @@ serve(async (req) => {
 
     console.log(`📱 Found ${deviceTokens.length} active device tokens`);
 
-    // 5. הכנת תוכן ההתראה כמו וואטסאפ
-    const notificationTitle = groupData.name;
-    
+    // 5. הכנת תוכן ההתראה:
+    //    תמונה = קבוצה | כותרת = שם הצ'אט | כותרת משנה = שם השולח: | גוף = תוכן ההודעה
+
     // תוכן ההודעה לפי סוג
     let messagePreview: string;
     switch (message_type) {
@@ -196,19 +228,20 @@ serve(async (req) => {
           : content || '';
     }
 
-    const notificationBody = `${senderName}: ${messagePreview}`;
+    const notificationSubtitle = `${senderName}:`;
 
-    // תמונת ההתראה: תמונת המשתמש ששלח (מוצגת בצד בהתראה). Fallback לתמונת הקבוצה
-    const senderAvatarUrl = await ensureNotificationImageUrl(supabase, senderData.profile_picture);
+    // תמונת ההתראה: תמונת הצ'אט/קבוצה. גיבוי לתמונת השולח אם אין לקבוצה
     const groupAvatarUrl = await ensureNotificationImageUrl(supabase, groupData.avatar_url);
-    const notificationImageUrl = senderAvatarUrl || groupAvatarUrl;
+    const senderAvatarUrl = await ensureNotificationImageUrl(supabase, senderData.profile_picture);
+    const notificationImageUrl = groupAvatarUrl || senderAvatarUrl;
 
-    // 6. יצירת הודעות push לכל הטוקנים - בסגנון וואטסאפ (תמונת שולח בצד)
+    // 6. יצירת הודעות push לכל הטוקנים
     const messages = deviceTokens.map((token) => ({
       to: token.expo_push_token,
       sound: 'default',
       title: groupData.name,
-      body: `${senderName}: ${messagePreview}`,
+      subtitle: notificationSubtitle,
+      body: messagePreview,
       data: {
         type: 'chat_message',
         group_id: group_id,
@@ -228,7 +261,17 @@ serve(async (req) => {
       ...(notificationImageUrl ? { richContent: { image: notificationImageUrl } } : {}),
       _displayInForeground: true,
       badge: 1,
-      subtitle: senderName,
+      android: {
+        channelId: 'chat-messages',
+        priority: 'high',
+        collapseKey: `chat-${group_id}`,
+        ...(notificationImageUrl ? { imageUrl: notificationImageUrl } : {}),
+      },
+      ios: {
+        sound: 'default',
+        threadId: `chat-${group_id}`,
+        ...(notificationImageUrl ? { attachments: [{ url: notificationImageUrl }] } : {}),
+      },
     }));
 
     // 7. שליחת התראות דרך Expo Push API

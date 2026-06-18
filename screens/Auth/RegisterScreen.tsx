@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabase';
 import { AuthService } from '../../services/authService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
 import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export default function RegisterScreen({ navigation }: any) {
   const [fullName, setFullName] = useState('');
@@ -357,7 +358,10 @@ export default function RegisterScreen({ navigation }: any) {
                     autoCapitalize="none"
                   />
                   <Pressable 
-                    onPress={() => setShowPassword(!showPassword)}
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setShowPassword(!showPassword);
+                    }}
                     style={{ padding: 6 }}
                   >
                     <Ionicons 
@@ -411,7 +415,10 @@ export default function RegisterScreen({ navigation }: any) {
                     autoCapitalize="none"
                   />
                   <Pressable 
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setShowConfirmPassword(!showConfirmPassword);
+                    }}
                     style={{ padding: 6 }}
                   >
                     <Ionicons 
@@ -439,7 +446,10 @@ export default function RegisterScreen({ navigation }: any) {
                 }}
               >
                 <Pressable
-                  onPress={handleSignUp}
+                  onPress={() => {
+                    void HapticFeedback.medium();
+                    handleSignUp();
+                  }}
                   disabled={isLoading}
                   style={{
                     paddingVertical: 16,
@@ -472,7 +482,12 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 14, fontWeight: '400' }}>
                   יש לך כבר חשבון?
                 </Text>
-                <Pressable onPress={() => navigation.navigate('Login')}>
+                <Pressable
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    navigation.navigate('Login');
+                  }}
+                >
                   <Text style={{ 
                     color: DesignTokens.colors.primary.main, 
                     fontSize: 14, 

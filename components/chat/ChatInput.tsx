@@ -5,8 +5,8 @@
 // ============================================
 
 import React, { useState, useRef, useMemo, useEffect, memo } from 'react';
-import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Alert, Animated, Easing } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Alert, Animated, Easing, Platform } from 'react-native';
+import { chatInputBottomPadding, CHAT_COMPOSER_NATIVE_ID } from './chatInputLayout';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import * as ImagePicker from 'expo-image-picker';
@@ -55,7 +55,6 @@ function ChatInputImpl({
   disabled = false,
 }: ChatInputProps) {
   const DesignTokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
   const { isDarkMode } = useTheme();
   const { addOptimisticMediaMessage, updateOptimisticMessage } = useChatActions();
   const { user } = useAuth();
@@ -65,9 +64,15 @@ function ChatInputImpl({
     ? DesignTokens.colors.text.inverse
     : DesignTokens.colors.text.primary;
 
+  const inputBottomPadding = chatInputBottomPadding(
+    0,
+    false,
+    Math.max(DesignTokens.spacing.sm, 6),
+  );
+
   const styles = useMemo(() => {
-    return createStyles(DesignTokens, insets.bottom);
-  }, [DesignTokens, insets.bottom]);
+    return createStyles(DesignTokens, inputBottomPadding);
+  }, [DesignTokens, inputBottomPadding]);
 
   // Per-group draft autosave: text typed but not sent survives screen exits,
   // app background, and process death. The hook restores any saved draft
@@ -139,19 +144,8 @@ function ChatInputImpl({
 
   const MAX_RECORDING_DURATION = 60; // מקסימום 60 שניות
 
-  const canSend = text.trim().length > 0 || isRecording;
-
-  // אנימציית מעבר בין מיקרופון לשליחה (0 = מיק, 1 = שלח)
-  const iconAnim = useRef(new Animated.Value(canSend ? 1 : 0)).current;
-  useEffect(() => {
-    const showSend = canSend && !isRecording && !isPaused;
-    Animated.spring(iconAnim, {
-      toValue: showSend ? 1 : 0,
-      tension: 60,
-      friction: 9,
-      useNativeDriver: true,
-    }).start();
-  }, [canSend, isRecording, isPaused]);
+  // מעבר מיידי מיק↔שליחה לפי תוכן (בלי spring — נתקע לפעמים אחרי re-render / typing)
+  const hasText = text.trim().length > 0;
 
   // ============================================
   // Cleanup typing status when unmounting
@@ -181,6 +175,7 @@ function ChatInputImpl({
   // ============================================
 
   const handleTextChange = (newText: string) => {
+    textRef.current = newText;
     setText(newText);
 
     // Handle mentions (@)
@@ -221,9 +216,6 @@ function ChatInputImpl({
     clearAllMentions();
     stopTyping();
 
-    // Keep reference to input for refocus
-    const inputRef = textInputRef.current;
-
     try {
       // Send message with mentions
       onSendMessage(textToSend, undefined, undefined, {
@@ -237,8 +229,13 @@ function ChatInputImpl({
         setText(textToSend);
       });
 
-      // Immediately refocus to keep keyboard open
-      inputRef?.focus();
+      // WhatsApp-style: keep composer focused so the keyboard stays open
+      requestAnimationFrame(() => {
+        textInputRef.current?.focus();
+      });
+      if (Platform.OS === 'android') {
+        setTimeout(() => textInputRef.current?.focus(), 64);
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       Alert.alert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
@@ -1732,6 +1729,7 @@ function ChatInputImpl({
             <>
               <TextInput
                 ref={textInputRef}
+                nativeID={CHAT_COMPOSER_NATIVE_ID}
                 style={styles.textInput}
                 placeholder={isUploading ? 'מעלה...' : 'הקלד הודעה...'}
                 placeholderTextColor={DesignTokens.colors.text.secondary}
@@ -1742,6 +1740,8 @@ function ChatInputImpl({
                 maxLength={10000}
                 editable={!disabled && !isUploading}
                 blurOnSubmit={false}
+                showSoftInputOnFocus
+                importantForAutofill="no"
               />
               {/* L2: character counter – only shown when approaching the limit */}
               {text.length > 8000 && (
@@ -1759,57 +1759,8 @@ function ChatInputImpl({
         {/* Send / Mic button — OUTSIDE the pill, WhatsApp-style floating circle */}
         {!isLocked && !isRecording && !isPaused && (
           <View style={styles.sendBtnOuter}>
-            {/* Mic button (fades out when text present) */}
-            <Animated.View
-              pointerEvents={text.trim().length === 0 ? 'auto' : 'none'}
-              style={{
-                position: 'absolute',
-                width: 46,
-                height: 46,
-                justifyContent: 'center',
-                alignItems: 'center',
-                opacity: iconAnim.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
-                transform: [
-                  { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.7], extrapolate: 'clamp' }) },
-                ],
-              }}
-            >
+            {hasText ? (
               <Pressable
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  handleMicTapToRecord();
-                }}
-                disabled={disabled || isUploading}
-                accessibilityRole="button"
-                accessibilityLabel="הקלטת הודעה קולית"
-                style={({ pressed }) => ({
-                  width: 46,
-                  height: 46,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  opacity: pressed && !disabled && !isUploading ? 0.82 : 1,
-                })}
-              >
-                <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
-              </Pressable>
-            </Animated.View>
-
-            {/* Send button (fades in when text present) */}
-            <Animated.View
-              pointerEvents={text.trim().length > 0 ? 'auto' : 'none'}
-              style={{
-                position: 'absolute',
-                width: 46,
-                height: 46,
-                justifyContent: 'center',
-                alignItems: 'center',
-                opacity: iconAnim.interpolate({ inputRange: [0.5, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
-                transform: [
-                  { scale: iconAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1], extrapolate: 'clamp' }) },
-                ],
-              }}
-            >
-              <TouchableOpacity
                 onPress={() => {
                   void HapticFeedback.impactLight();
                   Animated.sequence([
@@ -1818,15 +1769,32 @@ function ChatInputImpl({
                   ]).start();
                   handleSend();
                 }}
-                style={{ width: 46, height: 46, justifyContent: 'center', alignItems: 'center' }}
-                disabled={disabled || isUploading || text.trim().length === 0}
-                activeOpacity={1}
+                style={styles.sendBtnTouchable}
+                disabled={disabled || isUploading}
+                accessibilityRole="button"
+                accessibilityLabel="שליחת הודעה"
               >
                 <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
                   <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
                 </Animated.View>
-              </TouchableOpacity>
-            </Animated.View>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  handleMicTapToRecord();
+                }}
+                disabled={disabled || isUploading}
+                accessibilityRole="button"
+                accessibilityLabel="הקלטת הודעה קולית"
+                style={({ pressed }) => [
+                  styles.sendBtnTouchable,
+                  pressed && !disabled && !isUploading ? { opacity: 0.82 } : null,
+                ]}
+              >
+                <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
+              </Pressable>
+            )}
           </View>
         )}
       </View>
@@ -1900,14 +1868,13 @@ export default ChatInput;
 // Styles - Modern Design from Reference
 // ============================================
 
-const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create({
+const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'transparent',
     paddingTop: 2,
-    /** insets.bottom = אזור מקשי המערכת / home indicator — חייב להתווסף במלואו, לא רק כ־boolean */
-    paddingBottom: safeAreaBottom + Math.max(tokens.spacing.sm, 6),
+    paddingBottom,
     gap: 0,
   },
 
@@ -2103,6 +2070,12 @@ const createStyles = (tokens: any, safeAreaBottom: number) => StyleSheet.create(
     top: -1.5,
   },
 
+  sendBtnTouchable: {
+    width: 46,
+    height: 46,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   /** Standalone circular send/mic button outside the input pill — WhatsApp style */
   sendBtnOuter: {
     width: 46,

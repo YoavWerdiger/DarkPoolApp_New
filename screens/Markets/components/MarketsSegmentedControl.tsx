@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 export type SegmentedOption<T extends string = string> = {
   id: T;
@@ -43,7 +44,10 @@ export function MarketsSegmentedControl<T extends string>({
         return (
           <TouchableOpacity
             key={opt.id}
-            onPress={() => onChange(opt.id)}
+            onPress={() => {
+              if (!isActive) void HapticFeedback.selection();
+              onChange(opt.id);
+            }}
             activeOpacity={0.7}
             accessibilityRole={segmentAccessibilityRole}
             accessibilityLabel={`${accessibilityGroupLabel}: ${opt.label}`}
@@ -69,7 +73,9 @@ export function MarketsSegmentedControl<T extends string>({
                   right: 0,
                   bottom: 0,
                   borderRadius: tokens.borderRadius['3xl'],
-                  backgroundColor: tokens.colors.background.cardSolid,
+                  backgroundColor: `${tokens.colors.primary.main}18`,
+                  borderWidth: 1,
+                  borderColor: `${tokens.colors.primary.main}44`,
                 }}
               />
             )}

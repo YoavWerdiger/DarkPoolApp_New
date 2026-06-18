@@ -48,24 +48,45 @@ serve(async (req) => {
     console.log('📊 Fear and Greed Index: Raw API response received');
 
     // Parse the response
-    let value: number;
+    let value: number | null = null;
     let valueClassification: string;
     let timestamp: number;
 
     if (rawData.fgi?.now) {
-      value = rawData.fgi.now.value ?? 50;
-      valueClassification = rawData.fgi.now.valueText || 
-                          rawData.fgi.now.valueClassification || 
+      // חשוב: אנחנו **לא** מחליפים value חסר ב-50 כברירת מחדל —
+      // עדיף לזרוק שגיאה ולשמור על הערך הקודם בטבלה מאשר לדרוס נתון
+      // אמיתי בערך "ניטרלי" סינתטי שילבש מסכת אמת ב-UI.
+      const rawValue = rawData.fgi.now.value;
+      if (typeof rawValue === 'number') {
+        value = rawValue;
+      } else if (typeof rawValue === 'string' && rawValue.trim() !== '') {
+        const parsed = Number(rawValue);
+        if (Number.isFinite(parsed)) value = parsed;
+      }
+      valueClassification = rawData.fgi.now.valueText ||
+                          rawData.fgi.now.valueClassification ||
                           'Neutral';
-      timestamp = rawData.fgi.now.timestamp || 
-                 rawData.fgi.now.lastUpdated?.epochUnixSeconds || 
+      timestamp = rawData.fgi.now.timestamp ||
+                 rawData.fgi.now.lastUpdated?.epochUnixSeconds ||
                  Math.floor(Date.now() / 1000);
     } else if (rawData.value !== undefined) {
-      value = rawData.value;
+      const rawValue = rawData.value;
+      if (typeof rawValue === 'number') {
+        value = rawValue;
+      } else if (typeof rawValue === 'string' && rawValue.trim() !== '') {
+        const parsed = Number(rawValue);
+        if (Number.isFinite(parsed)) value = parsed;
+      }
       valueClassification = rawData.valueClassification || rawData.valueText || 'Neutral';
       timestamp = rawData.timestamp || Math.floor(Date.now() / 1000);
     } else {
       throw new Error('Unexpected API response format');
+    }
+
+    if (value == null || !Number.isFinite(value)) {
+      throw new Error(
+        `Fear and Greed API returned no numeric value (raw=${JSON.stringify(rawData).slice(0, 200)})`
+      );
     }
 
     // Ensure value is within 0-100 range

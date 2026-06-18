@@ -130,10 +130,10 @@ export default function PinnedMessagesHeader({ groupId, refreshKey = 0, onMessag
     return () => { isMountedRef.current = false; };
   }, []);
 
-  const loadPinnedMessages = useCallback(async () => {
+  const loadPinnedMessages = useCallback(async (force = false) => {
     if (!groupId) return;
     try {
-      const { data, error } = await getChatPinnedMessages(groupId);
+      const { data, error } = await getChatPinnedMessages(groupId, { force });
       if (!isMountedRef.current) return;
       if (error) {
         logger.error('PinnedMessagesHeader', 'Error loading pinned messages', error);
@@ -146,7 +146,7 @@ export default function PinnedMessagesHeader({ groupId, refreshKey = 0, onMessag
   }, [groupId]);
 
   useEffect(() => {
-    void loadPinnedMessages();
+    void loadPinnedMessages(refreshKey > 0);
   }, [groupId, refreshKey, loadPinnedMessages]);
 
   const handleUnpinMessage = async (messageId: string) => {

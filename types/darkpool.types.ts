@@ -155,6 +155,9 @@ export interface InsiderBuyRow {
   id: string;
   external_id: string | null;
   ticker: string;
+  company_name?: string | null;
+  insider_cik?: string | null;
+  insider_logo_url?: string | null;
   insider_name: string | null;
   insider_role: string | null;
   transaction_type: 'P' | 'S' | 'A' | 'M' | 'G' | 'F' | 'O' | 'D';
@@ -164,6 +167,10 @@ export interface InsiderBuyRow {
   filed_at: string;
   transaction_date: string;
   source: string;
+  sector?: string | null;
+  is_sp500?: boolean | null;
+  marketcap?: number | null;
+  next_earnings_date?: string | null;
   created_at: string;
 }
 
@@ -209,6 +216,31 @@ export interface DarkPoolFeedItem {
  * הוחלף ל-false כדי לפתוח את הפיצ'ר לכל משתמשי האפליקציה בזמן הרצה הראשוני.
  */
 export const DARK_POOL_PREMIUM_GATING_ENABLED = false;
+
+/**
+ * מצב production מסחרי — נתונים מ-SEC/DB בלבד (ללא feed חי מ-UW/Quiver באפליקציה).
+ */
+export const DARK_POOL_SEC_PRODUCTION = true;
+
+/**
+ * שלב 1: רק פיד רכישות בכירים מ-`dark_pool_insider_buys` (Form 4 / EDGAR).
+ * כבוי = גם הדפסות Dark Pool, סיגנלים, וכו'.
+ */
+export const DARK_POOL_FORM4_ONLY = DARK_POOL_SEC_PRODUCTION;
+
+/** Dark Pool tab / whale feed — כבוי במצב SEC עד רישיון redistribution */
+export const DARK_POOL_DARK_POOL_ENABLED = !DARK_POOL_SEC_PRODUCTION;
+
+/** קריאות live ל-UW/Quiver מה-client (explore, profile, ticker insights) */
+export const DARK_POOL_VENDOR_LIVE_APIS = !DARK_POOL_SEC_PRODUCTION;
+
+/** העשרת פיד במחיר שוטף + «מאז העסקה» — כבוי = כרטיסים קומpact */
+export const DARK_POOL_FEED_ENRICH_QUOTES = false;
+
+/**
+ * פיד LATEST TRADES: true = רק UW; false = DB (Form 4 / EDGAR).
+ */
+export const DARK_POOL_INSIDER_UW_ONLY = false;
 
 export const DARK_POOL_FREE_DELAY_MINUTES = 15;
 export const DARK_POOL_FREE_TOP_N = 3;

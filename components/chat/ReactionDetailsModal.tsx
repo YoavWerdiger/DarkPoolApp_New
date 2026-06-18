@@ -1,4 +1,3 @@
-import { useDesignTokens } from "../ui/DesignTokens";
 import { logger } from '../../utils/logger';
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
@@ -6,13 +5,19 @@ import {
   Text,
   Pressable,
   ScrollView,
-  ActivityIndicator,
   StyleSheet,
   Image,
 } from 'react-native';
 import { ChatMessage, ChatReactionGroup } from '../../types/chat.types';
 import { chatMessageService } from '../../services/chat';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import {
+  ChatBottomSheet,
+  ChatSheetContent,
+  ChatSheetEmptyState,
+  ChatSheetLoading,
+  ChatSheetTitle,
+  useChatSheetStyles,
+} from './ChatBottomSheet';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -22,17 +27,52 @@ interface ReactionDetailsModalProps {
   message: ChatMessage | null;
 }
 
+function UserReactionAvatar({
+  uri,
+  name,
+  avatarStyle,
+  imageStyle,
+  textStyle,
+}: {
+  uri?: string | null;
+  name: string;
+  avatarStyle: object;
+  imageStyle: object;
+  textStyle: object;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+
+  if (uri && !failed) {
+    return (
+      <Image
+        source={{ uri }}
+        style={imageStyle}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <View style={avatarStyle}>
+      <Text style={textStyle}>{name.charAt(0).toUpperCase()}</Text>
+    </View>
+  );
+}
+
 const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
   visible,
   onClose,
-  message
+  message,
 }) => {
-  const DesignTokens = useDesignTokens();
+  const sheet = useChatSheetStyles();
   const [reactionDetails, setReactionDetails] = useState<ChatReactionGroup[]>([]);
   const [selectedTab, setSelectedTab] = useState<'all' | string>('all');
   const [loading, setLoading] = useState(false);
 
-  // טעינת פירוט הריאקציות
   useEffect(() => {
     if (visible && message?.id) {
       loadReactionDetails();
@@ -44,7 +84,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
 
   const loadReactionDetails = async () => {
     if (!message?.id) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await chatMessageService.getMessageReactionDetails(message.id);
@@ -60,241 +100,130 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
     }
   };
 
-  // קבלת כל סוגי הריאקציות
   const reactionTypes = useMemo(() => reactionDetails.map(r => r.emoji), [reactionDetails]);
-  const allReactions = useMemo(() => reactionDetails.flatMap(r => 
-    r.users.map(user => ({
-      emoji: r.emoji,
-      userId: user.id,
-      userName: user.name,
-      profilePicture: user.profile_picture,
-      reactedAt: (user as any).reacted_at,
-    }))
-  ), [reactionDetails]);
+  const allReactions = useMemo(
+    () =>
+      reactionDetails.flatMap(r =>
+        r.users.map(user => ({
+          emoji: r.emoji,
+          userId: user.id,
+          userName: user.name,
+          profilePicture: user.profile_picture,
+          reactedAt: (user as { reacted_at?: string }).reacted_at,
+        })),
+      ),
+    [reactionDetails],
+  );
 
-  // סינון לפי טאב נבחר
-  const filteredReactions = useMemo(() => selectedTab === 'all' 
-    ? allReactions 
-    : allReactions.filter(r => r.emoji === selectedTab)
-  , [allReactions, selectedTab]);
+  const filteredReactions = useMemo(
+    () =>
+      selectedTab === 'all'
+        ? allReactions
+        : allReactions.filter(r => r.emoji === selectedTab),
+    [allReactions, selectedTab],
+  );
 
-  const styles = useMemo(() => StyleSheet.create({
-    container: {
-      paddingHorizontal: DesignTokens.spacing.md,
-    },
-    header: {
-      alignItems: 'center',
-      paddingTop: DesignTokens.spacing.sm,
-      paddingBottom: DesignTokens.spacing.md,
-    },
-    title: {
-      color: DesignTokens.colors.text.primary,
-      fontSize: 17,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    tabsContainer: {
-      flexDirection: 'row', // RTL
-      backgroundColor: DesignTokens.colors.background.secondary,
-      borderRadius: 30,
-      padding: 4,
-      alignSelf: 'center',
-      marginBottom: DesignTokens.spacing.md,
-    },
-    tab: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 16,
-      height: 36,
-      borderRadius: 18,
-      gap: 6,
-      overflow: 'hidden',
-    },
-    tabActive: {
-      backgroundColor: DesignTokens.colors.primary.main + '14',
-    },
-    tabInactive: {
-      backgroundColor: 'transparent',
-    },
-    tabEmoji: {
-      fontSize: 15,
-    },
-    tabText: {
-      fontSize: 14,
-    },
-    tabTextActive: {
-      fontWeight: '700',
-      color: DesignTokens.colors.primary.main,
-    },
-    tabTextInactive: {
-      fontWeight: '600',
-      color: DesignTokens.colors.text.secondary,
-    },
-    usersContainer: {
-      minHeight: 200,
-    },
-    userRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 14,
-      paddingHorizontal: DesignTokens.spacing.sm,
-    },
-    userAvatar: {
-      width: 40,
-      height: 40,
-      backgroundColor: DesignTokens.colors.primary.main + '15',
-      borderRadius: 20,
-      marginLeft: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    userAvatarImage: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      marginLeft: 12,
-    },
-    userAvatarText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: DesignTokens.colors.primary.main,
-    },
-    userInfo: {
-      flex: 1,
-      alignItems: 'flex-end',
-    },
-    userName: {
-      color: DesignTokens.colors.text.primary,
-      fontSize: 15,
-      fontWeight: '500',
-      textAlign: 'right',
-    },
-    userTime: {
-      color: DesignTokens.colors.text.tertiary,
-      fontSize: 12,
-      textAlign: 'right',
-      marginTop: 2,
-    },
-    userEmoji: {
-      fontSize: 24,
-    },
-    emptyState: {
-      alignItems: 'center',
-      paddingVertical: 32,
-    },
-    emptyText: {
-      color: DesignTokens.colors.text.secondary,
-      fontSize: 15,
-      textAlign: 'center',
-    },
-    loadingContainer: {
-      alignItems: 'center',
-      paddingVertical: 32,
-    },
-    loadingText: {
-      color: DesignTokens.colors.text.secondary,
-      marginTop: 12,
-      fontSize: 15,
-    },
-  }), [DesignTokens]);
+  const localStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        usersContainer: {
+          minHeight: 200,
+        },
+        userEmoji: {
+          fontSize: 24,
+          flexShrink: 0,
+        },
+      }),
+    [],
+  );
 
   return (
-    <BottomSheet
-      isOpen={visible}
-      onClose={onClose}
-      snapPoints={[0.5]}
-      showHandle={true}
-      enablePanDownToClose={true}
-      useModal={true}
-      backdropOpacity={0.15}
-    >
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>ריאקציות</Text>
-        </View>
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.5]}>
+      <ChatSheetContent>
+        <ChatSheetTitle title="ריאקציות" />
 
-        {/* Tabs - בסגנון האפליקציה */}
-        <View style={styles.tabsContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={sheet.tabsScroll}
+          contentContainerStyle={sheet.tabsContainer}
+        >
           <Pressable
             onPress={() => setSelectedTab('all')}
             style={[
-              styles.tab,
-              selectedTab === 'all' ? styles.tabActive : styles.tabInactive,
+              sheet.tab,
+              selectedTab === 'all' ? sheet.tabActive : sheet.tabInactive,
             ]}
           >
-            <Text style={[
-              styles.tabText,
-              selectedTab === 'all' ? styles.tabTextActive : styles.tabTextInactive
-            ]}>
+            <Text
+              style={[
+                sheet.tabText,
+                selectedTab === 'all' ? sheet.tabTextActive : sheet.tabTextInactive,
+              ]}
+            >
               הכל {allReactions.length}
             </Text>
           </Pressable>
-          
-          {reactionTypes.map(emoji => (
+
+          {reactionTypes.map((emoji) => (
             <Pressable
               key={emoji}
               onPress={() => setSelectedTab(emoji)}
               style={[
-                styles.tab,
-                selectedTab === emoji ? styles.tabActive : styles.tabInactive,
+                sheet.tab,
+                selectedTab === emoji ? sheet.tabActive : sheet.tabInactive,
               ]}
             >
-              <Text style={styles.tabEmoji}>{emoji}</Text>
-              <Text style={[
-                styles.tabText,
-                selectedTab === emoji ? styles.tabTextActive : styles.tabTextInactive
-              ]}>
-                {reactionDetails.find(r => r.emoji === emoji)?.count}
+              <Text style={sheet.tabEmoji}>{emoji}</Text>
+              <Text
+                style={[
+                  sheet.tabText,
+                  selectedTab === emoji ? sheet.tabTextActive : sheet.tabTextInactive,
+                ]}
+              >
+                {reactionDetails.find((r) => r.emoji === emoji)?.count}
               </Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
 
-        {/* Content - גובה קבוע כדי למנוע קפיצות */}
-        <View style={styles.usersContainer}>
+        <View style={localStyles.usersContainer}>
           {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-              <Text style={styles.loadingText}>טוען...</Text>
-            </View>
+            <ChatSheetLoading />
           ) : filteredReactions.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>אין ריאקציות</Text>
-            </View>
+            <ChatSheetEmptyState title="אין ריאקציות" />
           ) : (
             <ScrollView showsVerticalScrollIndicator={false}>
               {filteredReactions.map((item, index) => (
-                <View key={`${item.userId}-${item.emoji}-${index}`} style={styles.userRow}>
-                  {item.profilePicture ? (
-                    <Image 
-                      source={{ uri: item.profilePicture }} 
-                      style={styles.userAvatarImage}
-                    />
-                  ) : (
-                    <View style={styles.userAvatar}>
-                      <Text style={styles.userAvatarText}>
-                        {item.userName.charAt(0).toUpperCase()}
+                <View key={`${item.userId}-${item.emoji}-${index}`} style={sheet.userRow}>
+                  <UserReactionAvatar
+                    uri={item.profilePicture}
+                    name={item.userName}
+                    avatarStyle={sheet.userAvatar}
+                    imageStyle={sheet.userAvatarImage}
+                    textStyle={sheet.userAvatarText}
+                  />
+                  <View style={sheet.userInfo}>
+                    <Text style={sheet.userName}>{item.userName}</Text>
+                    {item.reactedAt ? (
+                      <Text style={sheet.userMeta}>
+                        {formatDistanceToNow(new Date(item.reactedAt), {
+                          addSuffix: true,
+                          locale: he,
+                        })}
                       </Text>
-                    </View>
-                  )}
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{item.userName}</Text>
-                    {item.reactedAt && (
-                      <Text style={styles.userTime}>
-                        {formatDistanceToNow(new Date(item.reactedAt), { addSuffix: true, locale: he })}
-                      </Text>
-                    )}
+                    ) : null}
                   </View>
-                  <Text style={styles.userEmoji}>{item.emoji}</Text>
+                  <Text style={localStyles.userEmoji} allowFontScaling={false}>
+                    {item.emoji}
+                  </Text>
                 </View>
               ))}
             </ScrollView>
           )}
         </View>
-      </View>
-    </BottomSheet>
+      </ChatSheetContent>
+    </ChatBottomSheet>
   );
 });
 

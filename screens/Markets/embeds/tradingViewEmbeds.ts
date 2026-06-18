@@ -16,10 +16,25 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export const tabHtmlTemplate = (bodyContent: string, clipBottom: number = 0) => `
+/**
+ * תבנית HTML אחידה לווידג'טים של TradingView.
+ *
+ * הזרקה ידנית של תג <script> חיוניות ב-iOS WKWebView: סקריפטי ה-embed
+ * החיצוניים של TradingView קוראים את ה-config מתוך textContent של ה-script
+ * שהם מצורפים אליו. כשמשתמשים ב-<script src async> עם תוכן inline ישירות
+ * ב-HTML הראשוני, document.currentScript עלול להיות null ב-WebKit וה-config
+ * לא נטען — וכתוצאה מכך הווידג'ט לא מאותחל. הזרקה דרך appendChild מבטיחה
+ * שגם ב-iOS, גם ב-Android וגם בדפדפנים רגילים ה-script ייטען עם ה-config.
+ */
+export const tvWidgetHtml = (
+  widgetSrc: string,
+  config: Record<string, unknown>,
+  clipBottom: number = 0
+) => `
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     html, body {
@@ -29,6 +44,7 @@ export const tabHtmlTemplate = (bodyContent: string, clipBottom: number = 0) => 
       width: 100%;
       background-color: transparent;
       overflow: hidden;
+      -webkit-overflow-scrolling: touch;
     }
     .tradingview-widget-container {
       height: 100%;
@@ -58,10 +74,66 @@ export const tabHtmlTemplate = (bodyContent: string, clipBottom: number = 0) => 
   </style>
 </head>
 <body>
-  ${bodyContent}
+  <div class="tradingview-widget-container">
+    <div class="tradingview-widget-container__widget"></div>
+    <script type="application/json" id="tv-config">${JSON.stringify(config)}</script>
+    <script>
+      (function () {
+        try {
+          var cfg = document.getElementById('tv-config').textContent;
+          var s = document.createElement('script');
+          s.type = 'text/javascript';
+          s.src = ${JSON.stringify(widgetSrc)};
+          s.async = true;
+          s.text = cfg;
+          var container = document.querySelector('.tradingview-widget-container');
+          container.appendChild(s);
+        } catch (err) {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage('tv-init-error: ' + (err && err.message ? err.message : err));
+          }
+        }
+      })();
+    </script>
 </body>
 </html>
 `;
+
+/**
+ * Ticker Tape — רצועת סמלים נעה דקה ומינימלית בראש דף השווקים.
+ * גובה מומלץ: ~44px במצב compact.
+ */
+export function getTradingViewTickerTapeHTML(tokens: MarketsTokens) {
+  const config = {
+    symbols: [
+      { proName: 'FOREXCOM:SPXUSD', title: 'S&P 500' },
+      { proName: 'FOREXCOM:NSXUSD', title: 'Nasdaq 100' },
+      { proName: 'FOREXCOM:DJI', title: 'Dow Jones' },
+      { proName: 'CAPITALCOM:RTY', title: 'Russell 2000' },
+      { proName: 'CBOE:VIX', title: 'VIX' },
+      { proName: 'BINANCE:BTCUSDT', title: 'Bitcoin' },
+      { proName: 'BINANCE:ETHUSDT', title: 'Ethereum' },
+      { proName: 'OANDA:XAUUSD', title: 'Gold' },
+      { proName: 'TVC:SILVER', title: 'Silver' },
+      { proName: 'MATBAROFEX:WTI1!', title: 'WTI Oil' },
+      { proName: 'OANDA:EURUSD', title: 'EUR/USD' },
+      { proName: 'OANDA:USDJPY', title: 'USD/JPY' },
+      { proName: 'TVC:US10Y', title: 'US 10Y' },
+      { proName: 'TVC:DXY', title: 'DXY' },
+    ],
+    showSymbolLogo: true,
+    isTransparent: true,
+    displayMode: 'compact',
+    colorTheme: 'dark',
+    locale: 'he_IL',
+  };
+
+  return tvWidgetHtml(
+    'https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js',
+    config,
+    32
+  );
+}
 
 export function getTradingViewMarketOverviewHTML(tokens: MarketsTokens) {
   const growing = tokens.colors.primary.main;
@@ -147,21 +219,46 @@ export function getTradingViewMarketOverviewHTML(tokens: MarketsTokens) {
     showChart: true,
   };
 
-  const body = `
-    <div class="tradingview-widget-container">
-      <div class="tradingview-widget-container__widget"></div>
-      <div class="tradingview-widget-copyright">
-        <a href="https://il.tradingview.com/markets/" rel="noopener nofollow" target="_blank">
-          <span class="blue-text">Track all markets on TradingView</span>
-        </a>
-      </div>
-      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
-      ${JSON.stringify(config, null, 2)}
-      </script>
-    </div>
-  `;
+  return tvWidgetHtml(
+    'https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js',
+    config,
+    0
+  );
+}
 
-  return tabHtmlTemplate(body);
+/**
+ * Hot Lists — מציג Top Gainers / Top Losers / Most Active באותו הווידג'ט,
+ * בטאבים פנימיים. מתאים לכרטיס "מי זז בשוק" מתחת למדדים והחוזים.
+ */
+export function getTradingViewHotListsHTML(tokens: MarketsTokens) {
+  const config = {
+    colorTheme: 'dark',
+    dateRange: '1D',
+    exchange: 'US',
+    showChart: true,
+    locale: 'he_IL',
+    largeChartUrl: '',
+    isTransparent: true,
+    showSymbolLogo: true,
+    showFloatingTooltip: false,
+    width: '100%',
+    height: '100%',
+    plotLineColorGrowing: hexToRgba(tokens.colors.primary.main, 1),
+    plotLineColorFalling: hexToRgba(tokens.colors.danger?.main || tokens.colors.text.danger, 1),
+    gridLineColor: 'rgba(240, 243, 250, 0)',
+    scaleFontColor: tokens.colors.text.secondary,
+    belowLineFillColorGrowing: hexToRgba(tokens.colors.primary.main, 0.12),
+    belowLineFillColorFalling: hexToRgba(tokens.colors.danger?.main || tokens.colors.text.danger, 0.12),
+    belowLineFillColorGrowingBottom: hexToRgba(tokens.colors.primary.main, 0),
+    belowLineFillColorFallingBottom: hexToRgba(tokens.colors.danger?.main || tokens.colors.text.danger, 0),
+    symbolActiveColor: hexToRgba(tokens.colors.primary.main, 0.12),
+  };
+
+  return tvWidgetHtml(
+    'https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js',
+    config,
+    0
+  );
 }
 
 export function getTradingViewHeatmapHTML(type: HeatmapKind) {
@@ -225,21 +322,62 @@ export function getTradingViewHeatmapHTML(type: HeatmapKind) {
     };
   }
 
-  const body = `
-  <div class="tradingview-widget-container">
-    <div class="tradingview-widget-container__widget"></div>
-    <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/" rel="noopener nofollow" target="_blank"><span class="blue-text">Track all markets on TradingView</span></a></div>
-    <script type="text/javascript" src="${widgetSrc}" async>
-    ${JSON.stringify(config, null, 2)}
-    </script>
-  </div>
-  `;
+  return tvWidgetHtml(widgetSrc, config, 48);
+}
 
-  return tabHtmlTemplate(body, 48);
+/**
+ * Advanced Chart for a specific symbol — used in Trade Detail.
+ * interval is auto-calculated from trade duration.
+ */
+export function getTradingViewTradeChartHTML(symbol: string, entryDate: string, exitDate: string) {
+  const entryMs = new Date(entryDate).getTime();
+  const exitMs = new Date(exitDate).getTime();
+  const durationMs = Math.max(exitMs - entryMs, 0);
+  const durationDays = durationMs / 86400000;
+
+  let interval: string;
+  if (durationDays < 0.5) {
+    interval = '5';
+  } else if (durationDays < 2) {
+    interval = '15';
+  } else if (durationDays < 14) {
+    interval = '60';
+  } else if (durationDays < 90) {
+    interval = 'D';
+  } else {
+    interval = 'W';
+  }
+
+  const config = {
+    autosize: true,
+    symbol,
+    interval,
+    timezone: 'America/New_York',
+    theme: 'dark',
+    style: '1',
+    locale: 'en',
+    backgroundColor: 'rgba(10, 14, 10, 0)',
+    gridColor: 'rgba(255,255,255,0.05)',
+    enable_publishing: false,
+    hide_top_toolbar: true,
+    hide_legend: false,
+    save_image: false,
+    calendar: false,
+    hide_volume: false,
+    support_host: 'https://www.tradingview.com',
+    width: '100%',
+    height: '100%',
+  };
+
+  return tvWidgetHtml(
+    'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js',
+    config,
+    0
+  );
 }
 
 export function getTradingViewScreenerHTML(type: ScreenerKind) {
-  const widgetUrl = 'https://s3.tradingview.com/external-embedding/embed-widget-screener.js';
+  const widgetSrc = 'https://s3.tradingview.com/external-embedding/embed-widget-screener.js';
 
   let config: Record<string, unknown> = {};
 
@@ -285,15 +423,5 @@ export function getTradingViewScreenerHTML(type: ScreenerKind) {
       break;
   }
 
-  const body = `
-  <div class="tradingview-widget-container">
-    <div class="tradingview-widget-container__widget"></div>
-    <div class="tradingview-widget-copyright"><a href="https://il.tradingview.com/markets/" rel="noopener nofollow" target="_blank"><span class="blue-text">Track all markets on TradingView</span></a></div>
-    <script type="text/javascript" src="${widgetUrl}" async>
-    ${JSON.stringify(config, null, 2)}
-    </script>
-  </div>
-  `;
-
-  return tabHtmlTemplate(body, 48);
+  return tvWidgetHtml(widgetSrc, config, 48);
 }

@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Modal,
-  Image,
   FlatList,
   Pressable,
   Text,
@@ -11,6 +10,7 @@ import {
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, ChevronLeft, ChevronRight, Play } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
@@ -64,7 +64,14 @@ function GalleryImageItem({ url, isActive }: { url: string; isActive: boolean })
   return (
     <GestureDetector gesture={pinchGesture}>
       <Animated.View style={[{ width: screenWidth, height: screenHeight }, animatedStyle]}>
-        <Image source={{ uri: url }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+        <ExpoImage
+          source={{ uri: url }}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          recyclingKey={url}
+          transition={200}
+        />
       </Animated.View>
     </GestureDetector>
   );
@@ -255,10 +262,11 @@ export default function MediaGalleryViewer({
                   index === currentIndex && styles.thumbnailActive,
                 ]}
               >
-                <Image
+                <ExpoImage
                   source={{ uri: item.url }}
                   style={styles.thumbnailImage}
-                  resizeMode="cover"
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
                 />
                 {item.type === 'video' && (
                   <View style={styles.thumbnailVideoIcon}>

@@ -13,7 +13,8 @@ export function MarketsIndicesCard() {
   const marketOverviewHtml = useMemo(() => getTradingViewMarketOverviewHTML(tokens), [tokens]);
 
   const chartHeight = useMemo(() => {
-    return Math.round(Math.min(Math.max(winH * 0.42, 260), winH * 0.52));
+    // Markets screen — give the indices/futures chart more vertical room.
+    return Math.round(Math.min(Math.max(winH * 0.55, 360), winH * 0.65));
   }, [winH]);
 
   const styles = useMemo(

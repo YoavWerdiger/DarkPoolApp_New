@@ -3,6 +3,7 @@ import { View, Pressable, ViewStyle, StyleSheet, Platform, StyleProp } from 'rea
 import { BlurView } from 'expo-blur';
 import { useDesignTokens, DesignTokens as StaticDesignTokens } from './DesignTokens';
 import { useTheme } from '../../context/ThemeContext';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export interface UICardProps {
   children: React.ReactNode;
@@ -14,6 +15,10 @@ export interface UICardProps {
   contentContainerStyle?: StyleProp<ViewStyle>;
   pressable?: boolean;
   accessibilityLabel?: string;
+  /** השבתת מסגרת הזכוכית הפנימית כשיש מסגרת accent חיצונית */
+  showGlassBorder?: boolean;
+  /** השבתת רטט בלחיצה (ברירת מחדל: רטט קל פעיל אם יש onPress) */
+  haptic?: boolean;
 }
 
 const UICard: React.FC<UICardProps> = ({
@@ -26,6 +31,8 @@ const UICard: React.FC<UICardProps> = ({
   contentContainerStyle,
   pressable = false,
   accessibilityLabel,
+  showGlassBorder = true,
+  haptic = true,
 }) => {
   const tokens = useDesignTokens();
   const { colors, spacing, borderRadius, shadows, glassmorphism, layout } = tokens;
@@ -149,17 +156,19 @@ const UICard: React.FC<UICardProps> = ({
               },
             ]}
           />
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              {
-                borderWidth: StyleSheet.hairlineWidth * 2,
-                borderColor: glassBorder,
-                borderTopColor: glassTopHighlight,
-                borderRadius: clipCornerRadius,
-              },
-            ]}
-          />
+          {showGlassBorder ? (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  borderWidth: StyleSheet.hairlineWidth * 2,
+                  borderColor: glassBorder,
+                  borderTopColor: glassTopHighlight,
+                  borderRadius: clipCornerRadius,
+                },
+              ]}
+            />
+          ) : null}
         </>
       ) : null}
       <View style={[{ position: 'relative', zIndex: 1 }, StyleSheet.flatten(contentContainerStyle)]}>
@@ -169,13 +178,19 @@ const UICard: React.FC<UICardProps> = ({
   );
 
   if (pressable || onPress) {
+    const handlePress = onPress
+      ? () => {
+          if (haptic) void HapticFeedback.impactLight();
+          onPress();
+        }
+      : undefined;
     return (
       <Pressable
         style={({ pressed }) => [
           baseStyle,
           pressed && { opacity: 0.92, transform: [{ scale: 0.985 }] },
         ]}
-        onPress={onPress}
+        onPress={handlePress}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
       >

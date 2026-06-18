@@ -299,7 +299,10 @@ export default function TradeDetailScreen() {
           }}
         >
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              navigation.goBack();
+            }}
             hitSlop={10}
             style={{
               width: 36,
@@ -367,7 +370,10 @@ export default function TradeDetailScreen() {
             ) : null}
           </View>
           <TouchableOpacity
-            onPress={handleDelete}
+            onPress={() => {
+              void HapticFeedback.warning();
+              handleDelete();
+            }}
             hitSlop={10}
             style={{
               width: 36,

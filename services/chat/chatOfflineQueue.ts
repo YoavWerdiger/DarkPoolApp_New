@@ -169,6 +169,28 @@ export function makeLocalId(): string {
   return `temp-${Date.now()}-${Math.random().toString(36).slice(2, 11)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+const PERSISTED_MESSAGE_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** Optimistic placeholder ids must never be sent to Postgres uuid columns. */
+export function isOptimisticChatMessageId(id: string | null | undefined): boolean {
+  return typeof id === 'string' && id.startsWith('temp-');
+}
+
+export function isPersistedChatMessageId(id: string | null | undefined): boolean {
+  return typeof id === 'string' && !isOptimisticChatMessageId(id) && PERSISTED_MESSAGE_ID_RE.test(id);
+}
+
+/** messages[0] = newest; skips in-flight optimistic rows. */
+export function getNewestPersistedMessageId(
+  messages: ReadonlyArray<{ id: string }>,
+): string | undefined {
+  for (const m of messages) {
+    if (isPersistedChatMessageId(m.id)) return m.id;
+  }
+  return undefined;
+}
+
 /**
  * RFC4122-ish v4 UUID using Math.random. We use this for `client_message_id`
  * because react-native-uuid is already pulled in transitively for other

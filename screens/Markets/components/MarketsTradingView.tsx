@@ -3,8 +3,6 @@ import { View, ActivityIndicator, Platform, StyleProp, ViewStyle } from 'react-n
 import { WebView } from 'react-native-webview';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 
-const WEB_SOURCE_BASE = 'https://tradingview.com';
-
 type Props = {
   html: string;
   instanceKey: string;
@@ -46,16 +44,22 @@ export function MarketsTradingView({ html, instanceKey, height, flexFill, contai
     <View style={outerStyle}>
       <WebView
         key={instanceKey}
-        source={{ html, baseUrl: WEB_SOURCE_BASE }}
+        // הערה: לא משתמשים ב-baseUrl. ב-iOS WKWebView, קביעת baseUrl לדומיין רחוק
+        // (כגון tradingview.com) משנה את ה-origin של המסמך וגורמת ל-iframes של
+        // TradingView להיכשל בטעינה בגלל הבדלי origin/redirect ל-www.tradingview.com.
+        source={{ html }}
         style={{ flex: 1, backgroundColor: 'transparent' }}
         androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
         javaScriptEnabled
         domStorageEnabled
+        thirdPartyCookiesEnabled
+        sharedCookiesEnabled
         startInLoadingState
         originWhitelist={['*']}
         mixedContentMode="always"
         allowsInlineMediaPlayback
         mediaPlaybackRequiresUserAction={false}
+        setSupportMultipleWindows={false}
         scalesPageToFit={Platform.OS === 'android'}
         scrollEnabled
         nestedScrollEnabled
@@ -64,6 +68,24 @@ export function MarketsTradingView({ html, instanceKey, height, flexFill, contai
         showsVerticalScrollIndicator
         showsHorizontalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
+        onError={(e) => {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.warn(`[TV:${instanceKey}] WebView error`, e.nativeEvent);
+          }
+        }}
+        onHttpError={(e) => {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.warn(`[TV:${instanceKey}] WebView http error`, e.nativeEvent);
+          }
+        }}
+        onMessage={(e) => {
+          if (__DEV__) {
+            // eslint-disable-next-line no-console
+            console.log(`[TV:${instanceKey}] msg`, e.nativeEvent.data);
+          }
+        }}
         renderLoading={() => (
           <View style={loadingOverlay}>
             <ActivityIndicator size="large" color={tokens.colors.primary.main} />

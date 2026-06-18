@@ -654,53 +654,56 @@ function KpiBlock({
   title,
   value,
   valueColor,
-  titleColor,
+  sub,
 }: {
   title: string;
   value: string;
   valueColor: string;
-  titleColor: string;
+  sub?: string;
 }) {
   return (
-    <View style={journalTabStyles.kpiBlock}>
-      <Text style={[journalTabStyles.kpiTitle, { color: titleColor }]}>{title}</Text>
+    <UICard
+      variant="glass"
+      glassIntensity="light"
+      padding="sm"
+      style={{ flex: 1, minWidth: 120, borderRadius: 14 }}
+      contentContainerStyle={{ alignItems: 'center', gap: 4 }}
+    >
+      <Text style={[journalTabStyles.kpiTitle, { color: 'rgba(255,255,255,0.55)' }]}>{title}</Text>
       <Text
         style={[journalTabStyles.kpiValue, { color: valueColor }]}
         numberOfLines={1}
         adjustsFontSizeToFit
-        minimumFontScale={0.75}
+        minimumFontScale={0.7}
       >
         {value}
       </Text>
-    </View>
+      {sub ? (
+        <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>
+          {sub}
+        </Text>
+      ) : null}
+    </UICard>
   );
 }
 
-function JournalInsightSection({
+function InsightCard({
   title,
-  titleColor,
-  surfaceBg,
-  surfaceBorder,
   children,
 }: {
   title: string;
-  titleColor: string;
-  surfaceBg: string;
-  surfaceBorder: string;
   children: React.ReactNode;
 }) {
   return (
-    <View style={journalTabStyles.journalInsightSection}>
-      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: titleColor }]}>{title}</Text>
-      <View
-        style={[
-          journalTabStyles.journalInsightSurface,
-          { backgroundColor: surfaceBg, borderColor: surfaceBorder },
-        ]}
-      >
-        {children}
-      </View>
-    </View>
+    <UICard
+      variant="glass"
+      glassIntensity="light"
+      padding="md"
+      style={{ borderRadius: 16, marginBottom: 14, width: '100%', maxWidth: 440, alignSelf: 'center' }}
+    >
+      <Text style={journalTabStyles.sectionTitle}>{title}</Text>
+      {children}
+    </UICard>
   );
 }
 
@@ -842,21 +845,50 @@ export default function JournalDataTab() {
   const kpis = useMemo(() => {
     if (trades.length === 0) return null;
     const totalPnl = trades.reduce((s, t) => s + t.pnl, 0);
-    const wins = trades.filter((t) => t.pnl > 0).length;
-    const winRate = Math.round((wins / trades.length) * 100);
-    const avg = totalPnl / trades.length;
-    const pnlColor =
-      totalPnl >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
-    const avgColor = avg >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
+    const wins = trades.filter((t) => t.pnl > 0);
+    const losses = trades.filter((t) => t.pnl < 0);
+    const winRate = Math.round((wins.length / trades.length) * 100);
+    const avgPnl = totalPnl / trades.length;
+    const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+    const profitFactor = avgLoss > 0 ? avgWin / avgLoss : null;
+    const best = Math.max(...trades.map((t) => t.pnl));
+    const worst = Math.min(...trades.map((t) => t.pnl));
+    const pnlColor = totalPnl >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
+    const avgColor = avgPnl >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
     return {
+      totalPnl, totalPnlColor: pnlColor,
       totalPnlStr: `$${formatUsd(totalPnl)}`,
-      totalPnlColor: pnlColor,
       countStr: String(trades.length),
       winRateStr: `${winRate}%`,
-      avgStr: `$${formatUsd(avg)}`,
-      avgColor,
+      avgStr: `$${formatUsd(avgPnl)}`, avgColor,
+      avgWinStr: `$${formatUsd(avgWin)}`,
+      avgLossStr: `$${formatUsd(avgLoss)}`,
+      profitFactor,
+      bestStr: `$${formatUsd(best)}`,
+      worstStr: `$${formatUsd(worst)}`,
     };
   }, [trades, DesignTokens.colors.primary.main, DesignTokens.colors.text.danger]);
+
+  const strategyStats = useMemo(() => {
+    const map = new Map<string, { pnl: number; wins: number; total: number }>();
+    for (const t of trades) {
+      const name = t.strategy_name?.trim() || '—';
+      const cur = map.get(name) ?? { pnl: 0, wins: 0, total: 0 };
+      cur.pnl += t.pnl;
+      cur.wins += t.pnl >= 0 ? 1 : 0;
+      cur.total += 1;
+      map.set(name, cur);
+    }
+    return Array.from(map.entries())
+      .map(([name, { pnl, wins, total }]) => ({
+        name,
+        pnl,
+        winRate: Math.round((wins / total) * 100),
+        total,
+      }))
+      .sort((a, b) => b.pnl - a.pnl);
+  }, [trades]);
 
   const journalInsights = useMemo(() => buildJournalInsights(trades), [trades]);
 
@@ -920,9 +952,10 @@ export default function JournalDataTab() {
         </UICard>
       ) : (
         <>
+          {/* P&L Line Chart */}
           <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
             <Text style={[journalTabStyles.sectionTitle, { color: DesignTokens.colors.text.primary }]}>
-              גרף P&L
+              P&L צבורי
             </Text>
             <View style={journalTabStyles.chartCenter}>
               {cumSeries.length > 0 ? (
@@ -939,6 +972,33 @@ export default function JournalDataTab() {
             </View>
           </UICard>
 
+          {/* KPIs — row 1 */}
+          {kpis ? (
+            <>
+              <View style={{ flexDirection: 'row-reverse', gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 10 }}>
+                <KpiBlock title="P&L כולל" value={kpis.totalPnlStr} valueColor={kpis.totalPnlColor} />
+                <KpiBlock title="Win Rate" value={kpis.winRateStr} valueColor={kpis.winRateStr >= '50%' ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger} />
+                <KpiBlock title="טריידים" value={kpis.countStr} valueColor={DesignTokens.colors.text.primary} />
+              </View>
+              <View style={{ flexDirection: 'row-reverse', gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 14 }}>
+                <KpiBlock title="Avg Win" value={kpis.avgWinStr} valueColor={DesignTokens.colors.primary.main} />
+                <KpiBlock title="Avg Loss" value={kpis.avgLossStr} valueColor={DesignTokens.colors.text.danger} />
+                {kpis.profitFactor != null ? (
+                  <KpiBlock
+                    title="Profit Factor"
+                    value={kpis.profitFactor.toFixed(2)}
+                    valueColor={kpis.profitFactor >= 1.5 ? DesignTokens.colors.primary.main : kpis.profitFactor >= 1 ? DesignTokens.colors.text.secondary : DesignTokens.colors.text.danger}
+                  />
+                ) : null}
+              </View>
+              <View style={{ flexDirection: 'row-reverse', gap: 10, width: '100%', maxWidth: 440, alignSelf: 'center', marginBottom: 14 }}>
+                <KpiBlock title="הטרייד הטוב ביותר" value={kpis.bestStr} valueColor={DesignTokens.colors.primary.main} />
+                <KpiBlock title="הטרייד הגרוע ביותר" value={kpis.worstStr} valueColor={DesignTokens.colors.text.danger} />
+              </View>
+            </>
+          ) : null}
+
+          {/* Bar Chart */}
           <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
             <Text style={[journalTabStyles.sectionTitle, { color: DesignTokens.colors.text.primary }]}>
               חלוקת P&L לפי טווחי זמן
@@ -972,89 +1032,71 @@ export default function JournalDataTab() {
             </View>
           </UICard>
 
-          {kpis ? (
+          {/* Strategy Performance */}
+          {strategyStats.length > 1 || (strategyStats.length === 1 && strategyStats[0].name !== '—') ? (
             <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
               <Text style={[journalTabStyles.sectionTitle, { color: DesignTokens.colors.text.primary }]}>
-                ביצועים
+                ביצועים לפי אסטרטגיה
               </Text>
-              <View style={[journalTabStyles.kpiGrid, { gap: kpiGap }]}>
-                <View style={[journalTabStyles.kpiRow, { gap: kpiGap }]}>
-                  <KpiBlock
-                    title="סה״כ רווח / הפסד"
-                    value={kpis.totalPnlStr}
-                    valueColor={kpis.totalPnlColor}
-                    titleColor={DesignTokens.colors.text.secondary}
-                  />
-                  <KpiBlock
-                    title="סה״כ טריידים"
-                    value={kpis.countStr}
-                    valueColor={DesignTokens.colors.text.primary}
-                    titleColor={DesignTokens.colors.text.secondary}
-                  />
-                </View>
-                <View style={[journalTabStyles.kpiRow, { gap: kpiGap }]}>
-                  <KpiBlock
-                    title="אחוזי הצלחה"
-                    value={kpis.winRateStr}
-                    valueColor={DesignTokens.colors.text.primary}
-                    titleColor={DesignTokens.colors.text.secondary}
-                  />
-                  <KpiBlock
-                    title="רווח ממוצע"
-                    value={kpis.avgStr}
-                    valueColor={kpis.avgColor}
-                    titleColor={DesignTokens.colors.text.secondary}
-                  />
-                </View>
-              </View>
+              {strategyStats.map((s) => {
+                const pnlColor = s.pnl >= 0 ? DesignTokens.colors.primary.main : DesignTokens.colors.text.danger;
+                return (
+                  <View
+                    key={s.name}
+                    style={{
+                      flexDirection: 'row-reverse',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 10,
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: DesignTokens.colors.border.subtle,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
+                        {s.name}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, textAlign: 'right', marginTop: 2 }}>
+                        {s.total} טריידים · Win {s.winRate}%
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: pnlColor, writingDirection: 'ltr' }}>
+                      {s.pnl >= 0 ? '+' : '-'}${Math.abs(s.pnl).toFixed(0)}
+                    </Text>
+                  </View>
+                );
+              })}
             </UICard>
           ) : null}
 
+          {/* Journal Insights */}
           {journalInsights ? (
             <UICard variant="glass" glassIntensity="light" padding="md" style={sectionCardStyle}>
               <Text style={[journalTabStyles.sectionTitle, { color: DesignTokens.colors.text.primary }]}>
-                יומן המסחר — תובנות
+                תובנות יומן
               </Text>
               {journalInsights.withDetails === 0 ? (
                 <Text style={[journalTabStyles.journalHint, { color: DesignTokens.colors.text.tertiary }]}>
-                  עדיין אין שדות יומן משוריינים. בעת שמירת טרייד, ניתן למלא מצב רוח, מסגרת זמן, עמידה בתוכנית
-                  וטעויות — הנתונים יתאגדו כאן.
+                  עדיין אין שדות יומן. בעת שמירת טרייד, ניתן למלא מצב רוח, מסגרת זמן, עמידה בתוכנית וטעויות.
                 </Text>
               ) : (
                 <View style={journalTabStyles.journalInsightStack}>
-                  <JournalInsightSection
-                    title="כיסוי יומן"
-                    titleColor={DesignTokens.colors.text.secondary}
-                    surfaceBg={DesignTokens.colors.glass.card.bg}
-                    surfaceBorder={DesignTokens.colors.glass.card.border}
-                  >
-                    <View style={journalTabStyles.journalCoverageWrap}>
-                      <Text
-                        style={[
-                          journalTabStyles.journalCoveragePct,
-                          { color: DesignTokens.colors.primary.main },
-                        ]}
-                      >
-                        {journalInsights.coveragePct}%
-                      </Text>
-                      <Text
-                        style={[
-                          journalTabStyles.journalCoverageSub,
-                          { color: DesignTokens.colors.text.tertiary },
-                        ]}
-                      >
-                        {`${journalInsights.withDetails} מתוך ${journalInsights.total} טריידים עם פרטי יומן`}
-                      </Text>
-                    </View>
-                  </JournalInsightSection>
+                  {/* Coverage */}
+                  <View style={{ alignItems: 'center', paddingVertical: 6, gap: 4 }}>
+                    <Text style={[journalTabStyles.journalCoveragePct, { color: DesignTokens.colors.primary.main }]}>
+                      {journalInsights.coveragePct}%
+                    </Text>
+                    <Text style={[journalTabStyles.journalCoverageSub, { color: DesignTokens.colors.text.tertiary }]}>
+                      {`${journalInsights.withDetails} מתוך ${journalInsights.total} טריידים עם פרטי יומן`}
+                    </Text>
+                  </View>
 
+                  {/* Mood Before */}
                   {journalInsights.moodBefore.length > 0 ? (
-                    <JournalInsightSection
-                      title="מצב רוח לפני הטרייד"
-                      titleColor={DesignTokens.colors.text.secondary}
-                      surfaceBg={DesignTokens.colors.glass.card.bg}
-                      surfaceBorder={DesignTokens.colors.glass.card.border}
-                    >
+                    <View>
+                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
+                        מצב רוח לפני הטרייד
+                      </Text>
                       <View style={journalTabStyles.journalMoodGrid}>
                         {journalInsights.moodBefore.map((m) => (
                           <JournalMoodInsightCard
@@ -1071,16 +1113,15 @@ export default function JournalDataTab() {
                           />
                         ))}
                       </View>
-                    </JournalInsightSection>
+                    </View>
                   ) : null}
 
+                  {/* Mood After */}
                   {journalInsights.moodAfter.length > 0 ? (
-                    <JournalInsightSection
-                      title="מצב רוח אחרי הטרייד"
-                      titleColor={DesignTokens.colors.text.secondary}
-                      surfaceBg={DesignTokens.colors.glass.card.bg}
-                      surfaceBorder={DesignTokens.colors.glass.card.border}
-                    >
+                    <View>
+                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
+                        מצב רוח אחרי הטרייד
+                      </Text>
                       <View style={journalTabStyles.journalMoodGrid}>
                         {journalInsights.moodAfter.map((m) => (
                           <JournalMoodInsightCard
@@ -1097,50 +1138,27 @@ export default function JournalDataTab() {
                           />
                         ))}
                       </View>
-                    </JournalInsightSection>
+                    </View>
                   ) : null}
 
-                  <JournalInsightSection
-                    title="עמידה בתוכנית (כל הטריידים)"
-                    titleColor={DesignTokens.colors.text.secondary}
-                    surfaceBg={DesignTokens.colors.glass.card.bg}
-                    surfaceBorder={DesignTokens.colors.glass.card.border}
-                  >
+                  {/* Plan */}
+                  <View>
+                    <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
+                      עמידה בתוכנית
+                    </Text>
                     <View style={journalTabStyles.journalPillRow}>
-                      <JournalMiniPill
-                        label="כן"
-                        value={String(journalInsights.plan.yes)}
-                        labelColor={DesignTokens.colors.text.tertiary}
-                        valueColor={DesignTokens.colors.primary.main}
-                        borderColor="rgba(255,255,255,0.1)"
-                        backgroundColor="rgba(255,255,255,0.05)"
-                      />
-                      <JournalMiniPill
-                        label="לא"
-                        value={String(journalInsights.plan.no)}
-                        labelColor={DesignTokens.colors.text.tertiary}
-                        valueColor={DesignTokens.colors.text.danger}
-                        borderColor="rgba(255,255,255,0.1)"
-                        backgroundColor="rgba(255,255,255,0.05)"
-                      />
-                      <JournalMiniPill
-                        label="לא צוין"
-                        value={String(journalInsights.plan.unknown)}
-                        labelColor={DesignTokens.colors.text.tertiary}
-                        valueColor={DesignTokens.colors.text.secondary}
-                        borderColor="rgba(255,255,255,0.1)"
-                        backgroundColor="rgba(255,255,255,0.05)"
-                      />
+                      <JournalMiniPill label="כן" value={String(journalInsights.plan.yes)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.primary.main} borderColor="rgba(255,255,255,0.1)" backgroundColor="rgba(255,255,255,0.05)" />
+                      <JournalMiniPill label="לא" value={String(journalInsights.plan.no)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.danger} borderColor="rgba(255,255,255,0.1)" backgroundColor="rgba(255,255,255,0.05)" />
+                      <JournalMiniPill label="לא צוין" value={String(journalInsights.plan.unknown)} labelColor={DesignTokens.colors.text.tertiary} valueColor={DesignTokens.colors.text.secondary} borderColor="rgba(255,255,255,0.1)" backgroundColor="rgba(255,255,255,0.05)" />
                     </View>
-                  </JournalInsightSection>
+                  </View>
 
+                  {/* Timeframes */}
                   {journalInsights.timeframes.some((t) => t.count > 0) ? (
-                    <JournalInsightSection
-                      title="מסגרת זמן"
-                      titleColor={DesignTokens.colors.text.secondary}
-                      surfaceBg={DesignTokens.colors.glass.card.bg}
-                      surfaceBorder={DesignTokens.colors.glass.card.border}
-                    >
+                    <View>
+                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
+                        מסגרת זמן
+                      </Text>
                       <View style={journalTabStyles.journalPillRow}>
                         {journalInsights.timeframes.map((tf) => (
                           <JournalMiniPill
@@ -1148,59 +1166,37 @@ export default function JournalDataTab() {
                             label={tf.label}
                             value={String(tf.count)}
                             labelColor={DesignTokens.colors.text.tertiary}
-                            valueColor={
-                              tf.count > 0
-                                ? DesignTokens.colors.text.primary
-                                : DesignTokens.colors.text.tertiary
-                            }
+                            valueColor={tf.count > 0 ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary}
                             borderColor="rgba(255,255,255,0.1)"
                             backgroundColor="rgba(255,255,255,0.05)"
                           />
                         ))}
                       </View>
-                    </JournalInsightSection>
+                    </View>
                   ) : null}
 
+                  {/* Mistakes */}
                   {journalInsights.mistakes.length > 0 ? (
-                    <JournalInsightSection
-                      title="טעויות נפוצות"
-                      titleColor={DesignTokens.colors.text.secondary}
-                      surfaceBg={DesignTokens.colors.glass.card.bg}
-                      surfaceBorder={DesignTokens.colors.glass.card.border}
-                    >
+                    <View>
+                      <Text style={[journalTabStyles.journalInsightSectionTitle, { color: DesignTokens.colors.text.secondary }]}>
+                        טעויות נפוצות
+                      </Text>
                       <View style={journalTabStyles.journalMistakeList}>
                         {journalInsights.mistakes.map((mis) => (
                           <View
                             key={mis.id}
-                            style={[
-                              journalTabStyles.journalMistakeCard,
-                              {
-                                backgroundColor: 'rgba(255,255,255,0.04)',
-                                borderColor: 'rgba(255,255,255,0.08)',
-                              },
-                            ]}
+                            style={[journalTabStyles.journalMistakeCard, { backgroundColor: 'rgba(255,60,60,0.06)', borderColor: 'rgba(255,60,60,0.15)' }]}
                           >
-                            <Text
-                              style={[
-                                journalTabStyles.journalMistakeLabel,
-                                { color: DesignTokens.colors.text.secondary },
-                              ]}
-                              numberOfLines={2}
-                            >
+                            <Text style={[journalTabStyles.journalMistakeLabel, { color: DesignTokens.colors.text.secondary }]} numberOfLines={2}>
                               {mis.label}
                             </Text>
-                            <Text
-                              style={[
-                                journalTabStyles.journalMistakeCount,
-                                { color: DesignTokens.colors.text.primary },
-                              ]}
-                            >
+                            <Text style={[journalTabStyles.journalMistakeCount, { color: DesignTokens.colors.text.danger }]}>
                               {mis.count}
                             </Text>
                           </View>
                         ))}
                       </View>
-                    </JournalInsightSection>
+                    </View>
                   ) : null}
                 </View>
               )}

@@ -5,7 +5,7 @@ import { MessageSnapshot } from '../../types/MessageSnapshot';
 import ReactionBar from './ReactionBar';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { ChatBottomSheet } from './ChatBottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -257,14 +257,11 @@ export default function LongPressOverlay({
   };
 
   return (
-    <BottomSheet
-      isOpen={visible}
+    <ChatBottomSheet
+      visible={visible}
       onClose={onClose}
       snapPoints={[snapPoint]}
-      showHandle
-      enablePanDownToClose
-      backdropOpacity={0.15}
-      useModal
+      fitContent
     >
       <View
         style={styles.container}
@@ -283,7 +280,7 @@ export default function LongPressOverlay({
           canEdit={!message.id?.toString().startsWith('temp-')}
         />
       </View>
-    </BottomSheet>
+    </ChatBottomSheet>
   );
 }
 

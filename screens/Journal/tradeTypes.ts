@@ -14,6 +14,10 @@ export interface Trade {
   tags?: string[];
   created_at: string;
   updated_at: string;
+  /** Risk management */
+  stop_loss?: number | null;
+  target_price?: number | null;
+  strategy_name?: string | null;
   /** JSONB — מסגרת זמן, רגש, תוכנית, אסטרטגיה, סיבות, טעויות */
   journal_details?: Record<string, unknown> | null;
 }

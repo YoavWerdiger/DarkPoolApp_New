@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
+import { ChatBottomSheet } from './ChatBottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { PollService, PollOption } from '../../services/pollService';
 import { logger } from '../../utils/logger';
@@ -65,15 +65,7 @@ export default function PollVotesBottomSheet({
   };
 
   return (
-    <BottomSheet
-      isOpen={visible}
-      onClose={onClose}
-      snapPoints={[0.85]}
-      showHandle
-      enablePanDownToClose
-      useModal
-      backdropOpacity={0.4}
-    >
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.85]}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
@@ -162,7 +154,7 @@ export default function PollVotesBottomSheet({
           </ScrollView>
         )}
       </View>
-    </BottomSheet>
+    </ChatBottomSheet>
   );
 }
 

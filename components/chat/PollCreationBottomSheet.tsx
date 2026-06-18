@@ -1,10 +1,22 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import UICard from '../ui/UICard';
 import { Trash2 } from 'lucide-react-native';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
+import { ChatBottomSheet } from './ChatBottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
@@ -29,7 +41,8 @@ export default function PollCreationBottomSheet({
   onPollCreated,
 }: PollCreationBottomSheetProps) {
   const tokens = useDesignTokens();
-  const styles = useMemo(() => createStyles(tokens), [tokens]);
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(tokens, insets.bottom), [tokens, insets.bottom]);
   const { user } = useAuth();
   const animatedClose = useBottomSheetClose();
 
@@ -46,7 +59,8 @@ export default function PollCreationBottomSheet({
   const uniqueOptionsCount = new Set(trimmedOptions.filter(Boolean)).size;
   const hasDuplicateOptions = uniqueOptionsCount !== trimmedOptions.filter(Boolean).length;
 
-  const canCreate = hasQuestion && hasEnoughOptions && !hasEmptyOption && !hasDuplicateOptions && !isCreating;
+  const canCreate =
+    hasQuestion && hasEnoughOptions && !hasEmptyOption && !hasDuplicateOptions && !isCreating;
 
   const resetForm = () => {
     setQuestion('');
@@ -95,34 +109,28 @@ export default function PollCreationBottomSheet({
       legacyAlert('שגיאה', 'יש להזין שאלה לסקר');
       return false;
     }
-
     if (!hasEnoughOptions) {
       legacyAlert('שגיאה', `יש צורך לפחות ב-${MIN_OPTIONS} אפשרויות`);
       return false;
     }
-
     if (hasEmptyOption) {
       legacyAlert('שגיאה', 'יש למלא את כל האפשרויות');
       return false;
     }
-
     if (hasDuplicateOptions) {
-      legacyAlert('שגיאה', 'יש אפשרויות כפולות. אנא שנה כדי שכל האפשרויות יהיו שונות.');
+      legacyAlert('שגיאה', 'יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.');
       return false;
     }
-
     return true;
   };
 
   const handleCreatePoll = async () => {
     if (isCreating) return;
     if (!validateForm()) return;
-
     if (!user?.id) {
       legacyAlert('שגיאה', 'לא ניתן ליצור סקר - משתמש לא מזוהה');
       return;
     }
-
     setIsCreating(true);
     try {
       const poll = await PollService.createPoll(
@@ -132,7 +140,6 @@ export default function PollCreationBottomSheet({
         user.id,
         multipleChoice
       );
-
       if (poll) {
         onPollCreated(poll);
         resetForm();
@@ -148,15 +155,7 @@ export default function PollCreationBottomSheet({
   };
 
   return (
-    <BottomSheet
-      isOpen={visible}
-      onClose={handleClose}
-      snapPoints={[0.9]}
-      showHandle
-      enablePanDownToClose
-      useModal
-      backdropOpacity={0.4}
-    >
+    <ChatBottomSheet visible={visible} onClose={handleClose} snapPoints={[0.9]}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -194,13 +193,12 @@ export default function PollCreationBottomSheet({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Question */}
-          <View style={styles.card}>
+          {/* Question card */}
+          <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>שאלה</Text>
               <Text style={styles.counter}>{question.length}/{QUESTION_MAX_LEN}</Text>
+              <Text style={styles.cardTitle}>שאלה</Text>
             </View>
-
             <TextInput
               value={question}
               onChangeText={setQuestion}
@@ -208,24 +206,26 @@ export default function PollCreationBottomSheet({
               placeholderTextColor={tokens.colors.text.secondary}
               style={styles.questionInput}
               textAlign="right"
+              textAlignVertical="top"
               multiline
               maxLength={QUESTION_MAX_LEN}
+              writingDirection="rtl"
             />
-          </View>
+          </UICard>
 
-          {/* Options */}
-          <View style={styles.card}>
+          {/* Options card */}
+          <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
             <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitle}>אפשרויות</Text>
               <Text style={styles.counter}>{options.length}/{MAX_OPTIONS}</Text>
+              <Text style={styles.cardTitle}>אפשרויות</Text>
             </View>
 
             <View style={styles.optionsList}>
               {options.map((option, index) => {
                 const showRemove = options.length > MIN_OPTIONS;
-
                 return (
                   <View key={`poll-option-${index}`} style={styles.optionRow}>
+                    {/* row-reverse: first child = rightmost */}
                     <View style={styles.optionIndexPill}>
                       <Text style={styles.optionIndexText}>{index + 1}</Text>
                     </View>
@@ -238,6 +238,7 @@ export default function PollCreationBottomSheet({
                       style={styles.optionInput}
                       textAlign="right"
                       maxLength={OPTION_MAX_LEN}
+                      writingDirection="rtl"
                     />
 
                     {showRemove ? (
@@ -246,7 +247,7 @@ export default function PollCreationBottomSheet({
                         style={styles.removeOptionButton}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
-                        <Trash2 size={18} color={tokens.colors.text.primary} strokeWidth={2} />
+                        <Trash2 size={16} color={tokens.colors.text.danger ?? '#EF4444'} strokeWidth={2} />
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.removeOptionButtonPlaceholder} />
@@ -255,18 +256,15 @@ export default function PollCreationBottomSheet({
                 );
               })}
 
+              {/* Add option */}
               <TouchableOpacity
                 onPress={addOption}
                 disabled={options.length >= MAX_OPTIONS}
-                style={[styles.addOptionRow, options.length >= MAX_OPTIONS && styles.addOptionRowDisabled]}
+                style={[
+                  styles.addOptionRow,
+                  options.length >= MAX_OPTIONS && styles.addOptionRowDisabled,
+                ]}
               >
-                <View style={styles.addOptionLeft}>
-                  <Ionicons
-                    name="add"
-                    size={18}
-                    color={options.length >= MAX_OPTIONS ? tokens.colors.text.secondary : tokens.colors.text.primary}
-                  />
-                </View>
                 <Text
                   style={[
                     styles.addOptionText,
@@ -275,30 +273,47 @@ export default function PollCreationBottomSheet({
                 >
                   הוסף אפשרות
                 </Text>
+                <View style={styles.addOptionLeft}>
+                  <Ionicons
+                    name="add"
+                    size={18}
+                    color={
+                      options.length >= MAX_OPTIONS
+                        ? tokens.colors.text.secondary
+                        : tokens.colors.primary.main
+                    }
+                  />
+                </View>
               </TouchableOpacity>
 
               {hasDuplicateOptions && (
-                <Text style={styles.inlineWarning}>יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.</Text>
+                <Text style={styles.inlineWarning}>
+                  יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.
+                </Text>
               )}
             </View>
-          </View>
+          </UICard>
 
-          {/* Settings */}
-          <View style={styles.card}>
+          {/* Settings card */}
+          <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
             <Text style={styles.cardTitle}>הגדרות</Text>
 
             <View style={styles.segmented}>
               <TouchableOpacity
-                onPress={() => setMultipleChoice(false)}
-                style={[styles.segment, !multipleChoice && styles.segmentActive]}
-              >
-                <Text style={[styles.segmentText, !multipleChoice && styles.segmentTextActive]}>בחירה יחידה</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
                 onPress={() => setMultipleChoice(true)}
                 style={[styles.segment, multipleChoice && styles.segmentActive]}
               >
-                <Text style={[styles.segmentText, multipleChoice && styles.segmentTextActive]}>בחירה מרובה</Text>
+                <Text style={[styles.segmentText, multipleChoice && styles.segmentTextActive]}>
+                  בחירה מרובה
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setMultipleChoice(false)}
+                style={[styles.segment, !multipleChoice && styles.segmentActive]}
+              >
+                <Text style={[styles.segmentText, !multipleChoice && styles.segmentTextActive]}>
+                  בחירה יחידה
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -307,13 +322,12 @@ export default function PollCreationBottomSheet({
                 ? 'משתמשים יוכלו לבחור יותר מתשובה אחת.'
                 : 'משתמשים יוכלו לבחור תשובה אחת בלבד.'}
             </Text>
-          </View>
+          </UICard>
 
-          {/* Spacer to not hide behind footer */}
-          <View style={{ height: 12 }} />
+          <View style={{ height: 8 }} />
         </ScrollView>
 
-        {/* Footer */}
+        {/* Footer — respects safe area */}
         <View style={styles.footer}>
           <TouchableOpacity
             onPress={handleCreatePoll}
@@ -323,26 +337,37 @@ export default function PollCreationBottomSheet({
           >
             {isCreating ? (
               <View style={styles.primaryButtonContent}>
-                <ActivityIndicator color={tokens.colors.text.primary} />
-                <Text style={[styles.primaryButtonText, styles.primaryButtonTextDisabled]}>יוצר…</Text>
+                <ActivityIndicator color="#fff" size="small" />
+                <Text style={styles.primaryButtonText}>יוצר…</Text>
               </View>
             ) : (
               <Text style={styles.primaryButtonText}>צור סקר</Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleClose} disabled={isCreating} style={styles.secondaryButton}>
+          <TouchableOpacity
+            onPress={handleClose}
+            disabled={isCreating}
+            style={styles.secondaryButton}
+          >
             <Text style={styles.secondaryButtonText}>ביטול</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </BottomSheet>
+    </ChatBottomSheet>
   );
 }
 
-const createStyles = (tokens: any) => {
-  const borderColor = tokens.colors.border?.primary || tokens.colors.border?.main || 'rgba(255,255,255,0.12)';
-  const cardBg = tokens.colors.background.elevated || tokens.colors.background.secondary;
+const glassCardStyles = StyleSheet.create({
+  inner: {
+    padding: 16,
+    gap: 10,
+  },
+});
+
+/* ── Main styles ── */
+const createStyles = (tokens: any, safeAreaBottom: number) => {
+  const borderColor = 'rgba(255,255,255,0.1)';
 
   return StyleSheet.create({
     container: {
@@ -350,14 +375,15 @@ const createStyles = (tokens: any) => {
       backgroundColor: 'transparent',
     },
 
+    /* Header */
     header: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse' as any,
       alignItems: 'center',
-      paddingHorizontal: tokens.spacing.md,
-      paddingVertical: tokens.spacing.sm,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
       borderBottomWidth: 1,
       borderBottomColor: borderColor,
-      gap: tokens.spacing.sm,
+      gap: 10,
     },
     headerIconButton: {
       alignSelf: 'center',
@@ -394,33 +420,25 @@ const createStyles = (tokens: any) => {
       color: tokens.colors.text.primary,
     },
 
+    /* Scroll */
     scroll: {
       flex: 1,
-      backgroundColor: 'transparent',
     },
     scrollContent: {
       flexGrow: 1,
-      paddingHorizontal: tokens.spacing.md,
-      paddingVertical: tokens.spacing.md,
-      paddingBottom: tokens.spacing.xl,
-      gap: tokens.spacing.md,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 12,
     },
 
-    card: {
-      backgroundColor: cardBg,
-      borderWidth: 1,
-      borderColor: borderColor,
-      borderRadius: 16,
-      padding: tokens.spacing.md,
-    },
+    /* Card internals */
     cardHeaderRow: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse' as any,
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: tokens.spacing.sm,
     },
     cardTitle: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '800',
       color: tokens.colors.text.primary,
       textAlign: 'right',
@@ -431,90 +449,98 @@ const createStyles = (tokens: any) => {
       color: tokens.colors.text.secondary,
     },
 
+    /* Question input */
     questionInput: {
-      backgroundColor: tokens.colors.background.tertiary,
+      backgroundColor: 'rgba(255,255,255,0.06)',
       borderWidth: 1,
       borderColor: borderColor,
-      borderRadius: 14,
-      paddingHorizontal: tokens.spacing.md,
-      paddingVertical: tokens.spacing.sm,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
       color: tokens.colors.text.primary,
       fontSize: 16,
-      minHeight: 84,
+      minHeight: 80,
     },
 
+    /* Options */
     optionsList: {
-      gap: 10,
+      gap: 9,
     },
     optionRow: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse' as any,
       alignItems: 'center',
-      gap: 10,
+      gap: 8,
     },
     optionIndexPill: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       backgroundColor: 'rgba(255,255,255,0.08)',
       alignItems: 'center',
       justifyContent: 'center',
+      flexShrink: 0,
     },
     optionIndexText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '800',
-      color: tokens.colors.text.primary,
+      color: tokens.colors.text.secondary,
     },
     optionInput: {
       flex: 1,
-      backgroundColor: tokens.colors.background.tertiary,
+      backgroundColor: 'rgba(255,255,255,0.06)',
       borderWidth: 1,
       borderColor: borderColor,
-      borderRadius: 14,
-      paddingHorizontal: tokens.spacing.md,
+      borderRadius: 12,
+      paddingHorizontal: 12,
       paddingVertical: 10,
       color: tokens.colors.text.primary,
       fontSize: 15,
     },
     removeOptionButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
-      backgroundColor: 'rgba(239, 68, 68, 0.16)', // danger tint
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: 'rgba(239,68,68,0.14)',
       alignItems: 'center',
       justifyContent: 'center',
+      flexShrink: 0,
     },
     removeOptionButtonPlaceholder: {
-      width: 36,
-      height: 36,
+      width: 32,
+      height: 32,
+      flexShrink: 0,
     },
 
+    /* Add option */
     addOptionRow: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse' as any,
       alignItems: 'center',
-      gap: 10,
+      gap: 8,
       borderWidth: 1,
       borderColor: borderColor,
-      borderRadius: 14,
-      paddingVertical: 12,
-      paddingHorizontal: tokens.spacing.md,
-      backgroundColor: 'rgba(255,255,255,0.04)',
+      borderStyle: 'dashed' as any,
+      borderRadius: 12,
+      paddingVertical: 11,
+      paddingHorizontal: 14,
+      backgroundColor: 'rgba(255,255,255,0.03)',
     },
     addOptionRowDisabled: {
-      opacity: 0.55,
+      opacity: 0.45,
     },
     addOptionLeft: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: 'rgba(0,200,5,0.12)',
       alignItems: 'center',
       justifyContent: 'center',
+      flexShrink: 0,
     },
     addOptionText: {
       flex: 1,
       fontSize: 14,
       fontWeight: '700',
-      color: tokens.colors.text.primary,
+      color: tokens.colors.primary.main,
       textAlign: 'right',
     },
     addOptionTextDisabled: {
@@ -522,24 +548,24 @@ const createStyles = (tokens: any) => {
     },
 
     inlineWarning: {
-      marginTop: 6,
       fontSize: 12,
       fontWeight: '600',
-      color: tokens.colors.warning?.main || '#F59E0B',
+      color: '#F59E0B',
       textAlign: 'right',
     },
 
+    /* Segmented control — RTL: מרובה | יחידה */
     segmented: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse' as any,
       borderWidth: 1,
       borderColor: borderColor,
-      borderRadius: 14,
+      borderRadius: 12,
       overflow: 'hidden',
-      marginTop: tokens.spacing.sm,
+      marginTop: 8,
     },
     segment: {
       flex: 1,
-      paddingVertical: 12,
+      paddingVertical: 11,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'rgba(255,255,255,0.04)',
@@ -549,50 +575,48 @@ const createStyles = (tokens: any) => {
     },
     segmentText: {
       fontSize: 13,
-      fontWeight: '800',
-      color: tokens.colors.text.primary,
+      fontWeight: '700',
+      color: tokens.colors.text.secondary,
     },
     segmentTextActive: {
-      color: tokens.colors.text.inverse,
+      color: '#fff',
+      fontWeight: '800' as any,
     },
     helperText: {
-      marginTop: 10,
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: '500',
       color: tokens.colors.text.secondary,
       textAlign: 'right',
     },
 
+    /* Footer — safe area aware */
     footer: {
-      paddingHorizontal: tokens.spacing.md,
-      paddingTop: tokens.spacing.sm,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: Math.max(safeAreaBottom, 16),
       gap: 10,
       borderTopWidth: 1,
       borderTopColor: borderColor,
-      backgroundColor: tokens.colors.background.secondary,
     },
     primaryButton: {
-      height: 46,
+      height: 50,
       borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: tokens.colors.primary.main,
     },
     primaryButtonDisabled: {
-      backgroundColor: tokens.colors.background.tertiary,
+      backgroundColor: 'rgba(255,255,255,0.08)',
     },
     primaryButtonText: {
-      fontSize: 15,
-      fontWeight: '900',
-      color: tokens.colors.text.inverse,
-    },
-    primaryButtonTextDisabled: {
-      color: tokens.colors.text.secondary,
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#fff',
     },
     primaryButtonContent: {
-      flexDirection: 'row',
+      flexDirection: 'row-reverse' as any,
       alignItems: 'center',
-      gap: 10,
+      gap: 8,
     },
     secondaryButton: {
       height: 44,
@@ -603,8 +627,8 @@ const createStyles = (tokens: any) => {
     },
     secondaryButtonText: {
       fontSize: 14,
-      fontWeight: '800',
-      color: tokens.colors.text.primary,
+      fontWeight: '700',
+      color: tokens.colors.text.secondary,
     },
   });
 };

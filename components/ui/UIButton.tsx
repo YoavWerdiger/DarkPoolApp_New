@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export type UIButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'hairline';
 export type UIButtonSize = 'sm' | 'md' | 'lg';
@@ -19,6 +20,8 @@ export interface UIButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   children?: React.ReactNode;
+  /** השבתת רטט בלחיצה (ברירת מחדל: רטט קל פעיל) */
+  haptic?: boolean;
 }
 
 const UIButton: React.FC<UIButtonProps> = ({
@@ -34,6 +37,7 @@ const UIButton: React.FC<UIButtonProps> = ({
   style,
   textStyle,
   children,
+  haptic = true,
 }) => {
   const DesignTokens = useDesignTokens();
   const { colors, typography, spacing, borderRadius, shadows } = DesignTokens;
@@ -233,6 +237,18 @@ const UIButton: React.FC<UIButtonProps> = ({
     );
   };
 
+  const handlePress = () => {
+    if (disabled || loading) return;
+    if (haptic) {
+      if (variant === 'danger') {
+        void HapticFeedback.medium();
+      } else {
+        void HapticFeedback.impactLight();
+      }
+    }
+    onPress?.();
+  };
+
   return (
     <Pressable
       style={({ pressed }) => [
@@ -242,7 +258,7 @@ const UIButton: React.FC<UIButtonProps> = ({
           transform: [{ scale: 0.985 }],
         },
       ]}
-      onPress={disabled || loading ? undefined : onPress}
+      onPress={disabled || loading ? undefined : handlePress}
       disabled={disabled || loading}
     >
       {renderContent()}

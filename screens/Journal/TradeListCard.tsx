@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { brandfetchTickerLogoUri } from '../../utils/brandfetch';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import type { Trade } from './tradeTypes';
 
 function SymbolLogo({
@@ -114,10 +115,24 @@ const TradeListCardInner = memo(function TradeListCardInner({
             </View>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => onShare(item)} style={styles.iconBtn} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                onShare(item);
+              }}
+              style={styles.iconBtn}
+              hitSlop={8}
+            >
               <Ionicons name="share-outline" size={17} color={DesignTokens.colors.primary.main} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => onDelete(item.id)} style={styles.iconBtn} hitSlop={8}>
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.warning();
+                onDelete(item.id);
+              }}
+              style={styles.iconBtn}
+              hitSlop={8}
+            >
               <Ionicons name="trash-outline" size={17} color={DesignTokens.colors.text.danger} />
             </TouchableOpacity>
           </View>

@@ -17,6 +17,7 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface SubscriptionPlan {
   id: string;
@@ -100,7 +101,13 @@ export default function SubscriptionScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
-        <ChatSubScreenHeader title="מנוי ומסלול" onBack={() => navigation.goBack()} />
+        <ChatSubScreenHeader
+          title="מנוי ומסלול"
+          onBack={() => {
+            void HapticFeedback.impactLight();
+            navigation.goBack();
+          }}
+        />
 
         <View style={{ flex: 1 }}>
           <ScrollView
@@ -208,7 +215,10 @@ export default function SubscriptionScreen({ navigation }: any) {
                 return (
                   <TouchableOpacity
                     key={plan.id}
-                    onPress={() => handlePlanSelection(plan.id)}
+                    onPress={() => {
+                      void HapticFeedback.impactLight();
+                      handlePlanSelection(plan.id);
+                    }}
                     disabled={isCurrentPlan}
                     style={{ marginBottom: DesignTokens.spacing.md, opacity: isCurrentPlan ? 0.6 : 1 }}
                   >
@@ -347,7 +357,10 @@ export default function SubscriptionScreen({ navigation }: any) {
                           borderTopColor: 'rgba(255, 255, 255, 0.1)'
                         }}>
                           <TouchableOpacity
-                            onPress={() => handlePlanSelection(plan.id)}
+                            onPress={() => {
+                              void HapticFeedback.medium();
+                              handlePlanSelection(plan.id);
+                            }}
                             style={{
                               backgroundColor: DesignTokens.colors.primary.main,
                               paddingVertical: DesignTokens.spacing.md,

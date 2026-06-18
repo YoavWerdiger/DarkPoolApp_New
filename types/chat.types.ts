@@ -409,6 +409,14 @@ export interface SendChatMessageInput {
   group_id: string;
   content?: string;
   sender_id?: string; // L4: נשמר בתור offline כדי לדעת מי שלח
+  /**
+   * Stable client-generated identifier for the message. When set, the server
+   * may use it to deduplicate retries (idempotent send). Required column on
+   * `chat_messages.client_message_id` is added by an upcoming migration; the
+   * field is safe to pass today, the server simply ignores unknown columns
+   * if the migration has not run yet.
+   */
+  client_message_id?: string;
   message_type: ChatMessageType;
   media_url?: string;
   media_thumbnail_url?: string;

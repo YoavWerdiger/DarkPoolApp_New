@@ -35,7 +35,15 @@ import {
   peek as peekOffline,
   makeLocalId,
   makeClientMessageId,
+  getNewestPersistedMessageId,
+  isPersistedChatMessageId,
+  isOptimisticChatMessageId,
 } from '../services/chat/chatOfflineQueue';
+import {
+  applyReactionInsert,
+  applyReactionRemove,
+  totalReactionCount,
+} from '../utils/chatReactions';
 import { supabase } from '../services/supabase';
 import * as Haptics from 'expo-haptics';
 // Audio import removed — notification sound is not yet implemented (no mp3 asset in repo)
@@ -44,7 +52,7 @@ const MAX_OFFLINE_RETRY_ATTEMPTS = 5;
 
 function warmChatMediaCache(messages: ChatMessage[]): void {
   if (!messages.length) return;
-  void prefetchChatMediaForMessages(messages).catch((e: unknown) =>
+  void prefetchChatMediaForMessages(messages).catch((e) =>
     logger.warn('ChatContext', 'prefetchChatMediaForMessages failed', e)
   );
 }
@@ -53,10 +61,15 @@ function warmChatMediaCache(messages: ChatMessage[]): void {
 function asServerMessage(
   message: ChatMessage,
   extras?: Partial<ChatMessage>,
+  preserve?: Pick<ChatMessage, 'reactions' | 'reactions_count' | 'reply_to'>,
 ): ChatMessage {
   return {
     ...message,
     ...extras,
+    reply_to: extras?.reply_to ?? preserve?.reply_to ?? message.reply_to,
+    reactions: extras?.reactions ?? preserve?.reactions ?? message.reactions,
+    reactions_count:
+      extras?.reactions_count ?? preserve?.reactions_count ?? message.reactions_count,
     is_sending: false,
     is_uploading: false,
     local_media_uri: undefined,
@@ -129,6 +142,8 @@ interface ChatContextType {
 
   // Read Receipts
   markAsRead: (groupId: string, messageIds: string[]) => Promise<void>;
+  /** סימון "נקרא עד הסוף" — אחרי גלילה לתחתית (לא בפתיחה עם unread) */
+  confirmChatReadAtBottom: () => Promise<void>;
 
   // Unread
   totalUnreadCount: number;
@@ -156,6 +171,7 @@ type ChatActionsType = Pick<
   | 'unstarMessage'
   | 'setTyping'
   | 'markAsRead'
+  | 'confirmChatReadAtBottom'
   | 'addOptimisticMediaMessage'
   | 'updateOptimisticMessage'
   | 'removeOptimisticMessage'
@@ -238,20 +254,41 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   const markAsRead = useCallback(async (groupId: string, messageIds: string[]) => {
-    if (!user || messageIds.length === 0) return;
+    const persistedIds = messageIds.filter(isPersistedChatMessageId);
+    if (!user || persistedIds.length === 0) return;
 
     if (pendingReadRef.current?.groupId === groupId) {
-      messageIds.forEach(id => pendingReadRef.current!.messageIds.add(id));
+      persistedIds.forEach((id) => pendingReadRef.current!.messageIds.add(id));
     } else {
       if (pendingReadRef.current) {
         await flushMarkAsRead();
       }
-      pendingReadRef.current = { groupId, messageIds: new Set(messageIds) };
+      pendingReadRef.current = { groupId, messageIds: new Set(persistedIds) };
     }
 
     if (readTimerRef.current) clearTimeout(readTimerRef.current);
     readTimerRef.current = setTimeout(flushMarkAsRead, 500);
   }, [user, flushMarkAsRead]);
+
+  const confirmChatReadAtBottom = useCallback(async () => {
+    if (!user) return;
+    const gid = currentGroupId.current;
+    if (!gid) return;
+
+    const newestPersistedId = getNewestPersistedMessageId(messagesRef.current);
+
+    try {
+      await chatMessageService.markChatAsRead(gid, user.id, newestPersistedId);
+      setInitialUnreadInfo(null);
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.id === gid ? { ...g, unread_count: 0, mentioned_count: 0 } : g,
+        ),
+      );
+    } catch (error) {
+      logger.error('ChatContext', 'confirmChatReadAtBottom failed', error);
+    }
+  }, [user]);
 
   const userRef = useRef(user);
   useEffect(() => {
@@ -389,9 +426,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         if (optimisticIndex !== -1) {
           const optimisticMsg = prev[optimisticIndex];
-          const finalMessage = asServerMessage(enrichedMessage, {
-            reply_to: optimisticMsg.reply_to || enrichedMessage.reply_to,
-          });
+          const finalMessage = asServerMessage(
+            enrichedMessage,
+            { reply_to: optimisticMsg.reply_to || enrichedMessage.reply_to },
+            {
+              reactions: optimisticMsg.reactions,
+              reactions_count: optimisticMsg.reactions_count,
+              reply_to: optimisticMsg.reply_to,
+            },
+          );
           return prev.map((m, idx) => (idx === optimisticIndex ? finalMessage : m));
         }
 
@@ -447,7 +490,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     // C2: bump version so any prior in-flight selectGroup call detects it's stale
     const version = ++selectVersion.current;
-    processedMessageIds.current.clear();
+    if (!isSameGroup) {
+      processedMessageIds.current.clear();
+    }
 
     // שימור הודעות אופטימיסטיות (בשליחה) לפני איפוס – מונע "היעלמות" כשחוזרים למסך
     const optimisticsToKeep =
@@ -502,15 +547,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!skipMessageReload) {
-        // Load messages
         const { data: messagesData } = await chatMessageService.getChatMessages(
-        groupId,
-        user.id,
-        { limit: 50, offset: 0 }
-      );
+          groupId,
+          user.id,
+          { limit: 50, offset: 0 },
+        );
 
-      if (selectVersion.current !== version) return; // C2: stale call, abort
-      if (messagesData) {
+        if (selectVersion.current !== version) return;
+        if (messagesData) {
         // מיזוג הודעות אופטימיסטיות – התאמה אחד-לאחד (מונע איבוד הודעות שנשלחו במקביל)
         const usedApiIndices = new Set();
         const stillPending = optimisticsToKeep.filter((opt) => {
@@ -557,19 +601,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // סימון הצ'אט כנקרא - תמיד! לא משנה מה הסטטוס של ההודעות
-        // ⚠️ messages[0] היא ההודעה הכי חדשה (FlatList inverted)
-        if (messagesData.messages.length > 0) {
+        // בלי unread — סימון מיידי; עם unread — רק אחרי גלילה לתחתית (confirmChatReadAtBottom)
+        if (messagesData.messages.length > 0 && savedUnreadCount === 0) {
           const newestMessageId = messagesData.messages[0].id;
           await chatMessageService.markChatAsRead(groupId, user.id, newestMessageId);
-
-          // עדכון מקומי
-          setGroups(prev => prev.map(g =>
-            g.id === groupId ? { ...g, unread_count: 0, mentioned_count: 0 } : g
-          ));
+          setGroups((prev) =>
+            prev.map((g) =>
+              g.id === groupId ? { ...g, unread_count: 0, mentioned_count: 0 } : g,
+            ),
+          );
+        }
         }
       }
-      } // skipMessageReload
 
       if (selectVersion.current !== version) return; // C2: stale call, abort before subscribing
 
@@ -614,111 +657,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           }
         },
         onReaction: async (reaction, eventType) => {
-          // התעלם לחלוטין מ-real-time events של הריאקציות שלי - נטפל בהן אופטימיסטית בלבד
-          if (reaction.user_id === user.id) {
-            logger.debug('ChatContext', 'Skipping own reaction event - handled optimistically');
+          if (reaction.user_id === user.id) return;
+          if (
+            typeof reaction.emoji !== 'string' ||
+            reaction.emoji.length === 0 ||
+            reaction.emoji.length > 20
+          ) {
             return;
           }
 
-          // Validate emoji — reject non-string or suspiciously long values
-          if (typeof reaction.emoji !== 'string' || reaction.emoji.length === 0 || reaction.emoji.length > 20) {
-            logger.warn('ChatContext', 'Dropping reaction event with invalid emoji', reaction.emoji);
-            return;
-          }
+          const actor = {
+            id: reaction.user_id,
+            name: reaction.user?.display_name || 'משתמש',
+            profile_picture: reaction.user?.profile_picture,
+          };
 
-          logger.debug('ChatContext', `Processing other user reaction: ${eventType} ${reaction.emoji}`);
-          
-          setMessages(prev => prev.map(m => {
-            if (m.id === reaction.message_id) {
-              const currentReactions = m.reactions || [];
-              const reactionGroup = currentReactions.find(r => r.emoji === reaction.emoji);
-
-              if (eventType === 'INSERT') {
-                // בדיקה אם המשתמש כבר קיים בריאקציה (בדיקה נוספת)
-                const userAlreadyReacted = reactionGroup?.users?.some(u => u.id === reaction.user_id);
-                if (userAlreadyReacted) {
-                  // כבר קיים, לא צריך לעדכן שוב
-                  return m;
-                }
-
-                // הוספת ריאקציה
-                if (reactionGroup) {
-                  // אם יש כבר ריאקציה עם האימוג'י הזה
-                  return {
-                    ...m,
-                    reactions: currentReactions.map(r =>
-                      r.emoji === reaction.emoji
-                        ? {
-                          ...r,
-                          count: r.count + 1,
-                          reacted_by_me: r.reacted_by_me || reaction.user_id === user.id,
-                          users: [...r.users, {
-                            id: reaction.user_id,
-                            name: reaction.user?.display_name || 'משתמש',
-                            profile_picture: reaction.user?.profile_picture,
-                          }]
-                        }
-                        : r
-                    ),
-                    reactions_count: (m.reactions_count || 0) + 1
-                  };
-                } else {
-                  // ריאקציה חדשה
-                  return {
-                    ...m,
-                    reactions: [
-                      ...currentReactions,
-                      {
-                        emoji: reaction.emoji,
-                        count: 1,
-                        reacted_by_me: reaction.user_id === user.id,
-                        users: [{
-                          id: reaction.user_id,
-                          name: reaction.user?.display_name || 'משתמש',
-                          profile_picture: reaction.user?.profile_picture,
-                        }]
-                      }
-                    ],
-                    reactions_count: (m.reactions_count || 0) + 1
-                  };
-                }
-              } else {
-                // DELETE - הסרת ריאקציה
-                // בדיקה נוספת אם המשתמש עדיין קיים
-                const userExistsInReaction = reactionGroup?.users?.some(u => u.id === reaction.user_id);
-                if (!userExistsInReaction) {
-                  // המשתמש לא קיים, לא צריך לעדכן
-                  return m;
-                }
-
-                if (reactionGroup && reactionGroup.count > 1) {
-                  // עדיין יש ריאקציות אחרות עם האימוג'י הזה
-                  return {
-                    ...m,
-                    reactions: currentReactions.map(r =>
-                      r.emoji === reaction.emoji
-                        ? {
-                          ...r,
-                          count: r.count - 1,
-                          reacted_by_me: r.reacted_by_me && reaction.user_id !== user.id,
-                          users: r.users.filter(u => u.id !== reaction.user_id)
-                        }
-                        : r
-                    ),
-                    reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
-                  };
-                } else {
-                  // הסרת הריאקציה האחרונה עם האימוג'י הזה
-                  return {
-                    ...m,
-                    reactions: currentReactions.filter(r => r.emoji !== reaction.emoji),
-                    reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
-                  };
-                }
-              }
-            }
-            return m;
-          }));
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (m.id !== reaction.message_id) return m;
+              const reactions =
+                eventType === 'INSERT'
+                  ? applyReactionInsert(m.reactions, reaction.emoji, actor, {
+                      isActorMe: false,
+                    })
+                  : applyReactionRemove(m.reactions, reaction.emoji, reaction.user_id, user.id);
+              if (reactions === m.reactions) return m;
+              return { ...m, reactions, reactions_count: totalReactionCount(reactions) };
+            }),
+          );
         },
         onTyping: (indicators) => {
           setTypingUsers(indicators.map(i => ({
@@ -727,14 +693,24 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           })));
         },
         onMember: (_data, _eventType) => {
-          chatGroupService.getChatGroupDetails(groupId, user.id).then(({ data: groupDetails, error: detailsError }) => {
-            if (detailsError) {
-              logger.error('ChatContext', 'onMember: failed to reload group details', detailsError);
-            }
-            if (groupDetails && currentGroupId.current === groupId) {
-              setCurrentGroup(groupDetails);
-            }
-          });
+          if (memberDetailsRefreshTimerRef.current) {
+            clearTimeout(memberDetailsRefreshTimerRef.current);
+          }
+          memberDetailsRefreshTimerRef.current = setTimeout(() => {
+            memberDetailsRefreshTimerRef.current = null;
+            const gid = currentGroupId.current;
+            if (!gid || !userRef.current) return;
+            void chatGroupService.getChatGroupDetails(gid, userRef.current.id).then(
+              ({ data: groupDetails, error: detailsError }) => {
+                if (detailsError) {
+                  logger.error('ChatContext', 'onMember: failed to reload group details', detailsError);
+                }
+                if (groupDetails && currentGroupId.current === gid) {
+                  setCurrentGroup(groupDetails);
+                }
+              },
+            );
+          }, 500);
         },
         onReadReceipt: (read) => {
           if (read.user_id === user.id) return;
@@ -1254,123 +1230,62 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const addReaction = useCallback(async (messageId: string, emoji: string) => {
-    if (!user) return;
+    if (!user || isOptimisticChatMessageId(messageId)) return;
 
-    // עדכון אופטימיסטי
-    setMessages(prev => prev.map(m => {
-      if (m.id === messageId) {
-        const currentReactions = m.reactions || [];
-        const reactionGroup = currentReactions.find(r => r.emoji === emoji);
+    const actor = {
+      id: user.id,
+      name: user.display_name || 'אני',
+      profile_picture: user.profile_picture,
+    };
 
-        if (reactionGroup) {
-          // אם יש כבר ריאקציה עם האימוג'י הזה
-          return {
-            ...m,
-            reactions: currentReactions.map(r =>
-              r.emoji === emoji
-                ? {
-                  ...r,
-                  count: r.count + 1,
-                  reacted_by_me: true,
-                  users: [...r.users, {
-                    id: user.id,
-                    name: user.display_name || 'אני',
-                    profile_picture: user.profile_picture,
-                  }]
-                }
-                : r
-            ),
-            reactions_count: (m.reactions_count || 0) + 1
-          };
-        } else {
-          // ריאקציה חדשה
-          return {
-            ...m,
-            reactions: [
-              ...currentReactions,
-              {
-                emoji: emoji,
-                count: 1,
-                reacted_by_me: true,
-                users: [{
-                  id: user.id,
-                  name: user.display_name || 'אני',
-                  profile_picture: user.profile_picture,
-                }]
-              }
-            ],
-            reactions_count: (m.reactions_count || 0) + 1
-          };
-        }
-      }
-      return m;
-    }));
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const reactions = applyReactionInsert(m.reactions, emoji, actor, { isActorMe: true });
+        if (reactions === m.reactions) return m;
+        return { ...m, reactions, reactions_count: totalReactionCount(reactions) };
+      }),
+    );
 
     const { error } = await chatMessageService.addReaction({ message_id: messageId, emoji }, user.id);
     if (error) {
-      setMessages(prev => prev.map(m => {
-        if (m.id !== messageId) return m;
-        const reactions = (m.reactions || []).map(r => {
-          if (r.emoji !== emoji) return r;
-          const filtered = r.users.filter(u => u.id !== user.id);
-          return { ...r, count: r.count - 1, reacted_by_me: false, users: filtered };
-        }).filter(r => r.count > 0);
-        return { ...m, reactions, reactions_count: Math.max(0, (m.reactions_count || 0) - 1) };
-      }));
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== messageId) return m;
+          const reactions = applyReactionRemove(m.reactions, emoji, user.id, user.id);
+          return { ...m, reactions, reactions_count: totalReactionCount(reactions) };
+        }),
+      );
       logger.error('ChatContext', 'addReaction failed, rolled back', error);
     }
   }, [user]);
 
   const removeReaction = useCallback(async (messageId: string, emoji: string) => {
-    if (!user) return;
+    if (!user || isOptimisticChatMessageId(messageId)) return;
 
-    // עדכון אופטימיסטי
-    setMessages(prev => prev.map(m => {
-      if (m.id === messageId) {
-        const currentReactions = m.reactions || [];
-        const reactionGroup = currentReactions.find(r => r.emoji === emoji);
-
-        if (reactionGroup && reactionGroup.count > 1) {
-          // עדיין יש ריאקציות אחרות עם האימוג'י הזה
-          return {
-            ...m,
-            reactions: currentReactions.map(r =>
-              r.emoji === emoji
-                ? {
-                  ...r,
-                  count: r.count - 1,
-                  reacted_by_me: false,
-                  users: r.users.filter(u => u.id !== user.id)
-                }
-                : r
-            ),
-            reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
-          };
-        } else {
-          // הסרת הריאקציה האחרונה עם האימוג'י הזה
-          return {
-            ...m,
-            reactions: currentReactions.filter(r => r.emoji !== emoji),
-            reactions_count: Math.max(0, (m.reactions_count || 0) - 1)
-          };
-        }
-      }
-      return m;
-    }));
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId) return m;
+        const reactions = applyReactionRemove(m.reactions, emoji, user.id, user.id);
+        if (reactions === m.reactions) return m;
+        return { ...m, reactions, reactions_count: totalReactionCount(reactions) };
+      }),
+    );
 
     const { error } = await chatMessageService.removeReaction({ message_id: messageId, emoji }, user.id);
     if (error) {
-      setMessages(prev => prev.map(m => {
-        if (m.id !== messageId) return m;
-        const reactions = m.reactions || [];
-        const existing = reactions.find(r => r.emoji === emoji);
-        if (existing) {
-          return { ...m, reactions: reactions.map(r => r.emoji === emoji
-            ? { ...r, count: r.count + 1, reacted_by_me: true, users: [...r.users, { id: user.id, name: user.display_name || 'אני', profile_picture: user.profile_picture }] }
-            : r), reactions_count: (m.reactions_count || 0) + 1 };
-        }
-        return { ...m, reactions: [...reactions, { emoji, count: 1, reacted_by_me: true, users: [{ id: user.id, name: user.display_name || 'אני', profile_picture: user.profile_picture }] }], reactions_count: (m.reactions_count || 0) + 1 };
-      }));
+      const actor = {
+        id: user.id,
+        name: user.display_name || 'אני',
+        profile_picture: user.profile_picture,
+      };
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== messageId) return m;
+          const reactions = applyReactionInsert(m.reactions, emoji, actor, { isActorMe: true });
+          return { ...m, reactions, reactions_count: totalReactionCount(reactions) };
+        }),
+      );
       logger.error('ChatContext', 'removeReaction failed, rolled back', error);
     }
   }, [user]);
@@ -1822,6 +1737,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     unstarMessage,
     setTyping,
     markAsRead,
+    confirmChatReadAtBottom,
     isConnected,
     realtimeConnectionState,
     totalUnreadCount,
@@ -1836,7 +1752,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     loadGroups, selectGroup, refreshCurrentGroupDetails, createGroup, updateGroup, leaveGroup,
     sendMessage, loadMoreMessages, loadMessagesAround, editMessage,
     deleteMessage, forwardMessage, addReaction, removeReaction,
-    starMessage, unstarMessage, setTyping, markAsRead,
+    starMessage, unstarMessage, setTyping, markAsRead, confirmChatReadAtBottom,
     addOptimisticMediaMessage, updateOptimisticMessage, removeOptimisticMessage, retrySendMessage,
   ]);
 
@@ -1860,6 +1776,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     unstarMessage,
     setTyping,
     markAsRead,
+    confirmChatReadAtBottom,
     addOptimisticMediaMessage,
     updateOptimisticMessage,
     removeOptimisticMessage,
@@ -1885,6 +1802,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     unstarMessage: (...args) => actionsRef.current.unstarMessage(...args),
     setTyping: (...args) => actionsRef.current.setTyping(...args),
     markAsRead: (...args) => actionsRef.current.markAsRead(...args),
+    confirmChatReadAtBottom: (...args) => actionsRef.current.confirmChatReadAtBottom(...args),
     addOptimisticMediaMessage: (...args) => actionsRef.current.addOptimisticMediaMessage(...args),
     updateOptimisticMessage: (...args) => actionsRef.current.updateOptimisticMessage(...args),
     removeOptimisticMessage: (...args) => actionsRef.current.removeOptimisticMessage(...args),

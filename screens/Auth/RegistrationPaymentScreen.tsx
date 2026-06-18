@@ -10,6 +10,7 @@ import { DesignTokens } from '../../components/ui/DesignTokens';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
@@ -17,15 +18,27 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('monthly');
 
-  // המרת תוכניות המנוי לפורמט המתאים לתצוגה
-  const plans = Object.values(SUBSCRIPTION_PLANS).map(plan => ({
-    id: plan.id,
-    name: plan.name,
-    price: plan.price === 0 ? '₪0' : `₪${plan.price}`,
-    period: 'לחודש',
-    features: plan.features,
-    popular: plan.popular
-  }));
+  // המרת תוכניות המנוי לפורמט המתאים לתצוגה (ללא אד-אונים ותשלום חד פעמי)
+  const getPeriodLabel = (period: string, planId: string) => {
+    if (planId === 'yearly') return '₪117 / לחודש (מחויב שנתי)';
+    switch (period) {
+      case 'monthly':   return 'לחודש';
+      case 'quarterly': return 'ל-3 חודשים';
+      case 'yearly':    return 'לשנה';
+      default:          return 'לחודש';
+    }
+  };
+
+  const plans = Object.values(SUBSCRIPTION_PLANS)
+    .filter(plan => !('isAddon' in plan && plan.isAddon) && !('isOneTime' in plan && plan.isOneTime))
+    .map(plan => ({
+      id: plan.id,
+      name: plan.name,
+      price: plan.price === 0 ? '₪0' : `₪${plan.price}`,
+      period: getPeriodLabel(plan.period, plan.id),
+      features: plan.features,
+      popular: plan.popular
+    }));
 
   const handlePayment = async () => {
     // במהלך הרישום, המשתמש עדיין לא מחובר, אז נדלג על הבדיקה הזו
@@ -203,7 +216,10 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               {plans.map((plan) => (
                 <TouchableOpacity
                   key={plan.id}
-                  onPress={() => setSelectedPlan(plan.id)}
+                  onPress={() => {
+                    if (selectedPlan !== plan.id) void HapticFeedback.selection();
+                    setSelectedPlan(plan.id);
+                  }}
                   style={{
                     backgroundColor: selectedPlan === plan.id ? DesignTokens.colors.primary.dim : DesignTokens.colors.background.cardSolid,
                     borderRadius: 16,
@@ -308,7 +324,10 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={handlePayment}
+                    onPress={() => {
+                      void HapticFeedback.medium();
+                      handlePayment();
+                    }}
                     disabled={loading}
                     style={{
                       paddingVertical: 16,
@@ -351,7 +370,10 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={handleSkipPayment}
+                    onPress={() => {
+                      void HapticFeedback.medium();
+                      handleSkipPayment();
+                    }}
                     style={{
                       paddingVertical: 16,
                       alignItems: 'center',
@@ -375,7 +397,10 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               {/* Skip Payment Button */}
               {selectedPlan !== 'free' && (
                 <TouchableOpacity
-                  onPress={handleSkipPayment}
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    handleSkipPayment();
+                  }}
                   style={{
                     backgroundColor: DesignTokens.colors.background.cardSolid,
                     borderRadius: 14,

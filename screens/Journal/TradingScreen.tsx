@@ -8,13 +8,12 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import { MarketsSegmentedControl } from '../Markets/components/MarketsSegmentedControl';
+import { MarketsEmbedSwitcher } from '../Markets/components/MarketsEmbedSwitcher';
 import TradesListTab from './TradesListTab';
 import CalendarTab from './CalendarTab';
 import JournalDataTab from './JournalDataTab';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
-import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
 import type { JournalStackParamList } from '../../navigation/JournalStack';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 
@@ -83,15 +82,6 @@ export default function TradingScreen() {
           paddingBottom: DesignTokens.spacing.sm,
           alignItems: 'center',
         },
-        tabBarCard: {
-          width: '100%',
-          maxWidth: 520,
-          alignSelf: 'center',
-          borderRadius: DesignTokens.borderRadius['3xl'],
-          overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: `${DesignTokens.colors.primary.main}22`,
-        },
         tabContent: {
           flex: 1,
           minHeight: 0,
@@ -147,16 +137,12 @@ export default function TradingScreen() {
         </View>
 
         <View style={styles.tabBarWrap} accessibilityRole="tablist">
-          <UICard variant="glass" glassIntensity="light" padding="none" style={styles.tabBarCard}>
-            <MarketsSegmentedControl
-              options={JOURNAL_SEGMENTS}
-              value={activeTab}
-              onChange={setActiveTab}
-              accessibilityGroupLabel="יומן מסחר"
-              containerDirection="row-reverse"
-              segmentAccessibilityRole="tab"
-            />
-          </UICard>
+          <MarketsEmbedSwitcher
+            options={JOURNAL_SEGMENTS}
+            value={activeTab}
+            onChange={setActiveTab}
+            accessibilityGroupLabel="יומן מסחר"
+          />
         </View>
 
         <View style={styles.tabContent}>
@@ -169,7 +155,10 @@ export default function TradingScreen() {
           <View style={styles.fabWrap} pointerEvents="box-none">
             <TouchableOpacity
               style={styles.fabBtn}
-              onPress={() => navigation.navigate('AddTrade')}
+              onPress={() => {
+                void HapticFeedback.medium();
+                navigation.navigate('AddTrade');
+              }}
               activeOpacity={0.88}
               accessibilityRole="button"
               accessibilityLabel="הוסף טרייד"

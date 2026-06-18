@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import { ChatBottomSheet } from './ChatBottomSheet';
 
 interface GroupInfo {
   id: string;
@@ -94,15 +94,7 @@ export default function JoinGroupBottomSheet({
   if (!group) return null;
 
   return (
-    <BottomSheet
-      isOpen={visible}
-      onClose={onClose}
-      snapPoints={[0.42]}
-      showHandle={true}
-      enablePanDownToClose={true}
-      useModal={true}
-      backdropOpacity={0.15}
-    >
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.42]}>
       <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
         {/* Avatar */}
         <View style={styles.avatarContainer}>
@@ -144,7 +136,7 @@ export default function JoinGroupBottomSheet({
           </Text>
         </TouchableOpacity>
       </View>
-    </BottomSheet>
+    </ChatBottomSheet>
   );
 }
 

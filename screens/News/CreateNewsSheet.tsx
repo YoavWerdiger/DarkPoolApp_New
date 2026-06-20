@@ -22,7 +22,6 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
@@ -236,7 +235,26 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             </Text>
           </View>
 
-          <View style={styles.headerSideSpacer} />
+          <TouchableOpacity
+            onPress={() => {
+              void HapticFeedback.medium();
+              void handleSubmit();
+            }}
+            disabled={!canSubmit}
+            activeOpacity={0.85}
+            style={[styles.headerPublishBtn, !canSubmit && styles.headerPublishBtnDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel="פרסם כתבה"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={[styles.headerPublishBtnText, !canSubmit && styles.headerPublishBtnTextDisabled]}>
+                פרסם
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* גוף גלילה */}
@@ -396,30 +414,6 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
             </UICard>
           </FormField>
         </ScrollView>
-
-        {/* Footer — SafeAreaView מטפל ב-home indicator / כפתורי מכשיר */}
-        <SafeAreaView edges={['bottom']} style={styles.footer}>
-          <TouchableOpacity
-            onPress={() => {
-              void HapticFeedback.medium();
-              void handleSubmit();
-            }}
-            disabled={!canSubmit}
-            activeOpacity={0.85}
-            style={[styles.primaryButton, !canSubmit && styles.primaryButtonDisabled]}
-            accessibilityRole="button"
-            accessibilityLabel="פרסם כתבה"
-          >
-            {isSubmitting ? (
-              <View style={styles.primaryButtonContent}>
-                <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.primaryButtonText}>מפרסם…</Text>
-              </View>
-            ) : (
-              <Text style={styles.primaryButtonText}>פרסם כתבה</Text>
-            )}
-          </TouchableOpacity>
-        </SafeAreaView>
       </KeyboardAvoidingView>
     </BottomSheet>
   );
@@ -501,9 +495,25 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
       alignItems: 'flex-start',
     },
-    headerSideSpacer: {
-      width: DAY_NAV_BUTTON_SIZE,
+    headerPublishBtn: {
+      minWidth: DAY_NAV_BUTTON_SIZE + 12,
       height: DAY_NAV_BUTTON_SIZE,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: tokens.colors.primary.main,
+    },
+    headerPublishBtnDisabled: {
+      backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+    headerPublishBtnText: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#fff',
+    },
+    headerPublishBtnTextDisabled: {
+      color: tokens.colors.text.tertiary,
     },
     headerTitle: {
       fontSize: 18,
@@ -521,7 +531,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: 16,
-      paddingVertical: 14,
+      paddingTop: 14,
+      paddingBottom: 28,
       gap: 18,
       direction: 'rtl',
     },
@@ -648,33 +659,5 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       color: '#fff',
       fontSize: 13,
       fontWeight: '600',
-    },
-    footer: {
-      paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: Platform.OS === 'android' ? 8 : 4,
-      borderTopWidth: StyleSheet.hairlineWidth,
-      borderTopColor: SHEET_BORDER,
-      backgroundColor: tokens.colors.background.secondary,
-    },
-    primaryButton: {
-      height: 50,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: tokens.colors.primary.main,
-    },
-    primaryButtonDisabled: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
-    },
-    primaryButtonContent: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: 8,
-    },
-    primaryButtonText: {
-      fontSize: 16,
-      fontWeight: '800',
-      color: '#fff',
     },
   });

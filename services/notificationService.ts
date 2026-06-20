@@ -60,8 +60,11 @@ async function setupNotificationChannels() {
     await Notifications.setNotificationChannelAsync('news', {
       name: 'חדשות',
       description: 'התראות על חדשות חדשות',
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
       sound: 'default',
+      enableVibrate: true,
+      showBadge: true,
     });
 
     // Channel ליומן כלכלי

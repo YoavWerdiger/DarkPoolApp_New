@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
-import { ensurePushBidi, formatPushMultiline } from '../_shared/notificationBidi.ts';
+import { ensurePushBidi, formatPushMultiline, buildEconomicPushContent } from '../_shared/notificationBidi.ts';
 
 const EXPO_PUSH_API_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -322,23 +322,24 @@ serve(async (req) => {
                 : threadId;
 
           let subtitle: string | undefined;
-          const economicEventName = isEconomic
-            ? ensurePushBidi(String(notificationData.title || '').trim()) || undefined
-            : undefined;
+          let pushTitle = formatPushMultiline(notification.title);
+          let pushBody = formatPushMultiline(notification.body);
+          let pushBodyWithEconomicName: string | undefined;
+
           if (isEconomic) {
-            subtitle = economicEventName;
+            const { eventName, body: econBody, androidBody } = buildEconomicPushContent({
+              title: notificationData.title,
+              actual: notificationData.actual,
+              forecast: notificationData.forecast,
+            });
+            subtitle = eventName || undefined;
+            pushBody = econBody;
+            pushBodyWithEconomicName = androidBody;
           } else if (isNews) {
             subtitle = ensurePushBidi(String(notificationData.source || '').trim()) || undefined;
           }
 
-          const pushTitle = formatPushMultiline(notification.title);
-          const pushBody = formatPushMultiline(notification.body);
-          const pushBodyWithEconomicName =
-            isEconomic && economicEventName
-              ? formatPushMultiline(
-                  `${String(notificationData.title || '').trim()}\n${notification.body}`,
-                )
-              : pushBody;
+          const economicEventName = isEconomic ? subtitle : undefined;
 
           for (const token of uniqueTokens) {
             const isAndroid = String(token.platform || '').toLowerCase() === 'android';
@@ -361,13 +362,13 @@ serve(async (req) => {
                 notificationType: notification.notification_type,
                 ...(imageUrl ? { image: imageUrl } : {}),
               },
-              priority: isNews ? 'default' : 'high',
+              priority: 'high',
               channelId,
               icon: 'ic_notification',
               ...(imageUrl ? { richContent: { image: imageUrl } } : {}),
               android: {
                 channelId,
-                priority: isNews ? 'default' : 'high',
+                priority: 'high',
                 ...(imageUrl ? { imageUrl: imageUrl } : {}),
               },
               ios: {

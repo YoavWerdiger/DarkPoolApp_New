@@ -2,10 +2,18 @@
  * עזרי כיוון טקסט (BiDi) להתראות Push בעברית.
  * עוטפים קטעים לטיניים/מספריים ב-LRI כדי שלא יתהפכו בסביבת RTL.
  */
+import { formatEconomicDisplayValue } from './economicNumberFormat.ts';
+import { translateEconomicEventNameSmart } from './economicEventTranslations.ts';
+
 const LRI = '\u2066' // Left-to-Right Isolate
 const PDI = '\u2069' // Pop Directional Isolate
 const RLM = '\u200F' // Right-to-Left Mark — הקשר RTL לשורה
 export const PUSH_SEP = ' · '
+
+/** מסיר סימני BiDi שהוכנסו בטריגר DB לפני תרגום/עיבוד */
+export function stripPushBidiMarkers(text: string | null | undefined): string {
+  return String(text ?? '').replace(/[\u200F\u2066\u2069]/g, '').trim()
+}
 
 /** רצף לטיני/מספרי בתוך שורה מעורבת */
 const LTR_RUN = /[A-Za-z0-9$](?:[A-Za-z0-9$%.,+\-/'":]*)?/g
@@ -106,4 +114,25 @@ export function buildEarningsUpcomingBody(
 export function buildEconomicResultBody(actual: string, forecast: string): string {
   const f = forecast && forecast !== '—' ? forecast : '—'
   return `תוצאה: ${ltr(actual)}${PUSH_SEP}צפי: ${ltr(f)}`
+}
+
+/** שם דוח בעברית + גוף עם פסיקים — כמו בממשק היומן הכלכלי */
+export function buildEconomicPushContent(data: {
+  title?: string | null
+  actual?: string | null
+  forecast?: string | null
+}): { eventName: string; body: string; androidBody: string } {
+  const rawTitle = stripPushBidiMarkers(data.title)
+  const hebrewTitle = translateEconomicEventNameSmart(rawTitle)
+  const eventName = ensurePushBidi(hebrewTitle)
+
+  const actualRaw = stripPushBidiMarkers(data.actual)
+  const forecastRaw = stripPushBidiMarkers(data.forecast)
+  const actual = formatEconomicDisplayValue(actualRaw) || actualRaw
+  const forecast = formatEconomicDisplayValue(forecastRaw) || forecastRaw || '—'
+
+  const resultLine = buildEconomicResultBody(actual, forecast)
+  const body = formatPushMultiline(resultLine)
+  const androidBody = formatPushMultiline(`${hebrewTitle}\n${resultLine}`)
+  return { eventName, body, androidBody }
 }

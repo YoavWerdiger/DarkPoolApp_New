@@ -1,6 +1,5 @@
 /**
- * פורמט ערכים ליומן כלכלי: מפריד אלפים (למשל 1,000,000) תוך שמירה על סיומות כמו %, K, M.
- * שמור בסנכרון עם supabase/functions/_shared/economicNumberFormat.ts
+ * פורמט ערכים ליומן כלכלי — שמור בסנכרון עם utils/economicNumberFormat.ts
  */
 
 function splitNumericPrefix(raw: string): { sign: string; intFrac: string; suffix: string } | null {
@@ -41,18 +40,6 @@ function splitNumericPrefix(raw: string): { sign: string; intFrac: string; suffi
   return { sign, intFrac, suffix };
 }
 
-/** מחזיר מספר לצורך השוואות (תוצאה מול תחזית) — מתעלם מפסיקים וסיומות */
-export function parseEconomicNumber(raw: string | undefined | null): number {
-  if (raw == null) return NaN;
-  const parts = splitNumericPrefix(String(raw));
-  if (!parts) return NaN;
-  const n = Number(parts.sign + parts.intFrac);
-  return n;
-}
-
-/**
- * תצוגה: פסיקים כל שלוש ספרות (מקל en-US), ספרות עשרוניות לפי המקור (עד 6).
- */
 export function formatEconomicDisplayValue(raw: string | undefined | null): string {
   if (raw == null) return '';
   const s = String(raw);

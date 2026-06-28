@@ -9,8 +9,6 @@ import { chatComposerSafeBottomInset } from '../../components/chat/chatInputLayo
 import { ChatComposerDock } from '../../components/chat/ChatComposerDock';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
-import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
-import { useKeyboardContext } from 'react-native-keyboard-controller';
 
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
@@ -483,19 +481,11 @@ export default function ChatGroupScreen() {
       requestAnimationFrame(() => applyScrollToBottomRef.current?.(false));
     }
   }, []);
-  const { keyboardShown } = useChatKeyboardInsets(onKeyboardShow);
+  const { keyboardInset, keyboardShown } = useChatKeyboardInsets(onKeyboardShow);
   const composerPaddingBottom = useMemo(
     () => chatComposerSafeBottomInset(insets.bottom),
     [insets.bottom],
   );
-
-  // אינסט מקלדת רציף ב-UI thread (אותו מקור של ChatComposerDock) — עוקב בזמן אמת
-  // גם בפתיחה וגם בסגירה. מחליף את keyboardInset (state) שהתעדכן רק ב-didShow/didHide,
-  // מה שגרם ל-lag בסגירה (הרשימה "נתקעת" עד שהאנימציה נגמרת).
-  const { reanimated: keyboardAnimated } = useKeyboardContext();
-  const listKeyboardInsetStyle = useAnimatedStyle(() => ({
-    paddingBottom: Math.max(0, keyboardAnimated.height.value - composerPaddingBottom),
-  }));
 
   /** תמיד גולל לתחתית כששולחים — גם אחרי פתיחה עם unread (לא בתחתית) */
   const scrollToBottomOnSend = useCallback(() => {
@@ -1499,7 +1489,6 @@ export default function ChatGroupScreen() {
       <View style={styles.messagesSection}>
         <View style={styles.messagesAreaFlex}>
           <RNAnimated.View style={[styles.flatListTransparent, { opacity: listOpacity }]}>
-          <Reanimated.View style={[styles.flatListTransparent, listKeyboardInsetStyle]}>
           <FlatList
             ref={listRef}
             data={messagesListReady ? displayMessages : []}
@@ -1535,10 +1524,11 @@ export default function ChatGroupScreen() {
             }}
           contentContainerStyle={[
               displayMessages.length === 0 ? styles.emptyList : styles.messagesList,
-            // אינסט המקלדת מוחל ברציפות על העטיפה (listKeyboardInsetStyle) ולא כאן,
-            // כדי שגם הסגירה תעקוב בזמן אמת. כאן נשאר רק הריווח הבסיסי.
+            // inverted: paddingTop = הצד התחתון (ליד הקומפוזר/המקלדת).
+            // מחסירים את composerPaddingBottom כדי לשקף את ה-translate של הקומפוזר
+            // (שמחסיר את ה-bottomInset) — אחרת נוצר מרווח עודף בגובה ה-safe-area.
             {
-              paddingTop: 12,
+              paddingTop: 12 + Math.max(0, keyboardInset - composerPaddingBottom),
               paddingBottom: 12,
             },
           ]}
@@ -1607,7 +1597,6 @@ export default function ChatGroupScreen() {
             }}
             onScrollToIndexFailed={handleScrollToIndexFailedWithPin}
           />
-          </Reanimated.View>
           </RNAnimated.View>
           {showMessagesPlaceholder && (
             <View style={styles.messagesPlaceholderOverlay} pointerEvents="none">

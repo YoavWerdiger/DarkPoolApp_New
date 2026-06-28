@@ -8,6 +8,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { AppState } from 'react-native';
 import { useAuth } from './AuthContext';
 import { logger } from '../utils/logger';
+import { getChatMessagePreview } from '../utils/chatMessagePreview';
 import * as Clipboard from 'expo-clipboard';
 
 import {
@@ -45,6 +46,10 @@ import {
   totalReactionCount,
 } from '../utils/chatReactions';
 import { supabase } from '../services/supabase';
+import { queryClient } from '../lib/queryClient';
+import { appQueryKeys } from '../lib/appQueryKeys';
+import { scheduleChatMessagesPersist } from '../lib/chatMessagePersist';
+import { persistQueryCache } from '../lib/queryPersist';
 import * as Haptics from 'expo-haptics';
 // Audio import removed — notification sound is not yet implemented (no mp3 asset in repo)
 
@@ -221,6 +226,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Keep messagesRef in sync with state
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
+  // סנכרון cache ההודעות (כולל realtime) + גיבוי לדיסק — לכניסה מיידית בפעם הבאה
+  useEffect(() => {
+    const gid = currentGroupId.current;
+    if (!gid || !user || messages.length === 0) return;
+    const persistable = messages.filter((m) => !m.id.startsWith('temp-'));
+    if (persistable.length === 0) return;
+    queryClient.setQueryData(appQueryKeys.chatMessages(gid), persistable);
+    scheduleChatMessagesPersist(user.id);
+  }, [messages, user]);
+
   // Clear pending read timer when user logs out to avoid stale API calls
   useEffect(() => {
     if (!user) {
@@ -235,6 +250,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Read Receipts (debounced - batches calls within 500ms)
   const pendingReadRef = useRef<{ groupId: string; messageIds: Set<string> } | null>(null);
   const readTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const memberDetailsRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flushMarkAsRead = useCallback(async () => {
     const pending = pendingReadRef.current;
@@ -313,11 +329,21 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const loadGroups = useCallback(async () => {
     if (!user) return;
 
-    setIsLoadingGroups(true);
+    const cacheKey = appQueryKeys.chatGroups(user.id);
+    const cached = queryClient.getQueryData<ChatGroup[]>(cacheKey);
+    if (cached?.length) {
+      setGroups(cached);
+      setIsLoadingGroups(false);
+    } else {
+      setIsLoadingGroups(true);
+    }
+
     try {
       const { data, error } = await chatGroupService.getChatGroups(user.id);
       if (data) {
         setGroups(data);
+        queryClient.setQueryData(cacheKey, data);
+        void persistQueryCache(user.id);
       } else {
         logger.error('ChatContext', 'Error loading groups', error);
       }
@@ -507,12 +533,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     currentGroupId.current = groupId;
 
+    // אופטימי: זריעת currentGroup מיידית מה-cache של רשימת הקבוצות.
+    // מונע את ה-skeleton המלא ("מסך תקוע") ומציג כותרת/שם הקבוצה מיד בכניסה,
+    // בזמן שפרטי הקבוצה המלאים וההודעות נטענים ברקע.
+    if (!isSameGroup) {
+      const cachedGroups = queryClient.getQueryData<ChatGroup[]>(
+        appQueryKeys.chatGroups(user.id),
+      );
+      const cachedGroup = cachedGroups?.find((g) => g.id === groupId);
+      if (cachedGroup) {
+        setCurrentGroup({
+          ...cachedGroup,
+          members: [],
+          is_admin: String(cachedGroup.my_role) === 'admin',
+          last_read_message_id: cachedGroup.last_read_message_id ?? null,
+        });
+      }
+    }
+
     if (!keepVisibleThread) {
-      setIsLoadingMessages(true);
-      setMessages([]);
+      // אופטימי: זריעת הודעות מיידית מה-cache (stale-while-revalidate).
+      // אם יש הודעות שמורות מהכניסה הקודמת — מציגים אותן מיד בלי skeleton,
+      // והרשת מרעננת ברקע. אחרת — מצב טעינה רגיל.
+      const cachedMessages = queryClient.getQueryData<ChatMessage[]>(
+        appQueryKeys.chatMessages(groupId),
+      );
+      if (cachedMessages?.length) {
+        setMessages(cachedMessages);
+        messagesOffset.current = cachedMessages.length;
+        hasMoreMessages.current = true;
+        setIsLoadingMessages(false);
+        warmChatMediaCache(cachedMessages);
+      } else {
+        setIsLoadingMessages(true);
+        setMessages([]);
+        messagesOffset.current = 0;
+        hasMoreMessages.current = true;
+      }
       setTypingUsers([]);
-      messagesOffset.current = 0;
-      hasMoreMessages.current = true;
       setInitialUnreadInfo(null);
     }
 
@@ -524,8 +582,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     let savedLastReadMessageId: string | null = null;
 
     try {
+      // הרצה במקביל: פרטי הקבוצה + ההודעות יוצאים יחד (במקום בטור).
+      // טעינת פרטי הקבוצה כוללת join לכל החברים ויכולה להיות איטית —
+      // אין סיבה שטעינת ההודעות תחכה לה. חוסך עד ~חצי מזמן הכניסה.
+      const groupDetailsPromise = chatGroupService.getChatGroupDetails(groupId, user.id);
+      const messagesPromise = skipMessageReload
+        ? null
+        : chatMessageService.getChatMessages(groupId, user.id, { limit: 50, offset: 0 });
+
       // Load group details
-      const { data: groupData, error: groupError } = await chatGroupService.getChatGroupDetails(groupId, user.id);
+      const { data: groupData, error: groupError } = await groupDetailsPromise;
       if (selectVersion.current !== version) return;
       if (groupError) {
         logger.error('ChatContext', 'Failed to load group details', groupError);
@@ -546,12 +612,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (!skipMessageReload) {
-        const { data: messagesData } = await chatMessageService.getChatMessages(
-          groupId,
-          user.id,
-          { limit: 50, offset: 0 },
-        );
+      if (!skipMessageReload && messagesPromise) {
+        const { data: messagesData } = await messagesPromise;
 
         if (selectVersion.current !== version) return;
         if (messagesData) {
@@ -580,6 +642,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         messagesOffset.current = merged.length;
         hasMoreMessages.current = messagesData.has_more;
         warmChatMediaCache(merged);
+
+        // שמירת ה-batch הראשון ל-cache לכניסה אופטימית מהירה בפעם הבאה.
+        // שומרים רק הודעות אמיתיות (לא אופטימיות temp-) כדי לא לזרוע מצב שליחה.
+        const persistable = merged.filter((m) => !m.id.startsWith('temp-'));
+        queryClient.setQueryData(appQueryKeys.chatMessages(groupId), persistable);
 
         // ✅ ספירה אמיתית של הודעות לא נקראות (לא סומכים על unread_count מהשרת)
         if (savedLastReadMessageId && messagesData.messages.length > 0) {
@@ -1102,7 +1169,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             ? {
               ...g,
               last_message_at: data.created_at,
-              last_message_preview: data.content || '📎 מדיה',
+              last_message_preview: getChatMessagePreview(data.message_type, data.content),
               messages_count: g.messages_count + 1,
             }
             : g
@@ -1475,7 +1542,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             ? {
               ...g,
               last_message_at: message.created_at,
-              last_message_preview: message.content || '📎 מדיה',
+              last_message_preview: getChatMessagePreview(message.message_type, message.content),
             }
             : g
         )

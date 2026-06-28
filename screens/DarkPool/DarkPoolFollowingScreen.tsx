@@ -26,7 +26,7 @@ import {
   dispatchOpenMainDrawer,
   type DrawerParentNavigation,
 } from '../../navigation/mainDrawerNav';
-import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
+import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { useFollowedInvestors } from '../../hooks/useFollowedInvestors';
 import { unfollowInvestor, type FollowedInvestor } from '../../services/darkpool/darkPoolFollowService';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';

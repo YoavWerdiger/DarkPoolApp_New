@@ -3,6 +3,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /** רטט לכפתור תפריט/מגירה — export נפרד כדי שלא ייעלם בגלל cache של Metro */
 export async function triggerDrawerMenuHaptic(): Promise<void> {
+  if (!HapticFeedback.isEnabled()) {
+    await HapticFeedback.init();
+    if (!HapticFeedback.isEnabled()) return;
+  }
   try {
     const Haptics = require('expo-haptics');
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -102,7 +106,12 @@ export class HapticFeedback {
     try {
       await HapticFeedback.ensureInit();
       if (!HapticFeedback._enabled) return;
-      Vibration.vibrate(5);
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.selectionAsync();
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 10 : 8);
+      }
     } catch {}
   }
 
@@ -118,6 +127,24 @@ export class HapticFeedback {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch {
         Vibration.vibrate(Platform.OS === 'ios' ? 8 : 12);
+      }
+    } catch {
+      /* noop */
+    }
+  }
+
+  /**
+   * רטט בינוני (מומלץ לבחירה משמעותית). קודם expo-haptics; אם נכשל — Vibration.
+   */
+  static async impactMedium() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 15 : 20);
       }
     } catch {
       /* noop */

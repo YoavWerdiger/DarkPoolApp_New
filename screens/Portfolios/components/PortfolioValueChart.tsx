@@ -115,6 +115,7 @@ export function PortfolioValueChart({
   const change = ranges.lastValue - ranges.firstValue;
   const isUp = change >= 0;
   const lineColor = isUp ? tokens.colors.primary.main : tokens.colors.text.danger;
+  const benchmarkColor = tokens.colors.text.tertiary;
 
   return (
     <View

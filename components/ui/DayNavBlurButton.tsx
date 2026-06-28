@@ -6,6 +6,8 @@ import UICard from './UICard';
 export const DAY_NAV_BUTTON_SIZE = 40;
 /** כפתור תפריט מגירה — קצת גדול יותר */
 export const DRAWER_MENU_BUTTON_SIZE = 46;
+/** כפתור חזרה / פעולה בכותרת מסך פרטים (אחיד לכל ה-stack screens) */
+export const HEADER_BACK_BTN_SIZE = 40;
 
 type Props = {
   onPress?: () => void;

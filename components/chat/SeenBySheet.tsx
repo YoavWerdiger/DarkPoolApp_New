@@ -135,7 +135,7 @@ const SeenBySheet: React.FC<SeenBySheetProps> = memo(({
   );
 
   return (
-    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.55]}>
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.55]} showBrandWatermark={false}>
       <ChatSheetContent style={{ flex: 1, paddingBottom: insets.bottom + 16 }}>
         <ChatSheetTitle title="נראה על ידי" />
 

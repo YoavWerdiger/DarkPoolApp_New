@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
+import { queryClient } from '../lib/queryClient';
 import {
   listFollowedInvestors,
   subscribeFollowChanges,
@@ -7,38 +10,33 @@ import {
 } from '../services/darkpool/darkPoolFollowService';
 
 export function useFollowedInvestors() {
-  const [list, setList] = useState<FollowedInvestor[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const reload = useCallback(async (forceSync = false) => {
-    try {
-      const data = forceSync
-        ? await syncFollowedFromCloud()
-        : await listFollowedInvestors(forceSync);
-      setList(data);
-    } catch {
-      setList([]);
-    }
-  }, []);
+  // הטעינה הראשונה מסנכרנת מהענן; רענונים מקומיים קוראים מהמטמון המקומי
+  const forceRef = useRef(true);
+  const query = useQuery<FollowedInvestor[]>({
+    queryKey: appQueryKeys.followedInvestors,
+    queryFn: async () => {
+      const force = forceRef.current;
+      forceRef.current = false;
+      try {
+        return force ? await syncFollowedFromCloud() : await listFollowedInvestors(false);
+      } catch {
+        return [];
+      }
+    },
+  });
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    void reload(true).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
     const unsub = subscribeFollowChanges(() => {
-      void reload();
+      void queryClient.invalidateQueries({ queryKey: appQueryKeys.followedInvestors });
     });
-    return () => {
-      cancelled = true;
-      unsub();
-    };
-  }, [reload]);
+    return unsub;
+  }, []);
 
   const refetch = useCallback(async () => {
-    await reload(true);
-  }, [reload]);
+    forceRef.current = true;
+    await query.refetch();
+  }, [query]);
 
-  return { list, loading, refetch, count: list.length };
+  const list = query.data ?? [];
+  return { list, loading: query.isLoading, refetch, count: list.length };
 }

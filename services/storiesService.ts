@@ -8,6 +8,11 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
+import {
+  isCacheableMediaPath,
+  getCachedLocalMediaUri,
+  downloadMediaToCache,
+} from '../lib/mediaFileCache';
 
 const STORY_DURATION_HOURS = 24;
 const STORIES_BUCKET = 'chat-media';
@@ -95,6 +100,16 @@ async function getSignedUrl(storagePath: string): Promise<string | null> {
 async function resolveMediaUrl(mediaUrl: string | null): Promise<string | null> {
   if (!mediaUrl) return null;
   const path = extractStoragePath(mediaUrl);
+
+  // וידאו של סטורי — אם כבר נשמר לדיסק, מחזירים URI מקומי (מיידי + offline)
+  if (isCacheableMediaPath(path)) {
+    const local = getCachedLocalMediaUri(path, 'stories');
+    if (local) return local;
+    const signed = await getSignedUrl(path);
+    if (signed) void downloadMediaToCache(path, signed, 'stories');
+    return signed;
+  }
+
   return getSignedUrl(path);
 }
 

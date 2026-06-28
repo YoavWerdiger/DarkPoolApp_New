@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
 import {
   listCongressTradesFromDb,
   triggerCongressSync,
@@ -34,78 +36,48 @@ async function enrichWithQuotes(
   return rows.map((trade) => buildCongressFeedItem(trade, quotes));
 }
 
+async function loadCongress(limit: number, refresh: boolean): Promise<CongressTradeFeedItem[]> {
+  if (refresh && !DARK_POOL_SEC_PRODUCTION) {
+    await triggerCongressSync().catch(() => fetchUwCongressFeed(limit, true));
+  }
+
+  let rows = await listCongressTradesFromDb(limit);
+  if (!rows.length && !refresh && !DARK_POOL_SEC_PRODUCTION) {
+    await fetchUwCongressFeed(limit, false).catch(() => undefined);
+    rows = await listCongressTradesFromDb(limit);
+  }
+
+  const enriched = await enrichWithQuotes(rows);
+  const seen = new Set<string>();
+  return enriched.filter((item) => {
+    if (seen.has(item.trade.id)) return false;
+    seen.add(item.trade.id);
+    return true;
+  });
+}
+
 export function useCongressFeed(limit = 40, enabled = true) {
-  const [trades, setTrades] = useState<CongressTradeFeedItem[]>([]);
-  const [loading, setLoading] = useState(enabled);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const mounted = useRef(true);
-
-  useEffect(() => () => {
-    mounted.current = false;
-  }, []);
-
-  const load = useCallback(
-    async (refresh = false) => {
-      if (!enabled) {
-        setTrades([]);
-        setLoading(false);
-        setRefreshing(false);
-        return;
-      }
-      setError(null);
-      try {
-        if (refresh) {
-          if (!DARK_POOL_SEC_PRODUCTION) {
-            await triggerCongressSync().catch(() => {
-              return fetchUwCongressFeed(limit, true);
-            });
-          }
-        }
-
-        let rows = await listCongressTradesFromDb(limit);
-        if (!rows.length && !refresh && !DARK_POOL_SEC_PRODUCTION) {
-          await fetchUwCongressFeed(limit, false).catch(() => undefined);
-          rows = await listCongressTradesFromDb(limit);
-        }
-
-        if (!mounted.current) return;
-        const enriched = await enrichWithQuotes(rows);
-        const seen = new Set<string>();
-        const deduped = enriched.filter((item) => {
-          if (seen.has(item.trade.id)) return false;
-          seen.add(item.trade.id);
-          return true;
-        });
-        setTrades(deduped);
-      } catch (e) {
-        if (!mounted.current) return;
-        setError((e as Error).message);
-      }
+  const forceRef = useRef(false);
+  const query = useQuery<CongressTradeFeedItem[]>({
+    queryKey: appQueryKeys.congressFeed(limit),
+    queryFn: () => {
+      const refresh = forceRef.current;
+      forceRef.current = false;
+      return loadCongress(limit, refresh);
     },
-    [enabled, limit]
-  );
-
-  useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    void load(false).finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [load, enabled]);
+    enabled,
+  });
 
   const refetch = useCallback(async () => {
-    setRefreshing(true);
-    await load(true);
-    setRefreshing(false);
-  }, [load]);
+    forceRef.current = true;
+    await query.refetch();
+  }, [query]);
 
-  return { trades, loading, refreshing, error, refetch };
+  return {
+    trades: query.data ?? [],
+    loading: query.isLoading,
+    refreshing: query.isRefetching,
+    error: query.error ? (query.error as Error).message : null,
+    refetch,
+  };
 }

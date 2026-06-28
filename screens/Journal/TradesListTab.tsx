@@ -14,6 +14,8 @@ import type { Trade } from './tradeTypes';
 import { TradeListCard, createTradeCardStyles } from './TradeListCard';
 import type { JournalStackParamList } from '../../navigation/JournalStack';
 import UICard from '../../components/ui/UICard';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 
 export type { Trade } from './tradeTypes';
 
@@ -32,8 +34,13 @@ export default function TradesListTab() {
   const { user } = useAuth();
   const navigation = useNavigation<Nav>();
   const mainTabsHeight = useMainTabsHeight();
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
+  // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי
+  const [trades, setTrades] = useState<Trade[]>(
+    () => queryClient.getQueryData<Trade[]>(appQueryKeys.trades(user?.id ?? 'anon')) ?? []
+  );
+  const [loading, setLoading] = useState(
+    () => !queryClient.getQueryData<Trade[]>(appQueryKeys.trades(user?.id ?? 'anon'))
+  );
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +61,7 @@ export default function TradesListTab() {
 
       if (error) throw error;
       setTrades(data || []);
+      queryClient.setQueryData(appQueryKeys.trades(user.id), data || []);
     } catch (error: any) {
       legacyAlert('שגיאה', 'לא ניתן לטעון את הטריידים');
     } finally {

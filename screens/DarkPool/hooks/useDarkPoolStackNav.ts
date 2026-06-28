@@ -4,15 +4,20 @@ import type { DarkPoolStackParamList } from '../../../navigation/DarkPoolStack';
 
 const STACK_ROUTE_NAMES = new Set(['DarkPoolHome', 'DarkPoolTicker', 'DarkPoolInvestor']);
 
+type NavLike = {
+  getState?: () => { routeNames?: string[] } | undefined;
+  getParent?: () => NavLike | undefined;
+};
+
 function findDarkPoolStackNav(
-  navigation: ReturnType<typeof useNavigation>
+  navigation: NavLike
 ): NativeStackNavigationProp<DarkPoolStackParamList> | null {
-  let current: typeof navigation | undefined = navigation;
+  let current: NavLike | undefined = navigation;
 
   while (current) {
     const routeNames = current.getState?.()?.routeNames ?? [];
-    if (routeNames.some((name) => STACK_ROUTE_NAMES.has(name))) {
-      return current as NativeStackNavigationProp<DarkPoolStackParamList>;
+    if (routeNames.some((name: string) => STACK_ROUTE_NAMES.has(name))) {
+      return current as unknown as NativeStackNavigationProp<DarkPoolStackParamList>;
     }
     current = current.getParent?.() ?? undefined;
   }
@@ -22,6 +27,6 @@ function findDarkPoolStackNav(
 
 export function useDarkPoolStackNav() {
   const navigation = useNavigation();
-  const stackNav = findDarkPoolStackNav(navigation);
-  return stackNav ?? (navigation as NativeStackNavigationProp<DarkPoolStackParamList>);
+  const stackNav = findDarkPoolStackNav(navigation as NavLike);
+  return stackNav ?? (navigation as unknown as NativeStackNavigationProp<DarkPoolStackParamList>);
 }

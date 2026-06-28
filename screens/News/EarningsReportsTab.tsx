@@ -8,10 +8,15 @@ import { BlurView } from 'expo-blur';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import EarningsService, { EarningsReport } from '../../services/earningsService';
 import { supabase } from '../../lib/supabase';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
+
+const EARNINGS_QUERY_KEY = appQueryKeys.earningsList('window');
+type ReportsByDate = Record<string, EarningsReport[]>;
 import BottomSheet, { useBottomSheetClose } from '../../components/ui/BottomSheet/BottomSheet';
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
-import { TickerLogo } from '../Portfolios/components/TickerLogo';
+import { TickerLogo } from '../../components/ui/TickerLogo';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const EarningsReportCard: React.FC<{ 
@@ -414,10 +419,15 @@ export default function EarningsReportsTab() {
   const DesignTokens = useDesignTokens();
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   // Map of date string → reports for that day. נטען הדרגתית.
-  const [reportsByDate, setReportsByDate] = useState<Record<string, EarningsReport[]>>({});
+  // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי
+  const [reportsByDate, setReportsByDate] = useState<ReportsByDate>(
+    () => queryClient.getQueryData<ReportsByDate>(EARNINGS_QUERY_KEY) ?? {}
+  );
   // tracking של אילו ימים כבר נטענו, כדי למנוע קריאות כפולות.
   const loadedDatesRef = useRef<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => Object.keys(queryClient.getQueryData<ReportsByDate>(EARNINGS_QUERY_KEY) ?? {}).length === 0
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedReport, setSelectedReport] = useState<EarningsReport | null>(null);
@@ -530,6 +540,9 @@ export default function EarningsReportsTab() {
         loadedDatesRef.current.add(key);
       }
 
+      const prevCached = queryClient.getQueryData<ReportsByDate>(EARNINGS_QUERY_KEY) ?? {};
+      const merged = opts.forceReload ? byDate : { ...prevCached, ...byDate };
+      queryClient.setQueryData(EARNINGS_QUERY_KEY, merged);
       setReportsByDate(prev => (opts.forceReload ? byDate : { ...prev, ...byDate }));
 
       if (__DEV__) {

@@ -9,7 +9,7 @@ import {
   FlatList,
   Platform,
 } from 'react-native';
-import { Check, X, Users, Zap, TrendingUp, Crown } from 'lucide-react-native';
+import { Check, X, Users, Zap, TrendingUp, Crown, Sparkles } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
@@ -20,7 +20,7 @@ import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const CARD_W = Math.round(SCREEN_W * 0.76);
+const CARD_W = Math.round(SCREEN_W * 0.78);
 const GAP = 14;
 const SNAP = CARD_W + GAP;
 // RTL: נהפוך את הFlatList כדי שיגלול ימין → שמאל
@@ -33,6 +33,17 @@ const PLANS = [
   SUBSCRIPTION_PLANS.quarterly,
   SUBSCRIPTION_PLANS.yearly,
 ] as const;
+
+/**
+ * פלטה מותגית אחידה (DarkPool) — ירוק כצבע מוביל, גוונים משלימים.
+ * מחליף את הכחול/זהב המקוריים שלא התאימו לזהות הירוקה.
+ */
+const PLAN_THEME: Record<string, { color: string; icon: any }> = {
+  free: { color: '#8B98A5', icon: Users },        // אפור-פלדה ניטרלי
+  monthly: { color: '#00C805', icon: Zap },       // ירוק DarkPool
+  quarterly: { color: '#2DD4BF', icon: TrendingUp }, // טורקיז (הכי משתלם)
+  yearly: { color: '#F5B400', icon: Crown },      // זהב פרימיום
+};
 
 // תכונות לטבלת השוואה
 const COMPARISON_FEATURES = [
@@ -57,16 +68,11 @@ const ra = (hex: string, a: number) => {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 };
 
-const PLAN_ICONS = {
-  free: Users,
-  monthly: Zap,
-  quarterly: TrendingUp,
-  yearly: Crown,
-} as const;
+const planColorOf = (id: string) => PLAN_THEME[id]?.color ?? '#00C805';
 
 export default function SubscriptionPlansScreen({ navigation }: any) {
   const tokens = useDesignTokens();
-  const { colors, spacing, borderRadius, typography, shadows } = tokens;
+  const { colors, spacing, borderRadius, typography } = tokens;
 
   const [activePlanId, setActivePlanId] = useState<string>(PLANS[0].id);
   // useNativeDriver:false נדרש כי יש listener + interpolation על width (dots)
@@ -88,65 +94,73 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
 
   /* ─── כרטיסיית מסלול ─── */
   const PlanCard = ({ plan, idx }: { plan: (typeof PLANS)[number]; idx: number }) => {
-    const Icon = PLAN_ICONS[plan.id as keyof typeof PLAN_ICONS] ?? Users;
-    const color = plan.color;
+    const theme = PLAN_THEME[plan.id] ?? PLAN_THEME.monthly;
+    const Icon = theme.icon;
+    const color = theme.color;
     const isActive = activePlanId === plan.id;
-
-    const inputRange = [(idx - 1) * SNAP, idx * SNAP, (idx + 1) * SNAP];
-    const cardScale = scrollX.interpolate({ inputRange, outputRange: [0.91, 1, 0.91], extrapolate: 'clamp' });
-    const cardOpacity = scrollX.interpolate({ inputRange, outputRange: [0.62, 1, 0.62], extrapolate: 'clamp' });
-    const cardTranslateY = scrollX.interpolate({ inputRange, outputRange: [10, 0, 10], extrapolate: 'clamp' });
+    const isPopular = (plan as any).popular === true;
 
     const renderPrice = () => {
       if (plan.price === 0) return (
         <View style={{ alignItems: 'center' }}>
-          <Text style={{ fontSize: 36, fontWeight: '800', color: colors.text.primary, letterSpacing: -1 }}>חינם</Text>
+          <Text style={{ fontSize: 38, fontWeight: '800', color: colors.text.primary, letterSpacing: -1 }}>חינם</Text>
           <Text style={{ fontSize: 13, color: colors.text.tertiary, fontWeight: '500', marginTop: 2 }}>לתמיד</Text>
         </View>
       );
       if (plan.id === 'yearly') return (
         <View style={{ alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
-            <Text style={{ fontSize: 36, fontWeight: '800', color, letterSpacing: -1 }}>₪117</Text>
-            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 6, fontWeight: '500' }}>/חודש</Text>
+            <Text style={{ fontSize: 38, fontWeight: '800', color, letterSpacing: -1 }}>₪117</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 7, fontWeight: '500' }}>/חודש</Text>
           </View>
-          <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 2 }}>(מחויב שנתי — ₪{plan.price.toLocaleString()})</Text>
+          <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 3 }}>מחויב שנתי — ₪{plan.price.toLocaleString()}</Text>
         </View>
       );
       if (plan.id === 'quarterly') return (
         <View style={{ alignItems: 'center' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
-            <Text style={{ fontSize: 36, fontWeight: '800', color, letterSpacing: -1 }}>₪{plan.price}</Text>
-          </View>
-          <Text style={{ fontSize: 13, color: colors.text.secondary, marginTop: 3, fontWeight: '500' }}>לשלושה חודשים</Text>
-          <View style={{ marginTop: 8, backgroundColor: ra(color, 0.18), paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, borderWidth: 1, borderColor: ra(color, 0.4) }}>
-            <Text style={{ fontSize: 11, color, fontWeight: '700' }}>חסוך 47% ברבעון</Text>
-          </View>
+          <Text style={{ fontSize: 38, fontWeight: '800', color, letterSpacing: -1 }}>₪{plan.price}</Text>
+          <Text style={{ fontSize: 13, color: colors.text.secondary, marginTop: 2, fontWeight: '500' }}>לשלושה חודשים</Text>
         </View>
       );
       // monthly
       return (
         <View style={{ alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
-            <Text style={{ fontSize: 36, fontWeight: '800', color, letterSpacing: -1 }}>₪{plan.price}</Text>
-            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 6, fontWeight: '500' }}>/חודש</Text>
+            <Text style={{ fontSize: 38, fontWeight: '800', color, letterSpacing: -1 }}>₪{plan.price}</Text>
+            <Text style={{ fontSize: 14, color: colors.text.secondary, marginBottom: 7, fontWeight: '500' }}>/חודש</Text>
           </View>
-          <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 2 }}>ללא התחייבות</Text>
+          <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 3 }}>ללא התחייבות</Text>
         </View>
       );
     };
 
     return (
-      <Animated.View style={{
+      <View style={{
         width: CARD_W,
         marginHorizontal: GAP / 2,
-        transform: [{ translateY: cardTranslateY }, { scale: cardScale }],
-        opacity: cardOpacity,
-        paddingBottom: 16,
+        paddingTop: 14,
+        paddingBottom: 18,
       }}>
+        {/* Ribbon "הכי משתלם" — מעל הכרטיס */}
+        {isPopular && (
+          <View style={{ position: 'absolute', top: 0, alignSelf: 'center', zIndex: 5 }}>
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 5,
+              backgroundColor: color,
+              paddingHorizontal: 14, paddingVertical: 5,
+              borderRadius: borderRadius.full,
+              shadowColor: color, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 6,
+            }}>
+              <Sparkles size={12} color="#04140F" strokeWidth={2.5} />
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#04140F', letterSpacing: 0.2 }}>הכי משתלם</Text>
+            </View>
+          </View>
+        )}
+
         <UICard
           variant="glass"
           glassIntensity="medium"
+          showGlassBorder={false}
           padding="none"
           pressable
           onPress={() => {
@@ -156,41 +170,25 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           style={{
             borderRadius: borderRadius['2xl'],
             borderWidth: isActive ? 1.5 : 1,
-            borderColor: isActive ? ra(color, 0.7) : colors.border.subtle,
+            borderColor: isActive ? ra(color, 0.75) : colors.border.default,
             shadowColor: color,
-            shadowOffset: { width: 0, height: isActive ? 12 : 4 },
-            shadowOpacity: isActive ? 0.28 : 0.08,
-            shadowRadius: isActive ? 20 : 8,
-            elevation: isActive ? 14 : 4,
+            shadowOffset: { width: 0, height: isActive ? 14 : 4 },
+            shadowOpacity: isActive ? 0.32 : 0.06,
+            shadowRadius: isActive ? 24 : 8,
+            elevation: isActive ? 16 : 3,
           }}
         >
-          {/* Glow top strip */}
-          {isActive && (
-            <LinearGradient
-              colors={[ra(color, 0.22), 'transparent']}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 80, borderTopLeftRadius: borderRadius['2xl'], borderTopRightRadius: borderRadius['2xl'] }}
-            />
-          )}
-
-          <View style={{ padding: spacing.xl }}>
-            {/* Badge */}
-            {plan.badge && (
-              <View style={{ position: 'absolute', top: -1, right: -1, backgroundColor: color, paddingHorizontal: 10, paddingVertical: 4, borderTopRightRadius: borderRadius['2xl'], borderBottomLeftRadius: borderRadius.md, zIndex: 2 }}>
-                <Text style={{ fontSize: 10, fontWeight: '800', color: plan.id === 'quarterly' ? '#fff' : '#000' }}>{plan.badge}</Text>
-              </View>
-            )}
-
+          <View style={{ padding: spacing.xl, paddingTop: isPopular ? spacing.xl + 8 : spacing.xl }}>
             {/* Icon + name */}
-            <View style={{ alignItems: 'center', marginBottom: spacing.xl, marginTop: plan.badge ? spacing.base : 0 }}>
+            <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
               <View style={{
-                width: 56, height: 56, borderRadius: 28,
-                backgroundColor: ra(color, 0.15),
-                borderWidth: 1.5, borderColor: ra(color, 0.35),
-                alignItems: 'center', justifyContent: 'center', marginBottom: 14,
+                width: 52, height: 52, borderRadius: 16,
+                backgroundColor: ra(color, 0.14),
+                alignItems: 'center', justifyContent: 'center', marginBottom: 12,
               }}>
                 <Icon size={24} color={color} strokeWidth={2} />
               </View>
-              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text.primary, textAlign: 'center', letterSpacing: -0.3 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text.primary, textAlign: 'center', letterSpacing: -0.4 }}>
                 {plan.name}
               </Text>
               <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 4, textAlign: 'center' }}>
@@ -199,26 +197,39 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             </View>
 
             {/* Price */}
-            <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
+            <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
               {renderPrice()}
             </View>
 
             {/* Divider */}
-            <View style={{ height: 1, backgroundColor: colors.border.subtle, marginBottom: spacing.lg }} />
+            <View style={{ height: 1, backgroundColor: colors.border.default, marginBottom: spacing.lg }} />
 
             {/* Features */}
-            <View style={{ gap: 10, marginBottom: spacing.xl }}>
+            <View style={{ gap: 11, marginBottom: spacing.xl }}>
               {plan.features.map((f, i) => (
-                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View key={`inc-${i}`} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
                   <View style={{
-                    width: 18, height: 18, borderRadius: 9,
+                    width: 19, height: 19, borderRadius: 10,
                     backgroundColor: ra(color, 0.18),
-                    borderWidth: 1, borderColor: ra(color, 0.4),
                     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                   }}>
-                    <Check size={10} color={color} strokeWidth={3} />
+                    <Check size={11} color={color} strokeWidth={3} />
                   </View>
                   <Text style={{ flex: 1, fontSize: 13, color: colors.text.secondary, textAlign: 'right', lineHeight: 18, fontWeight: '500' }}>
+                    {f}
+                  </Text>
+                </View>
+              ))}
+              {((plan as any).excludedFeatures ?? []).map((f: string, i: number) => (
+                <View key={`exc-${i}`} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
+                  <View style={{
+                    width: 19, height: 19, borderRadius: 10,
+                    backgroundColor: ra('#FF4444', 0.1),
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <X size={11} color={ra('#FF4444', 0.7)} strokeWidth={2.5} />
+                  </View>
+                  <Text style={{ flex: 1, fontSize: 13, color: colors.text.muted, textAlign: 'right', lineHeight: 18, fontWeight: '500', textDecorationLine: 'line-through' }}>
                     {f}
                   </Text>
                 </View>
@@ -228,8 +239,8 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             {/* CTA */}
             {plan.price === 0 ? (
               <View style={{
-                paddingVertical: 13, borderRadius: borderRadius.lg,
-                backgroundColor: ra(color, 0.1), borderWidth: 1, borderColor: ra(color, 0.2),
+                paddingVertical: 14, borderRadius: borderRadius.lg,
+                backgroundColor: colors.background.input, borderWidth: 1, borderColor: colors.border.default,
                 alignItems: 'center',
               }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text.tertiary }}>מסלול נוכחי</Text>
@@ -244,11 +255,11 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
                 style={{ borderRadius: borderRadius.lg, overflow: 'hidden' }}
               >
                 <LinearGradient
-                  colors={[color, ra(color, 0.75)]}
+                  colors={[color, ra(color, 0.72)]}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={{ paddingVertical: 14, alignItems: 'center' }}
+                  style={{ paddingVertical: 15, alignItems: 'center' }}
                 >
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff', letterSpacing: 0.2 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#04140F', letterSpacing: 0.2 }}>
                     הצטרפות למסלול
                   </Text>
                 </LinearGradient>
@@ -256,14 +267,14 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             )}
           </View>
         </UICard>
-      </Animated.View>
+      </View>
     );
   };
 
   /* ─── טבלת השוואה ─── */
   const ComparisonTable = () => (
-    <View style={{ paddingHorizontal: spacing.base, marginTop: spacing['2xl'] }}>
-      <Text style={{ fontSize: typography.fontSize.lg, fontWeight: '700', color: colors.text.primary, textAlign: 'center', marginBottom: 4 }}>
+    <View style={{ paddingHorizontal: spacing.base, marginTop: spacing.xl }}>
+      <Text style={{ fontSize: typography.fontSize.xl, fontWeight: '800', color: colors.text.primary, textAlign: 'center', marginBottom: 4 }}>
         מה כלול בכל מסלול?
       </Text>
       <Text style={{ fontSize: typography.fontSize.sm, color: colors.text.tertiary, textAlign: 'center', marginBottom: spacing.lg }}>
@@ -273,8 +284,8 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
       <UICard variant="glass" glassIntensity="light" padding="none" style={{ borderRadius: borderRadius.xl, overflow: 'hidden' }}>
         {/* Header */}
         <View style={{
-          flexDirection: 'row', paddingVertical: spacing.md, paddingHorizontal: spacing.md,
-          borderBottomWidth: 1, borderBottomColor: colors.border.subtle,
+          flexDirection: 'row-reverse', paddingVertical: spacing.md, paddingHorizontal: spacing.md,
+          borderBottomWidth: 1, borderBottomColor: colors.border.default,
           backgroundColor: ra('#ffffff', 0.03),
         }}>
           <View style={{ width: '30%' }}>
@@ -282,7 +293,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           </View>
           {PLANS.map(p => (
             <View key={p.id} style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={{ fontSize: 9, fontWeight: '700', color: p.color, textAlign: 'center', lineHeight: 13 }}>
+              <Text style={{ fontSize: 9, fontWeight: '700', color: planColorOf(p.id), textAlign: 'center', lineHeight: 13 }}>
                 {p.id === 'yearly' ? 'שנתי' : p.name}
               </Text>
             </View>
@@ -292,7 +303,7 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
         {/* Rows */}
         {COMPARISON_FEATURES.map((feat, i) => (
           <View key={i} style={{
-            flexDirection: 'row', alignItems: 'center',
+            flexDirection: 'row-reverse', alignItems: 'center',
             paddingVertical: 11, paddingHorizontal: spacing.md,
             borderBottomWidth: i < COMPARISON_FEATURES.length - 1 ? 1 : 0,
             borderBottomColor: colors.border.subtle,
@@ -305,15 +316,16 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             </View>
             {PLANS.map(plan => {
               const has = plan.features.some(f => f.includes(feat) || feat.includes(f.replace(' 🇮🇱', '')));
+              const c = planColorOf(plan.id);
               return (
                 <View key={plan.id} style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                   {has ? (
-                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: ra(plan.color, 0.18), borderWidth: 1, borderColor: ra(plan.color, 0.45), alignItems: 'center', justifyContent: 'center' }}>
-                      <Check size={11} color={plan.color} strokeWidth={3} />
+                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: ra(c, 0.18), alignItems: 'center', justifyContent: 'center' }}>
+                      <Check size={11} color={c} strokeWidth={3} />
                     </View>
                   ) : (
-                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: ra('#FF4444', 0.1), borderWidth: 1, borderColor: ra('#FF4444', 0.35), alignItems: 'center', justifyContent: 'center' }}>
-                      <X size={11} color="#FF4444" strokeWidth={2.5} />
+                    <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: ra('#FF4444', 0.09), alignItems: 'center', justifyContent: 'center' }}>
+                      <X size={11} color={ra('#FF4444', 0.7)} strokeWidth={2.5} />
                     </View>
                   )}
                 </View>
@@ -327,12 +339,12 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
 
   /* ─── כיצד זה עובד ─── */
   const HowItWorks = () => (
-    <View style={{ paddingHorizontal: spacing.base, marginTop: spacing['2xl'], marginBottom: spacing['3xl'] }}>
+    <View style={{ paddingHorizontal: spacing.base, marginTop: spacing.xl, marginBottom: spacing['3xl'] }}>
       <UICard variant="glass" glassIntensity="light" padding="lg" style={{ borderRadius: borderRadius.xl }}>
-        <Text style={{ fontSize: typography.fontSize.base, fontWeight: '700', color: colors.text.primary, textAlign: 'right', marginBottom: spacing.lg }}>
+        <Text style={{ fontSize: typography.fontSize.base, fontWeight: '800', color: colors.text.primary, textAlign: 'right', marginBottom: spacing.lg }}>
           איך זה עובד?
         </Text>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
           {[
             { n: '1', title: 'בחר מסלול', sub: 'מצא את הרמה שמתאימה לך' },
             { n: '2', title: 'אשר פרטים', sub: 'מילוי קצר ותשלום מאובטח' },
@@ -340,18 +352,18 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           ].map(s => (
             <View key={s.n} style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
               <View style={{
-                width: 40, height: 40, borderRadius: 20, marginBottom: spacing.sm,
+                width: 42, height: 42, borderRadius: 21, marginBottom: spacing.sm,
                 backgroundColor: colors.primary.dim, borderWidth: 1, borderColor: colors.primary.subtle,
                 alignItems: 'center', justifyContent: 'center',
               }}>
                 <Text style={{ fontSize: typography.fontSize.lg, fontWeight: '800', color: colors.primary.main }}>{s.n}</Text>
               </View>
-              <Text style={{ fontSize: typography.fontSize.sm, fontWeight: '600', color: colors.text.primary, textAlign: 'center', marginBottom: 3 }}>{s.title}</Text>
+              <Text style={{ fontSize: typography.fontSize.sm, fontWeight: '700', color: colors.text.primary, textAlign: 'center', marginBottom: 3 }}>{s.title}</Text>
               <Text style={{ fontSize: 11, color: colors.text.tertiary, textAlign: 'center', lineHeight: 15 }}>{s.sub}</Text>
             </View>
           ))}
         </View>
-        <View style={{ marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border.subtle }}>
+        <View style={{ marginTop: spacing.lg, paddingTop: spacing.lg, borderTopWidth: 1, borderTopColor: colors.border.default }}>
           <Text style={{ fontSize: 12, color: colors.text.tertiary, textAlign: 'right', lineHeight: 19 }}>
             ניתן לשנות מסלול בכל עת — שדרוג נכנס לתוקף מיידית. ביטול פשוט, ללא קנסות.
           </Text>
@@ -379,20 +391,11 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
           bounces={Platform.OS === 'ios'}
         >
           {/* ─── Header ─── */}
-          <View style={{ alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.lg, paddingHorizontal: spacing.xl }}>
-            {/* Accent glow */}
-            <View style={{
-              position: 'absolute', top: 0, left: SCREEN_W * 0.2, right: SCREEN_W * 0.2, height: 120,
-              borderRadius: 60, backgroundColor: colors.primary.glow,
-              opacity: 0.18,
-              // blur workaround
-              ...(Platform.OS === 'ios' ? {} : {}),
-            }} />
-            <View style={{ width: 48, height: 3, backgroundColor: colors.primary.main, borderRadius: 2, marginBottom: spacing.md }} />
+          <View style={{ alignItems: 'center', paddingTop: spacing.lg, paddingBottom: spacing.base, paddingHorizontal: spacing.xl }}>
             <Text style={{ fontSize: typography.fontSize['3xl'], fontWeight: '800', color: colors.text.primary, textAlign: 'center', letterSpacing: -0.8, lineHeight: 36 }}>
               בחר את המסלול שלך
             </Text>
-            <Text style={{ fontSize: typography.fontSize.base, color: colors.text.secondary, textAlign: 'center', marginTop: spacing.sm, lineHeight: 22, maxWidth: 260 }}>
+            <Text style={{ fontSize: typography.fontSize.base, color: colors.text.secondary, textAlign: 'center', marginTop: spacing.sm, lineHeight: 22, maxWidth: 280 }}>
               כל סוחר מתחיל איפשהו.{'\n'}איפה אתה רוצה להתחיל?
             </Text>
           </View>
@@ -412,21 +415,14 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
               disableIntervalMomentum
               onScroll={Animated.event(
                 [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-                {
-                  useNativeDriver: false,
-                  listener: (e: any) => {
-                    const x = e.nativeEvent.contentOffset.x;
-                    const idx = Math.round(x / SNAP);
-                    if (idx >= 0 && idx < PLANS.length) {
-                      const id = (PLANS as any)[idx].id;
-                      if (id !== activePlanId) setActivePlanId(id);
-                    }
-                  },
-                }
+                { useNativeDriver: true }
               )}
               onMomentumScrollEnd={(e: any) => {
                 const idx = Math.round(e.nativeEvent.contentOffset.x / SNAP);
-                if (idx >= 0 && idx < PLANS.length) setActivePlanId((PLANS as any)[idx].id);
+                if (idx >= 0 && idx < PLANS.length) {
+                  const id = (PLANS as any)[idx].id;
+                  if (id !== activePlanId) setActivePlanId(id);
+                }
               }}
               scrollEventThrottle={16}
               removeClippedSubviews={false}
@@ -440,15 +436,15 @@ export default function SubscriptionPlansScreen({ navigation }: any) {
             />
 
             {/* Dots */}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 8, gap: 6 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 6, gap: 6 }}>
               {PLANS.map((p, i) => {
                 const inputRange = [(i - 1) * SNAP, i * SNAP, (i + 1) * SNAP];
-                const dotW = scrollX.interpolate({ inputRange, outputRange: [7, 18, 7], extrapolate: 'clamp' });
-                const dotOp = scrollX.interpolate({ inputRange, outputRange: [0.35, 1, 0.35], extrapolate: 'clamp' });
+                const dotScale = scrollX.interpolate({ inputRange, outputRange: [0.4, 1, 0.4], extrapolate: 'clamp' });
+                const dotOp = scrollX.interpolate({ inputRange, outputRange: [0.3, 1, 0.3], extrapolate: 'clamp' });
                 return (
                   <Animated.View
                     key={p.id}
-                    style={{ width: dotW, height: 7, borderRadius: 4, backgroundColor: p.color, opacity: dotOp }}
+                    style={{ width: 20, height: 7, borderRadius: 4, backgroundColor: planColorOf(p.id), opacity: dotOp, transform: [{ scaleX: dotScale }] }}
                   />
                 );
               })}

@@ -159,14 +159,54 @@ export async function buildExploreFromDb(
     .sort((a, b) => (b.activity_score ?? 0) - (a.activity_score ?? 0))
     .slice(0, 10);
 
-  return {
+  const payload: DbExplorePayload = {
     most_followed: featured.length ? featured : topActive.slice(0, 8),
     executives: insiders.slice(0, 12),
     top_active: topActive,
     recently_active: recentlyActive,
-    insiders_with_photo: insiders.filter((p) => !!p.image_url).slice(0, 12),
+    insiders_with_photo: insiders,
     warnings,
     fetched_at: new Date().toISOString(),
     source: 'public_filings',
+  };
+
+  return enrichExplorePayloadWithPortraits(supabase, payload);
+}
+
+async function enrichExplorePayloadWithPortraits(
+  supabase: SupabaseClient,
+  payload: DbExplorePayload
+): Promise<DbExplorePayload> {
+  const people = [
+    ...payload.most_followed,
+    ...payload.top_active,
+    ...payload.recently_active,
+    ...payload.executives,
+    ...payload.insiders_with_photo,
+  ];
+  const ids = [...new Set(people.map((p) => p.id))].slice(0, 80);
+  if (!ids.length) return payload;
+
+  const { data } = await supabase
+    .from('dark_pool_person_portraits')
+    .select('person_id, image_url')
+    .in('person_id', ids)
+    .not('image_url', 'is', null);
+
+  const map = new Map(
+    (data ?? []).map((r) => [String(r.person_id), String(r.image_url)])
+  );
+  if (!map.size) return payload;
+
+  const merge = (list: DbExplorePerson[]) =>
+    list.map((p) => (map.has(p.id) ? { ...p, image_url: map.get(p.id)! } : p));
+
+  return {
+    ...payload,
+    most_followed: merge(payload.most_followed),
+    top_active: merge(payload.top_active),
+    recently_active: merge(payload.recently_active),
+    executives: merge(payload.executives),
+    insiders_with_photo: merge(payload.insiders_with_photo),
   };
 }

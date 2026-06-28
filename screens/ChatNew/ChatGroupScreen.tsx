@@ -4,17 +4,11 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, type ViewStyle, TouchableOpacity, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform } from 'react-native';
-import {
-  KeyboardAvoidingView,
-  KeyboardStickyView,
-  useKeyboardState,
-} from 'react-native-keyboard-controller';
-import {
-  chatComposerPaddingBottom,
-  chatComposerStickyOffset,
-} from '../../components/chat/chatInputLayout';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager } from 'react-native';
+import { chatComposerSafeBottomInset } from '../../components/chat/chatInputLayout';
+import { ChatComposerDock } from '../../components/chat/ChatComposerDock';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
 
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
@@ -48,7 +42,7 @@ import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
 import { scrollChatListToBottom } from '../../utils/chatListScrollToBottom';
 
 // ── Skeleton bubble — shown while messages are loading ──────────────────────
-const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; width: string; delay: number }) => {
+const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; width: DimensionValue; delay: number }) => {
   const opacity = useRef(new RNAnimated.Value(0.35)).current;
   useEffect(() => {
     const anim = RNAnimated.loop(
@@ -78,10 +72,21 @@ export default function ChatGroupScreen() {
   const route = useRoute();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
-  const composerStickyOffset = useMemo(
-    () => chatComposerStickyOffset(insets.bottom),
-    [insets.bottom],
-  );
+  const [composerHeight, setComposerHeight] = useState(72);
+  // דחיית רינדור רשימת ההודעות הכבדה עד אחרי אנימציית הניווט (כמו WhatsApp):
+  // המסך (כותרת+קומפוזר+סקלטון) נכנס מיד וחלק, וההודעות מרונדרות רגע אחרי.
+  const [messagesListReady, setMessagesListReady] = useState(false);
+  // הרשימה מרונדרת שקופה (opacity:0) מעל הסקלטון, ונחשפת רק אחרי שהיא כבר
+  // ממוקמת בתחתית — כך אין "קפיצת התמקמות" גלויה בכניסה (ההתמקמות קורית מאחורי הסקלטון).
+  const [messagesRevealed, setMessagesRevealed] = useState(false);
+  const messagesRevealedRef = useRef(false);
+  const listOpacity = useRef(new RNAnimated.Value(0)).current;
+  const onComposerLayout = useCallback((event: LayoutChangeEvent) => {
+    const h = event.nativeEvent.layout.height;
+    if (h > 0 && Math.abs(h - composerHeight) > 2) {
+      setComposerHeight(h);
+    }
+  }, [composerHeight]);
   useLockParentDrawerWhileFocused();
 
   const listRef = useRef<FlatList<ChatMessageType>>(null);
@@ -139,12 +144,6 @@ export default function ChatGroupScreen() {
   } = useChat();
 
   const initialUnreadInfoRef = useRef(initialUnreadInfo);
-  const keyboardVisible = useKeyboardState((state) => state.isVisible);
-  const composerPaddingBottom = useMemo(
-    () => chatComposerPaddingBottom(insets.bottom, keyboardVisible),
-    [insets.bottom, keyboardVisible],
-  );
-  const prevKeyboardVisibleRef = useRef(false);
 
   // בדיקה אם זו קבוצת הכרזות
   const isAnnouncementGroup = useMemo(() => {
@@ -414,6 +413,29 @@ export default function ChatGroupScreen() {
     setShowScrollToBottomButton(false);
   }, []);
 
+  /** חושף את רשימת ההודעות (fade-in) — אחרי שהיא כבר ממוקמת. אידמפוטנטי. */
+  const revealMessages = useCallback(() => {
+    if (messagesRevealedRef.current) return;
+    messagesRevealedRef.current = true;
+    setMessagesRevealed(true);
+    RNAnimated.timing(listOpacity, {
+      toValue: 1,
+      duration: 160,
+      useNativeDriver: true,
+    }).start();
+  }, [listOpacity]);
+
+  /** חשיפה בפריים הבא-אחרי-הבא — מבטיח שה-scrollToOffset(0) כבר הוחל לפני שמראים */
+  const requestRevealMessages = useCallback(() => {
+    if (messagesRevealedRef.current) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => revealMessages());
+    });
+  }, [revealMessages]);
+
+  const requestRevealMessagesRef = useRef(requestRevealMessages);
+  requestRevealMessagesRef.current = requestRevealMessages;
+
   /** גלילה לתחתית — עם ניסיונות חוזרים עד שגובה התוכן מוכן */
   const applyScrollToBottom = useCallback((animated: boolean, markInitialDone = false) => {
     if (displayMessages.length === 0) return;
@@ -435,6 +457,8 @@ export default function ChatGroupScreen() {
           if (markInitialDone && reachedBottom) {
             initialScrollDoneRef.current = true;
           }
+          // הרשימה כבר נחתה בתחתית — אפשר לחשוף אותה בלי קפיצה גלויה
+          requestRevealMessagesRef.current();
         },
       },
     );
@@ -451,6 +475,17 @@ export default function ChatGroupScreen() {
 
   const applyScrollToBottomRef = useRef(applyScrollToBottom);
   applyScrollToBottomRef.current = applyScrollToBottom;
+
+  const onKeyboardShow = useCallback(() => {
+    if (isAtBottomRef.current || pinScrollToBottomRef.current) {
+      requestAnimationFrame(() => applyScrollToBottomRef.current?.(false));
+    }
+  }, []);
+  const { keyboardInset, keyboardShown } = useChatKeyboardInsets(onKeyboardShow);
+  const composerPaddingBottom = useMemo(
+    () => chatComposerSafeBottomInset(insets.bottom),
+    [insets.bottom],
+  );
 
   /** תמיד גולל לתחתית כששולחים — גם אחרי פתיחה עם unread (לא בתחתית) */
   const scrollToBottomOnSend = useCallback(() => {
@@ -535,6 +570,7 @@ export default function ChatGroupScreen() {
         'ChatGroupScreen',
         `initial scroll to last read index=${index} unread=${unreadCount}`,
       );
+      requestRevealMessages();
       return;
     }
 
@@ -550,6 +586,7 @@ export default function ChatGroupScreen() {
     applyScrollToBottom,
     scrollToMessageInView,
     queueScrollToMessage,
+    requestRevealMessages,
   ]);
 
   const applyInitialOpenScrollRef = useRef(applyInitialOpenScroll);
@@ -637,14 +674,6 @@ export default function ChatGroupScreen() {
     messagesRef.current = displayMessages;
   }, [displayMessages]);
 
-  useEffect(() => {
-    const wasVisible = prevKeyboardVisibleRef.current;
-    prevKeyboardVisibleRef.current = keyboardVisible;
-    if (keyboardVisible && !wasVisible && (isAtBottomRef.current || pinScrollToBottomRef.current)) {
-      requestAnimationFrame(() => applyScrollToBottomRef.current?.(false));
-    }
-  }, [keyboardVisible]);
-
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
@@ -710,13 +739,53 @@ export default function ChatGroupScreen() {
     return () => clearTimeout(t);
   }, [groupId, selectGroup]);
 
+  // דחיית רינדור ההודעות עד שאנימציית הניווט מסתיימת — מונע jank בכניסה.
+  useEffect(() => {
+    setMessagesListReady(false);
+    setMessagesRevealed(false);
+    messagesRevealedRef.current = false;
+    listOpacity.setValue(0);
+    const handle = InteractionManager.runAfterInteractions(() => {
+      setMessagesListReady(true);
+    });
+    // fallback — מבטיח שההודעות יופיעו גם אם ה-interactions מתעכבים (לא נתקע על סקלטון)
+    const fallback = setTimeout(() => setMessagesListReady(true), 400);
+    return () => {
+      handle.cancel();
+      clearTimeout(fallback);
+    };
+  }, [groupId, listOpacity]);
+
+  // גיבוי לחשיפת הרשימה — אם ה-callback של הגלילה לא נורה (רשימה ריקה / נתיב pin).
+  // מונע מצב של "סקלטון תקוע" כשהרשימה כבר ממוקמת אך לא נחשפה.
+  useEffect(() => {
+    if (!messagesListReady || messagesRevealedRef.current) return;
+    if (displayMessages.length === 0) {
+      if (!isLoadingMessages) revealMessages();
+      return;
+    }
+    const t = setTimeout(() => revealMessages(), 500);
+    return () => clearTimeout(t);
+  }, [messagesListReady, displayMessages.length, isLoadingMessages, revealMessages]);
+
   // Auto-navigate to groups list when removed from group by an admin.
   // ChatContext clears currentGroup when membership DELETE event fires.
+  // חשוב: מנווטים חזרה רק אם הקבוצה *נטענה בעבר* ואז נוקתה — אחרת ב-mount הראשון
+  // (לפני ש-selectGroup האסינכרוני מספיק לעדכן) currentGroup=null וזה היה בועט החוצה
+  // את הכניסה הראשונה (הבאג של "צריך ללחוץ פעמיים").
+  const everHadGroupRef = useRef(false);
+  useEffect(() => {
+    if (currentGroup) {
+      everHadGroupRef.current = true;
+    }
+  }, [currentGroup]);
+  useEffect(() => {
+    everHadGroupRef.current = false;
+  }, [groupId]);
   useEffect(() => {
     if (!groupId) return;
-    if (currentGroup === null && !isLoadingMessages) {
-      // Group was cleared — check if it's still in the groups list
-      // If not, we were removed → go back to groups list
+    if (everHadGroupRef.current && currentGroup === null && !isLoadingMessages) {
+      // Group was cleared after being loaded — we were removed → go back to groups list
       (navigation as any).navigate('ChatGroupsList');
     }
   }, [currentGroup, isLoadingMessages, groupId]);
@@ -1260,10 +1329,17 @@ export default function ChatGroupScreen() {
     return null;
   };
 
-  const renderEmpty = () => {
-    if (isLoadingMessages) {
+  // Placeholder מרונדר כ-overlay מעל הרשימה (לא בתוך ה-FlatList ההפוך),
+  // כדי שלא יושפע מטרנספורם ה-inverted (שהפך אותו אופקית).
+  // הסקלטון נשאר עד שהרשימה נחשפת (messagesRevealed) — לא ברגע שהיא נטענת —
+  // כך ההתמקמות לתחתית קורית מאחורי הסקלטון ולא כקפיצה גלויה.
+  const isEmptyConfirmed = messagesListReady && !isLoadingMessages && displayMessages.length === 0;
+  const showMessagesPlaceholder = !messagesRevealed || isEmptyConfirmed;
+  const showMessagesSkeleton = !isEmptyConfirmed;
+  const renderMessagesPlaceholder = () => {
+    if (showMessagesSkeleton) {
       return (
-        <View style={[styles.messageCellFlip, { paddingHorizontal: 12, paddingTop: 8 }]}>
+        <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
           {[
             { isMe: false, w: '60%' }, { isMe: true, w: '45%' },
             { isMe: false, w: '75%' }, { isMe: false, w: '50%' },
@@ -1350,6 +1426,34 @@ export default function ChatGroupScreen() {
     );
   }
 
+  const chatComposer = (
+    <View
+      style={[
+        styles.inputArea,
+        { paddingBottom: composerPaddingBottom },
+      ]}
+      onLayout={onComposerLayout}
+    >
+      {typingUsers.length > 0 && renderTypingIndicator()}
+      {isAnnouncementGroup && !currentGroup?.is_admin ? (
+        <View style={styles.announcementOnlyView}>
+          <Ionicons name="megaphone-outline" size={18} color={DesignTokens.colors.text.tertiary} />
+          <Text style={styles.announcementOnlyText}>
+            רק מנהלי הקהילה יכולים לכתוב בצ'אט זה
+          </Text>
+        </View>
+      ) : (
+        <ChatInput
+          groupId={groupId}
+          onSendMessage={handleSendMessage}
+          onTyping={handleTyping}
+          replyTo={replyTo}
+          onCancelReply={handleCancelReply}
+        />
+      )}
+    </View>
+  );
+
   const chatMainColumn = (
     <View style={{ flex: 1 }}>
       {/* Safe area top spacer + Header */}
@@ -1382,29 +1486,24 @@ export default function ChatGroupScreen() {
         }}
       />
 
-      <KeyboardAvoidingView behavior="padding" style={styles.messagesKeyboardAvoid}>
       <View style={styles.messagesSection}>
         <View style={styles.messagesAreaFlex}>
-        <FlatList
+          <RNAnimated.View style={[styles.flatListTransparent, { opacity: listOpacity }]}>
+          <FlatList
             ref={listRef}
-            data={displayMessages}
+            data={messagesListReady ? displayMessages : []}
           inverted
-            maintainVisibleContentPosition={{
-              minIndexForVisible: 1,
-              autoscrollToTopThreshold: 80,
-            }}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           extraData={flatListExtraData}
           ListFooterComponent={renderFooter}
-          ListEmptyComponent={renderEmpty}
             scrollEnabled
             bounces
-            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            keyboardDismissMode="none"
           keyboardShouldPersistTaps="handled"
-          initialNumToRender={20}
-            maxToRenderPerBatch={12}
-          windowSize={11}
+          initialNumToRender={10}
+            maxToRenderPerBatch={8}
+          windowSize={9}
           updateCellsBatchingPeriod={50}
             removeClippedSubviews={false}
             onEndReached={() => {
@@ -1425,7 +1524,13 @@ export default function ChatGroupScreen() {
             }}
           contentContainerStyle={[
               displayMessages.length === 0 ? styles.emptyList : styles.messagesList,
-            { paddingTop: 8, paddingBottom: 12 },
+            // inverted: paddingTop = הצד התחתון (ליד הקומפוזר/המקלדת).
+            // מחסירים את composerPaddingBottom כדי לשקף את ה-translate של הקומפוזר
+            // (שמחסיר את ה-bottomInset) — אחרת נוצר מרווח עודף בגובה ה-safe-area.
+            {
+              paddingTop: 12 + Math.max(0, keyboardInset - composerPaddingBottom),
+              paddingBottom: 12,
+            },
           ]}
           showsVerticalScrollIndicator
           nestedScrollEnabled={Platform.OS === 'android'}
@@ -1447,6 +1552,7 @@ export default function ChatGroupScreen() {
                       false,
                       maxScrollOffsetRef.current,
                     );
+                    requestRevealMessagesRef.current();
                   } else if (!initialScrollDoneRef.current) {
                     void applyInitialOpenScrollRef.current();
                   }
@@ -1491,13 +1597,19 @@ export default function ChatGroupScreen() {
             }}
             onScrollToIndexFailed={handleScrollToIndexFailedWithPin}
           />
+          </RNAnimated.View>
+          {showMessagesPlaceholder && (
+            <View style={styles.messagesPlaceholderOverlay} pointerEvents="none">
+              {renderMessagesPlaceholder()}
+            </View>
+          )}
         </View>
 
-        {showScrollToBottomButton && (
+        {showScrollToBottomButton && !keyboardShown && (
           <View style={styles.scrollFabOverlay} pointerEvents="box-none">
             <View style={styles.scrollFabButtonWrap}>
               <DayNavBlurButton
-                size={46}
+                size={36}
                 glassIntensity="medium"
                 onPress={() => {
                   void HapticFeedback.impactLight();
@@ -1507,7 +1619,7 @@ export default function ChatGroupScreen() {
               >
                 <Ionicons
                   name="chevron-down"
-                  size={22}
+                  size={18}
                   color={DesignTokens.colors.text.primary}
                 />
               </DayNavBlurButton>
@@ -1522,29 +1634,10 @@ export default function ChatGroupScreen() {
           </View>
         )}
       </View>
-      </KeyboardAvoidingView>
 
-      <KeyboardStickyView offset={composerStickyOffset}>
-        <View style={[styles.inputArea, { paddingBottom: composerPaddingBottom }]}>
-        {typingUsers.length > 0 && renderTypingIndicator()}
-        {isAnnouncementGroup && !currentGroup?.is_admin ? (
-            <View style={styles.announcementOnlyView}>
-            <Ionicons name="megaphone-outline" size={18} color={DesignTokens.colors.text.tertiary} />
-            <Text style={styles.announcementOnlyText}>
-              רק מנהלי הקהילה יכולים לכתוב בצ'אט זה
-            </Text>
-          </View>
-        ) : (
-          <ChatInput
-            groupId={groupId}
-            onSendMessage={handleSendMessage}
-            onTyping={handleTyping}
-            replyTo={replyTo}
-            onCancelReply={handleCancelReply}
-          />
-        )}
-        </View>
-      </KeyboardStickyView>
+      <ChatComposerDock bottomInset={composerPaddingBottom}>
+        {chatComposer}
+      </ChatComposerDock>
 
     </View>
   );
@@ -1975,12 +2068,21 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   },
 
   /* ── Scroll to bottom FAB ── */
+  messagesPlaceholderOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+    paddingBottom: 12,
+  },
   scrollFabOverlay: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 12,
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     paddingHorizontal: 14,
     zIndex: 2000,
     elevation: 20,

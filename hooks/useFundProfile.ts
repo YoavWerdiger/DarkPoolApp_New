@@ -1,41 +1,30 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
 import { fetchFundProfile, type FundProfile } from '../services/darkpool/uwFundProfileService';
 
 export function useFundProfile(cik: string) {
-  const [profile, setProfile] = useState<FundProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(
-    async (force = false) => {
-      if (!cik) return;
-      try {
-        setError(null);
-        setProfile(await fetchFundProfile(cik, force));
-      } catch (e) {
-        setError((e as Error).message);
-      }
+  const forceRef = useRef(false);
+  const query = useQuery<FundProfile>({
+    queryKey: appQueryKeys.fundProfile(cik),
+    queryFn: () => {
+      const force = forceRef.current;
+      forceRef.current = false;
+      return fetchFundProfile(cik, force);
     },
-    [cik]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    void load().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [load]);
+    enabled: !!cik,
+  });
 
   const refetch = useCallback(async () => {
-    setRefreshing(true);
-    await load(true);
-    setRefreshing(false);
-  }, [load]);
+    forceRef.current = true;
+    await query.refetch();
+  }, [query]);
 
-  return { profile, loading, refreshing, error, refetch };
+  return {
+    profile: query.data ?? null,
+    loading: query.isLoading,
+    refreshing: query.isRefetching,
+    error: query.error ? (query.error as Error).message : null,
+    refetch,
+  };
 }

@@ -28,6 +28,8 @@ import type { Portfolio, PortfolioSummary } from './portfolioTypes';
 import { PortfolioCard } from './components/PortfolioCard';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 
 type SortMode = 'default' | 'value_desc' | 'return_desc' | 'name_asc';
 
@@ -61,8 +63,13 @@ export default function PortfoliosTab() {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
   const mainTabsHeight = useMainTabsHeight();
-  const [items, setItems] = useState<PortfolioWithSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי
+  const [items, setItems] = useState<PortfolioWithSummary[]>(
+    () => queryClient.getQueryData<PortfolioWithSummary[]>(appQueryKeys.portfolios) ?? []
+  );
+  const [loading, setLoading] = useState(
+    () => !queryClient.getQueryData<PortfolioWithSummary[]>(appQueryKeys.portfolios)
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('default');
@@ -128,6 +135,7 @@ export default function PortfoliosTab() {
         })
       );
       setItems(enriched);
+      queryClient.setQueryData(appQueryKeys.portfolios, enriched);
     } finally {
       setLoading(false);
       setRefreshing(false);

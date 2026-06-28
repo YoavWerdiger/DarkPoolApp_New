@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,9 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import {
   fearAndGreedService,
-  FearAndGreedData,
   FEAR_GREED_MINI_SEGMENTS,
 } from '../../services/fearAndGreedService';
+import { useFearAndGreed } from '../../hooks/useFearAndGreed';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 type Props = { onPress?: () => void };
@@ -21,29 +21,9 @@ const SEGMENTS = FEAR_GREED_MINI_SEGMENTS;
 
 export default function FearAndGreedMiniCard({ onPress }: Props) {
   const tokens = useDesignTokens();
-  const [data, setData] = useState<FearAndGreedData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const full = await fearAndGreedService.getFearAndGreedIndex();
-        if (!cancelled) setData(full.fgi.now);
-      } catch {
-        const fallback = await fearAndGreedService.getCurrentValueOrNull();
-        if (!cancelled && fallback) setData(fallback);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    void load();
-    const interval = setInterval(load, 30 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []);
+  const { data: response, isLoading, isFetching } = useFearAndGreed();
+  const data = response?.fgi.now ?? null;
+  const loading = (isLoading || isFetching) && !data;
 
   const hasValue = data != null && typeof data.value === 'number';
   const value = hasValue ? data!.value : 0;
@@ -99,7 +79,6 @@ export default function FearAndGreedMiniCard({ onPress }: Props) {
           />
         ) : null}
 
-        {/* 5 מקטעים — צבע סטטי לכל אזור */}
         <View style={styles.barRow}>
           {SEGMENTS.map((s, i) => (
             <View

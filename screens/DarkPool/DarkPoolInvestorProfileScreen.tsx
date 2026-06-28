@@ -175,7 +175,7 @@ function InsiderInvestorProfileBody({
       <SafeAreaView style={styles.safe} edges={['top']}>
         <Header
           onBack={() => stackNav.goBack()}
-          title={kind === 'politician' ? 'פוליטיקאי' : 'בכיר'}
+          title="בכיר"
           tokens={tokens}
         />
         <ScrollView

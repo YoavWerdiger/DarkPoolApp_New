@@ -11,6 +11,7 @@ import {
   resolveForm4ApiKey,
   searchForm4Insiders,
 } from '../_shared/form4api.ts';
+import { congressPhotoUrl, knownPortraitUrl } from '../_shared/personPortraits.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -176,8 +177,44 @@ serve(async (req) => {
     }
   }
 
-  return json({ results: results.slice(0, 24), q, fetched_at: new Date().toISOString() }, 200);
+  return json(
+    {
+      results: await enrichSearchWithPortraits(supabase, results.slice(0, 24)),
+      q,
+      fetched_at: new Date().toISOString(),
+    },
+    200
+  );
 });
+
+async function enrichSearchWithPortraits(
+  supabase: ReturnType<typeof createClient>,
+  results: SearchPerson[]
+): Promise<SearchPerson[]> {
+  const ids = results.map((r) => r.id).filter(Boolean);
+  if (!ids.length) return results;
+
+  const { data } = await supabase
+    .from('dark_pool_person_portraits')
+    .select('person_id, image_url')
+    .in('person_id', ids.slice(0, 40))
+    .not('image_url', 'is', null);
+
+  const map = new Map(
+    (data ?? []).map((r) => [String(r.person_id), String(r.image_url)])
+  );
+
+  return results.map((r) => {
+    if (r.image_url) return r;
+    const cached = map.get(r.id);
+    if (cached) return { ...r, image_url: cached };
+    const fallback =
+      r.kind === 'politician'
+        ? congressPhotoUrl(r.id) ?? knownPortraitUrl(r.id, r.name)
+        : knownPortraitUrl(r.id, r.name);
+    return fallback ? { ...r, image_url: fallback } : r;
+  });
+}
 
 function addFeatured(
   row: {

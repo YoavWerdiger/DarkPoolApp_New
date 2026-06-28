@@ -93,3 +93,10 @@ export async function triggerExploreSync(): Promise<void> {
   });
   if (error) throw error;
 }
+
+export async function triggerPersonPortraitSync(force = false): Promise<void> {
+  const { error } = await supabase.functions.invoke('sync-person-portraits', {
+    body: { force, limit: 80 },
+  });
+  if (error) throw error;
+}

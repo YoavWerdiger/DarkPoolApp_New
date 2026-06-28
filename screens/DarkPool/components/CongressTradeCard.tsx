@@ -27,6 +27,9 @@ export function CongressTradeCard({ item, onPersonPress }: Props) {
       detail={detail}
       filedAt={trade.filed_at}
       sinceTradePct={sinceTradePct}
+      personImageUrl={trade.politician_image_url}
+      personId={trade.politician_id}
+      personKind="politician"
       onPress={
         onPersonPress && trade.politician_id
           ? () => onPersonPress(trade.politician_id)

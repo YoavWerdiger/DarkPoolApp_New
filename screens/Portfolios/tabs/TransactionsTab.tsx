@@ -34,6 +34,10 @@ interface Props {
   onAddPress: () => void;
   /** תיק ציבורי של אחר — ללא עריכה/מחיקה */
   readOnly?: boolean;
+  /** סינון לפי סוגי טרנזקציה — אם לא מוגדר מציג הכל */
+  typeFilter?: PortfolioTransaction['type'][];
+  /** כותרת לסעיף — אם מוגדר מוצג מעל הרשימה */
+  sectionTitle?: string;
 }
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -53,6 +57,8 @@ export default function TransactionsTab({
   portfolio,
   onAddPress,
   readOnly = false,
+  typeFilter,
+  sectionTitle,
 }: Props) {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
@@ -62,11 +68,11 @@ export default function TransactionsTab({
   const load = useCallback(async () => {
     try {
       const list = await listTransactions(portfolio.id, { limit: 500 });
-      setItems(list);
+      setItems(typeFilter ? list.filter((tx) => typeFilter.includes(tx.type)) : list);
     } finally {
       setLoading(false);
     }
-  }, [portfolio.id]);
+  }, [portfolio.id, typeFilter]);
 
   useEffect(() => {
     void load();
@@ -153,17 +159,14 @@ export default function TransactionsTab({
         row: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          minHeight: 64,
-          paddingVertical: 12,
-          paddingHorizontal: 16,
-          borderRadius: 28,
-          marginBottom: 10,
+          paddingVertical: 10,
+          paddingHorizontal: 14,
           gap: 12,
         },
         iconWrap: {
-          width: 38,
-          height: 38,
-          borderRadius: 19,
+          width: 34,
+          height: 34,
+          borderRadius: 17,
           alignItems: 'center',
           justifyContent: 'center',
         },
@@ -247,6 +250,18 @@ export default function TransactionsTab({
 
   return (
     <View>
+      {sectionTitle ? (
+        <Text style={{
+          fontSize: 14,
+          fontWeight: '700',
+          color: tokens.colors.text.secondary,
+          textAlign: 'right',
+          marginBottom: 12,
+          paddingHorizontal: 4,
+        }}>
+          {sectionTitle}
+        </Text>
+      ) : null}
       {items.map((tx) => {
         const isBuy = tx.type === 'buy';
         const isSell = tx.type === 'sell';
@@ -292,7 +307,7 @@ export default function TransactionsTab({
             variant="glass"
             glassIntensity="light"
             padding="none"
-            style={{ borderRadius: 40, marginBottom: 10 }}
+            style={{ borderRadius: 16, marginBottom: 8, overflow: 'hidden' }}
           >
             <TouchableOpacity
               style={styles.row}
@@ -324,7 +339,7 @@ export default function TransactionsTab({
                     { backgroundColor: `${iconColor}20` },
                   ]}
                 >
-                  <Ionicons name={TX_ICONS[tx.type]} size={20} color={iconColor} />
+                  <Ionicons name={TX_ICONS[tx.type]} size={18} color={iconColor} />
                 </View>
               )}
               <View style={styles.rowMain}>

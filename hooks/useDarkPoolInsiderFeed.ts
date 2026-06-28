@@ -16,7 +16,9 @@
  *   - premium – ללא הגבלה
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
 import {
   listRecentInsiderTrades,
   listWatchlist,
@@ -39,13 +41,6 @@ import { useSubscription } from './useSubscription';
 export type DarkPoolFeedTab = 'congress' | 'all' | 'watchlist' | 'following';
 export type { InsiderTradeFeedItem };
 
-interface UseDarkPoolInsiderFeedState {
-  trades: InsiderTradeFeedItem[];
-  loading: boolean;
-  refreshing: boolean;
-  error: string | null;
-}
-
 export interface UseDarkPoolInsiderFeedOptions {
   tab: DarkPoolFeedTab;
   /** אופציונלי — מגביל את גודל ה-fetch. */
@@ -56,6 +51,48 @@ export interface UseDarkPoolInsiderFeedOptions {
 
 const QUOTE_ENRICH_TIMEOUT_MS = 6_000;
 
+async function loadInsider(
+  tab: DarkPoolFeedTab,
+  limit: number | undefined,
+  isPremium: boolean,
+  refresh: boolean
+): Promise<InsiderTradeFeedItem[]> {
+  let watchedTickers: string[] | undefined;
+  if (tab === 'watchlist') {
+    const wl = await listWatchlist().catch(() => []);
+    watchedTickers = wl.map((r) => r.ticker);
+    if (watchedTickers.length === 0) return [];
+  }
+
+  let trades = await listRecentInsiderTrades({
+    isPremium,
+    watchedTickers,
+    limit: limit ?? (isPremium ? 30 : 3),
+  });
+
+  if (trades.length === 0 && DARK_POOL_INSIDER_UW_ONLY && tab !== 'watchlist') {
+    try {
+      trades = await fetchUwLiveInsiderFeed(limit ?? 40, refresh);
+    } catch (e) {
+      console.warn('uw live insider feed fallback', e);
+    }
+  }
+
+  const symbols = DARK_POOL_FEED_ENRICH_QUOTES
+    ? Array.from(new Set(trades.map((t) => t.ticker)))
+    : [];
+  const quotes = symbols.length
+    ? await Promise.race([
+        getQuotes(symbols),
+        new Promise<Map<string, PriceQuote>>((resolve) =>
+          setTimeout(() => resolve(new Map()), QUOTE_ENRICH_TIMEOUT_MS)
+        ),
+      ])
+    : new Map<string, PriceQuote>();
+
+  return trades.map((trade) => buildFeedItem(trade, quotes));
+}
+
 export function useDarkPoolInsiderFeed({
   tab,
   limit,
@@ -64,108 +101,34 @@ export function useDarkPoolInsiderFeed({
   const { isPremium: subscriptionIsPremium } = useSubscription();
   // כש-Premium gating כבוי — כולם מקבלים גישה מלאה (ללא השהייה / מגבלת כמות).
   const isPremium = DARK_POOL_PREMIUM_GATING_ENABLED ? subscriptionIsPremium : true;
-  const [state, setState] = useState<UseDarkPoolInsiderFeedState>({
-    trades: [],
-    loading: true,
-    refreshing: false,
-    error: null,
+  const forceRef = useRef(false);
+
+  const query = useQuery<InsiderTradeFeedItem[]>({
+    queryKey: appQueryKeys.insiderFeed(tab, isPremium, limit),
+    queryFn: () => {
+      const refresh = forceRef.current;
+      forceRef.current = false;
+      return loadInsider(tab, limit, isPremium, refresh);
+    },
+    enabled,
   });
-  const mounted = useRef(true);
-
-  useEffect(() => () => { mounted.current = false; }, []);
-
-  const load = useCallback(async (refresh = false) => {
-    if (!enabled) {
-      setState({
-        trades: [],
-        loading: false,
-        refreshing: false,
-        error: null,
-      });
-      return;
-    }
-    setState((s) => ({
-      ...s,
-      loading: refresh ? s.loading : true,
-      refreshing: refresh,
-      error: null,
-    }));
-    try {
-      let watchedTickers: string[] | undefined;
-      if (tab === 'watchlist') {
-        const wl = await listWatchlist().catch(() => []);
-        watchedTickers = wl.map((r) => r.ticker);
-        if (watchedTickers.length === 0) {
-          if (!mounted.current) return;
-          setState({
-            trades: [],
-            loading: false,
-            refreshing: false,
-            error: null,
-          });
-          return;
-        }
-      }
-
-      let trades = await listRecentInsiderTrades({
-        isPremium,
-        watchedTickers,
-        limit: limit ?? (isPremium ? 30 : 3),
-      });
-
-      if (trades.length === 0 && DARK_POOL_INSIDER_UW_ONLY && tab !== 'watchlist') {
-        try {
-          const live = await fetchUwLiveInsiderFeed(limit ?? 40, refresh);
-          trades = live;
-        } catch (e) {
-          console.warn('uw live insider feed fallback', e);
-        }
-      }
-
-      // העשרה במחירים שוטפים — עם timeout כדי לא לתקוע את ה-UI.
-      const symbols = DARK_POOL_FEED_ENRICH_QUOTES
-        ? Array.from(new Set(trades.map((t) => t.ticker)))
-        : [];
-      const quotes = symbols.length
-        ? await Promise.race([
-            getQuotes(symbols),
-            new Promise<Map<string, PriceQuote>>((resolve) =>
-              setTimeout(() => resolve(new Map()), QUOTE_ENRICH_TIMEOUT_MS)
-            ),
-          ])
-        : new Map<string, PriceQuote>();
-
-      if (!mounted.current) return;
-      setState({
-        trades: trades.map((trade) => buildFeedItem(trade, quotes)),
-        loading: false,
-        refreshing: false,
-        error: null,
-      });
-    } catch (e) {
-      if (!mounted.current) return;
-      setState((s) => ({
-        ...s,
-        loading: false,
-        refreshing: false,
-        error: (e as Error).message || 'failed_to_load',
-      }));
-    }
-  }, [tab, limit, isPremium, enabled]);
-
-  useEffect(() => {
-    void load(false);
-  }, [load]);
 
   const refetch = useCallback(async () => {
-    setState((s) => ({ ...s, refreshing: true, error: null }));
+    forceRef.current = true;
     try {
       await triggerInsiderSync();
     } catch (e) {
       console.warn('insider sync on refresh', e);
     }
-    await load(true);
-  }, [load]);
+    await query.refetch();
+  }, [query]);
 
-  return { ...state, isPremium, refetch };
+  return {
+    trades: query.data ?? [],
+    loading: query.isLoading,
+    refreshing: query.isRefetching,
+    error: query.error ? (query.error as Error).message : null,
+    isPremium,
+    refetch,
+  };
 }

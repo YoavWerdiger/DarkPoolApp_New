@@ -30,7 +30,7 @@ export function AccumulationCard({ row, onPress }: AccumulationCardProps) {
     <Pressable
       onPress={() => {
         if (onPress) {
-          void HapticFeedback.impactLight();
+          void HapticFeedback.selection();
           onPress(row.ticker);
         }
       }}

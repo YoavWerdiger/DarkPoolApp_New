@@ -8,6 +8,7 @@ import Animated, {
   interpolate,
   Extrapolate,
   runOnJS,
+  Easing,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,17 +18,49 @@ import { ScreenGradientBackground } from '../../VideoBackground';
 import { BottomSheetProps } from './BottomSheet.types';
 import { createStyles } from './BottomSheet.styles';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
+import * as NavigationBar from 'expo-navigation-bar';
+
+const SHEET_SURFACE_COLOR = '#0A0E0A';
+const NAV_BAR_TRANSPARENT = '#00000000';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DEFAULT_SNAP_POINTS = [0.5];
-// ⚡ Snappier – פתיחה מהירה יותר (stiffness גבוה = תגובה מהירה)
+// שיט רגיל — snap מהיר
 const SPRING_CONFIG = {
   damping: 24,
   stiffness: 280,
   mass: 0.4,
 };
+// fitContent — חזרה ל-snap אחרי גרירה
+const SPRING_CONFIG_SNAP = {
+  damping: 30,
+  stiffness: 200,
+  mass: 0.55,
+};
+/** סגירה — כל השיטים */
+const SHEET_MOTION_MS = 280;
+const SHEET_CLOSE_TIMING = {
+  duration: SHEET_MOTION_MS,
+  easing: Easing.in(Easing.cubic),
+};
+/** @deprecated alias — לתאימות cache / worklets ישנים */
+const FIT_CONTENT_CLOSE_TIMING = SHEET_CLOSE_TIMING;
+/** פתיחה — כל השיטים (הפוך מהסגירה) */
+const SHEET_OPEN_TIMING = {
+  duration: SHEET_MOTION_MS,
+  easing: Easing.out(Easing.cubic),
+};
+/** @deprecated alias */
+const FIT_CONTENT_OPEN_TIMING = SHEET_OPEN_TIMING;
+/** fitContent — התאמת גובה אחרי onLayout */
+const FIT_CONTENT_HEIGHT_TIMING = {
+  duration: 220,
+  easing: Easing.out(Easing.cubic),
+};
 const CLOSE_THRESHOLD = 88;
 const VELOCITY_THRESHOLD = 650;
+/** handle + padding ב-edgeToEdge (paddingTop 14 + margins + handle 4 + paddingBottom 4) */
+export const BOTTOM_SHEET_EDGE_HANDLE_HEIGHT = 42;
 
 const BottomSheetCloseContext = createContext<(() => void) | null>(null);
 
@@ -69,9 +102,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     const extra = Platform.OS === 'android' ? 12 : 20;
     return safeBottom + extra;
   }, [insets.bottom, contentPaddingBottomOverride]);
-  const translateY = useSharedValue(SCREEN_HEIGHT); // מתחיל ב-SCREEN_HEIGHT (מחוץ למסך למטה)
+  const translateY = useSharedValue(SCREEN_HEIGHT);
+  const fitContentHeight = useSharedValue(0);
   const startY = useSharedValue(0);
   const currentSnapIndex = useSharedValue(0);
+  const isClosing = useSharedValue(0);
   
   const insetsRef = useRef(insets);
   useEffect(() => {
@@ -87,55 +122,133 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     minAllowedYRef.current = minAllowedY;
   }, [minAllowedY]);
   
-  const handleCloseWithAnimation = useCallback(() => {
-    // סגירה חלקה — אנימציית החלקה למטה לפני סגירת ה-Modal
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 220 }, (finished) => {
+  const wasOpenRef = useRef(false);
+  const isClosingRef = useRef(false);
+  const fitContentOpenDoneRef = useRef(true);
+  const closedTranslateYRef = useRef(SCREEN_HEIGHT);
+
+  const resetClosingState = useCallback(() => {
+    isClosingRef.current = false;
+    isClosing.value = 0;
+  }, [isClosing]);
+
+  const finishClose = useCallback(() => {
+    resetClosingState();
+    onClose?.();
+  }, [onClose, resetClosingState]);
+
+  const markClosing = useCallback(() => {
+    isClosingRef.current = true;
+  }, []);
+
+  const visibleHeightPx = useMemo(() => {
+    if (!snapPoints?.length) return Math.round(SCREEN_HEIGHT * 0.5);
+    const clamped = Math.max(0.1, Math.min(0.9, snapPoints[0]));
+    return Math.ceil(SCREEN_HEIGHT * clamped);
+  }, [snapPoints]);
+
+  const closedTranslateY = fitContent ? visibleHeightPx : SCREEN_HEIGHT;
+
+  closedTranslateYRef.current = closedTranslateY;
+
+  const visibleHeightPxRef = useRef(visibleHeightPx);
+  useEffect(() => {
+    visibleHeightPxRef.current = visibleHeightPx;
+  }, [visibleHeightPx]);
+
+  const settleFitContentHeight = useCallback(() => {
+    fitContentHeight.value = withTiming(visibleHeightPxRef.current, FIT_CONTENT_HEIGHT_TIMING);
+  }, [fitContentHeight]);
+
+  const onFitContentOpenComplete = useCallback(() => {
+    fitContentOpenDoneRef.current = true;
+    settleFitContentHeight();
+  }, [settleFitContentHeight]);
+
+  const animateClose = useCallback(() => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    isClosing.value = 1;
+    const targetY = closedTranslateYRef.current;
+    translateY.value = withTiming(targetY, SHEET_CLOSE_TIMING, (finished) => {
       'worklet';
-      if (finished && onClose) {
-        runOnJS(onClose)();
+      if (finished) {
+        runOnJS(finishClose)();
+      } else {
+        runOnJS(resetClosingState)();
       }
     });
-  }, [onClose, translateY]);
+  }, [finishClose, resetClosingState, translateY, isClosing]);
+
+  const animateCloseRef = useRef(animateClose);
+  animateCloseRef.current = animateClose;
+
+  const handleCloseWithAnimation = useCallback(() => {
+    animateCloseRef.current();
+  }, []);
 
   const snapValues = useMemo(() => {
+    if (fitContent) {
+      return [0];
+    }
     if (!snapPoints || snapPoints.length === 0) {
-      // אם snapPoints הוא 0.5, ה-container צריך להיות ב-50% מהמסך, אז translateY צריך להיות SCREEN_HEIGHT * 0.5
       return [SCREEN_HEIGHT * 0.5];
     }
     return snapPoints.map(point => {
       const clampedPoint = Math.max(0.1, Math.min(0.9, point));
-      // translateY חיובי כדי לזוז למטה
-      // אם point הוא 0.7, ה-container צריך להיות ב-70% מהמסך, אז translateY צריך להיות SCREEN_HEIGHT * (1 - 0.7) = SCREEN_HEIGHT * 0.3
       const calculatedY = SCREEN_HEIGHT * (1 - clampedPoint);
-      // הגבלה - לא לעבור את ה-safe area העליון
       return Math.max(minAllowedY, Math.min(SCREEN_HEIGHT, calculatedY));
-    }).sort((a, b) => a - b); // מיון מהקטן לגדול
-  }, [snapPoints, minAllowedY]);
+    }).sort((a, b) => a - b);
+  }, [snapPoints, minAllowedY, fitContent]);
 
   // פתיחה/סגירה - זה הקוד הקריטי
   // משתמשים רק ב-isOpen כ-dependency כדי למנוע אנימציה מחדש בשינוי תוכן
-  const wasOpenRef = useRef(false);
   useEffect(() => {
     if (isOpen && snapValues.length > 0) {
       const isOpening = !wasOpenRef.current;
       wasOpenRef.current = true;
-      const targetY = snapValues[currentSnapIndex.value] ?? snapValues[0];
       if (isOpening) {
-        void HapticFeedback.impactLight();
-        translateY.value = SCREEN_HEIGHT;
+        isClosingRef.current = false;
+        isClosing.value = 0;
+        void HapticFeedback.selection();
+        if (fitContent) {
+          fitContentOpenDoneRef.current = false;
+          fitContentHeight.value = visibleHeightPx;
+        }
+        translateY.value = closedTranslateY;
         currentSnapIndex.value = 0;
-        translateY.value = withSpring(snapValues[0], SPRING_CONFIG);
-      } else {
-        // snapPoints התעדכנו בזמן שהשיט פתוח (לדוגמה אחרי מדידה של תוכן) -
-        // נזיז לערך ה-snap הנוכחי החדש בצורה עדינה
-        translateY.value = withSpring(targetY, SPRING_CONFIG);
+        if (fitContent) {
+          translateY.value = withTiming(0, FIT_CONTENT_OPEN_TIMING, (finished) => {
+            'worklet';
+            if (finished) {
+              runOnJS(onFitContentOpenComplete)();
+            }
+          });
+        } else {
+          translateY.value = withTiming(snapValues[0], SHEET_OPEN_TIMING);
+        }
+      } else if (!isClosingRef.current && !fitContent) {
+        translateY.value = withTiming(snapValues[0], SHEET_OPEN_TIMING);
       }
     } else if (!isOpen) {
       wasOpenRef.current = false;
-      translateY.value = withTiming(SCREEN_HEIGHT, { duration: 100 });
+      isClosingRef.current = false;
+      isClosing.value = 0;
+      fitContentOpenDoneRef.current = true;
+      translateY.value = closedTranslateY;
+      if (fitContent) {
+        fitContentHeight.value = visibleHeightPx;
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, snapValues]);
+  }, [isOpen, snapValues, closedTranslateY, fitContent, visibleHeightPx, onFitContentOpenComplete]);
+
+  // fitContent: עדכון גובה רק אחרי שהפתיחה הסתיימה (מונע קפיצה בסוף)
+  useEffect(() => {
+    if (!fitContent || !isOpen || !fitContentOpenDoneRef.current) return;
+    fitContentHeight.value = withTiming(visibleHeightPx, FIT_CONTENT_HEIGHT_TIMING);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleHeightPx, fitContent, isOpen]);
 
   const findNearestSnapPoint = useCallback((currentY: number, snapVals: number[]): number => {
     'worklet';
@@ -159,9 +272,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   const panGesture = useMemo(() => {
     const currentSnapValues = [...snapValues];
     const currentMinAllowedY = minAllowedY;
+    const maxDragY = fitContent ? visibleHeightPx : SCREEN_HEIGHT;
+    const openY = currentSnapValues[0] ?? 0;
     
     return Gesture.Pan()
-      // סף גבוה — מונע הפעלה מטאפ רגיל על כפתור (5px היה רגיש מדי)
       .activeOffsetY([-18, 18])
       .failOffsetX([-20, 20])
       .onStart(() => {
@@ -173,13 +287,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         'worklet';
         if (!currentSnapValues || currentSnapValues.length === 0) return;
         
-        // translationY חיובי = גרירה למטה, שלילי = גרירה למעלה
-        // translateY קטן = פתוח, SCREEN_HEIGHT = סגור
         const newY = startY.value + event.translationY;
-        const minY = currentSnapValues[0]; // זה הקטן ביותר (פתוח)
-        const maxY = SCREEN_HEIGHT; // זה הסגור
-        const absoluteMinY = Math.max(minY, currentMinAllowedY);
-        const clampedY = Math.max(absoluteMinY, Math.min(maxY, newY));
+        const minY = fitContent ? openY : Math.max(openY, currentMinAllowedY);
+        const clampedY = Math.max(minY, Math.min(maxDragY, newY));
         translateY.value = clampedY;
       })
       .onEnd((event) => {
@@ -193,7 +303,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         if (!enablePanDownToClose) {
           const nearestIndex = findNearestSnapPoint(currentY, currentSnapValues);
           const targetY = currentSnapValues[nearestIndex];
-          translateY.value = withSpring(targetY, SPRING_CONFIG);
+          translateY.value = withSpring(targetY, fitContent ? SPRING_CONFIG_SNAP : SPRING_CONFIG);
           
           const prevIndex = currentSnapIndex.value;
           currentSnapIndex.value = nearestIndex;
@@ -209,22 +319,31 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         const shouldClose = 
           (translationY > CLOSE_THRESHOLD && velocity >= 0) || 
           (velocity > VELOCITY_THRESHOLD && velocity > 0) ||
-          (currentY > SCREEN_HEIGHT * 0.7 && velocity >= 0); // קרוב לסגור
+          (fitContent
+            ? currentY > visibleHeightPx * 0.42 && velocity >= 0
+            : currentY > SCREEN_HEIGHT * 0.7 && velocity >= 0);
 
         if (shouldClose) {
-          translateY.value = withTiming(SCREEN_HEIGHT, { duration: 220 }, (finished) => {
-            'worklet';
-            if (finished && onClose) {
-              runOnJS(onClose)();
-            }
-          });
+          if (isClosing.value === 0) {
+            isClosing.value = 1;
+            runOnJS(markClosing)();
+            const targetY = fitContent ? visibleHeightPx : SCREEN_HEIGHT;
+            translateY.value = withTiming(targetY, SHEET_CLOSE_TIMING, (finished) => {
+              'worklet';
+              if (finished) {
+                runOnJS(finishClose)();
+              } else {
+                runOnJS(resetClosingState)();
+              }
+            });
+          }
           return;
         }
 
         const nearestIndex = findNearestSnapPoint(currentY, currentSnapValues);
         const targetY = currentSnapValues[nearestIndex];
 
-        translateY.value = withSpring(targetY, SPRING_CONFIG);
+        translateY.value = withSpring(targetY, fitContent ? SPRING_CONFIG_SNAP : SPRING_CONFIG);
         
         const prevIndex = currentSnapIndex.value;
         currentSnapIndex.value = nearestIndex;
@@ -233,7 +352,12 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           runOnJS(onSnapPointChange)(nearestIndex);
         }
       });
-  }, [snapValues, minAllowedY, enablePanDownToClose, onSnapPointChange, onClose, findNearestSnapPoint, translateY, startY, currentSnapIndex]);
+  }, [snapValues, minAllowedY, enablePanDownToClose, onSnapPointChange, finishClose, resetClosingState, markClosing, findNearestSnapPoint, translateY, startY, currentSnapIndex, isClosing, fitContent, visibleHeightPx]);
+
+  const fitContentSizeStyle = useAnimatedStyle(() => {
+    if (!fitContent) return {};
+    return { height: fitContentHeight.value };
+  }, [fitContent]);
 
   const backdropStyle = useAnimatedStyle(() => {
     'worklet';
@@ -241,27 +365,58 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       return { opacity: 0 };
     }
     
-    // translateY קטן = פתוח, SCREEN_HEIGHT = סגור
+    const closedY = fitContent ? visibleHeightPx : SCREEN_HEIGHT;
+    const openY = snapValues[0];
     const opacity = interpolate(
       translateY.value,
-      [SCREEN_HEIGHT, snapValues[0]], // מ-SCREEN_HEIGHT (סגור) ל-snapValues[0] (פתוח)
+      [closedY, openY],
       [0, backdropOpacity],
       Extrapolate.CLAMP
     );
     return { opacity };
-  }, [snapValues, backdropOpacity]);
+  }, [snapValues, backdropOpacity, fitContent, visibleHeightPx]);
 
   const sheetStyle = useAnimatedStyle(() => {
     'worklet';
-    // translateY קטן = פתוח, SCREEN_HEIGHT = סגור
-    const minY = (snapValues && snapValues.length > 0) ? snapValues[0] : minAllowedY;
-    const clampedY = Math.max(minY, Math.min(SCREEN_HEIGHT, translateY.value));
+    const openY = (snapValues && snapValues.length > 0) ? snapValues[0] : (fitContent ? 0 : minAllowedY);
+    const maxY = fitContent ? visibleHeightPx : SCREEN_HEIGHT;
+    const y = translateY.value;
+    const clampedY =
+      y >= openY
+        ? Math.min(maxY, y)
+        : Math.max(openY, y);
     return {
       transform: [{ translateY: clampedY }],
     };
-  }, [snapValues, minAllowedY]);
+  }, [snapValues, minAllowedY, fitContent, visibleHeightPx]);
+
+  const systemBarFillHeight = useMemo(() => {
+    const minBottom = Platform.OS === 'android' ? 28 : 12;
+    return Math.max(insets.bottom, minBottom);
+  }, [insets.bottom]);
 
   const styles = createStyles(tokens.colors.overlay || 'rgba(0,0,0,0.6)');
+
+  // Modal שקוף + nav bar שקוף ב-Android → רקע חלון Modal לבן מתחת לכפתורי המערכת
+  useEffect(() => {
+    if (!useModal || Platform.OS !== 'android') return;
+
+    const syncNavigationBar = async () => {
+      try {
+        if (isOpen) {
+          await NavigationBar.setBackgroundColorAsync(SHEET_SURFACE_COLOR);
+          await NavigationBar.setButtonStyleAsync('light');
+        } else {
+          await NavigationBar.setBackgroundColorAsync(NAV_BAR_TRANSPARENT);
+          await NavigationBar.setButtonStyleAsync('light');
+        }
+      } catch {
+        // non-critical
+      }
+    };
+
+    void syncNavigationBar();
+  }, [isOpen, useModal]);
 
   /**
    * רקע השיט כמו מסכי האפליקציה (TradingScreen וכו'):
@@ -271,6 +426,13 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   const content = (
     <BottomSheetCloseContext.Provider value={handleCloseWithAnimation}>
       <Fragment>
+      <View
+        pointerEvents="none"
+        style={[
+          styles.systemBarFill,
+          { height: systemBarFillHeight, backgroundColor: SHEET_SURFACE_COLOR },
+        ]}
+      />
       <Pressable
         style={StyleSheet.absoluteFill}
         android_ripple={{ color: 'transparent' }}
@@ -281,7 +443,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
       <Animated.View 
         style={[
-          styles.container, 
+          fitContent ? styles.fitContentContainer : styles.container,
+          fitContent ? fitContentSizeStyle : null,
           sheetStyle,
           topCornerRadius != null && topCornerRadius > 0
             ? {
@@ -295,7 +458,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         {showBrandBackground ? (
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 0 }]}>
             <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: '#0A0E0A' }]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: SHEET_SURFACE_COLOR }]}
             />
             <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
             {showWatermark ? (
@@ -303,9 +466,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
                 layout="sheetBottom"
                 scale={brandWatermarkScale}
                 sheetVisibleHeightPx={
-                  snapValues.length > 0
-                    ? SCREEN_HEIGHT - snapValues[0]
-                    : SCREEN_HEIGHT * 0.5
+                  fitContent
+                    ? visibleHeightPx
+                    : snapValues.length > 0
+                      ? SCREEN_HEIGHT - snapValues[0]
+                      : visibleHeightPx
                 }
               />
             ) : null}
@@ -324,19 +489,21 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           <GestureDetector gesture={panGesture}>
             <View 
               style={[
-                styles.content,
-                { paddingBottom: contentPaddingBottom, zIndex: 2 },
+                fitContent ? styles.contentCompact : styles.content,
+                {
+                  paddingBottom: contentPaddingBottom,
+                  zIndex: 2,
+                },
               ]}
             >
               {edgeToEdge ? (
                 <>
-                  {/* Handle indicator (visual only) */}
                   {showHandle && (
                     <View style={{ width: '100%', alignItems: 'center', paddingTop: 14, paddingBottom: 4 }}>
                       <View style={[styles.handle, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
                     </View>
                   )}
-                  <View style={fitContent ? undefined : { flex: 1 }}>{children}</View>
+                  {fitContent ? children : <View style={{ flex: 1 }}>{children}</View>}
                 </>
               ) : (
                 <>
@@ -380,6 +547,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       transparent
       animationType="none"
       statusBarTranslucent
+      navigationBarTranslucent={Platform.OS === 'android'}
       presentationStyle="overFullScreen"
       onRequestClose={handleCloseWithAnimation}
     >
@@ -391,3 +559,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 };
 
 export default BottomSheet;
+export {
+  FIT_CONTENT_CLOSE_TIMING,
+  FIT_CONTENT_OPEN_TIMING,
+  SHEET_CLOSE_TIMING,
+  SHEET_OPEN_TIMING,
+  SHEET_MOTION_MS,
+};

@@ -1,7 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
 import { AcademySubScreenBar, ModuleSection, LessonRow } from '../../components/learning';
@@ -9,7 +9,13 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress } from '../../types/learning';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
+import { ScreenChrome } from '../../components/ui';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import {
+  ACADEMY_CARD_HP,
+  academyCardFrameStyle,
+} from '../../components/learning/academyCardLayout';
+import { getAcademyCourseTier } from '../../components/learning/academyCourses';
 
 export const CourseDetailScreen: React.FC = () => {
   const route = useRoute();
@@ -94,34 +100,22 @@ export const CourseDetailScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1 }}>
-        <LinearGradient
-          colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
-          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+      <ScreenChrome withBrandWatermark>
+        <StatusBar style="light" />
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
             <Text style={styles.loadingText}>טוען קורס...</Text>
           </View>
         </RNSafeAreaView>
-      </View>
+      </ScreenChrome>
     );
   }
 
   if (error || !course) {
     return (
-      <View style={{ flex: 1 }}>
-        <LinearGradient
-          colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
-          locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+      <ScreenChrome withBrandWatermark>
+        <StatusBar style="light" />
         <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
@@ -131,22 +125,16 @@ export const CourseDetailScreen: React.FC = () => {
             </Text>
           </View>
         </RNSafeAreaView>
-      </View>
+      </ScreenChrome>
     );
   }
 
   const isEnrolled = !!course.enrollment;
+  const frameTier = getAcademyCourseTier(course) === 'premium' ? 'premium' : 'free';
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* רקע עם גרדיאנט ירוק כהה-שחור אנכי */}
-      <LinearGradient
-        colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
-        locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
+    <ScreenChrome withBrandWatermark>
+      <StatusBar style="light" />
       <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
           <ScrollView 
@@ -156,8 +144,9 @@ export const CourseDetailScreen: React.FC = () => {
           >
         <AcademySubScreenBar onBackPress={() => navigation.goBack()} />
 
+        <View style={{ paddingHorizontal: ACADEMY_CARD_HP }}>
         {/* Cover Image */}
-        <View style={styles.coverContainer}>
+        <View style={[styles.coverContainer, academyCardFrameStyle(frameTier)]}>
           {course.cover_url ? (
             <Image
               source={{ uri: course.cover_url }}
@@ -172,9 +161,12 @@ export const CourseDetailScreen: React.FC = () => {
         </View>
 
         {/* Content */}
-        <View style={{ paddingHorizontal: DesignTokens.spacing.lg }}>
-          {/* Course Info Card */}
-          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+          <UICard
+            variant="blur"
+            padding="lg"
+            showGlassBorder={false}
+            style={[styles.infoCard, academyCardFrameStyle(frameTier)]}
+          >
             <View style={styles.courseInfoStack}>
               <View style={styles.titleBlock}>
                 <Text style={styles.title}>{course.title}</Text>
@@ -331,7 +323,7 @@ export const CourseDetailScreen: React.FC = () => {
           </ScrollView>
         </View>
       </RNSafeAreaView>
-    </View>
+    </ScreenChrome>
   );
 };
 
@@ -376,10 +368,11 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   coverContainer: {
     height: 200,
-    marginHorizontal: tokens.spacing.lg,
     marginBottom: tokens.spacing.lg,
-    borderRadius: tokens.borderRadius['2xl'],
     overflow: 'hidden',
+  },
+  infoCard: {
+    marginBottom: tokens.spacing.lg,
   },
   coverImage: {
     width: '100%',

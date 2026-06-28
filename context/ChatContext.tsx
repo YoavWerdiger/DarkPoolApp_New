@@ -692,7 +692,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       chatRealtimeService.startTypingCleanup();
 
       // Subscribe to realtime updates
-      const groupRealtimeListeners = {
+      const groupRealtimeListeners: Parameters<typeof chatRealtimeService.subscribeToGroup>[2] = {
         onMessage: async (message, eventType) => {
           if (eventType === 'INSERT') {
             await ingestIncomingInsertRef.current(message);

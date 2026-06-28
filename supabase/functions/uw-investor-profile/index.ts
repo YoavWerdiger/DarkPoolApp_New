@@ -31,6 +31,11 @@ import {
   type CongressTradeInput,
 } from '../_shared/congressPortfolio.ts';
 import { isSecProductionMode } from '../_shared/darkPoolMode.ts';
+import {
+  congressPhotoUrl,
+  knownPortraitUrl,
+  loadPortraitFromDb,
+} from '../_shared/personPortraits.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -157,8 +162,12 @@ async function buildPoliticianProfile(
   const name =
     String(meta?.name ?? dbMeta?.politician_name ?? '').trim() || 'פוליטיקאי';
   const bg = meta?.bioguide_id?.trim();
+  const portraitCache = await loadPortraitFromDb(supabase, politicianId).catch(() => null);
   const image_url =
+    portraitCache ??
     dbMeta?.politician_image_url ??
+    congressPhotoUrl(politicianId) ??
+    knownPortraitUrl(politicianId, name) ??
     (bg ? `${CONGRESS_PHOTO}/${bg}.jpg` : null);
 
   const holdings = aggregateCongressHoldings(mine);
@@ -270,9 +279,13 @@ async function buildInsiderProfile(
     match?.name ||
     formatInsiderName(nameKey) ||
     'בכיר';
+  const portraitCache = await loadPortraitFromDb(supabase, personKey).catch(() => null);
   const image_url =
-    dbRows[0]?.insider_logo_url?.trim() ||
-    (match ? resolveUwLogoUrl(match) : null);
+    portraitCache ??
+    (dbRows[0]?.insider_logo_url?.trim() ||
+      knownPortraitUrl(personKey, name) ||
+      (match ? resolveUwLogoUrl(match) : null) ||
+      null);
 
   const mine = txs.filter((t) => {
     if (!nameKey) return true;

@@ -7,6 +7,8 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { EconomicEvent } from '../../services/economicCalendarService';
 type EconEvent = EconomicEvent;
 import { supabase } from '../../lib/supabase';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 import { getIndicatorExplanation } from '../../utils/economicIndicatorExplanations';
 import { translateEconomicEventNameSmart } from '../../utils/economicEventTranslations';
 import UICard from '../../components/ui/UICard';
@@ -200,9 +202,14 @@ const CRITICAL_EVENTS = [
 export default function EconomicCalendarTab() {
   const DesignTokens = useDesignTokens();
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
-  const [events, setEvents] = useState<EconEvent[]>([]);
+  // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי
+  const [events, setEvents] = useState<EconEvent[]>(
+    () => queryClient.getQueryData<EconEvent[]>(appQueryKeys.economicEvents) ?? []
+  );
   const [filteredEvents, setFilteredEvents] = useState<EconEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => !queryClient.getQueryData<EconEvent[]>(appQueryKeys.economicEvents)
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImportance, setSelectedImportance] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week'>('week');
@@ -547,6 +554,7 @@ export default function EconomicCalendarTab() {
       }
       
       setEvents(loadedEvents);
+      queryClient.setQueryData(appQueryKeys.economicEvents, loadedEvents);
       filterEvents(loadedEvents, selectedImportance);
     } catch (error) {
       legacyAlert('שגיאה', 'לא ניתן לטעון את האירועים הכלכליים');

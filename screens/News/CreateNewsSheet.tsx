@@ -88,7 +88,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      const allowed = permission.status === 'granted' || permission.status === 'limited';
+      const allowed = permission.granted || permission.accessPrivileges === 'limited';
 
       if (!allowed) {
         if (!permission.canAskAgain) {

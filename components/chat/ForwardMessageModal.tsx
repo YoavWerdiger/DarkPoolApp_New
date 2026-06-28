@@ -147,7 +147,7 @@ export default function ForwardMessageModal({
   };
 
   return (
-    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.7, 0.9]}>
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.7, 0.9]} showBrandWatermark={false}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>

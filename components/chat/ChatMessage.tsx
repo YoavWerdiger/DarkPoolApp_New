@@ -51,8 +51,8 @@ function buildInitialResolvedMedia(message: ChatMessageType): ResolvedMessageMed
         getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
         message.media_thumbnail_url ||
         message.local_media_uri,
-      audio: message.message_type === MessageType.AUDIO ? message.media_url : null,
-      doc: message.message_type === MessageType.DOCUMENT ? message.media_url : null,
+      audio: message.message_type === MessageType.AUDIO ? message.media_url ?? null : null,
+      doc: message.message_type === MessageType.DOCUMENT ? message.media_url ?? null : null,
     };
   }
   return {
@@ -66,11 +66,11 @@ function buildInitialResolvedMedia(message: ChatMessageType): ResolvedMessageMed
       null,
     audio:
       message.message_type === MessageType.AUDIO
-        ? getCachedChatMediaDisplayUri(message.media_url) || message.media_url
+        ? getCachedChatMediaDisplayUri(message.media_url) || message.media_url || null
         : null,
     doc:
       message.message_type === MessageType.DOCUMENT
-        ? getCachedChatMediaDisplayUri(message.media_url) || message.media_url
+        ? getCachedChatMediaDisplayUri(message.media_url) || message.media_url || null
         : null,
   };
 }
@@ -1435,7 +1435,7 @@ function AudioPlayer({
   const displayDuration = (actualDuration > 0) ? actualDuration : (duration > 0 ? duration : 0);
   // יצירת waveformData - שימוש בנתונים אמיתיים אם קיימים, אחרת placeholder
   const waveformData = useMemo(() => {
-    const FIXED_BARS_COUNT = 20;
+    const FIXED_BARS_COUNT = 30;
 
     // Try to get waveform from metadata first
     let realWaveformData = message.metadata?.waveformData;
@@ -1497,13 +1497,11 @@ function AudioPlayer({
           activeOpacity={0.7}
           style={styles.audioPlayButton}
         >
-          <Image
-            source={isPlaying
-              ? require('../../assets/icons/ico-24-pause.png')
-              : require('../../assets/icons/ico-24-play.png')
-            }
-            style={styles.audioPlayIcon}
-            resizeMode="contain"
+          <Ionicons
+            name={isPlaying ? 'pause' : 'play'}
+            size={24}
+            color={tokens.colors.text.primary}
+            style={!isPlaying ? { marginLeft: 2 } : undefined}
           />
         </TouchableOpacity>
 
@@ -1996,7 +1994,6 @@ const createStyles = (tokens: any) => StyleSheet.create({
     flexGrow: 1,
     flexShrink: 1,
     minWidth: 88,
-    maxWidth: 158,
     justifyContent: 'center',
   },
   audioPlayButton: {
@@ -2041,8 +2038,8 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingHorizontal: 4,
   },
   audioWaveformBar: {
-    width: 3.5, // קצת יותר רחב
-    borderRadius: 1.75,
+    width: 2,
+    borderRadius: 999,
   },
   audioProgressIndicator: {
     position: 'absolute',

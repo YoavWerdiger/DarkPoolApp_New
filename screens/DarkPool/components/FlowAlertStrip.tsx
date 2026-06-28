@@ -29,7 +29,7 @@ export function FlowAlertStrip({ alerts, onTickerPress }: Props) {
           <Pressable
             key={a.id}
             onPress={() => {
-              void HapticFeedback.impactLight();
+              void HapticFeedback.selection();
               onTickerPress?.(a.ticker);
             }}
           >

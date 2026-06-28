@@ -4,6 +4,7 @@ import {
   buildEarningsMetricLine,
   earningsResultsTitle,
 } from '../_shared/notificationBidi.ts'
+import { fetchEarningsNotificationUsers } from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -81,7 +82,7 @@ serve(async (req) => {
         .select('id, code, ticker, company_name, report_date, actual, estimate, percent, revenue_actual, revenue_estimate_avg, revenue_surprise_percent, before_after_market, updated_at')
         .eq('report_date', new Date().toISOString().split('T')[0])
         .not('actual', 'is', null)
-        .gte('importance', 3)
+        .or('importance.gte.3,importance.is.null')
         .like('code', '%.US')
         .gte('updated_at', new Date(Date.now() - 10 * 60 * 1000).toISOString())
         .order('updated_at', { ascending: false })
@@ -109,16 +110,7 @@ serve(async (req) => {
       )
     }
 
-    // קבלת כל המשתמשים עם התראות earnings מופעלות
-    const { data: usersWithNotifications, error: usersError } = await supabase
-      .from('user_notification_settings')
-      .select('user_id')
-      .eq('notifications_enabled', true)
-      .eq('earnings_notifications', true)
-
-    if (usersError) {
-      throw new Error(`Failed to fetch users: ${usersError.message}`)
-    }
+    const usersWithNotifications = await fetchEarningsNotificationUsers(supabase)
 
     console.log(`👥 Found ${usersWithNotifications?.length || 0} users with earnings notifications enabled`)
 

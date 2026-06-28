@@ -20,8 +20,15 @@ export type ScrollToBottomRetryOptions = {
 
 const BOTTOM_REACHED_PX = 80;
 
+/**
+ * inverted FlatList: offset 0 = תחתית (ההודעה החדשה ביותר).
+ * `scrollToOffset({offset:0})` הוא הפרימיטיב האמין לגלילה לתחתית.
+ * (בעבר השתמשנו ב-scrollToIndex בגלל maintainVisibleContentPosition שהוסר —
+ *  scrollToIndex עם viewPosition/viewOffset על inverted הוא באגי ולעיתים לא מזיז.)
+ */
 function scrollToOffsetZero(list: ChatListRef, animated: boolean): void {
   list.scrollToOffset({ offset: 0, animated });
+  // קריאה נוספת בפריים הבא — מבטיחה נחיתה בתחתית גם אם המדידה התעדכנה.
   requestAnimationFrame(() => {
     list.scrollToOffset({ offset: 0, animated: false });
   });

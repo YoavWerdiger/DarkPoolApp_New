@@ -1,9 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { Portfolio, PortfolioSummary } from '../portfolioTypes';
 import {
   formatCurrency,
@@ -15,10 +14,6 @@ import {
 interface Props {
   summary: PortfolioSummary | null;
   portfolio?: Portfolio | null;
-  isOwner?: boolean;
-  onAddAsset?: () => void;
-  onImport?: () => void;
-  onShare?: () => void;
 }
 
 /**
@@ -30,10 +25,6 @@ interface Props {
 export function PortfolioSummaryHeader({
   summary,
   portfolio,
-  isOwner,
-  onAddAsset,
-  onImport,
-  onShare,
 }: Props) {
   const tokens = useDesignTokens();
   const positive = tokens.colors.primary.main;
@@ -64,9 +55,6 @@ export function PortfolioSummaryHeader({
     neutral
   );
 
-  const isBroker = portfolio?.source === 'colmex_pro';
-  const canShowActions = !!isOwner && !isBroker;
-  const isPublic = portfolio?.is_public === true;
 
   return (
     <View style={styles.wrap}>
@@ -121,31 +109,6 @@ export function PortfolioSummaryHeader({
           </View>
         </View>
 
-        {/* Quick actions */}
-        {canShowActions ? (
-          <View style={styles.actionsRow}>
-            <QuickAction
-              icon="add-circle-outline"
-              label="פעולה חדשה"
-              onPress={onAddAsset}
-              tokens={tokens}
-            />
-            <QuickAction
-              icon="cloud-upload-outline"
-              label="ייבוא"
-              onPress={onImport}
-              tokens={tokens}
-            />
-            <QuickAction
-              icon={isPublic ? 'checkmark-circle' : 'share-social-outline'}
-              label={isPublic ? 'משותף' : 'שיתוף לקהילה'}
-              onPress={onShare}
-              tokens={tokens}
-              active={isPublic}
-            />
-          </View>
-        ) : null}
-
         {/* Divider */}
         <View
           style={[styles.divider, { backgroundColor: tokens.colors.border.subtle }]}
@@ -194,58 +157,6 @@ export function PortfolioSummaryHeader({
   );
 }
 
-interface QuickActionProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress?: () => void;
-  tokens: ReturnType<typeof useDesignTokens>;
-  active?: boolean;
-}
-function QuickAction({ icon, label, onPress, tokens, active }: QuickActionProps) {
-  const disabled = !onPress;
-  const accent = tokens.colors.primary.main;
-  return (
-    <TouchableOpacity
-      onPress={
-        onPress
-          ? () => {
-              void HapticFeedback.impactLight();
-              onPress();
-            }
-          : undefined
-      }
-      disabled={disabled}
-      activeOpacity={0.85}
-      style={[
-        styles.actionBtn,
-        {
-          backgroundColor: active ? `${accent}1A` : 'rgba(255,255,255,0.04)',
-          borderColor: active ? `${accent}55` : tokens.colors.border.subtle,
-          opacity: disabled ? 0.5 : 1,
-        },
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <View
-        style={[
-          styles.actionIconWrap,
-          { backgroundColor: active ? `${accent}33` : `${accent}1F` },
-        ]}
-      >
-        <Ionicons name={icon} size={20} color={accent} />
-      </View>
-      <Text
-        style={[styles.actionLabel, { color: tokens.colors.text.primary }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.8}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-}
 
 interface KpiInlineProps {
   label: string;
@@ -325,36 +236,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     marginRight: 2,
-  },
-  actionsRow: {
-    flexDirection: 'row-reverse',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingTop: 14,
-    paddingBottom: 14,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
-    paddingHorizontal: 6,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  actionIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionLabel: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    flexShrink: 1,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

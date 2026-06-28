@@ -55,7 +55,7 @@ export default function DarkPoolFollowingScreen() {
 
   const openProfile = useCallback(
     (person: FollowedInvestor) => {
-      void HapticFeedback.impactLight();
+      void HapticFeedback.selection();
       stackNav.navigate('DarkPoolInvestor', {
         id: person.id,
         kind: person.kind,

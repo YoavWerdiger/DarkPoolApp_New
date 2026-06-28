@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
 import {
   clearUwSignalsCache,
   fetchUwSignals,
@@ -6,30 +8,26 @@ import {
 } from '../services/darkpool/uwSignalsService';
 
 export function useUwSignals() {
-  const [data, setData] = useState<UwSignalsPayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const forceRef = useRef(false);
+  const query = useQuery<UwSignalsPayload>({
+    queryKey: appQueryKeys.uwSignals,
+    queryFn: () => {
+      const force = forceRef.current;
+      forceRef.current = false;
+      if (force) clearUwSignalsCache();
+      return fetchUwSignals(force);
+    },
+  });
 
-  const load = useCallback(async (force = false) => {
-    if (force) clearUwSignalsCache();
-    setError(null);
-    try {
-      setData(await fetchUwSignals(force));
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const refetch = useCallback(async () => {
+    forceRef.current = true;
+    await query.refetch();
+  }, [query]);
 
   return {
-    data,
-    loading,
-    error,
-    refetch: () => load(true),
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refetch,
   };
 }

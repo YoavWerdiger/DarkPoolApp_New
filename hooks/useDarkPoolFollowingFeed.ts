@@ -1,72 +1,58 @@
-import { useCallback, useEffect, useState } from 'react';
-import { listFollowedInvestors } from '../services/darkpool/darkPoolFollowService';
+import { useCallback, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
+import { queryClient } from '../lib/queryClient';
+import {
+  listFollowedInvestors,
+  subscribeFollowChanges,
+} from '../services/darkpool/darkPoolFollowService';
 import {
   fetchFollowingFeed,
   type FollowingActivityItem,
 } from '../services/darkpool/uwFollowingFeedService';
-import { subscribeFollowChanges } from '../services/darkpool/darkPoolFollowService';
 
-interface State {
+interface FollowingFeedData {
   items: FollowingActivityItem[];
-  loading: boolean;
-  refreshing: boolean;
-  error: string | null;
   followingCount: number;
 }
 
+async function loadFollowing(refresh: boolean): Promise<FollowingFeedData> {
+  const following = await listFollowedInvestors();
+  if (!following.length) return { items: [], followingCount: 0 };
+  const payload = await fetchFollowingFeed(following, refresh);
+  return { items: payload.items, followingCount: following.length };
+}
+
 export function useDarkPoolFollowingFeed() {
-  const [state, setState] = useState<State>({
-    items: [],
-    loading: true,
-    refreshing: false,
-    error: null,
-    followingCount: 0,
+  const forceRef = useRef(false);
+  const query = useQuery<FollowingFeedData>({
+    queryKey: appQueryKeys.followingFeed,
+    queryFn: () => {
+      const refresh = forceRef.current;
+      forceRef.current = false;
+      return loadFollowing(refresh);
+    },
   });
 
-  const load = useCallback(async (refresh = false) => {
-    setState((s) => ({
-      ...s,
-      loading: refresh ? s.loading : true,
-      refreshing: refresh,
-      error: null,
-    }));
-    try {
-      const following = await listFollowedInvestors();
-      if (!following.length) {
-        setState({
-          items: [],
-          loading: false,
-          refreshing: false,
-          error: null,
-          followingCount: 0,
-        });
-        return;
-      }
-      const payload = await fetchFollowingFeed(following, refresh);
-      setState({
-        items: payload.items,
-        loading: false,
-        refreshing: false,
-        error: null,
-        followingCount: following.length,
-      });
-    } catch (e) {
-      setState((s) => ({
-        ...s,
-        loading: false,
-        refreshing: false,
-        error: (e as Error).message,
-      }));
-    }
+  useEffect(() => {
+    const unsub = subscribeFollowChanges(() => {
+      forceRef.current = true;
+      void queryClient.invalidateQueries({ queryKey: appQueryKeys.followingFeed });
+    });
+    return unsub;
   }, []);
 
-  useEffect(() => {
-    void load();
-    const unsub = subscribeFollowChanges(() => void load(true));
-    return unsub;
-  }, [load]);
+  const refetch = useCallback(async () => {
+    forceRef.current = true;
+    await query.refetch();
+  }, [query]);
 
-  const refetch = useCallback(() => load(true), [load]);
-
-  return { ...state, refetch };
+  return {
+    items: query.data?.items ?? [],
+    followingCount: query.data?.followingCount ?? 0,
+    loading: query.isLoading,
+    refreshing: query.isRefetching,
+    error: query.error ? (query.error as Error).message : null,
+    refetch,
+  };
 }

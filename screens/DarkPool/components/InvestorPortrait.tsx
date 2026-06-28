@@ -13,7 +13,7 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import {
   INVESTOR_PORTRAIT_PLACEHOLDER_URI,
-  resolveInvestorPortraitUri,
+  portraitPhotoCandidates,
 } from '../utils/investorPlaceholder';
 
 interface Props {
@@ -47,20 +47,23 @@ export function InvestorPortraitFallback({
   children,
 }: Props) {
   const tokens = useDesignTokens();
-  const [failed, setFailed] = useState(false);
-  const uri = useMemo(
+  const [failed, setFailed] = useState<Set<string>>(() => new Set());
+
+  const candidates = useMemo(
     () =>
-      resolveInvestorPortraitUri({
-        imageUrl: failed ? null : imageUrl,
+      portraitPhotoCandidates({
+        imageUrl,
         kind,
         personId,
         name,
-      }),
-    [failed, imageUrl, kind, personId, name]
+      }).filter((u) => !failed.has(u) && !u.includes('transback.png')),
+    [imageUrl, kind, personId, name, failed]
   );
 
+  const uri = candidates[0] ?? null;
+
   const showTickerHero =
-    kind === 'insider' && !!ticker && (!imageUrl?.trim() || failed);
+    kind === 'insider' && !!ticker && !uri;
 
   if (showTickerHero && ticker) {
     return (
@@ -90,6 +93,24 @@ export function InvestorPortraitFallback({
   }
 
   if (layout === 'circle') {
+    if (!uri) {
+      return (
+        <View
+          style={[
+            circleStyle(size),
+            styles.ring,
+            { borderColor: tokens.colors.border.subtle },
+            style,
+          ]}
+        >
+          <Image
+            source={{ uri: INVESTOR_PORTRAIT_PLACEHOLDER_URI }}
+            style={[circleStyle(size), imageStyle]}
+            accessibilityLabel={name}
+          />
+        </View>
+      );
+    }
     return (
       <View
         style={[
@@ -102,9 +123,27 @@ export function InvestorPortraitFallback({
         <Image
           source={{ uri }}
           style={[circleStyle(size), imageStyle]}
-          onError={() => setFailed(true)}
+          onError={() =>
+            setFailed((prev) => {
+              const next = new Set(prev);
+              next.add(uri);
+              return next;
+            })
+          }
           accessibilityLabel={name}
         />
+      </View>
+    );
+  }
+
+  if (!uri) {
+    return (
+      <View style={[styles.cardBg, styles.logoWrap, style]}>
+        <LinearGradient
+          colors={['#0f160f', '#1a261a', '#0a0e0a']}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {children}
       </View>
     );
   }
@@ -114,13 +153,15 @@ export function InvestorPortraitFallback({
       source={{ uri }}
       style={[styles.cardBg, style]}
       imageStyle={[styles.cardImage, imageStyle]}
-      onError={() => setFailed(true)}
+      onError={() =>
+        setFailed((prev) => {
+          const next = new Set(prev);
+          next.add(uri);
+          return next;
+        })
+      }
       accessibilityLabel={name}
     >
-      <LinearGradient
-        colors={['rgba(10,14,10,0.15)', 'rgba(10,14,10,0.55)', 'rgba(0,0,0,0.88)']}
-        style={StyleSheet.absoluteFillObject}
-      />
       {children}
     </ImageBackground>
   );
@@ -138,17 +179,35 @@ export function InvestorPortrait({
   imageStyle,
   children,
 }: Props) {
-  const [failed, setFailed] = useState(false);
-  const hasPhoto = !!imageUrl?.trim() && !failed;
+  const [failed, setFailed] = useState<Set<string>>(() => new Set());
 
-  if (hasPhoto) {
+  const candidates = useMemo(
+    () =>
+      portraitPhotoCandidates({
+        imageUrl,
+        kind,
+        personId,
+        name,
+      }).filter((u) => !failed.has(u) && !u.includes('transback.png')),
+    [imageUrl, kind, personId, name, failed]
+  );
+
+  const uri = candidates[0] ?? null;
+
+  if (uri) {
     if (layout === 'circle') {
       return (
         <View style={[circleStyle(size), styles.ring, style]}>
           <Image
-            source={{ uri: imageUrl! }}
+            source={{ uri }}
             style={[circleStyle(size), imageStyle]}
-            onError={() => setFailed(true)}
+            onError={() =>
+              setFailed((prev) => {
+                const next = new Set(prev);
+                next.add(uri);
+                return next;
+              })
+            }
             accessibilityLabel={name}
           />
         </View>
@@ -156,10 +215,16 @@ export function InvestorPortrait({
     }
     return (
       <ImageBackground
-        source={{ uri: imageUrl! }}
+        source={{ uri }}
         style={[styles.cardBg, style]}
-        imageStyle={[styles.cardImage, imageStyle]}
-        onError={() => setFailed(true)}
+        imageStyle={[styles.cardImageFull, imageStyle]}
+        onError={() =>
+          setFailed((prev) => {
+            const next = new Set(prev);
+            next.add(uri);
+            return next;
+          })
+        }
         accessibilityLabel={name}
       >
         {children}
@@ -193,6 +258,9 @@ const styles = StyleSheet.create({
   cardImage: {
     resizeMode: 'cover',
     opacity: 0.55,
+  },
+  cardImageFull: {
+    resizeMode: 'cover',
   },
   ring: {
     overflow: 'hidden',

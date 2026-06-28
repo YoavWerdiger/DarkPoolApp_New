@@ -11,6 +11,8 @@ import Svg, { Line, Rect, Polyline, Circle } from 'react-native-svg';
 import { useFocusEffect } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 import { supabase } from '../../services/supabase';
 import UICard from '../../components/ui/UICard';
 import type { Trade } from './tradeTypes';
@@ -782,8 +784,13 @@ export default function JournalDataTab() {
   const { user } = useAuth();
   const { width: windowW } = useWindowDimensions();
   const mainTabsHeight = useMainTabsHeight();
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [loading, setLoading] = useState(true);
+  // זריעה אופטימית מה-cache המשותף עם TradesListTab — מעבר בין טאבים מיידי
+  const [trades, setTrades] = useState<Trade[]>(
+    () => queryClient.getQueryData<Trade[]>(appQueryKeys.trades(user?.id ?? 'anon')) ?? []
+  );
+  const [loading, setLoading] = useState(
+    () => !queryClient.getQueryData<Trade[]>(appQueryKeys.trades(user?.id ?? 'anon'))
+  );
   const [chartMode, setChartMode] = useState<ChartGranularity>('months');
 
   const chartW = Math.min(windowW - 48, 400);
@@ -814,6 +821,7 @@ export default function JournalDataTab() {
         .order('exit_date', { ascending: false });
       if (error) throw error;
       setTrades(data || []);
+      queryClient.setQueryData(appQueryKeys.trades(user.id), data || []);
     } catch {
       setTrades([]);
     } finally {

@@ -8,6 +8,15 @@ const CONGRESS_PHOTO_BASE = 'https://unitedstates.github.io/images/congress/225x
 const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
 const CONGRESS_URL_RE = /\/225x275\/([A-Z]\d{6})\.jpg/i;
 
+/** SEC Form 4: "MUSK ELON" → "Elon Musk" */
+export function formatInsiderDisplayName(raw: string): string {
+  const parts = raw.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return raw.trim();
+  const last = parts[0];
+  const rest = parts.slice(1).join(' ');
+  return `${rest} ${last}`.trim();
+}
+
 export function congressPhotoUrl(bioguideId: string | null | undefined): string | null {
   const id = bioguideId?.trim().toUpperCase();
   if (!id || !BIOGUIDE_RE.test(id)) return null;

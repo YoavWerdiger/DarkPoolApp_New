@@ -6,6 +6,7 @@ import ReactionBar from './ReactionBar';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
 import { ChatBottomSheet } from './ChatBottomSheet';
+import { BOTTOM_SHEET_EDGE_HANDLE_HEIGHT } from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -15,8 +16,6 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-/** אזור handle סטנדרטי — תואם BottomSheet (paddingVertical 22 + minHeight 88) */
-const SHEET_HANDLE_HEIGHT = 88;
 
 type ParsedTrade = {
   id: string;
@@ -83,10 +82,8 @@ export default function LongPressOverlay({
   );
 
   const sheetBottomPad = useMemo(() => {
-    const minBottom = Platform.OS === 'android' ? 24 : 20;
-    const safeBottom = Math.max(insets.bottom, minBottom);
-    const extra = Platform.OS === 'android' ? 12 : 20;
-    return safeBottom + extra;
+    const minBottom = Platform.OS === 'android' ? 16 : 8;
+    return Math.max(insets.bottom, minBottom);
   }, [insets.bottom]);
 
   // מצא את הריאקציה הנוכחית של המשתמש (רק אחת!)
@@ -150,28 +147,27 @@ export default function LongPressOverlay({
     if (!message) return 0.35;
 
     if (contentHeight != null && contentHeight > 0) {
-      const totalPx = contentHeight + SHEET_HANDLE_HEIGHT + sheetBottomPad;
-      return Math.min(0.92, Math.max(0.14, totalPx / SCREEN_HEIGHT));
+      const totalPx = contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + 4;
+      return Math.min(0.92, Math.max(0.12, totalPx / SCREEN_HEIGHT));
     }
 
-    // הערכה ראשונית עד onLayout — שמרנית ונמוכה
+    // הערכה ראשונית עד onLayout
     const mainCount = 4
       + (message.isMe && !message.id?.toString().startsWith('temp-') ? 1 : 0)
-      + (message.isMe ? 1 : 0)
-      + (isAdmin ? 1 : 0);
+      + (isAdmin ? 2 : 0);
     const dangerCount = (message.isMe ? 1 : 0) + (message.isMe || isAdmin ? 1 : 0);
     const previewLines = message.content ? Math.min(4, message.content.split('\n').length + Math.ceil(message.content.length / 40)) : 0;
     const isTrade = isTradeMessageType(message.type) || !!parseTradeFromContent(message.content);
     const previewPx = isTrade
-      ? 240
-      : 72 + previewLines * 22 + (message.mediaUrl ? 24 : 0);
-    const reactionPx = 58;
-    const menuRowPx = 82;
+      ? 220
+      : 64 + previewLines * 20 + (message.mediaUrl ? 20 : 0);
+    const reactionPx = 52;
+    const menuRowPx = 74;
     const mainRows = Math.ceil(mainCount / 4);
     const dangerRows = dangerCount > 0 ? 1 : 0;
-    const menuPx = mainRows * menuRowPx + dangerRows * menuRowPx + 34;
-    const estimatedPx = previewPx + reactionPx + menuPx + SHEET_HANDLE_HEIGHT + sheetBottomPad;
-    return Math.min(0.88, Math.max(0.14, estimatedPx / SCREEN_HEIGHT));
+    const menuPx = mainRows * menuRowPx + dangerRows * menuRowPx + 24;
+    const estimatedPx = previewPx + reactionPx + menuPx + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + sheetBottomPad;
+    return Math.min(0.88, Math.max(0.12, estimatedPx / SCREEN_HEIGHT));
   }, [message, isAdmin, contentHeight, sheetBottomPad]);
 
   if (!message) {
@@ -195,9 +191,14 @@ export default function LongPressOverlay({
       ? format(new Date(message.createdAt), 'HH:mm')
       : '';
 
+    const contentTrimmed = (message.content ?? '').trim();
+    const isAudio =
+      message.type === 'audio' ||
+      (message.type as string) === 'voice' ||
+      (contentTrimmed.startsWith('{') && contentTrimmed.includes('waveformData'));
     const isMedia = !!(message.mediaUrl && (message.type === 'image' || message.type === 'video'));
-    const mediaIcon = message.type === 'video' ? 'videocam' : 'image';
-    const mediaLabel = message.type === 'video' ? 'סרטון' : 'תמונה';
+    const mediaIcon = isAudio ? 'mic' : message.type === 'video' ? 'videocam' : 'image';
+    const mediaLabel = isAudio ? 'הקלטה' : message.type === 'video' ? 'סרטון' : 'תמונה';
     const tradeFromContent = parseTradeFromContent(message.content);
     const isTrade = isTradeMessageType(message.type) || !!tradeFromContent;
     const tradePayload = tradeFromContent;
@@ -232,14 +233,14 @@ export default function LongPressOverlay({
               <TradeMessage trade={tradePayload} isMe={!!isMe} embeddedInBubble />
             ) : (
               <>
-                {isMedia && (
+                {(isMedia || isAudio) && (
                   <View style={p.mediaRow}>
                     <Ionicons name={mediaIcon as any} size={16} color={mediaIconColor} />
                     <Text style={[p.mediaText, isMe && p.myMediaText]}>{mediaLabel}</Text>
                   </View>
                 )}
 
-                {message.content ? (
+                {message.content && !isAudio ? (
                   <Text style={[p.msgText, isMe ? p.myText : p.theirText]} numberOfLines={4}>
                     {message.content}
                   </Text>
@@ -262,9 +263,11 @@ export default function LongPressOverlay({
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
+      showBrandWatermark={false}
+      contentPaddingBottom={0}
     >
       <View
-        style={styles.container}
+        style={[styles.container, { paddingBottom: sheetBottomPad }]}
         onLayout={(e) => handleContentLayout(e.nativeEvent.layout.height)}
       >
         {renderMessagePreview()}

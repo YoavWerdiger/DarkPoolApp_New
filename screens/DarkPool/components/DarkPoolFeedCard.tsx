@@ -15,6 +15,8 @@ interface Props {
   accent?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  /** רטט בלחיצה — ברירת מחדל: selection עדין */
+  haptic?: boolean;
 }
 
 export function DarkPoolFeedCard({
@@ -23,6 +25,7 @@ export function DarkPoolFeedCard({
   accent = false,
   style,
   accessibilityLabel,
+  haptic = true,
 }: Props) {
   const tokens = useDesignTokens();
   const cardStyle = [
@@ -43,7 +46,7 @@ export function DarkPoolFeedCard({
     return (
       <Pressable
         onPress={() => {
-          void HapticFeedback.impactLight();
+          if (haptic) void HapticFeedback.selection();
           onPress();
         }}
         accessibilityRole="button"

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
 import {
   fetchUwTickerInsights,
   type UwTickerInsights,
@@ -6,34 +8,27 @@ import {
 import { DARK_POOL_VENDOR_LIVE_APIS } from '../types/darkpool.types';
 
 export function useUwTickerInsights(ticker: string | undefined) {
-  const [data, setData] = useState<UwTickerInsights | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(
-    async (force = false) => {
-      const sym = (ticker || '').trim().toUpperCase();
-      if (!sym || !DARK_POOL_VENDOR_LIVE_APIS) {
-        setData(null);
-        return;
-      }
-      setLoading(true);
-      setError(null);
-      try {
-        const payload = await fetchUwTickerInsights(sym, force);
-        setData(payload);
-      } catch (e) {
-        setError((e as Error).message);
-      } finally {
-        setLoading(false);
-      }
+  const sym = (ticker || '').trim().toUpperCase();
+  const forceRef = useRef(false);
+  const query = useQuery<UwTickerInsights>({
+    queryKey: appQueryKeys.tickerInsights(sym),
+    queryFn: () => {
+      const force = forceRef.current;
+      forceRef.current = false;
+      return fetchUwTickerInsights(sym, force);
     },
-    [ticker]
-  );
+    enabled: !!sym && DARK_POOL_VENDOR_LIVE_APIS,
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const refetch = useCallback(async () => {
+    forceRef.current = true;
+    await query.refetch();
+  }, [query]);
 
-  return { data, loading, error, refetch: () => load(true) };
+  return {
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refetch,
+  };
 }

@@ -4,6 +4,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Star, RefreshCw, XCircle } from 'lucide-react-native';
 import { logger } from '../../utils/logger';
+import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -216,7 +217,7 @@ export default function PinnedMessagesHeader({ groupId, refreshKey = 0, onMessag
               color={DesignTokens.colors.text.tertiary}
             />
           </Pressable>
-          <Pressable onPress={loadPinnedMessages}>
+          <Pressable onPress={() => { void loadPinnedMessages(); }}>
             <RefreshCw size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
           </Pressable>
         </View>
@@ -244,7 +245,7 @@ export default function PinnedMessagesHeader({ groupId, refreshKey = 0, onMessag
 
             <Pressable onPress={() => onMessagePress?.(pinnedMsg.message_id)} style={styles.messagePreview}>
               <Text style={styles.messageBody} numberOfLines={2}>
-                {pinnedMsg.message_content}
+                {getChatMessagePreview(pinnedMsg.message_type, pinnedMsg.message_content)}
               </Text>
             </Pressable>
 

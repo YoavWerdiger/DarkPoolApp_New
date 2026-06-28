@@ -82,13 +82,12 @@ export const HOLDINGS_VIEW_MODES: { id: HoldingsViewMode; label: string }[] = [
   { id: 'technicals', label: 'טכני' },
 ];
 
+/** סדר מימין לשמאל — האיבר הראשון מופיע בקצה הימני */
 export const PORTFOLIO_DETAIL_TABS = [
-  { id: 'overview' as const, label: 'סקירה' },
-  { id: 'open_trades' as const, label: 'פוזיציות' },
-  { id: 'history' as const, label: 'היסטוריה' },
-  { id: 'holdings' as const, label: 'נכסים' },
-  { id: 'calendar' as const, label: 'לוח שנה' },
-  { id: 'transactions' as const, label: 'טרנזקציות' },
+  { id: 'overview' as const,    label: 'סקירה'            },
+  { id: 'open_trades' as const, label: 'פוזיציות פתוחות'  },
+  { id: 'calendar' as const,    label: 'לוח שנה'          },
+  { id: 'transactions' as const, label: 'עסקאות'          },
 ];
 
 /** טאבים נוספים שמופיעים רק לתיקים מסונכרנים מ-broker */

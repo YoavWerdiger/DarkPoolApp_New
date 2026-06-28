@@ -1,8 +1,8 @@
 /**
- * גילוי — חיפוש ומעקב אחרי פוליטיקאים ובכירי חברות (לא פיד עסקאות).
+ * גילוי — גריד פרופילים עם תמונות (Insider Wave).
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -15,38 +15,53 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import { ScreenChrome } from '../../components/ui/ScreenChrome';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 import { useDarkPoolExplore } from '../../hooks/useDarkPoolExplore';
-import { useFeaturedProfiles } from '../../hooks/useFeaturedProfiles';
 import { useInvestorSearch } from '../../hooks/useInvestorSearch';
-import { featuredToExplorePerson } from '../../services/darkpool/featuredProfilesService';
+import { fetchExploreProfilesGrid } from '../../services/darkpool/personPortraitService';
+import { triggerPersonPortraitSync } from '../../services/darkpool/darkPoolDbCacheService';
 import {
   dispatchOpenMainDrawer,
   type DrawerParentNavigation,
 } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 import { useNavigation } from '@react-navigation/native';
-import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
-import { UwRateLimitBanner } from './components/UwRateLimitBanner';
-import { ExploreSection } from './components/ExploreSection';
+import { ExplorePeopleGrid } from './components/ExplorePeopleGrid';
+import { ExploreKindFilterBar } from './components/ExploreKindFilter';
 import type { ExplorePerson } from '../../services/darkpool/uwExploreService';
-import { DARK_POOL_SEC_PRODUCTION } from '../../types/darkpool.types';
+import {
+  buildExploreProfileGrid,
+  collectExploreSources,
+  type ExploreKindFilter,
+  withResolvedPhoto,
+} from './utils/exploreGrid';
+
+async function loadExploreGridPeople(): Promise<ExplorePerson[]> {
+  return fetchExploreProfilesGrid();
+}
 
 export default function DarkPoolExploreScreen() {
   const tokens = useDesignTokens();
   const drawerNav = useNavigation();
   const stackNav = useDarkPoolStackNav();
   const bottomPad = useDarkPoolTabBarHeight();
-  const { data, loading, refreshing, error, refetch } = useDarkPoolExplore();
-  const featured = useFeaturedProfiles();
-  const [query, setQuery] = React.useState('');
+  const explore = useDarkPoolExplore();
+  const [query, setQuery] = useState('');
+  const [kindFilter, setKindFilter] = useState<ExploreKindFilter>('all');
   const search = useInvestorSearch(query);
   const isSearching = query.trim().length >= 2;
+
+  const gridQuery = useQuery({
+    queryKey: [...appQueryKeys.uwExplore, 'grid-profiles'],
+    queryFn: loadExploreGridPeople,
+  });
 
   const openDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -59,56 +74,67 @@ export default function DarkPoolExploreScreen() {
 
   const onPersonPress = useCallback(
     (person: ExplorePerson) => {
-      void HapticFeedback.impactLight();
+      const resolved = withResolvedPhoto(person);
       stackNav.navigate('DarkPoolInvestor', {
-        id: person.id,
-        kind: person.kind,
-        ticker: person.ticker,
-        nameHint: person.name,
-        imageHint: person.image_url,
+        id: resolved.id,
+        kind: resolved.kind,
+        ticker: resolved.ticker,
+        nameHint: resolved.name,
+        imageHint: resolved.image_url,
       });
     },
     [stackNav]
   );
 
-  const filterList = useCallback(
-    (list: ExplorePerson[]) => {
-      const q = query.trim().toLowerCase();
-      if (!q) return list;
-      return list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.subtitle.toLowerCase().includes(q) ||
-          (p.ticker || '').toLowerCase().includes(q)
-      );
-    },
-    [query]
+  const fallbackSources = useMemo(
+    () => collectExploreSources(explore.data, []),
+    [explore.data]
   );
 
-  const politicianPeople = useMemo(() => {
-    if (!data) return [] as ExplorePerson[];
-    const merged = new Map<string, ExplorePerson>();
-    for (const p of [...(data.top_active ?? []), ...(data.recently_active ?? [])]) {
-      if (p.kind === 'politician' && !merged.has(p.id)) merged.set(p.id, p);
-    }
-    for (const p of data.most_followed ?? []) {
-      if (p.kind === 'politician' && !merged.has(p.id)) merged.set(p.id, p);
-    }
-    return Array.from(merged.values()).slice(0, 16);
-  }, [data]);
+  const allProfiles = useMemo(() => {
+    const portraitRows = gridQuery.data ?? [];
+    const merged = buildExploreProfileGrid(
+      portraitRows.length ? portraitRows : fallbackSources
+    );
+    if (merged.length) return merged;
+    return buildExploreProfileGrid(fallbackSources);
+  }, [gridQuery.data, fallbackSources]);
 
-  const insiderPeople = useMemo(() => {
-    if (!data) return [] as ExplorePerson[];
-    const fromDb = data.insiders_with_photo?.length
-      ? data.insiders_with_photo
-      : data.executives ?? [];
-    return filterList(fromDb).slice(0, 16);
-  }, [data, filterList]);
+  const filtered = useMemo(
+    () =>
+      buildExploreProfileGrid(allProfiles, {
+        kind: kindFilter,
+        query: isSearching ? undefined : query.trim() || undefined,
+      }),
+    [allProfiles, kindFilter, query, isSearching]
+  );
+
+  const searchGrid = useMemo(
+    () =>
+      buildExploreProfileGrid(search.results.map(withResolvedPhoto), {
+        kind: kindFilter,
+      }),
+    [search.results, kindFilter]
+  );
+
+  const counts = useMemo(
+    () => ({
+      all: allProfiles.length,
+      politician: allProfiles.filter((p) => p.kind === 'politician').length,
+      insider: allProfiles.filter((p) => p.kind === 'insider').length,
+    }),
+    [allProfiles]
+  );
+
+  const handleRefresh = useCallback(async () => {
+    await triggerPersonPortraitSync(true).catch(() => undefined);
+    await Promise.all([gridQuery.refetch(), explore.refetch()]);
+  }, [gridQuery, explore]);
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        scroll: { paddingBottom: bottomPad, direction: 'rtl' },
+        scroll: { paddingBottom: bottomPad },
         searchWrap: {
           marginHorizontal: tokens.layout.screenPadding,
           marginTop: tokens.spacing.sm,
@@ -129,47 +155,25 @@ export default function DarkPoolExploreScreen() {
           color: tokens.colors.text.primary,
           textAlign: 'left',
           writingDirection: 'rtl',
-          direction: 'rtl',
         },
-        center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-        errorText: {
-          color: tokens.colors.text.danger,
-          fontSize: 13,
-          textAlign: 'left',
-          writingDirection: 'rtl',
-        },
-        emptyExplore: {
-          marginHorizontal: tokens.layout.screenPadding,
-          marginBottom: tokens.spacing.lg,
-        },
-        emptyText: {
-          fontSize: 14,
-          color: tokens.colors.text.tertiary,
-          textAlign: 'left',
-          lineHeight: 20,
-        },
-        searchHint: {
+        hint: {
           marginHorizontal: tokens.layout.screenPadding,
           marginBottom: tokens.spacing.sm,
           fontSize: 12,
           color: tokens.colors.text.tertiary,
           textAlign: 'left',
         },
+        center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+        errorText: { color: tokens.colors.text.danger, fontSize: 13, textAlign: 'left' },
+        errCard: { marginHorizontal: tokens.layout.screenPadding, marginBottom: 12 },
       }),
     [tokens, bottomPad]
   );
 
-  const featuredPeople = useMemo(
-    () => featured.list.map(featuredToExplorePerson),
-    [featured.list]
-  );
+  const loading =
+    (explore.loading && !explore.data) || (gridQuery.isLoading && !gridQuery.data);
 
-  const handleRefresh = useCallback(() => {
-    void refetch();
-    void featured.refetch();
-  }, [refetch, featured.refetch]);
-
-  if (loading && !data) {
+  if (loading) {
     return (
       <ScreenChrome rtl>
         <StatusBar style="light" />
@@ -183,6 +187,9 @@ export default function DarkPoolExploreScreen() {
     );
   }
 
+  const displayPeople = isSearching ? searchGrid : filtered;
+  const refreshing = explore.refreshing || gridQuery.isRefetching;
+
   return (
     <ScreenChrome rtl withBrandWatermark>
       <StatusBar style="light" />
@@ -190,114 +197,66 @@ export default function DarkPoolExploreScreen() {
         <MainDrawerScreenHeader
           inRtlTree
           title="גילוי"
-          subtitle="מי לעקוב אחריו"
+          subtitle={`${counts.all} פרופילים`}
           onMenuPress={openDrawer}
         />
         <ScrollView
           contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={handleRefresh}
+              onRefresh={() => void handleRefresh()}
               tintColor={tokens.colors.primary.main}
             />
           }
-          showsVerticalScrollIndicator={false}
         >
           <View style={styles.searchWrap}>
             <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
             <TextInput
               style={styles.searchInput}
-              placeholder="חיפוש לפי שם או טיקר"
+              placeholder="חיפוש פרופיל..."
               placeholderTextColor={tokens.colors.text.tertiary}
               value={query}
               onChangeText={setQuery}
             />
           </View>
 
-          {isSearching ? (
+          {!isSearching ? (
             <>
-              {search.loading ? (
-                <View style={styles.center}>
-                  <ActivityIndicator color={tokens.colors.primary.main} />
-                </View>
-              ) : null}
-              {search.error ? (
-                <UICard
-                  variant="outlined"
-                  padding="md"
-                  style={{ marginHorizontal: tokens.layout.screenPadding, marginBottom: 12 }}
-                >
-                  <Text style={styles.errorText}>{search.error}</Text>
-                </UICard>
-              ) : null}
-              {search.results.length > 0 ? (
-                <ExploreSection
-                  title="תוצאות חיפוש"
-                  subtitle={`«${query.trim()}»`}
-                  people={search.results}
-                  onPersonPress={onPersonPress}
-                />
-              ) : !search.loading && !search.error ? (
-                <UICard variant="outlined" padding="md" style={styles.emptyExplore}>
-                  <Text style={styles.emptyText}>לא נמצאו תוצאות. נסה שם אחר או טיקר.</Text>
-                </UICard>
-              ) : null}
+              <Text style={styles.hint}>לחץ על פרופיל לפתיחת תיק · תמונות מ-STIR ו-Form 4</Text>
+              <ExploreKindFilterBar
+                value={kindFilter}
+                onChange={setKindFilter}
+                counts={counts}
+              />
             </>
-          ) : (
-            <>
-          {featuredPeople.length > 0 ? (
-            <ExploreSection
-              title="מומלצים"
-              subtitle="נבחרו ידנית מנתונים ציבוריים"
-              people={featuredPeople}
-              variant="large"
-              onPersonPress={onPersonPress}
-            />
           ) : null}
 
-          {error ? (
-            <UICard
-              variant="outlined"
-              padding="md"
-              style={{ marginHorizontal: tokens.layout.screenPadding, marginBottom: 12 }}
-            >
-              <Text style={styles.errorText}>{error}</Text>
-            </UICard>
-          ) : null}
-
-          {!DARK_POOL_SEC_PRODUCTION ? (
-            <UwRateLimitBanner warnings={data?.warnings} />
-          ) : null}
-
-          {politicianPeople.length > 0 ? (
-            <ExploreSection
-              title="פוליטיקאים"
-              subtitle="עסקאות מדיווחי STIR · STOCK Act"
-              people={politicianPeople}
-              variant="large"
-              onPersonPress={onPersonPress}
-            />
-          ) : null}
-
-          {insiderPeople.length > 0 ? (
-            <ExploreSection
-              title="בכירי חברות"
-              subtitle="מדיווחי Form 4 · SEC"
-              people={insiderPeople}
-              onPersonPress={onPersonPress}
-            />
-          ) : null}
-
-          {!featuredPeople.length && !politicianPeople.length && !insiderPeople.length ? (
-            <UICard variant="outlined" padding="md" style={styles.emptyExplore}>
-              <Text style={styles.emptyText}>
-                אין עדיין משקיעים להצגה. משוך למטה לרענון — הנתונים יופיעו אחרי סנכרון Form 4 ו-STIR.
+          {(explore.error || gridQuery.error) && (
+            <UICard variant="outlined" padding="md" style={styles.errCard}>
+              <Text style={styles.errorText}>
+                {(explore.error || (gridQuery.error as Error)?.message) ?? 'שגיאה'}
               </Text>
             </UICard>
-          ) : null}
-            </>
           )}
+
+          {isSearching && search.loading ? (
+            <ActivityIndicator
+              color={tokens.colors.primary.main}
+              style={{ marginVertical: 24 }}
+            />
+          ) : null}
+
+          <ExplorePeopleGrid
+            people={displayPeople}
+            onPersonPress={onPersonPress}
+            emptyMessage={
+              isSearching
+                ? 'לא נמצא פרופיל'
+                : 'אין פרופילים. משוך למטה לסנכרון תמונות.'
+            }
+          />
         </ScrollView>
       </SafeAreaView>
     </ScreenChrome>

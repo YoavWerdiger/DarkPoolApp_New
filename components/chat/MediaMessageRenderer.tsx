@@ -466,9 +466,9 @@ export default function MediaMessageRenderer({
           onPress={togglePlay}
         >
           {isPlaying ? (
-            <Pause size={16} color={isMe ? DesignTokens.colors.success.main : "#000000"} strokeWidth={2.5} />
+            <Ionicons name="pause" size={20} color={isMe ? DesignTokens.colors.success.main : "#000000"} />
           ) : (
-            <Play size={16} color={isMe ? DesignTokens.colors.success.main : "#000000"} strokeWidth={2.5} />
+            <Ionicons name="play" size={20} color={isMe ? DesignTokens.colors.success.main : "#000000"} style={{ marginLeft: 2 }} />
           )}
         </Pressable>
 

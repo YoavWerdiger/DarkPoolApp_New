@@ -6,9 +6,11 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import { ChatGroup } from '../../types/chat.types';
+import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
 
@@ -24,6 +26,11 @@ function ChatGroupCard({ group, onPress, onLongPress }: ChatGroupCardProps) {
 
   const hasUnread = (group.unread_count || 0) > 0;
   const hasMentions = (group.mentioned_count || 0) > 0;
+
+  const previewText = group.last_message_preview
+    ? getChatMessagePreview(undefined, group.last_message_preview)
+    : 'אין הודעות';
+  const isRecordingPreview = previewText === 'הקלטה';
 
   const timeText = useMemo(() => {
     if (!group.last_message_at) return '';
@@ -72,7 +79,16 @@ function ChatGroupCard({ group, onPress, onLongPress }: ChatGroupCardProps) {
             style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]}
             numberOfLines={1}
           >
-            {group.last_message_preview || 'אין הודעות'}
+            {isRecordingPreview ? (
+              <>
+                <Ionicons
+                  name="mic-outline"
+                  size={14}
+                  color={hasUnread ? DesignTokens.colors.text.primary : DesignTokens.colors.text.secondary}
+                />{' '}
+              </>
+            ) : null}
+            {previewText}
           </Text>
           
           {/* Badge & Mentions Area */}

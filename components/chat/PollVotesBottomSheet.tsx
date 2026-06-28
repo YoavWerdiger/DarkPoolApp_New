@@ -65,7 +65,7 @@ export default function PollVotesBottomSheet({
   };
 
   return (
-    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.85]}>
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.85]} showBrandWatermark={false}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>

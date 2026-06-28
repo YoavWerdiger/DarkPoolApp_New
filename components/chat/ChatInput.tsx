@@ -4,13 +4,14 @@
 // שדה הקלדה ושליחת הודעות עם כל התכונות
 // ============================================
 
-import React, { useState, useRef, useMemo, useEffect, memo } from 'react';
-import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Alert, Animated, Easing, Platform } from 'react-native';
+import React, { useState, useRef, useMemo, useEffect, useCallback, memo } from 'react';
+import { View, TextInput, TouchableOpacity, Pressable, Text, StyleSheet, Alert, Animated, Easing, Platform, Keyboard } from 'react-native';
 import { chatInputBottomPadding, CHAT_COMPOSER_NATIVE_ID } from './chatInputLayout';
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import * as ImagePicker from 'expo-image-picker';
 import MediaPickerSheet from './MediaPickerSheet';
+import { runAfterSheetDismiss } from './mediaPickerLaunch';
 import PollCreationBottomSheet from './PollCreationBottomSheet';
 
 // ImagePicker media types - using new array format for Expo SDK 52+
@@ -65,8 +66,6 @@ function ChatInputImpl({
     : DesignTokens.colors.text.primary;
 
   const inputBottomPadding = chatInputBottomPadding(
-    0,
-    false,
     Math.max(DesignTokens.spacing.sm, 6),
   );
 
@@ -122,6 +121,12 @@ function ChatInputImpl({
   const soundRef = useRef<Audio.Sound | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const waveformIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // ערכי metering חיים בלי לגרום ל-re-render של ChatInput (חוסך עומס JS thread)
+  const audioLevelRef = useRef(0);
+  const waveformSamplesRef = useRef<number[]>([]);
+  // מדידת משך אמיתית מבוססת timestamp (לא תלויה בדיוק ה-interval)
+  const recordingStartRef = useRef(0);
+  const recordingAccumMsRef = useRef(0);
   const previewPositionInterval = useRef<NodeJS.Timeout | null>(null);
   const recordingDotOpacity = useRef(new Animated.Value(1)).current;
   const timelineProgress = useRef(new Animated.Value(0)).current;
@@ -676,9 +681,7 @@ function ChatInputImpl({
   // Create Poll
   // ============================================
   const handleCreatePoll = () => {
-    setMediaPickerVisible(false);
-    // ⚡ ללא השהייה – פתיחה מיידית
-    setPollCreationVisible(true);
+    runAfterSheetDismiss(() => setPollCreationVisible(true));
   };
 
   const handlePollCreated = (_poll: any) => {
@@ -688,14 +691,51 @@ function ChatInputImpl({
 
   // Handle Audio from Media Picker
   // ============================================
-  const handleStartAudioRecording = async () => {
-    setMediaPickerVisible(false);
-    requestAnimationFrame(() => startRecording({ openInLockedMode: true }));
+  const handleStartAudioRecording = () => {
+    runAfterSheetDismiss(() => {
+      void startRecording({ openInLockedMode: true });
+    });
   };
 
   // ============================================
   // Record Audio
   // ============================================
+
+  // דגימת metering אחת → מעדכן ref חי + אוסף samples להודעה. ללא setState.
+  const sampleMetering = useCallback(async () => {
+    try {
+      const rec = recordingRef.current;
+      if (!rec) return;
+      const status = await rec.getStatusAsync();
+      if (!status.isRecording) return;
+
+      const metering = (status as any).metering;
+      let normalizedValue: number;
+      if (metering !== undefined && typeof metering === 'number') {
+        // טווח ממוקד דיבור: -50 עד -5 dB; עקומת power להגברת רגישות
+        const MIN_DB = -50;
+        const MAX_DB = -5;
+        const clamped = Math.max(MIN_DB, Math.min(MAX_DB, metering));
+        const linear = (clamped - MIN_DB) / (MAX_DB - MIN_DB);
+        const curved = Math.pow(linear, 0.55);
+        normalizedValue = 0.06 + curved * 0.94;
+      } else {
+        normalizedValue = 0.25 + Math.random() * 0.75;
+      }
+
+      audioLevelRef.current = normalizedValue;
+
+      // שמירת samples להודעה (downsample ל-100)
+      const samples = waveformSamplesRef.current;
+      if (samples.length < 100) {
+        samples.push(normalizedValue);
+      } else {
+        samples[Math.floor(Math.random() * 100)] = normalizedValue;
+      }
+    } catch (error) {
+      logger.error('ChatInput', 'Recording error', error);
+    }
+  }, []);
 
   const startRecording = async (opts?: { openInLockedMode?: boolean }) => {
     if (isStartingRecordingRef.current) {
@@ -745,6 +785,8 @@ function ChatInputImpl({
       // יצירת recording חדש
       const recording = new Audio.Recording();
       await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      // רענון metering מהיר (ברירת המחדל 500ms גורמת לגלים להיראות שטוחים)
+      recording.setProgressUpdateInterval(80);
       await recording.startAsync();
 
       recordingRef.current = recording;
@@ -752,6 +794,10 @@ function ChatInputImpl({
       setRecordingDuration(0);
       setAudioLevel(0);
       setWaveformSamples([]); // איפוס ה-waveform data
+      audioLevelRef.current = 0;
+      waveformSamplesRef.current = [];
+      recordingStartRef.current = Date.now();
+      recordingAccumMsRef.current = 0;
       timelineProgress.setValue(0); // איפוס הטיימליין
 
       pulseAnimationRef.current?.stop();
@@ -778,62 +824,17 @@ function ChatInputImpl({
       }
 
       recordingTimerRef.current = setInterval(() => {
-        setRecordingDuration(prev => {
-          const newDuration = prev + 1;
-          // עדכן את הטיימליין
-          const progress = Math.min(newDuration / MAX_RECORDING_DURATION, 1);
-          timelineProgress.setValue(progress);
-          return newDuration;
-        });
-      }, 1000);
+        const elapsedMs = recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
+        const seconds = Math.floor(elapsedMs / 1000);
+        const progress = Math.min(seconds / MAX_RECORDING_DURATION, 1);
+        timelineProgress.setValue(progress);
+        setRecordingDuration(seconds);
+      }, 250);
 
-      // עדכן waveforms כל 50ms בזמן אמת
-      // גם מציג את האנימציה וגם שומר samples עבור ההודעה
-      waveformIntervalRef.current = setInterval(async () => {
-        try {
-          if (recordingRef.current) {
-            const status = await recordingRef.current.getStatusAsync();
-            if (status.isRecording) {
-              // קבל metering data אם זמין
-              const metering = (status as any).metering;
-              let normalizedValue: number;
-
-              if (metering !== undefined && typeof metering === 'number') {
-                // נרמול רגיש יותר - metering בדרך כלל בין -60 ל-0 dB
-                // טווח רגישות: -35 עד 0 dB (רגיש יותר לקולות חלשים)
-                // ואז עקומת power לעשות את ההבדלים יותר בולטים
-                const clamped = Math.max(-35, Math.min(0, metering));
-                const linear = (clamped + 35) / 35; // 0 to 1
-                // Apply power curve to make differences more visible
-                normalizedValue = Math.pow(linear, 0.7); // 0.7 power = more sensitive
-                // Ensure minimum of 0.15 and max of 1.0
-                normalizedValue = 0.15 + normalizedValue * 0.85;
-              } else {
-                // אם אין metering, צור ערכים אקראיים עם וריאציה
-                const base = 0.25;
-                const variation = Math.random() * 0.75;
-                normalizedValue = base + variation;
-              }
-
-              // עדכון רמת הקול לאנימציה חיה
-              setAudioLevel(normalizedValue);
-
-              // שמירת sample עבור ה-waveform של ההודעה (מקסימום 100 samples)
-              setWaveformSamples(prev => {
-                if (prev.length < 100) {
-                  return [...prev, normalizedValue];
-                }
-                // אם יש יותר מ-100, החלף כל sample שני
-                const newSamples = [...prev];
-                newSamples[Math.floor(Math.random() * 100)] = normalizedValue;
-                return newSamples;
-              });
-            }
-          }
-        } catch (error) {
-          logger.error('ChatInput', 'Recording error', error);
-        }
-      }, 50);
+      // קריאת metering בזמן אמת → ref בלבד (ללא setState, בלי לעמיס את ה-JS thread)
+      waveformIntervalRef.current = setInterval(() => {
+        void sampleMetering();
+      }, 60);
 
       isStartingRecordingRef.current = false; // איפוס ה-flag אחרי הצלחה
     } catch (error) {
@@ -862,6 +863,9 @@ function ChatInputImpl({
       // Pause the recording
       await recordingRef.current.pauseAsync();
 
+      // צבירת הזמן שחלף עד עכשיו
+      recordingAccumMsRef.current += Date.now() - recordingStartRef.current;
+
       // Stop timer
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
@@ -877,6 +881,9 @@ function ChatInputImpl({
       setIsRecording(false);
       setIsPaused(true);
       setAudioLevel(0);
+      audioLevelRef.current = 0;
+      // flush של ה-samples שנאספו ל-state עבור תצוגת ה-preview
+      setWaveformSamples([...waveformSamplesRef.current]);
 
       pulseAnimationRef.current?.stop();
       pulseAnimationRef.current = null;
@@ -919,51 +926,20 @@ function ChatInputImpl({
       pulseAnimationRef.current = pulseAnim;
       pulseAnim.start();
 
+      // המשך מדידת הזמן מהנקודה שעצרנו
+      recordingStartRef.current = Date.now();
       recordingTimerRef.current = setInterval(() => {
-        setRecordingDuration(prev => {
-          const newDuration = prev + 1;
-          const progress = Math.min(newDuration / MAX_RECORDING_DURATION, 1);
-          timelineProgress.setValue(progress);
-          return newDuration;
-        });
-      }, 1000);
+        const elapsedMs = recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
+        const seconds = Math.floor(elapsedMs / 1000);
+        const progress = Math.min(seconds / MAX_RECORDING_DURATION, 1);
+        timelineProgress.setValue(progress);
+        setRecordingDuration(seconds);
+      }, 250);
 
-      // Restart waveform updates
-      waveformIntervalRef.current = setInterval(async () => {
-        try {
-          if (recordingRef.current) {
-            const status = await recordingRef.current.getStatusAsync();
-            if (status.isRecording) {
-              const metering = (status as any).metering;
-              let normalizedValue: number;
-
-              if (metering !== undefined && typeof metering === 'number') {
-                const clamped = Math.max(-35, Math.min(0, metering));
-                const linear = (clamped + 35) / 35;
-                normalizedValue = Math.pow(linear, 0.7);
-                normalizedValue = 0.15 + normalizedValue * 0.85;
-              } else {
-                const base = 0.25;
-                const variation = Math.random() * 0.75;
-                normalizedValue = base + variation;
-              }
-
-              setAudioLevel(normalizedValue);
-
-              setWaveformSamples(prev => {
-                if (prev.length < 100) {
-                  return [...prev, normalizedValue];
-                }
-                const newSamples = [...prev];
-                newSamples[Math.floor(Math.random() * 100)] = normalizedValue;
-                return newSamples;
-              });
-            }
-          }
-        } catch (error) {
-          logger.error('ChatInput', 'Recording error', error);
-        }
-      }, 50);
+      // Restart waveform updates → ref בלבד
+      waveformIntervalRef.current = setInterval(() => {
+        void sampleMetering();
+      }, 60);
     } catch (error) {
       logger.error('ChatInput', 'Recording error', error);
       Alert.alert('שגיאה', 'לא הצלחנו להמשיך את ההקלטה');
@@ -997,9 +973,18 @@ function ChatInputImpl({
       const uri = recordingRef.current.getURI();
       await recordingRef.current.stopAndUnloadAsync();
       recordingRef.current = null;
+
+      // משך סופי מדויק — מעדיף את durationMillis האמיתי של ההקלטה
+      const totalMs = typeof status.durationMillis === 'number'
+        ? status.durationMillis
+        : recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
+      setRecordingDuration(Math.floor(totalMs / 1000));
+
       setIsRecording(false);
       setIsPaused(true);
       setAudioLevel(0);
+      audioLevelRef.current = 0;
+      setWaveformSamples([...waveformSamplesRef.current]);
 
       // Stop pulse animation
       recordingDotOpacity.setValue(1);
@@ -1463,6 +1448,7 @@ function ChatInputImpl({
   };
 
   const showAttachmentOptions = () => {
+    Keyboard.dismiss();
     attachmentIconRotate.setValue(0);
     Animated.sequence([
       Animated.timing(attachmentIconRotate, {
@@ -1626,7 +1612,7 @@ function ChatInputImpl({
 
               <View style={styles.recordingCenterCluster}>
                 <View style={styles.waveformWrapper}>
-                  <VoiceWaveform isRecording={isRecording} audioLevel={audioLevel} />
+                  <VoiceWaveform isRecording={isRecording} audioLevelRef={audioLevelRef} />
                 </View>
                 <View style={styles.timerContainer}>
                   <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
@@ -1741,6 +1727,7 @@ function ChatInputImpl({
                 editable={!disabled && !isUploading}
                 blurOnSubmit={false}
                 showSoftInputOnFocus
+                keyboardAppearance="dark"
                 importantForAutofill="no"
               />
               {/* L2: character counter – only shown when approaching the limit */}

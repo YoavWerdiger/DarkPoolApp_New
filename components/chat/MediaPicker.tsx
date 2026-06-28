@@ -259,7 +259,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
   }), [DesignTokens]);
 
   return (
-    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.38]}>
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.38]} showBrandWatermark={false}>
       <View style={styles.container}>
         <ChatSheetTitle title="שתף" />
         <View style={styles.optionsGrid}>

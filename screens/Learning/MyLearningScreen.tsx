@@ -11,10 +11,11 @@ import {
 import UICard from '../../components/ui/UICard';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ScreenChrome, MAIN_SCREEN_HEADER_HP } from '../../components/ui';
+import { ScreenChrome } from '../../components/ui';
 import { useNavigation } from '@react-navigation/native';
 import { useMyEnrollments } from '../../hooks/useLearning';
 import { AcademyScreenHeader, CourseCard } from '../../components/learning';
+import { ACADEMY_CARD_HP, academyCardFrameStyle } from '../../components/learning/academyCardLayout';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { CourseWithProgress } from '../../types/learning';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -134,8 +135,12 @@ export const MyLearningScreen: React.FC = () => {
       c.progress && c.progress.progress_percentage > 0 && c.progress.progress_percentage < 100
     ).length;
     return (
-      <UICard variant="glass" glassIntensity="light" padding="lg"
-        style={{ marginHorizontal: MAIN_SCREEN_HEADER_HP, marginBottom: 16, borderRadius: 20 }}>
+      <UICard
+        variant="blur"
+        padding="lg"
+        showGlassBorder={false}
+        style={[{ marginHorizontal: ACADEMY_CARD_HP, marginBottom: 16 }, academyCardFrameStyle('neutral')]}
+      >
         <Text style={styles.statsTitle}>התקדמות הלמידה</Text>
         <View style={styles.statsRow}>
           {[
@@ -240,7 +245,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       textAlign: 'center',
     },
     listContainer: {
-      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
+      paddingHorizontal: ACADEMY_CARD_HP,
       paddingTop: tokens.spacing.md,
       paddingBottom: tokens.spacing['5xl'],
     },

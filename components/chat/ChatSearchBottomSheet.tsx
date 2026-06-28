@@ -6,22 +6,26 @@ import {
   FlatList,
   StyleSheet,
   Pressable,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomSheetClose } from '../ui/BottomSheet/BottomSheet';
+import { useDesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import {
   ChatBottomSheet,
-  ChatSheetContent,
-  ChatSheetNavHeader,
-  ChatSheetSearchBar,
   ChatSheetEmptyState,
   ChatSheetLoading,
   useChatSheetStyles,
 } from './ChatBottomSheet';
 import { searchMessagesInGroup } from '../../services/chat/chatSearchService';
 import { ChatMessage } from '../../types/chat.types';
+import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { format, isToday, isYesterday } from 'date-fns';
 import { he } from 'date-fns/locale';
+import { chatRtlText } from './chatDesignTokens';
 
 interface ChatSearchBottomSheetProps {
   visible: boolean;
@@ -30,13 +34,17 @@ interface ChatSearchBottomSheetProps {
   onMessagePress: (messageId: string) => void;
 }
 
+const SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
+
 export default function ChatSearchBottomSheet({
   visible,
   onClose,
   groupId,
   onMessagePress,
 }: ChatSearchBottomSheetProps) {
+  const tokens = useDesignTokens();
   const sheet = useChatSheetStyles();
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const animatedClose = useBottomSheetClose();
   const handleHeaderClose = useCallback(() => {
     (animatedClose ?? onClose)();
@@ -51,7 +59,9 @@ export default function ChatSearchBottomSheet({
 
   useEffect(() => {
     isMountedRef.current = true;
-    return () => { isMountedRef.current = false; };
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   const handleSearch = useCallback(async () => {
@@ -85,6 +95,7 @@ export default function ChatSearchBottomSheet({
     setSearchTerm('');
     setSearchResults([]);
     setHasSearched(false);
+    searchInputRef.current?.focus();
   };
 
   const sanitizeSearchInput = (text: string) =>
@@ -148,7 +159,7 @@ export default function ChatSearchBottomSheet({
 
     return (
       <Pressable
-        style={({ pressed }) => [sheet.resultItem, pressed && { opacity: 0.75 }]}
+        style={({ pressed }) => [styles.resultItem, pressed && { opacity: 0.75 }]}
         onPress={() => {
           onMessagePress(item.id);
           onClose();
@@ -159,11 +170,15 @@ export default function ChatSearchBottomSheet({
           <Text style={sheet.resultDate}>{formatMessageDate(messageDate)}</Text>
         </View>
         <Text style={sheet.resultBody} numberOfLines={2}>
-          {highlightText(item.content || '', searchTerm)}
+          {item.message_type && item.message_type !== 'text'
+            ? getChatMessagePreview(item.message_type, item.content)
+            : highlightText(item.content || '', searchTerm)}
         </Text>
       </Pressable>
     );
   };
+
+  const canSearch = searchTerm.trim().length > 0 && !isSearching;
 
   const resultsBody = useMemo(() => {
     if (isSearching) {
@@ -198,46 +213,173 @@ export default function ChatSearchBottomSheet({
         subtitle="חפש הודעות בקבוצה זו"
       />
     );
-  }, [hasSearched, isSearching, searchResults, searchTerm, sheet]);
+  }, [hasSearched, isSearching, searchResults, searchTerm, sheet, styles]);
 
   return (
-    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.92]}>
-      <ChatSheetContent style={styles.content}>
-        <ChatSheetNavHeader title="חיפוש הודעות" onClose={handleHeaderClose} />
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.92]} showBrandWatermark={false}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <DayNavBlurButton
+            onPress={handleHeaderClose}
+            size={DAY_NAV_BUTTON_SIZE}
+            glassIntensity="subtle"
+            accessibilityLabel="סגור"
+          >
+            <Ionicons name="chevron-forward" size={22} color={tokens.colors.text.primary} />
+          </DayNavBlurButton>
 
-        <ChatSheetSearchBar
-          inputRef={searchInputRef}
-          value={searchTerm}
-          onChangeText={(text) => setSearchTerm(sanitizeSearchInput(text))}
-          onSubmit={handleSearch}
-          onSearchPress={handleSearch}
-          onClear={handleClear}
-          placeholder="חפש הודעות..."
-          loading={isSearching}
-          searchDisabled={!searchTerm.trim()}
-        />
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>חיפוש הודעות</Text>
+            <Text style={[styles.headerSubtitle, { color: tokens.colors.text.secondary }]}>
+              חפש לפי תוכן ההודעה
+            </Text>
+          </View>
+
+          <View style={styles.headerSideSpacer} />
+        </View>
+
+        <UICard variant="inputGlass" padding="none" style={styles.searchShell}>
+          <View style={styles.searchRow}>
+            <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
+            <TextInput
+              ref={searchInputRef}
+              style={[styles.searchInput, { color: tokens.colors.text.primary }]}
+              placeholder="חפש הודעות..."
+              placeholderTextColor={tokens.colors.text.tertiary}
+              value={searchTerm}
+              onChangeText={(text) => setSearchTerm(sanitizeSearchInput(text))}
+              onSubmitEditing={() => void handleSearch()}
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="none"
+            />
+            {searchTerm.length > 0 ? (
+              <Pressable
+                onPress={handleClear}
+                hitSlop={8}
+                style={({ pressed }) => pressed && { opacity: 0.6 }}
+              >
+                <Ionicons name="close-circle" size={18} color={tokens.colors.text.tertiary} />
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => void handleSearch()}
+              disabled={!canSearch}
+              style={({ pressed }) => [
+                styles.searchAction,
+                !canSearch && styles.searchActionDisabled,
+                pressed && canSearch && { opacity: 0.85 },
+              ]}
+            >
+              {isSearching ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="search" size={17} color="#fff" />
+              )}
+            </Pressable>
+          </View>
+        </UICard>
 
         <View style={styles.resultsWrap}>{resultsBody}</View>
-      </ChatSheetContent>
+      </View>
     </ChatBottomSheet>
   );
 }
 
-const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    minHeight: 280,
-  },
-  resultsWrap: {
-    flex: 1,
-    minHeight: 0,
-  },
-  resultsList: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  resultsListContent: {
-    flexGrow: 1,
-    paddingBottom: 12,
-  },
-});
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      minHeight: 280,
+      paddingHorizontal: tokens.spacing.md,
+      direction: 'rtl',
+      backgroundColor: 'transparent',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingBottom: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: SHEET_BORDER,
+      gap: 10,
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerSideSpacer: {
+      width: DAY_NAV_BUTTON_SIZE,
+      height: DAY_NAV_BUTTON_SIZE,
+    },
+    headerTitle: {
+      ...chatRtlText,
+      fontSize: 20,
+      fontWeight: '800',
+      letterSpacing: -0.35,
+      textAlign: 'center',
+      width: '100%',
+    },
+    headerSubtitle: {
+      ...chatRtlText,
+      marginTop: 4,
+      fontSize: 13,
+      fontWeight: '500',
+      textAlign: 'center',
+      width: '100%',
+    },
+    searchShell: {
+      marginTop: 14,
+      marginBottom: 12,
+      borderRadius: 999,
+      overflow: 'hidden',
+      paddingHorizontal: 14,
+      paddingVertical: 4,
+    },
+    searchRow: {
+      flexDirection: 'row',
+      direction: 'rtl',
+      alignItems: 'center',
+      gap: 10,
+      minHeight: 44,
+    },
+    searchInput: {
+      flex: 1,
+      ...chatRtlText,
+      fontSize: 16,
+      paddingVertical: Platform.OS === 'ios' ? 10 : 8,
+      backgroundColor: 'transparent',
+    },
+    searchAction: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: tokens.colors.primary.main,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    searchActionDisabled: {
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      opacity: 0.55,
+    },
+    resultsWrap: {
+      flex: 1,
+      minHeight: 0,
+    },
+    resultsList: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
+    resultsListContent: {
+      flexGrow: 1,
+      paddingBottom: 12,
+    },
+    resultItem: {
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: SHEET_BORDER,
+    },
+  });

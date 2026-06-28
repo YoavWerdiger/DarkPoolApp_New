@@ -23,6 +23,17 @@ export interface ExplorePerson {
   returns?: Record<string, number | null>;
 }
 
+export interface CongressTradeCard {
+  id: string;
+  politician_name: string;
+  image_url: string | null;
+  txn_label: string;
+  amount_label?: string;
+  ticker: string;
+  issuer?: string;
+  filed_label: string;
+}
+
 export interface UwExplorePayload {
   most_followed: ExplorePerson[];
   executives: ExplorePerson[];

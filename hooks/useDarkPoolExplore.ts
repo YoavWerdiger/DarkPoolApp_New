@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
 import {
   fetchExploreSnapshotFromDb,
   triggerExploreSync,
+  triggerPersonPortraitSync,
 } from '../services/darkpool/darkPoolDbCacheService';
+import {
+  fetchExploreFromDbDirect,
+  isExplorePayloadEmpty,
+} from '../services/darkpool/exploreFromDbClient';
 import {
   clearUwExploreCache,
   fetchUwExplore,
@@ -10,61 +17,71 @@ import {
 } from '../services/darkpool/uwExploreService';
 import { DARK_POOL_SEC_PRODUCTION } from '../types/darkpool.types';
 
-export function useDarkPoolExplore() {
-  const [data, setData] = useState<UwExplorePayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export async function loadExplore(refresh: boolean): Promise<UwExplorePayload> {
+  try {
+    if (DARK_POOL_SEC_PRODUCTION) {
+      let payload = await fetchExploreFromDbDirect();
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) {
-      clearUwExploreCache();
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-    setError(null);
-    try {
-      if (!refresh) {
-        const cached = await fetchExploreSnapshotFromDb();
-        if (cached?.most_followed?.length || cached?.top_active?.length) {
-          setData(cached);
-          return;
-        }
-        if (DARK_POOL_SEC_PRODUCTION) {
-          setData(await fetchUwExplore(false));
-          return;
-        }
-      } else {
-        await triggerExploreSync();
-        const cached = await fetchExploreSnapshotFromDb();
-        if (cached) {
-          setData(cached);
-          return;
-        }
-      }
-
-      setData(await fetchUwExplore(refresh));
-    } catch (e) {
-      const fallback = await fetchExploreSnapshotFromDb().catch(() => null);
-      if (fallback) setData(fallback);
-      else {
-        const msg = (e as Error).message ?? '';
-        if (/[<]|\bhtml\b|doctype/i.test(msg)) {
-          setError('שגיאה זמנית בטעינת גילוי — נסה שוב.');
+        if (refresh || isExplorePayloadEmpty(payload)) {
+          await triggerExploreSync().catch(() => undefined);
+          await triggerPersonPortraitSync(refresh).catch(() => undefined);
+          const edge = await fetchUwExplore(true).catch(() => null);
+        if (edge && !isExplorePayloadEmpty(edge)) {
+          payload = edge;
         } else {
-          setError(msg || 'שגיאה בטעינת גילוי');
+          payload = await fetchExploreFromDbDirect();
         }
       }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      return payload;
     }
-  }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+    if (!refresh) {
+      const cached = await fetchExploreSnapshotFromDb();
+      if (cached && !isExplorePayloadEmpty(cached)) return cached;
+    } else {
+      await triggerExploreSync();
+      const cached = await fetchExploreSnapshotFromDb();
+      if (cached && !isExplorePayloadEmpty(cached)) return cached;
+    }
 
-  return { data, loading, refreshing, error, refetch: () => load(true) };
+    return await fetchUwExplore(refresh);
+  } catch (e) {
+    const fallback = DARK_POOL_SEC_PRODUCTION
+      ? await fetchExploreFromDbDirect().catch(() => null)
+      : await fetchExploreSnapshotFromDb().catch(() => null);
+    if (fallback && !isExplorePayloadEmpty(fallback)) return fallback;
+
+    const msg = (e as Error).message ?? '';
+    throw new Error(
+      /[<]|\bhtml\b|doctype/i.test(msg)
+        ? 'שגיאה זמנית בטעינת גילוי — נסה שוב.'
+        : msg || 'שגיאה בטעינת גילוי'
+    );
+  }
+}
+
+export function useDarkPoolExplore() {
+  const forceRef = useRef(false);
+  const query = useQuery<UwExplorePayload>({
+    queryKey: appQueryKeys.uwExplore,
+    queryFn: () => {
+      const refresh = forceRef.current;
+      forceRef.current = false;
+      if (refresh) clearUwExploreCache();
+      return loadExplore(refresh);
+    },
+  });
+
+  const refetch = useCallback(async () => {
+    forceRef.current = true;
+    await query.refetch();
+  }, [query]);
+
+  return {
+    data: query.data ?? null,
+    loading: query.isLoading,
+    refreshing: query.isRefetching,
+    error: query.error ? (query.error as Error).message : null,
+    refetch,
+  };
 }

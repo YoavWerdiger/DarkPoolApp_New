@@ -288,7 +288,7 @@ export interface ChatReactionGroup {
   users: Array<{
     id: string;
     name: string;
-    profile_picture?: string;
+    profile_picture?: string | null;
   }>;
   reacted_by_me: boolean;
 }

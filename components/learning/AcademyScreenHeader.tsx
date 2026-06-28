@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
-import { ArrowRight } from 'lucide-react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { MainDrawerScreenHeader } from '../ui/MainDrawerScreenHeader';
+import { MainDrawerScreenHeader, MAIN_SCREEN_HEADER_HP } from '../ui/MainDrawerScreenHeader';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 
 export type AcademyScreenHeaderProps = {
   onMenuPress: () => void;
@@ -76,6 +77,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   });
 }
 
+const SUB_SCREEN_HEADER_SIDE = 72;
+
 export type AcademySubScreenBarProps = {
   onBackPress: () => void;
   title?: string;
@@ -83,6 +86,7 @@ export type AcademySubScreenBarProps = {
   style?: ViewStyle;
 };
 
+/** כותרת משנה — כמו צ׳אט: כפתור זכוכית, כותרת ממורכזת, מקום סימטרי */
 export function AcademySubScreenBar({ onBackPress, title, subtitle, style }: AcademySubScreenBarProps) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createSubBarStyles(tokens), [tokens]);
@@ -90,74 +94,85 @@ export function AcademySubScreenBar({ onBackPress, title, subtitle, style }: Aca
   return (
     <View style={[styles.wrap, style]}>
       <View style={styles.row}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={onBackPress}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="חזרה"
-        >
-          <ArrowRight size={20} color={tokens.colors.text.primary} strokeWidth={2} />
-        </TouchableOpacity>
-        {title ? (
-          <Text style={styles.barTitle} numberOfLines={1}>
-            {title}
-          </Text>
-        ) : (
-          <View style={styles.flexSpacer} />
-        )}
+        <View style={styles.sideSlot}>
+          <DayNavBlurButton
+            onPress={onBackPress}
+            size={DRAWER_MENU_BUTTON_SIZE}
+            glassIntensity="subtle"
+            accessibilityLabel="חזרה"
+          >
+            <Ionicons name="chevron-forward" size={24} color={tokens.colors.text.primary} />
+          </DayNavBlurButton>
+        </View>
+        <View style={styles.titleBlock}>
+          {title ? (
+            <Text style={styles.barTitle} numberOfLines={2}>
+              {title}
+            </Text>
+          ) : null}
+          {subtitle ? (
+            <Text style={styles.subBarSubtitle} numberOfLines={2}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.sideSlotEnd} pointerEvents="none">
+          <View style={styles.sideSpacer} />
+        </View>
       </View>
-      {subtitle ? (
-        <Text style={styles.subBarSubtitle} numberOfLines={1}>
-          {subtitle}
-        </Text>
-      ) : null}
     </View>
   );
 }
 
-const BACK_BTN = 44;
-
 function createSubBarStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     wrap: {
-      paddingHorizontal: tokens.spacing.lg,
-      paddingTop: tokens.spacing.md,
-      marginBottom: tokens.spacing.md,
+      width: '100%',
+      marginBottom: tokens.spacing.sm,
     },
     row: {
       flexDirection: 'row-reverse',
       alignItems: 'center',
-      gap: tokens.spacing.md,
+      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
+      paddingVertical: 14,
     },
-    backBtn: {
-      width: BACK_BTN,
-      height: BACK_BTN,
-      borderRadius: BACK_BTN / 2,
+    sideSlot: {
+      minWidth: SUB_SCREEN_HEADER_SIDE,
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+    },
+    sideSlotEnd: {
+      minWidth: SUB_SCREEN_HEADER_SIDE,
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+    },
+    sideSpacer: {
+      width: DRAWER_MENU_BUTTON_SIZE,
+      height: DRAWER_MENU_BUTTON_SIZE,
+    },
+    titleBlock: {
+      flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: tokens.colors.background.secondary,
-      borderWidth: 1,
-      borderColor: tokens.colors.border.strong,
-      ...tokens.shadows.sm,
-    },
-    flexSpacer: {
-      flex: 1,
+      minHeight: 48,
+      paddingHorizontal: 4,
     },
     barTitle: {
-      flex: 1,
-      fontSize: tokens.typography.fontSize.lg,
-      fontWeight: '800' as const,
+      fontSize: 22,
+      fontWeight: '700' as const,
       color: tokens.colors.text.primary,
-      textAlign: 'right',
+      letterSpacing: -0.3,
+      textAlign: 'center',
       writingDirection: 'rtl',
     },
     subBarSubtitle: {
-      marginTop: tokens.spacing.xs,
-      paddingEnd: BACK_BTN + tokens.spacing.md,
-      fontSize: tokens.typography.fontSize.sm,
+      marginTop: 3,
+      fontSize: 13,
+      fontWeight: '500' as const,
       color: tokens.colors.text.secondary,
-      textAlign: 'right',
+      textAlign: 'center',
+      lineHeight: 17,
       writingDirection: 'rtl',
     },
   });

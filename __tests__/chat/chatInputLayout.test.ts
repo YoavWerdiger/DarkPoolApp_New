@@ -1,9 +1,9 @@
 import {
-  chatComposerPaddingBottom,
+  chatComposerKeyboardTranslate,
   chatComposerSafeBottomInset,
-  chatComposerStickyOffset,
   chatInputBottomPadding,
   CHAT_COMPOSER_ANDROID_MIN_BOTTOM,
+  CHAT_COMPOSER_KEYBOARD_GAP,
 } from '../../components/chat/chatInputLayout';
 import { Platform } from 'react-native';
 
@@ -31,23 +31,29 @@ describe('chatComposerSafeBottomInset', () => {
   });
 });
 
-describe('chatComposerStickyOffset', () => {
-  it('keeps closed at 0 and compensates opened by safe area', () => {
-    expect(chatComposerStickyOffset(34)).toEqual({ closed: 0, opened: 26 });
+describe('chatComposerKeyboardTranslate', () => {
+  it('returns 0 when keyboard is closed', () => {
+    expect(chatComposerKeyboardTranslate(0, 34)).toBe(0);
   });
-});
 
-describe('chatComposerPaddingBottom', () => {
-  it('uses safe inset when keyboard closed and small gap when open', () => {
-    expect(chatComposerPaddingBottom(34, false)).toBe(34);
-    expect(chatComposerPaddingBottom(34, true)).toBe(8);
+  it('keeps 3px gap above keyboard with constant bottom inset', () => {
+    expect(chatComposerKeyboardTranslate(300, 34, 3)).toBe(-269);
+  });
+
+  it('compensates android fallback inset when safe area is 0', () => {
+    expect(chatComposerKeyboardTranslate(280, 16, 3)).toBe(-267);
   });
 });
 
 describe('chatInputBottomPadding', () => {
   it('keeps fixed minimal inner padding', () => {
-    expect(chatInputBottomPadding(34, false, 8)).toBe(8);
-    expect(chatInputBottomPadding(34, true, 8)).toBe(8);
-    expect(chatInputBottomPadding(0, true, 6)).toBe(6);
+    expect(chatInputBottomPadding(8)).toBe(8);
+    expect(chatInputBottomPadding(6)).toBe(6);
+  });
+});
+
+describe('CHAT_COMPOSER_KEYBOARD_GAP', () => {
+  it('is 3px', () => {
+    expect(CHAT_COMPOSER_KEYBOARD_GAP).toBe(3);
   });
 });

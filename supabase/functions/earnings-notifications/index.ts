@@ -4,6 +4,7 @@ import {
   buildEarningsUpcomingBody,
   earningsUpcomingTitle,
 } from '../_shared/notificationBidi.ts'
+import { deriveEarningsDateTimeIso, fetchEarningsNotificationUsers } from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -79,7 +80,7 @@ serve(async (req) => {
       .select('id, code, ticker, company_name, report_date, earnings_date_time, before_after_market, actual, estimate, revenue_estimate_avg, revenue_estimate')
       .eq('report_date', now.toISOString().split('T')[0])
       .is('actual', null) // רק דיווחים שעדיין לא פורסמו
-      .gte('importance', 3) // רק חשובים
+      .or('importance.gte.3,importance.is.null')
       .like('code', '%.US')
       .order('earnings_date_time', { ascending: true })
       .limit(50)
@@ -101,16 +102,7 @@ serve(async (req) => {
       )
     }
 
-    // קבלת כל המשתמשים עם התראות earnings מופעלות
-    const { data: usersWithNotifications, error: usersError } = await supabase
-      .from('user_notification_settings')
-      .select('user_id')
-      .eq('notifications_enabled', true)
-      .eq('earnings_notifications', true)
-
-    if (usersError) {
-      throw new Error(`Failed to fetch users: ${usersError.message}`)
-    }
+    const usersWithNotifications = await fetchEarningsNotificationUsers(supabase)
 
     console.log(`👥 Found ${usersWithNotifications?.length || 0} users with earnings notifications enabled`)
 
@@ -139,11 +131,12 @@ serve(async (req) => {
 
     // יצירת התראות לכל דיווח קרוב
     for (const report of upcomingReports) {
-      // בדיקת זמן הדיווח
-      if (!report.earnings_date_time) continue
-      
+      const earningsDateTime =
+        report.earnings_date_time
+        ?? deriveEarningsDateTimeIso(report.report_date, report.before_after_market)
+
       // המרת זמן הדיווח לשעון ישראל
-      const reportTimeUTC = new Date(report.earnings_date_time)
+      const reportTimeUTC = new Date(earningsDateTime)
       const reportTimeIsraelStr = reportTimeUTC.toLocaleString('en-US', { 
         timeZone: 'Asia/Jerusalem',
         hour12: false,
@@ -227,7 +220,7 @@ serve(async (req) => {
               code: report.code,
               report_date: report.report_date,
               before_after_market: report.before_after_market,
-              earnings_date_time: report.earnings_date_time,
+              earnings_date_time: earningsDateTime,
               minutes_until: minutesDiff
             },
             is_sent: false

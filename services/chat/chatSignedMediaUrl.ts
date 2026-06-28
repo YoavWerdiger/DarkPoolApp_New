@@ -8,6 +8,11 @@ import { supabase } from '../../lib/supabase';
 import { logger } from '../../utils/logger';
 import type { ChatMessage } from '../../types/chat.types';
 import { ChatMessageType } from '../../types/chat.types';
+import {
+  getCachedLocalMediaUri,
+  downloadMediaToCache,
+  isCacheableMediaPath,
+} from '../../lib/mediaFileCache';
 
 const BUCKET = 'chat-media';
 const TAG = 'ChatSignedMedia';
@@ -70,9 +75,16 @@ export async function getChatMediaDisplayUri(ref: string | null | undefined): Pr
     return null;
   }
 
+  // קובץ שמור מקומית (אודיו/וידאו/מסמך) — מוחזר מיד, עובד גם offline
+  const localUri = getCachedLocalMediaUri(path);
+  if (localUri) return localUri;
+
   const now = Date.now();
   const hit = pathCache.get(path);
   if (hit && hit.expiresAt > now) {
+    if (isCacheableMediaPath(path)) {
+      void downloadMediaToCache(path, hit.url);
+    }
     return hit.url;
   }
 
@@ -84,6 +96,10 @@ export async function getChatMediaDisplayUri(ref: string | null | undefined): Pr
       return null;
     }
     pathCache.set(path, { url: data.signedUrl, expiresAt: now + CACHE_MS });
+    // הורדה ברקע לדיסק כדי שהפעם הבאה תהיה מיידית/offline
+    if (isCacheableMediaPath(path)) {
+      void downloadMediaToCache(path, data.signedUrl);
+    }
     return data.signedUrl;
   } catch (e) {
     logger.warn(TAG, 'createSignedUrl exception', e);
@@ -165,6 +181,8 @@ export function getCachedChatMediaDisplayUri(ref: string | null | undefined): st
   if (!ref) return null;
   const path = chatMediaStoragePathFromRef(ref);
   if (path) {
+    const localUri = getCachedLocalMediaUri(path);
+    if (localUri) return localUri;
     const hit = pathCache.get(path);
     if (hit && hit.expiresAt > Date.now()) return hit.url;
     return null;
@@ -260,4 +278,34 @@ export async function prefetchChatMediaForMessages(messages: ChatMessage[]): Pro
   const { thumbs, full } = imageUrisToWarmFromMessages(messages);
   await prefetchImageUris(thumbs);
   await prefetchImageUris(full);
+
+  await prefetchCacheableMediaFiles(refs);
+}
+
+const MEDIA_FILE_PREFETCH_CONCURRENCY = 4;
+
+/** מוריד לדיסק אודיו/וידאו/מסמכים מההודעות (תמונות מטופלות ע"י expo-image) */
+async function prefetchCacheableMediaFiles(refs: string[]): Promise<void> {
+  const targets: string[] = [];
+  const seen = new Set<string>();
+  for (const ref of refs) {
+    const path = chatMediaStoragePathFromRef(ref);
+    if (!path || seen.has(path) || !isCacheableMediaPath(path)) continue;
+    if (getCachedLocalMediaUri(path)) continue;
+    seen.add(path);
+    targets.push(path);
+  }
+  if (targets.length === 0) return;
+
+  for (let i = 0; i < targets.length; i += MEDIA_FILE_PREFETCH_CONCURRENCY) {
+    const batch = targets.slice(i, i + MEDIA_FILE_PREFETCH_CONCURRENCY);
+    await Promise.all(
+      batch.map(async (path) => {
+        const signed = await getChatMediaDisplayUri(path);
+        if (signed && signed.startsWith('http')) {
+          await downloadMediaToCache(path, signed);
+        }
+      }),
+    );
+  }
 }

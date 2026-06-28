@@ -7,7 +7,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   ACADEMY_CARD_RADIUS,
-  ACADEMY_CARD_BORDER_WIDTH,
+  academyCardFrameStyle,
 } from './academyCardLayout';
 
 const channelAvatar = require('../../assets/youtube-channel-avatar.png');
@@ -125,10 +125,8 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
     },
     card: {
       width: '100%',
-      borderRadius: ACADEMY_CARD_RADIUS,
       overflow: 'hidden',
-      borderWidth: ACADEMY_CARD_BORDER_WIDTH,
-      borderColor: 'rgba(255, 0, 51, 0.35)',
+      ...academyCardFrameStyle('youtube'),
       ...Platform.select({
         ios: {
           shadowColor: YOUTUBE_BRAND,

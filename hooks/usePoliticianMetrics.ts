@@ -1,59 +1,50 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  fetchPoliticianMetricsFromDb,
-} from '../services/darkpool/darkPoolDbCacheService';
+import { useCallback, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
+import { fetchPoliticianMetricsFromDb } from '../services/darkpool/darkPoolDbCacheService';
 import {
   fetchPoliticianMetrics,
   type PoliticianMetricsPayload,
 } from '../services/darkpool/uwPoliticianMetricsService';
 
-export function usePoliticianMetrics(politicianId: string, enabled = true) {
-  const [data, setData] = useState<PoliticianMetricsPayload | null>(null);
-  const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(
-    async (force = false) => {
-      if (!enabled || !politicianId) return;
-      setError(null);
-      try {
-        if (!force) {
-          const cached = await fetchPoliticianMetricsFromDb(politicianId);
-          if (cached) {
-            setData(cached);
-            return;
-          }
-        }
-        setData(await fetchPoliticianMetrics(politicianId, force));
-      } catch (e) {
-        const cached = await fetchPoliticianMetricsFromDb(politicianId).catch(() => null);
-        if (cached) setData(cached);
-        else setError((e as Error).message);
-      }
-    },
-    [enabled, politicianId]
-  );
-
-  useEffect(() => {
-    if (!enabled || !politicianId) {
-      setLoading(false);
-      return;
+async function loadMetrics(
+  politicianId: string,
+  force: boolean
+): Promise<PoliticianMetricsPayload | null> {
+  try {
+    if (!force) {
+      const cached = await fetchPoliticianMetricsFromDb(politicianId);
+      if (cached) return cached;
     }
-    let cancelled = false;
-    setLoading(true);
-    void load().finally(() => {
-      if (!cancelled) setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [load, enabled, politicianId]);
+    return await fetchPoliticianMetrics(politicianId, force);
+  } catch (e) {
+    const cached = await fetchPoliticianMetricsFromDb(politicianId).catch(() => null);
+    if (cached) return cached;
+    throw e;
+  }
+}
+
+export function usePoliticianMetrics(politicianId: string, enabled = true) {
+  const forceRef = useRef(false);
+  const query = useQuery<PoliticianMetricsPayload | null>({
+    queryKey: appQueryKeys.politicianMetrics(politicianId),
+    queryFn: () => {
+      const force = forceRef.current;
+      forceRef.current = false;
+      return loadMetrics(politicianId, force);
+    },
+    enabled: enabled && !!politicianId,
+  });
 
   const refetch = useCallback(async () => {
-    setLoading(true);
-    await load(true);
-    setLoading(false);
-  }, [load]);
+    forceRef.current = true;
+    await query.refetch();
+  }, [query]);
 
-  return { data, loading, error, refetch };
+  return {
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refetch,
+  };
 }

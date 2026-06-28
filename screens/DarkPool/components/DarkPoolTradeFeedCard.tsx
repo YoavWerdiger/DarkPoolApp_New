@@ -1,5 +1,5 @@
 /**
- * כרטיס פיד אחיד — לוגו מניה + טיקר + פעולה + שם משקיע + פירוט.
+ * כרטיס פיד — תמונת פרופיל + טיקר + פעולה + פירוט.
  */
 
 import React, { useMemo } from 'react';
@@ -7,6 +7,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import { DarkPoolFeedCard } from './DarkPoolFeedCard';
+import { InvestorPortrait } from './InvestorPortrait';
 import { formatRelativeTime } from '../utils/darkPoolFormat';
 import {
   getFeedTradeSide,
@@ -22,6 +23,9 @@ interface Props {
   filedAt: string;
   sinceTradePct?: number | null;
   onPress?: () => void;
+  personImageUrl?: string | null;
+  personId?: string;
+  personKind?: 'politician' | 'insider';
 }
 
 export function DarkPoolTradeFeedCard({
@@ -32,6 +36,9 @@ export function DarkPoolTradeFeedCard({
   filedAt,
   sinceTradePct,
   onPress,
+  personImageUrl,
+  personId,
+  personKind = 'insider',
 }: Props) {
   const tokens = useDesignTokens();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
@@ -50,7 +57,20 @@ export function DarkPoolTradeFeedCard({
   return (
     <DarkPoolFeedCard onPress={onPress} accessibilityLabel={a11y}>
       <View style={styles.row}>
-        <TickerLogo symbol={ticker} size={40} />
+        <View style={styles.avatarCol}>
+          <InvestorPortrait
+            name={personName}
+            imageUrl={personImageUrl}
+            kind={personKind}
+            personId={personId}
+            ticker={ticker}
+            layout="circle"
+            size={48}
+          />
+          <View style={styles.tickerBadge}>
+            <TickerLogo symbol={ticker} size={22} borderRadius={6} />
+          </View>
+        </View>
         <View style={styles.body}>
           <View style={styles.topLine}>
             <Text style={styles.ticker}>{ticker}</Text>
@@ -126,6 +146,21 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 12,
+    },
+    avatarCol: {
+      width: 48,
+      height: 48,
+      position: 'relative',
+    },
+    tickerBadge: {
+      position: 'absolute',
+      bottom: -4,
+      end: -4,
+      borderRadius: 8,
+      borderWidth: 2,
+      borderColor: tokens.colors.background.primary,
+      backgroundColor: tokens.colors.background.primary,
+      overflow: 'hidden',
     },
     body: { flex: 1, minWidth: 0 },
     topLine: {

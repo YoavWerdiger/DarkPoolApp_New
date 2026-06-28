@@ -33,7 +33,7 @@ export default function TradingScreen() {
   const mainTabsHeight = useMainTabsHeight();
   const [activeTab, setActiveTab] = useState<JournalTab>('trades');
 
-  const showAddTradeFab = activeTab === 'trades' || activeTab === 'calendar';
+  const showAddTradeFab = true;
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -92,7 +92,7 @@ export default function TradingScreen() {
           right: 0,
           bottom: 0,
           alignItems: 'center',
-          paddingBottom: mainTabsHeight,
+          paddingBottom: mainTabsHeight + 8,
           zIndex: 40,
         },
         fabBtn: {

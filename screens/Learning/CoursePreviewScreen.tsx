@@ -1,14 +1,16 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, TextInput, Modal } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { courseService } from '../../services/courseService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import { ScreenChrome } from '../../components/ui';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { AcademySubScreenBar } from '../../components/learning';
+import { ACADEMY_CARD_HP, academyCardFrameStyle } from '../../components/learning/academyCardLayout';
 
 export const CoursePreviewScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -90,11 +92,8 @@ export const CoursePreviewScreen: React.FC = () => {
   };
 
   return (
-    <LinearGradient
-      colors={['rgba(10,10,10,0.98)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.92)', 'rgba(10,10,10,0.95)', 'rgba(10,10,10,0.98)']}
-      locations={[0, 0.2, 0.35, 0.65, 0.8, 1]}
-      style={styles.gradientContainer}
-    >
+    <ScreenChrome withBrandWatermark>
+      <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
         <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
           <ScrollView 
@@ -103,13 +102,17 @@ export const CoursePreviewScreen: React.FC = () => {
             showsVerticalScrollIndicator={false}
           >
           <AcademySubScreenBar
-            style={{ marginHorizontal: -DesignTokens.spacing.lg }}
             onBackPress={() => navigation.goBack()}
             title="תצוגה מקדימה"
           />
 
           {/* Course Info */}
-          <UICard variant="blur" padding="lg" style={{ marginBottom: DesignTokens.spacing.lg }}>
+          <UICard
+            variant="blur"
+            padding="lg"
+            showGlassBorder={false}
+            style={[styles.cardSpacing, academyCardFrameStyle('free')]}
+          >
           <Text style={styles.courseTitle}>{preview.course.title}</Text>
           <Text style={styles.courseSubtitle}>{preview.course.subtitle}</Text>
           <Text style={styles.courseDescription}>{preview.course.description}</Text>
@@ -147,7 +150,13 @@ export const CoursePreviewScreen: React.FC = () => {
             <Text style={styles.sectionTitle}>רשימת שיעורים ({preview.lessons.length})</Text>
             
             {preview.lessons.map((lesson, index) => (
-              <UICard key={lesson.id} variant="blur" padding="md" style={{ marginBottom: DesignTokens.spacing.md }}>
+              <UICard
+                key={lesson.id}
+                variant="blur"
+                padding="md"
+                showGlassBorder={false}
+                style={[styles.lessonCard, academyCardFrameStyle('neutral')]}
+              >
               <View style={styles.lessonHeader}>
                 <Text style={styles.lessonNumber}>{index + 1}</Text>
                 <View style={styles.lessonInfo}>
@@ -197,7 +206,12 @@ export const CoursePreviewScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
 
-          <UICard variant="blur" padding="md" style={{ marginTop: DesignTokens.spacing.lg }}>
+          <UICard
+            variant="blur"
+            padding="md"
+            showGlassBorder={false}
+            style={[styles.footerCard, academyCardFrameStyle('neutral')]}
+          >
             <Text style={styles.footerText}>
               לאחר לחיצה על "צור קורס", הקורס יווצר במסד הנתונים עם כל השיעורים.
               {youtubeLinks.length === 0 && ' ניתן להוסיף קישורי יוטיוב מאוחר יותר.'}
@@ -248,15 +262,12 @@ export const CoursePreviewScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </ScreenChrome>
   );
 };
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
-    gradientContainer: {
-      flex: 1,
-    },
     safeAreaContainer: {
       flex: 1,
     },
@@ -268,8 +279,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       flex: 1,
     },
     content: {
-      padding: tokens.spacing.lg,
+      paddingHorizontal: ACADEMY_CARD_HP,
       paddingBottom: tokens.spacing['4xl'],
+    },
+    cardSpacing: {
+      marginBottom: tokens.spacing.lg,
+    },
+    lessonCard: {
+      marginBottom: tokens.spacing.md,
+    },
+    footerCard: {
+      marginTop: tokens.spacing.lg,
     },
     courseTitle: {
       fontSize: tokens.typography.fontSize.xl,

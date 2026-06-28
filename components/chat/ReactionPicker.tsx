@@ -1,12 +1,13 @@
-import React from 'react';
-import { View, Text, Pressable } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   ChatBottomSheet,
   ChatSheetCancelButton,
-  ChatSheetContent,
   ChatSheetTitle,
+  useChatFitContentSnap,
+  useChatSheetDismiss,
   useChatSheetStyles,
 } from './ChatBottomSheet';
 
@@ -31,6 +32,19 @@ export default function ReactionPicker({
 }: ReactionPickerProps) {
   const sheet = useChatSheetStyles();
   const insets = useSafeAreaInsets();
+  const dismiss = useChatSheetDismiss(onClose);
+
+  const sheetBottomPad = useMemo(() => {
+    const minBottom = Platform.OS === 'android' ? 16 : 8;
+    return Math.max(insets.bottom, minBottom);
+  }, [insets.bottom]);
+
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(
+    0.38,
+    0.55,
+    0.28,
+    visible,
+  );
 
   const isReactionSelected = (emoji: string) =>
     messageReactions.some((r) => r.emoji === emoji && r.reacted_by_me);
@@ -38,12 +52,22 @@ export default function ReactionPicker({
   const handleReaction = (emoji: string) => {
     void HapticFeedback.selection();
     onReaction(emoji);
-    onClose();
+    dismiss();
   };
 
   return (
-    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.35]}>
-      <ChatSheetContent style={{ paddingBottom: insets.bottom + 12 }}>
+    <ChatBottomSheet
+      visible={visible}
+      onClose={onClose}
+      snapPoints={[snapPoint]}
+      fitContent
+      showBrandWatermark={false}
+      contentPaddingBottom={0}
+    >
+      <View
+        style={{ paddingHorizontal: 16, paddingBottom: sheetBottomPad, direction: 'rtl' }}
+        onLayout={onContentLayout}
+      >
         <ChatSheetTitle title="בחר ריאקציה" />
 
         <View style={sheet.emojiGrid}>
@@ -74,8 +98,8 @@ export default function ReactionPicker({
           ))}
         </View>
 
-        <ChatSheetCancelButton onPress={onClose} />
-      </ChatSheetContent>
+        <ChatSheetCancelButton onPress={dismiss} />
+      </View>
     </ChatBottomSheet>
   );
 }

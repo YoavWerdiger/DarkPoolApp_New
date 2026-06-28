@@ -9,12 +9,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
 import { InvestorPortrait } from './InvestorPortrait';
 
 interface Props {
   person: ExplorePerson;
-  variant?: 'large' | 'compact';
+  variant?: 'large' | 'compact' | 'grid';
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }
@@ -31,11 +32,18 @@ export function ExplorePortraitCard({
     [tokens, variant]
   );
 
-  const w = variant === 'large' ? 168 : 132;
-  const h = variant === 'large' ? 220 : 176;
+  const isGrid = variant === 'grid';
+  const w = isGrid ? undefined : variant === 'large' ? 168 : 132;
+  const h = isGrid ? undefined : variant === 'large' ? 220 : 176;
 
   const content = (
-    <View style={[styles.card, { width: w, height: h }, style]}>
+    <View
+      style={[
+        styles.card,
+        isGrid ? styles.gridCard : { width: w, height: h },
+        style,
+      ]}
+    >
       <InvestorPortrait
         name={person.name}
         imageUrl={person.image_url}
@@ -46,22 +54,17 @@ export function ExplorePortraitCard({
         style={styles.bg}
       >
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.85)']}
+          colors={['transparent', 'rgba(0,0,0,0.92)']}
           style={styles.footer}
         >
-          <Text style={styles.name} numberOfLines={variant === 'large' ? 2 : 1}>
+          <Text style={styles.name} numberOfLines={2}>
             {person.name}
           </Text>
-          {person.metric ? (
-            <Text style={styles.metric}>
-              {person.metric_label ? `${person.metric_label} ` : ''}
-              <Text style={styles.metricVal}>{person.metric}</Text>
-            </Text>
-          ) : (
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {person.subtitle}
-            </Text>
-          )}
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {person.kind === 'politician'
+              ? 'קונגרס'
+              : person.ticker || person.subtitle.split('·')[0]?.trim() || 'בכיר'}
+          </Text>
         </LinearGradient>
       </InvestorPortrait>
     </View>
@@ -69,7 +72,13 @@ export function ExplorePortraitCard({
 
   if (!onPress) return content;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && { opacity: 0.92 }}>
+    <Pressable
+      onPress={() => {
+        void HapticFeedback.selection();
+        onPress();
+      }}
+      style={({ pressed }) => pressed && { opacity: 0.92 }}
+    >
       {content}
     </Pressable>
   );
@@ -77,7 +86,7 @@ export function ExplorePortraitCard({
 
 function createStyles(
   tokens: ReturnType<typeof useDesignTokens>,
-  variant: 'large' | 'compact'
+  variant: 'large' | 'compact' | 'grid'
 ) {
   return StyleSheet.create({
     card: {
@@ -86,6 +95,10 @@ function createStyles(
       backgroundColor: 'rgba(255,255,255,0.06)',
       borderWidth: 1,
       borderColor: tokens.colors.border.subtle,
+    },
+    gridCard: {
+      aspectRatio: 0.72,
+      width: '100%',
     },
     bg: {
       flex: 1,
@@ -97,7 +110,7 @@ function createStyles(
       paddingTop: 36,
     },
     name: {
-      fontSize: variant === 'large' ? 15 : 13,
+      fontSize: variant === 'grid' ? 14 : variant === 'large' ? 15 : 13,
       fontWeight: '800',
       color: '#fff',
       textAlign: 'left',

@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import { appQueryKeys } from '../lib/appQueryKeys';
 
 /** Roles שנחשבים אדמין לצורך פעולות ניהול (כמו יצירת חדשות). */
 const ADMIN_ROLES = new Set(['admin', 'super_admin']);
@@ -10,55 +11,34 @@ export interface IsAdminInfo {
   isLoading: boolean;
 }
 
+async function fetchIsAdmin(userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('subscription_role')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error || !data) return false;
+  const role = String(data.subscription_role || '').toLowerCase();
+  return ADMIN_ROLES.has(role);
+}
+
 /**
  * Hook לבדיקת האם המשתמש המחובר הוא admin (לפי `users.subscription_role`).
  * משמש לחשיפת פעולות ניהול בלבד (למשל כפתור יצירת חדשה במסך החדשות).
+ * משותף דרך React Query (cache בזיכרון בלבד).
  */
 export function useIsAdmin(): IsAdminInfo {
   const { user } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isLoading, setIsLoading] = useState<boolean>(!!user?.id);
+  const userId = user?.id;
 
-  useEffect(() => {
-    let cancelled = false;
+  const query = useQuery<boolean>({
+    queryKey: appQueryKeys.userIsAdmin(userId ?? 'anon'),
+    queryFn: () => fetchIsAdmin(userId as string),
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+  });
 
-    if (!user?.id) {
-      setIsAdmin(false);
-      setIsLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setIsLoading(true);
-
-    (async () => {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('subscription_role')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (cancelled) return;
-
-        if (error || !data) {
-          setIsAdmin(false);
-        } else {
-          const role = String(data.subscription_role || '').toLowerCase();
-          setIsAdmin(ADMIN_ROLES.has(role));
-        }
-      } catch {
-        if (!cancelled) setIsAdmin(false);
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
-
-  return { isAdmin, isLoading };
+  if (!userId) return { isAdmin: false, isLoading: false };
+  return { isAdmin: query.data ?? false, isLoading: query.isLoading };
 }

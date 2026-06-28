@@ -18,7 +18,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   ACADEMY_CARD_RADIUS,
-  ACADEMY_CARD_BORDER_WIDTH,
+  academyCardFrameStyle,
   academyCardWidth,
 } from './academyCardLayout';
 import {
@@ -79,9 +79,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   const isFree = tier === 'free';
   const isPaid = isPremium;
   const accentColor = isPremium ? PREMIUM_GOLD : T.colors.primary.dark;
-  const frameBorderColor = isPremium
-    ? 'rgba(245, 158, 11, 0.35)'
-    : 'rgba(0, 160, 4, 0.35)';
+  const frameTier = isPremium ? 'premium' : 'free';
   const freeBadgeLabel = isDavidTrainingCourse(course) ? 'קורס בסיסי' : 'חינמי';
   const durationMinutes = getCourseDurationMinutes(course as CourseWithProgress & { duration_hours?: number });
 
@@ -100,13 +98,7 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         variant="blur"
         padding="none"
         showGlassBorder={false}
-        style={[
-          styles.card,
-          {
-            borderWidth: ACADEMY_CARD_BORDER_WIDTH,
-            borderColor: frameBorderColor,
-          },
-        ]}
+        style={[styles.card, academyCardFrameStyle(frameTier)]}
       >
         {/* Cover image */}
         <View style={styles.cover}>
@@ -304,8 +296,8 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>, coverHeight: number
       shadowOffset: { width: 0, height: 4 },
       shadowRadius: 10,
       elevation: 6,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.22)',
+      borderWidth: 2,
+      borderColor: 'rgba(255,255,255,0.28)',
       overflow: 'hidden',
     },
     badgePremium: {

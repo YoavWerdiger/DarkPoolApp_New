@@ -1,7 +1,7 @@
 /**
  * עטיפה אחידה לכל bottom sheets בצ'אט — רקע זכוכית, backdrop, כותרות ורשימות.
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,15 +12,67 @@ import {
   Image,
   TextInput,
   Platform,
+  Dimensions,
+  LayoutChangeEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
+import BottomSheet, {
+  BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
+  useBottomSheetClose,
+  SHEET_MOTION_MS,
+} from '../ui/BottomSheet/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
 
 export const CHAT_SHEET_BACKDROP_OPACITY = 0.4;
 export const CHAT_SHEET_WATERMARK_SCALE = 0.58;
+export { BOTTOM_SHEET_EDGE_HANDLE_HEIGHT, useBottomSheetClose, SHEET_MOTION_MS };
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+/** snap point לפי גובה תוכן מדוד — כמו LongPressOverlay / MediaPickerSheet */
+export function useChatFitContentSnap(
+  initialEstimate = 0.45,
+  maxSnap = 0.92,
+  minSnap = 0.12,
+  resetKey?: string | number | boolean | null,
+) {
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    setContentHeight(null);
+  }, [resetKey]);
+
+  const onContentLayout = useCallback((e: LayoutChangeEvent) => {
+    const height = e.nativeEvent.layout.height;
+    if (height > 0) {
+      setContentHeight((prev) => (prev === height ? prev : height));
+    }
+  }, []);
+
+  const snapPoint = useMemo(() => {
+    if (contentHeight != null && contentHeight > 0) {
+      const totalPx = contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + 4;
+      return Math.min(maxSnap, Math.max(minSnap, totalPx / SCREEN_HEIGHT));
+    }
+    return initialEstimate;
+  }, [contentHeight, initialEstimate, maxSnap, minSnap]);
+
+  return { snapPoint, onContentLayout, contentHeight };
+}
+
+/** סגירה מונפשת — לשימוש במקום onClose ישיר (שובר אנימציה) */
+export function useChatSheetDismiss(onClose?: () => void) {
+  const animatedClose = useBottomSheetClose();
+  return useCallback(() => {
+    if (animatedClose) {
+      animatedClose();
+    } else {
+      onClose?.();
+    }
+  }, [animatedClose, onClose]);
+}
 
 type ChatBottomSheetProps = {
   visible: boolean;
@@ -29,6 +81,9 @@ type ChatBottomSheetProps = {
   fitContent?: boolean;
   edgeToEdge?: boolean;
   brandWatermarkScale?: number;
+  showBrandBackground?: boolean;
+  showBrandWatermark?: boolean;
+  contentPaddingBottom?: number;
   children: React.ReactNode;
 };
 
@@ -39,6 +94,9 @@ export function ChatBottomSheet({
   fitContent,
   edgeToEdge = true,
   brandWatermarkScale = CHAT_SHEET_WATERMARK_SCALE,
+  showBrandBackground = true,
+  showBrandWatermark,
+  contentPaddingBottom,
   children,
 }: ChatBottomSheetProps) {
   return (
@@ -50,10 +108,12 @@ export function ChatBottomSheet({
       enablePanDownToClose
       useModal
       backdropOpacity={CHAT_SHEET_BACKDROP_OPACITY}
-      showBrandBackground
+      showBrandBackground={showBrandBackground}
+      showBrandWatermark={showBrandWatermark}
       edgeToEdge={edgeToEdge}
       fitContent={fitContent}
       brandWatermarkScale={brandWatermarkScale}
+      contentPaddingBottom={contentPaddingBottom}
     >
       {children}
     </BottomSheet>
@@ -393,6 +453,13 @@ export function useChatSheetStyles() {
           fontSize: 17,
           fontWeight: '600',
         },
+        headerTitlePlain: {
+          ...chatRtlText,
+          color: tokens.colors.text.primary,
+          fontSize: 17,
+          fontWeight: '600',
+          textAlign: 'center',
+        },
         cancelButton: {
           marginTop: tokens.spacing.md,
           backgroundColor: tokens.colors.background.secondary,
@@ -412,16 +479,20 @@ export function useChatSheetStyles() {
           marginBottom: tokens.spacing.md,
           flexGrow: 0,
         },
+        tabsScrollContent: {
+          flexGrow: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
         tabsContainer: {
-          ...chatRtlRow,
+          flexDirection: 'row-reverse',
           direction: 'rtl',
           backgroundColor: tokens.colors.background.secondary,
           borderRadius: 30,
-          borderWidth: 1,
-          borderColor: chatPalette.glassBorder,
           padding: 4,
           gap: 4,
           alignItems: 'center',
+          alignSelf: 'center',
         },
         tab: {
           ...chatRtlRow,

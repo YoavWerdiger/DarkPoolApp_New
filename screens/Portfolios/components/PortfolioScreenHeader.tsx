@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 interface Props {
@@ -36,20 +37,13 @@ export function PortfolioScreenHeader({
     >
       <View style={styles.sideEdge}>
         {onBack ? (
-          <TouchableOpacity
+          <DayNavBlurButton
             onPress={() => {
               void HapticFeedback.impactLight();
               onBack();
             }}
-            hitSlop={10}
-            style={[
-              styles.edgeBtn,
-              {
-                backgroundColor: 'rgba(255,255,255,0.06)',
-                borderColor: tokens.colors.border.subtle,
-              },
-            ]}
-            accessibilityRole="button"
+            size={HEADER_BACK_BTN_SIZE}
+            glassIntensity="subtle"
             accessibilityLabel="חזרה"
           >
             <Ionicons
@@ -57,7 +51,7 @@ export function PortfolioScreenHeader({
               size={22}
               color={tokens.colors.text.primary}
             />
-          </TouchableOpacity>
+          </DayNavBlurButton>
         ) : null}
       </View>
       <View style={styles.center} pointerEvents="box-none">
@@ -89,7 +83,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   sideEdge: {
-    width: 44,
+    width: HEADER_BACK_BTN_SIZE,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
@@ -99,14 +93,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 4,
-  },
-  edgeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
   },
   center: {
     flex: 1,

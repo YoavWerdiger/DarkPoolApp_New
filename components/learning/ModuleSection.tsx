@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ModuleWithLessons, Enrollment } from '../../types/learning';
 import { useDesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
 import { LessonRow } from './LessonRow';
+import { academyCardFrameStyle } from './academyCardLayout';
 
 interface ModuleSectionProps {
   module: ModuleWithLessons;
@@ -33,12 +34,8 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      backgroundColor: DesignTokens.colors.background.elevated,
-      borderRadius: DesignTokens.borderRadius['2xl'],
       marginBottom: DesignTokens.spacing.lg,
       overflow: 'hidden',
-      borderWidth: DesignTokens.layout.borderWidth.normal,
-      borderColor: DesignTokens.colors.border.primary,
     },
     header: {
       padding: DesignTokens.spacing.lg,
@@ -85,7 +82,7 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
     progressBar: {
       width: 40,
       height: 4,
-      backgroundColor: DesignTokens.colors.border.primary,
+      backgroundColor: 'rgba(255,255,255,0.12)',
       borderRadius: DesignTokens.borderRadius.sm,
       overflow: 'hidden',
       marginBottom: DesignTokens.spacing.xs,
@@ -109,25 +106,21 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
       transform: [{ rotate: '180deg' }],
     },
     lessonsContainer: {
-      borderTopWidth: DesignTokens.layout.borderWidth.normal,
-      borderTopColor: DesignTokens.colors.border.primary,
-      position: 'relative',
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255,255,255,0.08)',
       paddingHorizontal: DesignTokens.spacing.lg,
       paddingTop: DesignTokens.spacing.sm,
       paddingBottom: DesignTokens.spacing.lg,
     },
-    gradientBackground: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-    },
   }), [DesignTokens]);
 
   return (
-    <View style={styles.container}>
-      {/* Module Header */}
+    <UICard
+      variant="blur"
+      padding="none"
+      showGlassBorder={false}
+      style={[styles.container, academyCardFrameStyle('neutral')]}
+    >
       <TouchableOpacity
         style={styles.header}
         onPress={onToggle}
@@ -147,7 +140,6 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
           </View>
           
           <View style={styles.headerRight}>
-            {/* Progress indicator */}
             {isEnrolled && totalLessons > 0 && (
               <View style={styles.progressContainer}>
                 <View style={styles.progressBar}>
@@ -164,7 +156,6 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
               </View>
             )}
             
-            {/* Expand/Collapse Icon */}
             <Text style={[styles.expandIcon, isExpanded && styles.expandIconRotated]}>
               ▼
             </Text>
@@ -172,16 +163,8 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
         </View>
       </TouchableOpacity>
 
-      {/* Lessons List */}
       {isExpanded && module.lessons && (
         <View style={styles.lessonsContainer}>
-          <LinearGradient
-            colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientBackground}
-            pointerEvents="none"
-          />
           {module.lessons.map((lesson, index) => (
             <LessonRow
               key={lesson.id}
@@ -195,7 +178,6 @@ export const ModuleSection: React.FC<ModuleSectionProps> = ({
           ))}
         </View>
       )}
-    </View>
+    </UICard>
   );
 };
-

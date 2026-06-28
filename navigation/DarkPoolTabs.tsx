@@ -20,7 +20,7 @@ const Tab = createBottomTabNavigator<DarkPoolTabParamList>();
 export default function DarkPoolTabs() {
   return (
     <Tab.Navigator
-      initialRouteName="DarkPoolFeed"
+      initialRouteName="DarkPoolExplore"
       tabBar={(props) => <DarkPoolBottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,

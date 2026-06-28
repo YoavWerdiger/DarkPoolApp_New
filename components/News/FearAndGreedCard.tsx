@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Circle, Line, Text as SvgText } from 'react-native-svg';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { useFearAndGreed } from '../../hooks/useFearAndGreed';
 import {
   fearAndGreedService,
-  FearAndGreedData,
+  type FearAndGreedData,
   FEAR_GREED_GAUGE_SEGMENTS,
 } from '../../services/fearAndGreedService';
 import UICard from '../ui/UICard';
@@ -47,15 +48,24 @@ export default function FearAndGreedCard({
 }: FearAndGreedCardProps) {
   const DesignTokens = useDesignTokens();
   const { width: windowWidth } = useWindowDimensions();
-  const [data, setData] = useState<FearAndGreedData | null>(null);
-  const [historicalData, setHistoricalData] = useState<{
-    previousClose?: FearAndGreedData;
-    oneWeekAgo?: FearAndGreedData;
-    oneMonthAgo?: FearAndGreedData;
-    oneYearAgo?: FearAndGreedData;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: fullData,
+    isLoading: queryLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useFearAndGreed();
+  const data = fullData?.fgi.now ?? null;
+  const historicalData = fullData
+    ? {
+        previousClose: fullData.fgi.previousClose,
+        oneWeekAgo: fullData.fgi.oneWeekAgo,
+        oneMonthAgo: fullData.fgi.oneMonthAgo,
+        oneYearAgo: fullData.fgi.oneYearAgo,
+      }
+    : null;
+  const loading = queryLoading && !data;
+  const error = !data && queryError ? (queryError as Error).message : null;
   const [expanded, setExpanded] = useState(initialExpanded ?? false);
 
   // בדיקת בטיחות - אם DesignTokens לא מוגדר, נשתמש בערכים ברירת מחדל
@@ -277,48 +287,6 @@ export default function FearAndGreedCard({
         }
       : undefined;
 
-  useEffect(() => {
-    loadFearAndGreedIndex();
-
-    // עדכון אוטומטי כל 30 דקות (המדד מתעדכן פעם ביום, אבל נבדוק לעתים קרובות יותר)
-    const interval = setInterval(() => {
-      loadFearAndGreedIndex();
-    }, 30 * 60 * 1000); // 30 דקות
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-
-  const loadFearAndGreedIndex = async () => {
-    // אם כבר יש לנו נתון, לא נראה את ספינר ה"טעינה" — נטען ברקע ונחליף
-    // את הערכים רק אם הצלחנו. זה מונע "הבזק" של מצב טעינה ושל ערך 50 דיפולטי.
-    const hadDataBefore = data != null;
-    try {
-      if (!hadDataBefore) setLoading(true);
-      setError(null);
-      // שליפת כל הנתונים כולל היסטוריים
-      const fullData = await fearAndGreedService.getFearAndGreedIndex();
-      setData(fullData.fgi.now);
-      setHistoricalData({
-        previousClose: fullData.fgi.previousClose,
-        oneWeekAgo: fullData.fgi.oneWeekAgo,
-        oneMonthAgo: fullData.fgi.oneMonthAgo,
-        oneYearAgo: fullData.fgi.oneYearAgo,
-      });
-    } catch (err: any) {
-      // אם הייתה לנו תצוגה קודמת תקינה — נשאיר אותה ולא נראה הודעת שגיאה,
-      // אבל גם **לא** נציג ערך 50 מזויף.
-      if (!hadDataBefore) {
-        setError(err?.message || 'שגיאה בטעינת המדד');
-        setData(null);
-        setHistoricalData(null);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const effectiveExpanded = disableToggle ? true : expanded;
 
   const renderHeader = (_subtitle?: string) => (
@@ -402,7 +370,7 @@ export default function FearAndGreedCard({
             {error || 'לא ניתן לטעון את המדד'}
           </Text>
           <TouchableOpacity
-            onPress={loadFearAndGreedIndex}
+            onPress={() => void refetch()}
             style={{
               marginTop: DesignTokens.spacing.sm,
               paddingVertical: DesignTokens.spacing.xs,

@@ -209,6 +209,7 @@ export interface PaymentCallback {
   amount: number;
   planId: string;
   userId: string;
+  cardcomTransactionId?: string;
 }
 
 class PaymentService {

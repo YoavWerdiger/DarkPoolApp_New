@@ -45,7 +45,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
   return (
     <Pressable
       onPress={() => {
-        void HapticFeedback.impactLight();
+        void HapticFeedback.selection();
         onPress();
       }}
       accessibilityRole="button"

@@ -1,11 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LearningService } from '../services/learningService';
+import { appQueryKeys } from '../lib/appQueryKeys';
 import { CourseListParams, CourseWithProgress, CourseWithModules, LessonWithProgress, Enrollment, LessonProgress, ProgressUpdateRequest, SignedUrlRequest } from '../types/learning';
 
 // Query keys
 export const learningKeys = {
   all: ['learning'] as const,
-  courses: (params?: CourseListParams) => [...learningKeys.all, 'courses', params] as const,
+  courses: (params?: CourseListParams) => appQueryKeys.courses(params),
   course: (id: string) => [...learningKeys.all, 'course', id] as const,
   lesson: (id: string) => [...learningKeys.all, 'lesson', id] as const,
   enrollments: () => [...learningKeys.all, 'enrollments'] as const,

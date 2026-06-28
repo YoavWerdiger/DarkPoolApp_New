@@ -1,3 +1,5 @@
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2.94.1'
+
 export interface RawEarningsEvent {
   code?: string;
   report_date?: string;
@@ -132,6 +134,61 @@ const sanitizeDateString = (value?: string | null, fallback?: string): string =>
   }
   return fallback ?? getDateInTimeZone(new Date(), DEFAULT_TIME_ZONE);
 };
+
+/** ברירת מחדל לסינון push — דיווחי US רגילים */
+export const DEFAULT_EARNINGS_IMPORTANCE = 3;
+
+/**
+ * זמן דיווח משוער (UTC) ל-scheduling של push כשאין earnings_date_time מה-API.
+ * BeforeMarket ≈ 7:00 ET · AfterMarket ≈ 16:05 ET
+ */
+export function deriveEarningsDateTimeIso(
+  reportDate: string,
+  beforeAfterMarket: string | null | undefined,
+): string {
+  const date = String(reportDate).slice(0, 10);
+  if (beforeAfterMarket === 'BeforeMarket') {
+    return `${date}T12:00:00.000Z`;
+  }
+  return `${date}T21:00:00.000Z`;
+}
+
+/** משתמשים עם device token פעיל + התראות דיווחים (ברירת מחדל: מופעל) */
+export async function fetchEarningsNotificationUsers(
+  supabase: SupabaseClient,
+): Promise<{ user_id: string }[]> {
+  const { data: tokens, error: tokensError } = await supabase
+    .from('device_tokens')
+    .select('user_id')
+    .eq('is_active', true)
+    .not('user_id', 'is', null)
+
+  if (tokensError) throw tokensError
+
+  const userIds = [...new Set((tokens ?? []).map((t) => t.user_id as string).filter(Boolean))]
+  if (userIds.length === 0) return []
+
+  const { data: settings, error: settingsError } = await supabase
+    .from('user_notification_settings')
+    .select('user_id, notifications_enabled, earnings_notifications')
+    .in('user_id', userIds)
+
+  if (settingsError) throw settingsError
+
+  const settingsByUser = new Map(
+    (settings ?? []).map((row) => [row.user_id as string, row]),
+  )
+
+  return userIds
+    .filter((userId) => {
+      const row = settingsByUser.get(userId)
+      if (!row) return true
+      if (row.notifications_enabled === false) return false
+      if (row.earnings_notifications === false) return false
+      return true
+    })
+    .map((user_id) => ({ user_id }))
+}
 
 export const prepareEarningsRecord = (
   raw: RawEarningsEvent,

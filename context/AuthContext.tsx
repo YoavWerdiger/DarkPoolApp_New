@@ -5,6 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NotificationService } from '../services/notificationService';
 import { logger } from '../utils/logger';
 import { setUser as setSentryUser, clearUser as clearSentryUser } from '../utils/sentry';
+import { clearChatMessagesCache } from '../lib/chatMessagePersist';
+import { clearMediaFileCache } from '../lib/mediaFileCache';
+import { clearPersistedQueryCache } from '../lib/queryPersist';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -162,9 +165,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async (keepCredentials: boolean = false): Promise<{ error: string | null }> => {
     try {
+      const previousUserId = user?.id;
       setUser(null);
       setIsLoading(false);
       deviceTokenRegistered.current = false;
+
+      // ניקוי גיבוי ההודעות המקומי כדי שלא ידלוף לחשבון אחר
+      if (previousUserId) {
+        try {
+          await clearChatMessagesCache(previousUserId);
+        } catch (_) { /* non-critical */ }
+      }
+      try {
+        await clearMediaFileCache();
+      } catch (_) { /* non-critical */ }
+      try {
+        await clearPersistedQueryCache();
+      } catch (_) { /* non-critical */ }
 
       try {
         await NotificationService.unregisterDeviceToken();

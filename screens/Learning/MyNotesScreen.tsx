@@ -1,7 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -11,8 +11,10 @@ import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { FileText, Copy } from 'lucide-react-native';
 import { AcademySubScreenBar } from '../../components/learning';
 import UICard from '../../components/ui/UICard';
+import { ScreenChrome } from '../../components/ui';
 import * as Clipboard from 'expo-clipboard';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { ACADEMY_CARD_HP, academyCardFrameStyle } from '../../components/learning/academyCardLayout';
 
 interface NoteWithDetails {
   id?: string;
@@ -97,7 +99,12 @@ export const MyNotesScreen: React.FC = () => {
         activeOpacity={0.7}
         style={{ marginBottom: DesignTokens.spacing.md }}
       >
-        <UICard variant="blur" padding="md">
+        <UICard
+          variant="blur"
+          padding="md"
+          showGlassBorder={false}
+          style={academyCardFrameStyle('neutral')}
+        >
           <View style={styles.noteContentContainer}>
             <View style={styles.noteHeader}>
               <View style={styles.noteIconContainer}>
@@ -148,56 +155,49 @@ export const MyNotesScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={styles.loadingText}>טוען הערות...</Text>
-      </View>
+      <ScreenChrome withBrandWatermark>
+        <StatusBar style="light" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+          <Text style={styles.loadingText}>טוען הערות...</Text>
+        </View>
+      </ScreenChrome>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <SafeAreaView edges={['top']} style={styles.safeArea}>
-        <View style={styles.safeAreaContent}>
-          <AcademySubScreenBar
-            onBackPress={() => navigation.goBack()}
-            title="ההערות שלי"
-            subtitle={`${notes.length} הערות`}
+    <ScreenChrome withBrandWatermark>
+      <StatusBar style="light" />
+      <SafeAreaView edges={['top']} style={styles.safeAreaContainer}>
+        <AcademySubScreenBar
+          onBackPress={() => navigation.goBack()}
+          title="ההערות שלי"
+          subtitle={`${notes.length} הערות`}
+        />
+
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <FlatList
+            data={notes}
+            renderItem={renderNote}
+            keyExtractor={(item, index) => item.id || `note-${index}`}
+            contentContainerStyle={styles.listContainer}
+            ListEmptyComponent={renderEmptyState}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={DesignTokens.colors.primary.main}
+              />
+            }
+            showsVerticalScrollIndicator={false}
           />
         </View>
       </SafeAreaView>
-
-      {/* Notes List */}
-      <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
-        <FlatList
-          data={notes}
-          renderItem={renderNote}
-          keyExtractor={(item, index) => item.id || `note-${index}`}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={renderEmptyState}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={DesignTokens.colors.primary.main}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
-    </View>
+    </ScreenChrome>
   );
 };
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    // edges handled by component
-  },
-  safeAreaContent: {},
   safeAreaContainer: {
     flex: 1,
   },
@@ -212,7 +212,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.secondary,
   },
   listContainer: {
-    paddingHorizontal: tokens.spacing.lg,
+    paddingHorizontal: ACADEMY_CARD_HP,
     paddingTop: tokens.spacing.md,
     paddingBottom: tokens.spacing['5xl'],
   },

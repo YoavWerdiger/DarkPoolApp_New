@@ -2,10 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { LessonWithProgress, Enrollment, BlockType } from '../../types/learning';
 import { useDesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
 import { CheckCircle2 } from 'lucide-react-native';
 import { mediaService } from '../../services/mediaService';
 import { useTheme } from '../../context/ThemeContext';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { academyCardFrameStyle } from './academyCardLayout';
 
 interface LessonRowProps {
   lesson: LessonWithProgress;
@@ -69,8 +71,6 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
-      backgroundColor: DesignTokens.colors.background.secondary,
-      borderRadius: DesignTokens.borderRadius['2xl'],
       marginBottom: DesignTokens.spacing.lg,
       overflow: 'hidden',
     },
@@ -181,10 +181,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
 
   return (
     <TouchableOpacity
-      style={[
-        styles.container,
-        isLockedForUser && styles.lockedContainer
-      ]}
+      style={isLockedForUser ? styles.lockedContainer : undefined}
       onPress={() => {
         if (isLockedForUser) return;
         void HapticFeedback.impactLight();
@@ -193,6 +190,12 @@ export const LessonRow: React.FC<LessonRowProps> = ({
       activeOpacity={isLockedForUser ? 1 : 0.8}
       disabled={isLockedForUser}
     >
+      <UICard
+        variant="blur"
+        padding="none"
+        showGlassBorder={false}
+        style={[styles.container, academyCardFrameStyle('neutral')]}
+      >
       {/* Thumbnail */}
       <View style={styles.lessonThumbnail}>
         {thumbnailUrl ? (
@@ -253,6 +256,7 @@ export const LessonRow: React.FC<LessonRowProps> = ({
           ) : null}
         </View>
       </View>
+      </UICard>
     </TouchableOpacity>
   );
 };

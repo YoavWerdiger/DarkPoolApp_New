@@ -39,7 +39,6 @@ import type {
   PortfolioSummary,
 } from './portfolioTypes';
 import OverviewTab from './tabs/OverviewTab';
-import HoldingsTab from './tabs/HoldingsTab';
 import TransactionsTab from './tabs/TransactionsTab';
 import BrokerOrdersTab from './tabs/BrokerOrdersTab';
 import OpenTradesTab from './tabs/OpenTradesTab';
@@ -47,6 +46,9 @@ import HistoryTab from './tabs/HistoryTab';
 import CalendarTab from './tabs/CalendarTab';
 import { useRealtimeHoldings } from './hooks/useRealtimeHoldings';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
+import UICard from '../../components/ui/UICard';
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
 type Route = RouteProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -66,6 +68,8 @@ export default function PortfolioDetailScreen() {
   const [portfolioActionsOpen, setPortfolioActionsOpen] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const tabsScrollRef = useRef<ScrollView | null>(null);
+
+  const mainTabsHeight = useMainTabsHeight();
 
   const isOwner = useMemo(
     () =>
@@ -203,15 +207,15 @@ export default function PortfolioDetailScreen() {
           gap: 8,
         },
         tabBtn: {
+          borderRadius: 999,
+          overflow: 'hidden',
+        },
+        tabBtnInner: {
           paddingHorizontal: 16,
           paddingVertical: 7,
-          borderRadius: 999,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderWidth: StyleSheet.hairlineWidth,
-          borderColor: 'rgba(255,255,255,0.08)',
         },
         tabBtnActive: {
-          backgroundColor: `${tokens.colors.primary.main}24`,
+          borderWidth: 1,
           borderColor: `${tokens.colors.primary.main}55`,
         },
         tabText: {
@@ -223,18 +227,33 @@ export default function PortfolioDetailScreen() {
           color: tokens.colors.primary.main,
           fontWeight: '700',
         },
-        moreBtn: {
-          width: 38,
-          height: 38,
-          borderRadius: 19,
+        fabWrap: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
           alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: 'rgba(255,255,255,0.06)',
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
+          paddingBottom: mainTabsHeight + 8,
+          zIndex: 40,
+          pointerEvents: 'box-none',
+        },
+        fabBtn: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: 22,
+          paddingVertical: 14,
+          borderRadius: 28,
+          backgroundColor: tokens.colors.primary.main,
+          ...tokens.shadows.md,
+        },
+        fabBtnText: {
+          fontSize: 16,
+          fontWeight: '700',
+          color: tokens.colors.text.inverse,
         },
       }),
-    [tokens]
+    [tokens, mainTabsHeight]
   );
 
   if (loading) {
@@ -265,13 +284,13 @@ export default function PortfolioDetailScreen() {
           onBack={() => navigation.goBack()}
           moreAction={
             isOwner ? (
-              <TouchableOpacity
-                style={styles.moreBtn}
+              <DayNavBlurButton
                 onPress={() => {
                   void HapticFeedback.impactLight();
                   openPortfolioActions();
                 }}
-                hitSlop={10}
+                size={HEADER_BACK_BTN_SIZE}
+                glassIntensity="subtle"
                 accessibilityLabel="פעולות תיק"
               >
                 <Ionicons
@@ -279,7 +298,7 @@ export default function PortfolioDetailScreen() {
                   size={18}
                   color={tokens.colors.text.primary}
                 />
-              </TouchableOpacity>
+              </DayNavBlurButton>
             ) : undefined
           }
         />
@@ -298,10 +317,6 @@ export default function PortfolioDetailScreen() {
           <PortfolioSummaryHeader
             summary={liveSummary ?? summary}
             portfolio={portfolio}
-            isOwner={isOwner}
-            onAddAsset={canAddTransaction ? handleAddTransaction : undefined}
-            onImport={canAddTransaction ? handleImport : undefined}
-            onShare={handleShare}
           />
 
           <ScrollView
@@ -311,7 +326,7 @@ export default function PortfolioDetailScreen() {
             style={styles.tabsScroll}
             contentContainerStyle={styles.tabsScrollContent}
             onContentSizeChange={() =>
-              tabsScrollRef.current?.scrollToEnd({ animated: false })
+              tabsScrollRef.current?.scrollTo({ x: 0, animated: false })
             }
           >
             {(portfolio?.source === 'colmex_pro'
@@ -320,28 +335,34 @@ export default function PortfolioDetailScreen() {
             ).map((tab) => {
               const active = tab.id === activeTab;
               return (
-                <TouchableOpacity
+                <UICard
                   key={tab.id}
+                  variant="glass"
+                  glassIntensity="subtle"
+                  padding="none"
+                  haptic={false}
+                  showGlassBorder={!active}
                   onPress={() => {
                     if (!active) void HapticFeedback.selection();
                     setActiveTab(tab.id);
                   }}
-                  style={[styles.tabBtn, active && styles.tabBtnActive]}
-                  activeOpacity={0.85}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: active }}
+                  style={[
+                    styles.tabBtn,
+                    active && styles.tabBtnActive,
+                  ]}
+                  contentContainerStyle={styles.tabBtnInner}
                 >
                   <Text
                     style={[styles.tabText, active && styles.tabTextActive]}
                   >
                     {tab.label}
                   </Text>
-                </TouchableOpacity>
+                </UICard>
               );
             })}
           </ScrollView>
 
-          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 60 }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: canAddTransaction ? mainTabsHeight + 90 : 60 }}>
             {activeTab === 'overview' && portfolio && (
               <OverviewTab
                 portfolio={portfolio}
@@ -357,18 +378,6 @@ export default function PortfolioDetailScreen() {
                 readOnly={!canAddTransaction}
               />
             )}
-            {activeTab === 'history' && portfolio && (
-              <HistoryTab
-                portfolioId={portfolio.id}
-                holdings={liveHoldings.length ? liveHoldings : holdings}
-              />
-            )}
-            {activeTab === 'holdings' && portfolio && (
-              <HoldingsTab
-                portfolio={portfolio}
-                holdings={liveHoldings.length ? liveHoldings : holdings}
-              />
-            )}
             {activeTab === 'calendar' && portfolio && (
               <CalendarTab
                 portfolioId={portfolio.id}
@@ -376,11 +385,21 @@ export default function PortfolioDetailScreen() {
               />
             )}
             {activeTab === 'transactions' && portfolio && (
-              <TransactionsTab
-                portfolio={portfolio}
-                onAddPress={handleAddTransaction}
-                readOnly={!canAddTransaction}
-              />
+              <View>
+                {/* עסקאות מסחר סגורות — עם רווח/הפסד ממומש */}
+                <HistoryTab
+                  portfolioId={portfolio.id}
+                  holdings={liveHoldings.length ? liveHoldings : holdings}
+                />
+                {/* הפקדות, משיכות, דיבידנדים, עמלות */}
+                <TransactionsTab
+                  portfolio={portfolio}
+                  onAddPress={handleAddTransaction}
+                  readOnly={!canAddTransaction}
+                  typeFilter={['deposit', 'withdrawal', 'dividend', 'fee']}
+                  sectionTitle="הפקדות, דיבידנדים ופעולות"
+                />
+              </View>
             )}
             {activeTab === 'broker' && portfolio && portfolio.source === 'colmex_pro' && (
               <BrokerOrdersTab portfolioId={portfolio.id} currency={portfolio.currency} />
@@ -388,6 +407,24 @@ export default function PortfolioDetailScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {canAddTransaction ? (
+        <View style={styles.fabWrap} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.fabBtn}
+            onPress={() => {
+              void HapticFeedback.selection();
+              handleAddTransaction();
+            }}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="פעולה חדשה"
+          >
+            <Ionicons name="add" size={26} color={tokens.colors.text.inverse} />
+            <Text style={styles.fabBtnText}>פעולה חדשה</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {portfolio && isOwner ? (
         <PortfolioActionsBottomSheet

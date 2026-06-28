@@ -7,15 +7,16 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChatMessage, ChatReactionGroup } from '../../types/chat.types';
 import { chatMessageService } from '../../services/chat';
 import {
   ChatBottomSheet,
-  ChatSheetContent,
   ChatSheetEmptyState,
   ChatSheetLoading,
-  ChatSheetTitle,
+  useChatFitContentSnap,
   useChatSheetStyles,
 } from './ChatBottomSheet';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,9 +70,22 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
   message,
 }) => {
   const sheet = useChatSheetStyles();
+  const insets = useSafeAreaInsets();
   const [reactionDetails, setReactionDetails] = useState<ChatReactionGroup[]>([]);
   const [selectedTab, setSelectedTab] = useState<'all' | string>('all');
   const [loading, setLoading] = useState(false);
+
+  const sheetBottomPad = useMemo(() => {
+    const minBottom = Platform.OS === 'android' ? 16 : 8;
+    return Math.max(insets.bottom, minBottom);
+  }, [insets.bottom]);
+
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(
+    0.5,
+    0.85,
+    0.48,
+    visible ? message?.id : null,
+  );
 
   useEffect(() => {
     if (visible && message?.id) {
@@ -128,63 +142,80 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
       StyleSheet.create({
         usersContainer: {
           minHeight: 200,
+          maxHeight: 360,
         },
         userEmoji: {
           fontSize: 24,
           flexShrink: 0,
         },
+        contentWrap: {
+          paddingHorizontal: 16,
+          direction: 'rtl' as const,
+          paddingBottom: sheetBottomPad,
+        },
       }),
-    [],
+    [sheetBottomPad],
   );
 
   return (
-    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.5]}>
-      <ChatSheetContent>
-        <ChatSheetTitle title="ריאקציות" />
+    <ChatBottomSheet
+      visible={visible}
+      onClose={onClose}
+      snapPoints={[snapPoint]}
+      fitContent
+      showBrandWatermark={false}
+      contentPaddingBottom={0}
+    >
+      <View style={localStyles.contentWrap} onLayout={onContentLayout}>
+        <View style={sheet.header}>
+          <Text style={sheet.headerTitlePlain}>ריאקציות</Text>
+        </View>
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={sheet.tabsScroll}
-          contentContainerStyle={sheet.tabsContainer}
+          contentContainerStyle={sheet.tabsScrollContent}
         >
-          <Pressable
-            onPress={() => setSelectedTab('all')}
-            style={[
-              sheet.tab,
-              selectedTab === 'all' ? sheet.tabActive : sheet.tabInactive,
-            ]}
-          >
-            <Text
-              style={[
-                sheet.tabText,
-                selectedTab === 'all' ? sheet.tabTextActive : sheet.tabTextInactive,
-              ]}
-            >
-              הכל {allReactions.length}
-            </Text>
-          </Pressable>
-
-          {reactionTypes.map((emoji) => (
+          <View style={sheet.tabsContainer}>
             <Pressable
-              key={emoji}
-              onPress={() => setSelectedTab(emoji)}
+              onPress={() => setSelectedTab('all')}
               style={[
                 sheet.tab,
-                selectedTab === emoji ? sheet.tabActive : sheet.tabInactive,
+                selectedTab === 'all' ? sheet.tabActive : sheet.tabInactive,
               ]}
             >
-              <Text style={sheet.tabEmoji}>{emoji}</Text>
               <Text
                 style={[
                   sheet.tabText,
-                  selectedTab === emoji ? sheet.tabTextActive : sheet.tabTextInactive,
+                  selectedTab === 'all' ? sheet.tabTextActive : sheet.tabTextInactive,
                 ]}
               >
-                {reactionDetails.find((r) => r.emoji === emoji)?.count}
+                הכל {allReactions.length}
               </Text>
             </Pressable>
-          ))}
+
+            {reactionTypes.map((emoji) => (
+              <Pressable
+                key={emoji}
+                onPress={() => setSelectedTab(emoji)}
+                style={[
+                  sheet.tab,
+                  selectedTab === emoji ? sheet.tabActive : sheet.tabInactive,
+                ]}
+              >
+                <Text style={sheet.tabEmoji}>{emoji}</Text>
+                <Text
+                  style={[
+                    sheet.tabText,
+                    selectedTab === emoji ? sheet.tabTextActive : sheet.tabTextInactive,
+                  ]}
+                >
+                  {reactionDetails.find((r) => r.emoji === emoji)?.count}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </ScrollView>
 
         <View style={localStyles.usersContainer}>
@@ -193,7 +224,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
           ) : filteredReactions.length === 0 ? (
             <ChatSheetEmptyState title="אין ריאקציות" />
           ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
               {filteredReactions.map((item, index) => (
                 <View key={`${item.userId}-${item.emoji}-${index}`} style={sheet.userRow}>
                   <UserReactionAvatar
@@ -222,7 +253,7 @@ const ReactionDetailsModal: React.FC<ReactionDetailsModalProps> = memo(({
             </ScrollView>
           )}
         </View>
-      </ChatSheetContent>
+      </View>
     </ChatBottomSheet>
   );
 });

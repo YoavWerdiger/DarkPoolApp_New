@@ -32,6 +32,8 @@ export interface Course {
   tags: string[];
   created_at: string;
   updated_at: string;
+  instructor_name?: string;
+  instructor_avatar?: string;
   // Relations
   owner?: Instructor;
   modules?: Module[];
@@ -193,6 +195,7 @@ export interface ProgressUpdateRequest {
   lesson_id: string;
   status: ProgressStatus;
   last_position_seconds?: number;
+  total_duration_seconds?: number;
   /** ל־invalidate של cache לפי קורס (אופציונלי) */
   course_id?: string;
 }

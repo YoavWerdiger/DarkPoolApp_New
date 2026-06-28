@@ -12,6 +12,8 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { appQueryKeys } from '../lib/appQueryKeys';
 import {
   addToWatchlist,
   getTickerAggregates,
@@ -31,84 +33,93 @@ import type {
 import { useSubscription } from './useSubscription';
 import { logger } from '../utils/logger';
 
-interface State {
+interface TickerData {
   aggregates: DarkPoolDailyAggregateRow[];
   trades: DarkPoolTradeRow[];
   signals: DarkPoolSignalRow[];
   insiderBuys: InsiderBuyRow[];
-  loading: boolean;
-  isWatching: boolean;
-  alertsOn: boolean;
-  error: string | null;
+  watchRow: { ticker: string; alerts_on: boolean } | null;
 }
 
-const EMPTY: State = {
+const EMPTY_DATA: TickerData = {
   aggregates: [],
   trades: [],
   signals: [],
   insiderBuys: [],
-  loading: true,
-  isWatching: false,
-  alertsOn: false,
-  error: null,
+  watchRow: null,
 };
 
 export function useDarkPoolTicker(ticker: string | undefined) {
   const { isPremium } = useSubscription();
-  const [state, setState] = useState<State>(EMPTY);
+  const [isWatching, setIsWatching] = useState(false);
+  const [alertsOn, setAlertsOn] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!ticker) {
-      setState({ ...EMPTY, loading: false });
-      return;
-    }
-    setState((s) => ({ ...s, loading: true, error: null }));
-    try {
+  const query = useQuery<TickerData>({
+    queryKey: appQueryKeys.darkPoolTicker((ticker || '').toUpperCase(), isPremium),
+    queryFn: async () => {
+      const sym = ticker as string;
       const [aggregates, trades, signals, insiderBuys, watchRow] = await Promise.all([
-        getTickerAggregates(ticker, 30),
-        getTickerTrades(ticker, { isPremium }, isPremium ? 100 : 3),
-        listSignals({ isPremium, ticker, limit: isPremium ? 20 : 3 }),
-        getTickerInsiderBuys(ticker, 90),
-        fetchWatchRow(ticker),
+        getTickerAggregates(sym, 30),
+        getTickerTrades(sym, { isPremium }, isPremium ? 100 : 3),
+        listSignals({ isPremium, ticker: sym, limit: isPremium ? 20 : 3 }),
+        getTickerInsiderBuys(sym, 90),
+        fetchWatchRow(sym),
       ]);
-      setState({
-        aggregates,
-        trades,
-        signals,
-        insiderBuys,
-        loading: false,
-        isWatching: !!watchRow,
-        alertsOn: watchRow?.alerts_on ?? false,
-        error: null,
-      });
-    } catch (e) {
-      logger.warn('useDarkPoolTicker', (e as Error).message);
-      setState((s) => ({ ...s, loading: false, error: (e as Error).message || 'load_failed' }));
-    }
-  }, [ticker, isPremium]);
+      return { aggregates, trades, signals, insiderBuys, watchRow };
+    },
+    enabled: !!ticker,
+  });
 
+  // סנכרון מצב מעקב מתוך הנתונים שנטענו
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (query.data) {
+      setIsWatching(!!query.data.watchRow);
+      setAlertsOn(query.data.watchRow?.alerts_on ?? false);
+    }
+  }, [query.data]);
+
+  const data = query.data ?? EMPTY_DATA;
 
   const toggleWatch = useCallback(async () => {
     if (!ticker) return;
-    if (state.isWatching) {
+    if (isWatching) {
       await removeFromWatchlist(ticker);
-      setState((s) => ({ ...s, isWatching: false, alertsOn: false }));
+      setIsWatching(false);
+      setAlertsOn(false);
     } else {
       await addToWatchlist(ticker);
-      setState((s) => ({ ...s, isWatching: true, alertsOn: true }));
+      setIsWatching(true);
+      setAlertsOn(true);
     }
-  }, [ticker, state.isWatching]);
+  }, [ticker, isWatching]);
 
-  const setAlerts = useCallback(async (on: boolean) => {
-    if (!ticker || !state.isWatching) return;
-    await toggleWatchlistAlerts(ticker, on);
-    setState((s) => ({ ...s, alertsOn: on }));
-  }, [ticker, state.isWatching]);
+  const setAlerts = useCallback(
+    async (on: boolean) => {
+      if (!ticker || !isWatching) return;
+      await toggleWatchlistAlerts(ticker, on);
+      setAlertsOn(on);
+    },
+    [ticker, isWatching]
+  );
 
-  return { ...state, isPremium, refetch: load, toggleWatch, setAlerts };
+  const refetch = useCallback(async () => {
+    await query.refetch();
+  }, [query]);
+
+  return {
+    aggregates: data.aggregates,
+    trades: data.trades,
+    signals: data.signals,
+    insiderBuys: data.insiderBuys,
+    loading: query.isLoading,
+    isWatching,
+    alertsOn,
+    error: query.error ? (query.error as Error).message || 'load_failed' : null,
+    isPremium,
+    refetch,
+    toggleWatch,
+    setAlerts,
+  };
 }
 
 async function fetchWatchRow(ticker: string) {

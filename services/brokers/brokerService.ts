@@ -40,7 +40,9 @@ import type {
 // --------------------------------------------------------------------------
 
 async function invokeEdge<TIn, TOut>(name: string, body: TIn): Promise<TOut> {
-  const { data, error } = await supabase.functions.invoke<TOut>(name, { body });
+  const { data, error } = await supabase.functions.invoke<TOut>(name, {
+    body: body as Record<string, unknown>,
+  });
   if (error) {
     // Edge Function errors carry response body in FunctionsHttpError; surface a usable message.
     const msg = (error as Error & { context?: { error?: string } })?.context?.error ?? error.message;

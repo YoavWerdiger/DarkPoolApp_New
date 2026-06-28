@@ -22,11 +22,19 @@ import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
   cancelAnimation,
   runOnJS,
   Easing,
   SharedValue,
+  interpolate,
+  Extrapolation,
 } from 'react-native-reanimated';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+} from 'react-native-gesture-handler';
 import {
   UserStory,
   StoryWithUser,
@@ -105,6 +113,12 @@ export default function StoryViewer({
   const goNextRef = useRef<() => void>(() => {});
   const isTransitioningRef = useRef(false);
   const progressStartedFor = useRef<string | null>(null);
+
+  // Horizontal swipe between users (Instagram-style)
+  const swipeX = useSharedValue(0);
+  const isSwipingRef = useRef(false);
+  const SWIPE_DISTANCE_THRESHOLD = SCREEN_WIDTH * 0.25;
+  const SWIPE_VELOCITY_THRESHOLD = 500;
 
   const currentUser = storiesByUser[userIndex];
   const currentStory = stories[storyIndex];
@@ -224,6 +238,109 @@ export default function StoryViewer({
     }
   }, [storyIndex, userIndex, progress]);
 
+  const goNextUser = useCallback(() => {
+    cancelAnimation(progress);
+    progressStartedFor.current = null;
+    if (userIndex < storiesByUser.length - 1) {
+      setMediaReady(false);
+      setMediaError(false);
+      setVideoDuration(null);
+      setUserIndex(prev => prev + 1);
+    } else {
+      onClose();
+    }
+  }, [userIndex, storiesByUser.length, onClose, progress]);
+
+  const goPrevUser = useCallback(() => {
+    cancelAnimation(progress);
+    progressStartedFor.current = null;
+    if (userIndex > 0) {
+      setMediaReady(false);
+      setMediaError(false);
+      setVideoDuration(null);
+      setUserIndex(prev => prev - 1);
+    }
+  }, [userIndex, progress]);
+
+  // Pause progress while user is mid-swipe; resume only on snap-back
+  const onSwipeStart = useCallback(() => {
+    isSwipingRef.current = true;
+    handlePauseStartRef.current?.();
+  }, []);
+
+  const onSwipeSnapBack = useCallback(() => {
+    isSwipingRef.current = false;
+    handlePauseEndRef.current?.();
+  }, []);
+
+  const onSwipeCommit = useCallback((direction: 'next' | 'prev') => {
+    isSwipingRef.current = false;
+    if (direction === 'next') goNextUser();
+    else goPrevUser();
+  }, [goNextUser, goPrevUser]);
+
+  const handlePauseStartRef = useRef<(() => void) | undefined>(undefined);
+  const handlePauseEndRef = useRef<(() => void) | undefined>(undefined);
+
+  // RTL note: in this Modal we render LTR consistently. Standard convention:
+  // - drag finger to the LEFT (negative translationX)  → advance to NEXT user
+  // - drag finger to the RIGHT (positive translationX) → go to PREVIOUS user
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-18, 18])
+    .failOffsetY([-14, 14])
+    .onStart(() => {
+      'worklet';
+      runOnJS(onSwipeStart)();
+    })
+    .onUpdate((e) => {
+      'worklet';
+      const atFirst = userIndex === 0 && e.translationX > 0;
+      const atLast = userIndex >= storiesByUser.length - 1 && e.translationX < 0;
+      const resistance = atFirst || atLast ? 0.35 : 1;
+      swipeX.value = e.translationX * resistance;
+    })
+    .onEnd((e) => {
+      'worklet';
+      const dist = swipeX.value;
+      const absDist = Math.abs(dist);
+      const fastEnough = Math.abs(e.velocityX) > SWIPE_VELOCITY_THRESHOLD;
+      const farEnough = absDist > SWIPE_DISTANCE_THRESHOLD;
+      const canGoNext = userIndex < storiesByUser.length - 1;
+      const canGoPrev = userIndex > 0;
+
+      if (dist < 0 && (farEnough || fastEnough) && canGoNext) {
+        // Swipe finger left → next user; animate content fully off-screen
+        swipeX.value = withTiming(-SCREEN_WIDTH, { duration: 180 }, () => {
+          'worklet';
+          runOnJS(onSwipeCommit)('next');
+        });
+      } else if (dist > 0 && (farEnough || fastEnough) && canGoPrev) {
+        // Swipe finger right → previous user
+        swipeX.value = withTiming(SCREEN_WIDTH, { duration: 180 }, () => {
+          'worklet';
+          runOnJS(onSwipeCommit)('prev');
+        });
+      } else {
+        swipeX.value = withSpring(0, { damping: 22, stiffness: 220, mass: 0.6 });
+        runOnJS(onSwipeSnapBack)();
+      }
+    });
+
+  const swipeAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: swipeX.value }],
+    opacity: interpolate(
+      Math.abs(swipeX.value),
+      [0, SCREEN_WIDTH * 0.6],
+      [1, 0.65],
+      Extrapolation.CLAMP,
+    ),
+  }));
+
+  // Reset swipeX whenever we land on a new user
+  useEffect(() => {
+    swipeX.value = 0;
+  }, [userIndex]);
+
   // Kick off progress
   useEffect(() => {
     if (!visible || isLoading || !currentStory || stories.length === 0) return;
@@ -274,6 +391,11 @@ export default function StoryViewer({
       if (finished) runOnJS(handleAutoNext)();
     });
   }, [storyIndex, progress, handleAutoNext]);
+
+  useEffect(() => {
+    handlePauseStartRef.current = handlePauseStart;
+    handlePauseEndRef.current = handlePauseEnd;
+  }, [handlePauseStart, handlePauseEnd]);
 
   const handleDeleteStory = useCallback(() => {
     if (!currentStory || !user?.id) return;
@@ -331,13 +453,14 @@ export default function StoryViewer({
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
       <StatusBar hidden />
-      <View style={styles.container}>
+      <GestureHandlerRootView style={styles.container}>
         {isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={chatPalette.primary} />
           </View>
         ) : currentStory ? (
-          <>
+          <GestureDetector gesture={swipeGesture}>
+            <Reanimated.View style={[styles.swipeWrap, swipeAnimStyle]}>
             {/* ===== Media layer ===== */}
             {currentStory.media_type === 'image' && currentStory.media_url ? (
               <Image
@@ -521,14 +644,15 @@ export default function StoryViewer({
                 <View style={styles.touchRight} />
               </TouchableWithoutFeedback>
             </View>
-          </>
+            </Reanimated.View>
+          </GestureDetector>
         ) : (
           <TouchableOpacity style={styles.center} onPress={onClose} activeOpacity={0.9}>
             <Ionicons name="images-outline" size={48} color="rgba(255,255,255,0.3)" />
             <Text style={styles.emptyText}>אין סטטוסים</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -537,6 +661,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  swipeWrap: {
+    flex: 1,
   },
   center: {
     flex: 1,

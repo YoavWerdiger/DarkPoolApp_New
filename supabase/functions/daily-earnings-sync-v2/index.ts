@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import {
+  DEFAULT_EARNINGS_IMPORTANCE,
+  deriveEarningsDateTimeIso,
+} from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -177,6 +181,8 @@ function buildRecord(item: ParseEarningsItem): Record<string, unknown> | null {
 
     // timing (unified: BeforeMarket/AfterMarket)
     before_after_market: marketTiming,
+    earnings_date_time: deriveEarningsDateTimeIso(String(reportDate).slice(0, 10), marketTiming),
+    importance: DEFAULT_EARNINGS_IMPORTANCE,
 
     // backward compatibility
     date: String(reportDate).slice(0, 10),

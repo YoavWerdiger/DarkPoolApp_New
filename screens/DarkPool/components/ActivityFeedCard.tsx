@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { HapticFeedback } from '../../../utils/hapticFeedback';
 import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import type { FollowingActivityItem } from '../../../services/darkpool/uwFollowingFeedService';
 import { DarkPoolFeedCard } from './DarkPoolFeedCard';
@@ -26,27 +25,10 @@ export function ActivityFeedCard({
 
   return (
     <DarkPoolFeedCard
-      onPress={
-        onTickerPress
-          ? () => onTickerPress(item.ticker)
-          : onPersonPress
-            ? () => {
-                void HapticFeedback.impactLight();
-                onPersonPress();
-              }
-            : undefined
-      }
+      onPress={onPersonPress ?? (onTickerPress ? () => onTickerPress(item.ticker) : undefined)}
       accessibilityLabel={`${item.person_name} ${item.ticker}`}
     >
-      <Pressable
-        onPress={() => {
-          if (onPersonPress) {
-            void HapticFeedback.impactLight();
-            onPersonPress();
-          }
-        }}
-        style={h.header}
-      >
+      <View style={h.header}>
         <InvestorPortrait
           name={item.person_name}
           imageUrl={item.person_image_url}
@@ -65,7 +47,7 @@ export function ActivityFeedCard({
             {item.filed_label ? ` · ${item.filed_label}` : ''}
           </Text>
         </View>
-      </Pressable>
+      </View>
 
       <View style={styles.tickerRow}>
         <TickerLogo symbol={item.ticker} size={36} borderRadius={10} />

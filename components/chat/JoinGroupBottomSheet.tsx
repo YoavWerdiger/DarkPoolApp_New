@@ -94,7 +94,7 @@ export default function JoinGroupBottomSheet({
   if (!group) return null;
 
   return (
-    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.42]}>
+    <ChatBottomSheet visible={visible} onClose={onClose} snapPoints={[0.42]} showBrandWatermark={false}>
       <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
         {/* Avatar */}
         <View style={styles.avatarContainer}>

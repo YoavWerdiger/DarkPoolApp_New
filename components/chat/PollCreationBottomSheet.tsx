@@ -155,7 +155,7 @@ export default function PollCreationBottomSheet({
   };
 
   return (
-    <ChatBottomSheet visible={visible} onClose={handleClose} snapPoints={[0.9]}>
+    <ChatBottomSheet visible={visible} onClose={handleClose} snapPoints={[0.9]} showBrandWatermark={false}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -204,12 +204,11 @@ export default function PollCreationBottomSheet({
               onChangeText={setQuestion}
               placeholder="מה תרצה לשאול?"
               placeholderTextColor={tokens.colors.text.secondary}
-              style={styles.questionInput}
+              style={[styles.questionInput, { writingDirection: 'rtl' }]}
               textAlign="right"
               textAlignVertical="top"
               multiline
               maxLength={QUESTION_MAX_LEN}
-              writingDirection="rtl"
             />
           </UICard>
 
@@ -235,10 +234,9 @@ export default function PollCreationBottomSheet({
                       onChangeText={(text) => updateOption(index, text)}
                       placeholder={`אפשרות ${index + 1}`}
                       placeholderTextColor={tokens.colors.text.secondary}
-                      style={styles.optionInput}
+                      style={[styles.optionInput, { writingDirection: 'rtl' }]}
                       textAlign="right"
                       maxLength={OPTION_MAX_LEN}
-                      writingDirection="rtl"
                     />
 
                     {showRemove ? (

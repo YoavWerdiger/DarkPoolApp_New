@@ -1526,7 +1526,8 @@ export default function ChatGroupScreen() {
       <View style={styles.messagesSection}>
         <View style={styles.messagesAreaFlex}>
           <RNAnimated.View style={[styles.flatListTransparent, { opacity: listOpacity }]}>
-          <Reanimated.FlatList
+          <Reanimated.View style={[styles.flatListTransparent, listFollowStyle]}>
+          <FlatList
             ref={listRef}
             data={messagesListReady ? displayMessages : []}
           inverted
@@ -1570,7 +1571,7 @@ export default function ChatGroupScreen() {
           ]}
           showsVerticalScrollIndicator
           nestedScrollEnabled={Platform.OS === 'android'}
-          style={[styles.flatListTransparent, listFollowStyle]}
+          style={styles.flatListTransparent}
           scrollEventThrottle={16}
           onScroll={handleScroll}
             onScrollEndDrag={handleScrollEnd}
@@ -1633,6 +1634,7 @@ export default function ChatGroupScreen() {
             }}
             onScrollToIndexFailed={handleScrollToIndexFailedWithPin}
           />
+          </Reanimated.View>
           </RNAnimated.View>
           {showMessagesPlaceholder && (
             <View style={styles.messagesPlaceholderOverlay} pointerEvents="none">

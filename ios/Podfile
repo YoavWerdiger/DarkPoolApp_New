@@ -23,6 +23,13 @@ prepare_react_native_project!
 target 'DarkPool' do
   use_expo_modules!
 
+  # GoogleSignIn → AppCheckCore (Swift) requires module maps for these non-modular
+  # transitive pods when building as static libraries. Without this, `pod install`
+  # fails with: "The Swift pod `AppCheckCore` depends upon `GoogleUtilities` and
+  # `RecaptchaInterop`, which do not define modules."
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'RecaptchaInterop', :modular_headers => true
+
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
     config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
   else

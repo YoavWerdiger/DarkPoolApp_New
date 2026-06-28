@@ -14,7 +14,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import OnboardingNavigator from './navigation/OnboardingNavigator';
 import { RegistrationProvider } from './context/RegistrationContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/queryClient';
+import { useAppBootstrap } from './hooks/useAppBootstrap';
 import ScheduledUpdatesService from './services/scheduledUpdates';
 import { NotificationService } from './services/notificationService';
 import { initSentry, Sentry } from './utils/sentry';
@@ -28,20 +30,16 @@ import { Fingerprint } from 'lucide-react-native';
 import { rootNavigationRef } from './navigation/rootNavigationRef';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as NavigationBar from 'expo-navigation-bar';
+import { enableScreens, enableFreeze } from 'react-native-screens';
+
+// מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
+// משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
+enableScreens(true);
+enableFreeze(true);
 
 initSentry();
 
 const Stack = createNativeStackNavigator();
-
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-    },
-  },
-});
 
 const OnboardingWithProvider = () => (
   <RegistrationProvider>
@@ -51,6 +49,7 @@ const OnboardingWithProvider = () => (
 
 function AppContent() {
   const { user, isLoading } = useAuth();
+  useAppBootstrap(user?.id, !isLoading);
   const [biometricLocked, setBiometricLocked] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
   const appState = useRef(AppState.currentState);
@@ -325,7 +324,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
       <SafeAreaProvider>
-        <KeyboardProvider>
+        <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
           <QueryClientProvider client={queryClient}>
             <ThemeProvider>
               <AuthProvider>

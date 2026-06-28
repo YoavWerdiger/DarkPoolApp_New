@@ -13,11 +13,9 @@ import {
   RefreshControl,
   ActivityIndicator,
   Image,
-  ImageBackground,
   TextInput,
   Keyboard,
   ScrollView,
-  Dimensions,
   Animated,
 } from 'react-native';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
@@ -36,16 +34,21 @@ import { MainDrawerRegistration } from '../../navigation/MainDrawerRegistration'
 import { supabase } from '../../lib/supabase';
 import { ChatGroup } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
+import { Search } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
 import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
+import { ChatBottomSheet, ChatSheetEmptyState, ChatSheetLoading } from '../../components/chat/ChatBottomSheet';
+import { ChatSearchResult } from '../../types/chat.types';
 import StoryViewer from '../../components/chat/StoryViewer';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
 import { getUsersWithStories, StoryWithUser } from '../../services/storiesService';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 import { logger } from '../../utils/logger';
+import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
-import { SUPABASE_URL } from '../../config/publicEnv';
 
 // Skeleton row for groups list
 const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
@@ -71,8 +74,6 @@ const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
     </Animated.View>
   );
 });
-
-const { width: CHAT_SCREEN_W, height: CHAT_SCREEN_H } = Dimensions.get('window');
 
 // RTL is configured once inside the component via useEffect (not at module level)
 
@@ -198,11 +199,17 @@ export default function ChatGroupsListScreen() {
   const isLoadingRef = useRef(false);
   const [imageErrorCount, setImageErrorCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchSheetVisible, setSearchSheetVisible] = useState(false);
+  const [messageResults, setMessageResults] = useState<ChatSearchResult[]>([]);
+  const [searchingMessages, setSearchingMessages] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
   const [joinGroupSheet, setJoinGroupSheet] = useState<{ visible: boolean; group: GroupWithMembership | null }>({ visible: false, group: null });
   const [isJoining, setIsJoining] = useState(false);
   const [addStorySheetVisible, setAddStorySheetVisible] = useState(false);
-  const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>([]);
+  // זריעה אופטימית מה-cache (בזיכרון) — שורת ה-Stories מופיעה מיד בכניסה חוזרת
+  const [usersWithStories, setUsersWithStories] = useState<StoryWithUser[]>(
+    () => queryClient.getQueryData<StoryWithUser[]>(appQueryKeys.storiesUsers) ?? []
+  );
   const [storyViewerVisible, setStoryViewerVisible] = useState(false);
   const [storyViewerInitialIndex, setStoryViewerInitialIndex] = useState(0);
   const storiesScrollRef = useRef<ScrollView>(null);
@@ -296,11 +303,8 @@ export default function ChatGroupsListScreen() {
         }
       }
 
-      const getMessagePreview = (msg: any): string => {
-        if (msg.content) return msg.content;
-        const typeMap: Record<string, string> = { image: 'תמונה', video: 'וידאו', audio: 'הודעת קול', document: 'מסמך' };
-        return typeMap[msg.message_type] || 'הודעה';
-      };
+      const getMessagePreview = (msg: any): string =>
+        getChatMessagePreview(msg.message_type, msg.content);
 
       const groupsWithLastMessage = realGroups.map((g) => {
         const lastMessage = lastMessageMap.get(g.id);
@@ -345,6 +349,7 @@ export default function ChatGroupsListScreen() {
     try {
       const data = await getUsersWithStories(user?.id);
       setUsersWithStories(data);
+      queryClient.setQueryData(appQueryKeys.storiesUsers, data);
     } catch (error) {
       logger.error('ChatGroupsListScreen', 'Failed to load stories', error);
       setUsersWithStories([]);
@@ -404,26 +409,19 @@ export default function ChatGroupsListScreen() {
     });
   }, [contextGroups]);
 
-  // Helper function for message type text
-  const getMessageTypeText = (messageType: string): string => {
-    switch (messageType) {
-      case 'image': return 'תמונה';
-      case 'video': return 'וידאו';
-      case 'audio': return 'הודעת קול';
-      case 'document': return 'מסמך';
-      default: return 'הודעה';
-    }
-  };
-  
-  // פונקציה להחזרת אייקון לפי סוג ההודעה
-  const getMessageTypeIcon = (messageType?: string): string | null => {
+  // פונקציה להחזרת אייקון לפי סוג ההודעה (מזהה הקלטה גם מתוכן JSON ללא message_type)
+  const getMessageTypeIcon = (messageType?: string, content?: string): string | null => {
     switch (messageType) {
       case 'image': return 'image-outline';
       case 'video': return 'videocam-outline';
       case 'audio': return 'mic-outline';
       case 'document': return 'document-text-outline';
-      default: return null;
     }
+    const trimmed = (content ?? '').trim();
+    if (trimmed.startsWith('{') && trimmed.includes('waveformData')) {
+      return 'mic-outline';
+    }
+    return null;
   };
 
   // בדיקה אם זו קבוצת הכרזות
@@ -533,6 +531,7 @@ export default function ChatGroupsListScreen() {
   };
 
   const handleGroupPress = useCallback((group: GroupWithMembership) => {
+    setSearchSheetVisible(false);
     if (!group.is_member) {
       void HapticFeedback.selection();
       setJoinGroupSheet({ visible: true, group });
@@ -542,6 +541,207 @@ export default function ChatGroupsListScreen() {
     void HapticFeedback.impactLight();
     (navigation as any).navigate('ChatGroup', { groupId: group.id });
   }, [navigation]);
+
+  const closeSearchSheet = useCallback(() => {
+    setSearchSheetVisible(false);
+    setSearchQuery('');
+    setMessageResults([]);
+  }, []);
+
+  const handleMessageResultPress = useCallback((result: ChatSearchResult) => {
+    setSearchSheetVisible(false);
+    Keyboard.dismiss();
+    void HapticFeedback.impactLight();
+    (navigation as any).navigate('ChatGroup', {
+      groupId: result.group?.id,
+      scrollToMessageId: result.message?.id,
+    });
+  }, [navigation]);
+
+  useEffect(() => {
+    if (!searchSheetVisible) return;
+    const t = setTimeout(() => {
+      try {
+        searchInputRef.current?.focus();
+      } catch {
+        /* non-critical */
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchSheetVisible]);
+
+  // חיפוש תוכן הודעות (חוצה קבוצות) — debounced, רק כשהשיט פתוח
+  useEffect(() => {
+    if (!searchSheetVisible) return;
+    const term = searchQuery.trim();
+    if (!user?.id || term.length < 2) {
+      setMessageResults([]);
+      setSearchingMessages(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchingMessages(true);
+    const t = setTimeout(async () => {
+      try {
+        const memberGroups = allGroups.filter((g) => g.is_member);
+        const groupIds = memberGroups.map((g) => g.id);
+        if (groupIds.length === 0) {
+          if (!cancelled) setMessageResults([]);
+          return;
+        }
+        const groupMap = new Map(memberGroups.map((g) => [g.id, g]));
+        const escaped = term.replace(/[%_\\]/g, '\\$&');
+
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .select(`
+            id, content, message_type, created_at, group_id,
+            sender:users!chat_messages_sender_id_fkey (id, display_name, profile_picture)
+          `)
+          .in('group_id', groupIds)
+          .eq('is_deleted', false)
+          .ilike('content', `%${escaped}%`)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (cancelled) return;
+        if (error || !data) {
+          if (error) logger.warn('ChatGroupsList', 'message search failed', error);
+          setMessageResults([]);
+          return;
+        }
+
+        const results: ChatSearchResult[] = (data as any[]).map((msg) => {
+          const g = groupMap.get(msg.group_id) as GroupWithMembership | undefined;
+          const content: string = msg.content || '';
+          const idx = content.toLowerCase().indexOf(term.toLowerCase());
+          const start = Math.max(0, idx - 40);
+          const end = Math.min(content.length, idx + term.length + 60);
+          const highlight = idx >= 0 ? `${start > 0 ? '…' : ''}${content.substring(start, end)}` : content;
+          return {
+            message: msg,
+            group: { id: g?.id ?? msg.group_id, name: g?.name ?? '', avatar_url: g?.avatar_url ?? null } as any,
+            highlights: [highlight],
+          } as ChatSearchResult;
+        });
+
+        setMessageResults(results);
+      } catch (e) {
+        if (!cancelled) {
+          logger.warn('ChatGroupsList', 'message search error', e);
+          setMessageResults([]);
+        }
+      } finally {
+        if (!cancelled) setSearchingMessages(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [searchQuery, searchSheetVisible, user?.id, allGroups]);
+
+  type SearchRow =
+    | { type: 'header'; id: string; title: string }
+    | { type: 'group'; id: string; group: GroupWithMembership }
+    | { type: 'message'; id: string; result: ChatSearchResult }
+    | { type: 'loading'; id: string }
+    | { type: 'empty'; id: string };
+
+  const searchSheetRows = useMemo<SearchRow[]>(() => {
+    const rows: SearchRow[] = [];
+    if (filteredGroups.length > 0) {
+      rows.push({ type: 'header', id: 'h-groups', title: 'צ׳אטים' });
+      for (const g of filteredGroups) rows.push({ type: 'group', id: `g-${g.id}`, group: g });
+    }
+    const term = searchQuery.trim();
+    if (term.length >= 2) {
+      rows.push({ type: 'header', id: 'h-msgs', title: 'הודעות' });
+      if (searchingMessages) {
+        rows.push({ type: 'loading', id: 'msgs-loading' });
+      } else if (messageResults.length > 0) {
+        messageResults.forEach((r, i) =>
+          rows.push({ type: 'message', id: `m-${r.message?.id ?? i}-${i}`, result: r })
+        );
+      } else {
+        rows.push({ type: 'empty', id: 'msgs-empty' });
+      }
+    }
+    return rows;
+  }, [filteredGroups, searchQuery, searchingMessages, messageResults]);
+
+  const renderSearchRow = useCallback(({ item }: { item: SearchRow }) => {
+    if (item.type === 'header') {
+      return <Text style={styles.searchSectionHeader}>{item.title}</Text>;
+    }
+    if (item.type === 'loading') {
+      return <View style={{ paddingVertical: 20 }}><ChatSheetLoading label="מחפש הודעות..." /></View>;
+    }
+    if (item.type === 'empty') {
+      return (
+        <Text style={styles.searchNoResults}>לא נמצאו הודעות תואמות</Text>
+      );
+    }
+    if (item.type === 'group') {
+      const group = item.group;
+      const imageUrl = group.avatar_url || getImageByGroupName(group.name) || null;
+      const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
+      const preview = group.is_member && group.last_message
+        ? getChatMessagePreview(group.last_message.message_type, group.last_message.content)
+        : group.is_member
+          ? 'אין הודעות עדיין'
+          : `${group.members_count || 0} חברים`;
+      return (
+        <TouchableOpacity style={styles.searchRowItem} activeOpacity={0.6} onPress={() => handleGroupPress(group)}>
+          {imageUrl && !hasImageError ? (
+            <Image source={{ uri: imageUrl }} style={styles.searchRowAvatar} resizeMode="cover" />
+          ) : (
+            <View style={[styles.searchRowAvatar, styles.searchRowAvatarPlaceholder]}>
+              <Ionicons name={GROUP_ICONS[group.name] || 'chatbubbles'} size={22} color={tokens.colors.text.secondary} />
+            </View>
+          )}
+          <View style={styles.searchRowBody}>
+            <Text style={styles.searchRowTitle} numberOfLines={1}>{group.name}</Text>
+            <Text style={styles.searchRowSubtitle} numberOfLines={1}>{preview}</Text>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+    // message
+    const msg = item.result.message as any;
+    const group = item.result.group as any;
+    const senderName = msg?.sender?.display_name || 'משתמש';
+    const groupName = group?.name || '';
+    const groupImage = group?.avatar_url || (groupName ? getImageByGroupName(groupName) : null) || null;
+    const preview = item.result.highlights?.[0]
+      || (msg?.message_type && msg.message_type !== 'text'
+        ? getChatMessagePreview(msg.message_type, msg?.content)
+        : msg?.content || '');
+    const timeLabel = msg?.created_at ? formatRelativeTime(msg.created_at) : '';
+    return (
+      <TouchableOpacity style={styles.searchRowItem} activeOpacity={0.6} onPress={() => handleMessageResultPress(item.result)}>
+        {groupImage ? (
+          <Image source={{ uri: groupImage }} style={styles.searchRowAvatar} resizeMode="cover" />
+        ) : (
+          <View style={[styles.searchRowAvatar, styles.searchRowAvatarPlaceholder]}>
+            <Ionicons name="chatbubbles" size={22} color={tokens.colors.text.secondary} />
+          </View>
+        )}
+        <View style={styles.searchRowBody}>
+          <View style={styles.searchRowMsgHead}>
+            <Text style={styles.searchRowTitle} numberOfLines={1}>{groupName}</Text>
+            {timeLabel ? <Text style={styles.searchRowTime}>{timeLabel}</Text> : null}
+          </View>
+          <Text style={styles.searchRowSubtitle} numberOfLines={2}>
+            <Text style={{ color: tokens.colors.text.primary, fontWeight: '600' }}>{senderName}: </Text>
+            {preview}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [handleGroupPress, handleMessageResultPress, tokens, styles]);
 
   const renderGroup = useCallback(({ item, index }: { item: GroupWithMembership; index: number }) => {
     const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
@@ -554,9 +754,7 @@ export default function ChatGroupsListScreen() {
     const isLastItem = index === filteredGroups.length - 1;
 
     const lastMsgPreview = item.is_member && item.last_message
-      ? item.last_message.message_type && item.last_message.message_type !== 'text'
-        ? `${item.last_message.sender_name}: ${getMessageTypeText(item.last_message.message_type)}`
-        : `${item.last_message.sender_name}: ${item.last_message.content}`
+      ? `${item.last_message.sender_name}: ${getChatMessagePreview(item.last_message.message_type, item.last_message.content)}`
       : item.is_member
         ? 'אין הודעות עדיין'
         : `${item.members_count || 0} חברים`;
@@ -610,10 +808,10 @@ export default function ChatGroupsListScreen() {
                 style={[styles.chatPreview, hasUnread && styles.chatPreviewUnread]}
                 numberOfLines={1}
               >
-                {item.last_message?.message_type && getMessageTypeIcon(item.last_message.message_type) ? (
+                {item.last_message && getMessageTypeIcon(item.last_message.message_type, item.last_message.content) ? (
                   <>
                     <Ionicons
-                      name={getMessageTypeIcon(item.last_message.message_type) as any}
+                      name={getMessageTypeIcon(item.last_message.message_type, item.last_message.content) as any}
                       size={13}
                       color={hasUnread ? tokens.colors.text.primary : tokens.colors.text.tertiary}
                     />{' '}
@@ -682,22 +880,6 @@ export default function ChatGroupsListScreen() {
     <View style={{ flex: 1 }}>
       <MainDrawerRegistration />
       <ScreenGradientBackground style={StyleSheet.absoluteFill} />
-      {/* שור ודוב ברקע — כמו LoginScreen */}
-      <View
-        pointerEvents="none"
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          justifyContent: 'center',
-          alignItems: 'center',
-          opacity: 0.22,
-        }}
-      >
-        <ImageBackground
-          source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
-          style={{ width: CHAT_SCREEN_W * 1.6, height: CHAT_SCREEN_H * 1.6 }}
-          imageStyle={{ resizeMode: 'contain' }}
-        />
-      </View>
       <RNSafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
           {/* Header */}
@@ -712,8 +894,8 @@ export default function ChatGroupsListScreen() {
                 <Ionicons name="menu" size={24} color={tokens.colors.text.primary} />
               </DayNavBlurButton>
             </View>
-            <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]}>צ׳אטים</Text>
-            <View style={styles.appHeaderActions}>
+            <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]}>קהילת DarkPool</Text>
+            <View style={[styles.appHeaderActions, { justifyContent: 'flex-end' }]}>
               {isGlobalAdmin && (
                 <TouchableOpacity
                   style={styles.headerActionBtn}
@@ -723,6 +905,21 @@ export default function ChatGroupsListScreen() {
                   <Ionicons name="create-outline" size={22} color={tokens.colors.text.primary} />
                 </TouchableOpacity>
               )}
+              <DayNavBlurButton
+                onPress={() => {
+                  void HapticFeedback.selection();
+                  setSearchSheetVisible(true);
+                }}
+                glassIntensity="subtle"
+                size={DRAWER_MENU_BUTTON_SIZE}
+                accessibilityLabel="חיפוש"
+              >
+                <Search
+                  size={20}
+                  strokeWidth={2}
+                  color={searchSheetVisible ? tokens.colors.primary.main : tokens.colors.text.primary}
+                />
+              </DayNavBlurButton>
             </View>
           </View>
 
@@ -815,31 +1012,17 @@ export default function ChatGroupsListScreen() {
 
           {/* Chat list card – raised surface with rounded top corners */}
           <View style={styles.listCard}>
-          {/* Search + Filters – Instagram style */}
+          {/* Filters – Instagram style (search moved to header button → bottom sheet) */}
           <View style={styles.searchSection}>
-            <View style={styles.searchBar}>
-              <Ionicons name="search" size={16} color={tokens.colors.text.tertiary} />
-              <TextInput
-                ref={searchInputRef}
-                style={styles.searchInput}
-                placeholder="חיפוש..."
-                placeholderTextColor={tokens.colors.text.tertiary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close-circle" size={16} color={tokens.colors.text.tertiary} />
-                </TouchableOpacity>
-              )}
-            </View>
-            <View style={styles.filterRow}>
+            <View style={[styles.filterRow, { marginTop: 0 }]}>
               {(['all', 'unread', 'mentions'] as TabType[]).map((tab) => (
                 <TouchableOpacity
                   key={tab}
                   style={[styles.filterPill, activeTab === tab && styles.filterPillActive]}
-                  onPress={() => setActiveTab(tab)}
+                  onPress={() => {
+                    if (activeTab !== tab) void HapticFeedback.selection();
+                    setActiveTab(tab);
+                  }}
                 >
                   <Text style={[styles.filterPillText, activeTab === tab && styles.filterPillTextActive]}>
                     {tab === 'all' ? 'הכל' : tab === 'unread' ? 'לא נקראו' : '@אזכורים'}
@@ -929,6 +1112,51 @@ export default function ChatGroupsListScreen() {
           legacyAlert('הצלחה', `הקבוצה "${groupName}" נוצרה בהצלחה!`);
         }}
       />
+
+      {/* Search Sheet — חיפוש בצ'אטים ובתוכן ההודעות */}
+      <ChatBottomSheet
+        visible={searchSheetVisible}
+        onClose={closeSearchSheet}
+        snapPoints={[0.92]}
+        showBrandWatermark={false}
+      >
+        <View style={{ flex: 1, paddingHorizontal: 16 }}>
+          <View style={styles.searchPill}>
+            <Search size={18} color={tokens.colors.text.tertiary} />
+            <TextInput
+              ref={searchInputRef}
+              style={styles.searchPillInput}
+              placeholder="חיפוש צ׳אטים והודעות..."
+              placeholderTextColor={tokens.colors.text.tertiary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={tokens.colors.text.tertiary} />
+              </Pressable>
+            )}
+          </View>
+          <FlatList
+            data={searchSheetRows}
+            renderItem={renderSearchRow}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator
+            contentContainerStyle={{ paddingBottom: 24 }}
+            ListEmptyComponent={
+              <ChatSheetEmptyState
+                icon="search-outline"
+                title="חפש בצ׳אטים"
+                subtitle="הקלד שם של קבוצה או טקסט מתוך הודעה"
+              />
+            }
+          />
+        </View>
+      </ChatBottomSheet>
 
       {/* Add Story – מסך מלא בסגנון Instagram/WhatsApp */}
       <AddStoryFullScreen
@@ -1128,6 +1356,84 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
     textAlign: 'right',
     paddingVertical: 0,
+  },
+  /* ── Search Sheet ── */
+  searchPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: tokens.colors.border.primary,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    height: 46,
+    marginBottom: 14,
+  },
+  searchPillInput: {
+    flex: 1,
+    fontSize: 15,
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
+    paddingVertical: 0,
+  },
+  searchSectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: tokens.colors.text.tertiary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  searchNoResults: {
+    fontSize: 14,
+    color: tokens.colors.text.tertiary,
+    textAlign: 'center',
+    paddingVertical: 16,
+    writingDirection: 'rtl',
+  },
+  searchRowItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  searchRowAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  searchRowAvatarPlaceholder: {
+    backgroundColor: tokens.colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchRowBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  searchRowTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  searchRowSubtitle: {
+    fontSize: 13,
+    color: tokens.colors.text.secondary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: 2,
+  },
+  searchRowMsgHead: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  searchRowTime: {
+    fontSize: 11,
+    color: tokens.colors.text.tertiary,
   },
   filterRow: {
     flexDirection: 'row-reverse',

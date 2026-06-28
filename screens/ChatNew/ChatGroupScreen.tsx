@@ -520,9 +520,6 @@ export default function ChatGroupScreen() {
     },
     [],
   );
-  // ה-translateY מוחל על מעטפת transform-only סביב הרשימה (לא על הרשימה עצמה), כדי לא
-  // להתנגש עם ה-scaleY:-1 שה-prop inverted מחיל. transform בלבד — בלי flex/padding — ולכן
-  // לא משנה layout ולא משבש את עליית המקלדת (בניגוד למעטפת ה-paddingBottom של 9adff8a).
   const listFollowStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: listFollowY.value }],
   }));
@@ -1529,8 +1526,7 @@ export default function ChatGroupScreen() {
       <View style={styles.messagesSection}>
         <View style={styles.messagesAreaFlex}>
           <RNAnimated.View style={[styles.flatListTransparent, { opacity: listOpacity }]}>
-          <Reanimated.View style={[styles.flatListTransparent, listFollowStyle]}>
-          <FlatList
+          <Reanimated.FlatList
             ref={listRef}
             data={messagesListReady ? displayMessages : []}
           inverted
@@ -1574,7 +1570,7 @@ export default function ChatGroupScreen() {
           ]}
           showsVerticalScrollIndicator
           nestedScrollEnabled={Platform.OS === 'android'}
-          style={styles.flatListTransparent}
+          style={[styles.flatListTransparent, listFollowStyle]}
           scrollEventThrottle={16}
           onScroll={handleScroll}
             onScrollEndDrag={handleScrollEnd}
@@ -1637,7 +1633,6 @@ export default function ChatGroupScreen() {
             }}
             onScrollToIndexFailed={handleScrollToIndexFailedWithPin}
           />
-          </Reanimated.View>
           </RNAnimated.View>
           {showMessagesPlaceholder && (
             <View style={styles.messagesPlaceholderOverlay} pointerEvents="none">

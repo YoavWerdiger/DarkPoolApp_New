@@ -520,8 +520,12 @@ export default function ChatGroupScreen() {
     },
     [],
   );
+  // ה-prop inverted מחיל transform:[{scaleY:-1}] על ה-style של ה-ScrollView, אבל ה-style
+  // שלנו (אחרון במערך) דורס אותו. לכן מחזירים את שני ה-transforms יחד.
+  // סדר: translateY לפני scaleY → ה-translate חל ב-screen space אחרי ההיפוך, כך שאותו
+  // סימן/ערך של הקומפוזר (שלילי = מעלה) ממשיך לעבוד, וההיפוך נשמר.
   const listFollowStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: listFollowY.value }],
+    transform: [{ translateY: listFollowY.value }, { scaleY: -1 }],
   }));
 
   /** תמיד גולל לתחתית כששולחים — גם אחרי פתיחה עם unread (לא בתחתית) */

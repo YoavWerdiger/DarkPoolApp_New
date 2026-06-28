@@ -5,10 +5,12 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager } from 'react-native';
-import { chatComposerSafeBottomInset } from '../../components/chat/chatInputLayout';
+import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock } from '../../components/chat/ChatComposerDock';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
+import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
 
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
@@ -481,11 +483,46 @@ export default function ChatGroupScreen() {
       requestAnimationFrame(() => applyScrollToBottomRef.current?.(false));
     }
   }, []);
-  const { keyboardInset, keyboardShown } = useChatKeyboardInsets(onKeyboardShow);
+  const { keyboardShown } = useChatKeyboardInsets(onKeyboardShow);
   const composerPaddingBottom = useMemo(
     () => chatComposerSafeBottomInset(insets.bottom),
     [insets.bottom],
   );
+
+  // מעקב רציף של הרשימה אחרי המקלדת ב-UI thread: אותו translate בדיוק כמו הקומפוזר
+  // (chatComposerKeyboardTranslate עם אותו inset/gap), כך שתחתית הרשימה ההפוכה נשארת
+  // צמודה לראש הקומפוזר בפתיחה ובסגירה — בלי ה-lag של אינסט מבוסס-state.
+  // handler נפרד (keyboard-controller תומך בכמה) — לא נוגע בקומפוזר ולא ב-resize mode.
+  const composerInsetSV = useSharedValue(composerPaddingBottom);
+  useEffect(() => {
+    composerInsetSV.value = composerPaddingBottom;
+  }, [composerPaddingBottom, composerInsetSV]);
+
+  const listFollowY = useSharedValue(0);
+  useGenericKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        listFollowY.value = chatComposerKeyboardTranslate(
+          event.height,
+          composerInsetSV.value,
+          CHAT_COMPOSER_KEYBOARD_GAP,
+        );
+      },
+      onEnd: (event) => {
+        'worklet';
+        listFollowY.value = chatComposerKeyboardTranslate(
+          event.height,
+          composerInsetSV.value,
+          CHAT_COMPOSER_KEYBOARD_GAP,
+        );
+      },
+    },
+    [],
+  );
+  const listFollowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: listFollowY.value }],
+  }));
 
   /** תמיד גולל לתחתית כששולחים — גם אחרי פתיחה עם unread (לא בתחתית) */
   const scrollToBottomOnSend = useCallback(() => {
@@ -1489,7 +1526,7 @@ export default function ChatGroupScreen() {
       <View style={styles.messagesSection}>
         <View style={styles.messagesAreaFlex}>
           <RNAnimated.View style={[styles.flatListTransparent, { opacity: listOpacity }]}>
-          <FlatList
+          <Reanimated.FlatList
             ref={listRef}
             data={messagesListReady ? displayMessages : []}
           inverted
@@ -1524,17 +1561,16 @@ export default function ChatGroupScreen() {
             }}
           contentContainerStyle={[
               displayMessages.length === 0 ? styles.emptyList : styles.messagesList,
-            // inverted: paddingTop = הצד התחתון (ליד הקומפוזר/המקלדת).
-            // מחסירים את composerPaddingBottom כדי לשקף את ה-translate של הקומפוזר
-            // (שמחסיר את ה-bottomInset) — אחרת נוצר מרווח עודף בגובה ה-safe-area.
+            // המעקב אחרי המקלדת נעשה ע"י translateY רציף על הרשימה עצמה (listFollowStyle),
+            // ולכן כאן נשאר רק הריווח הבסיסי הקבוע.
             {
-              paddingTop: 12 + Math.max(0, keyboardInset - composerPaddingBottom),
+              paddingTop: 12,
               paddingBottom: 12,
             },
           ]}
           showsVerticalScrollIndicator
           nestedScrollEnabled={Platform.OS === 'android'}
-          style={styles.flatListTransparent}
+          style={[styles.flatListTransparent, listFollowStyle]}
           scrollEventThrottle={16}
           onScroll={handleScroll}
             onScrollEndDrag={handleScrollEnd}
@@ -1964,6 +2000,8 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   messagesAreaFlex: {
     flex: 1,
     minHeight: 0,
+    // הרשימה זזה ב-translateY עם המקלדת; clip מונע דליפה מעל ה-PinnedHeader.
+    overflow: 'hidden',
   },
   flatListTransparent: {
     backgroundColor: 'transparent',

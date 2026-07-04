@@ -11,7 +11,7 @@ import { Video, ResizeMode } from 'expo-av';
 import { Audio } from 'expo-av';
 import { MediaFile } from '../../services/mediaService';
 import { logger } from '../../utils/logger';
-// BlurView removed for performance - using transparent backgrounds instead
+import { BlurView } from 'expo-blur';
 import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -31,7 +31,6 @@ interface MediaPreviewModalProps {
 
 import { chatPalette as COLORS } from './chatDesignTokens';
 import ChatComposerBar from './ChatComposerBar';
-import { useDesignTokens } from '../ui/DesignTokens';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -43,7 +42,6 @@ export default function MediaPreviewModal({
   mediaFiles
 }: MediaPreviewModalProps) {
   const insets = useSafeAreaInsets();
-  const tokens = useDesignTokens();
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
   const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
   
@@ -631,25 +629,29 @@ export default function MediaPreviewModal({
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <RNAnimatedView style={[styles.container, { opacity: modalOpacityAnim, transform: [{ scale: modalScaleAnim }] }]}>
-          {/* ── פס עליון שחור מלא (וואטסאפ) ── */}
-          <View style={[styles.topBlackBar, { paddingTop: insets.top + 6 }]}>
-            <GlassButton onPress={onClose}>
-              <X size={24} color={COLORS.text} strokeWidth={2} />
-            </GlassButton>
+          {/* ── פס עליון זכוכית (כמו MediaViewer) ── */}
+          <View style={styles.topGlassBar}>
+            <BlurView intensity={80} tint="dark" style={styles.glassBarBlur}>
+              <View style={[styles.topGlassContent, { paddingTop: insets.top + 8 }]}>
+                <GlassButton onPress={onClose}>
+                  <X size={24} color={COLORS.text} strokeWidth={2} />
+                </GlassButton>
 
-            {localFiles.length > 1 && (
-              <View style={styles.counterBadge}>
-                <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
-                  <View style={styles.counterInner}>
-                    <Text style={styles.counterText}>{currentIndex + 1}/{localFiles.length}</Text>
+                {localFiles.length > 1 && (
+                  <View style={styles.counterBadge}>
+                    <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+                      <View style={styles.counterInner}>
+                        <Text style={styles.counterText}>{currentIndex + 1}/{localFiles.length}</Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </View>
-            )}
+                )}
 
-            <GlassButton onPress={() => removeMedia(currentMedia.id)}>
-              <Trash2 size={22} color={COLORS.danger} strokeWidth={2} />
-            </GlassButton>
+                <GlassButton onPress={() => removeMedia(currentMedia.id)}>
+                  <Trash2 size={22} color={COLORS.danger} strokeWidth={2} />
+                </GlassButton>
+              </View>
+            </BlurView>
           </View>
 
           {/* ── אזור מדיה באמצע: contain + letterbox שחור ── */}
@@ -682,50 +684,37 @@ export default function MediaPreviewModal({
             )}
           </Pressable>
 
-          {/* ── פס תחתון שחור מלא: בקרות וידאו + אינפוט ── */}
-          <Animated.View style={[styles.bottomBlackBar, animatedBottomBarStyle]}>
-            <View style={styles.bottomBar}>
-              {currentMedia?.type === 'video' && (
-                <View style={styles.videoControlsRow}>
-                  <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
-                    <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
-                  </TouchableOpacity>
-                  <Text style={styles.videoTimeText}>{formatDuration(videoDisplayPosition)}</Text>
-                  <GestureDetector gesture={videoTimelineGesture}>
-                    <View
-                      style={styles.timelineTrack}
-                      onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
-                    >
-                      <View style={styles.timelineTrackBg} />
-                      <Animated.View style={[styles.timelineFill, videoAnimatedFillStyle]} />
-                      <Animated.View style={[styles.timelineThumb, videoAnimatedThumbStyle]} />
-                    </View>
-                  </GestureDetector>
-                  <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
-                </View>
-              )}
+          {/* ── פס תחתון זכוכית: בקרות וידאו + אינפוט + כפתור שליחה ירוק ── */}
+          <Animated.View style={[styles.bottomGlassBar, animatedBottomBarStyle]}>
+            <BlurView intensity={80} tint="dark" style={styles.glassBarBlur}>
+              <View style={styles.bottomGlassContent}>
+                {currentMedia?.type === 'video' && (
+                  <View style={styles.videoControlsRow}>
+                    <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
+                      <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.videoTimeText}>{formatDuration(videoDisplayPosition)}</Text>
+                    <GestureDetector gesture={videoTimelineGesture}>
+                      <View
+                        style={styles.timelineTrack}
+                        onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+                      >
+                        <View style={styles.timelineTrackBg} />
+                        <Animated.View style={[styles.timelineFill, videoAnimatedFillStyle]} />
+                        <Animated.View style={[styles.timelineThumb, videoAnimatedThumbStyle]} />
+                      </View>
+                    </GestureDetector>
+                    <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
+                  </View>
+                )}
 
-              <ChatComposerBar
-                value={captions[currentMedia.id] || ''}
-                onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
-                placeholder="הוסף כיתוב..."
-                maxLength={500}
-                onSend={handleSend}
-                trailing={
-                  <Pressable
-                    onPress={handleSend}
-                    style={({ pressed }) => [
-                      styles.previewSendBtn,
-                      { backgroundColor: tokens.colors.primary.main },
-                      pressed ? { opacity: 0.82 } : null,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="שליחה"
-                  >
-                    <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
-                  </Pressable>
-                }
-              />
+                <ChatComposerBar
+                  value={captions[currentMedia.id] || ''}
+                  onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
+                  placeholder="הוסף כיתוב..."
+                  maxLength={500}
+                  onSend={handleSend}
+                />
 
               {localFiles.length > 1 && (
                 <ScrollView
@@ -783,7 +772,8 @@ export default function MediaPreviewModal({
                   ))}
                 </ScrollView>
               )}
-            </View>
+              </View>
+            </BlurView>
           </Animated.View>
         </RNAnimatedView>
       </GestureHandlerRootView>
@@ -797,16 +787,23 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: '#000',
   },
-  /** פס עליון — #000 מלא, לא overlay על המדיה */
-  topBlackBar: {
+  /** פס עליון — blur/glass כמו MediaViewer */
+  topGlassBar: {
+    zIndex: 2,
+    overflow: 'hidden',
+  },
+  glassBarBlur: {
+    width: '100%',
+  },
+  topGlassContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 10,
-    minHeight: 52,
-    backgroundColor: '#000',
-    zIndex: 2,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   /** אזור המדיה באמצע — letterbox בתוך viewport בלבד */
   mediaViewport: {
@@ -895,27 +892,19 @@ const styles = StyleSheet.create({
   navRight: {
     right: 16,
   },
-  /** פס תחתון — #000 מלא; בקרות וידאו + אינפוט */
-  bottomBlackBar: {
-    backgroundColor: '#000',
+  /** פס תחתון — blur/glass + אינפוט */
+  bottomGlassBar: {
     width: '100%',
-    paddingTop: 10,
     zIndex: 2,
+    overflow: 'hidden',
   },
-  bottomBar: {
+  bottomGlassContent: {
     paddingHorizontal: 16,
+    paddingTop: 12,
     paddingBottom: 4,
-  },
-  previewSendBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-    marginStart: 8,
-    alignSelf: 'flex-end',
-    marginBottom: 3,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   videoControlsRow: {
     flexDirection: 'row',

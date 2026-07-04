@@ -1,31 +1,45 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
-import { View, ActivityIndicator, Text, ImageBackground } from 'react-native';
+import ProfileStack from './navigation/ProfileStack';
+import { View, ActivityIndicator, Text, StatusBar, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AnimatedBackground } from './components/VideoBackground';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import OnboardingNavigator from './navigation/OnboardingNavigator';
 import { RegistrationProvider } from './context/RegistrationContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/queryClient';
+import { useAppBootstrap } from './hooks/useAppBootstrap';
 import ScheduledUpdatesService from './services/scheduledUpdates';
+import { NotificationService } from './services/notificationService';
+import { initSentry, Sentry } from './utils/sentry';
+import { ToastProvider } from './components/ui/Toast';
+import { AppDialogProvider } from './components/ui/AppDialogProvider';
+import { logger } from './utils/logger';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { HapticFeedback } from './utils/hapticFeedback';
+import { Fingerprint } from 'lucide-react-native';
+import { rootNavigationRef } from './navigation/rootNavigationRef';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
+import { enableScreens, enableFreeze } from 'react-native-screens';
+
+// מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
+// משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
+enableScreens(true);
+enableFreeze(true);
+
+initSentry();
 
 const Stack = createNativeStackNavigator();
-
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      retry: 1,
-    },
-  },
-});
 
 const OnboardingWithProvider = () => (
   <RegistrationProvider>
@@ -35,75 +49,222 @@ const OnboardingWithProvider = () => (
 
 function AppContent() {
   const { user, isLoading } = useAuth();
+  useAppBootstrap(user?.id, !isLoading);
+  const [biometricLocked, setBiometricLocked] = useState(false);
+  const [biometricChecked, setBiometricChecked] = useState(false);
+  const appState = useRef(AppState.currentState);
 
-  console.log('🎓 AppContent: Auth state:', { user: user?.id, isLoading });
+  const attemptBiometricAuth = useCallback(async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
+        cancelLabel: 'ביטול',
+        disableDeviceFallback: false,
+      });
+      if (result.success) {
+        setBiometricLocked(false);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!user || isLoading || biometricChecked) return;
+
+    const checkBiometric = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('appSettings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.biometricAuth) {
+            setBiometricLocked(true);
+            setBiometricChecked(true);
+            const result = await LocalAuthentication.authenticateAsync({
+              promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
+              cancelLabel: 'ביטול',
+              disableDeviceFallback: false,
+            });
+            if (result.success) {
+              setBiometricLocked(false);
+            }
+            return;
+          }
+        }
+      } catch {}
+      setBiometricChecked(true);
+    };
+
+    checkBiometric();
+  }, [user, isLoading, biometricChecked]);
+
+  useEffect(() => {
+    if (!user) {
+      setBiometricChecked(false);
+      setBiometricLocked(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', async (nextState) => {
+      if (appState.current.match(/inactive|background/) && nextState === 'active' && user) {
+        try {
+          const saved = await AsyncStorage.getItem('appSettings');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.biometricAuth) {
+              setBiometricLocked(true);
+              const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'אמת את זהותך כדי להיכנס לאפליקציה',
+                cancelLabel: 'ביטול',
+                disableDeviceFallback: false,
+              });
+              if (result.success) {
+                setBiometricLocked(false);
+              }
+            }
+          }
+        } catch {}
+      }
+      appState.current = nextState;
+    });
+
+    return () => subscription.remove();
+  }, [user]);
+
+  useEffect(() => {
+    HapticFeedback.init();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const setupNavigationBar = async () => {
+      try {
+        await NavigationBar.setBackgroundColorAsync('#00000000');
+        await NavigationBar.setButtonStyleAsync('light');
+      } catch (error) {
+        logger.warn('App', 'Failed to configure Android navigation bar', error);
+      }
+    };
+
+    setupNavigationBar();
+  }, []);
 
   // אתחול עדכונים מתוזמנים
   useEffect(() => {
     // התחלת עדכונים מתוזמנים רק אחרי שהמשתמש מחובר
     if (user && !isLoading) {
-      console.log('🚀 Starting scheduled updates for user:', user.id);
       ScheduledUpdatesService.startScheduledUpdates();
     }
 
-    // ניקוי בעת סגירת האפליקציה
     return () => {
-      console.log('⏹️ Stopping scheduled updates');
       ScheduledUpdatesService.stopScheduledUpdates();
     };
   }, [user, isLoading]);
 
+  // טיפול בהתראות
+  useEffect(() => {
+    if (!user) return;
+
+    const receivedSubscription = NotificationService.addNotificationReceivedListener((_notification) => {
+    });
+
+    const responseSubscription = NotificationService.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      const notificationType = data?.type;
+
+      if (!rootNavigationRef.isReady()) return;
+
+      try {
+        if (notificationType === 'chat_message' && data?.group_id) {
+          rootNavigationRef.navigate('Main', {
+            screen: 'Chat',
+            params: {
+              screen: 'ChatGroup',
+              params: {
+                groupId: data.group_id,
+                groupName: data.group_name || 'צ\'אט',
+              },
+            },
+          });
+        } else if (notificationType === 'news' && data?.articleId) {
+          rootNavigationRef.navigate('Main', {
+            screen: 'News',
+            params: { articleId: data.articleId, tab: 'breaking' }
+          });
+        } else if (
+          notificationType === 'economic_calendar' ||
+          notificationType === 'economic_result'
+        ) {
+          rootNavigationRef.navigate('Main', {
+            screen: 'NewsCalendar',
+          });
+        } else if (
+          notificationType === 'earnings' ||
+          notificationType === 'earnings_results'
+        ) {
+          rootNavigationRef.navigate('Main', {
+            screen: 'NewsEarnings',
+          });
+        } else if (data?.kind === 'dark_pool_signal' && data?.ticker) {
+          rootNavigationRef.navigate('Main', {
+            screen: 'DarkPool',
+            params: {
+              screen: 'DarkPoolTicker',
+              params: { ticker: String(data.ticker), tab: 'darkpool' },
+            },
+          });
+        } else {
+          rootNavigationRef.navigate('Main');
+        }
+      } catch (navError) {
+        logger.error('App', 'Notification navigation failed', navError);
+      }
+    });
+
+    return () => {
+      receivedSubscription.remove();
+      responseSubscription.remove();
+    };
+  }, [user]);
+
+  // מסך טעינה מינימלי בלבד בזמן טעינת ה-Auth (בלי splash \"מלאכותי\" ובלי תמונת רקע מרשת)
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0d0d0d' }}>
-        <LinearGradient 
-          colors={['rgba(0,230,84,0.08)', 'rgba(0,230,84,0.03)', 'rgba(0,230,84,0.05)']} 
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} 
-        />
-        <ImageBackground
-          source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            opacity: 0.1
-          }}
-          resizeMode="cover"
-        />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            paddingHorizontal: 32,
-            paddingVertical: 24,
-            borderRadius: 16,
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: 'rgba(0,230,84,0.2)'
-          }}>
-            <ActivityIndicator size="large" color="#05d157" />
-            <Text style={{ 
-              color: '#FFFFFF', 
-              fontSize: 16, 
-              fontWeight: '500',
-              marginTop: 16,
-              textAlign: 'center'
-            }}>
-              טוען אפליקציה...
-            </Text>
-          </View>
-        </View>
+      <View style={{ flex: 1, backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#00C805" />
+      </View>
+    );
+  }
+
+  // לא מציגים את ה-Main לפני שידוע אם נדרשת ביומטריה — מונע תחושת "זריקה" לשכבת הנעילה
+  if (user && !biometricChecked) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#00C805" />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, direction: 'ltr', backgroundColor: '#0d0d0d' }}>
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <View style={{ flex: 1, direction: 'ltr', backgroundColor: '#0A0E0A' }}>
+      <AnimatedBackground />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent={false}
+      />
+      {/* חייב להתאים ל־direction של ה־View המעטף — אחרת useLocale (rtl) לא תואם ל־Yoga (ltr) ו־react-native-drawer-layout מחשב translateX שגוי (רצועת מגירה בפרודקשן). */}
+      <NavigationContainer ref={rootNavigationRef} direction="ltr">
+        <Stack.Navigator screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: 'transparent' },
+          animation: 'fade',
+        }}>
           {user ? (
-            <Stack.Screen name="Main" component={MainTabs} />
+            <>
+              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Profile" component={ProfileStack} />
+            </>
           ) : (
             <>
               <Stack.Screen name="Auth" component={AuthStack} />
@@ -112,22 +273,71 @@ function AppContent() {
           )}
         </Stack.Navigator>
       </NavigationContainer>
+
+      {biometricLocked && (
+        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
+          <LinearGradient
+            colors={['#0A0E0A', '#0F1A0F', '#0F1A0F', '#0A0E0A']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={{ alignItems: 'center', gap: 24 }}>
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: 'rgba(0, 230, 84, 0.15)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Fingerprint size={40} color="#00C805" strokeWidth={2} />
+            </View>
+            <Text style={{ color: '#fff', fontSize: 22, fontWeight: '700', textAlign: 'center' }}>
+              האפליקציה נעולה
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, textAlign: 'center', paddingHorizontal: 40 }}>
+              אמת את זהותך באמצעות Face ID / Touch ID כדי להמשיך
+            </Text>
+            <TouchableOpacity
+              onPress={attemptBiometricAuth}
+              style={{
+                backgroundColor: '#00C805',
+                borderRadius: 14,
+                paddingVertical: 14,
+                paddingHorizontal: 40,
+                marginTop: 8,
+              }}
+            >
+              <Text style={{ color: '#000', fontSize: 16, fontWeight: '700' }}>
+                אמת זהות
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <BottomSheetModalProvider>
-          <ThemeProvider>
-            <AuthProvider>
-              <AppContent />
-            </AuthProvider>
-          </ThemeProvider>
-        </BottomSheetModalProvider>
-      </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+      <SafeAreaProvider>
+        <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider>
+              <AuthProvider>
+                <ToastProvider>
+                  <AppDialogProvider>
+                    <AppContent />
+                  </AppDialogProvider>
+                </ToastProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </KeyboardProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

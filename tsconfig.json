@@ -2,5 +2,13 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "DarkPoolApp_New",
+    "DASHBOARD_DEPLOY",
+    "supabase/functions",
+    "payment-callback-function.ts",
+    "payment-success-function.ts"
+  ]
 }

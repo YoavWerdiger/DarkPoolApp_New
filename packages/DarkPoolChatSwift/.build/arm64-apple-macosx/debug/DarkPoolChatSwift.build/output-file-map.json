@@ -1,0 +1,194 @@
+{
+  "": {
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/master.swiftdeps"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/ChatMediaURL.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaURL.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaURL.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaURL~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaURL.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaURL.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/ChatRealtimeListener.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRealtimeListener.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRealtimeListener.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRealtimeListener~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRealtimeListener.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRealtimeListener.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/ChatRepository.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRepository.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRepository.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRepository~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRepository.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRepository.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/DarkPoolChatConfiguration.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/DarkPoolChatConfiguration.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/DarkPoolChatConfiguration.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/DarkPoolChatConfiguration~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/DarkPoolChatConfiguration.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/DarkPoolChatConfiguration.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/Models/ChatDTOs.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDTOs.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDTOs.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDTOs~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDTOs.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDTOs.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/PollRepository.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollRepository.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollRepository.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollRepository~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollRepository.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollRepository.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/StoriesRepository.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoriesRepository.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoriesRepository.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoriesRepository~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoriesRepository.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoriesRepository.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/Theme/ChatBrandTheme.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatBrandTheme.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatBrandTheme.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatBrandTheme~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatBrandTheme.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatBrandTheme.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/Theme/ChatDesignTokens.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDesignTokens.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDesignTokens.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDesignTokens~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDesignTokens.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDesignTokens.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/Theme/ChatSwiftTheme.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSwiftTheme.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSwiftTheme.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSwiftTheme~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSwiftTheme.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSwiftTheme.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/AddStorySheet.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/AddStorySheet.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/AddStorySheet.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/AddStorySheet~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/AddStorySheet.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/AddStorySheet.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatConversationListRow.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatConversationListRow.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatConversationListRow.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatConversationListRow~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatConversationListRow.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatConversationListRow.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatDocumentPicker.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDocumentPicker.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDocumentPicker.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDocumentPicker~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDocumentPicker.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatDocumentPicker.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatGroupDetailView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatGroupDetailView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatGroupDetailView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatGroupDetailView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatGroupDetailView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatGroupDetailView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatMediaLibraryPicker.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaLibraryPicker.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaLibraryPicker.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaLibraryPicker~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaLibraryPicker.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatMediaLibraryPicker.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatPhotoLibraryPicker.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatPhotoLibraryPicker.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatPhotoLibraryPicker.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatPhotoLibraryPicker~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatPhotoLibraryPicker.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatPhotoLibraryPicker.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatRootView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRootView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRootView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRootView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRootView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRootView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatSessionViewModel.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSessionViewModel.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSessionViewModel.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSessionViewModel~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSessionViewModel.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSessionViewModel.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatSignedAudioPlayerView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedAudioPlayerView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedAudioPlayerView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedAudioPlayerView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedAudioPlayerView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedAudioPlayerView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatSignedDocumentView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedDocumentView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedDocumentView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedDocumentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedDocumentView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedDocumentView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatSignedImageView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedImageView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedImageView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedImageView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedImageView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedImageView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatSignedVideoView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedVideoView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedVideoView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedVideoView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedVideoView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatSignedVideoView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/ChatTradeBubbleView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatTradeBubbleView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatTradeBubbleView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatTradeBubbleView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatTradeBubbleView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatTradeBubbleView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/PollMessageView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollMessageView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollMessageView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollMessageView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollMessageView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/PollMessageView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/StoryStripView.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryStripView.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryStripView.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryStripView~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryStripView.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryStripView.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/UI/StoryViewerSheet.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryViewerSheet.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryViewerSheet.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryViewerSheet~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryViewerSheet.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/StoryViewerSheet.dia"
+  },
+  "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/Sources/DarkPoolChatSwift/Util/ChatRelativeTimeFormatter.swift": {
+    "dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRelativeTimeFormatter.d",
+    "object": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRelativeTimeFormatter.swift.o",
+    "swiftmodule": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRelativeTimeFormatter~partial.swiftmodule",
+    "swift-dependencies": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRelativeTimeFormatter.swiftdeps",
+    "diagnostics": "/Users/yoavwerdiger/DarkPoolApp_New-1/packages/DarkPoolChatSwift/.build/arm64-apple-macosx/debug/DarkPoolChatSwift.build/ChatRelativeTimeFormatter.dia"
+  }
+}

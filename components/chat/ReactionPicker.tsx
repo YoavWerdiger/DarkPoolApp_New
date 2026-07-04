@@ -1,86 +1,105 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  Modal, 
-  Pressable, 
-  ScrollView,
-  Alert
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  ChatBottomSheet,
+  ChatSheetCancelButton,
+  ChatSheetTitle,
+  useChatFitContentSnap,
+  useChatSheetDismiss,
+  useChatSheetStyles,
+} from './ChatBottomSheet';
 
 interface ReactionPickerProps {
   visible: boolean;
   onClose: () => void;
   onReaction: (emoji: string) => void;
+  messageReactions?: Array<{ emoji: string; reacted_by_me: boolean }>;
 }
 
-// רשימת אימוג'ים פופולריים
-const POPULAR_EMOJIS = [
-  '👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🎉',
-  '🔥', '💯', '✨', '🌟', '💪', '🙏', '🤔', '😍',
-  '😎', '🤩', '🥳', '😴', '🤯', '😱', '🥺', '😤'
+const EMOJI_ROWS = [
+  ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🎉'],
+  ['🔥', '💯', '✨', '🌟', '💪', '🙏', '🤔', '😍'],
+  ['😎', '🤩', '🥳', '😴', '🤯', '😱', '🥺', '😤'],
 ];
 
-export default function ReactionPicker({ 
-  visible, 
-  onClose, 
-  onReaction 
+export default function ReactionPicker({
+  visible,
+  onClose,
+  onReaction,
+  messageReactions = [],
 }: ReactionPickerProps) {
-  
+  const sheet = useChatSheetStyles();
+  const insets = useSafeAreaInsets();
+  const dismiss = useChatSheetDismiss(onClose);
+
+  const sheetBottomPad = useMemo(() => {
+    const minBottom = Platform.OS === 'android' ? 16 : 8;
+    return Math.max(insets.bottom, minBottom);
+  }, [insets.bottom]);
+
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(
+    0.38,
+    0.55,
+    0.28,
+    visible,
+  );
+
+  const isReactionSelected = (emoji: string) =>
+    messageReactions.some((r) => r.emoji === emoji && r.reacted_by_me);
+
   const handleReaction = (emoji: string) => {
+    void HapticFeedback.selection();
     onReaction(emoji);
-    onClose();
+    dismiss();
   };
 
   return (
-    <Modal
+    <ChatBottomSheet
       visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
+      onClose={onClose}
+      snapPoints={[snapPoint]}
+      fitContent
+      showBrandWatermark={false}
+      contentPaddingBottom={0}
     >
-      <Pressable 
-        className="flex-1 bg-black/50 justify-center items-center"
-        onPress={onClose}
+      <View
+        style={{ paddingHorizontal: 16, paddingBottom: sheetBottomPad, direction: 'rtl' }}
+        onLayout={onContentLayout}
       >
-        <View className="bg-[#1a1a1a] rounded-3xl p-6 mx-4 border border-[#333] max-w-sm">
-          {/* Header */}
-          <View className="items-center mb-6">
-            <Text className="text-white text-lg font-bold mb-2">בחר ריאקציה</Text>
-            <Text className="text-gray-400 text-sm text-center">
-              בחר אימוג'י כדי להגיב להודעה
-            </Text>
-          </View>
+        <ChatSheetTitle title="בחר ריאקציה" />
 
-          {/* Emojis Grid */}
-          <ScrollView 
-            className="max-h-80"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 20 }}
-          >
-            <View className="flex-row flex-wrap justify-center">
-              {POPULAR_EMOJIS.map((emoji, index) => (
-                <Pressable
-                  key={index}
-                  onPress={() => handleReaction(emoji)}
-                  className="w-16 h-16 bg-[#2a2a2a] rounded-2xl items-center justify-center m-2 border border-[#444] active:bg-primary/20 active:border-primary"
-                >
-                  <Text className="text-2xl">{emoji}</Text>
-                </Pressable>
-              ))}
+        <View style={sheet.emojiGrid}>
+          {EMOJI_ROWS.map((row, rowIndex) => (
+            <View key={rowIndex} style={sheet.emojiRow}>
+              {row.map((emoji, index) => {
+                const isSelected = isReactionSelected(emoji);
+                return (
+                  <Pressable
+                    key={`${rowIndex}-${index}`}
+                    onPress={() => handleReaction(emoji)}
+                    style={({ pressed }) => [
+                      sheet.emojiButton,
+                      isSelected && sheet.emojiButtonSelected,
+                      pressed && sheet.emojiButtonPressed,
+                    ]}
+                  >
+                    <Text style={sheet.emoji}>{emoji}</Text>
+                    {isSelected ? (
+                      <View style={sheet.emojiSelectedBadge}>
+                        <Text style={sheet.emojiSelectedBadgeText}>✓</Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
             </View>
-          </ScrollView>
-
-          {/* Close Button */}
-          <Pressable
-            onPress={onClose}
-            className="mt-4 bg-[#333] py-3 rounded-2xl items-center border border-[#444]"
-          >
-            <Text className="text-white font-semibold">ביטול</Text>
-          </Pressable>
+          ))}
         </View>
-      </Pressable>
-    </Modal>
+
+        <ChatSheetCancelButton onPress={dismiss} />
+      </View>
+    </ChatBottomSheet>
   );
 }

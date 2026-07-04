@@ -1,15 +1,51 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, Modal, Dimensions, Animated } from 'react-native';
-import { BlurView } from 'expo-blur';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, StyleSheet, Text, Image, Dimensions, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import ReactionBar from './ReactionBar';
-import { DesignTokens } from '../ui/DesignTokens';
 import ContextMenu from './ContextMenu';
 import { supabase } from '../../lib/supabase';
+import { ChatBottomSheet } from './ChatBottomSheet';
+import { BOTTOM_SHEET_EDGE_HANDLE_HEIGHT } from '../ui/BottomSheet/BottomSheet';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { Ionicons } from '@expo/vector-icons';
+import { format } from 'date-fns';
+import TradeMessage from './TradeMessage';
 
-// רטט קצר ועדין בעת פתיחת התצוגה (עם fallback אם אין expo-haptics)
-let Haptics: any = { selectionAsync: async () => {}, impactAsync: async () => {}, ImpactFeedbackStyle: { Light: 'Light' } };
-try { Haptics = require('expo-haptics'); } catch {}
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { logger } from '../../utils/logger';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+type ParsedTrade = {
+  id: string;
+  symbol: string;
+  direction: 'long' | 'short';
+  entry_price: number;
+  exit_price: number;
+  quantity: number;
+  entry_date: string;
+  exit_date: string;
+  pnl: number;
+  return_percentage?: number;
+  notes?: string;
+};
+
+function isTradeMessageType(type?: string): boolean {
+  return (type ?? '').toLowerCase() === 'trade';
+}
+
+function parseTradeFromContent(content: string): ParsedTrade | null {
+  if (!content?.trim()) return null;
+  try {
+    const o = JSON.parse(content.trim()) as { trade?: ParsedTrade };
+    const t = o.trade;
+    if (!t || typeof t.symbol !== 'string') return null;
+    return t;
+  } catch {
+    return null;
+  }
+}
 
 interface LongPressOverlayProps {
   visible: boolean;
@@ -18,8 +54,6 @@ interface LongPressOverlayProps {
   onAction: (actionName: string, payload?: any) => void;
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 
 export default function LongPressOverlay({
   visible,
@@ -27,7 +61,42 @@ export default function LongPressOverlay({
   onClose,
   onAction
 }: LongPressOverlayProps) {
-  const [isAdmin, setIsAdmin] = React.useState(false);
+  const insets = useSafeAreaInsets();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const DesignTokens = useDesignTokens();
+  const messagePreviewStyles = useMemo(() => createMessagePreviewStyles(DesignTokens), [DesignTokens]);
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          paddingHorizontal: DesignTokens.spacing.md,
+          paddingTop: DesignTokens.spacing.sm,
+        },
+        reactionWrapper: {
+          alignItems: 'center',
+          marginVertical: DesignTokens.spacing.md,
+        },
+      }),
+    [DesignTokens],
+  );
+
+  const sheetBottomPad = useMemo(() => {
+    const minBottom = Platform.OS === 'android' ? 16 : 8;
+    return Math.max(insets.bottom, minBottom);
+  }, [insets.bottom]);
+
+  // מצא את הריאקציה הנוכחית של המשתמש (רק אחת!)
+  const currentUserReaction = React.useMemo(() => {
+    if (!message?.reactions || !Array.isArray(message.reactions)) return null;
+    // חיפוש הריאקציה שבה המשתמש הגיב (reacted_by_me === true)
+    // אמור להיות רק ריאקציה אחת של המשתמש
+    const myReaction = message.reactions.find((r: any) => 
+      r.reacted_by_me === true
+    );
+    // מחזיר את האימוג'י של הריאקציה שמצאנו, או null אם אין
+    return myReaction?.emoji || null;
+  }, [message?.reactions]);
 
   React.useEffect(() => {
     const fetchRole = async () => {
@@ -38,85 +107,72 @@ export default function LongPressOverlay({
         if (!userId || !channelId) return;
 
         const { data, error } = await supabase
-          .from('channel_members')
+          .from('chat_group_members')
           .select('role')
-          .eq('channel_id', channelId)
+          .eq('group_id', channelId)
           .eq('user_id', userId)
           .single();
 
         if (!error && data) {
           setIsAdmin(data.role === 'admin' || data.role === 'owner');
         }
-      } catch {}
+      } catch (error) {
+        logger.error('LongPressOverlay', 'Failed to fetch role', error);
+      }
     };
-    fetchRole();
+    if (message) {
+      fetchRole();
+    }
   }, [message]);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const menuSlideAnim = useRef(new Animated.Value(300)).current;
-  const menuOpacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (visible) {
+    if (visible && message) {
       // רטט קצר מאוד בעת פתיחה (אסתטי ועדין)
-      try { Haptics.impactAsync?.(Haptics.ImpactFeedbackStyle.Light); } catch {}
-
-      // פתיחה: רקע + תצוגות
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.parallel([
-          Animated.timing(menuOpacityAnim, {
-            toValue: 1,
-            duration: 250,
-            delay: 100,
-            useNativeDriver: true,
-          }),
-          Animated.spring(menuSlideAnim, {
-            toValue: 0,
-            tension: 80,
-            friction: 8,
-            delay: 100,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
-    } else {
-      // סגירה
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 50,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(menuOpacityAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(menuSlideAnim, {
-          toValue: 300,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      try { HapticFeedback.impactLight(); } catch { /* non-critical */ }
     }
-  }, [visible]);
+  }, [visible, message]);
 
-  if (!visible || !message) return null;
+  useEffect(() => {
+    setContentHeight(null);
+  }, [message?.id, visible, isAdmin]);
+
+  const handleContentLayout = useCallback((height: number) => {
+    if (height > 0) {
+      setContentHeight((prev) => (prev === height ? prev : height));
+    }
+  }, []);
+
+  // snap point לפי גובה תוכן מדוד — לא אחוז קבוע מהמסך
+  const snapPoint = useMemo(() => {
+    if (!message) return 0.35;
+
+    if (contentHeight != null && contentHeight > 0) {
+      const totalPx = contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + 4;
+      return Math.min(0.92, Math.max(0.12, totalPx / SCREEN_HEIGHT));
+    }
+
+    // הערכה ראשונית עד onLayout
+    const mainCount = 4
+      + (message.isMe && !message.id?.toString().startsWith('temp-') ? 1 : 0)
+      + (isAdmin ? 2 : 0);
+    const dangerCount = (message.isMe ? 1 : 0) + (message.isMe || isAdmin ? 1 : 0);
+    const previewLines = message.content ? Math.min(4, message.content.split('\n').length + Math.ceil(message.content.length / 40)) : 0;
+    const isTrade = isTradeMessageType(message.type) || !!parseTradeFromContent(message.content);
+    const previewPx = isTrade
+      ? 220
+      : 64 + previewLines * 20 + (message.mediaUrl ? 20 : 0);
+    const reactionPx = 52;
+    const menuRowPx = 74;
+    const mainRows = Math.ceil(mainCount / 4);
+    const dangerRows = dangerCount > 0 ? 1 : 0;
+    const menuPx = mainRows * menuRowPx + dangerRows * menuRowPx + 24;
+    const estimatedPx = previewPx + reactionPx + menuPx + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT + sheetBottomPad;
+    return Math.min(0.88, Math.max(0.12, estimatedPx / SCREEN_HEIGHT));
+  }, [message, isAdmin, contentHeight, sheetBottomPad]);
+
+  if (!message) {
+    return null;
+  }
 
   const handleReaction = (emoji: string) => {
     onAction('react', { messageId: message?.id, emoji });
@@ -126,84 +182,224 @@ export default function LongPressOverlay({
     onAction(option, message);
   };
 
-  return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <BlurView
-            intensity={60}
-            tint="dark"
-            style={StyleSheet.absoluteFill}
-          />
+  const renderMessagePreview = () => {
+    if (!message) return null;
+
+    const timeText = message.timestamp
+      ? format(new Date(message.timestamp), 'HH:mm')
+      : message.createdAt
+      ? format(new Date(message.createdAt), 'HH:mm')
+      : '';
+
+    const contentTrimmed = (message.content ?? '').trim();
+    const isAudio =
+      message.type === 'audio' ||
+      (message.type as string) === 'voice' ||
+      (contentTrimmed.startsWith('{') && contentTrimmed.includes('waveformData'));
+    const isMedia = !!(message.mediaUrl && (message.type === 'image' || message.type === 'video'));
+    const mediaIcon = isAudio ? 'mic' : message.type === 'video' ? 'videocam' : 'image';
+    const mediaLabel = isAudio ? 'הקלטה' : message.type === 'video' ? 'סרטון' : 'תמונה';
+    const tradeFromContent = parseTradeFromContent(message.content);
+    const isTrade = isTradeMessageType(message.type) || !!tradeFromContent;
+    const tradePayload = tradeFromContent;
+
+    const isMe = message.isMe;
+    const p = messagePreviewStyles;
+    const mediaIconColor = isMe ? 'rgba(255,255,255,0.75)' : DesignTokens.colors.text.secondary;
+
+    return (
+      <View style={[p.previewWrap, isMe ? p.previewWrapMe : p.previewWrapOther]}>
+        <View style={p.row}>
+          {!isMe && (
+            <View style={p.avatarCol}>
+              {message.senderAvatar ? (
+                <Image source={{ uri: message.senderAvatar }} style={p.avatar} />
+              ) : (
+                <View style={[p.avatar, p.avatarFallback]}>
+                  <Text style={p.avatarLetter}>
+                    {(message.senderName ?? '?').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          <View style={[p.bubble, isMe ? p.myBubble : p.theirBubble, isTrade && p.tradeBubble]}>
+            {!isMe && message.senderName ? (
+              <Text style={p.senderName} numberOfLines={1}>{message.senderName}</Text>
+            ) : null}
+
+            {isTrade && tradePayload ? (
+              <TradeMessage trade={tradePayload} isMe={!!isMe} embeddedInBubble />
+            ) : (
+              <>
+                {(isMedia || isAudio) && (
+                  <View style={p.mediaRow}>
+                    <Ionicons name={mediaIcon as any} size={16} color={mediaIconColor} />
+                    <Text style={[p.mediaText, isMe && p.myMediaText]}>{mediaLabel}</Text>
+                  </View>
+                )}
+
+                {message.content && !isAudio ? (
+                  <Text style={[p.msgText, isMe ? p.myText : p.theirText]} numberOfLines={4}>
+                    {message.content}
+                  </Text>
+                ) : null}
+              </>
+            )}
+
+            <Text style={[p.timeText, isMe ? p.myTime : p.theirTime, isTrade && p.timeInTradeBubble]}>
+              {timeText}
+            </Text>
+          </View>
         </View>
-      </TouchableWithoutFeedback>
-
-      <View style={styles.container} pointerEvents="box-none">
-        {/* Reaction Bar */}
-        <Animated.View
-          style={[
-            styles.reactionWrapper,
-            {
-              opacity: fadeAnim,
-              // ללא זום - פייד בלבד
-            }
-          ]}
-        >
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View>
-              <ReactionBar onReaction={handleReaction} />
-            </View>
-          </TouchableWithoutFeedback>
-        </Animated.View>
-
-        {/* Bottom Action Sheet - מותאם, כך שהריאקציות יופיעו מעליו */}
-        <Animated.View
-          style={[
-            styles.actionSheet,
-            {
-              opacity: menuOpacityAnim,
-              // ללא זום - החלקה קלה בלבד
-              transform: [{ translateY: menuSlideAnim }]
-            }
-          ]}
-        >
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View>
-              <ContextMenu onSelect={handleOptionSelect} isAdmin={isAdmin} />
-            </View>
-          </TouchableWithoutFeedback>
-        </Animated.View>
       </View>
-    </Modal>
+    );
+  };
+
+  return (
+    <ChatBottomSheet
+      visible={visible}
+      onClose={onClose}
+      snapPoints={[snapPoint]}
+      fitContent
+      showBrandWatermark={false}
+      contentPaddingBottom={0}
+    >
+      <View
+        style={[styles.container, { paddingBottom: sheetBottomPad }]}
+        onLayout={(e) => handleContentLayout(e.nativeEvent.layout.height)}
+      >
+        {renderMessagePreview()}
+
+        <View style={styles.reactionWrapper}>
+          <ReactionBar onReaction={handleReaction} currentReaction={currentUserReaction} />
+        </View>
+
+        <ContextMenu
+          onSelect={handleOptionSelect}
+          isAdmin={isAdmin}
+          isMe={message.isMe}
+          canEdit={!message.id?.toString().startsWith('temp-')}
+        />
+      </View>
+    </ChatBottomSheet>
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
+  previewWrap: {
+    paddingTop: tokens.spacing.xs,
+    paddingBottom: tokens.spacing.xs,
   },
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  previewWrapMe: {
+    alignItems: 'flex-end',
+  },
+  previewWrapOther: {
+    alignItems: 'flex-start',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    maxWidth: '82%',
+    gap: 6,
+  },
+  avatarCol: {
+    marginBottom: 2,
+  },
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  avatarFallback: {
+    backgroundColor: tokens.colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
   },
-  reactionWrapper: {
-    position: 'absolute',
-    top: '15%',
-    zIndex: 20,
+  avatarLetter: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: tokens.colors.text.primary,
   },
-  actionSheet: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    backgroundColor: 'transparent',
+  bubble: {
+    flexShrink: 1,
+    borderRadius: 16,
+    paddingTop: 4,
+    paddingBottom: 5,
+    paddingHorizontal: 9,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.16,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  myBubble: {
+    backgroundColor: tokens.colors.bubbleMe,
+    borderBottomRightRadius: 4,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomLeftRadius: 16,
+  },
+  theirBubble: {
+    backgroundColor: tokens.colors.bubbleOther,
+    borderBottomLeftRadius: 4,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  tradeBubble: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    overflow: 'hidden',
+  },
+  senderName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: tokens.colors.primary.main,
+    textAlign: 'right',
+    alignSelf: 'stretch',
+    marginTop: 0,
+    marginBottom: 1,
+    lineHeight: 16,
+  },
+  mediaRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 5,
+  },
+  mediaText: {
+    fontSize: 14,
+    color: tokens.colors.text.secondary,
+  },
+  myMediaText: {
+    color: 'rgba(255,255,255,0.75)',
+  },
+  msgText: {
+    fontSize: 16,
+    lineHeight: 21,
+    textAlign: 'right',
+    marginTop: 0,
+  },
+  myText: {
+    color: '#FFFFFF',
+  },
+  theirText: {
+    color: tokens.colors.text.primary,
+  },
+  timeText: {
+    fontSize: 11,
+    alignSelf: 'flex-end',
+    marginTop: 3,
+  },
+  myTime: {
+    color: 'rgba(255,255,255,0.5)',
+  },
+  theirTime: {
+    color: tokens.colors.text.tertiary,
+  },
+  timeInTradeBubble: {
+    paddingHorizontal: 9,
+    paddingBottom: 2,
   },
 });

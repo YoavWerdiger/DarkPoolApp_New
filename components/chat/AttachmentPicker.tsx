@@ -3,6 +3,7 @@ import { View, Text, Pressable, Modal, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { X, ImageIcon, FileText, Mic } from 'lucide-react-native';
 import { useState, useRef, useEffect } from 'react';
+import { chatPalette } from './chatDesignTokens';
 
 interface AttachmentPickerProps {
   visible: boolean;
@@ -104,7 +105,7 @@ export default function AttachmentPicker({
               className="items-center bg-[#222] p-6 rounded-2xl flex-1 mx-2 active:bg-[#333]"
             >
               <View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center mb-3">
-                <ImageIcon size={32} color="#00E654" strokeWidth={2} />
+                <ImageIcon size={32} color={chatPalette.primary} strokeWidth={2} />
               </View>
               <Text className="text-white text-sm font-medium">תמונה</Text>
             </Pressable>
@@ -114,7 +115,7 @@ export default function AttachmentPicker({
               className="items-center bg-[#222] p-6 rounded-2xl flex-1 mx-2 active:bg-[#333]"
             >
               <View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center mb-3">
-                <FileText size={32} color="#00E654" strokeWidth={2} />
+                <FileText size={32} color={chatPalette.primary} strokeWidth={2} />
               </View>
               <Text className="text-white text-sm font-medium">קובץ</Text>
             </Pressable>
@@ -124,7 +125,7 @@ export default function AttachmentPicker({
               className="items-center bg-[#222] p-6 rounded-2xl flex-1 mx-2 active:bg-[#333]"
             >
               <View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center mb-3">
-                <Mic size={32} color="#00E654" strokeWidth={2} />
+                <Mic size={32} color={chatPalette.primary} strokeWidth={2} />
               </View>
               <Text className="text-white text-sm font-medium">הקלטה</Text>
             </Pressable>

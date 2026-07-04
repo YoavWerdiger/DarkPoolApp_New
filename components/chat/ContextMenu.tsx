@@ -1,184 +1,145 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, TouchableWithoutFeedback } from 'react-native';
+// ============================================
+// Context Menu — Telegram-style action grid
+// ============================================
+import React, { useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { DesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { chatPalette } from './chatDesignTokens';
 
-type OptionDef = { key: string; label: string; icon: any; danger: boolean };
+type OptionDef = { key: string; label: string; icon: string; danger: boolean };
 
-interface OptionItemProps {
-  option: OptionDef;
-  index: number;
-  isLast: boolean;
+interface ContextMenuProps {
   onSelect: (key: string) => void;
+  isAdmin?: boolean;
+  isMe?: boolean;
+  canEdit?: boolean;
 }
 
-function OptionItem({ option, index, isLast, onSelect }: OptionItemProps) {
-  const [scaleValue] = useState(new Animated.Value(1));
+export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, canEdit = true }: ContextMenuProps) {
+  const tokens = useDesignTokens();
 
-  const [pressed, setPressed] = useState(false);
-
-  const handlePressIn = () => {
-    setPressed(true);
-    Animated.spring(scaleValue, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    setPressed(false);
-    Animated.spring(scaleValue, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePress = () => {
-    HapticFeedback.selection();
-    onSelect(option.key);
-  };
-
-  return (
-    <Animated.View
-      style={[
-        styles.option,
-        isLast && styles.lastOption,
-        { transform: [{ scale: scaleValue }] }
-      ]}
-    >
-      <TouchableOpacity
-        style={[
-          styles.optionTouchable,
-          pressed && styles.optionPressed
-        ]}
-        onPress={handlePress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        accessibilityLabel={option.label}
-        accessibilityHint={option.label}
-        activeOpacity={1}
-      >
-        <Ionicons 
-          name={option.icon as any} 
-          size={24} 
-          color={option.danger ? '#FF453A' : '#FFFFFF'}
-          style={styles.optionIcon}
-        />
-        <Text style={[
-          styles.optionLabel, 
-          option.danger && { color: '#FF453A' }
-        ]}>
-          {option.label}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-export default function ContextMenu({ onSelect, isAdmin = false }: { onSelect: (key: string) => void; isAdmin?: boolean }) {
-  const [dialogScale] = useState(new Animated.Value(1));
-
-  const options: OptionDef[] = useMemo(() => {
-    const base: OptionDef[] = [
-      { key: 'reply', label: 'השב', icon: 'arrow-undo', danger: false },
-      { key: 'forward', label: 'העבר', icon: 'arrow-redo', danger: false },
-      { key: 'copy', label: 'העתק', icon: 'copy', danger: false },
-      // הצג "מידע" רק למנהלים
-      ...(isAdmin ? [{ key: 'info', label: 'מידע', icon: 'information-circle', danger: false } as OptionDef] : []),
-      { key: 'star', label: 'סמן בכוכב', icon: 'star', danger: false },
-      { key: 'pin', label: 'הצמד', icon: 'pin', danger: false },
-      { key: 'delete', label: 'מחק', icon: 'trash', danger: true },
+  const { mainOptions, dangerOptions } = useMemo(() => {
+    const main: OptionDef[] = [
+      { key: 'reply',   label: 'השב',       icon: 'arrow-undo-outline',  danger: false },
+      { key: 'forward', label: 'העבר',      icon: 'arrow-redo-outline',  danger: false },
+      { key: 'copy',    label: 'העתק',      icon: 'copy-outline',        danger: false },
+      { key: 'star',    label: 'כוכב',      icon: 'star-outline',        danger: false },
+      ...(isMe && canEdit ? [{ key: 'edit', label: 'ערוך', icon: 'create-outline', danger: false } as OptionDef] : []),
+      ...(isAdmin ? [{ key: 'info', label: 'מידע', icon: 'information-circle-outline', danger: false } as OptionDef] : []),
+      ...(isAdmin ? [{ key: 'pin', label: 'הצמד', icon: 'pin-outline', danger: false } as OptionDef] : []),
     ];
-    return base;
-  }, [isAdmin]);
+    const danger: OptionDef[] = [
+      ...(isMe ? [{ key: 'delete', label: 'מחק אצלי', icon: 'trash-outline', danger: true } as OptionDef] : []),
+      ...((isMe || isAdmin) ? [{ key: 'deleteForEveryone', label: 'מחק לכולם', icon: 'people-outline', danger: true } as OptionDef] : []),
+    ];
+    return { mainOptions: main, dangerOptions: danger };
+  }, [isAdmin, isMe, canEdit]);
 
-  const handleDialogPressIn = () => {
-    Animated.spring(dialogScale, {
-      toValue: 0.98,
-      useNativeDriver: true,
-    }).start();
+  const handlePress = (key: string) => {
+    void HapticFeedback.selection();
+    onSelect(key);
   };
 
-  const handleDialogPressOut = () => {
-    Animated.spring(dialogScale, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
+  const tileBg = 'rgba(255,255,255,0.07)';
+  const tileIconBg = 'rgba(255,255,255,0.10)';
+  const dangerBg = 'rgba(255,60,60,0.12)';
 
   return (
-    <View style={styles.dialog}>
-      {/* Handle Bar */}
-      <View style={styles.handleBar} />
-      
-      {/* Options */}
-      <View style={styles.optionsContainer}>
-        {options.map((opt, index) => (
-          <OptionItem
-            key={opt.key}
-            option={opt}
-            index={index}
-            isLast={index === options.length - 1}
-            onSelect={onSelect}
-          />
-        ))}
-      </View>
+    <View style={styles.root}>
+      {/* Main actions grid */}
+      {mainOptions.length > 0 && (
+        <BlurView intensity={Platform.OS === 'ios' ? 40 : 20} tint="dark" style={styles.gridCard}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: tileBg }]} />
+          <View style={styles.grid}>
+            {mainOptions.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                onPress={() => handlePress(opt.key)}
+                activeOpacity={0.65}
+                style={styles.tile}
+                accessibilityLabel={opt.label}
+              >
+                <View style={[styles.tileIcon, { backgroundColor: tileIconBg }]}>
+                  <Ionicons name={opt.icon as any} size={22} color={tokens.colors.text.primary} />
+                </View>
+                <Text style={[styles.tileLabel, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </BlurView>
+      )}
+
+      {/* Danger actions — separate card */}
+      {dangerOptions.length > 0 && (
+        <BlurView intensity={Platform.OS === 'ios' ? 40 : 20} tint="dark" style={[styles.gridCard, styles.dangerCard]}>
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: dangerBg }]} />
+          <View style={styles.grid}>
+            {dangerOptions.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                onPress={() => handlePress(opt.key)}
+                activeOpacity={0.65}
+                style={styles.tile}
+                accessibilityLabel={opt.label}
+              >
+                <View style={[styles.tileIcon, { backgroundColor: 'rgba(255,60,60,0.18)' }]}>
+                  <Ionicons name={opt.icon as any} size={22} color={tokens.colors.text.danger} />
+                </View>
+                <Text style={[styles.tileLabel, { color: tokens.colors.text.danger }]} numberOfLines={1}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </BlurView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  dialog: {
-    backgroundColor: '#2C2C2E',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+  root: {
+    paddingHorizontal: 14,
+    gap: 10,
+    paddingBottom: 12,
+  },
+  gridCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: chatPalette.glassBorder,
     overflow: 'hidden',
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
   },
-  handleBar: {
-    width: 36,
-    height: 5,
-    backgroundColor: '#8E8E93',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  optionsContainer: {
-    backgroundColor: '#2C2C2E',
-  },
-  option: {
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#48484A',
-  },
-  optionTouchable: {
-    flexDirection: 'row',
+  dangerCard: {},
+  grid: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    justifyContent: 'space-evenly',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    minHeight: 50,
-    backgroundColor: '#2C2C2E',
   },
-  optionPressed: {
-    backgroundColor: '#3A3A3C',
+  tile: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    gap: 5,
+    minWidth: 62,
   },
-  lastOption: {
-    borderBottomWidth: 0,
+  tileIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  optionIcon: {
-    marginRight: 12,
-    width: 24,
-  },
-  optionLabel: {
-    fontSize: 17,
-    fontWeight: '400',
-    color: '#FFFFFF',
-    flex: 1,
+  tileLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });

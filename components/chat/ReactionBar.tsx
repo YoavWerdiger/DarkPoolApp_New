@@ -1,76 +1,86 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import React, { useMemo } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface ReactionBarProps {
   onReaction: (emoji: string) => void;
+  currentReaction?: string | null;
 }
 
-const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '😍', '➕'];
+const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥'];
 
-export default function ReactionBar({ onReaction }: ReactionBarProps) {
+export default function ReactionBar({ onReaction, currentReaction }: ReactionBarProps) {
+  const tokens = useDesignTokens();
+
   return (
-    <View style={styles.row}>
-      {EMOJIS.map(emoji => (
-        <TouchableOpacity
-          key={emoji}
-          onPress={() => onReaction(emoji)}
-          style={styles.emojiBtn}
-          accessibilityLabel={`React ${emoji}`}
-        >
-          <Text style={styles.emoji}>{emoji}</Text>
-        </TouchableOpacity>
-      ))}
-      <TouchableOpacity style={[styles.emojiBtn, styles.plus]}>
-        <Text style={styles.emoji}>+</Text>
-      </TouchableOpacity>
-      <View style={{ width: 16 }} />
-      <View style={styles.otherTag}><Text style={styles.otherTagText}>other</Text></View>
-      <View style={{ width: 8 }} />
-      <Text style={styles.otherPlain}>other</Text>
-    </View>
+    <BlurView
+      intensity={Platform.OS === 'ios' ? 50 : 25}
+      tint="dark"
+      style={styles.pill}
+    >
+      <View style={[StyleSheet.absoluteFill, styles.pillOverlay]} />
+      {EMOJIS.map(emoji => {
+        const isSelected = currentReaction === emoji;
+        return (
+          <Pressable
+            key={emoji}
+            onPress={() => {
+              void HapticFeedback.selection();
+              onReaction(emoji);
+            }}
+            style={({ pressed }) => [
+              styles.emojiBtn,
+              isSelected && styles.emojiBtnSelected,
+              pressed && styles.emojiBtnPressed,
+            ]}
+            accessibilityLabel={`React ${emoji}`}
+            accessibilityState={{ selected: isSelected }}
+          >
+            <Text style={[styles.emoji, isSelected && styles.emojiSelected]}>{emoji}</Text>
+          </Pressable>
+        );
+      })}
+    </BlurView>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  pill: {
     flexDirection: 'row',
-    backgroundColor: '#2A2A2A',
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-    borderRadius: 72,
+    borderRadius: 999,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    elevation: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.18)',
+    overflow: 'hidden',
+    gap: 2,
+  },
+  pillOverlay: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 999,
   },
   emojiBtn: {
-    paddingHorizontal: 28,
-    paddingVertical: 18,
-    minWidth: 148,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 22,
+  },
+  emojiBtnSelected: {
+    backgroundColor: 'rgba(0,200,5,0.22)',
+    transform: [{ scale: 1.1 }],
+  },
+  emojiBtnPressed: {
+    opacity: 0.65,
+    transform: [{ scale: 0.9 }],
   },
   emoji: {
-    fontSize: 60,
+    fontSize: 26,
   },
-  plus: {
-    backgroundColor: '#222',
-    borderRadius: 44,
-  },
-  otherTag: {
-    backgroundColor: '#3A3A3A',
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  otherTagText: {
-    color: '#E5E7EB',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  otherPlain: {
-    color: '#E5E7EB',
-    fontSize: 18,
+  emojiSelected: {
+    transform: [{ scale: 1.1 }],
   },
 });

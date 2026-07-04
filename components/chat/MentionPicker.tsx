@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+// ============================================
+// MentionPicker — styled like replyPreviewContainer in ChatInput
+// ============================================
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  Image,
-  TouchableOpacity,
-  TextInput,
+  View, Text, StyleSheet, FlatList, Image,
+  TouchableOpacity, Platform, Keyboard, KeyboardEvent,
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { logger } from '../../utils/logger';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface User {
   id: string;
@@ -21,299 +21,226 @@ interface MentionPickerProps {
   visible: boolean;
   onSelectUser: (user: { id: string; display: string }) => void;
   onClose: () => void;
-  channelId: string;
+  groupId: string;
   searchQuery: string;
 }
 
 const MentionPicker: React.FC<MentionPickerProps> = ({
-  visible,
-  onSelectUser,
-  onClose,
-  channelId,
-  searchQuery,
+  visible, onSelectUser, onClose, groupId, searchQuery,
 }) => {
+  const tokens = useDesignTokens();
   const [members, setMembers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const currentUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (visible && channelId) {
-      loadChannelMembers();
-    }
-  }, [visible, channelId]);
+    supabase.auth.getUser().then(({ data }) => {
+      currentUserIdRef.current = data.user?.id ?? null;
+    });
+  }, []);
 
   useEffect(() => {
-    setSearchText(searchQuery);
-  }, [searchQuery]);
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent  = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const onShow = (e: KeyboardEvent) => setKeyboardHeight(e.endCoordinates.height);
+    const onHide = () => setKeyboardHeight(0);
+    const s1 = Keyboard.addListener(showEvent, onShow);
+    const s2 = Keyboard.addListener(hideEvent,  onHide);
+    return () => { s1.remove(); s2.remove(); };
+  }, []);
 
-  const loadChannelMembers = async () => {
-    if (!channelId) return;
-    
+  useEffect(() => {
+    if (visible && groupId) loadGroupMembers();
+  }, [visible, groupId]);
+
+  const loadGroupMembers = async () => {
     try {
-      console.log('🔄 MentionPicker: Loading channel members for chat:', channelId);
-      
-      // שלוף חברי הערוץ עם הנתונים המלאים
-      const { data: membersData, error: membersError } = await supabase
-        .from('channel_members')
-        .select('user_id, role, user_data')
-        .eq('channel_id', channelId);
-      
-      if (membersError) {
-        console.error('❌ MentionPicker: Error loading channel members:', membersError);
-        return;
+      const { data, error } = await supabase
+        .from('chat_group_members')
+        .select('user_id, users:user_id(id, full_name, display_name, profile_picture)')
+        .eq('group_id', groupId);
+      if (!error && data) {
+        setMembers(
+          data
+            .filter(m => m.user_id !== currentUserIdRef.current)
+            .map(m => {
+              const u = m.users as any;
+              return {
+                id: m.user_id,
+                full_name: u?.full_name ?? null,
+                display_name: u?.display_name ?? u?.full_name ?? null,
+                profile_picture: u?.profile_picture ?? null,
+              };
+            })
+        );
       }
-      
-      console.log('✅ MentionPicker: Channel members loaded:', membersData?.length || 0);
-      console.log('📋 MentionPicker: First few members:', membersData?.slice(0, 3));
-      
-      if (membersData && membersData.length > 0) {
-        // המר את הנתונים לפורמט הנכון
-        const formattedMembers = membersData.map(member => ({
-          id: member.user_id,
-          full_name: member.user_data?.full_name || `User ${member.user_id.slice(0, 8)}`,
-          profile_picture: member.user_data?.profile_picture || null,
-          phone: member.user_data?.phone || null,
-          display_name: member.user_data?.display_name || member.user_data?.full_name || `User ${member.user_id.slice(0, 8)}`,
-          role: member.role
-        }));
-        
-        console.log('🔗 MentionPicker: Formatted members data:', formattedMembers.slice(0, 2));
-        setMembers(formattedMembers);
-      } else {
-        console.log('⚠️ MentionPicker: No channel members found');
-        setMembers([]);
-      }
-    } catch (error) {
-      console.error('❌ MentionPicker: Exception in loadChannelMembers:', error);
-      setMembers([]);
+    } catch (e) {
+      logger.error('MentionPicker', 'load failed', e);
     }
   };
 
-  // פונקציה נפרדת לפתרון החלופי
-  const loadFallbackMembers = async (altMemberData: any) => {
-    try {
-      console.log('🔍 MentionPicker: Loading fallback members from channel_members...');
-      
-      const { data: fallbackMemberData, error: fallbackError } = await supabase
-        .from('channel_members')
-        .select('user_id, role, joined_at')
-        .eq('channel_id', channelId);
-      
-      if (fallbackError) {
-        console.error('❌ MentionPicker: Fallback approach failed:', fallbackError);
-        return;
-      }
-      
-      // יצירת אובייקטים פשוטים עם המידע שיש לנו
-      const fallbackMembers = fallbackMemberData.map(member => ({
-        id: member.user_id,
-        full_name: `User ${member.user_id.slice(0, 8)} (${member.role || 'member'})`,
-        display_name: `User ${member.user_id.slice(0, 8)}`,
-        profile_picture: null
-      }));
-      
-      console.log('🔍 MentionPicker: Using fallback members:', fallbackMembers.length);
-      setMembers(fallbackMembers);
-    } catch (error) {
-      console.error('❌ MentionPicker: Error in fallback approach:', error);
-    }
+  // אם השם נראה כמו email — מציג רק את החלק לפני @
+  const cleanName = (raw: string | null): string => {
+    if (!raw) return '';
+    if (raw.includes('@')) return raw.split('@')[0];
+    return raw;
   };
 
-  const filteredMembers = useMemo(() => {
-    if (!searchText) return members;
-    
-    const query = searchText.toLowerCase().replace('@', '');
-    return members.filter(member => {
-      const name = (member.full_name || member.display_name || '').toLowerCase();
-      return name.includes(query);
+  const filtered = useMemo(() => {
+    // deduplicate by user id
+    const seen = new Set<string>();
+    const unique = members.filter(m => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
     });
-  }, [members, searchText]);
+    if (!searchQuery) return unique;
+    const q = searchQuery.toLowerCase().replace('@', '');
+    return unique.filter(m => {
+      const name = cleanName(m.display_name || m.full_name || '');
+      return name.toLowerCase().includes(q);
+    });
+  }, [members, searchQuery]);
 
-  const handleSelectUser = (member: User) => {
-    const displayName = member.display_name || member.full_name || 'משתמש';
-    onSelectUser({
-      id: member.id,
-      display: `@${displayName}`,
-    });
+  const handleSelect = (m: User) => {
+    const display = cleanName(m.display_name || m.full_name) || 'משתמש';
+    onSelectUser({ id: m.id, display: `@${display}` });
     onClose();
   };
 
-  const renderMember = ({ item }: { item: User }) => (
-    <TouchableOpacity
-      style={styles.memberRow}
-      onPress={() => handleSelectUser(item)}
-      activeOpacity={0.7}
-    >
-      <Image
-        source={
-          item.profile_picture
-            ? { uri: item.profile_picture }
-            : require('../../assets/icon.png')
-        }
-        style={styles.avatar}
-      />
-      <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>
-          {item.display_name || item.full_name || 'משתמש'}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+  if (!visible || filtered.length === 0) return null;
 
-  if (!visible) return null;
+  const bottomOffset = keyboardHeight > 0 ? keyboardHeight + 4 : 76;
+  const maxItems = Math.min(filtered.length, 5);
+  const ITEM_H = 44;
+  const primary = tokens.colors.primary.main;
+  const dividerBg = tokens.colors.border?.divider ?? 'rgba(255,255,255,0.07)';
+  const lgRadius = tokens.borderRadius?.lg ?? 16;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.picker}>
-        <View style={styles.header}>
-          <Text style={styles.title}>בחר משתמש</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={styles.closeText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="חפש משתמש..."
-            placeholderTextColor="#9CA3AF"
-            value={searchText}
-            onChangeText={setSearchText}
-            autoFocus
-          />
-        </View>
+    <View
+      pointerEvents="box-none"
+      style={[StyleSheet.absoluteFill, { zIndex: 2000 }]}
+    >
+      <View
+        style={[
+          styles.container,
+          {
+            bottom: bottomOffset,
+            height: maxItems * ITEM_H,
+            backgroundColor: dividerBg,
+            borderRadius: lgRadius,
+          },
+        ]}
+      >
+        {/* פס ירוק שמאלי — בדיוק כמו replyPreviewBar */}
+        <View style={[styles.accentBar, { backgroundColor: primary }]} />
 
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>טוען...</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={filteredMembers}
-            renderItem={renderMember}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={true}
-            contentContainerStyle={styles.listContainer}
-            keyboardShouldPersistTaps="handled"
-            style={styles.list}
-          />
-        )}
+        <FlatList
+          data={filtered}
+          keyExtractor={m => m.id}
+          keyboardShouldPersistTaps="always"
+          showsVerticalScrollIndicator={false}
+          style={styles.list}
+            renderItem={({ item, index }) => {
+            const name = cleanName(item.display_name || item.full_name) || 'משתמש';
+            const isLast = index === filtered.length - 1;
+            return (
+              <TouchableOpacity
+                onPress={() => handleSelect(item)}
+                activeOpacity={0.55}
+                style={[
+                  styles.row,
+                  { height: ITEM_H },
+                  !isLast && {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: 'rgba(255,255,255,0.08)',
+                  },
+                ]}
+              >
+                {/* @ prefix — כמו replyLabel */}
+                <Text style={[styles.atSign, { color: primary }]}>@</Text>
+
+                {/* שם */}
+                <Text style={[styles.name, { color: tokens.colors.text.primary }]} numberOfLines={1}>
+                  {name}
+                </Text>
+
+                {/* Avatar */}
+                {item.profile_picture ? (
+                  <Image source={{ uri: item.profile_picture }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarFallback]}>
+                    <Text style={[styles.avatarLetter, { color: tokens.colors.text.secondary }]}>
+                      {name.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          }}
+        />
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
   container: {
     position: 'absolute',
-    bottom: 80, // מעל ל-MessageInputBar
-    left: 20,
-    right: 20,
-    zIndex: 1000,
-  },
-  picker: {
-    backgroundColor: '#1F1F1F',
-    borderRadius: 16,
-    maxHeight: 300, // גובה קבוע
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  header: {
+    left: 8,
+    right: 8,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  accentBar: {
+    width: 3,
+    borderRadius: 1.5,
+    marginVertical: 8,
+    marginLeft: 10,
+    flexShrink: 0,
+  },
+  list: {
+    flex: 1,
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    paddingHorizontal: 10,
+    gap: 8,
   },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  atSign: {
+    fontSize: 13,
+    fontWeight: '700',
+    flexShrink: 0,
+    width: 14,
+    textAlign: 'center',
   },
-  closeButton: {
+  name: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'right',
+  },
+  avatar: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#2A2A2A',
+    flexShrink: 0,
+  },
+  avatarFallback: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  closeText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  searchContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  searchInput: {
-    backgroundColor: '#2A2A2A',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    color: '#FFFFFF',
-    fontSize: 16,
-    textAlign: 'right',
-  },
-  loadingContainer: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#9CA3AF',
-    fontSize: 16,
-  },
-  listContainer: {
-    paddingBottom: 16,
-  },
-  list: {
-    maxHeight: 200, // גובה מקסימלי לרשימה
-  },
-  memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 12,
-  },
-  memberInfo: {
-    flex: 1,
-  },
-  memberName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
+  avatarLetter: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 

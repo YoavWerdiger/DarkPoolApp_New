@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Users, Lock } from 'lucide-react-native';
 import { PollOption } from '../../services/pollService';
+import { chatPalette } from './chatDesignTokens';
 
 interface PollResultsProps {
   options: PollOption[];
@@ -19,26 +20,18 @@ export default function PollResults({
   multipleChoice,
   isLocked
 }: PollResultsProps) {
-  console.log('📊 PollResults rendering:', {
-    optionsCount: options.length,
-    userVotes,
-    totalVotes,
-    multipleChoice,
-    isLocked
-  });
   const getVotePercentage = (votesCount: number): number => {
     if (totalVotes === 0) return 0;
     return Math.round((votesCount / totalVotes) * 100);
   };
 
   const getVoteColor = (votesCount: number): string => {
-    if (votesCount === 0) return '#333';
-    
+    if (votesCount === 0) return 'rgba(255,255,255,0.2)';
     const percentage = getVotePercentage(votesCount);
-    if (percentage > 50) return '#00E654'; // ירוק כהה
-    if (percentage > 25) return '#00ff88'; // ירוק בהיר
-    if (percentage > 10) return '#ffaa00'; // כתום
-    return '#ff6b6b'; // אדום
+    if (percentage > 50) return chatPalette.primary;
+    if (percentage > 25) return chatPalette.success;
+    if (percentage > 10) return chatPalette.warning;
+    return chatPalette.danger;
   };
 
   const isUserVoted = (optionId: string): boolean => {
@@ -61,7 +54,7 @@ export default function PollResults({
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-white font-bold text-lg">תוצאות ההצבעה</Text>
         <View className="flex-row items-center">
-          <Users size={16} color="#00E654" strokeWidth={2} />
+          <Users size={16} color={chatPalette.primary} strokeWidth={2} />
           <Text className="text-primary text-sm mr-1">
             {totalVotes} הצבעות
           </Text>
@@ -90,7 +83,7 @@ export default function PollResults({
                   <Ionicons
                     name={voteIcon as any}
                     size={20}
-                    color="#00E654"
+                    color={chatPalette.primary}
                     style={{ marginRight: 8 }}
                   />
                 )}

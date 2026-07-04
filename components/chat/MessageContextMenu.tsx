@@ -1,7 +1,8 @@
+import { useDesignTokens } from "../ui/DesignTokens";
+import { HapticFeedback } from "../../utils/hapticFeedback";
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Menu, MenuProvider, MenuOptions, MenuOption, MenuTrigger } from 'react-native-popup-menu';
-import { DesignTokens } from '../ui/DesignTokens';
 import { Ionicons } from '@expo/vector-icons';
 
 interface MessageContextMenuProps {
@@ -35,6 +36,7 @@ export default function MessageContextMenu({
   isStarred = false,
   messagePosition
 }: MessageContextMenuProps) {
+  const DesignTokens = useDesignTokens();
   if (!visible) return null;
 
   const menuItems = [
@@ -76,7 +78,7 @@ export default function MessageContextMenu({
     {
       id: 'star',
       title: isStarred ? 'הסר כוכב' : 'סמן בכוכב',
-      icon: isStarred ? 'star' : 'star-outline' as const,
+      icon: (isStarred ? 'star' : 'star-outline') as keyof typeof Ionicons.glyphMap,
       onPress: isStarred ? onUnstar : onStar,
       color: isStarred ? '#fbbf24' : '#ffffff'
     },
@@ -94,6 +96,7 @@ export default function MessageContextMenu({
       <MenuOption
         key={item.id}
         onSelect={() => {
+          void HapticFeedback.selection();
           item.onPress?.();
           onClose();
         }}

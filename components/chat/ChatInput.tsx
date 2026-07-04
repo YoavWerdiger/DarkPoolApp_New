@@ -10,6 +10,7 @@ import { chatInputBottomPadding, CHAT_COMPOSER_NATIVE_ID } from './chatInputLayo
 import { useDesignTokens } from '../ui/DesignTokens';
 import UICard from '../ui/UICard';
 import * as ImagePicker from 'expo-image-picker';
+import { Image as ExpoImage } from 'expo-image';
 import MediaPickerSheet from './MediaPickerSheet';
 import { runAfterSheetDismiss } from './mediaPickerLaunch';
 import PollCreationBottomSheet from './PollCreationBottomSheet';
@@ -33,6 +34,17 @@ import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
 import MentionPicker from './MentionPicker';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+
+/**
+ * חימום cache של expo-image ברגע שיש URI מקומי — כדי שהפריוויו יציג מיידית
+ * במקום לפענח את הקובץ בזמן ה-mount. לא חוסם: fire-and-forget.
+ */
+function warmImageCache(uris: string[]): void {
+  if (uris.length === 0) return;
+  ExpoImage.prefetch(uris, { cachePolicy: 'memory-disk' }).catch(() => {
+    /* best effort — נכשל בשקט, הפריוויו עדיין יטען מה-uri */
+  });
+}
 
 interface ChatInputProps {
   groupId: string;
@@ -531,6 +543,8 @@ function ChatInputImpl({
           width: asset.width,
           height: asset.height,
         }));
+        // ⚡ חימום cache לפני ה-render כדי שהתצוגה תהיה מיידית לכל התמונות שנבחרו
+        warmImageCache(mediaFiles.map((f) => f.uri));
         // ⚡ Show preview IMMEDIATELY
         setSelectedMedia(mediaFiles);
         setShowMediaPreview(true);
@@ -573,6 +587,8 @@ function ChatInputImpl({
           name: asset.fileName || 'photo.jpg',
           size: asset.fileSize,
         };
+        // ⚡ חימום cache לפני ה-render כדי שהתצוגה תהיה מיידית
+        warmImageCache([mediaFile.uri]);
         // Set media and show preview immediately
         setSelectedMedia([mediaFile]);
         setShowMediaPreview(true);

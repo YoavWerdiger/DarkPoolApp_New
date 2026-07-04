@@ -8,8 +8,9 @@ import {
   Pressable
 } from 'react-native';
 import { Scissors, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react-native';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface Split {
   id: string
@@ -50,12 +51,6 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
         paddingVertical: 14,
         paddingHorizontal: 16,
         backgroundColor: DesignTokens.colors.background.secondary,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
-        elevation: 6,
-        borderWidth: 1,
         borderColor: split.is_reverse ? 'rgba(239, 68, 68, 0.2)' : 'rgba(0, 216, 74, 0.2)'
       }}
     >
@@ -67,14 +62,14 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
           top: 0, 
           bottom: 0, 
           width: 3, 
-          backgroundColor: split.is_reverse ? DesignTokens.colors.danger.main : '#00D84A',
+          backgroundColor: split.is_reverse ? DesignTokens.colors.danger.main : 'DesignTokens.colors.success.main',
           borderTopRightRadius: 18,
           borderBottomRightRadius: 18
         }} 
       />
 
       {/* Header */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View style={{ flex: 1 }}>
           <Text 
             style={{ 
@@ -87,7 +82,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
           >
             {getCompanyName(split.code, split.name)}
           </Text>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
               {split.code}
             </Text>
@@ -116,7 +111,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
           paddingVertical: 16,
           paddingHorizontal: 20,
           borderRadius: 16,
-          backgroundColor: split.is_reverse ? 'rgba(239, 68, 68, 0.1)' : 'rgba(0, 216, 74, 0.1)',
+          backgroundColor: split.is_reverse ? 'rgba(239, 68, 68, 0.1)' : `${DesignTokens.colors.success.main}1A`,
           marginBottom: 12
         }}
       >
@@ -124,19 +119,19 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
           {split.is_reverse ? (
             <TrendingDown size={24} color={DesignTokens.colors.danger.main} strokeWidth={2.5} />
           ) : (
-            <TrendingUp size={24} color="#00D84A" strokeWidth={2.5} />
+            <TrendingUp size={24} color="DesignTokens.colors.success.main" strokeWidth={2.5} />
           )}
           <Text 
             style={{ 
               fontSize: 36, 
               fontWeight: '800', 
-              color: split.is_reverse ? DesignTokens.colors.danger.main : '#00D84A',
+              color: split.is_reverse ? DesignTokens.colors.danger.main : 'DesignTokens.colors.success.main',
               marginHorizontal: 12
             }}
           >
             {split.ratio}
           </Text>
-          <Scissors size={24} color={split.is_reverse ? DesignTokens.colors.danger.main : '#00D84A'} strokeWidth={2.5} />
+          <Scissors size={24} color={split.is_reverse ? DesignTokens.colors.danger.main : 'DesignTokens.colors.success.main'} strokeWidth={2.5} />
         </View>
         
         <View 
@@ -144,10 +139,10 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
             paddingHorizontal: 16, 
             paddingVertical: 8, 
             borderRadius: 14, 
-            backgroundColor: split.is_reverse ? 'rgba(239, 68, 68, 0.15)' : 'rgba(0, 216, 74, 0.15)'
+            backgroundColor: split.is_reverse ? 'rgba(239, 68, 68, 0.15)' : `${DesignTokens.colors.success.main}26`
           }}
         >
-          <Text style={{ fontSize: 13, color: split.is_reverse ? DesignTokens.colors.danger.main : '#00D84A', fontWeight: '700', textAlign: 'center' }}>
+          <Text style={{ fontSize: 13, color: split.is_reverse ? DesignTokens.colors.danger.main : 'DesignTokens.colors.success.main', fontWeight: '700', textAlign: 'center' }}>
             {split.is_reverse ? '⚠️ פיצול הפוך' : '✨ פיצול רגיל'}
           </Text>
         </View>
@@ -167,7 +162,7 @@ const SplitCard: React.FC<{ split: Split }> = ({ split }) => {
       </Text>
 
       {/* Date */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
         <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary }}>
           תאריך אפקטיבי:
         </Text>
@@ -186,8 +181,6 @@ export default function SplitsTab() {
 
   const loadSplits = useCallback(async () => {
     try {
-      console.log('✂️ Loading splits from Supabase');
-      
       const { data, error } = await supabase
         .from('splits_calendar')
         .select('*')
@@ -195,26 +188,27 @@ export default function SplitsTab() {
         .limit(100);
       
       if (error) {
-        console.error('❌ Supabase error:', error);
         return;
       }
       
       if (data) {
-        console.log(`✅ Loaded ${data.length} splits`);
         setSplits(data);
       }
     } catch (error) {
-      console.error('❌ Error loading splits:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadSplits();
-  };
+    try {
+      await loadSplits();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
+  }, [loadSplits]);
 
   useEffect(() => {
     loadSplits();
@@ -235,7 +229,7 @@ export default function SplitsTab() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-        <ActivityIndicator size="large" color="#00D84A" />
+        <ActivityIndicator size="large" color="DesignTokens.colors.success.main" />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען פיצולים...
         </Text>
@@ -253,8 +247,8 @@ export default function SplitsTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#00D84A"
-            colors={['#00D84A']}
+            tintColor="DesignTokens.colors.success.main"
+            colors={['DesignTokens.colors.success.main']}
           />
         }
         ListEmptyComponent={renderEmptyState}

@@ -1,17 +1,21 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, Alert, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, ScrollView } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { Check, User, Phone, Mail, TrendingUp, BarChart3, Clock, Rocket } from 'lucide-react-native';
+import { Check, User, Phone, TrendingUp, BarChart3, Clock, Rocket } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../../services/authService';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
-// Debug: בדיקה שה-AuthService קיים
-console.log('🔍 RegistrationSummary: AuthService imported:', !!AuthService);
-console.log('🔍 RegistrationSummary: AuthService.signUp exists:', !!AuthService.signUp);
+const { width, height } = Dimensions.get('window');
 
 const tracks: Record<string, string> = {
   '1': 'מסלול משקיעים מתחילים',
@@ -19,409 +23,451 @@ const tracks: Record<string, string> = {
   '3': 'מסלול ניתוח טכני',
 };
 
+const ProgressBar = ({ current, total }: { current: number; total: number }) => (
+  <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 4 }}>
+    <View style={{ flexDirection: 'row', gap: 6 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor:
+              i < current
+                ? DesignTokens.colors.primary.main
+                : 'rgba(255,255,255,0.12)',
+          }}
+        />
+      ))}
+    </View>
+  </View>
+);
+
+// Row item in summary card
+const SummaryRow = ({
+  icon,
+  label,
+}: {
+  icon: React.ReactNode;
+  label: string;
+}) => (
+  <View
+    style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(255,255,255,0.05)',
+    }}
+  >
+    <View
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: 'rgba(0,230,84,0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 12,
+      }}
+    >
+      {icon}
+    </View>
+    <Text
+      style={{
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 14,
+        textAlign: 'right',
+        flex: 1,
+      }}
+    >
+      {label}
+    </Text>
+  </View>
+);
+
 const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
-  const { data } = useRegistration();
-  const { signIn, setUser } = useAuth();
+  const { data, resetData } = useRegistration();
+  const { signIn, setUser, signOut, user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleFinish = async () => {
     setLoading(true);
-    
     try {
-      console.log('🔄 RegistrationSummary: Starting registration with data:', data);
-      
-      // וידוא שכל הנתונים הנדרשים קיימים
-      const registrationData = {
-        email: data.email,
-        password: data.password,
-        display_name: data.fullName,
-            full_name: data.fullName,
-        profile_picture: data.profileImage,
-        phone: data.phone,
-        track_id: data.trackId || '1', // default למסלול מתחילים
-        account_type: data.accountType,
-        intro_data: {
-          markets: data.markets || [],
-          experience: data.experience || '',
-          styles: data.styles || [],
-          brokers: data.brokers || [],
-          level: data.level || '',
-          goal: data.goal || '',
-          communityGoals: data.communityGoals || [],
-          hours: data.hours || '',
-          socials: data.socials || [],
-          heardFrom: data.heardFrom || '',
-          wish: data.wish || ''
-        }
+      const introData = {
+        markets:        data.markets        || [],
+        experience:     data.experience     || '',
+        styles:         data.styles         || [],
+        brokers:        data.brokers        || [],
+        level:          data.level          || '',
+        goal:           data.goal           || '',
+        communityGoals: data.communityGoals || [],
+        hours:          data.hours          || '',
+        socials:        data.socials        || [],
+        heardFrom:      data.heardFrom      || '',
+        wish:           data.wish           || '',
+        fullTime:       data.fullTime       || '',
+        style:          data.style          || '',
       };
 
-      console.log('🔄 RegistrationSummary: Sending registration data:', registrationData);
-
-      // יצירת משתמש עם כל הנתונים בבת אחת
-      console.log('🔄 RegistrationSummary: Calling AuthService.signUp...');
-      
       let user, signUpError;
-      try {
-        const result = await AuthService.signUp(registrationData);
-        user = result.user;
-        signUpError = result.error;
-        console.log('🔄 RegistrationSummary: AuthService.signUp completed:', { user: !!user, error: signUpError });
-      } catch (authError) {
-        console.error('❌ RegistrationSummary: AuthService.signUp threw exception:', authError);
-        signUpError = authError.message || 'Unknown error in AuthService';
-      }
 
-      if (signUpError) {
-        setLoading(false);
-        Alert.alert('שגיאה בהרשמה', signUpError);
-        return;
-      }
-
-      // אם המשתמש נוצר בהצלחה, נעביר אותו ישירות לדף הקבוצות
-      if (user) {
-        console.log('✅ RegistrationSummary: User created successfully, navigating to main app');
-        
-      // עדכון ה-AuthContext עם המשתמש החדש
-      setUser(user);
-      
-      // קבלת פרטי התוכנית שנבחרה
-      const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
-      const planName = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
-      
-      Alert.alert(
-        'הרשמה הושלמה בהצלחה!',
-        `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}. תוכל להתחיל להשתמש באפליקציה.`,
-        [
-          {
-            text: 'התחל',
-            onPress: () => {
-              // ניווט ישיר לדף הקבוצות
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Main' }],
-              });
-            }
+      if (data.isGoogleSignUp && data.googleUserId) {
+        try {
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({
+              phone:        data.phone || null,
+              track_id:     data.trackId || '1',
+              account_type: data.accountType,
+              intro_data:   introData,
+              updated_at:   new Date().toISOString(),
+            })
+            .eq('id', data.googleUserId);
+          if (updateError) {
+            signUpError = updateError.message;
+          } else {
+            user = await AuthService.getUserProfile(data.googleUserId);
           }
-        ]
-      );
+        } catch (error: any) {
+          signUpError = error.message || 'שגיאה בעדכון הפרופיל';
+        }
       } else {
-        Alert.alert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
+        try {
+          await AsyncStorage.removeItem('saved_email');
+          await AsyncStorage.removeItem('saved_password');
+          await AsyncStorage.removeItem('remember_me');
+          await AsyncStorage.setItem('explicit_logout', 'true');
+        } catch {}
+
+        if (currentUser) await signOut();
+
+        try {
+          const result = await AuthService.signUp({
+            email:           data.email,
+            password:        data.password,
+            display_name:    data.fullName,
+            full_name:       data.fullName,
+            profile_picture: data.profileImage ?? undefined,
+            phone:           data.phone,
+            track_id:        data.trackId || '1',
+            account_type:    data.accountType,
+            intro_data:      introData,
+          });
+          user       = result.user;
+          signUpError = result.error;
+        } catch (authError: any) {
+          signUpError = authError.message || 'Unknown error in AuthService';
+        }
       }
-    } catch (error: any) {
+
+      if (signUpError) { setLoading(false); legacyAlert('שגיאה בהרשמה', signUpError); return; }
+
+      if (user) {
+        if (data.isGoogleSignUp) {
+          setLoading(false);
+          try { await AsyncStorage.removeItem('explicit_logout'); } catch {}
+          setUser(user);
+          if (resetData) resetData();
+
+          const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
+          const planName     = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
+
+          legacyAlert(
+            'הרשמה הושלמה בהצלחה! 🎉',
+            `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}.`,
+            [{
+              text: 'התחל',
+              onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Main' }] }),
+            }]
+          );
+        } else {
+          setLoading(false);
+          try { await AsyncStorage.setItem('explicit_logout', 'true'); } catch {}
+          await signOut(true);
+          if (resetData) resetData();
+
+          legacyAlert(
+            'נשלח מייל אימות',
+            `שלחנו קישור אימות לכתובת ${data.email}. יש לאשר את המייל ורק אז להתחבר.`,
+            [
+              {
+                text: 'שלח שוב',
+                onPress: async () => {
+                  const { error } = await AuthService.resendVerificationEmail(data.email || '');
+                  if (error) {
+                    legacyAlert('שגיאה', error);
+                  } else {
+                    legacyAlert('בוצע', 'מייל אימות נשלח שוב בהצלחה');
+                  }
+                },
+              },
+              {
+                text: 'אישור',
+                onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }),
+              },
+            ]
+          );
+        }
+      } else {
+        legacyAlert('שגיאה', 'לא ניתן היה ליצור את המשתמש');
+      }
+    } catch {
       setLoading(false);
-      Alert.alert('שגיאה', 'אירעה שגיאה בעת השלמת ההרשמה');
-      console.error('Registration completion error:', error);
+      legacyAlert('שגיאה', 'אירעה שגיאה בעת השלמת ההרשמה');
     }
   };
-
-  const { width, height } = Dimensions.get('window');
-
-  // Create subtle background pattern
-  const createBackgroundPattern = () => {
-    const patterns = [];
-    for (let i = 0; i < 15; i++) {
-      patterns.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.05 + 0.02
-      });
-    }
-    return patterns;
-  };
-
-  const backgroundPattern = createBackgroundPattern();
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <LinearGradient
-          colors={['#000000', '#0d1b0d', '#1a2d1a', '#000000']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={['#0A0E0A', '#0F1A0F', '#142014', '#0A0E0A']}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
           style={{ flex: 1 }}
         >
-          {/* Subtle Background Pattern */}
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {backgroundPattern.map((dot, index) => (
-              <View
-                key={index}
-                style={{
-                  position: 'absolute',
-                  left: dot.x,
-                  top: dot.y,
-                  width: dot.size,
-                  height: dot.size,
-                  backgroundColor: '#00E654',
-                  opacity: dot.opacity,
-                  borderRadius: dot.size / 2
-                }}
-              />
-            ))}
-          </View>
-
-          {/* Gradient Overlay */}
+          {/* Depth overlay */}
           <LinearGradient
-            colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.35)']}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           />
 
-          {/* Transparent Background Image - Center */}
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            opacity: 0.15
-          }}>
+          {/* Bull & Bear background */}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', opacity: 0.22 }}>
             <ImageBackground
-              source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
-              style={{
-                width: width,
-                height: height,
-                resizeMode: 'contain'
-              }}
-              imageStyle={{
-                opacity: 0.3
-              }}
+              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
+              style={{ width: width * 1.6, height: height * 1.6 }}
+              imageStyle={{ resizeMode: 'contain' }}
             />
           </View>
 
-          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
-            {/* Header Section */}
-            <View style={{ alignItems: 'center', marginBottom: 40 }}>
-              {/* Success Icon */}
-              <View style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: 'rgba(0, 230, 84, 0.2)',
-                borderWidth: 3,
-                borderColor: '#00E654',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 20,
-                shadowColor: '#00E654',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 8
-              }}>
-                <Check size={40} color="#00E654" strokeWidth={2} />
-              </View>
+          {/* Animated candlestick chart */}
 
-              {/* Main Title */}
-              <Text style={{ 
-                fontSize: 32, 
-                fontWeight: '800', 
-                color: '#FFFFFF', 
-                marginBottom: 8,
-                letterSpacing: -0.8,
-                textAlign: 'center',
-                writingDirection: 'rtl'
-              }}>
+          {/* SafeArea with progress bar */}
+          <View style={{ paddingTop: 44 }}>
+            <ProgressBar current={5} total={5} />
+          </View>
+
+          <RNSafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingHorizontal: 24,
+              paddingBottom: 24,
+              paddingTop: 20,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Success icon */}
+            <View style={{ alignItems: 'center', marginBottom: 28 }}>
+              <LinearGradient
+                colors={['rgba(0,230,84,0.25)', 'rgba(0,230,84,0.05)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  width: 90,
+                  height: 90,
+                  borderRadius: 45,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 20,
+                  borderWidth: 1.5,
+                  borderColor: 'rgba(0,230,84,0.3)',
+                }}
+              >
+                <Check size={44} color={DesignTokens.colors.primary.main} strokeWidth={2.5} />
+              </LinearGradient>
+
+              <Text
+                style={{
+                  fontSize: 30,
+                  fontWeight: '800',
+                  color: '#fff',
+                  marginBottom: 8,
+                  letterSpacing: -0.5,
+                  textAlign: 'center',
+                }}
+              >
                 הרשמה הושלמה!
               </Text>
-              
-              {/* Subtitle */}
-              <Text style={{ 
-                fontSize: 16, 
-                color: '#B0B0B0', 
-                fontWeight: '400',
-                letterSpacing: 0.3,
-                textAlign: 'center',
-                lineHeight: 22,
-                writingDirection: 'rtl'
-              }}>
+              <Text
+                style={{
+                  fontSize: 15,
+                  color: 'rgba(255,255,255,0.55)',
+                  textAlign: 'center',
+                  lineHeight: 22,
+                }}
+              >
                 ברוכים הבאים ל-DarkPool
               </Text>
-              
-              {/* Decorative Line */}
-              <View style={{
-                width: 60,
-                height: 2,
-                backgroundColor: '#00E654',
-                marginTop: 16,
-                borderRadius: 1
-              }} />
             </View>
 
-            {/* Summary Section */}
-            <View style={{
-              backgroundColor: '#181818',
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.15)',
-              padding: 20,
-              marginBottom: 40
-            }}>
-              {/* Profile Section */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-        {data.profileImage ? (
+            {/* Summary card */}
+            <View
+              style={{
+                backgroundColor: 'rgba(255,255,255,0.04)',
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.08)',
+                padding: 20,
+                marginBottom: 28,
+              }}
+            >
+              {/* Profile header */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: 16,
+                  paddingBottom: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: 'rgba(255,255,255,0.06)',
+                }}
+              >
+                {data.profileImage ? (
                   <Image
                     source={{ uri: data.profileImage }}
-                    style={{
-                      width: 60,
-                      height: 60,
-                      borderRadius: 30,
-                      marginLeft: 16
-                    }}
+                    style={{ width: 56, height: 56, borderRadius: 28, marginLeft: 14 }}
                   />
                 ) : (
-                  <View style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 30,
-                    backgroundColor: 'rgba(0, 230, 84, 0.2)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: 16
-                  }}>
-                    <User size={30} color="#00E654" strokeWidth={2} />
+                  <View
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 28,
+                      backgroundColor: 'rgba(0,230,84,0.15)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginLeft: 14,
+                    }}
+                  >
+                    <User size={28} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
-                  <Text style={{ 
-                    color: '#FFFFFF', 
-                    fontSize: 18, 
-                    fontWeight: '700',
-                    writingDirection: 'rtl'
-                  }}>
+                  <Text
+                    style={{
+                      color: '#fff',
+                      fontSize: 18,
+                      fontWeight: '700',
+                      textAlign: 'right',
+                      marginBottom: 3,
+                    }}
+                  >
                     {data.fullName}
                   </Text>
-                  <Text style={{ 
-                    color: '#B0B0B0', 
-                    fontSize: 14,
-                    writingDirection: 'rtl'
-                  }}>
+                  <Text
+                    style={{
+                      color: 'rgba(255,255,255,0.45)',
+                      fontSize: 13,
+                      textAlign: 'right',
+                    }}
+                  >
                     {data.email}
                   </Text>
                 </View>
               </View>
 
-              {/* Details Section */}
-              <View style={{ gap: 16 }}>
-                {/* Phone */}
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Phone size={20} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
-                    {data.phone}
-                  </Text>
-                </View>
-
-                {/* Track */}
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TrendingUp size={20} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
-                    {tracks[data.trackId] || 'מסלול לא נבחר'}
-                  </Text>
-                </View>
-
-                {/* Markets */}
-                {data.markets && data.markets.length > 0 && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <BarChart3 size={20} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
-                      {data.markets.join(', ')}
-                    </Text>
-                  </View>
-                )}
-
-                {/* Experience */}
-                {data.experience && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Clock size={20} color="#00E654" strokeWidth={2} style={{ marginLeft: 12 }} />
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, writingDirection: 'rtl', flex: 1 }}>
-                      {data.experience}
-                    </Text>
-                  </View>
-                )}
-              </View>
+              {/* Details */}
+              {data.phone && (
+                <SummaryRow
+                  icon={<Phone size={18} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                  label={data.phone}
+                />
+              )}
+              <SummaryRow
+                icon={<TrendingUp size={18} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                label={tracks[data.trackId] || 'מסלול לא נבחר'}
+              />
+              {data.markets && data.markets.length > 0 && (
+                <SummaryRow
+                  icon={<BarChart3 size={18} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                  label={data.markets.join(' · ')}
+                />
+              )}
+              {data.experience && (
+                <SummaryRow
+                  icon={<Clock size={18} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
+                  label={data.experience}
+                />
+              )}
             </View>
 
-            {/* Action Buttons */}
-            <View style={{ gap: 16 }}>
-              {/* Finish Button */}
+            {/* Buttons */}
+            <View style={{ gap: 8 }}>
               <LinearGradient
-                colors={['#00E654', '#00B84A', '#008F3A']}
+                colors={['#00C805', '#00A004', '#008F03']}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+                end={{ x: 1, y: 0 }}
                 style={{
-                  borderRadius: 14,
-                  shadowColor: '#00E654',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 12,
-                  elevation: 8
+                  borderRadius: 30,
+                  shadowColor: DesignTokens.colors.primary.main,
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 16,
+                  elevation: 8,
                 }}
               >
-        <TouchableOpacity
-          onPress={handleFinish}
-          disabled={loading}
-                  style={{
-                    paddingVertical: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: loading ? 0.7 : 1
+                <TouchableOpacity
+                  onPress={() => {
+                    void HapticFeedback.success();
+                    handleFinish();
                   }}
-        >
-          {loading ? (
-                    <ActivityIndicator color="#000000" size="small" />
+                  disabled={loading}
+                  activeOpacity={0.85}
+                  style={{
+                    paddingVertical: 17,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    opacity: loading ? 0.75 : 1,
+                  }}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#000" size="small" />
                   ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Rocket size={20} color="#000000" strokeWidth={2} style={{ marginLeft: 8 }} />
-                      <Text style={{ 
-                        color: '#000000', 
-                        fontSize: 16, 
-                        fontWeight: '700',
-                        letterSpacing: 0.5,
-                        textTransform: 'uppercase',
-                        writingDirection: 'rtl'
-                      }}>
+                    <>
+                      <Rocket size={18} color="#000" strokeWidth={2} style={{ marginLeft: 8 }} />
+                      <Text style={{ color: '#000', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 }}>
                         התחל להשתמש
                       </Text>
-                    </View>
-          )}
-        </TouchableOpacity>
+                    </>
+                  )}
+                </TouchableOpacity>
               </LinearGradient>
 
-              {/* Edit Button */}
               <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                style={{
-                  backgroundColor: '#181818',
-                  borderRadius: 14,
-                  paddingVertical: 16,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.15)'
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  navigation.goBack();
                 }}
+                activeOpacity={0.7}
+                style={{ paddingVertical: 16, alignItems: 'center' }}
               >
-                <Text style={{ 
-                  color: '#B0B0B0', 
-                  fontSize: 16, 
-                  fontWeight: '600',
-                  letterSpacing: 0.3,
-                  writingDirection: 'rtl'
-                }}>
+                <Text
+                  style={{
+                    color: 'rgba(255,255,255,0.45)',
+                    fontSize: 15,
+                    fontWeight: '500',
+                  }}
+                >
                   ערוך פרטים
                 </Text>
               </TouchableOpacity>
             </View>
-    </View>
+          </ScrollView>
+          </RNSafeAreaView>
         </LinearGradient>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 };
 
-export default RegistrationSummaryScreen; 
+export default RegistrationSummaryScreen;

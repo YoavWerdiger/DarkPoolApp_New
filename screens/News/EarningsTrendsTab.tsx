@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { TrendingUp, TrendingDown, Users } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface EarningsTrend {
   id: string
@@ -30,6 +31,7 @@ interface EarningsTrend {
 }
 
 const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
+  const DesignTokens = useDesignTokens();
   const getCompanyName = (code: string) => {
     const companies: { [key: string]: string } = {
       'AAPL.US': 'Apple',
@@ -82,31 +84,25 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
         paddingVertical: 14,
         paddingHorizontal: 16,
         backgroundColor: DesignTokens.colors.background.secondary,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
-        elevation: 6,
-        borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.06)'
       }}
     >
       {/* Header - Company & Period */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <View>
-          <Text 
-            style={{ 
-              fontSize: 18, 
-              fontWeight: '700', 
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: '700',
               color: DesignTokens.colors.text.primary,
               textAlign: 'right'
             }}
           >
             {getCompanyName(trend.code)}
           </Text>
-          <Text 
-            style={{ 
-              fontSize: 12, 
+          <Text
+            style={{
+              fontSize: 12,
               color: DesignTokens.colors.text.tertiary,
               textAlign: 'right',
               marginTop: 2
@@ -115,46 +111,46 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
             {trend.code}
           </Text>
         </View>
-        
-        <View 
-          style={{ 
-            paddingHorizontal: 12, 
-            paddingVertical: 6, 
-            borderRadius: 14, 
-            backgroundColor: 'rgba(0, 216, 74, 0.15)' 
+
+        <View
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 14,
+            backgroundColor: `${DesignTokens.colors.success.main}26`
           }}
         >
-          <Text style={{ fontSize: 12, color: '#00D84A', fontWeight: '700' }}>
+          <Text style={{ fontSize: 12, color: DesignTokens.colors.success.main, fontWeight: '700' }}>
             {getPeriodName(trend.period)}
           </Text>
         </View>
       </View>
 
       {/* EPS & Revenue Estimates */}
-      <View style={{ flexDirection: 'row-reverse', marginBottom: 12 }}>
-        <View style={{ flex: 1, marginLeft: 8, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}>
-          <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>
+      <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'right' }}>
             EPS צפוי
           </Text>
-          <Text style={{ fontSize: 17, fontWeight: '700', color: '#00D84A' }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: DesignTokens.colors.success.main, textAlign: 'right' }}>
             ${formatNumber(trend.earnings_estimate_avg)}
           </Text>
           {trend.earnings_estimate_growth !== null && (
-            <Text style={{ fontSize: 11, color: trend.earnings_estimate_growth >= 0 ? '#00D84A' : DesignTokens.colors.danger.main, marginTop: 4 }}>
+            <Text style={{ fontSize: 11, color: trend.earnings_estimate_growth >= 0 ? DesignTokens.colors.success.main : DesignTokens.colors.danger.main, marginTop: 4, textAlign: 'right' }}>
               {formatPercent(trend.earnings_estimate_growth)}
             </Text>
           )}
         </View>
 
-        <View style={{ flex: 1, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', alignItems: 'center' }}>
-          <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, textAlign: 'right' }}>
             הכנסות צפויות
           </Text>
-          <Text style={{ fontSize: 17, fontWeight: '700', color: DesignTokens.colors.text.primary }}>
+          <Text style={{ fontSize: 17, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'right' }}>
             ${formatNumber(trend.revenue_estimate_avg)}
           </Text>
           {trend.revenue_estimate_growth !== null && (
-            <Text style={{ fontSize: 11, color: trend.revenue_estimate_growth >= 0 ? '#00D84A' : DesignTokens.colors.danger.main, marginTop: 4 }}>
+            <Text style={{ fontSize: 11, color: trend.revenue_estimate_growth >= 0 ? DesignTokens.colors.success.main : DesignTokens.colors.danger.main, marginTop: 4, textAlign: 'right' }}>
               {formatPercent(trend.revenue_estimate_growth)}
             </Text>
           )}
@@ -162,7 +158,7 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
       </View>
 
       {/* Analyst Insights */}
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
         {/* Analysts Count */}
         {trend.earnings_estimate_analysts_count !== null && (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -176,11 +172,11 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
         {/* 7-Day Trend */}
         {epsChange !== null && (
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: 12, color: isPositiveTrend ? '#00D84A' : DesignTokens.colors.danger.main, marginRight: 6, fontWeight: '700' }}>
+            <Text style={{ fontSize: 12, color: isPositiveTrend ? DesignTokens.colors.success.main : DesignTokens.colors.danger.main, marginRight: 6, fontWeight: '700' }}>
               {formatPercent(epsChange)}
             </Text>
             {isPositiveTrend ? (
-              <TrendingUp size={14} color="#00D84A" strokeWidth={2.5} />
+              <TrendingUp size={14} color={DesignTokens.colors.success.main} strokeWidth={2.5} />
             ) : (
               <TrendingDown size={14} color={DesignTokens.colors.danger.main} strokeWidth={2.5} />
             )}
@@ -195,41 +191,41 @@ const TrendCard: React.FC<{ trend: EarningsTrend }> = ({ trend }) => {
 };
 
 export default function EarningsTrendsTab() {
+  const DesignTokens = useDesignTokens();
   const [trends, setTrends] = useState<EarningsTrend[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadTrends = useCallback(async () => {
     try {
-      console.log('📊 Loading earnings trends from Supabase');
-      
       const { data, error } = await supabase
         .from('earnings_trends')
         .select('*')
         .order('date', { ascending: false })
         .limit(100);
-      
+
       if (error) {
-        console.error('❌ Supabase error:', error);
         return;
       }
-      
+
       if (data) {
-        console.log(`✅ Loaded ${data.length} trends`);
         setTrends(data);
       }
     } catch (error) {
-      console.error('❌ Error loading trends:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadTrends();
-  };
+    try {
+      await loadTrends();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
+  }, [loadTrends]);
 
   useEffect(() => {
     loadTrends();
@@ -250,7 +246,7 @@ export default function EarningsTrendsTab() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-        <ActivityIndicator size="large" color="#00D84A" />
+        <ActivityIndicator size="large" color="DesignTokens.colors.success.main" />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען תחזיות...
         </Text>
@@ -268,8 +264,8 @@ export default function EarningsTrendsTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#00D84A"
-            colors={['#00D84A']}
+            tintColor={DesignTokens.colors.success.main}
+            colors={[DesignTokens.colors.success.main]}
           />
         }
         ListEmptyComponent={renderEmptyState}

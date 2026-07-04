@@ -1,38 +1,36 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  TouchableOpacity
-} from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Clock, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import EconomicCalendarService, { EconomicEvent } from '../../services/economicCalendarService';
-// הימנעות מ-`import type` כדי למנוע בעיות טרנספילציה ב-Metro
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { EconomicEvent } from '../../services/economicCalendarService';
 type EconEvent = EconomicEvent;
-import EODHDService, { SUPPORTED_ECONOMIC_INDICATORS, SUPPORTED_COUNTRIES } from '../../services/eodhdService';
-import EconomicDataCacheService, { CachedEconomicEvent } from '../../services/economicDataCache';
-import ScheduledUpdatesService from '../../services/scheduledUpdates';
-import FinnhubService from '../../services/finnhubService';
 import { supabase } from '../../lib/supabase';
-import { getIndicatorExplanation, getIndicatorTitle } from '../../utils/economicIndicatorExplanations';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
+import { getIndicatorExplanation } from '../../utils/economicIndicatorExplanations';
+import { translateEconomicEventNameSmart } from '../../utils/economicEventTranslations';
+import UICard from '../../components/ui/UICard';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
+import { formatEconomicDisplayValue, parseEconomicNumber } from '../../utils/economicNumberFormat';
 
 const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent) => void }> = ({ 
   event, 
   onPress 
 }) => {
+  const DesignTokens = useDesignTokens();
+  
   const getImportanceColor = (importance: string) => {
     switch (importance) {
-      case 'high': return DesignTokens.colors.danger.main;
-      case 'medium': return DesignTokens.colors.warning.main;
-      case 'low': return DesignTokens.colors.success.main;
-      default: return 'rgba(255,255,255,0.18)';
+      case 'high':
+        return DesignTokens.colors.danger.main;
+      case 'medium':
+        return DesignTokens.colors.warning.main;
+      case 'low':
+        return DesignTokens.colors.success.main;
+      default:
+        return DesignTokens.colors.border.primary;
     }
   };
 
@@ -44,126 +42,110 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
   };
 
   const importanceColor = getImportanceColor(event.importance);
-  const cleanTitle = stripEmojis(event.title || '');
+  // תרגום שם האירוע לעברית
+  const translatedTitle = translateEconomicEventNameSmart(event.title || '');
+  const cleanTitle = stripEmojis(translatedTitle);
 
   const getActualColor = (): string => {
-    const actual = Number(event.actual);
-    const forecast = Number(event.forecast);
+    const actual = parseEconomicNumber(event.actual);
+    const forecast = parseEconomicNumber(event.forecast);
     if (!isFinite(actual) || !isFinite(forecast)) {
       return DesignTokens.colors.text.primary;
     }
     // כלל פשוט: תוצאה >= תחזית → ירוק עדין, אחרת אדום עדין
-    return actual >= forecast ? '#00D84A' : DesignTokens.colors.danger.main;
+    return actual >= forecast ? DesignTokens.colors.primary.main : DesignTokens.colors.danger.main;
   };
 
+  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   return (
-    <Pressable
-      onPress={() => onPress(event)}
-      style={{
-        marginHorizontal: 16,
-        marginBottom: 12,
-        borderRadius: 16,
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        backgroundColor: DesignTokens.colors.background.secondary,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)'
-      }}
-    >
-      {/* פס חשיבות דק מיושר לימין, עם פינות מעוגלות */}
-      <View style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 3, backgroundColor: importanceColor, borderTopRightRadius: 16, borderBottomRightRadius: 16 }} />
-
-      {/* כותרת נקייה */}
-      <Text 
-        style={{ 
-          fontSize: 16, 
-          fontWeight: '700', 
-          color: DesignTokens.colors.text.primary,
-          textAlign: 'right',
-          lineHeight: 22
+    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
+      <UICard variant="blur" padding="lg" style={{ flexDirection: 'row', alignItems: 'flex-start', overflow: 'hidden' }}>
+      {/* פס חשיבות דק מיושר לימין, מעוגל בפינות - מתאים לגובה הכרטיסיה */}
+      <View
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          backgroundColor: importanceColor,
+          borderTopRightRadius: 12,
+          borderBottomRightRadius: 12,
         }}
-        numberOfLines={2}
-      >
-        {cleanTitle}
-      </Text>
+      />
 
-      {/* מטא־דאטה ניטרלי: שעה בלבד + מדינה/מטבע */}
-      <View style={{ flexDirection: 'row-reverse', marginTop: 12, gap: 8 }}>
-        <View style={{ 
-          flexDirection: 'row', 
-          alignItems: 'center', 
-          paddingHorizontal: 10, 
-          paddingVertical: 6, 
-          borderRadius: 12, 
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.08)'
-        }}>
-          <Clock size={12} color={DesignTokens.colors.text.tertiary} strokeWidth={2} style={{ marginLeft: 6 }} />
-          <Text style={{ fontSize: 12, color: DesignTokens.colors.text.secondary, fontWeight: '600' }}>{event.time}</Text>
+      {/* תוכן מימין */}
+      <View style={{ flex: 1, alignItems: 'flex-end', marginRight: 12 }}>
+        {/* שורה עליונה - זמן וכותרת (RTL: זמן משמאל, כותרת מימין) */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
+          <Text 
+            style={{ 
+              fontSize: 18, 
+              fontWeight: '700', 
+              color: DesignTokens.colors.text.primary,
+              textAlign: 'right',
+              lineHeight: 24,
+              flex: 1,
+              marginRight: 8
+            }}
+            numberOfLines={2}
+          >
+            {cleanTitle}
+          </Text>
+          <View style={{
+            backgroundColor: (DesignTokens.colors.primary as any).dim || 'rgba(0, 210, 106, 0.12)',
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 20
+          }}>
+            <Text style={{ 
+              fontSize: 16, 
+              color: DesignTokens.colors.primary.main,
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              {event.time}
+            </Text>
+          </View>
         </View>
-        <View style={{ 
-          paddingHorizontal: 10, 
-          paddingVertical: 6, 
-          borderRadius: 12, 
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.08)'
-        }}>
-          <Text style={{ fontSize: 12, color: DesignTokens.colors.text.secondary, fontWeight: '500' }}>{event.country} ({event.currency})</Text>
-        </View>
-      </View>
 
-      {/* בלוק ערכים ויזואלי – קופסאות */}
+      {/* בלוק ערכים ויזואلي – ללא מסגרות, עם פסי הפרדה */}
+      {/* מציגים רק אם יש תוצאה/תחזית/קודם - אחרת רק שעה ושם האירוע */}
       {(event.actual || event.forecast || event.previous) && (
-        <View style={{ flexDirection: 'row-reverse', marginTop: 14, gap: 8 }}>
-          {event.actual && (
-            <View style={{ 
-              flex: 1, 
-              paddingVertical: 12, 
-              paddingHorizontal: 10, 
-              borderRadius: 12, 
-              backgroundColor: 'rgba(0, 216, 74, 0.08)', 
-              borderWidth: 1, 
-              borderColor: 'rgba(0, 216, 74, 0.2)', 
-              alignItems: 'center' 
-            }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, fontWeight: '500' }}>תוצאה</Text>
-              <Text style={{ fontSize: 17, fontWeight: '700', color: getActualColor() }}>{event.actual}</Text>
-            </View>
-          )}
-          {event.forecast && (
-            <View style={{ 
-              flex: 1, 
-              paddingVertical: 12, 
-              paddingHorizontal: 10, 
-              borderRadius: 12, 
-              backgroundColor: 'rgba(255,255,255,0.05)', 
-              borderWidth: 1, 
-              borderColor: 'rgba(255,255,255,0.08)', 
-              alignItems: 'center' 
-            }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, fontWeight: '500' }}>תחזית</Text>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: DesignTokens.colors.text.primary }}>{event.forecast}</Text>
-            </View>
-          )}
-          {event.previous && (
-            <View style={{ 
-              flex: 1, 
-              paddingVertical: 12, 
-              paddingHorizontal: 10, 
-              borderRadius: 12, 
-              backgroundColor: 'rgba(255,255,255,0.05)', 
-              borderWidth: 1, 
-              borderColor: 'rgba(255,255,255,0.08)', 
-              alignItems: 'center' 
-            }}>
-              <Text style={{ fontSize: 11, color: DesignTokens.colors.text.tertiary, marginBottom: 4, fontWeight: '500' }}>קודם</Text>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: DesignTokens.colors.text.secondary }}>{event.previous}</Text>
-            </View>
-          )}
+        <View style={{ marginTop: 12 }}>
+          {/* פס הפרדה אופקי עליון */}
+          <View style={{ height: 1, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginBottom: 12 }} />
+          
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
+            {event.actual && (
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>תוצאה</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: getActualColor(), textAlign: 'center' }}>{formatEconomicDisplayValue(event.actual)}</Text>
+              </View>
+            )}
+              {event.actual && (event.forecast || event.previous) && (
+              <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
+            )}
+            {event.forecast && (
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>תחזית</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center' }}>{formatEconomicDisplayValue(event.forecast)}</Text>
+              </View>
+            )}
+            {event.forecast && event.previous && (
+              <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
+            )}
+            {event.previous && (
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>קודם</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'center' }}>{formatEconomicDisplayValue(event.previous)}</Text>
+              </View>
+            )}
+          </View>
         </View>
       )}
+      </View>
+      </UICard>
     </Pressable>
   );
 };
@@ -218,58 +200,118 @@ const CRITICAL_EVENTS = [
 ];
 
 export default function EconomicCalendarTab() {
-  const [events, setEvents] = useState<EconEvent[]>([]);
+  const DesignTokens = useDesignTokens();
+  const screenPad = DesignTokens.layout?.screenPadding ?? 20;
+  // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי
+  const [events, setEvents] = useState<EconEvent[]>(
+    () => queryClient.getQueryData<EconEvent[]>(appQueryKeys.economicEvents) ?? []
+  );
   const [filteredEvents, setFilteredEvents] = useState<EconEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => !queryClient.getQueryData<EconEvent[]>(appQueryKeys.economicEvents)
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImportance, setSelectedImportance] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week'>('week');
-  const [showCriticalOnly, setShowCriticalOnly] = useState(false);
   
   // תצוגה יומית חדשה
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dailyEvents, setDailyEvents] = useState<EconEvent[]>([]);
+  
+  // Ref לגלילה לאירוע הקרוב ביותר
+  const dailyEventsListRef = useRef<FlatList>(null);
+
+  // דיבאג - בדיקה מתי הref מוכן (useLayoutEffect רץ סינכרוני אחרי DOM update)
+  useLayoutEffect(() => {
+    if (!loading) {
+    }
+  }, [loading]);
+  
+  // בדיקה נוספת אחרי טיימר
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => {
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
 
   // פילטרים מתקדמים
   // פישוט: אין פילטרים מתקדמים, אין טעינת היסטוריה ידנית
 
   // פונקציות ניווט יומי
   const goToPreviousDay = () => {
+    void HapticFeedback.impactLight();
     const previousDay = new Date(selectedDate);
     previousDay.setDate(selectedDate.getDate() - 1);
     setSelectedDate(previousDay);
   };
 
   const goToNextDay = () => {
+    void HapticFeedback.impactLight();
     const nextDay = new Date(selectedDate);
     nextDay.setDate(selectedDate.getDate() + 1);
     setSelectedDate(nextDay);
   };
 
-  const goToToday = () => {
+  const goToToday = useCallback(() => {
+    void HapticFeedback.medium();
     setSelectedDate(new Date());
-  };
+    dailyEventsListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
 
-  // בדיקה אם אירוע הוא חשוב
-  const isCriticalEvent = (event: EconEvent): boolean => {
-    const titleLower = event.title.toLowerCase();
+  const isSelectedToday = selectedDate.toDateString() === new Date().toDateString();
+
+  const fabBottomInset = DesignTokens.spacing.lg;
+  const listBottomPad = isSelectedToday ? DesignTokens.spacing.md : fabBottomInset + 68;
+
+  const fabStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        wrap: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          alignItems: 'center',
+          paddingBottom: fabBottomInset,
+          zIndex: 40,
+        },
+        btn: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 8,
+          paddingHorizontal: 22,
+          paddingVertical: 14,
+          borderRadius: 28,
+          backgroundColor: DesignTokens.colors.primary.main,
+          ...DesignTokens.shadows.md,
+        },
+        btnText: {
+          fontSize: 16,
+          fontWeight: '700',
+          color: DesignTokens.colors.text.inverse,
+        },
+      }),
+    [DesignTokens, fabBottomInset],
+  );
+
+  // בדיקה אם אירוע הוא "מוכר" — נכלל ברשימת ה-CRITICAL_EVENTS או מסומן כ-high
+  // importance ב-DB. מספיק שאחד מהשניים יתקיים כדי שהאירוע ייחשב חשוב.
+  const isCriticalEvent = useCallback((event: EconEvent): boolean => {
+    if (event.importance === 'high') return true;
+    const titleLower = (event.title || '').toLowerCase();
     const descLower = (event.description || '').toLowerCase();
     const categoryLower = (event.category || '').toLowerCase();
-    
-    return CRITICAL_EVENTS.some(keyword => 
-      titleLower.includes(keyword.toLowerCase()) ||
-      descLower.includes(keyword.toLowerCase()) ||
-      categoryLower.includes(keyword.toLowerCase())
-    );
-  };
+    return CRITICAL_EVENTS.some(keyword => {
+      const k = keyword.toLowerCase();
+      return titleLower.includes(k) || descLower.includes(k) || categoryLower.includes(k);
+    });
+  }, []);
 
   // פילטור אירועים לפי יום נבחר עם תיקון שעה
   const filterEventsByDate = useCallback(() => {
     const selectedDateStr = selectedDate.toISOString().split('T')[0]; // YYYY-MM-DD
-    console.log(`🔍 DEBUG: Filtering for date: ${selectedDateStr}`);
-    console.log(`🔍 DEBUG: Selected date object:`, selectedDate);
-    console.log(`🔍 DEBUG: Total events available:`, events.length);
-    
     // פילטור חכם: דיווחים מ-00:00 עד 06:00 שייכים ליום הקודם
     // דיווחים מ-06:00 והלאה שייכים ליום הנוכחי
     let eventsForDay = events.filter(event => {
@@ -290,7 +332,6 @@ export default function EconomicCalendarTab() {
           previousDay.setDate(selectedDateObj.getDate() - 1);
           const previousDayStr = previousDay.toISOString().split('T')[0];
           
-          console.log(`🕐 Early event ${event.title} at ${eventTime} - should be on ${previousDayStr}, not ${selectedDateStr}`);
           return false; // לא להציג אותו ביום הנוכחי
         }
         
@@ -309,7 +350,6 @@ export default function EconomicCalendarTab() {
         const cutoffHour = 6 * 60; // 06:00
         
         if (eventHour <= cutoffHour) {
-          console.log(`🕐 Late event ${event.title} at ${eventTime} - should be on ${selectedDateStr}, not ${nextDayStr}`);
           return true; // להציג אותו ביום הנוכחי
         }
       }
@@ -317,62 +357,152 @@ export default function EconomicCalendarTab() {
       return false;
     });
     
-    console.log(`🔍 DEBUG: Events found for ${selectedDateStr} (with time correction):`, eventsForDay.length);
-    console.log(`🔍 DEBUG: Sample events:`, eventsForDay.slice(0, 3).map(e => ({ title: e.title, date: e.date, time: e.time, actual: e.actual })));
-    
-    // סינון אירועים חשובים אם הפילטר פעיל
-    if (showCriticalOnly) {
-      eventsForDay = eventsForDay.filter(isCriticalEvent);
-      console.log(`⭐ Filtering critical events for ${selectedDateStr}: found ${eventsForDay.length} critical events`);
-    } else {
-      console.log(`📅 Filtering events for ${selectedDateStr}: found ${eventsForDay.length} events`);
-    }
+    // סינון קבוע לדוחות מוכרים בלבד (FED / CPI / NFP / ...) — מסיר אלפי
+    // אירועים מקומיים/קלים שלא משפיעים על השווקים האמריקאיים.
+    eventsForDay = eventsForDay.filter(isCriticalEvent);
+
+    // מיון לפי זמן (מהשעה הקטנה לגדולה)
+    eventsForDay.sort((a, b) => {
+      const timeA = (a.time || '00:00').split(':').map(Number);
+      const timeB = (b.time || '00:00').split(':').map(Number);
+      const minutesA = timeA[0] * 60 + timeA[1];
+      const minutesB = timeB[0] * 60 + timeB[1];
+      return minutesA - minutesB;
+    });
     
     setDailyEvents(eventsForDay);
-  }, [events, selectedDate, showCriticalOnly]);
+  }, [events, selectedDate, isCriticalEvent]);
 
   // עדכון אירועים יומיים כשמשתנה התאריך או האירועים
   useEffect(() => {
     filterEventsByDate();
   }, [filterEventsByDate]);
 
-  // טעינת אירועים מ-Supabase Database
+  // חישוב אינדקס האירוע הקרוב ביותר לשעה הנוכחית מתוך dailyEvents
+  const findClosestEventIndex = useCallback((events: EconEvent[]): number => {
+    if (events.length === 0) return -1;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    let closestIndex = 0;
+    let smallestDiff = Infinity;
+    events.forEach((event, index) => {
+      const [hours, minutes] = (event.time || '00:00').split(':').map(Number);
+      const eventMinutes = hours * 60 + minutes;
+      const diff = Math.abs(eventMinutes - currentMinutes);
+      if (diff < smallestDiff) {
+        smallestDiff = diff;
+        closestIndex = index;
+      }
+    });
+    return closestIndex;
+  }, []);
+
+  // גלילה אקטיבית לאינדקס מסוים עם fallback אם scrollToIndex נכשל
+  const scrollToEventIndex = useCallback((index: number, animated: boolean = true) => {
+    const list = dailyEventsListRef.current;
+    if (!list || index < 0) return;
+    try {
+      list.scrollToIndex({
+        index,
+        animated,
+        viewPosition: 0.2,
+      });
+    } catch {
+      // ה-onScrollToIndexFailed יתפוס – בנוסף ננסה fallback ידני
+      const estimatedItemHeight = 100;
+      list.scrollToOffset({
+        offset: Math.max(0, index * estimatedItemHeight - 80),
+        animated,
+      });
+    }
+  }, []);
+
+  // כפתור "כעת" – גלילה ידנית לאירוע הקרוב לשעה הנוכחית
+  const scrollToClosestEvent = useCallback(() => {
+    if (dailyEvents.length === 0) return;
+    const isToday = selectedDate.toDateString() === new Date().toDateString();
+    if (!isToday) {
+      setSelectedDate(new Date());
+      return;
+    }
+    const closestIndex = findClosestEventIndex(dailyEvents);
+    if (closestIndex >= 0) {
+      void HapticFeedback.selection();
+      scrollToEventIndex(closestIndex, true);
+    }
+  }, [dailyEvents, selectedDate, findClosestEventIndex, scrollToEventIndex]);
+
+  // גלילה אוטומטית לאירוע הקרוב ביותר ברגע שהנתונים נטענים והתאריך הוא היום
+  const autoScrolledForKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    if (dailyEvents.length === 0) return;
+    const isToday = selectedDate.toDateString() === new Date().toDateString();
+    if (!isToday) return;
+
+    const todayKey = selectedDate.toDateString();
+    if (autoScrolledForKeyRef.current === todayKey) return;
+    autoScrolledForKeyRef.current = todayKey;
+
+    const closestIndex = findClosestEventIndex(dailyEvents);
+    if (closestIndex < 0) return;
+
+    // המתנה לרינדור הראשוני של ה-FlatList לפני קריאה ל-scrollToIndex
+    const t1 = setTimeout(() => scrollToEventIndex(closestIndex, false), 250);
+    const t2 = setTimeout(() => scrollToEventIndex(closestIndex, true), 600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [loading, dailyEvents, selectedDate, findClosestEventIndex, scrollToEventIndex]);
+
+  // טעינת אירועים מ-Supabase Database – קודם טווח קצר (היום והלאה), אחר כך עבר
   const loadFromDatabase = async (): Promise<EconEvent[]> => {
     try {
-      console.log('💾 Loading from Supabase Database...');
-      
-      // קבלת טווח תאריכים - 3 חודשים אחורה ו-3 חודשים קדימה מהיום (לא מהתאריך הנבחר)
-      const today = new Date(); // תמיד התאריך הנוכחי
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
       const startDate = new Date(today);
       startDate.setMonth(startDate.getMonth() - 3);
       const endDate = new Date(today);
       endDate.setMonth(endDate.getMonth() + 3);
-      
       const startDateStr = startDate.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
       
-      console.log(`📅 Fetching events from ${startDateStr} to ${endDateStr}`);
+      // שליפה 1: אירועים מהיום והלאה (טווח קצר) – עד 600 רשומות
+      const { data: futureData, error: futureError } = await supabase
+        .from('economic_events')
+        .select('*')
+        .gte('date', todayStr)
+        .lte('date', endDateStr)
+        .order('date', { ascending: true })
+        .limit(600);
       
-      const { data, error } = await supabase
+      if (futureError) {
+      }
+      
+      // שליפה 2: אירועים לפני היום (עבר) – עד 600 רשומות
+      const { data: pastData, error: pastError } = await supabase
         .from('economic_events')
         .select('*')
         .gte('date', startDateStr)
-        .lte('date', endDateStr)
-        .order('date', { ascending: true })
-        .limit(1000);
+        .lt('date', todayStr)
+        .order('date', { ascending: false })
+        .limit(600);
       
-      if (error) {
-        console.error('❌ Supabase error:', error);
-        return [];
+      if (pastError) {
       }
       
-      if (!data || data.length === 0) {
-        console.log('⚠️ No data in database');
+      const future = futureData || [];
+      const past = (pastData || []).reverse();
+      const byId = new Map<string, (typeof future)[0]>();
+      [...past, ...future].forEach(e => byId.set(e.id, e));
+      const data = Array.from(byId.values()).sort(
+        (a, b) => (a.date as string).localeCompare(b.date as string)
+      );
+      
+      if (data.length === 0) {
         return [];
       }
-      
-      console.log(`✅ Loaded ${data.length} events from database`);
-      console.log(`🔍 DEBUG: Sample data from DB:`, data.slice(0, 3).map(e => ({ title: e.title, date: e.date, actual: e.actual })));
       
       // המרה לפורמט של האפליקציה
       return data.map(event => {
@@ -398,13 +528,11 @@ export default function EconomicCalendarTab() {
         const eventDateTime = new Date(`${convertedEvent.date}T${convertedEvent.time}`);
         const now = new Date();
         if (convertedEvent.actual && eventDateTime > now) {
-          console.warn(`⚠️ WARNING: Event ${convertedEvent.title} on ${convertedEvent.date} has actual value but is in the future!`);
         }
         
         return convertedEvent;
       });
     } catch (error) {
-      console.error('❌ Error loading from database:', error);
       return [];
     }
   };
@@ -412,21 +540,24 @@ export default function EconomicCalendarTab() {
   // טעינת אירועים כלכליים מ-Database בלבד
   const loadEconomicEvents = useCallback(async () => {
     try {
-      console.log('📅 EconomicCalendarTab: Loading economic events from Database');
-      
       // טעינה מ-Supabase Database
       const loadedEvents = await loadFromDatabase();
       
       if (loadedEvents.length === 0) {
-        Alert.alert('אין נתונים', 'הטבלה ריקה. הרץ את daily-economic-sync להביא נתונים.');
+      } else {
+        const datesWithEvents = [...new Set(loadedEvents.map(e => e.date))].sort();
+        const todayStr = new Date().toISOString().split('T')[0];
+        const hasEventsForToday = loadedEvents.some(e => e.date === todayStr);
+        if (datesWithEvents.length > 0 && !hasEventsForToday) {
+          setSelectedDate(new Date(datesWithEvents[0] + 'T12:00:00'));
+        }
       }
       
-      console.log('✅ EconomicCalendarTab: Loaded', loadedEvents.length, 'events');
       setEvents(loadedEvents);
+      queryClient.setQueryData(appQueryKeys.economicEvents, loadedEvents);
       filterEvents(loadedEvents, selectedImportance);
     } catch (error) {
-      console.error('❌ EconomicCalendarTab: Error loading events:', error);
-      Alert.alert('שגיאה', 'לא ניתן לטעון את האירועים הכלכליים');
+      legacyAlert('שגיאה', 'לא ניתן לטעון את האירועים הכלכליים');
       setEvents([]);
       setFilteredEvents([]);
     } finally {
@@ -466,14 +597,11 @@ export default function EconomicCalendarTab() {
 
   // Realtime subscription - עדכונים אוטומטיים מ-Supabase
   useEffect(() => {
-    console.log('🔄 Subscribing to economic_events realtime updates...');
-    
     const subscription = supabase
       .channel('economic_events_channel')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'economic_events' },
         (payload) => {
-          console.log('📡 Economic event realtime update:', payload);
           // רענן את הנתונים
           loadEconomicEvents();
         }
@@ -481,24 +609,26 @@ export default function EconomicCalendarTab() {
       .subscribe();
 
     return () => {
-      console.log('🔄 Unsubscribing from economic_events realtime');
       subscription.unsubscribe();
     };
   }, [loadEconomicEvents]);
 
   // רענון
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadEconomicEvents();
+    try {
+      await loadEconomicEvents();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
   }, [loadEconomicEvents]);
 
   // בוטל: טעינת נתונים היסטוריים ידנית – היסטוריה נטענת בדיפולט דרך ה-cache
 
   // בחירת אירוע
   const handleEventPress = useCallback((event: EconomicEvent) => {
-    console.log('📅 EconomicCalendarTab: Event pressed:', event.title);
-    
     // קבלת הסבר מקצועי למדד
+    const translatedTitle = translateEconomicEventNameSmart(event.title);
     const explanation = getIndicatorExplanation(event.title, event.description, event.category);
     
     // הצגת נתונים אם יש
@@ -506,27 +636,101 @@ export default function EconomicCalendarTab() {
     
     if (event.forecast || event.actual || event.previous) {
       message += 'נתונים:\n';
-      if (event.forecast) message += `תחזית: ${event.forecast}\n`;
-      if (event.actual) message += `תוצאה: ${event.actual}\n`;
-      if (event.previous) message += `ערך קודם: ${event.previous}\n`;
+      if (event.forecast) message += `תחזית: ${formatEconomicDisplayValue(event.forecast)}\n`;
+      if (event.actual) message += `תוצאה: ${formatEconomicDisplayValue(event.actual)}\n`;
+      if (event.previous) message += `ערך קודם: ${formatEconomicDisplayValue(event.previous)}\n`;
       message += '\n';
     }
     
     message += explanation;
     
-    Alert.alert(
-      event.title,
+    legacyAlert(
+      translatedTitle,
       message,
       [{ text: 'סגור', style: 'cancel' }]
     );
   }, []);
 
   // רינדור אירוע
-  const renderEvent = ({ item }: { item: EconomicEvent }) => (
-    <EconomicEventCard
-      event={item}
-      onPress={handleEventPress}
-    />
+  const renderDateNavigator = () => (
+    <View
+      style={{
+        paddingHorizontal: screenPad,
+        paddingTop: 10,
+        paddingBottom: 20,
+        marginBottom: 4,
+      }}
+    >
+      <UICard
+        variant="blur"
+        glassIntensity="subtle"
+        padding="none"
+        style={{
+          borderRadius: DesignTokens.borderRadius.full,
+          overflow: 'hidden',
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: 'row',
+            direction: 'ltr',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <DayNavBlurButton onPress={goToPreviousDay} glassIntensity="subtle">
+            <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
+
+          <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: '600',
+                lineHeight: 21,
+                color: DesignTokens.colors.text.primary,
+                textAlign: 'center',
+              }}
+              numberOfLines={2}
+            >
+              {selectedDate.toLocaleDateString('he-IL', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+            </Text>
+            {isSelectedToday && (
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: DesignTokens.colors.primary.main,
+                  fontWeight: '600',
+                  marginTop: 2,
+                }}
+              >
+                היום
+              </Text>
+            )}
+          </View>
+
+          <DayNavBlurButton onPress={goToNextDay} glassIntensity="subtle">
+            <Ionicons name="chevron-forward" size={20} color={DesignTokens.colors.text.primary} />
+          </DayNavBlurButton>
+        </View>
+      </UICard>
+    </View>
+  );
+
+  const renderEvent = ({ item, index }: { item: EconomicEvent; index: number }) => (
+    <View style={index === 0 ? { marginTop: 8 } : undefined}>
+      <EconomicEventCard
+        event={item}
+        onPress={handleEventPress}
+      />
+    </View>
   );
 
   // רינדור רשימה ריקה - יום שקט
@@ -545,7 +749,7 @@ export default function EconomicCalendarTab() {
             width: 120, 
             height: 120, 
             borderRadius: 60, 
-            backgroundColor: 'rgba(0, 216, 74, 0.1)',
+            backgroundColor: `${DesignTokens.colors.primary.main}1A`,
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 24
@@ -554,7 +758,7 @@ export default function EconomicCalendarTab() {
           <Ionicons 
             name="calendar-outline" 
             size={56} 
-            color="#00D84A" 
+            color={DesignTokens.colors.primary.main} 
           />
         </View>
         <Text 
@@ -582,26 +786,6 @@ export default function EconomicCalendarTab() {
             : `לא נמצאו אירועים כלכליים ב${dateStr}`
           }
         </Text>
-      <TouchableOpacity
-        style={{
-          marginTop: 24,
-          paddingHorizontal: 28,
-          paddingVertical: 14,
-          borderRadius: 14,
-          backgroundColor: 'rgba(0, 216, 74, 0.15)',
-          borderWidth: 1,
-          borderColor: 'rgba(0, 216, 74, 0.3)'
-        }}
-        onPress={loadEconomicEvents}
-      >
-        <Text style={{
-          fontSize: 15,
-          fontWeight: '700',
-          color: '#00D84A'
-        }}>
-          רענן נתונים
-        </Text>
-      </TouchableOpacity>
     </View>
   );
   };
@@ -626,158 +810,25 @@ export default function EconomicCalendarTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ניווט יומי */}
-      <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
-        <View style={{ 
-          backgroundColor: 'rgba(255, 255, 255, 0.04)',
-          borderRadius: 16,
-          paddingHorizontal: 16,
-          paddingVertical: 14,
-          marginBottom: 12,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.08)'
-        }}>
-          {/* שורה עליונה - ניווט תאריכים */}
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'space-between',
-            marginBottom: 14
-          }}>
-            {/* חץ שמאל - יום קודם */}
-            <TouchableOpacity
-              onPress={goToPreviousDay}
-              style={{
-                padding: 10,
-                borderRadius: 12,
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.1)'
-              }}
-            >
-              <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
-            </TouchableOpacity>
-
-            {/* תאריך נוכחי */}
-            <View style={{ alignItems: 'center', flex: 1 }}>
-              <Text style={{
-                fontSize: 17,
-                fontWeight: '700',
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'center'
-              }}>
-                {selectedDate.toLocaleDateString('he-IL', { 
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric'
-                })}
-              </Text>
-              {selectedDate.toDateString() === new Date().toDateString() && (
-                <Text style={{
-                  fontSize: 12,
-                  color: '#00D84A',
-                  fontWeight: '600',
-                  marginTop: 3
-                }}>
-                  היום
-                </Text>
-              )}
-            </View>
-
-            {/* חץ ימין - יום הבא */}
-            <TouchableOpacity
-              onPress={goToNextDay}
-              style={{
-                padding: 10,
-                borderRadius: 12,
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.1)'
-              }}
-            >
-              <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
-
-          {/* שורה תחתונה - כפתורים נוספים */}
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            gap: 10
-          }}>
-            {/* כפתור אירועים חשובים */}
-            <TouchableOpacity
-              onPress={() => setShowCriticalOnly(!showCriticalOnly)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                paddingHorizontal: 16,
-                paddingVertical: 9,
-                borderRadius: 12,
-                backgroundColor: showCriticalOnly ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                borderWidth: 1,
-                borderColor: showCriticalOnly ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255, 255, 255, 0.1)'
-              }}
-            >
-              <Ionicons 
-                name={showCriticalOnly ? "star" : "star-outline"} 
-                size={15} 
-                color={showCriticalOnly ? '#F59E0B' : DesignTokens.colors.text.secondary} 
-                style={{ marginLeft: 5 }}
-              />
-              <Text style={{
-                fontSize: 12,
-                color: showCriticalOnly ? '#F59E0B' : DesignTokens.colors.text.secondary,
-                fontWeight: '600'
-              }}>
-                {showCriticalOnly ? 'כל האירועים' : 'רק חשובים'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* כפתור חזרה להיום - מוצג רק כשלא בהיום */}
-            {selectedDate.toDateString() !== new Date().toDateString() && (
-              <TouchableOpacity
-                onPress={goToToday}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: 16,
-                  paddingVertical: 9,
-                  borderRadius: 12,
-                  backgroundColor: 'rgba(0, 216, 74, 0.15)',
-                  borderWidth: 1,
-                  borderColor: 'rgba(0, 216, 74, 0.3)'
-                }}
-              >
-                <Ionicons 
-                  name="today" 
-                  size={15} 
-                  color="#00D84A" 
-                  style={{ marginLeft: 5 }}
-                />
-                <Text style={{
-                  fontSize: 12,
-                  color: '#00D84A',
-                  fontWeight: '600'
-                }}>
-                  היום
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-      </View>
-
-      {/* כפתור טעינת נתונים היסטוריים – בוטל לפי דרישה */}
-
-      {/* אירועים יומיים */}
-      <FlatList
-        data={dailyEvents}
-        keyExtractor={(item, index) => `${item.id}-${item.time}-${index}`}
-        renderItem={renderEvent}
+      <View style={{ flex: 1, minHeight: 0 }}>
+        <FlatList
+          ref={dailyEventsListRef}
+          data={dailyEvents}
+          keyExtractor={(item, index) => `${item.id}-${item.time}-${index}`}
+          renderItem={renderEvent}
+          style={{ flex: 1 }}
+          ListHeaderComponent={renderDateNavigator}
+          contentContainerStyle={{
+            paddingTop: 6,
+            paddingBottom: listBottomPad,
+            flexGrow: 1,
+          }}
+          showsVerticalScrollIndicator={true}
+          // אופטימיזציות ביצועים
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={10}
+        removeClippedSubviews={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -787,9 +838,36 @@ export default function EconomicCalendarTab() {
           />
         }
         ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24, paddingTop: 4 }}
-      />
+        onScrollToIndexFailed={(info) => {
+          const estimatedItemHeight = info.averageItemLength || 100;
+          const targetOffset = Math.max(0, info.index * estimatedItemHeight - 100);
+          setTimeout(() => {
+            try {
+              dailyEventsListRef.current?.scrollToOffset({
+                offset: targetOffset,
+                animated: true,
+              });
+            } catch (e) {
+            }
+          }, 100);
+        }}
+        />
+      </View>
+
+      {!isSelectedToday ? (
+        <View style={fabStyles.wrap} pointerEvents="box-none">
+          <TouchableOpacity
+            style={fabStyles.btn}
+            onPress={goToToday}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="חזרה להיום"
+          >
+            <Ionicons name="today-outline" size={24} color={DesignTokens.colors.text.inverse} />
+            <Text style={fabStyles.btnText}>חזרה להיום</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
 }

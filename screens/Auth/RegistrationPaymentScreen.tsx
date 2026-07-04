@@ -1,10 +1,16 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, Alert, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, Linking } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
+import { ScreenChrome } from '../../components/ui/ScreenChrome';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
@@ -12,20 +18,32 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('monthly');
 
-  // המרת תוכניות המנוי לפורמט המתאים לתצוגה
-  const plans = Object.values(SUBSCRIPTION_PLANS).map(plan => ({
-    id: plan.id,
-    name: plan.name,
-    price: plan.price === 0 ? '₪0' : `₪${plan.price}`,
-    period: 'לחודש',
-    features: plan.features,
-    popular: plan.popular
-  }));
+  // המרת תוכניות המנוי לפורמט המתאים לתצוגה (ללא אד-אונים ותשלום חד פעמי)
+  const getPeriodLabel = (period: string, planId: string) => {
+    if (planId === 'yearly') return '₪117 / לחודש (מחויב שנתי)';
+    switch (period) {
+      case 'monthly':   return 'לחודש';
+      case 'quarterly': return 'ל-3 חודשים';
+      case 'yearly':    return 'לשנה';
+      default:          return 'לחודש';
+    }
+  };
+
+  const plans = Object.values(SUBSCRIPTION_PLANS)
+    .filter(plan => !('isAddon' in plan && plan.isAddon) && !('isOneTime' in plan && plan.isOneTime))
+    .map(plan => ({
+      id: plan.id,
+      name: plan.name,
+      price: plan.price === 0 ? '₪0' : `₪${plan.price}`,
+      period: getPeriodLabel(plan.period, plan.id),
+      features: plan.features,
+      popular: plan.popular
+    }));
 
   const handlePayment = async () => {
     // במהלך הרישום, המשתמש עדיין לא מחובר, אז נדלג על הבדיקה הזו
     // if (!user) {
-    //   Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
+    //   legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
     //   return;
     // }
 
@@ -53,8 +71,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
       });
       
     } catch (error) {
-      console.error('❌ שגיאה בתשלום:', error);
-      Alert.alert(
+      legacyAlert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
       );
@@ -96,12 +113,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <LinearGradient
-          colors={['#000000', '#0d1b0d', '#1a2d1a', '#000000']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ flex: 1 }}
-        >
+        <ScreenChrome>
           {/* Subtle Background Pattern */}
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
             {backgroundPattern.map((dot, index) => (
@@ -113,7 +125,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   top: dot.y,
                   width: dot.size,
                   height: dot.size,
-                  backgroundColor: '#00E654',
+                  backgroundColor: DesignTokens.colors.primary.main,
                   opacity: dot.opacity,
                   borderRadius: dot.size / 2
                 }}
@@ -141,7 +153,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
             opacity: 0.15
           }}>
             <ImageBackground
-              source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
+              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
               style={{
                 width: width,
                 height: height
@@ -153,14 +165,21 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
             />
           </View>
 
-          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+          <RNSafeAreaView style={{ flex: 1 }} edges={['bottom']}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+            }}
+          >
             {/* Header Section */}
             <View style={{ alignItems: 'center', marginBottom: 40 }}>
               {/* Main Title */}
               <Text style={{ 
                 fontSize: 32, 
                 fontWeight: '800', 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 marginBottom: 8,
                 letterSpacing: -0.8,
                 textAlign: 'center',
@@ -172,7 +191,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               {/* Subtitle */}
               <Text style={{ 
                 fontSize: 16, 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontWeight: '400',
                 letterSpacing: 0.3,
                 textAlign: 'center',
@@ -186,7 +205,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               <View style={{
                 width: 60,
                 height: 2,
-                backgroundColor: '#00E654',
+                backgroundColor: DesignTokens.colors.primary.main,
                 marginTop: 16,
                 borderRadius: 1
               }} />
@@ -197,9 +216,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               {plans.map((plan) => (
                 <TouchableOpacity
                   key={plan.id}
-                  onPress={() => setSelectedPlan(plan.id)}
+                  onPress={() => {
+                    if (selectedPlan !== plan.id) void HapticFeedback.selection();
+                    setSelectedPlan(plan.id);
+                  }}
                   style={{
-                    backgroundColor: selectedPlan === plan.id ? 'rgba(0, 230, 84, 0.1)' : '#181818',
+                    backgroundColor: selectedPlan === plan.id ? DesignTokens.colors.primary.dim : DesignTokens.colors.background.cardSolid,
                     borderRadius: 16,
                     padding: 20,
                     position: 'relative'
@@ -210,12 +232,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       position: 'absolute',
                       top: -10,
                       right: 20,
-                      backgroundColor: '#00E654',
+                      backgroundColor: DesignTokens.colors.primary.main,
                       paddingHorizontal: 12,
                       paddingVertical: 4,
                       borderRadius: 12
                     }}>
-                      <Text style={{ color: '#000000', fontSize: 12, fontWeight: '700' }}>
+                      <Text style={{ color: DesignTokens.colors.background.primary, fontSize: 12, fontWeight: '700' }}>
                         מומלץ
                       </Text>
                     </View>
@@ -224,7 +246,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <View>
                       <Text style={{ 
-                        color: '#FFFFFF', 
+                        color: DesignTokens.colors.text.primary, 
                         fontSize: 20, 
                         fontWeight: '700',
                         writingDirection: 'rtl'
@@ -233,7 +255,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
                         <Text style={{ 
-                          color: '#00E654', 
+                          color: DesignTokens.colors.primary.main, 
                           fontSize: 24, 
                           fontWeight: '800',
                           writingDirection: 'rtl'
@@ -241,7 +263,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                           {plan.price}
                         </Text>
                         <Text style={{ 
-                          color: '#B0B0B0', 
+                          color: DesignTokens.colors.text.secondary, 
                           fontSize: 14, 
                           marginLeft: 4,
                           writingDirection: 'rtl'
@@ -255,12 +277,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                       width: 24,
                       height: 24,
                       borderRadius: 12,
-                      backgroundColor: selectedPlan === plan.id ? '#00E654' : 'transparent',
+                      backgroundColor: selectedPlan === plan.id ? DesignTokens.colors.primary.main : 'transparent',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
                       {selectedPlan === plan.id && (
-                        <Ionicons name="checkmark" size={16} color="#000000" />
+                        <Ionicons name="checkmark" size={16} color={DesignTokens.colors.text.inverse} />
                       )}
                     </View>
                   </View>
@@ -268,9 +290,9 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   <View style={{ gap: 8 }}>
                     {plan.features.map((feature, index) => (
                       <View key={index} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="checkmark-circle" size={16} color="#00E654" style={{ marginLeft: 8 }} />
+                        <Ionicons name="checkmark-circle" size={16} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
                         <Text style={{ 
-                          color: '#B0B0B0', 
+                          color: DesignTokens.colors.text.secondary, 
                           fontSize: 14,
                           writingDirection: 'rtl',
                           flex: 1
@@ -289,12 +311,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               {/* Payment Button */}
               {selectedPlan !== 'free' ? (
                 <LinearGradient
-                  colors={['#00E654', '#00B84A', '#008F3A']}
+                  colors={['#00C805', '#00A004', '#008F03']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
                     borderRadius: 14,
-                    shadowColor: '#00E654',
+                    shadowColor: DesignTokens.colors.primary.main,
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: 0.4,
                     shadowRadius: 12,
@@ -302,7 +324,10 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={handlePayment}
+                    onPress={() => {
+                      void HapticFeedback.medium();
+                      handlePayment();
+                    }}
                     disabled={loading}
                     style={{
                       paddingVertical: 16,
@@ -312,12 +337,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     }}
         >
           {loading ? (
-                      <ActivityIndicator color="#000000" size="small" />
+                      <ActivityIndicator color={DesignTokens.colors.text.inverse} size="small" />
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="card" size={20} color="#000000" style={{ marginLeft: 8 }} />
+                        <Ionicons name="card" size={20} color={DesignTokens.colors.text.inverse} style={{ marginLeft: 8 }} />
                         <Text style={{ 
-                          color: '#000000', 
+                          color: DesignTokens.colors.background.primary, 
                           fontSize: 16, 
                           fontWeight: '700',
                           letterSpacing: 0.5,
@@ -332,12 +357,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                 </LinearGradient>
               ) : (
                 <LinearGradient
-                  colors={['#00E654', '#00B84A', '#008F3A']}
+                  colors={['#00C805', '#00A004', '#008F03']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
                     borderRadius: 14,
-                    shadowColor: '#00E654',
+                    shadowColor: DesignTokens.colors.primary.main,
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: 0.4,
                     shadowRadius: 12,
@@ -345,7 +370,10 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={handleSkipPayment}
+                    onPress={() => {
+                      void HapticFeedback.medium();
+                      handleSkipPayment();
+                    }}
                     style={{
                       paddingVertical: 16,
                       alignItems: 'center',
@@ -353,7 +381,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                     }}
                   >
                     <Text style={{ 
-                      color: '#000000', 
+                      color: DesignTokens.colors.background.primary, 
                       fontSize: 16, 
                       fontWeight: '700',
                       letterSpacing: 0.5,
@@ -369,9 +397,12 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               {/* Skip Payment Button */}
               {selectedPlan !== 'free' && (
                 <TouchableOpacity
-                  onPress={handleSkipPayment}
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    handleSkipPayment();
+                  }}
                   style={{
-                    backgroundColor: '#181818',
+                    backgroundColor: DesignTokens.colors.background.cardSolid,
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: 'center',
@@ -379,7 +410,7 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
                   }}
                 >
                   <Text style={{ 
-                    color: '#B0B0B0', 
+                    color: DesignTokens.colors.text.secondary, 
                     fontSize: 16, 
                     fontWeight: '600',
                     letterSpacing: 0.3,
@@ -391,7 +422,8 @@ const RegistrationPaymentScreen = ({ navigation }: { navigation: any }) => {
               )}
             </View>
     </View>
-        </LinearGradient>
+          </RNSafeAreaView>
+        </ScreenChrome>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );

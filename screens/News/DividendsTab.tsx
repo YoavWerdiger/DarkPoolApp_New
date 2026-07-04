@@ -1,16 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  Pressable,
-  SectionList
-} from 'react-native';
+import { View, Text, RefreshControl, ActivityIndicator, Pressable, SectionList } from 'react-native';
 import { DollarSign, Calendar } from 'lucide-react-native';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import DesignTokens, { useDesignTokens } from '../../components/ui/DesignTokens';
 import { supabase } from '../../lib/supabase';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import UICard from '../../components/ui/UICard';
 
 interface Dividend {
   id: string
@@ -61,23 +55,14 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
   };
 
   return (
-    <Pressable
+    <UICard
+      variant="blur"
+      padding="md"
       style={{
         marginHorizontal: 16,
         marginBottom: 10,
-        borderRadius: 16,
-        paddingVertical: 12,
-        paddingHorizontal: 14,
-        backgroundColor: DesignTokens.colors.background.secondary,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 6,
-        elevation: 4,
-        borderWidth: 1,
-        borderColor: 'rgba(0, 216, 74, 0.15)',
-        flexDirection: 'row-reverse',
-        alignItems: 'center'
+        flexDirection: 'row',
+        alignItems: 'center',
       }}
     >
       {/* Icon */}
@@ -86,13 +71,13 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
           width: 44,
           height: 44,
           borderRadius: 22,
-          backgroundColor: 'rgba(0, 216, 74, 0.15)',
+          backgroundColor: `${DesignTokens.colors.success.main}26`,
           alignItems: 'center',
           justifyContent: 'center',
           marginLeft: 12
         }}
       >
-        <DollarSign size={22} color="#00D84A" strokeWidth={2.5} />
+        <DollarSign size={22} color="DesignTokens.colors.success.main" strokeWidth={2.5} />
       </View>
 
       {/* Company Info */}
@@ -120,16 +105,15 @@ const DividendCard: React.FC<{ dividend: Dividend }> = ({ dividend }) => {
           paddingHorizontal: 10, 
           paddingVertical: 6, 
           borderRadius: 12, 
-          backgroundColor: 'rgba(0, 216, 74, 0.1)',
-          borderWidth: 1,
+          backgroundColor: `${DesignTokens.colors.success.main}1A`,
           borderColor: 'rgba(0, 216, 74, 0.3)'
         }}
       >
-        <Text style={{ fontSize: 11, color: '#00D84A', fontWeight: '700' }}>
+        <Text style={{ fontSize: 11, color: 'DesignTokens.colors.success.main', fontWeight: '700' }}>
           {getShortDate(dividend.date)}
         </Text>
       </View>
-    </Pressable>
+    </UICard>
   );
 };
 
@@ -160,8 +144,6 @@ export default function DividendsTab() {
 
   const loadDividends = useCallback(async () => {
     try {
-      console.log('💰 Loading dividends from Supabase');
-      
       const today = new Date();
       const todayStr = today.toISOString().split('T')[0];
       
@@ -173,27 +155,28 @@ export default function DividendsTab() {
         .limit(200);
       
       if (error) {
-        console.error('❌ Supabase error:', error);
         return;
       }
       
       if (data) {
-        console.log(`✅ Loaded ${data.length} dividends`);
         setDividends(data);
         setSections(groupDividendsByMonth(data));
       }
     } catch (error) {
-      console.error('❌ Error loading dividends:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadDividends();
-  };
+    try {
+      await loadDividends();
+    } finally {
+      void HapticFeedback.impactLight();
+    }
+  }, [loadDividends]);
 
   useEffect(() => {
     loadDividends();
@@ -205,7 +188,7 @@ export default function DividendsTab() {
         paddingHorizontal: 16, 
         paddingVertical: 10,
         backgroundColor: DesignTokens.colors.background.primary,
-        flexDirection: 'row-reverse',
+        flexDirection: 'row',
         alignItems: 'center'
       }}
     >
@@ -233,8 +216,8 @@ export default function DividendsTab() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: DesignTokens.colors.background.primary }}>
-        <ActivityIndicator size="large" color="#00D84A" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={DesignTokens.colors.success.main} />
         <Text style={{ fontSize: 14, color: DesignTokens.colors.text.secondary, marginTop: 16 }}>
           טוען דיבידנדים...
         </Text>
@@ -243,7 +226,7 @@ export default function DividendsTab() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: DesignTokens.colors.background.primary }}>
+    <View style={{ flex: 1 }}>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -253,8 +236,8 @@ export default function DividendsTab() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#00D84A"
-            colors={['#00D84A']}
+            tintColor="DesignTokens.colors.success.main"
+            colors={['DesignTokens.colors.success.main']}
           />
         }
         ListEmptyComponent={renderEmptyState}

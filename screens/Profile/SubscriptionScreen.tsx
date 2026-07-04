@@ -1,26 +1,23 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  Alert,
-  TouchableOpacity,
-  ActivityIndicator,
-  SafeAreaView
-} from 'react-native';
-import { 
-  Crown, 
-  Star, 
-  CreditCard, 
-  Calendar, 
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import {
+  Crown,
+  Star,
+  CreditCard,
+  Calendar,
   Check,
-  ArrowLeft,
   Zap,
   Users
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface SubscriptionPlan {
   id: string;
@@ -36,6 +33,7 @@ interface SubscriptionPlan {
 export default function SubscriptionScreen({ navigation }: any) {
   const { user } = useAuth();
   const { theme } = useTheme();
+  const DesignTokens = useDesignTokens();
   const [currentPlan, setCurrentPlan] = useState<any>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,21 +62,20 @@ export default function SubscriptionScreen({ navigation }: any) {
         period: plan.period,
         features: plan.features,
         popular: plan.popular,
-        icon: plan.id === 'monthly' ? Crown : 
-              plan.id === 'quarterly' ? Star : Users
+        icon: plan.id === 'monthly' ? Crown :
+          plan.id === 'quarterly' ? Star : Users
       }));
       setPlans(availablePlans);
-      
+
       setLoading(false);
     } catch (error) {
-      console.error('Error loading subscription data:', error);
       setLoading(false);
     }
   };
 
   const handlePlanSelection = (planId: string) => {
     if (!user) {
-      Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
+      legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
       return;
     }
 
@@ -86,344 +83,331 @@ export default function SubscriptionScreen({ navigation }: any) {
       return;
     }
 
-    navigation.navigate('CreditCardCheckout', { 
+    navigation.navigate('CreditCardCheckout', {
       planId: planId,
-      fromRegistration: false 
+      fromRegistration: false
     });
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00E654" />
-          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען נתוני מנוי...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+        <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען נתוני מנוי...</Text>
+      </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
-        {/* Header */}
-        <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: theme.cardBackground,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.border
-      }}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 36,
-            height: 36,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: 18,
-            backgroundColor: theme.isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
+        <ChatSubScreenHeader
+          title="מנוי ומסלול"
+          onBack={() => {
+            void HapticFeedback.impactLight();
+            navigation.goBack();
           }}
-        >
-          <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
-        </TouchableOpacity>
-        
-        <Text style={{
-          flex: 1,
-          textAlign: 'center',
-          fontSize: 20,
-          fontWeight: '700',
-          color: theme.textPrimary,
-          marginRight: 36
-        }}>
-          מנוי ומסלול
-        </Text>
-        </View>
-      </SafeAreaView>
+        />
 
-      <ScrollView 
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        {/* Current Plan */}
-        {currentPlan && (
-          <View style={{ paddingHorizontal: 20, paddingTop: 24, marginBottom: 32 }}>
-            <Text style={{
-              fontSize: 13,
-              fontWeight: '700',
-              color: theme.textSecondary,
-              marginBottom: 12,
-              marginRight: 4,
-              textAlign: 'right',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5
-            }}>
-              המנוי הנוכחי
-            </Text>
-            
-            <View style={{
-              backgroundColor: theme.cardBackground,
-              borderRadius: 16,
-              padding: 24
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                  <Text style={{
-                    fontSize: 22,
-                    fontWeight: '700',
-                    color: theme.textPrimary,
-                    marginBottom: 6
-                  }}>
-                    {currentPlan.plan_name || 'מנוי פעיל'}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{
-                      fontSize: 14,
-                      color: theme.textSecondary,
-                      marginLeft: 6
-                    }}>
-                      {new Date(currentPlan.end_date).toLocaleDateString('he-IL')}
-                    </Text>
-                    <Calendar size={14} color={theme.textTertiary} strokeWidth={2} />
-                  </View>
-                </View>
-                <View style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
-                  backgroundColor: 'rgba(5, 209, 87, 0.15)',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginLeft: 16
-                }}>
-                  <Crown size={28} color="#00E654" strokeWidth={2} />
-                </View>
-              </View>
-
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(5, 209, 87, 0.15)',
-                paddingVertical: 10,
-                paddingHorizontal: 16,
-                borderRadius: 10
-              }}>
+        <View style={{ flex: 1 }}>
+          <ScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Current Plan */}
+            {currentPlan && (
+              <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing['2xl'] }}>
                 <Text style={{
-                  fontSize: 14,
-                  fontWeight: '700',
-                  color: '#00E654'
+                  fontSize: DesignTokens.typography.fontSize.xs,
+                  fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                  color: DesignTokens.colors.text.tertiary,
+                  marginBottom: DesignTokens.spacing.sm,
+                  marginRight: 4,
+                  textAlign: 'right',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5
                 }}>
-                  מנוי פעיל
+                  המנוי הנוכחי
                 </Text>
-                <Check size={18} color="#00E654" strokeWidth={2.5} style={{ marginRight: 8 }} />
-              </View>
-            </View>
-          </View>
-        )}
 
-        {/* Available Plans */}
-        <View style={{ paddingHorizontal: 20 }}>
-          <Text style={{
-            fontSize: 13,
-            fontWeight: '700',
-            color: theme.textSecondary,
-            marginBottom: 12,
-            marginRight: 4,
-            textAlign: 'right',
-            textTransform: 'uppercase',
-            letterSpacing: 0.5
-          }}>
-            מסלולים זמינים
-          </Text>
-
-          {plans.map((plan, index) => {
-            const isCurrentPlan = currentPlan && plan.id === currentPlan.plan_id;
-            
-            return (
-              <TouchableOpacity
-                key={plan.id}
-                onPress={() => handlePlanSelection(plan.id)}
-                disabled={isCurrentPlan}
-                style={{
-                  backgroundColor: theme.cardBackground,
-                  borderRadius: 16,
-                  padding: 20,
-                  marginBottom: 16,
-                  opacity: isCurrentPlan ? 0.6 : 1
-                }}
-              >
-                {plan.popular && (
-                  <View style={{
-                    position: 'absolute',
-                    top: 16,
-                    left: 16,
-                    backgroundColor: '#00E654',
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
-                    borderRadius: 16,
-                    flexDirection: 'row',
-                    alignItems: 'center'
-                  }}>
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '700',
-                      color: '#ffffff'
-                    }}>
-                      מומלץ ביותר
-                    </Text>
-                    <Star size={14} color="#ffffff" strokeWidth={2.5} style={{ marginRight: 6 }} />
-                  </View>
-                )}
-
-                <View style={{ alignItems: 'flex-end', marginBottom: 20, marginTop: plan.popular ? 24 : 0 }}>
-                  <Text style={{
-                    fontSize: 22,
-                    fontWeight: '700',
-                    color: theme.textPrimary,
-                    marginBottom: 6
-                  }}>
-                    {plan.name}
-                  </Text>
-                  <Text style={{
-                    fontSize: 14,
-                    color: theme.textSecondary,
-                    marginBottom: 12,
-                    textAlign: 'right'
-                  }}>
-                    {plan.description}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-                    <Text style={{
-                      fontSize: 15,
-                      color: theme.textSecondary,
-                      marginLeft: 6
-                    }}>
-                      / {plan.period}
-                    </Text>
-                    <Text style={{
-                      fontSize: 32,
-                      fontWeight: '700',
-                      color: '#00E654'
-                    }}>
-                      ₪{plan.price}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Features */}
-                <View style={{ gap: 10 }}>
-                  {plan.features.map((feature, featureIndex) => (
-                    <View key={featureIndex} style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center'
-                    }}>
+                <UICard
+                  variant="glass"
+                  glassIntensity="light"
+                  padding="lg"
+                  style={{ borderRadius: DesignTokens.borderRadius.lg }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: DesignTokens.spacing.lg }}>
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
                       <Text style={{
-                        flex: 1,
-                        fontSize: 14,
-                        color: theme.textSecondary,
-                        textAlign: 'right',
-                        lineHeight: 20
+                        fontSize: DesignTokens.typography.fontSize['2xl'],
+                        fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                        color: DesignTokens.colors.text.primary,
+                        marginBottom: DesignTokens.spacing.xs
                       }}>
-                        {feature}
+                        {currentPlan.plan_name || 'מנוי פעיל'}
                       </Text>
-                      <View style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: 10,
-                        backgroundColor: 'rgba(5, 209, 87, 0.15)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginLeft: 12
-                      }}>
-                        <Check size={14} color="#00E654" strokeWidth={3} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={{
+                          fontSize: DesignTokens.typography.fontSize.sm,
+                          color: DesignTokens.colors.text.secondary,
+                          marginLeft: DesignTokens.spacing.xs
+                        }}>
+                          {new Date(currentPlan.end_date).toLocaleDateString('he-IL')}
+                        </Text>
+                        <Calendar size={14} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                       </View>
                     </View>
-                  ))}
-                </View>
-
-                {isCurrentPlan && (
-                  <View style={{
-                    marginTop: 20,
-                    paddingTop: 20,
-                    borderTopWidth: 1,
-                    borderTopColor: '#2a2a2a',
-                    alignItems: 'center'
-                  }}>
                     <View style={{
-                      flexDirection: 'row',
+                      width: 56,
+                      height: 56,
+                      borderRadius: 28,
+                      backgroundColor: `${DesignTokens.colors.primary.main}20`,
                       alignItems: 'center',
-                      backgroundColor: 'rgba(5, 209, 87, 0.1)',
-                      paddingVertical: 8,
-                      paddingHorizontal: 16,
-                      borderRadius: 20
+                      justifyContent: 'center',
+                      marginLeft: DesignTokens.spacing.md
                     }}>
-                      <Text style={{
-                        fontSize: 13,
-                        color: '#00E654',
-                        fontWeight: '700'
-                      }}>
-                        המסלול הנוכחי שלך
-                      </Text>
-                      <Check size={16} color="#00E654" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                      <Crown size={28} color={DesignTokens.colors.primary.main} strokeWidth={2} />
                     </View>
                   </View>
-                )}
 
-                {!isCurrentPlan && (
                   <View style={{
-                    marginTop: 20,
-                    paddingTop: 20,
-                    borderTopWidth: 1,
-                    borderTopColor: '#2a2a2a'
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: `${DesignTokens.colors.primary.main}20`,
+                    paddingVertical: DesignTokens.spacing.sm,
+                    paddingHorizontal: DesignTokens.spacing.md,
+                    borderRadius: DesignTokens.borderRadius.lg,
+                    borderWidth: 1,
+                    borderColor: `${DesignTokens.colors.primary.main}40`
                   }}>
-                    <View style={{
-                      backgroundColor: 'rgba(5, 209, 87, 0.1)',
-                      paddingVertical: 12,
-                      paddingHorizontal: 20,
-                      borderRadius: 10,
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: 'rgba(5, 209, 87, 0.3)'
+                    <Text style={{
+                      fontSize: DesignTokens.typography.fontSize.sm,
+                      fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                      color: DesignTokens.colors.primary.main
                     }}>
-                      <Text style={{
-                        fontSize: 15,
-                        fontWeight: '700',
-                        color: '#00E654'
-                      }}>
-                        בחר מסלול זה
-                      </Text>
-                    </View>
+                      מנוי פעיל
+                    </Text>
+                    <Check size={18} color={DesignTokens.colors.primary.main} strokeWidth={2.5} style={{ marginRight: DesignTokens.spacing.xs }} />
                   </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                </UICard>
+              </View>
+            )}
 
-        {/* Info Note */}
-        <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
-          <View style={{
-            backgroundColor: 'rgba(255,255,255,0.03)',
-            borderRadius: 12,
-            padding: 16,
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.05)'
-          }}>
-            <Text style={{
-              fontSize: 13,
-              color: theme.textSecondary,
-              textAlign: 'right',
-              lineHeight: 20
-            }}>
-              💡 ניתן לשדרג או להוריד מסלול בכל עת. השינוי ייכנס לתוקף מיידית.
-            </Text>
-          </View>
+            {/* Available Plans */}
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg }}>
+              <Text style={{
+                fontSize: DesignTokens.typography.fontSize.xs,
+                fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                color: DesignTokens.colors.text.tertiary,
+                marginBottom: DesignTokens.spacing.sm,
+                marginRight: 4,
+                textAlign: 'right',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5
+              }}>
+                מסלולים זמינים
+              </Text>
+
+              {plans.map((plan, index) => {
+                const isCurrentPlan = currentPlan && plan.id === currentPlan.plan_id;
+
+                return (
+                  <TouchableOpacity
+                    key={plan.id}
+                    onPress={() => {
+                      void HapticFeedback.impactLight();
+                      handlePlanSelection(plan.id);
+                    }}
+                    disabled={isCurrentPlan}
+                    style={{ marginBottom: DesignTokens.spacing.md, opacity: isCurrentPlan ? 0.6 : 1 }}
+                  >
+                    <UICard
+                      variant="glass"
+                      glassIntensity="light"
+                      padding="lg"
+                      style={{ borderRadius: DesignTokens.borderRadius.lg }}
+                    >
+                      {plan.popular && (
+                        <View style={{
+                          position: 'absolute',
+                          top: 16,
+                          left: 16,
+                          backgroundColor: DesignTokens.colors.primary.main,
+                          paddingHorizontal: 14,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                          flexDirection: 'row',
+                          alignItems: 'center'
+                        }}>
+                          <Text style={{
+                            fontSize: 12,
+                            fontWeight: '700',
+                            color: DesignTokens.colors.text.primary
+                          }}>
+                            מומלץ ביותר
+                          </Text>
+                          <Star size={14} color={DesignTokens.colors.text.primary} strokeWidth={2.5} style={{ marginRight: 6 }} />
+                        </View>
+                      )}
+
+                      <View style={{ alignItems: 'flex-end', marginBottom: DesignTokens.spacing.lg, marginTop: plan.popular ? DesignTokens.spacing['2xl'] : 0 }}>
+                        <Text style={{
+                          fontSize: DesignTokens.typography.fontSize['2xl'],
+                          fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                          color: DesignTokens.colors.text.primary,
+                          marginBottom: DesignTokens.spacing.xs
+                        }}>
+                          {plan.name}
+                        </Text>
+                        <Text style={{
+                          fontSize: DesignTokens.typography.fontSize.sm,
+                          color: DesignTokens.colors.text.secondary,
+                          marginBottom: DesignTokens.spacing.md,
+                          textAlign: 'right',
+                          lineHeight: 20
+                        }}>
+                          {plan.description}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                          <Text style={{
+                            fontSize: DesignTokens.typography.fontSize.base,
+                            color: DesignTokens.colors.text.secondary,
+                            marginLeft: DesignTokens.spacing.xs
+                          }}>
+                            / {plan.period}
+                          </Text>
+                          <Text style={{
+                            fontSize: DesignTokens.typography.fontSize['3xl'],
+                            fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                            color: DesignTokens.colors.primary.main
+                          }}>
+                            ₪{plan.price}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Features */}
+                      <View style={{ gap: DesignTokens.spacing.sm }}>
+                        {plan.features.map((feature, featureIndex) => (
+                          <View key={featureIndex} style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: DesignTokens.spacing.xs
+                          }}>
+                            <Text style={{
+                              flex: 1,
+                              fontSize: DesignTokens.typography.fontSize.sm,
+                              color: DesignTokens.colors.text.secondary,
+                              textAlign: 'right',
+                              lineHeight: 20
+                            }}>
+                              {feature}
+                            </Text>
+                            <View style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: 10,
+                              backgroundColor: `${DesignTokens.colors.primary.main}20`,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginLeft: DesignTokens.spacing.sm
+                            }}>
+                              <Check size={12} color={DesignTokens.colors.primary.main} strokeWidth={3} />
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+
+                      {isCurrentPlan && (
+                        <View style={{
+                          marginTop: DesignTokens.spacing.lg,
+                          paddingTop: DesignTokens.spacing.lg,
+                          borderTopWidth: 1,
+                          borderTopColor: 'rgba(255, 255, 255, 0.1)',
+                          alignItems: 'center'
+                        }}>
+                          <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            backgroundColor: `${DesignTokens.colors.primary.main}20`,
+                            paddingVertical: DesignTokens.spacing.xs,
+                            paddingHorizontal: DesignTokens.spacing.md,
+                            borderRadius: DesignTokens.borderRadius.full,
+                            borderWidth: 1,
+                            borderColor: `${DesignTokens.colors.primary.main}40`
+                          }}>
+                            <Text style={{
+                              fontSize: DesignTokens.typography.fontSize.xs,
+                              color: DesignTokens.colors.primary.main,
+                              fontWeight: DesignTokens.typography.fontWeight.bold as any
+                            }}>
+                              המסלול הנוכחי שלך
+                            </Text>
+                            <Check size={16} color={DesignTokens.colors.primary.main} strokeWidth={2.5} style={{ marginRight: DesignTokens.spacing.xs }} />
+                          </View>
+                        </View>
+                      )}
+
+                      {!isCurrentPlan && (
+                        <View style={{
+                          marginTop: DesignTokens.spacing.lg,
+                          paddingTop: DesignTokens.spacing.lg,
+                          borderTopWidth: 1,
+                          borderTopColor: 'rgba(255, 255, 255, 0.1)'
+                        }}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              void HapticFeedback.medium();
+                              handlePlanSelection(plan.id);
+                            }}
+                            style={{
+                              backgroundColor: DesignTokens.colors.primary.main,
+                              paddingVertical: DesignTokens.spacing.md,
+                              paddingHorizontal: DesignTokens.spacing.lg,
+                              borderRadius: DesignTokens.borderRadius.lg,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              ...DesignTokens.shadows.md
+                            }}
+                          >
+                            <Text style={{
+                              fontSize: DesignTokens.typography.fontSize.base,
+                              fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                              color: DesignTokens.colors.text.primary
+                            }}>
+                              בחר מסלול זה
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </UICard>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Info Note */}
+            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginTop: DesignTokens.spacing.md }}>
+              <UICard
+                variant="glass"
+                glassIntensity="light"
+                padding="md"
+                style={{ borderRadius: DesignTokens.borderRadius.lg }}
+              >
+                <Text style={{
+                  fontSize: DesignTokens.typography.fontSize.sm,
+                  color: DesignTokens.colors.text.secondary,
+                  textAlign: 'right',
+                  lineHeight: 20
+                }}>
+                  💡 ניתן לשדרג או להוריד מסלול בכל עת. השינוי ייכנס לתוקף מיידית.
+                </Text>
+              </UICard>
+            </View>
+          </ScrollView>
         </View>
-      </ScrollView>
+      </RNSafeAreaView>
     </View>
   );
 }

@@ -1,520 +1,426 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Dimensions,
+  ImageBackground,
+  Animated,
+  Easing,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRegistration } from '../../context/RegistrationContext';
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import DropDownPicker from 'react-native-dropdown-picker';
+import { Ionicons } from '@expo/vector-icons';
+import { useRegistration } from '../../context/RegistrationContext';
+import { DesignTokens } from '../../components/ui/DesignTokens';
+import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
+const { width, height } = Dimensions.get('window');
+
+// ─── Data ──────────────────────────────────────────────────────────────────
 const marketOptions = [
   { label: '🇺🇸 מניות אמריקאיות', value: 'us_stocks' },
-  { label: '🇮🇱 מניות ישראליות', value: 'il_stocks' },
-  { label: 'קריפטו', value: 'crypto' },
-  { label: 'פורקס', value: 'forex' },
-  { label: 'אופציות', value: 'options' },
-  { label: 'סחורות', value: 'commodities' },
-  { label: 'אחר', value: 'other' },
+  { label: '🇮🇱 מניות ישראליות',  value: 'il_stocks' },
+  { label: '₿ קריפטו',             value: 'crypto'   },
+  { label: '💱 פורקס',             value: 'forex'    },
+  { label: '⚙️ אופציות',           value: 'options'  },
+  { label: '🪙 סחורות',            value: 'commodities' },
+  { label: '📦 אחר',               value: 'other'    },
 ];
 
 const experienceOptions = [
-  { label: 'פחות מחצי שנה', value: '<0.5' },
-  { label: '0.5–2 שנים', value: '0.5-2' },
+  { label: '< חצי שנה', value: '<0.5' },
+  { label: '6 חודשים–2 שנים', value: '0.5-2' },
   { label: '2–5 שנים', value: '2-5' },
   { label: '5+ שנים', value: '5+' },
 ];
 
 const fullTimeOptions = [
-  { label: 'סוחר במשרה מלאה', value: 'full' },
-  { label: 'סוחר במשרה חלקית', value: 'part' },
-  { label: 'משקיע פסיבי / לא סוחר יומיומי', value: 'passive' },
+  { label: 'משרה מלאה', value: 'full' },
+  { label: 'משרה חלקית', value: 'part' },
+  { label: 'פסיבי', value: 'passive' },
 ];
 
 const styleOptions = [
   { label: 'Day Trading', value: 'day' },
-  { label: 'Swing Trading', value: 'swing' },
-  { label: 'Position Trading', value: 'position' },
+  { label: 'Swing', value: 'swing' },
+  { label: 'Position', value: 'position' },
   { label: 'Scalping', value: 'scalping' },
   { label: 'אחר', value: 'other' },
 ];
 
+// ─── Chip component ────────────────────────────────────────────────────────
+interface ChipProps {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}
+
+const Chip: React.FC<ChipProps> = ({ label, selected, onPress }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const pressIn = () =>
+    Animated.timing(scale, { toValue: 0.93, duration: 80, useNativeDriver: true, easing: Easing.out(Easing.quad) }).start();
+  const pressOut = () =>
+    Animated.timing(scale, { toValue: 1, duration: 120, useNativeDriver: true, easing: Easing.out(Easing.quad) }).start();
+
+  const handlePress = () => {
+    void HapticFeedback.selection();
+    onPress();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }], margin: 4 }}>
+      <TouchableOpacity
+        onPress={handlePress}
+        onPressIn={pressIn}
+        onPressOut={pressOut}
+        activeOpacity={1}
+        style={{
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+          borderRadius: 24,
+          backgroundColor: selected
+            ? DesignTokens.colors.primary.main
+            : 'rgba(255,255,255,0.07)',
+          borderWidth: 1.5,
+          borderColor: selected
+            ? DesignTokens.colors.primary.main
+            : 'rgba(255,255,255,0.12)',
+          shadowColor: selected ? DesignTokens.colors.primary.main : 'transparent',
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: selected ? 0.4 : 0,
+          shadowRadius: 6,
+          elevation: selected ? 4 : 0,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 14,
+            fontWeight: selected ? '700' : '500',
+            color: selected ? '#000' : 'rgba(255,255,255,0.8)',
+          }}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+// ─── Section wrapper ───────────────────────────────────────────────────────
+const Section = ({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) => (
+  <View style={{ marginBottom: 28 }}>
+    <Text
+      style={{
+        color: 'rgba(255,255,255,0.6)',
+        fontSize: 13,
+        fontWeight: '500',
+        marginBottom: 10,
+        textAlign: 'right',
+        letterSpacing: 0.2,
+      }}
+    >
+      {title}
+    </Text>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', margin: -4 }}>
+      {children}
+    </View>
+  </View>
+);
+
+// ─── Progress bar ──────────────────────────────────────────────────────────
+const ProgressBar = ({ current, total }: { current: number; total: number }) => (
+  <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 4 }}>
+    <View style={{ flexDirection: 'row', gap: 6 }}>
+      {Array.from({ length: total }).map((_, i) => (
+        <View
+          key={i}
+          style={{
+            flex: 1,
+            height: 4,
+            borderRadius: 2,
+            backgroundColor:
+              i < current
+                ? DesignTokens.colors.primary.main
+                : 'rgba(255,255,255,0.12)',
+          }}
+        />
+      ))}
+    </View>
+  </View>
+);
+
+// ─── Screen ────────────────────────────────────────────────────────────────
 const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
-  
-  // State for dropdowns
-  const [markets, setMarkets] = useState(data.markets || []);
-  const [experience, setExperience] = useState(data.experience || null);
-  const [fullTime, setFullTime] = useState(data.fullTime || null);
-  const [style, setStyle] = useState(data.style || null);
-  const [goals, setGoals] = useState(data.goals || '');
-  
-  // Dropdown states
-  const [marketOpen, setMarketOpen] = useState(false);
-  const [experienceOpen, setExperienceOpen] = useState(false);
-  const [fullTimeOpen, setFullTimeOpen] = useState(false);
-  const [styleOpen, setStyleOpen] = useState(false);
+
+  const [markets, setMarkets]   = useState<string[]>(data.markets   || []);
+  const [experience, setExperience] = useState<string | null>(data.experience || null);
+  const [fullTime, setFullTime]   = useState<string | null>(data.fullTime   || null);
+  const [style, setStyle]         = useState<string | null>(data.style       || null);
+  const [goals, setGoals]         = useState<string>(data.goals      || '');
+  const [focused, setFocused]     = useState(false);
+
+
+  useEffect(() => {
+    // placeholder
+  }, []);
+
+  const toggleMarket = (value: string) => {
+    setMarkets(prev =>
+      prev.includes(value) ? prev.filter(m => m !== value) : [...prev, value]
+    );
+  };
 
   const handleNext = () => {
     setData({
       ...data,
       markets,
-      experience,
-      fullTime,
-      style,
-      goals
+      experience: experience ?? '',
+      fullTime: fullTime ?? '',
+      style: style ?? '',
+      goals,
+      accountType: 'free',
     });
-    navigation.navigate('RegistrationPayment');
+    navigation.navigate('RegistrationTrack');
   };
-
-  const { width, height } = Dimensions.get('window');
-
-  // Create subtle background pattern
-  const createBackgroundPattern = () => {
-    const patterns = [];
-    for (let i = 0; i < 15; i++) {
-      patterns.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.05 + 0.02
-      });
-    }
-    return patterns;
-  };
-
-  const backgroundPattern = createBackgroundPattern();
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <LinearGradient
-          colors={['#000000', '#0d1b0d', '#1a2d1a', '#000000']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={['#0A0E0A', '#0F1A0F', '#142014', '#0A0E0A']}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
           style={{ flex: 1 }}
         >
-          {/* Subtle Background Pattern */}
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {backgroundPattern.map((dot, index) => (
-              <View
-                key={index}
-                style={{
-                  position: 'absolute',
-                  left: dot.x,
-                  top: dot.y,
-                  width: dot.size,
-                  height: dot.size,
-                  backgroundColor: '#00E654',
-                  opacity: dot.opacity,
-                  borderRadius: dot.size / 2
-                }}
-              />
-            ))}
-          </View>
-
-          {/* Gradient Overlay */}
+          {/* Depth overlay */}
           <LinearGradient
-            colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.35)']}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0, y: 1 }}
             style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           />
 
-          {/* Transparent Background Image - Center */}
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            opacity: 0.15
-          }}>
+          {/* Bull & Bear background */}
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', opacity: 0.22 }}>
             <ImageBackground
-              source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
-              style={{
-                width: width,
-                height: height,
-                resizeMode: 'contain'
-              }}
-              imageStyle={{
-                opacity: 0.3
-              }}
+              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
+              style={{ width: width * 1.6, height: height * 1.6 }}
+              imageStyle={{ resizeMode: 'contain' }}
             />
           </View>
 
+          {/* Animated candlestick chart */}
+
           <SafeAreaView style={{ flex: 1 }}>
-            <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
-              {/* Header Section */}
-              <View style={{ alignItems: 'center', marginBottom: 40 }}>
-                {/* Main Title */}
-                <Text style={{ 
-                  fontSize: 32, 
-                  fontWeight: '800', 
-                  color: '#FFFFFF', 
-                  marginBottom: 8,
-                  letterSpacing: -0.8,
-                  textAlign: 'center',
-                  writingDirection: 'rtl'
-                }}>
-                  הכר את עצמך
-                </Text>
-                
-                {/* Subtitle */}
-                <Text style={{ 
-                  fontSize: 16, 
-                  color: '#B0B0B0', 
-                  fontWeight: '400',
-                  letterSpacing: 0.3,
-                  textAlign: 'center',
-                  lineHeight: 22,
-                  writingDirection: 'rtl'
-                }}>
-                  ספר לנו על הניסיון והמטרות שלך
-                </Text>
-                
-                {/* Decorative Line */}
-                <View style={{
-                  width: 60,
-                  height: 2,
-                  backgroundColor: '#00E654',
-                  marginTop: 16,
-                  borderRadius: 1
-                }} />
-              </View>
+            <ProgressBar current={3} total={5} />
 
-              {/* Form Section */}
-              <View style={{ gap: 20 }}>
-                {/* Markets Selection */}
-                <View>
-                  <Text style={{ 
-                    color: '#FFFFFF', 
-                    fontSize: 14, 
-                    fontWeight: '600', 
-                    marginBottom: 8,
-                    letterSpacing: 0.4,
-                    textTransform: 'uppercase',
-                    textAlign: 'right'
-                  }}>
-                    שווקים מעניינים
+            {/* Back button */}
+            <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  navigation.goBack();
+                }}
+                activeOpacity={0.75}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: 'rgba(255,255,255,0.07)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.08)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  alignSelf: 'flex-end',
+                }}
+              >
+                <Ionicons name="chevron-forward" size={22} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 48 }}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
+              <View style={{ paddingHorizontal: 24, paddingTop: 12 }}>
+                {/* Header */}
+                <View style={{ marginBottom: 32 }}>
+                  <Text
+                    style={{
+                      fontSize: 30,
+                      fontWeight: '800',
+                      color: '#fff',
+                      marginBottom: 8,
+                      letterSpacing: -0.5,
+                      textAlign: 'right',
+                    }}
+                  >
+                    הכר את עצמך
                   </Text>
-                  <View style={{
-                    backgroundColor: '#1a1a1a',
-                    borderRadius: 14,
-                    borderWidth: 1.5,
-                    borderColor: '#333333',
-                    paddingHorizontal: 16,
-                    paddingVertical: 4
-                  }}>
-      <DropDownPicker
-                      open={marketOpen}
-        value={markets}
-                      items={marketOptions}
-                      setOpen={setMarketOpen}
-        setValue={setMarkets}
-        multiple={true}
-                      placeholder="בחר שווקים"
-                      placeholderStyle={{ color: '#666666', textAlign: 'right' }}
-        style={{
-                        backgroundColor: 'transparent',
-                        borderWidth: 0,
-                        minHeight: 48
-                      }}
-                      textStyle={{
-                        color: '#FFFFFF',
-                        fontSize: 16,
-                        fontWeight: '500',
-                        textAlign: 'right'
-        }}
-        dropDownContainerStyle={{
-                        backgroundColor: '#1a1a1a',
-                        borderColor: '#333333',
-                        borderWidth: 1.5,
-                        borderRadius: 14
-                      }}
-                      listItemLabelStyle={{
-                        color: '#FFFFFF',
-                        fontSize: 14,
-                        textAlign: 'right'
-                      }}
-                      selectedItemLabelStyle={{
-                        color: '#00E654',
-                        fontWeight: '600'
-                      }}
-                      tickIconStyle={{
-                        tintColor: '#00E654'
-                      }}
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      color: 'rgba(255,255,255,0.55)',
+                      textAlign: 'right',
+                      lineHeight: 22,
+                    }}
+                  >
+                    ספר לנו על הניסיון והמטרות שלך
+                  </Text>
+                </View>
+
+                {/* Markets – multi select */}
+                <Section title="שווקים מעניינים">
+                  {marketOptions.map(opt => (
+                    <Chip
+                      key={opt.value}
+                      label={opt.label}
+                      selected={markets.includes(opt.value)}
+                      onPress={() => toggleMarket(opt.value)}
                     />
-                  </View>
-                </View>
+                  ))}
+                </Section>
 
-                {/* Experience */}
-                <View>
-                  <Text style={{ 
-                    color: '#FFFFFF', 
-                    fontSize: 14, 
-                    fontWeight: '600', 
-                    marginBottom: 8,
-                    letterSpacing: 0.4,
-                    textTransform: 'uppercase',
-                    textAlign: 'right'
-                  }}>
-                    ניסיון בסחר
-                  </Text>
-                  <View style={{
-                    backgroundColor: '#1a1a1a',
-                    borderRadius: 14,
-                    borderWidth: 1.5,
-                    borderColor: '#333333',
-                    paddingHorizontal: 16,
-                    paddingVertical: 4
-                  }}>
-      <DropDownPicker
-        open={experienceOpen}
-        value={experience}
-                      items={experienceOptions}
-        setOpen={setExperienceOpen}
-        setValue={setExperience}
-                      placeholder="בחר ניסיון"
-                      placeholderStyle={{ color: '#666666', textAlign: 'right' }}
-        style={{
-                        backgroundColor: 'transparent',
-                        borderWidth: 0,
-                        minHeight: 48
-                      }}
-                      textStyle={{
-                        color: '#FFFFFF',
-                        fontSize: 16,
-                        fontWeight: '500',
-                        textAlign: 'right'
-        }}
-        dropDownContainerStyle={{
-                        backgroundColor: '#1a1a1a',
-                        borderColor: '#333333',
-                        borderWidth: 1.5,
-                        borderRadius: 14
-                      }}
-                      listItemLabelStyle={{
-                        color: '#FFFFFF',
-                        fontSize: 14,
-                        textAlign: 'right'
-                      }}
-                      selectedItemLabelStyle={{
-                        color: '#00E654',
-                        fontWeight: '600'
-                      }}
-                      tickIconStyle={{
-                        tintColor: '#00E654'
-                      }}
+                {/* Experience – single */}
+                <Section title="ניסיון בסחר">
+                  {experienceOptions.map(opt => (
+                    <Chip
+                      key={opt.value}
+                      label={opt.label}
+                      selected={experience === opt.value}
+                      onPress={() => setExperience(opt.value)}
                     />
-                  </View>
-                </View>
+                  ))}
+                </Section>
 
-                {/* Full Time */}
-                <View>
-                  <Text style={{ 
-                    color: '#FFFFFF', 
-                    fontSize: 14, 
-                    fontWeight: '600', 
-                    marginBottom: 8,
-                    letterSpacing: 0.4,
-                    textTransform: 'uppercase',
-                    textAlign: 'right'
-                  }}>
-                    סטטוס סחר
-                  </Text>
-                  <View style={{
-                    backgroundColor: '#1a1a1a',
-                    borderRadius: 14,
-                    borderWidth: 1.5,
-                    borderColor: '#333333',
-                    paddingHorizontal: 16,
-                    paddingVertical: 4
-                  }}>
-      <DropDownPicker
-        open={fullTimeOpen}
-        value={fullTime}
-                      items={fullTimeOptions}
-        setOpen={setFullTimeOpen}
-        setValue={setFullTime}
-                      placeholder="בחר סטטוס"
-                      placeholderStyle={{ color: '#666666', textAlign: 'right' }}
-        style={{
-                        backgroundColor: 'transparent',
-                        borderWidth: 0,
-                        minHeight: 48
-        }}
-        textStyle={{
-                        color: '#FFFFFF',
-                        fontSize: 16,
-                        fontWeight: '500',
-                        textAlign: 'right'
-        }}
-        dropDownContainerStyle={{
-                        backgroundColor: '#1a1a1a',
-                        borderColor: '#333333',
-                        borderWidth: 1.5,
-                        borderRadius: 14
-                      }}
-                      listItemLabelStyle={{
-                        color: '#FFFFFF',
-                        fontSize: 14,
-                        textAlign: 'right'
-                      }}
-                      selectedItemLabelStyle={{
-                        color: '#00E654',
-                        fontWeight: '600'
-                      }}
-                      tickIconStyle={{
-                        tintColor: '#00E654'
-                      }}
-      />
-    </View>
-                </View>
+                {/* Full time – single */}
+                <Section title="סטטוס סחר">
+                  {fullTimeOptions.map(opt => (
+                    <Chip
+                      key={opt.value}
+                      label={opt.label}
+                      selected={fullTime === opt.value}
+                      onPress={() => setFullTime(opt.value)}
+                    />
+                  ))}
+                </Section>
 
-                {/* Trading Style */}
-                <View>
-                  <Text style={{ 
-                    color: '#FFFFFF', 
-                    fontSize: 14, 
-                    fontWeight: '600', 
-                    marginBottom: 8,
-                    letterSpacing: 0.4,
-                    textTransform: 'uppercase',
-                    textAlign: 'right'
-                  }}>
-                    סגנון סחר
-                  </Text>
-                  <View style={{
-                    backgroundColor: '#1a1a1a',
-                    borderRadius: 14,
-                    borderWidth: 1.5,
-                    borderColor: '#333333',
-                    paddingHorizontal: 16,
-                    paddingVertical: 4
-                  }}>
-      <DropDownPicker
-                      open={styleOpen}
-                      value={style}
-                      items={styleOptions}
-                      setOpen={setStyleOpen}
-                      setValue={setStyle}
-                      placeholder="בחר סגנון"
-                      placeholderStyle={{ color: '#666666', textAlign: 'right' }}
-        style={{
-                        backgroundColor: 'transparent',
-                        borderWidth: 0,
-                        minHeight: 48
-        }}
-        textStyle={{
-                        color: '#FFFFFF',
-                        fontSize: 16,
-                        fontWeight: '500',
-                        textAlign: 'right'
-        }}
-        dropDownContainerStyle={{
-                        backgroundColor: '#1a1a1a',
-                        borderColor: '#333333',
-                        borderWidth: 1.5,
-                        borderRadius: 14
-                      }}
-                      listItemLabelStyle={{
-                        color: '#FFFFFF',
-                        fontSize: 14,
-                        textAlign: 'right'
-                      }}
-                      selectedItemLabelStyle={{
-                        color: '#00E654',
-                        fontWeight: '600'
-                      }}
-                      tickIconStyle={{
-                        tintColor: '#00E654'
-                      }}
-      />
-    </View>
-                </View>
+                {/* Style – single */}
+                <Section title="סגנון סחר">
+                  {styleOptions.map(opt => (
+                    <Chip
+                      key={opt.value}
+                      label={opt.label}
+                      selected={style === opt.value}
+                      onPress={() => setStyle(opt.value)}
+                    />
+                  ))}
+                </Section>
 
-                {/* Goals */}
-                <View>
-                  <Text style={{ 
-                    color: '#FFFFFF', 
-                    fontSize: 14, 
-                    fontWeight: '600', 
-                    marginBottom: 8,
-                    letterSpacing: 0.4,
-                    textTransform: 'uppercase',
-                    textAlign: 'right'
-                  }}>
-                    מטרות
+                {/* Goals – text */}
+                <View style={{ marginBottom: 28 }}>
+                  <Text
+                    style={{
+                      color: 'rgba(255,255,255,0.6)',
+                      fontSize: 13,
+                      fontWeight: '500',
+                      marginBottom: 10,
+                      textAlign: 'right',
+                    }}
+                  >
+                    מטרות (אופציונלי)
                   </Text>
-                  <View style={{
-                    backgroundColor: '#1a1a1a',
-                    borderRadius: 14,
-                    borderWidth: 1.5,
-                    borderColor: '#333333',
-          paddingHorizontal: 16, 
-                    paddingVertical: 4
-                  }}>
-      <TextInput
-        style={{ 
-                        color: '#FFFFFF',
-                        paddingVertical: 16,
-                        fontSize: 16,
-                        fontWeight: '500',
-          textAlign: 'right',
-                        minHeight: 80,
-                        textAlignVertical: 'top'
+                  <View
+                    style={{
+                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderColor: focused
+                        ? DesignTokens.colors.primary.main
+                        : 'rgba(255,255,255,0.1)',
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                    }}
+                  >
+                    <TextInput
+                      style={{
+                        color: '#fff',
+                        fontSize: 15,
+                        fontWeight: '400',
+                        textAlign: 'right',
+                        minHeight: 72,
+                        textAlignVertical: 'top',
                       }}
                       placeholder="ספר לנו על המטרות שלך..."
-                      placeholderTextColor="#666666"
+                      placeholderTextColor="rgba(255,255,255,0.22)"
                       value={goals}
                       onChangeText={setGoals}
                       multiline
                       numberOfLines={4}
-      />
-    </View>
+                      onFocus={() => setFocused(true)}
+                      onBlur={() => setFocused(false)}
+                    />
+                  </View>
                 </View>
 
-                {/* Next Button */}
+                {/* Primary CTA */}
                 <LinearGradient
-                  colors={['#00E654', '#00B84A', '#008F3A']}
+                  colors={['#00C805', '#00A004', '#008F03']}
                   start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                  end={{ x: 1, y: 0 }}
                   style={{
-                    borderRadius: 14,
-                    marginTop: 12,
-                    shadowColor: '#00E654',
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 12,
-                    elevation: 8
+                    borderRadius: 30,
+                    shadowColor: DesignTokens.colors.primary.main,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 16,
+                    elevation: 8,
+                    marginBottom: 4,
                   }}
                 >
-                <TouchableOpacity
-                  onPress={handleNext}
-                    style={{
-                      paddingVertical: 16,
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                  <TouchableOpacity
+                    onPress={() => {
+                      void HapticFeedback.medium();
+                      handleNext();
                     }}
+                    activeOpacity={0.85}
+                    style={{ paddingVertical: 17, alignItems: 'center' }}
                   >
-                    <Text style={{ 
-                      color: '#000000', 
-                      fontSize: 16, 
-                      fontWeight: '700',
-                      letterSpacing: 0.5,
-                      textTransform: 'uppercase',
-                      writingDirection: 'rtl'
-                    }}>
+                    <Text
+                      style={{
+                        color: '#000',
+                        fontSize: 16,
+                        fontWeight: '700',
+                        letterSpacing: 0.3,
+                      }}
+                    >
                       המשך
                     </Text>
-                </TouchableOpacity>
+                  </TouchableOpacity>
                 </LinearGradient>
               </View>
-            </View>
+            </ScrollView>
           </SafeAreaView>
         </LinearGradient>
       </KeyboardAvoidingView>
@@ -522,4 +428,4 @@ const RegistrationIntroScreen = ({ navigation }: { navigation: any }) => {
   );
 };
 
-export default RegistrationIntroScreen; 
+export default RegistrationIntroScreen;

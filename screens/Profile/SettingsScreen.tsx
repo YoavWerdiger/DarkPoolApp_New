@@ -1,34 +1,30 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  Switch, 
-  Alert,
+import {
+  View,
+  Text,
+  ScrollView,
+  Switch,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView
+  StyleSheet,
 } from 'react-native';
 import { 
-  Globe, 
-  Moon, 
-  Sun,
-  ArrowLeft,
-  Smartphone,
-  Lock,
-  Database,
   Trash2,
   Info,
   ChevronLeft,
-  RefreshCcw,
-  HardDrive,
-  Fingerprint,
-  Shield
+  Fingerprint
 } from 'lucide-react-native';
-import { supabase } from '../../lib/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { loadAppSettings, saveAppSettings, clearAppCache } from '../../services/appSettings';
+import { getAppVersionLabel } from '../../utils/appMeta';
 
 interface SettingItem {
   id: string;
@@ -44,15 +40,9 @@ interface SettingItem {
 
 export default function SettingsScreen({ navigation }: any) {
   const { user } = useAuth();
-  const { theme, isDarkMode, toggleTheme } = useTheme();
-  const [settings, setSettings] = useState({
-    darkMode: true,
-    autoUpdate: true,
-    dataSaving: false,
-    biometricAuth: false,
-    language: 'he'
-  });
-
+  const { theme } = useTheme();
+  const DesignTokens = useDesignTokens();
+  const [biometricAuth, setBiometricAuth] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -61,52 +51,25 @@ export default function SettingsScreen({ navigation }: any) {
 
   const loadSettings = async () => {
     try {
-      const saved = await AsyncStorage.getItem('appSettings');
-      if (saved) {
-        const parsedSettings = JSON.parse(saved);
-        setSettings(parsedSettings);
-      }
-      setIsLoading(false);
+      const saved = await loadAppSettings();
+      setBiometricAuth(saved.biometricAuth);
     } catch (error) {
-      console.error('Error loading settings:', error);
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handleToggle = async (key: string, value: boolean) => {
-    const newSettings = {
-      ...settings,
-      [key]: value
-    };
-    
-    setSettings(newSettings);
-    
-    // Update theme immediately for dark mode
-    if (key === 'darkMode') {
-      toggleTheme();
-    }
-    
+  const persistBiometric = async (value: boolean) => {
+    void HapticFeedback.selection();
+    setBiometricAuth(value);
     try {
-      await AsyncStorage.setItem('appSettings', JSON.stringify(newSettings));
+      await saveAppSettings({ biometricAuth: value });
     } catch (error) {
-      console.error('Error saving settings:', error);
     }
-  };
-
-  const handleLanguageChange = () => {
-    Alert.alert(
-      'שפה',
-      'בחר שפה',
-      [
-        { text: 'עברית', onPress: () => handleToggle('language', 'he') },
-        { text: 'English', onPress: () => handleToggle('language', 'en') },
-        { text: 'ביטול', style: 'cancel' }
-      ]
-    );
   };
 
   const handleClearCache = () => {
-    Alert.alert(
+    legacyAlert(
       'נקה מטמון',
       'האם אתה בטוח שברצונך למחוק את כל הנתונים הזמניים? פעולה זו לא תמחק את המידע האישי שלך.',
       [
@@ -116,22 +79,14 @@ export default function SettingsScreen({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Clear AsyncStorage cache
-              const keys = await AsyncStorage.getAllKeys();
-              const cacheKeys = keys.filter(key => 
-                key.startsWith('cache_') || 
-                key.startsWith('temp_') || 
-                key === 'offlineData'
+              const removed = await clearAppCache();
+              void HapticFeedback.success();
+              legacyAlert(
+                'הצלחה',
+                removed > 0 ? `נוקו ${removed} פריטי מטמון` : 'אין מטמון לניקוי',
               );
-              
-              if (cacheKeys.length > 0) {
-                await AsyncStorage.multiRemove(cacheKeys);
-              }
-              
-              Alert.alert('הצלחה', 'המטמון נוקה בהצלחה');
             } catch (error) {
-              console.error('Error clearing cache:', error);
-              Alert.alert('שגיאה', 'שגיאה בניקוי המטמון');
+              legacyAlert('שגיאה', 'שגיאה בניקוי המטמון');
             }
           }
         }
@@ -139,74 +94,46 @@ export default function SettingsScreen({ navigation }: any) {
     );
   };
 
-  const handleBiometricAuth = (value: boolean) => {
+  const handleBiometricAuth = async (value: boolean) => {
     if (value) {
-      Alert.alert(
-        'אימות ביומטרי',
-        'הפעלת אימות ביומטרי תאפשר לך להתחבר לאפליקציה באמצעות Face ID או Touch ID.',
-        [
-          { text: 'ביטול', onPress: () => {} },
-          { 
-            text: 'הפעל', 
-            onPress: () => {
-              // Here you would integrate with biometric authentication
-              handleToggle('biometricAuth', true);
-              Alert.alert('הצלחה', 'אימות ביומטרי הופעל');
-            }
-          }
-        ]
-      );
+      try {
+        // נבדוק אם יש תמיכה באימות ביומטרי
+        const compatible = await LocalAuthentication.hasHardwareAsync();
+        
+        if (!compatible) {
+          legacyAlert('שגיאה', 'המכשיר שלך לא תומך באימות ביומטרי');
+          return;
+        }
+
+        const enrolled = await LocalAuthentication.isEnrolledAsync();
+        if (!enrolled) {
+          legacyAlert('שגיאה', 'לא הוגדר אימות ביומטרי במכשיר. אנא הגדר Face ID או Touch ID בהגדרות המכשיר');
+          return;
+        }
+
+        // נבצע אימות ביומטרי
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'אמת את זהותך',
+          cancelLabel: 'ביטול',
+          disableDeviceFallback: false,
+        });
+
+        if (result.success) {
+          await persistBiometric(true);
+          void HapticFeedback.success();
+          legacyAlert('הצלחה', 'אימות ביומטרי הופעל בהצלחה');
+        } else {
+          legacyAlert('בוטל', 'אימות ביומטרי בוטל');
+        }
+      } catch (error) {
+        legacyAlert('שגיאה', 'שגיאה בהפעלת אימות ביומטרי');
+      }
     } else {
-      handleToggle('biometricAuth', false);
+      await persistBiometric(false);
     }
   };
 
   const settingSections = [
-    {
-      title: 'תצוגה',
-      items: [
-        {
-          id: 'darkMode',
-          title: settings.darkMode ? 'מצב כהה' : 'מצב בהיר',
-          subtitle: settings.darkMode ? 'תצוגה כהה לעיניים' : 'תצוגה בהירה ובהירה',
-          icon: settings.darkMode ? Moon : Sun,
-          type: 'switch' as const,
-          value: settings.darkMode,
-          onToggle: (value: boolean) => handleToggle('darkMode', value)
-        }
-      ]
-    },
-    {
-      title: 'אפליקציה',
-      items: [
-        {
-          id: 'autoUpdate',
-          title: 'עדכון אוטומטי',
-          subtitle: 'עדכן תוכן באופן אוטומטי',
-          icon: RefreshCcw,
-          type: 'switch' as const,
-          value: settings.autoUpdate,
-          onToggle: (value: boolean) => handleToggle('autoUpdate', value)
-        },
-        {
-          id: 'dataSaving',
-          title: 'חיסכון בנתונים',
-          subtitle: 'הפחת שימוש בנתונים סלולריים',
-          icon: HardDrive,
-          type: 'switch' as const,
-          value: settings.dataSaving,
-          onToggle: (value: boolean) => handleToggle('dataSaving', value)
-        },
-        {
-          id: 'language',
-          title: 'שפה',
-          subtitle: settings.language === 'he' ? 'עברית' : 'English',
-          icon: Globe,
-          type: 'action' as const,
-          onPress: handleLanguageChange
-        }
-      ]
-    },
     {
       title: 'אבטחה',
       items: [
@@ -216,7 +143,7 @@ export default function SettingsScreen({ navigation }: any) {
           subtitle: 'השתמש ב-Face ID / Touch ID',
           icon: Fingerprint,
           type: 'switch' as const,
-          value: settings.biometricAuth,
+          value: biometricAuth,
           onToggle: handleBiometricAuth
         }
       ]
@@ -240,136 +167,123 @@ export default function SettingsScreen({ navigation }: any) {
           icon: Info,
           type: 'action' as const,
           onPress: () => {
-            Alert.alert('אודות', 'DarkPool App\nגרסה 1.0.0\n\n© 2025 DarkPool');
+            legacyAlert('אודות', `DarkPool App\nגרסה ${getAppVersionLabel()}\n\n© ${new Date().getFullYear()} DarkPool`);
           }
         }
       ]
     }
   ];
 
-
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#00E654" />
-          <Text style={{ color: theme.textSecondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
+        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+        <Text style={{ 
+          color: DesignTokens.colors.text.secondary, 
+          fontSize: DesignTokens.typography.body.size,
+          fontWeight: DesignTokens.typography.body.weight as any,
+          lineHeight: DesignTokens.typography.body.lineHeight,
+          marginTop: DesignTokens.spacing.lg 
+        }}>טוען...</Text>
+      </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <SafeAreaView style={{ backgroundColor: theme.cardBackground }}>
-        {/* Header */}
-        <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: theme.cardBackground,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.border
-      }}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()}
-          style={{
-            width: 36,
-            height: 36,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: 18,
-            backgroundColor: theme.isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)'
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
+        <ChatSubScreenHeader
+          title="הגדרות"
+          onBack={() => {
+            void HapticFeedback.impactLight();
+            navigation.goBack();
           }}
-        >
-          <ArrowLeft size={20} color={theme.textPrimary} strokeWidth={2} />
-        </TouchableOpacity>
-        
-        <Text style={{
-          flex: 1,
-          textAlign: 'center',
-          fontSize: 20,
-          fontWeight: '700',
-          color: theme.textPrimary,
-          marginRight: 36
-        }}>
-          הגדרות
-        </Text>
-        </View>
-      </SafeAreaView>
+        />
 
-      <ScrollView 
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
-          {settingSections.map((section, sectionIndex) => (
-            <View key={sectionIndex} style={{ marginBottom: 24 }}>
-              {/* Section Title */}
-              <Text style={{
-                fontSize: 13,
-                fontWeight: '700',
-                color: theme.textTertiary,
-                marginBottom: 12,
-                marginRight: 4,
-                textAlign: 'right',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5
-              }}>
-                {section.title}
-              </Text>
+        <View style={{ flex: 1 }}>
+          <ScrollView 
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+          >
+          <View
+            style={{
+              paddingHorizontal: DesignTokens.spacing.base,
+              paddingTop: DesignTokens.spacing.md,
+            }}
+          >
+            {settingSections.map((section, sectionIndex) => (
+              <View key={sectionIndex} style={{ marginBottom: DesignTokens.spacing.lg }}>
+                {/* Section Title */}
+                <Text style={{
+                  fontSize: DesignTokens.typography.caption.size,
+                  fontWeight: DesignTokens.typography.fontWeight.bold as any,
+                  color: DesignTokens.colors.text.tertiary,
+                  marginBottom: DesignTokens.spacing.sm,
+                  textAlign: 'right',
+                  textTransform: 'uppercase',
+                  letterSpacing: DesignTokens.typography.letterSpacing.wide
+                }}>
+                  {section.title}
+                </Text>
 
-              {/* Section Items */}
-              <View style={{
-                backgroundColor: theme.cardBackground,
-                borderRadius: 16,
-                overflow: 'hidden'
-              }}>
+                {/* Section Items */}
+                <UICard 
+                  variant="glass"
+                  glassIntensity="light"
+                  padding="none"
+                  style={{ borderRadius: DesignTokens.borderRadius.lg }}
+                >
                 {section.items.map((item, itemIndex) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={item.type === 'action' ? item.onPress : undefined}
-                    disabled={item.type === 'switch'}
-                    activeOpacity={item.type === 'action' ? 0.7 : 1}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 16,
-                      paddingHorizontal: 16,
-                      borderBottomWidth: itemIndex < section.items.length - 1 ? 1 : 0,
-                      borderBottomColor: theme.border
-                    }}
-                  >
+                  <View key={item.id}>
+                    <TouchableOpacity
+                      onPress={
+                        item.type === 'action'
+                          ? () => {
+                              void HapticFeedback.impactLight();
+                              item.onPress?.();
+                            }
+                          : undefined
+                      }
+                      disabled={item.type === 'switch'}
+                      activeOpacity={item.type === 'action' ? 0.7 : 1}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: DesignTokens.spacing.md,
+                        paddingHorizontal: DesignTokens.spacing.base,
+                      }}
+                    >
                     {/* Switch/Chevron - שמאל */}
                     {item.type === 'switch' && item.onToggle ? (
                       <Switch
                         value={item.value}
                         onValueChange={item.onToggle}
-                        trackColor={{ false: theme.switchTrackOff, true: '#00E654' }}
-                        thumbColor={item.value ? '#ffffff' : theme.switchThumbOff}
+                        trackColor={{ false: theme.switchTrackOff, true: DesignTokens.colors.primary.main }}
+                        thumbColor={item.value ? DesignTokens.colors.text.primary : theme.switchThumbOff}
                         ios_backgroundColor={theme.switchTrackOff}
                         style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                       />
                     ) : (
-                      <ChevronLeft size={20} color={theme.textTertiary} strokeWidth={2} />
+                      <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                     )}
 
                     {/* Text Content - מרכז */}
-                    <View style={{ flex: 1, marginLeft: 12, marginRight: 12 }}>
+                    <View style={{ flex: 1, marginLeft: DesignTokens.spacing.md, marginRight: DesignTokens.spacing.md }}>
                       <Text style={{
-                        fontSize: 16,
-                        fontWeight: '600',
-                        color: item.danger ? '#EF4444' : theme.textPrimary,
-                        marginBottom: 2,
+                        fontSize: DesignTokens.typography.body.size,
+                        fontWeight: DesignTokens.typography.fontWeight.semibold as any,
+                        lineHeight: DesignTokens.typography.body.lineHeight,
+                        color: 'danger' in item && item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.text.primary,
+                        marginBottom: DesignTokens.spacing.xs / 2,
                         textAlign: 'right'
                       }}>
                         {item.title}
                       </Text>
                       <Text style={{
-                        fontSize: 13,
-                        color: theme.textTertiary,
+                        fontSize: DesignTokens.typography.bodySmall.size,
+                        fontWeight: DesignTokens.typography.bodySmall.weight as any,
+                        lineHeight: DesignTokens.typography.bodySmall.lineHeight,
+                        color: DesignTokens.colors.text.tertiary,
                         textAlign: 'right'
                       }}>
                         {item.subtitle}
@@ -380,38 +294,51 @@ export default function SettingsScreen({ navigation }: any) {
                     <View style={{
                       width: 36,
                       height: 36,
-                      borderRadius: 8,
-                      backgroundColor: item.danger ? 'rgba(239, 68, 68, 0.1)' : 'rgba(0, 230, 84, 0.1)',
+                      borderRadius: DesignTokens.borderRadius.sm,
+                      backgroundColor: 'danger' in item && item.danger ? `${DesignTokens.colors.danger.main}1A` : `${DesignTokens.colors.primary.main}1A`,
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
                       <item.icon 
                         size={20} 
-                        color={item.danger ? '#EF4444' : '#00E654'} 
+                        color={'danger' in item && item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.primary.main} 
                         strokeWidth={2} 
                       />
                     </View>
                   </TouchableOpacity>
+                  {itemIndex < section.items.length - 1 && (
+                    <View
+                      style={{
+                        height: StyleSheet.hairlineWidth,
+                        backgroundColor: DesignTokens.colors.border.divider,
+                        marginHorizontal: DesignTokens.spacing.base,
+                      }}
+                    />
+                  )}
+                </View>
                 ))}
+                </UICard>
               </View>
-            </View>
-          ))}
+            ))}
 
-          {/* App Version */}
-          <View style={{ 
-            alignItems: 'center', 
-            marginTop: 16,
-            marginBottom: 20
-          }}>
-            <Text style={{ 
-              color: theme.textTertiary, 
-              fontSize: 13
+            {/* App Version */}
+            <View style={{ 
+              alignItems: 'center', 
+              marginTop: DesignTokens.spacing.md,
+              marginBottom: DesignTokens.spacing.lg
             }}>
-              DarkPool App · גרסה 1.0.0
-            </Text>
+              <Text style={{ 
+                color: DesignTokens.colors.text.tertiary, 
+                fontSize: DesignTokens.typography.caption.size,
+                fontWeight: DesignTokens.typography.caption.weight as any,
+              }}>
+                DarkPool App · גרסה {getAppVersionLabel()}
+              </Text>
+            </View>
           </View>
+          </ScrollView>
         </View>
-      </ScrollView>
+      </RNSafeAreaView>
     </View>
   );
 }

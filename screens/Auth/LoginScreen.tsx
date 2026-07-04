@@ -1,428 +1,625 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, Alert, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Pressable, ScrollView, ImageBackground, Animated, Easing } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { useRegistration } from '../../context/RegistrationContext';
 import { Ionicons } from '@expo/vector-icons';
-import { Mail, Lock, Check } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { ScreenGradientBackground } from '../../components/VideoBackground';
+import { SUPABASE_URL } from '../../config/publicEnv';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
+const { width, height } = Dimensions.get('window');
+const WELCOME_LOGO_URI = 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/app-media/image%20(3).png';
+
+// ─── Reusable input ────────────────────────────────────────────────────────
+interface FieldProps {
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder: string;
+  secureTextEntry?: boolean;
+  keyboardType?: any;
+  autoCapitalize?: any;
+  rightEl?: React.ReactNode;
+  tokens: ReturnType<typeof useDesignTokens>;
+}
+
+const Field: React.FC<FieldProps> = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry,
+  keyboardType,
+  autoCapitalize = 'none',
+  rightEl,
+  tokens,
+}) => {
+  const [focused, setFocused] = useState(false);
+  const { colors } = tokens;
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <Text
+        style={{
+          color: colors.text.secondary,
+          fontSize: 13,
+          fontWeight: '500',
+          marginBottom: 8,
+          textAlign: 'right',
+          letterSpacing: 0.2,
+        }}
+      >
+        {label}
+      </Text>
+      <View
+        style={{
+          backgroundColor: colors.glass.cardElevated.bg,
+          borderRadius: 26,
+          borderWidth: 1.5,
+          borderColor: focused
+            ? colors.primary.main
+            : colors.glass.cardElevated.border,
+          paddingHorizontal: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        {rightEl}
+        <TextInput
+          style={{
+            flex: 1,
+            color: colors.text.primary,
+            paddingHorizontal: 0,
+            paddingVertical: 15,
+            fontSize: 16,
+            fontWeight: '400',
+            textAlign: 'right',
+          }}
+          placeholder={placeholder}
+          placeholderTextColor={colors.text.disabled}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={false}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+      </View>
+    </View>
+  );
+};
+
+// ─── Screen ────────────────────────────────────────────────────────────────
 export default function LoginScreen({ navigation }: any) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const tokens = useDesignTokens();
+  const { colors } = tokens;
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const { signIn, isLoading, attemptAutoLogin } = useAuth();
+  const [rememberMe, setRememberMe]     = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const logoFloat = useRef(new Animated.Value(0)).current;
 
-  // טעינת פרטי התחברות שמורים
+  const { signIn, signInWithGoogle, isLoading } = useAuth();
+  const { setGoogleUserData } = useRegistration();
+
   useEffect(() => {
     loadSavedCredentials();
   }, []);
 
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoFloat, {
+          toValue: -8,
+          duration: 1500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoFloat, {
+          toValue: 0,
+          duration: 1500,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [logoFloat]);
+
   const loadSavedCredentials = async () => {
     try {
-      const savedEmail = await AsyncStorage.getItem('saved_email');
-      const savedPassword = await AsyncStorage.getItem('saved_password');
-      const savedRememberMe = await AsyncStorage.getItem('remember_me');
-      
-      if (savedRememberMe === 'true' && savedEmail && savedPassword) {
+      // Migrate: clear any legacy plaintext password from older versions
+      await AsyncStorage.removeItem('saved_password');
+
+      const savedEmail    = await AsyncStorage.getItem('saved_email');
+      const savedRemember = await AsyncStorage.getItem('remember_me');
+      if (savedRemember === 'true' && savedEmail) {
         setEmail(savedEmail);
-        setPassword(savedPassword);
         setRememberMe(true);
       }
-    } catch (error) {
-      console.error('Error loading saved credentials:', error);
-    }
+    } catch {}
   };
 
-  const saveCredentials = async (email: string, password: string, remember: boolean) => {
+  const saveCredentials = async (e: string, remember: boolean) => {
     try {
       if (remember) {
-        await AsyncStorage.setItem('saved_email', email);
-        await AsyncStorage.setItem('saved_password', password);
+        await AsyncStorage.setItem('saved_email', e);
         await AsyncStorage.setItem('remember_me', 'true');
       } else {
         await AsyncStorage.removeItem('saved_email');
-        await AsyncStorage.removeItem('saved_password');
         await AsyncStorage.removeItem('remember_me');
       }
-    } catch (error) {
-      console.error('Error saving credentials:', error);
-    }
+    } catch {}
   };
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('שגיאה', 'אנא מלא את כל השדות');
+      legacyAlert('שגיאה', 'אנא מלא את כל השדות');
       return;
     }
-
     const { error } = await signIn({ email: email.trim(), password });
     if (error) {
-      Alert.alert('שגיאה בהתחברות', error);
+      legacyAlert('שגיאה בהתחברות', error);
+      await saveCredentials('', false);
     } else {
-      // אם ההתחברות הצליחה, נשמור את הפרטים אם "זכור אותי" מסומן
-      await saveCredentials(email.trim(), password, rememberMe);
-      
-      if (rememberMe) {
-        // הודעה למשתמש על התחברות אוטומטית
-        setTimeout(() => {
-          Alert.alert(
-            'התחברות מוצלחת!', 
-            'הנתונים נשמרו. בפעם הבאה תתחבר אוטומטית.',
-            [{ text: 'אישור' }]
-          );
-        }, 1000);
-      }
+      await saveCredentials(email.trim(), rememberMe);
     }
   };
 
   const handleForgotPassword = () => {
     if (!email.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס את כתובת האימייל שלך');
+      legacyAlert('שגיאה', 'אנא הכנס את כתובת האימייל שלך');
       return;
     }
-    Alert.alert('איפוס סיסמה', 'נשלח לך אימייל לאיפוס הסיסמה');
+    legacyAlert('איפוס סיסמה', 'נשלח לך אימייל לאיפוס הסיסמה');
   };
 
-  const { width, height } = Dimensions.get('window');
-
-  // Create subtle background pattern
-  const createBackgroundPattern = () => {
-    const patterns = [];
-    for (let i = 0; i < 15; i++) {
-      patterns.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.05 + 0.02
-      });
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      if (result.error) { legacyAlert('שגיאה בהתחברות', result.error); return; }
+      if (result.isNewUser && result.googleUser) {
+        setGoogleUserData(result.googleUser);
+        navigation.navigate('Onboarding', { skipToIntro: true });
+      }
+    } catch {
+      legacyAlert('שגיאה', 'אירעה שגיאה בהתחברות עם Google');
+    } finally {
+      setGoogleLoading(false);
     }
-    return patterns;
   };
-
-  const backgroundPattern = createBackgroundPattern();
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <LinearGradient
-          colors={['#000000', '#0d1b0d', '#1a2d1a', '#000000']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ flex: 1 }}
-        >
-          {/* Subtle Background Pattern */}
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {backgroundPattern.map((dot, index) => (
-              <View
-                key={index}
-                style={{
-                  position: 'absolute',
-                  left: dot.x,
-                  top: dot.y,
-                  width: dot.size,
-                  height: dot.size,
-                  backgroundColor: '#00E654',
-                  opacity: dot.opacity,
-                  borderRadius: dot.size / 2
-                }}
-              />
-            ))}
-          </View>
-
-          {/* Gradient Overlay */}
-          <LinearGradient
-            colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-
-          {/* Transparent Background Image - Center */}
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            opacity: 0.15
-          }}>
+        <View style={{ flex: 1, backgroundColor: colors.background.primary }}>
+          <ScreenGradientBackground />
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: 0.12,
+            }}
+          >
             <ImageBackground
-              source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
-              style={{
-                width: width,
-                height: height,
-                resizeMode: 'contain'
-              }}
-              imageStyle={{
-                opacity: 0.3
-              }}
+              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
+              style={{ width: width * 1.45, height: height * 1.45 }}
+              imageStyle={{ resizeMode: 'contain' }}
             />
           </View>
 
-          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
-            {/* Header Section */}
-            <View style={{ alignItems: 'center', marginBottom: 48 }}>
-               {/* Main Title */}
-               <Text style={{ 
-                 fontSize: 32, 
-                 fontWeight: '800', 
-                 color: '#FFFFFF', 
-                 marginBottom: 8,
-                 letterSpacing: -0.8,
-                 textAlign: 'center',
-                 writingDirection: 'rtl'
-               }}>
-                  ברוכים הבאים ל-DarkPool
-               </Text>
-               
-               {/* Subtitle */}
-               <Text style={{ 
-                 fontSize: 16, 
-                 color: '#B0B0B0', 
-                 fontWeight: '400',
-                 letterSpacing: 0.3,
-                 textAlign: 'center',
-                 lineHeight: 22,
-                 writingDirection: 'rtl'
-               }}>
-                 התחבר לחשבון שלך כדי להמשיך
-               </Text>
-              
-              {/* Decorative Line */}
-              <View style={{
-                width: 60,
-                height: 2,
-                backgroundColor: '#00E654',
-                marginTop: 16,
-                borderRadius: 1
-              }} />
-            </View>
+          <SafeAreaView style={{ flex: 1 }}>
+            <ScrollView
+              contentContainerStyle={{
+                flexGrow: 1,
+                justifyContent: showForm ? 'center' : 'space-between',
+                paddingHorizontal: 24,
+                paddingTop: showForm ? 20 : 40,
+                paddingBottom: 28,
+              }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {!showForm ? (
+                <>
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 20 }}>
+                    <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
+                      <Image
+                        source={{ uri: WELCOME_LOGO_URI }}
+                        style={{ width: width * 0.78, height: width * 0.78, marginBottom: 10 }}
+                        resizeMode="contain"
+                      />
+                    </Animated.View>
+                  </View>
 
-            {/* Form Section */}
-            <View style={{ gap: 20 }}>
-              {/* Email Input */}
-              <View>
-                 <Text style={{ 
-                   color: '#FFFFFF', 
-                   fontSize: 14, 
-                   fontWeight: '600', 
-                   marginBottom: 8,
-                   letterSpacing: 0.4,
-                   textTransform: 'uppercase',
-                   textAlign: 'right'
-                 }}>
-                   כתובת אימייל
-                 </Text>
-                <View style={{
-                  backgroundColor: '#1a1a1a',
-                  borderRadius: 14,
-                  borderWidth: 1.5,
-                  borderColor: '#333333',
-                  paddingHorizontal: 16,
-                  paddingVertical: 4,
-                  flexDirection: 'row',
-                  alignItems: 'center'
-                }}>
-                  <Mail size={20} color="#666666" strokeWidth={2} />
-                  <TextInput
-                    style={{
-                      flex: 1,
-                      color: '#FFFFFF',
-                      paddingHorizontal: 12,
-                      paddingVertical: 16,
-                      fontSize: 16,
-                      fontWeight: '500',
-                      textAlign: 'right'
-                    }}
-                    placeholder="הכנס את כתובת האימייל"
-                    placeholderTextColor="#666666"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-              </View>
+                  <View style={{ gap: 12 }}>
+                    <LinearGradient
+                      colors={colors.primary.gradient as [string, string]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={{
+                        borderRadius: 28,
+                        shadowColor: colors.primary.main,
+                        shadowOffset: { width: 0, height: 8 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 14,
+                        elevation: 8,
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => {
+                          void HapticFeedback.medium();
+                          navigation.navigate('Onboarding');
+                        }}
+                        activeOpacity={0.86}
+                        style={{ paddingVertical: 17, alignItems: 'center' }}
+                      >
+                        <Text style={{ color: colors.text.inverse, fontSize: 17, fontWeight: '800' }}>
+                          התחל
+                        </Text>
+                      </TouchableOpacity>
+                    </LinearGradient>
 
-              {/* Password Input */}
-              <View>
-                 <Text style={{ 
-                   color: '#FFFFFF', 
-                   fontSize: 14, 
-                   fontWeight: '600', 
-                   marginBottom: 8,
-                   letterSpacing: 0.4,
-                   textTransform: 'uppercase',
-                   textAlign: 'right'
-                 }}>
-                   סיסמה
-                 </Text>
-                <View style={{
-                  backgroundColor: '#1a1a1a',
-                  borderRadius: 14,
-                  borderWidth: 1.5,
-                  borderColor: '#333333',
-                  paddingHorizontal: 16,
-                  paddingVertical: 4,
-                  flexDirection: 'row',
-                  alignItems: 'center'
-                }}>
-                  <Lock size={20} color="#666666" strokeWidth={2} />
-                  <TextInput
-                    style={{
-                      flex: 1,
-                      color: '#FFFFFF',
-                      paddingHorizontal: 12,
-                      paddingVertical: 16,
-                      fontSize: 16,
-                      fontWeight: '500',
-                      textAlign: 'right'
-                    }}
-                    placeholder="הכנס את הסיסמה"
-                    placeholderTextColor="#666666"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                  />
-                  <Pressable 
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={{ padding: 6 }}
-                  >
-                    <Ionicons 
-                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                      size={20} 
-                      color="#666666" 
-                    />
-                  </Pressable>
-                </View>
-              </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        void HapticFeedback.impactLight();
+                        setShowForm(true);
+                      }}
+                      activeOpacity={0.85}
+                      style={{
+                        borderRadius: 28,
+                        borderWidth: 1.5,
+                        borderColor: colors.glass.cardElevated.border,
+                        backgroundColor: colors.glass.cardElevated.bg,
+                        paddingVertical: 16,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ color: colors.text.primary, fontSize: 16, fontWeight: '700' }}>
+                        כבר יש לי חשבון
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <View style={{ width: '100%', alignSelf: 'center' }}>
+                  <View style={{ marginBottom: 24 }}>
+                    <Text
+                      style={{
+                        fontSize: 28,
+                        fontWeight: '800',
+                        color: colors.text.primary,
+                        marginBottom: 8,
+                        letterSpacing: -0.5,
+                        textAlign: 'right',
+                      }}
+                    >
+                      התחברות לחשבון
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        color: colors.text.secondary,
+                        fontWeight: '500',
+                        textAlign: 'right',
+                      }}
+                    >
+                      ברוכים הבאים לקהילת DarkPool
+                    </Text>
+                  </View>
 
-               {/* Remember Me & Forgot Password */}
-               <View style={{ 
-                 flexDirection: 'row-reverse', 
-                 justifyContent: 'space-between', 
-                 alignItems: 'center',
-                 marginTop: 8
-               }}>
-                 {/* Remember Me Checkbox */}
-                 <Pressable 
-                   onPress={() => setRememberMe(!rememberMe)}
-                   style={{ 
-                     flexDirection: 'row-reverse', 
-                     alignItems: 'center',
-                     gap: 8
-                   }}
-                 >
-                   <View style={{
-                     width: 20,
-                     height: 20,
-                     borderRadius: 4,
-                     borderWidth: 2,
-                     borderColor: rememberMe ? '#00E654' : '#666666',
-                     backgroundColor: rememberMe ? '#00E654' : 'transparent',
-                     alignItems: 'center',
-                     justifyContent: 'center'
-                   }}>
-                     {rememberMe && (
-                       <Check size={12} color="#000" strokeWidth={3} />
-                     )}
-                   </View>
-                   <Text style={{ 
-                     color: '#B0B0B0', 
-                     fontSize: 14, 
-                     fontWeight: '500',
-                     letterSpacing: 0.2,
-                     writingDirection: 'rtl'
-                   }}>
-                     זכור אותי
-                   </Text>
-                 </Pressable>
+                <Field
+                  label="כתובת אימייל"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="you@example.com"
+                  keyboardType="email-address"
+                  tokens={tokens}
+                />
 
-                 {/* Forgot Password */}
-                 <Pressable onPress={handleForgotPassword}>
-                   <Text style={{ 
-                     color: '#00E654', 
-                     fontSize: 14, 
-                     fontWeight: '500',
-                     letterSpacing: 0.2,
-                     textAlign: 'right'
-                   }}>
-                     שכחת סיסמה?
-                   </Text>
-                 </Pressable>
-               </View>
+                <Field
+                  label="סיסמה"
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="הכנס את הסיסמה"
+                  secureTextEntry={!showPassword}
+                  tokens={tokens}
+                  rightEl={
+                    <Pressable
+                      onPress={() => {
+                        void HapticFeedback.selection();
+                        setShowPassword(!showPassword);
+                      }}
+                      style={{ padding: 6 }}
+                    >
+                      <Ionicons
+                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={19}
+                        color={colors.text.tertiary}
+                      />
+                    </Pressable>
+                  }
+                />
 
-              {/* Login Button */}
-              <LinearGradient
-                colors={['#00E654', '#00B84A', '#008F3A']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  borderRadius: 14,
-                  marginTop: 12,
-                  shadowColor: '#00E654',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 12,
-                  elevation: 8
-                }}
-              >
-                <Pressable
-                  onPress={handleSignIn}
-                  disabled={isLoading}
+                {/* Remember me + Forgot */}
+                <View
                   style={{
-                    paddingVertical: 16,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: isLoading ? 0.7 : 1
+                    marginBottom: 28,
+                    marginTop: 4,
                   }}
                 >
-                   <Text style={{ 
-                     color: '#000000', 
-                     fontSize: 16, 
-                     fontWeight: '700',
-                     letterSpacing: 0.5,
-                     textTransform: 'uppercase',
-                     writingDirection: 'rtl'
-                   }}>
-                     {isLoading ? 'מתחבר...' : 'התחבר'}
-                   </Text>
-                </Pressable>
-              </LinearGradient>
+                  <Pressable
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setRememberMe(!rememberMe);
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      paddingVertical: 4,
+                      paddingHorizontal: 2,
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: 999,
+                        borderWidth: 1.5,
+                        borderColor: rememberMe
+                          ? colors.primary.main
+                          : colors.border.hover,
+                        backgroundColor: rememberMe
+                          ? colors.primary.main
+                          : 'transparent',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {rememberMe && (
+                        <Ionicons name="checkmark" size={13} color={colors.text.inverse} />
+                      )}
+                    </View>
+                    <Text
+                      style={{
+                        color: colors.text.secondary,
+                        fontSize: 14,
+                        fontWeight: '500',
+                      }}
+                    >
+                      זכור אותי
+                    </Text>
+                  </Pressable>
 
-               {/* Register Link */}
-               <View style={{ 
-                 flexDirection: 'row-reverse', 
-                 justifyContent: 'center', 
-                 alignItems: 'center', 
-                 marginTop: 24,
-                 gap: 6
-               }}>
-                 <Text style={{ color: '#A0A0A0', fontSize: 14, fontWeight: '400' }}>
-                   אין לך חשבון?
-                 </Text>
-                <Pressable onPress={() => navigation.navigate('Onboarding')}>
-                  <Text style={{ 
-                    color: '#00E654', 
-                    fontSize: 14, 
-                    fontWeight: '600',
-                    letterSpacing: 0.2
-                  }}>
-                    הירשם עכשיו
+                  <Pressable
+                    onPress={() => {
+                      void HapticFeedback.impactLight();
+                      handleForgotPassword();
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: colors.primary.main,
+                        fontSize: 14,
+                        fontWeight: '600',
+                      }}
+                    >
+                      שכחת סיסמה?
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* Login CTA */}
+                <LinearGradient
+                  colors={colors.primary.gradient as [string, string]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{
+                    borderRadius: 30,
+                    shadowColor: colors.primary.main,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 16,
+                    elevation: 8,
+                    marginBottom: 12,
+                  }}
+                >
+                  <TouchableOpacity
+                    onPress={() => {
+                      void HapticFeedback.medium();
+                      handleSignIn();
+                    }}
+                    disabled={isLoading}
+                    activeOpacity={0.85}
+                    style={{
+                      paddingVertical: 17,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: isLoading ? 0.75 : 1,
+                    }}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={colors.text.inverse} size="small" />
+                    ) : (
+                      <Text
+                        style={{
+                          color: colors.text.inverse,
+                          fontSize: 16,
+                          fontWeight: '700',
+                          letterSpacing: 0.3,
+                        }}
+                      >
+                        התחבר
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </LinearGradient>
+
+                {/* Divider */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginVertical: 18,
+                  }}
+                >
+                  <View
+                    style={{
+                      flex: 1,
+                      height: 1,
+                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                      borderRadius: 999,
+                    }}
+                  />
+                  <Text
+                    style={{
+                      color: colors.text.tertiary,
+                      fontSize: 12,
+                      fontWeight: '600',
+                      marginHorizontal: 12,
+                      backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                      borderRadius: 999,
+                      paddingHorizontal: 9,
+                      paddingVertical: 2,
+                    }}
+                  >
+                    או
                   </Text>
-                </Pressable>
-               </View>
-            </View>
-          </View>
-        </LinearGradient>
+                  <View
+                    style={{
+                      flex: 1,
+                      height: 1,
+                      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                      borderRadius: 999,
+                    }}
+                  />
+                </View>
+
+                {/* Google */}
+                <TouchableOpacity
+                  onPress={() => {
+                    void HapticFeedback.medium();
+                    handleGoogleSignIn();
+                  }}
+                  disabled={isLoading || googleLoading}
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: colors.selection.subtle,
+                    borderRadius: 30,
+                    borderWidth: 1,
+                    borderColor: colors.glass.card.border,
+                    paddingVertical: 15,
+                    paddingHorizontal: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 10,
+                    marginBottom: 12,
+                    opacity: isLoading || googleLoading ? 0.6 : 1,
+                  }}
+                >
+                  {googleLoading ? (
+                    <ActivityIndicator color={colors.text.primary} size="small" />
+                  ) : (
+                    <>
+                      <Image
+                        source={{ uri: 'https://www.google.com/favicon.ico' }}
+                        style={{ width: 18, height: 18 }}
+                      />
+                      <Text
+                        style={{
+                          color: colors.text.primary,
+                          fontSize: 15,
+                          fontWeight: '600',
+                          letterSpacing: 0.2,
+                        }}
+                      >
+                        התחבר עם Google
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {/* Register */}
+                <TouchableOpacity
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    navigation.navigate('Onboarding');
+                  }}
+                  activeOpacity={0.75}
+                  style={{
+                    borderRadius: 30,
+                    borderWidth: 1.5,
+                    borderColor: colors.primary.main,
+                    paddingVertical: 15,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: colors.primary.main,
+                      fontSize: 15,
+                      fontWeight: '700',
+                      letterSpacing: 0.2,
+                    }}
+                  >
+                    צור חשבון חדש
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Footer */}
+                <Text
+                  style={{
+                    color: colors.text.disabled,
+                    fontSize: 12,
+                    textAlign: 'center',
+                    marginTop: 28,
+                    lineHeight: 18,
+                  }}
+                >
+                  בהתחברות אתה מסכים לתנאי השימוש ומדיניות הפרטיות
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    setShowForm(false);
+                  }}
+                  activeOpacity={0.75}
+                  style={{ alignItems: 'center', marginTop: 18 }}
+                >
+                  <Text style={{ color: colors.text.tertiary, fontSize: 13, fontWeight: '600' }}>
+                    חזרה למסך ברוכים הבאים
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              )}
+            </ScrollView>
+          </SafeAreaView>
+        </View>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );

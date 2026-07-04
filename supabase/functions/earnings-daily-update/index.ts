@@ -2,7 +2,8 @@
 // מעדכן את כל דיווחי הרווחים של היום
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { prepareEarningsRecord } from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,7 +20,10 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const eodhdApiKey = Deno.env.get('EODHD_API_KEY') || '68e3c3af900997.85677801'
+    const benzingaApiKey = Deno.env.get('BENZINGA_API_KEY')
+    if (!benzingaApiKey) {
+      return new Response(JSON.stringify({ error: 'BENZINGA_API_KEY not configured' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration')
@@ -37,57 +41,118 @@ serve(async (req) => {
 
     console.log(`📅 Fetching ALL earnings for: ${fromDate} → ${toDate}`)
 
-    // קריאה ל-EODHD ללא symbols - מחזיר את כל הדיווחים!
-    const apiUrl = `https://eodhd.com/api/calendar/earnings?from=${fromDate}&to=${toDate}&api_token=${eodhdApiKey}&fmt=json`
+    // קריאה ל-Benziga API - מחזיר את כל הדיווחים!
+    const apiUrl = new URL('https://api.benzinga.com/api/v2/calendar/earnings')
+    apiUrl.searchParams.append('token', benzingaApiKey)
+    apiUrl.searchParams.append('accept', 'application/json')
+    apiUrl.searchParams.append('parameters[date_from]', fromDate)
+    apiUrl.searchParams.append('parameters[date_to]', toDate)
+    apiUrl.searchParams.append('pagesize', '1000')
     
-    console.log(`📡 Calling EODHD API...`)
+    console.log(`📡 Calling Benzinga API...`)
     
-    const response = await fetch(apiUrl)
+    const response = await fetch(apiUrl.toString())
     
     if (!response.ok) {
-      throw new Error(`EODHD API error: ${response.status}`)
+      throw new Error(`Benzinga API error: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()
     
     if (!data.earnings || !Array.isArray(data.earnings)) {
-      throw new Error('Invalid response format from EODHD')
+      throw new Error('Invalid response format from Benzinga')
     }
 
     console.log(`📊 Received ${data.earnings.length} earnings reports`)
+
+    // המרת Benzinga earnings לפורמט EODHD (תואם ל-earnings-utils)
+    const convertedEarnings = data.earnings.map((earning: any) => {
+      // קובע לפני/אחרי שוק לפי השעה
+      let before_after_market: string | null = null;
+      if (earning.time) {
+        const hour = parseInt(earning.time.split(':')[0]);
+        if (hour >= 4 && hour < 10) {
+          before_after_market = 'Before Market';
+        } else if (hour >= 16 && hour < 20) {
+          before_after_market = 'After Market';
+        }
+      }
+
+      // מחשב difference ו-percent מ-EPS
+      let actual: number | null = null;
+      let estimate: number | null = null;
+      let difference: number | null = null;
+      let percent: number | null = null;
+
+      if (earning.eps && earning.eps !== '') {
+        actual = parseFloat(earning.eps);
+        if (!isNaN(actual)) {
+          if (earning.eps_est && earning.eps_est !== '') {
+            estimate = parseFloat(earning.eps_est);
+            if (!isNaN(estimate)) {
+              difference = actual - estimate;
+              percent = estimate !== 0 ? (difference / Math.abs(estimate)) * 100 : 0;
+            }
+          }
+        }
+      } else if (earning.revenue && earning.revenue !== '') {
+        actual = parseFloat(earning.revenue);
+        if (!isNaN(actual)) {
+          if (earning.revenue_est && earning.revenue_est !== '') {
+            estimate = parseFloat(earning.revenue_est);
+            if (!isNaN(estimate)) {
+              difference = actual - estimate;
+              percent = estimate !== 0 ? (difference / Math.abs(estimate)) * 100 : 0;
+            }
+          }
+        }
+      }
+
+      // טיקר בפורמט .US
+      const tickerCode = earning.ticker.includes('.') ? earning.ticker : `${earning.ticker}.US`;
+
+      return {
+        code: tickerCode,
+        name: earning.name || earning.ticker,
+        report_date: earning.date,
+        date: earning.date,
+        before_after_market,
+        currency: earning.currency || 'USD',
+        actual,
+        estimate,
+        difference,
+        percent,
+      };
+    })
 
     let totalUpdated = 0
     let totalWithActual = 0
     const updates = []
 
-    for (const earnings of data.earnings) {
+    for (const earnings of convertedEarnings) {
       try {
-        // סינון: רק מניות אמריקאיות
-        if (!earnings.code || !earnings.code.endsWith('.US')) {
+        const prepared = prepareEarningsRecord(earnings, {
+          requireUSCode: true,
+          skipPreferredShares: true
+        })
+
+        if (!prepared) {
           continue
         }
 
-        // עדכון רק אם יש actual (תוצאה בפועל)
-        if (earnings.actual !== null && earnings.actual !== undefined) {
-          totalWithActual++
-          
-          const earningsData = {
-            id: `earnings_${earnings.code}_${earnings.report_date}`,
-            code: earnings.code,
-            report_date: earnings.report_date,
-            date: earnings.date,
-            before_after_market: earnings.before_after_market || null,
-            currency: earnings.currency || 'USD',
-            actual: earnings.actual,
-            estimate: earnings.estimate || null,
-            difference: earnings.difference || null,
-            percent: earnings.percent || null,
-            source: 'EODHD',
-            updated_at: new Date().toISOString()
-          }
-
-          updates.push(earningsData)
+        if (prepared.record.actual === null) {
+          continue
         }
+
+        totalWithActual++
+
+        if (prepared.meta.adjusted) {
+          console.log(
+            `🕒 Adjusted ${earnings.code} report date ${earnings.report_date} → ${prepared.record.report_date} (${prepared.meta.adjustmentReason})`
+          )
+        }
+
+        updates.push(prepared.record)
 
       } catch (error) {
         console.error('❌ Error processing earnings:', error)
@@ -128,7 +193,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       message: `Updated ${totalUpdated} earnings reports`,
-      totalChecked: data.earnings.length,
+      totalChecked: convertedEarnings.length,
       totalWithActual: totalWithActual,
       totalUpdated: totalUpdated,
       dateRange: `${fromDate} to ${toDate}`,

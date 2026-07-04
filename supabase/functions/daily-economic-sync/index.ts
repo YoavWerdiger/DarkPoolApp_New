@@ -2,12 +2,12 @@
   // שולף נתונים כלכליים מ-FRED API ומעדכן את Supabase DB
 
   import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+  import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
-  const FRED_API_KEY = 'f4d63bd9fddd00b175c1c99ca49b4247'
+  const FRED_API_KEY = Deno.env.get('FRED_API_KEY') ?? ''
   const FRED_BASE_URL = 'https://api.stlouisfed.org/fred'
 
-  const EODHD_API_KEY = '68e3c3af900997.85677801'
+  const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
   const EODHD_BASE_URL = 'https://eodhd.com/api'
 
 interface EconomicEvent {

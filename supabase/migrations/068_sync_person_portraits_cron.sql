@@ -1,0 +1,62 @@
+-- ============================================================================
+-- 068_sync_person_portraits_cron.sql
+-- סנכרון תמונות פרופיל יומי + אחרי insider/congress sync.
+-- ============================================================================
+
+CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pg_net  WITH SCHEMA extensions;
+
+CREATE OR REPLACE FUNCTION public.invoke_sync_person_portraits(p_body JSONB DEFAULT '{}'::jsonb)
+RETURNS BIGINT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions, vault
+AS $$
+DECLARE
+  v_url        TEXT;
+  v_key        TEXT;
+  v_request_id BIGINT;
+BEGIN
+  SELECT decrypted_secret INTO v_url
+    FROM vault.decrypted_secrets WHERE name = 'SUPABASE_URL' LIMIT 1;
+  SELECT decrypted_secret INTO v_key
+    FROM vault.decrypted_secrets WHERE name = 'SUPABASE_SERVICE_ROLE_KEY' LIMIT 1;
+
+  IF v_url IS NULL OR v_key IS NULL THEN
+    RAISE WARNING 'sync_person_portraits: missing vault secrets';
+    RETURN NULL;
+  END IF;
+
+  SELECT net.http_post(
+    url     := v_url || '/functions/v1/sync-person-portraits',
+    headers := jsonb_build_object(
+      'Content-Type',  'application/json',
+      'Authorization', 'Bearer ' || v_key
+    ),
+    body    := COALESCE(p_body, '{}'::jsonb),
+    timeout_milliseconds := 300000
+  ) INTO v_request_id;
+
+  RETURN v_request_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.invoke_sync_person_portraits(JSONB) FROM PUBLIC, authenticated;
+GRANT  EXECUTE ON FUNCTION public.invoke_sync_person_portraits(JSONB) TO service_role;
+
+COMMENT ON FUNCTION public.invoke_sync_person_portraits IS
+  'Cron entry point – invokes Edge Function sync-person-portraits.';
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'sync-person-portraits-daily') THEN
+    PERFORM cron.unschedule('sync-person-portraits-daily');
+  END IF;
+END $$;
+
+-- 04:15 UTC — אחרי sync-insider-buys (שעה) ו-congress (20 דק)
+SELECT cron.schedule(
+  'sync-person-portraits-daily',
+  '15 4 * * *',
+  $$ SELECT public.invoke_sync_person_portraits('{"limit":120}'::jsonb); $$
+);

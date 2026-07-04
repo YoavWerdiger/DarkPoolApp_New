@@ -37,13 +37,18 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 
 /**
  * חימום cache של expo-image ברגע שיש URI מקומי — כדי שהפריוויו יציג מיידית
- * במקום לפענח את הקובץ בזמן ה-mount. לא חוסם: fire-and-forget.
+ * במקום לפענח את הקובץ בזמן ה-mount.
+ *
+ * מנותק לחלוטין מזרימת הבחירה: מופעל דרך microtask ועטוף ב-catch, כך שגם אם
+ * prefetch נכשל או נתקע (למשל ב-Expo Go) — פתיחת הפריוויו לעולם לא נחסמת.
  */
 function warmImageCache(uris: string[]): void {
   if (uris.length === 0) return;
-  ExpoImage.prefetch(uris, { cachePolicy: 'memory-disk' }).catch(() => {
-    /* best effort — נכשל בשקט, הפריוויו עדיין יטען מה-uri */
-  });
+  void Promise.resolve()
+    .then(() => ExpoImage.prefetch(uris, { cachePolicy: 'memory-disk' }))
+    .catch(() => {
+      /* best effort — נכשל בשקט, הפריוויו עדיין יטען מה-uri */
+    });
 }
 
 interface ChatInputProps {

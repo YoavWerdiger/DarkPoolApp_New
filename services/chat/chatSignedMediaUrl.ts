@@ -19,6 +19,24 @@ const TAG = 'ChatSignedMedia';
 const SIGN_TTL_SEC = 3600;
 /** מטמון — חידוש ~10 דק׳ לפני פקיעת הטוקן */
 const CACHE_MS = (SIGN_TTL_SEC - 600) * 1000;
+/**
+ * חתימה היא קריאת metadata מהירה. ל-fetch של supabase אין timeout מובנה, ולכן
+ * חיבור שנתקע (למשל רשת חלשה / Expo Go) היה משאיר את ה-Promise תלוי לנצח והמדיה
+ * לא הייתה נטענת. ה-timeout הופך תקיעה לכשל רגיל (fallback), כך שהזרימה תמיד מתקדמת.
+ */
+const SIGN_TIMEOUT_MS = 15000;
+const SIGN_BATCH_TIMEOUT_MS = 20000;
+
+/** עוטף Promise ב-timeout כדי שתקיעת רשת לא תשאיר את הזרימה תלויה לנצח */
+function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); },
+    );
+  });
+}
 
 type CacheEntry = { url: string; expiresAt: number };
 const pathCache = new Map<string, CacheEntry>();
@@ -89,7 +107,11 @@ export async function getChatMediaDisplayUri(ref: string | null | undefined): Pr
   }
 
   try {
-    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, SIGN_TTL_SEC);
+    const { data, error } = await withTimeout(
+      supabase.storage.from(BUCKET).createSignedUrl(path, SIGN_TTL_SEC),
+      SIGN_TIMEOUT_MS,
+      'createSignedUrl',
+    );
     if (error || !data?.signedUrl) {
       logger.warn(TAG, 'createSignedUrl failed', { path, message: error?.message });
       if (t.startsWith('http')) return t;
@@ -153,9 +175,11 @@ async function signStoragePathsBatch(paths: string[]): Promise<void> {
   for (let i = 0; i < paths.length; i += SIGN_BATCH_SIZE) {
     const chunk = paths.slice(i, i + SIGN_BATCH_SIZE);
     try {
-      const { data, error } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrls(chunk, SIGN_TTL_SEC);
+      const { data, error } = await withTimeout(
+        supabase.storage.from(BUCKET).createSignedUrls(chunk, SIGN_TTL_SEC),
+        SIGN_BATCH_TIMEOUT_MS,
+        'createSignedUrls',
+      );
 
       if (error || !data) {
         logger.warn(TAG, 'createSignedUrls failed', { message: error?.message });

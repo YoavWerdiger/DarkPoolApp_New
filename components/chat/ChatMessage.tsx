@@ -33,6 +33,7 @@ import {
   invalidateChatMediaPathCache,
   chatMediaStoragePathFromRef,
 } from '../../services/chat/chatSignedMediaUrl';
+import { downloadMediaToCache } from '../../lib/mediaFileCache';
 import TradeMessage from './TradeMessage';
 import LinkPreview, { extractFirstUrl } from './LinkPreview';
 import MessageReactions from './MessageReactions';
@@ -346,31 +347,68 @@ function ChatMessage({
   ]);
 
   // Poster לבועת וידאו: אם אין thumbnail מהשרת (סרטונים ישנים / כשל ביצירה בהעלאה),
-  // מייצרים את הפריים הראשון מקומית מ-URI הווידאו כדי שהבועה לא תהיה ריקה מתחת ל-Play.
+  // מייצרים את הפריים הראשון מ-URI הווידאו. ב-iOS יצירה מ-URL מרוחק לא אמינה, לכן
+  // מעדיפים קובץ מקומי (הווידאו ממילא יורד ל-disk cache), עם נפילה ל-URL מרוחק/הורדה.
   const [runtimeVideoThumb, setRuntimeVideoThumb] = useState<string | null>(null);
   useEffect(() => {
     if (message.message_type !== MessageType.VIDEO) return;
     let cancelled = false;
 
-    const isDisplayable = (u: string | null | undefined) =>
+    const isDisplayable = (u: string | null | undefined): u is string =>
       !!u && (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
+    const isLocal = (u: string | null | undefined): u is string =>
+      !!u && (u.startsWith('file:') || u.startsWith('content:'));
 
     const hasRemoteThumb =
       isDisplayable(resolvedMedia.thumb) ||
       isDisplayable(getCachedChatMediaDisplayUri(message.media_thumbnail_url));
-    if (hasRemoteThumb) return;
+    if (hasRemoteThumb) {
+      setRuntimeVideoThumb(null);
+      return;
+    }
 
-    const videoSource =
-      message.local_media_uri || resolvedMedia.main || null;
-    if (!isDisplayable(videoSource)) return;
+    const genFrom = async (src: string): Promise<string | null> => {
+      // AVAssetImageGenerator לעיתים נכשל על time מסוים — מנסים כמה נקודות
+      for (const time of [1000, 0, 100]) {
+        try {
+          const { uri } = await VideoThumbnails.getThumbnailAsync(src, { time, quality: 0.6 });
+          if (uri) return uri;
+        } catch {
+          /* ננסה נקודת זמן/מקור הבא */
+        }
+      }
+      return null;
+    };
 
-    setRuntimeVideoThumb(null);
     (async () => {
       try {
-        const { uri } = await VideoThumbnails.getThumbnailAsync(videoSource!, {
-          time: 0,
-          quality: 0.6,
-        });
+        // 1) מקור מקומי אמין: local_media_uri או וידאו שכבר במטמון הדיסק
+        const cachedLocal = getCachedChatMediaDisplayUri(message.media_url);
+        const localSource =
+          (isLocal(message.local_media_uri) && message.local_media_uri) ||
+          (isLocal(cachedLocal) && cachedLocal) ||
+          (isLocal(resolvedMedia.main) && resolvedMedia.main) ||
+          null;
+
+        let uri: string | null = null;
+        if (localSource) {
+          uri = await genFrom(localSource);
+        }
+
+        // 2) URL מרוחק חתום (מהיר אם עובד)
+        if (!uri && resolvedMedia.main && resolvedMedia.main.startsWith('http')) {
+          uri = await genFrom(resolvedMedia.main);
+        }
+
+        // 3) נפילה אמינה: הורדת הווידאו ל-disk (dedup עם ה-cache הקיים) ויצירה מקומית
+        if (!uri) {
+          const path = chatMediaStoragePathFromRef(message.media_url);
+          if (path && resolvedMedia.main && resolvedMedia.main.startsWith('http')) {
+            const local = await downloadMediaToCache(path, resolvedMedia.main).catch(() => null);
+            if (local) uri = await genFrom(local);
+          }
+        }
+
         if (!cancelled && uri) setRuntimeVideoThumb(uri);
       } catch (error) {
         logger.warn('ChatMessage', 'runtime video thumbnail failed', error);
@@ -383,6 +421,7 @@ function ChatMessage({
   }, [
     message.id,
     message.message_type,
+    message.media_url,
     message.media_thumbnail_url,
     message.local_media_uri,
     resolvedMedia.thumb,

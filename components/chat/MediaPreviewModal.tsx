@@ -1,7 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, Modal, Pressable, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated, // React Native Animated for modal animations
-  KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
+  KeyboardAvoidingView, Keyboard, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -220,13 +220,21 @@ export default function MediaPreviewModal({
           savedScale.value = 2;
         }
       } else {
-        // Single tap - do nothing in preview mode (controls always visible)
+        // Single tap — סוגר את המקלדת (כמו לחיצה על אזור הצ'אט)
+        runOnJS(Keyboard.dismiss)();
       }
       lastTapTime.value = now;
     });
 
   // Combine gestures
   const combinedGesture = Gesture.Simultaneous(pinchGesture, panGesture, tapGesture);
+
+  // לחיצה על אזור הווידאו סוגרת את המקלדת — עקבי עם הצ'אט/פריוויו התמונה
+  const videoDismissKeyboardGesture = Gesture.Tap()
+    .numberOfTaps(1)
+    .onEnd(() => {
+      runOnJS(Keyboard.dismiss)();
+    });
 
   // Animated style for image
   const animatedImageStyle = useAnimatedStyle(() => {
@@ -513,26 +521,28 @@ export default function MediaPreviewModal({
 
       case 'video':
         return (
-          <View style={styles.gestureContainer}>
-            {isLoading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-              </View>
-            )}
-            <Video
-              ref={videoRef}
-              source={{ uri: currentMedia.uri }}
-              style={styles.fullVideo}
-              resizeMode={ResizeMode.CONTAIN}
-              useNativeControls={false}
-              shouldPlay={videoPlaying}
-              onLoad={() => {
-                setIsLoading(false);
-                videoRef.current?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
-              }}
-              onError={() => setIsLoading(false)}
-            />
-          </View>
+          <GestureDetector gesture={videoDismissKeyboardGesture}>
+            <View style={styles.gestureContainer}>
+              {isLoading && (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={COLORS.primary} />
+                </View>
+              )}
+              <Video
+                ref={videoRef}
+                source={{ uri: currentMedia.uri }}
+                style={styles.fullVideo}
+                resizeMode={ResizeMode.CONTAIN}
+                useNativeControls={false}
+                shouldPlay={videoPlaying}
+                onLoad={() => {
+                  setIsLoading(false);
+                  videoRef.current?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
+                }}
+                onError={() => setIsLoading(false)}
+              />
+            </View>
+          </GestureDetector>
         );
 
       case 'audio':

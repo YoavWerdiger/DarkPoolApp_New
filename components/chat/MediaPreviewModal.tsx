@@ -716,7 +716,7 @@ export default function MediaPreviewModal({
             </BlurView>
           </View>
 
-          {/* ── פס תחתון: blur/glass + וידאו + אינפוט; כפתור שליחה מעל ה-blur (ירוק) ── */}
+          {/* ── פס תחתון: composer מעל timeline; timeline בתחתון ── */}
           <Animated.View
             style={[
               styles.bottomGlassBar,
@@ -727,26 +727,6 @@ export default function MediaPreviewModal({
             <View style={styles.composerDock}>
               <BlurView intensity={80} tint="dark" style={styles.composerDockBlur} pointerEvents="none" />
               <View style={styles.composerDockContent}>
-                {currentMedia?.type === 'video' && (
-                  <View style={styles.videoControlsRow}>
-                    <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
-                      <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
-                    </TouchableOpacity>
-                    <Text style={styles.videoTimeText}>{formatDuration(videoDisplayPosition)}</Text>
-                    <GestureDetector gesture={videoTimelineGesture}>
-                      <View
-                        style={styles.timelineTrack}
-                        onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
-                      >
-                        <View style={styles.timelineTrackBg} />
-                        <Animated.View style={[styles.timelineFill, videoAnimatedFillStyle]} />
-                        <Animated.View style={[styles.timelineThumb, videoAnimatedThumbStyle]} />
-                      </View>
-                    </GestureDetector>
-                    <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
-                  </View>
-                )}
-
                 <ChatComposerBar
                   value={captions[currentMedia.id] || ''}
                   onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
@@ -831,6 +811,31 @@ export default function MediaPreviewModal({
                 )}
               </View>
             </View>
+
+            {currentMedia?.type === 'video' && (
+              <View style={styles.videoControlsDock}>
+                <BlurView intensity={80} tint="dark" style={styles.composerDockBlur} pointerEvents="none" />
+                <View style={styles.videoControlsContent}>
+                  <View style={styles.videoControlsRow}>
+                    <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
+                      <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.videoTimeText}>{formatDuration(videoDisplayPosition)}</Text>
+                    <GestureDetector gesture={videoTimelineGesture}>
+                      <View
+                        style={styles.timelineTrack}
+                        onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+                      >
+                        <View style={styles.timelineTrackBg} />
+                        <Animated.View style={[styles.timelineFill, videoAnimatedFillStyle]} />
+                        <Animated.View style={[styles.timelineThumb, videoAnimatedThumbStyle]} />
+                      </View>
+                    </GestureDetector>
+                    <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </Animated.View>
         </RNAnimatedView>
       </GestureHandlerRootView>
@@ -956,12 +961,10 @@ const styles = StyleSheet.create({
     zIndex: 5,
     backgroundColor: 'transparent',
   },
-  /** פס תחתון מאוחד — blur ברקע, תוכן (כולל שליחה) מעליו */
+  /** אזור כתיבה — מעל timeline בווידאo */
   composerDock: {
     position: 'relative',
     overflow: 'hidden',
-    borderTopWidth: 0.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   composerDockBlur: {
     ...StyleSheet.absoluteFillObject,
@@ -970,6 +973,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  /** timeline בתחתית המסך — מתחת ל-composer */
+  videoControlsDock: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  videoControlsContent: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   sendBtnOuter: {
@@ -992,7 +1008,6 @@ const styles = StyleSheet.create({
   videoControlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
     gap: 10,
   },
   videoPlayBtn: {

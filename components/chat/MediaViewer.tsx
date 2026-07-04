@@ -32,6 +32,10 @@ import { chatPalette as COLORS } from './chatDesignTokens';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+function isDisplayableMediaUri(u: string | null | undefined): u is string {
+  return !!u && (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
+}
+
 interface MediaViewerProps {
   visible: boolean;
   mediaUrl: string;
@@ -80,14 +84,21 @@ export default function MediaViewer({
   }, []);
 
   useEffect(() => {
-    setDisplayUri(mediaUrl);
-  }, [mediaUrl]);
-
-  useEffect(() => {
     if (!visible || !mediaUrl) return;
     let cancelled = false;
+    setIsLoading(true);
+    setLoadError(false);
     getChatMediaDisplayUri(mediaUrl).then((u) => {
-      if (!cancelled && u) setDisplayUri(u);
+      if (cancelled) return;
+      if (u) setDisplayUri(u);
+      else if (isDisplayableMediaUri(mediaUrl)) setDisplayUri(mediaUrl);
+      else setLoadError(true);
+      setIsLoading(false);
+    }).catch(() => {
+      if (!cancelled) {
+        setLoadError(true);
+        setIsLoading(false);
+      }
     });
     return () => {
       cancelled = true;
@@ -469,25 +480,31 @@ export default function MediaViewer({
                 </GestureDetector>
               )}
             </>
-          ) : (
-            <View style={styles.mediaContainer}>
-              {isLoading && (
+          ) : mediaType === 'video' ? (
+            <>
+              {(!isDisplayableMediaUri(displayUri) || isLoading) && !loadError && (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color={COLORS.primary} />
                 </View>
               )}
-              <Video
-                ref={videoRef}
-                source={{ uri: displayUri }}
-                style={styles.fullVideo}
-                useNativeControls={false}
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay={isPlaying}
-                onPlaybackStatusUpdate={(status) => {
-                  if (status.isLoaded) {
+              {loadError ? (
+                <View style={styles.mediaErrorContainer}>
+                  <Ionicons name="videocam-outline" size={64} color="rgba(255,255,255,0.3)" />
+                  <Text style={styles.mediaErrorText}>לא ניתן לטעון את הסרטון</Text>
+                </View>
+              ) : isDisplayableMediaUri(displayUri) ? (
+                <Video
+                  ref={videoRef}
+                  source={{ uri: displayUri }}
+                  style={styles.fullVideo}
+                  useNativeControls={false}
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay={isPlaying}
+                  onPlaybackStatusUpdate={(status) => {
+                    if (!isMountedRef.current || !status.isLoaded) return;
                     if (status.durationMillis != null) setDuration(status.durationMillis / 1000);
                     if (!isDraggingRef.current) {
-                      const reported = status.positionMillis / 1000;
+                      const reported = (status.positionMillis ?? 0) / 1000;
                       const target = lastSeekTargetRef.current;
                       if (target == null) {
                         setPosition(reported);
@@ -496,17 +513,17 @@ export default function MediaViewer({
                         setPosition(reported);
                       }
                     }
-                  }
-                }}
-                onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
-                onLoad={() => {
-                  setIsLoading(false);
-                  (videoRef.current as any)?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
-                }}
-                onError={() => { setIsLoading(false); setLoadError(true); }}
-              />
-            </View>
-          )}
+                  }}
+                  onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
+                  onLoad={() => {
+                    setIsLoading(false);
+                    (videoRef.current as any)?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
+                  }}
+                  onError={() => { setIsLoading(false); setLoadError(true); }}
+                />
+              ) : null}
+            </>
+          ) : null}
         </View>
 
         {/* Top Bar - Full Width (always visible like MediaPreviewModal) */}

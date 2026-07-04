@@ -350,6 +350,13 @@ function ChatMessage({
   // מייצרים את הפריים הראשון מ-URI הווידאו. ב-iOS יצירה מ-URL מרוחק לא אמינה, לכן
   // מעדיפים קובץ מקומי (הווידאו ממילא יורד ל-disk cache), עם נפילה ל-URL מרוחק/הורדה.
   const [runtimeVideoThumb, setRuntimeVideoThumb] = useState<string | null>(null);
+  const [videoServerThumbFailed, setVideoServerThumbFailed] = useState(false);
+
+  useEffect(() => {
+    setVideoServerThumbFailed(false);
+    setRuntimeVideoThumb(null);
+  }, [message.id, message.media_thumbnail_url, resolvedMedia.thumb]);
+
   useEffect(() => {
     if (message.message_type !== MessageType.VIDEO) return;
     let cancelled = false;
@@ -358,14 +365,6 @@ function ChatMessage({
       !!u && (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
     const isLocal = (u: string | null | undefined): u is string =>
       !!u && (u.startsWith('file:') || u.startsWith('content:'));
-
-    const hasRemoteThumb =
-      isDisplayable(resolvedMedia.thumb) ||
-      isDisplayable(getCachedChatMediaDisplayUri(message.media_thumbnail_url));
-    if (hasRemoteThumb) {
-      setRuntimeVideoThumb(null);
-      return;
-    }
 
     const genFrom = async (src: string): Promise<string | null> => {
       // AVAssetImageGenerator לעיתים נכשל על time מסוים — מנסים כמה נקודות
@@ -752,6 +751,8 @@ function ChatMessage({
             undefined,
             onStatusPress,
             runtimeVideoThumb,
+            videoServerThumbFailed,
+            () => setVideoServerThumbFailed(true),
           )}
 
           {/* Text Content */}
@@ -876,6 +877,8 @@ function renderMediaContent(
   timeOverlayNode?: React.ReactNode,
   onStatusPress?: () => void,
   videoPoster?: string | null,
+  videoServerThumbFailed?: boolean,
+  onVideoThumbError?: () => void,
 ) {
   const imageUri =
     message.local_media_uri || resolved.main || message.media_url;
@@ -936,12 +939,17 @@ function renderMediaContent(
     }
 
     case MessageType.VIDEO: {
-      const thumbUri =
+      const serverThumb =
         resolved.thumb ||
         getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
-        videoPoster ||
-        message.media_thumbnail_url ||
         null;
+      const serverThumbOk =
+        !!serverThumb &&
+        !videoServerThumbFailed &&
+        (serverThumb.startsWith('http') ||
+          serverThumb.startsWith('file:') ||
+          serverThumb.startsWith('content:'));
+      const thumbUri = serverThumbOk ? serverThumb : (videoPoster || null);
       const videoThumbOk =
         !!thumbUri &&
         (thumbUri.startsWith('http') ||
@@ -958,6 +966,7 @@ function renderMediaContent(
                 contentFit="cover"
                 cachePolicy="memory-disk"
                 recyclingKey={`${message.id}-vid-${thumbUri}`}
+                onError={() => onVideoThumbError?.()}
               />
             ) : (
               <View style={styles.videoPlaceholder}>

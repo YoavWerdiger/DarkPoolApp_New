@@ -1,8 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, Modal, Pressable, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated, // React Native Animated for modal animations
-  KeyboardAvoidingView, Keyboard, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, Modal, Pressable, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated,
+  Keyboard, ScrollView, TouchableOpacity } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
@@ -32,8 +31,10 @@ interface MediaPreviewModalProps {
 
 import { chatPalette as COLORS } from './chatDesignTokens';
 import ChatComposerBar from './ChatComposerBar';
+import { useDesignTokens } from '../ui/DesignTokens';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function MediaPreviewModal({
   visible,
@@ -42,7 +43,9 @@ export default function MediaPreviewModal({
   mediaFiles
 }: MediaPreviewModalProps) {
   const insets = useSafeAreaInsets();
+  const tokens = useDesignTokens();
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
   
   // Store insets.bottom as a constant for use in worklet
   const safeAreaBottom = insets.bottom;
@@ -74,15 +77,13 @@ export default function MediaPreviewModal({
   const modalOpacityAnim = useRef(new RNAnimated.Value(0)).current;
   // Controls are always visible - no animation needed
   
-  // Animated style for the bottom bar - moves up when keyboard opens
+  // Animated style for the bottom bar — עולה עם המקלדת (סגנון וואטסאפ)
   const animatedBottomBarStyle = useAnimatedStyle(() => {
     'worklet';
     const kbHeight = Math.abs(keyboardHeight.value);
     const isKeyboardOpen = kbHeight > 10;
-    
-    // When keyboard is open, sit right on keyboard (no gap); when closed, use safe area
-    const bottomPadding = isKeyboardOpen ? kbHeight : safeAreaBottom + 12;
-    
+    const bottomPadding = isKeyboardOpen ? kbHeight : safeAreaBottom;
+
     return {
       paddingBottom: withTiming(bottomPadding, {
         duration: 150,
@@ -187,7 +188,7 @@ export default function MediaPreviewModal({
       if (savedScale.value > 1) {
         // Limit pan boundaries based on zoom level
         const maxX = (screenWidth * (savedScale.value - 1)) / 2;
-        const maxY = (screenHeight * (savedScale.value - 1)) / 2;
+        const maxY = (screenWidth * (savedScale.value - 1)) / 2;
         
         let newX = Math.max(-maxX, Math.min(maxX, translateX.value));
         let newY = Math.max(-maxY, Math.min(maxY, translateY.value));
@@ -229,12 +230,37 @@ export default function MediaPreviewModal({
   // Combine gestures
   const combinedGesture = Gesture.Simultaneous(pinchGesture, panGesture, tapGesture);
 
-  // לחיצה על אזור הווידאו סוגרת את המקלדת — עקבי עם הצ'אט/פריוויו התמונה
-  const videoDismissKeyboardGesture = Gesture.Tap()
-    .numberOfTaps(1)
-    .onEnd(() => {
-      runOnJS(Keyboard.dismiss)();
-    });
+  const dismissKeyboard = useCallback(() => {
+    Keyboard.dismiss();
+  }, []);
+
+  // פריים ראשון לפריוויו וידאו (מקומי — אמין ב-iOS)
+  useEffect(() => {
+    if (!visible || currentMedia?.type !== 'video' || !currentMedia.uri) {
+      setVideoPosterUri(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      for (const time of [1000, 0, 100]) {
+        try {
+          const { uri } = await VideoThumbnails.getThumbnailAsync(currentMedia.uri, {
+            time,
+            quality: 0.7,
+          });
+          if (!cancelled && uri) {
+            setVideoPosterUri(uri);
+            return;
+          }
+        } catch {
+          /* ניסיון הבא */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, currentIndex, currentMedia?.type, currentMedia?.uri]);
 
   // Animated style for image
   const animatedImageStyle = useAnimatedStyle(() => {
@@ -500,16 +526,15 @@ export default function MediaPreviewModal({
       case 'image':
         return (
           <GestureDetector gesture={combinedGesture}>
-            <Animated.View style={[styles.gestureContainer, animatedImageStyle]}>
-              {/* ⚡ expo-image: Non-blocking, optimistic loading with blur placeholder */}
+            <Animated.View style={[styles.mediaFill, animatedImageStyle]}>
               <ExpoImage
                 source={{ uri: currentMedia.uri }}
-                style={styles.fullImage}
+                style={styles.mediaFill}
                 contentFit="contain"
                 placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
                 placeholderContentFit="contain"
                 transition={200}
-                onLoadStart={() => setIsLoading(false)} // ⚡ מיידי! לא מחכים
+                onLoadStart={() => setIsLoading(false)}
                 onLoad={() => setIsLoading(false)}
                 onError={() => setIsLoading(false)}
                 cachePolicy="memory-disk"
@@ -521,28 +546,34 @@ export default function MediaPreviewModal({
 
       case 'video':
         return (
-          <GestureDetector gesture={videoDismissKeyboardGesture}>
-            <View style={styles.gestureContainer}>
-              {isLoading && (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={COLORS.primary} />
-                </View>
-              )}
-              <Video
-                ref={videoRef}
-                source={{ uri: currentMedia.uri }}
-                style={styles.fullVideo}
-                resizeMode={ResizeMode.CONTAIN}
-                useNativeControls={false}
-                shouldPlay={videoPlaying}
-                onLoad={() => {
-                  setIsLoading(false);
-                  videoRef.current?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
-                }}
-                onError={() => setIsLoading(false)}
+          <View style={styles.mediaFill}>
+            {videoPosterUri && !videoPlaying ? (
+              <ExpoImage
+                source={{ uri: videoPosterUri }}
+                style={styles.mediaFill}
+                contentFit="contain"
+                cachePolicy="memory-disk"
               />
-            </View>
-          </GestureDetector>
+            ) : null}
+            {isLoading && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+              </View>
+            )}
+            <Video
+              ref={videoRef}
+              source={{ uri: currentMedia.uri }}
+              style={[styles.mediaFill, videoPosterUri && !videoPlaying ? styles.hiddenVideo : null]}
+              resizeMode={ResizeMode.CONTAIN}
+              useNativeControls={false}
+              shouldPlay={videoPlaying}
+              onLoad={() => {
+                setIsLoading(false);
+                videoRef.current?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
+              }}
+              onError={() => setIsLoading(false)}
+            />
+          </View>
         );
 
       case 'audio':
@@ -600,18 +631,8 @@ export default function MediaPreviewModal({
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <RNAnimatedView style={[styles.container, { opacity: modalOpacityAnim, transform: [{ scale: modalScaleAnim }] }]}>
-        {/* Full Page Media */}
-        <View style={styles.mediaFull}>
-          {renderMediaContent()}
-        </View>
-
-        {/* Top Controls - Glass Style + gradient */}
-        <LinearGradient
-          colors={['rgba(0,0,0,0.72)', 'rgba(0,0,0,0.0)']}
-          style={[styles.topBarGradient, { paddingTop: insets.top }]}
-          pointerEvents="box-none"
-        >
-          <View style={[styles.topBar, { paddingTop: 8 }]}>
+          {/* ── פס עליון שחור מלא (וואטסאפ) ── */}
+          <View style={[styles.topBlackBar, { paddingTop: insets.top + 6 }]}>
             <GlassButton onPress={onClose}>
               <X size={24} color={COLORS.text} strokeWidth={2} />
             </GlassButton>
@@ -630,130 +651,141 @@ export default function MediaPreviewModal({
               <Trash2 size={22} color={COLORS.danger} strokeWidth={2} />
             </GlassButton>
           </View>
-        </LinearGradient>
 
-        {/* Navigation Arrows */}
-        {localFiles.length > 1 && (
-          <>
-            {currentIndex > 0 && (
-              <Pressable onPress={goToPrev} style={[styles.navArrow, styles.navRight]}>
-                <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}>
-                  <View style={styles.navArrowInner}>
-                    <ChevronRight size={28} color={COLORS.text} strokeWidth={2} />
-                  </View>
-                </View>
-              </Pressable>
-            )}
-            {currentIndex < localFiles.length - 1 && (
-              <Pressable onPress={goToNext} style={[styles.navArrow, styles.navLeft]}>
-                <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}>
-                  <View style={styles.navArrowInner}>
-                    <ChevronLeft size={28} color={COLORS.text} strokeWidth={2} />
-                  </View>
-                </View>
-              </Pressable>
-            )}
-          </>
-        )}
-
-        {/* Bottom Controls - Glass Style with keyboard animation + gradient */}
-        <Animated.View style={[styles.bottomBarWrapper, animatedBottomBarStyle]}>
-        <LinearGradient
-          colors={['rgba(0,0,0,0.0)', 'rgba(0,0,0,0.82)']}
-          style={styles.bottomGradient}
-          pointerEvents="none"
-        />
-        <View style={styles.bottomBar}>
-          {/* נגן וידאו מותאם: טיימליין + play/pause */}
-          {currentMedia?.type === 'video' && (
-            <View style={styles.videoControlsRow}>
-              <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
-                <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
-              </TouchableOpacity>
-              <Text style={styles.videoTimeText}>{formatDuration(videoDisplayPosition)}</Text>
-              <GestureDetector gesture={videoTimelineGesture}>
-                <View
-                  style={styles.timelineTrack}
-                  onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
-                >
-                  <View style={styles.timelineTrackBg} />
-                  <Animated.View style={[styles.timelineFill, videoAnimatedFillStyle]} />
-                  <Animated.View style={[styles.timelineThumb, videoAnimatedThumbStyle]} />
-                </View>
-              </GestureDetector>
-              <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
+          {/* ── אזור מדיה באמצע: contain + letterbox שחור ── */}
+          <Pressable style={styles.mediaViewport} onPress={dismissKeyboard}>
+            <View style={styles.mediaContainLayer}>
+              {renderMediaContent()}
             </View>
-          )}
 
-          {/* Caption Input — קומפוננטת הקלט המשותפת, זהה לצ'אט הרגיל (עיצוב + לוגיקה) */}
-          <ChatComposerBar
-            value={captions[currentMedia.id] || ''}
-            onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
-            placeholder="הוסף כיתוב..."
-            maxLength={500}
-            onSend={handleSend}
-          />
-
-          {/* Thumbnail Strip */}
-          {localFiles.length > 1 && (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.thumbnailStrip}
-            >
-              {localFiles.map((media, index) => (
-                <Pressable
-                  key={media.id}
-                  onPress={() => {
-                    setCurrentIndex(index);
-                    setIsLoading(true);
-                  }}
-                  style={[
-                    styles.thumbnailContainer, 
-                    index === currentIndex && styles.thumbnailActive
-                  ]}
-                >
-                  {media.type === 'image' ? (
-                    <ExpoImage 
-                      source={{ uri: media.uri }} 
-                      style={styles.thumbnail}
-                      contentFit="cover"
-                      cachePolicy="memory-disk"
-                    />
-                  ) : media.type === 'video' ? (
-                    <View style={styles.thumbnailVideo}>
-                      <ExpoImage 
-                        source={{ uri: media.uri }} 
-                        style={styles.thumbnail}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                      />
-                      <View style={styles.thumbnailVideoOverlay}>
-                        <Play size={16} color="#fff" fill="#fff" />
+            {localFiles.length > 1 && (
+              <>
+                {currentIndex > 0 && (
+                  <Pressable onPress={goToPrev} style={[styles.navArrow, styles.navRight]}>
+                    <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}>
+                      <View style={styles.navArrowInner}>
+                        <ChevronRight size={28} color={COLORS.text} strokeWidth={2} />
                       </View>
                     </View>
-                  ) : (
-                    <View style={[styles.thumbnail, styles.thumbnailDocument]}>
-                      <Ionicons name="document-text" size={24} color={COLORS.text} />
-                    </View>
-                  )}
-                  {/* Remove button */}
-                  <Pressable 
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      removeMedia(media.id);
-                    }}
-                    style={styles.thumbnailRemove}
-                  >
-                    <X size={12} color="#fff" strokeWidth={3} />
                   </Pressable>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-        </Animated.View>
-      </RNAnimatedView>
+                )}
+                {currentIndex < localFiles.length - 1 && (
+                  <Pressable onPress={goToNext} style={[styles.navArrow, styles.navLeft]}>
+                    <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}>
+                      <View style={styles.navArrowInner}>
+                        <ChevronLeft size={28} color={COLORS.text} strokeWidth={2} />
+                      </View>
+                    </View>
+                  </Pressable>
+                )}
+              </>
+            )}
+          </Pressable>
+
+          {/* ── פס תחתון שחור מלא: בקרות וידאו + אינפוט ── */}
+          <Animated.View style={[styles.bottomBlackBar, animatedBottomBarStyle]}>
+            <View style={styles.bottomBar}>
+              {currentMedia?.type === 'video' && (
+                <View style={styles.videoControlsRow}>
+                  <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
+                    <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
+                  </TouchableOpacity>
+                  <Text style={styles.videoTimeText}>{formatDuration(videoDisplayPosition)}</Text>
+                  <GestureDetector gesture={videoTimelineGesture}>
+                    <View
+                      style={styles.timelineTrack}
+                      onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+                    >
+                      <View style={styles.timelineTrackBg} />
+                      <Animated.View style={[styles.timelineFill, videoAnimatedFillStyle]} />
+                      <Animated.View style={[styles.timelineThumb, videoAnimatedThumbStyle]} />
+                    </View>
+                  </GestureDetector>
+                  <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
+                </View>
+              )}
+
+              <ChatComposerBar
+                value={captions[currentMedia.id] || ''}
+                onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
+                placeholder="הוסף כיתוב..."
+                maxLength={500}
+                onSend={handleSend}
+                trailing={
+                  <Pressable
+                    onPress={handleSend}
+                    style={({ pressed }) => [
+                      styles.previewSendBtn,
+                      { backgroundColor: tokens.colors.primary.main },
+                      pressed ? { opacity: 0.82 } : null,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="שליחה"
+                  >
+                    <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
+                  </Pressable>
+                }
+              />
+
+              {localFiles.length > 1 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.thumbnailStrip}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {localFiles.map((media, index) => (
+                    <Pressable
+                      key={media.id}
+                      onPress={() => {
+                        setCurrentIndex(index);
+                        setIsLoading(true);
+                      }}
+                      style={[
+                        styles.thumbnailContainer,
+                        index === currentIndex && styles.thumbnailActive,
+                      ]}
+                    >
+                      {media.type === 'image' ? (
+                        <ExpoImage
+                          source={{ uri: media.uri }}
+                          style={styles.thumbnail}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                        />
+                      ) : media.type === 'video' ? (
+                        <View style={styles.thumbnailVideo}>
+                          <ExpoImage
+                            source={{ uri: media.uri }}
+                            style={styles.thumbnail}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                          />
+                          <View style={styles.thumbnailVideoOverlay}>
+                            <Play size={16} color="#fff" fill="#fff" />
+                          </View>
+                        </View>
+                      ) : (
+                        <View style={[styles.thumbnail, styles.thumbnailDocument]}>
+                          <Ionicons name="document-text" size={24} color={COLORS.text} />
+                        </View>
+                      )}
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          removeMedia(media.id);
+                        }}
+                        style={styles.thumbnailRemove}
+                      >
+                        <X size={12} color="#fff" strokeWidth={3} />
+                      </Pressable>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          </Animated.View>
+        </RNAnimatedView>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -762,46 +794,47 @@ export default function MediaPreviewModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    flexDirection: 'column',
     backgroundColor: '#000',
   },
-  gestureContainer: {
-    flex: 1,
-    width: screenWidth,
-    height: screenHeight,
-  },
-  mediaFull: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
+  /** פס עליון — #000 מלא, לא overlay על המדיה */
+  topBlackBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    minHeight: 52,
+    backgroundColor: '#000',
+    zIndex: 2,
   },
-  fullImage: {
+  /** אזור המדיה באמצע — letterbox בתוך viewport בלבד */
+  mediaViewport: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+    backgroundColor: '#000',
+    position: 'relative',
+  },
+  mediaContainLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
+  /** מילוי מלא של viewport — contain על תמונה/וידאו */
+  mediaFill: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
   },
-  fullVideo: {
-    width: '100%',
-    height: '100%',
+  hiddenVideo: {
+    opacity: 0,
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 5,
-  },
-  topBarGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    paddingBottom: 24,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    backgroundColor: '#000',
   },
   glassButton: {
     overflow: 'hidden',
@@ -862,24 +895,27 @@ const styles = StyleSheet.create({
   navRight: {
     right: 16,
   },
-  bottomBarWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  bottomGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 220,
+  /** פס תחתון — #000 מלא; בקרות וידאו + אינפוט */
+  bottomBlackBar: {
+    backgroundColor: '#000',
+    width: '100%',
+    paddingTop: 10,
+    zIndex: 2,
   },
   bottomBar: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    zIndex: 1,
+    paddingBottom: 4,
+  },
+  previewSendBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginStart: 8,
+    alignSelf: 'flex-end',
+    marginBottom: 3,
   },
   videoControlsRow: {
     flexDirection: 'row',

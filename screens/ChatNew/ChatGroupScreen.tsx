@@ -632,13 +632,14 @@ export default function ChatGroupScreen() {
   const scrollToBottom = useCallback((animated: boolean = false) => {
     if (scrollToBottomLockRef.current) return;
     const count = displayMessages.length;
-    if (count === 0 || !listRef.current) return;
+    const list = listRef.current;
+    if (count === 0 || !list) return;
 
     scrollToBottomLockRef.current = true;
 
     logger.info(
       'ChatGroupScreen',
-      `scrollToBottom pressed animated=${animated} dist=${distFromBottomRef.current.toFixed(0)} maxOffset=${maxScrollOffsetRef.current.toFixed(0)} count=${count} hasList=${!!listRef.current}`,
+      `scrollToBottom pressed animated=${animated} dist=${distFromBottomRef.current.toFixed(0)} maxOffset=${maxScrollOffsetRef.current.toFixed(0)} count=${count} hasList=${!!list}`,
     );
     ignoreFabUntilRef.current = Date.now() + 400;
     blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
@@ -649,6 +650,16 @@ export default function ChatGroupScreen() {
     userScrolledUpRef.current = false;
     pendingScrollAfterSendRef.current = false;
 
+    // תגובה מיידית — לא מחכים ל-onScroll (שעלול לא להגיע אחרי scrollToOffset)
+    hideScrollFab();
+    scrollYRef.current = 0;
+    distFromBottomRef.current = 0;
+    isAtBottomRef.current = true;
+    list.scrollToOffset({ offset: 0, animated });
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+
     const releaseScrollLock = (reachedBottom: boolean) => {
       logger.info(
         'ChatGroupScreen',
@@ -657,6 +668,12 @@ export default function ChatGroupScreen() {
       if (reachedBottom) {
         hideScrollFab();
         void confirmChatReadAtBottom();
+      } else {
+        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+        scrollYRef.current = 0;
+        distFromBottomRef.current = 0;
+        isAtBottomRef.current = true;
+        hideScrollFab();
       }
       scrollToBottomLockRef.current = false;
     };
@@ -1645,7 +1662,7 @@ export default function ChatGroupScreen() {
 
         {showScrollToBottomButton && !keyboardShown && (
           <View style={styles.scrollFabOverlay} pointerEvents="box-none">
-            <View style={styles.scrollFabButtonWrap}>
+            <View style={styles.scrollFabButtonWrap} pointerEvents="auto">
               <DayNavBlurButton
                 size={36}
                 glassIntensity="medium"
@@ -1666,7 +1683,7 @@ export default function ChatGroupScreen() {
                   <Text style={styles.scrollBadgeText}>
                     {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
                   </Text>
-      </View>
+                </View>
               )}
             </View>
           </View>

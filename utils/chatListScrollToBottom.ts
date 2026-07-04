@@ -69,29 +69,43 @@ export function scrollChatListToBottom(
   const finish = (reachedBottom: boolean) => {
     if (finished) return;
     finished = true;
-    retryOptions.onDone?.({ maxOffset: 0, reachedBottom });
+    const maxOffset = Math.max(
+      0,
+      refs.contentHeightRef.current - refs.layoutHeightRef.current,
+    );
+    retryOptions.onDone?.({ maxOffset, reachedBottom });
   };
 
   const tick = () => {
     if (finished) return;
-    attempts += 1;
-    scrollToOffsetZero(list, animated && attempts === 1);
+    const currentList = refs.listRef.current;
+    if (!currentList) {
+      finish(false);
+      return;
+    }
 
-    setTimeout(() => {
-      if (isNearBottom(refs)) {
-        finish(true);
-        return;
-      }
-      if (attempts >= maxAttempts) {
-        logger.debug(
-          'chatListScrollToBottom',
-          `retry exhausted attempts=${attempts} dist=${refs.getDistFromBottom?.()?.toFixed(0) ?? '?'}`,
-        );
-        finish(false);
-        return;
-      }
-      setTimeout(tick, 40 + attempts * 30);
-    }, 32);
+    attempts += 1;
+    scrollToOffsetZero(currentList, animated && attempts === 1);
+
+    // onScroll לא תמיד נורה אחרי scrollToOffset פרוגרמטי (במיוחד iOS + inverted).
+    // ממתינים שני פריימים ואז בודקים dist; בניסיון האחרון — מניחים הצלחה אחרי הפקודה.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (isNearBottom(refs)) {
+          finish(true);
+          return;
+        }
+        if (attempts >= maxAttempts) {
+          logger.debug(
+            'chatListScrollToBottom',
+            `retry exhausted attempts=${attempts} dist=${refs.getDistFromBottom?.()?.toFixed(0) ?? '?'} — assuming scroll applied`,
+          );
+          finish(true);
+          return;
+        }
+        setTimeout(tick, 40 + attempts * 30);
+      });
+    });
   };
 
   tick();

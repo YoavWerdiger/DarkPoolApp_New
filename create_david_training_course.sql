@@ -1,0 +1,375 @@
+-- סקריפט ליצירת קורס הכשרה של דוד אריאל במסד הנתונים
+-- הרצה: העתק והדבק ב-Supabase SQL Editor
+
+-- הסרת השיעור "ברוכים הבאים" אם הוא קיים
+DELETE FROM lesson_media_links WHERE course_id = 'david-training-course' AND lesson_id = 'david-training-lesson-1';
+DELETE FROM lessons WHERE id = 'david-training-lesson-1' AND course_id = 'david-training-course';
+
+-- הסרת השיעור "הסבר על קהילת הסוחרים DARKPOOL" אם הוא קיים
+DELETE FROM lesson_media_links WHERE course_id = 'david-training-course' AND lesson_id = 'david-training-lesson-13';
+DELETE FROM lessons WHERE id = 'david-training-lesson-13' AND course_id = 'david-training-course';
+
+-- יצירת הקורס אם הוא לא קיים
+INSERT INTO courses (
+  id,
+  title,
+  subtitle,
+  description,
+  cover_url,
+  instructor_name,
+  instructor_avatar,
+  duration_hours,
+  level,
+  rating,
+  students_count,
+  price,
+  original_price,
+  is_active
+) VALUES (
+  'david-training-course',
+  'הכשרה של דוד אריאל',
+  'קורס הכשרה מקצועי',
+  'ההכשרה הינו קורס מסחר מלא בשוק ההון של דוד אריאל מערוץ היוטיוב של ״הפריצה לשוק ההון״, לימוד פורה ומעשיר!',
+  'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg',
+  'דוד אריאל',
+  'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg',
+  6,
+  'מתחיל',
+  0,
+  0,
+  0,
+  0,
+  true
+)
+ON CONFLICT (id) DO UPDATE SET
+  title = EXCLUDED.title,
+  subtitle = EXCLUDED.subtitle,
+  description = EXCLUDED.description,
+  cover_url = EXCLUDED.cover_url,
+  instructor_name = EXCLUDED.instructor_name,
+  instructor_avatar = EXCLUDED.instructor_avatar,
+  duration_hours = EXCLUDED.duration_hours,
+  level = EXCLUDED.level,
+  is_active = EXCLUDED.is_active,
+  updated_at = NOW();
+
+-- יצירת השיעורים (40 שיעורים) - order_index מתחיל מ-1
+-- שיעור 1: מהו שוק ההון?
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-2', 'david-training-course', 'מהו שוק ההון?', 'שיעור 1 בקורס הכשרה של דוד אריאל', 12, 1, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+-- שיעור 2: בורסה ומניות
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-3', 'david-training-course', 'בורסה ומניות - כל מה שרציתם לדעת', 'שיעור 2 בקורס הכשרה של דוד אריאל', 10, 2, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-4', 'david-training-course', 'מהי הנפקה בבורסה וסימול מניה?', 'שיעור 3 בקורס הכשרה של דוד אריאל', 7, 3, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-5', 'david-training-course', 'מה הן עסקאות לונג?', 'שיעור 4 בקורס הכשרה של דוד אריאל', 11, 4, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-6', 'david-training-course', 'מה הן עסקאות שורט? (איך להרוויח מירידה) 🔴', 'שיעור 5 בקורס הכשרה של דוד אריאל', 15, 5, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-7', 'david-training-course', 'השחקנים בשוק ההון/ההבדלים בין סוגי המסחר/תכונות רצויות לסוחר 📊', 'שיעור 6 בקורס הכשרה של דוד אריאל', 20, 6, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-8', 'david-training-course', 'פקודת - סטופ לוס - כל מה שרציתם לדעת! 🛑', 'שיעור 7 בקורס הכשרה של דוד אריאל', 18, 7, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-9', 'david-training-course', 'פקודת - טייק פרופיט - הסרטון היחיד שתצטרכו! 💵', 'שיעור 8 בקורס הכשרה של דוד אריאל', 13, 8, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES ('david-training-lesson-10', 'david-training-course', 'פקודות מסחר מארקט, לימיט, וסטופ', 'שיעור 9 בקורס הכשרה של דוד אריאל', 15, 9, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+-- שיעורים 10-20
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES 
+('david-training-lesson-11', 'david-training-course', 'נרות יפניים - הסרטון היחיד שתצטרכו!', 'שיעור 11 בקורס הכשרה של דוד אריאל', 12, 11, false, true),
+('david-training-lesson-12', 'david-training-course', 'ווליום מסחר - כל מה שרציתם לדעת!', 'שיעור 12 בקורס הכשרה של דוד אריאל', 1, 12, false, true),
+('david-training-lesson-14', 'david-training-course', 'הדרכת אתר טריידינגוויו - Tradingview (חלק א׳)', 'שיעור 14 בקורס הכשרה של דוד אריאל', 17, 13, false, true),
+('david-training-lesson-15', 'david-training-course', 'הדרכת אתר טריידינגוויו - Tradingview (חלק ב׳)', 'שיעור 15 בקורס הכשרה של דוד אריאל', 10, 14, false, true),
+('david-training-lesson-16', 'david-training-course', 'הדרכת - TradingView מהטלפון 📱', 'שיעור 16 בקורס הכשרה של דוד אריאל', 16, 15, false, true),
+('david-training-lesson-17', 'david-training-course', 'מגמות בגרף - מה שרציתם לדעת!', 'שיעור 17 בקורס הכשרה של דוד אריאל', 26, 16, false, true),
+('david-training-lesson-18', 'david-training-course', 'רמות תמיכה והתנגדות', 'שיעור 18 בקורס הכשרה של דוד אריאל', 16, 17, false, true),
+('david-training-lesson-19', 'david-training-course', '״פריצה ובדיקה״ - אסטרטגיית מסחר!', 'שיעור 19 בקורס הכשרה של דוד אריאל', 13, 18, false, true),
+('david-training-lesson-20', 'david-training-course', 'גאפים בגרף (פערים)', 'שיעור 20 בקורס הכשרה של דוד אריאל', 15, 19, false, true),
+('david-training-lesson-21', 'david-training-course', 'ניהול סיכונים במסחר - (חובה לכל סוחר!)', 'שיעור 21 בקורס הכשרה של דוד אריאל', 13, 20, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+-- שיעורים 21-30
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES 
+('david-training-lesson-22', 'david-training-course', 'מה הם אינדיקטורים + שימוש ב-EMA', 'שיעור 22 בקורס הכשרה של דוד אריאל', 10, 21, false, true),
+('david-training-lesson-23', 'david-training-course', 'תיקון פיבונאצ׳י - אסטרטגיית מסחר מוכחת!', 'שיעור 23 בקורס הכשרה של דוד אריאל', 15, 22, false, true),
+('david-training-lesson-24', 'david-training-course', 'נרות היפוך וסיפורו של הנר 📈', 'שיעור 24 בקורס הכשרה של דוד אריאל', 14, 23, false, true),
+('david-training-lesson-25', 'david-training-course', 'תבניות היפוך (סווינג) כל מה שרציתם לדעת!💸', 'שיעור 25 בקורס הכשרה של דוד אריאל', 16, 24, false, true),
+('david-training-lesson-26', 'david-training-course', 'אסטרטגיית התכנסויות דגלים ודגלונים 🚩', 'שיעור 26 בקורס הכשרה של דוד אריאל', 15, 25, false, true),
+('david-training-lesson-27', 'david-training-course', 'איך לזהות עסקת סווינג מקצועית', 'שיעור 27 בקורס הכשרה של דוד אריאל', 14, 26, false, true),
+('david-training-lesson-28', 'david-training-course', 'איך להציב סטופ לוס כמו סוחר מקצועי! 🛑🫵', 'שיעור 28 בקורס הכשרה של דוד אריאל', 12, 27, false, true),
+('david-training-lesson-29', 'david-training-course', 'סקטורים בשוק ההון', 'שיעור 29 בקורס הכשרה של דוד אריאל', 8, 28, false, true),
+('david-training-lesson-30', 'david-training-course', 'תתי סקטורים', 'שיעור 30 בקורס הכשרה של דוד אריאל', 14, 29, false, true),
+('david-training-lesson-31', 'david-training-course', 'הדרכת אתר Finviz (סורק מניות)', 'שיעור 31 בקורס הכשרה של דוד אריאל', 7, 30, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+-- שיעורים 31-40
+INSERT INTO lessons (id, course_id, title, description, duration_minutes, order_index, is_completed, is_active)
+VALUES 
+('david-training-lesson-32', 'david-training-course', 'מתכוננים לשבוע מסחר', 'שיעור 32 בקורס הכשרה של דוד אריאל', 9, 31, false, true),
+('david-training-lesson-33', 'david-training-course', 'מסחר בדמו + כללים', 'שיעור 33 בקורס הכשרה של דוד אריאל', 9, 32, false, true),
+('david-training-lesson-34', 'david-training-course', 'יומן מסחר ויתרונתיו + יומן מקצועי', 'שיעור 34 בקורס הכשרה של דוד אריאל', 9, 33, false, true),
+('david-training-lesson-35', 'david-training-course', 'פתיחת חשבון מסחר (סרטון חובה לפני שבוחרים ברוקר!)', 'שיעור 35 בקורס הכשרה של דוד אריאל', 11, 34, false, true),
+('david-training-lesson-36', 'david-training-course', 'הדרכת קולמקס פרו מהטלפון', 'שיעור 36 בקורס הכשרה של דוד אריאל', 10, 35, false, true),
+('david-training-lesson-37', 'david-training-course', 'ספליט במניות', 'שיעור 37 בקורס הכשרה של דוד אריאל', 16, 36, false, true),
+('david-training-lesson-38', 'david-training-course', 'מה זה מינוף בשוק ההון', 'שיעור 38 בקורס הכשרה של דוד אריאל', 9, 37, false, true),
+('david-training-lesson-39', 'david-training-course', 'מה זה מיצוע (DCA)', 'שיעור 39 בקורס הכשרה של דוד אריאל', 12, 38, false, true),
+('david-training-lesson-40', 'david-training-course', 'שורט סקוויז? ואיך זה קשור למניית GME', 'שיעור 40 בקורס הכשרה של דוד אריאל', 11, 39, false, true),
+('david-training-lesson-41', 'david-training-course', 'עונת הדוחות בבורסה🔥', 'שיעור 41 בקורס הכשרה של דוד אריאל', 0, 40, false, true)
+ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, description = EXCLUDED.description, duration_minutes = EXCLUDED.duration_minutes, order_index = EXCLUDED.order_index, is_active = EXCLUDED.is_active;
+
+-- הוספת עמודות youtube_id ו-youtube_url לטבלה אם הן לא קיימות
+ALTER TABLE lesson_media_links 
+ADD COLUMN IF NOT EXISTS youtube_id TEXT,
+ADD COLUMN IF NOT EXISTS youtube_url TEXT;
+
+-- עדכון העמודות vimeo_id ו-vimeo_url להיות nullable (אם הן NOT NULL)
+DO $$ 
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'lesson_media_links' 
+    AND column_name = 'vimeo_id' 
+    AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE lesson_media_links ALTER COLUMN vimeo_id DROP NOT NULL;
+  END IF;
+  
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'lesson_media_links' 
+    AND column_name = 'vimeo_url' 
+    AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE lesson_media_links ALTER COLUMN vimeo_url DROP NOT NULL;
+  END IF;
+END $$;
+
+-- הוספת קישורי יוטיוב לשיעורים דרך lesson_media_links
+-- שיעור 1
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-2', 'm7qGJPmwN2w', 'https://youtu.be/m7qGJPmwN2w', 'https://img.youtube.com/vi/m7qGJPmwN2w/maxresdefault.jpg', 'מהו שוק ההון?', 'שיעור 1 בקורס הכשרה של דוד אריאל', 8, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 2
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-3', 'RUntLoQ-kvo', 'https://youtu.be/RUntLoQ-kvo', 'https://img.youtube.com/vi/RUntLoQ-kvo/maxresdefault.jpg', 'בורסה ומניות - כל מה שרציתם לדעת', 'שיעור 2 בקורס הכשרה של דוד אריאל', 12, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 3
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-4', '_k5qMI7CFSo', 'https://youtu.be/_k5qMI7CFSo', 'https://img.youtube.com/vi/_k5qMI7CFSo/maxresdefault.jpg', 'מהי הנפקה בבורסה וסימול מניה?', 'שיעור 3 בקורס הכשרה של דוד אריאל', 10, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 4
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-5', 'GE9UWKNEcx8', 'https://youtu.be/GE9UWKNEcx8', 'https://img.youtube.com/vi/GE9UWKNEcx8/maxresdefault.jpg', 'מה הן עסקאות לונג?', 'שיעור 4 בקורס הכשרה של דוד אריאל', 7, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 5
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-6', 'UfCpWxEil6U', 'https://youtu.be/UfCpWxEil6U', 'https://img.youtube.com/vi/UfCpWxEil6U/maxresdefault.jpg', 'מה הן עסקאות שורט? (איך להרוויח מירידה) 🔴', 'שיעור 5 בקורס הכשרה של דוד אריאל', 15, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 6
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-7', 'HDXmvaxXB1Y', 'https://youtu.be/HDXmvaxXB1Y', 'https://img.youtube.com/vi/HDXmvaxXB1Y/maxresdefault.jpg', 'השחקנים בשוק ההון/ההבדלים בין סוגי המסחר/תכונות רצויות לסוחר 📊', 'שיעור 6 בקורס הכשרה של דוד אריאל', 15, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 7
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-8', 'qRIXM4SbySk', 'https://youtu.be/qRIXM4SbySk', 'https://img.youtube.com/vi/qRIXM4SbySk/maxresdefault.jpg', 'פקודת - סטופ לוס - כל מה שרציתם לדעת! 🛑', 'שיעור 7 בקורס הכשרה של דוד אריאל', 20, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 8
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-9', 'PZ9z1Z3VyZA', 'https://youtu.be/PZ9z1Z3VyZA', 'https://img.youtube.com/vi/PZ9z1Z3VyZA/maxresdefault.jpg', 'פקודת - טייק פרופיט - הסרטון היחיד שתצטרכו! 💵', 'שיעור 8 בקורס הכשרה של דוד אריאל', 18, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 9
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-10', 'ZDvQeYa8sYE', 'https://youtu.be/ZDvQeYa8sYE', 'https://img.youtube.com/vi/ZDvQeYa8sYE/maxresdefault.jpg', 'פקודות מסחר מארקט, לימיט, וסטופ', 'שיעור 9 בקורס הכשרה של דוד אריאל', 13, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 10
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-11', 'NJn3GgkD2fQ', 'https://youtu.be/NJn3GgkD2fQ', 'https://img.youtube.com/vi/NJn3GgkD2fQ/maxresdefault.jpg', 'נרות יפניים - הסרטון היחיד שתצטרכו!', 'שיעור 11 בקורס הכשרה של דוד אריאל', 15, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 11
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-12', '9S_k0LxQUr8', 'https://youtu.be/9S_k0LxQUr8', 'https://img.youtube.com/vi/9S_k0LxQUr8/maxresdefault.jpg', 'ווליום מסחר - כל מה שרציתם לדעת!', 'שיעור 12 בקורס הכשרה של דוד אריאל', 12, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 12
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-14', 'wOh9K6q1vQA', 'https://youtu.be/wOh9K6q1vQA', 'https://img.youtube.com/vi/wOh9K6q1vQA/maxresdefault.jpg', 'הדרכת אתר טריידינגוויו - Tradingview (חלק א׳)', 'שיעור 12 בקורס הכשרה של דוד אריאל', 17, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 13
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-15', 'KwuSBseQ7cY', 'https://youtu.be/KwuSBseQ7cY', 'https://img.youtube.com/vi/KwuSBseQ7cY/maxresdefault.jpg', 'הדרכת אתר טריידינגוויו - Tradingview (חלק ב׳)', 'שיעור 13 בקורס הכשרה של דוד אריאל', 10, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 14
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-16', 'rF_cR80nlCY', 'https://youtu.be/rF_cR80nlCY', 'https://img.youtube.com/vi/rF_cR80nlCY/maxresdefault.jpg', 'הדרכת - TradingView מהטלפון 📱', 'שיעור 14 בקורס הכשרה של דוד אריאל', 10, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 15
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-17', 'wgylYygutAg', 'https://youtu.be/wgylYygutAg', 'https://img.youtube.com/vi/wgylYygutAg/maxresdefault.jpg', 'מגמות בגרף - מה שרציתם לדעת!', 'שיעור 15 בקורס הכשרה של דוד אריאל', 16, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 16
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-18', 'BijFUJ2QaLY', 'https://youtu.be/BijFUJ2QaLY', 'https://img.youtube.com/vi/BijFUJ2QaLY/maxresdefault.jpg', 'רמות תמיכה והתנגדות', 'שיעור 16 בקורס הכשרה של דוד אריאל', 26, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 17
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-19', 'G72MjzF5AsA', 'https://youtu.be/G72MjzF5AsA?si=QAhauHLV14s-vlZ2', 'https://img.youtube.com/vi/G72MjzF5AsA/maxresdefault.jpg', '״פריצה ובדיקה״ - אסטרטגיית מסחר!', 'שיעור 17 בקורס הכשרה של דוד אריאל', 17, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 18
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-20', 'Swsc12vs3UU', 'https://youtu.be/Swsc12vs3UU', 'https://img.youtube.com/vi/Swsc12vs3UU/maxresdefault.jpg', 'גאפים בגרף (פערים)', 'שיעור 19 בקורס הכשרה של דוד אריאל', 13, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 19
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-21', 'pK06jQiqH4c', 'https://youtu.be/pK06jQiqH4c', 'https://img.youtube.com/vi/pK06jQiqH4c/maxresdefault.jpg', 'ניהול סיכונים במסחר - (חובה לכל סוחר!)', 'שיעור 20 בקורס הכשרה של דוד אריאל', 15, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 20
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-22', 'sEUUzDXLA2I', 'https://youtu.be/sEUUzDXLA2I', 'https://img.youtube.com/vi/sEUUzDXLA2I/maxresdefault.jpg', 'מה הם אינדיקטורים + שימוש ב-EMA', 'שיעור 21 בקורס הכשרה של דוד אריאל', 13, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 21
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-23', 'ZKKUfqZx4QY', 'https://youtu.be/ZKKUfqZx4QY', 'https://img.youtube.com/vi/ZKKUfqZx4QY/maxresdefault.jpg', 'מה הם אינדיקטורים + שימוש ב-EMA', 'שיעור 22 בקורס הכשרה של דוד אריאל', 10, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 22
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-24', 'veOlCz8zn-k', 'https://youtu.be/veOlCz8zn-k', 'https://img.youtube.com/vi/veOlCz8zn-k/maxresdefault.jpg', 'תיקון פיבונאצ׳י - אסטרטגיית מסחר מוכחת!', 'שיעור 23 בקורס הכשרה של דוד אריאל', 15, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 23
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-25', 'UPs_wh_7u_U', 'https://youtu.be/UPs_wh_7u_U', 'https://img.youtube.com/vi/UPs_wh_7u_U/maxresdefault.jpg', 'נרות היפוך וסיפורו של הנר 📈', 'שיעור 24 בקורס הכשרה של דוד אריאל', 14, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 24
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-26', 'h_-ewed44cU', 'https://youtu.be/h_-ewed44cU', 'https://img.youtube.com/vi/h_-ewed44cU/maxresdefault.jpg', 'תבניות היפוך (סווינג) כל מה שרציתם לדעת!💸', 'שיעור 25 בקורס הכשרה של דוד אריאל', 16, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 25
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-27', 'i8NTB1hGBqE', 'https://youtu.be/i8NTB1hGBqE', 'https://img.youtube.com/vi/i8NTB1hGBqE/maxresdefault.jpg', 'אסטרטגיית התכנסויות דגלים ודגלונים 🚩', 'שיעור 26 בקורס הכשרה של דוד אריאל', 15, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 26
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-28', 'ZFiDvMImKNM', 'https://youtu.be/ZFiDvMImKNM', 'https://img.youtube.com/vi/ZFiDvMImKNM/maxresdefault.jpg', 'איך לזהות עסקת סווינג מקצועית', 'שיעור 27 בקורס הכשרה של דוד אריאל', 15, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 27
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-29', 'UYXX9sLn-y4', 'https://youtu.be/UYXX9sLn-y4', 'https://img.youtube.com/vi/UYXX9sLn-y4/maxresdefault.jpg', 'איך להציב סטופ לוס כמו סוחר מקצועי! 🛑🫵', 'שיעור 28 בקורס הכשרה של דוד אריאל', 12, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 28
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-30', 'S1EfRHIdOzM', 'https://youtu.be/S1EfRHIdOzM', 'https://img.youtube.com/vi/S1EfRHIdOzM/maxresdefault.jpg', 'סקטורים בשוק ההון', 'שיעור 29 בקורס הכשרה של דוד אריאל', 9, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 29
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-31', '_RnyhvOjevU', 'https://youtu.be/_RnyhvOjevU', 'https://img.youtube.com/vi/_RnyhvOjevU/maxresdefault.jpg', 'תתי סקטורים', 'שיעור 30 בקורס הכשרה של דוד אריאל', 14, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 30
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-32', 'YwucWSCN2D4', 'https://youtu.be/YwucWSCN2D4', 'https://img.youtube.com/vi/YwucWSCN2D4/maxresdefault.jpg', 'הדרכת אתר Finviz (סורק מניות)', 'שיעור 31 בקורס הכשרה של דוד אריאל', 7, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 31
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-33', 'Fw08VioUOPA', 'https://youtu.be/Fw08VioUOPA', 'https://img.youtube.com/vi/Fw08VioUOPA/maxresdefault.jpg', 'מתכוננים לשבוע מסחר', 'שיעור 32 בקורס הכשרה של דוד אריאל', 9, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 32
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-34', '0GgtV6IGeQc', 'https://youtu.be/0GgtV6IGeQc', 'https://img.youtube.com/vi/0GgtV6IGeQc/maxresdefault.jpg', 'מסחר בדמו + כללים', 'שיעור 33 בקורס הכשרה של דוד אריאל', 9, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 33
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-35', 'amYvQUS_aak', 'https://youtu.be/amYvQUS_aak', 'https://img.youtube.com/vi/amYvQUS_aak/maxresdefault.jpg', 'יומן מסחר ויתרונתיו + יומן מקצועי', 'שיעור 34 בקורס הכשרה של דוד אריאל', 9, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 34
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-36', 'jANivwvy62w', 'https://youtu.be/jANivwvy62w', 'https://img.youtube.com/vi/jANivwvy62w/maxresdefault.jpg', 'פתיחת חשבון מסחר (סרטון חובה לפני שבוחרים ברוקר!)', 'שיעור 35 בקורס הכשרה של דוד אריאל', 11, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 35
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-37', 'JErRPSjkYPk', 'https://youtu.be/JErRPSjkYPk', 'https://img.youtube.com/vi/JErRPSjkYPk/maxresdefault.jpg', 'הדרכת קולמקס פרו מהטלפון', 'שיעור 36 בקורס הכשרה של דוד אריאל', 10, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 36
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-38', 'DODSXlO4iOc', 'https://youtu.be/DODSXlO4iOc', 'https://img.youtube.com/vi/DODSXlO4iOc/maxresdefault.jpg', 'ספליט במניות', 'שיעור 37 בקורס הכשרה של דוד אריאל', 16, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 37
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-39', 'YwDfOYm_C6s', 'https://youtu.be/YwDfOYm_C6s', 'https://img.youtube.com/vi/YwDfOYm_C6s/maxresdefault.jpg', 'מה זה מינוף בשוק ההון', 'שיעור 38 בקורס הכשרה של דוד אריאל', 9, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 38
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-40', 'rQMffJi5eGk', 'https://youtu.be/rQMffJi5eGk', 'https://img.youtube.com/vi/rQMffJi5eGk/maxresdefault.jpg', 'מה זה מיצוע (DCA)', 'שיעור 39 בקורס הכשרה של דוד אריאל', 12, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 39
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-41', 'fXrFJPLeU3g', 'https://youtu.be/fXrFJPLeU3g?si=NPKFpHDdA-r0lLS1', 'https://img.youtube.com/vi/fXrFJPLeU3g/maxresdefault.jpg', 'שורט סקוויז? ואיך זה קשור למניית GME', 'שיעור 40 בקורס הכשרה של דוד אריאל', 11, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- שיעור 40 (שיעור 39 - עונת הדוחות) - ללא קישור יוטיוב (משך זמן 0)
+INSERT INTO lesson_media_links (course_id, lesson_id, youtube_id, youtube_url, thumbnail_url, title, description, duration_minutes, is_active)
+VALUES ('david-training-course', 'david-training-lesson-41', NULL, NULL, NULL, 'עונת הדוחות בבורסה🔥', 'שיעור 39 - עונת הדוחות בבורסה🔥', 0, true)
+ON CONFLICT (course_id, lesson_id) DO UPDATE SET youtube_id = EXCLUDED.youtube_id, youtube_url = EXCLUDED.youtube_url, thumbnail_url = EXCLUDED.thumbnail_url, duration_minutes = EXCLUDED.duration_minutes, is_active = EXCLUDED.is_active;
+
+-- עדכון משך הקורס לפי סכום כל השיעורים
+UPDATE courses 
+SET duration_hours = (
+  SELECT CEIL(SUM(duration_minutes) / 60.0)
+  FROM lessons
+  WHERE course_id = 'david-training-course' AND is_active = true
+)
+WHERE id = 'david-training-course';

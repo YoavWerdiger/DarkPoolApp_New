@@ -1,0 +1,166 @@
+{
+  "buildFiles": [
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/@react-native-clipboard/clipboard/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/@react-native-google-signin/google-signin/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/@sentry/react-native/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/lottie-react-native/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-haptic-feedback/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-keyboard-controller/android/src/main/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-reanimated/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-screens/android/src/main/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-svg/android/src/main/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-vector-icons/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-view-shot/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-webview/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/node_modules/react-native/ReactAndroid/cmake-utils/default-app-setup/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/yoavwerdiger/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/.cxx/RelWithDebInfo/6u3o5y2y/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/yoavwerdiger/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/.cxx/RelWithDebInfo/6u3o5y2y/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "appmodules::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "appmodules",
+      "output": "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libappmodules.so",
+      "runtimeFiles": [
+        "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libreact_codegen_RNKC.so",
+        "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libreact_codegen_safeareacontext.so",
+        "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libreact_codegen_rnscreens.so",
+        "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libreact_codegen_rnsvg.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/b7e0eb2bd95e864fda3d2e201827629b/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so"
+      ]
+    },
+    "react_codegen_RNCWebViewSpec::@eb48929f9f7453740a6c": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_RNCWebViewSpec"
+    },
+    "react_codegen_RNGoogleSignInCGen::@337b7b353bd94a4215c0": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_RNGoogleSignInCGen"
+    },
+    "react_codegen_RNHapticFeedbackSpec::@a83561f277f6afbb326c": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_RNHapticFeedbackSpec"
+    },
+    "react_codegen_RNKC::@01e3c54a97c6e9d385b6": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_RNKC",
+      "output": "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libreact_codegen_RNKC.so",
+      "runtimeFiles": [
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/b7e0eb2bd95e864fda3d2e201827629b/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so"
+      ]
+    },
+    "react_codegen_RNSentrySpec::@b85314237d91cb2ada57": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_RNSentrySpec"
+    },
+    "react_codegen_RNVectorIconsSpec::@479809fae146501fd34d": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_RNVectorIconsSpec"
+    },
+    "react_codegen_lottiereactnative::@0fa4dc904d7e359a99fb": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_lottiereactnative"
+    },
+    "react_codegen_rnasyncstorage::@1596841e19ec5b9eeffe": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnasyncstorage"
+    },
+    "react_codegen_rnclipboard::@6385240493dfcaf22ab7": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnclipboard"
+    },
+    "react_codegen_rngesturehandler_codegen::@39f233abcd2c728bc6ec": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rngesturehandler_codegen"
+    },
+    "react_codegen_rnreanimated::@8afabad14bfffa3f8b9a": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnreanimated"
+    },
+    "react_codegen_rnscreens::@25bcbd507e98d3a854ad": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnscreens",
+      "output": "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libreact_codegen_rnscreens.so",
+      "runtimeFiles": [
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/b7e0eb2bd95e864fda3d2e201827629b/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so"
+      ]
+    },
+    "react_codegen_rnsvg::@4f40eb209d0c0b4a3b65": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnsvg",
+      "output": "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libreact_codegen_rnsvg.so",
+      "runtimeFiles": [
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/b7e0eb2bd95e864fda3d2e201827629b/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so"
+      ]
+    },
+    "react_codegen_rnviewshot::@0ba03d237e60b9258a87": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnviewshot"
+    },
+    "react_codegen_rnworklets::@68f58d84d4754f193387": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnworklets"
+    },
+    "react_codegen_safeareacontext::@7984cd80db47aa7b952a": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_safeareacontext",
+      "output": "/Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/RelWithDebInfo/6u3o5y2y/obj/arm64-v8a/libreact_codegen_safeareacontext.so",
+      "runtimeFiles": [
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/b7e0eb2bd95e864fda3d2e201827629b/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so"
+      ]
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/Users/yoavwerdiger/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/Users/yoavwerdiger/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

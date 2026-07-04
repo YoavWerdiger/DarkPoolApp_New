@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "unusual-whales": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://api.unusualwhales.com/api/mcp",
+        "--header",
+        "Authorization: Bearer YOUR_UNUSUAL_WHALES_API_KEY",
+        "--header",
+        "UW-CLIENT-API-ID: 100001"
+      ]
+    },
+    "Benzinga API Documentation": {
+      "name": "Benzinga API Documentation",
+      "url": "https://docs.benzinga.com/mcp",
+      "headers": {}
+    },
+    "eodhd": {
+      "name": "EODHD MCP Server",
+      "url": "https://mcp.eodhd.dev/mcp?apikey=YOUR_EODHD_KEY",
+      "transport": "streamableHttp"
+    }
+  }
+}

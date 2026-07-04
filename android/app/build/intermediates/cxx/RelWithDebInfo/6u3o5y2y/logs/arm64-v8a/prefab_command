@@ -1,0 +1,23 @@
+/Users/yoavwerdiger/.sdkman/candidates/java/17.0.12-tem/bin/java \
+  --class-path \
+  /Users/yoavwerdiger/.gradle/caches/modules-2/files-2.1/com.google.prefab/cli/2.1.0/aa32fec809c44fa531f01dcfb739b5b3304d3050/cli-2.1.0-all.jar \
+  com.google.prefab.cli.AppKt \
+  --build-system \
+  cmake \
+  --platform \
+  android \
+  --abi \
+  arm64-v8a \
+  --os-version \
+  24 \
+  --stl \
+  c++_shared \
+  --ndk-version \
+  27 \
+  --output \
+  /var/folders/9m/3rjmfq3s5rngrnl0_kkkz8_40000gn/T/agp-prefab-staging12503277863902161046/staged-cli-output \
+  /Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/81184b01d0013fed76819403d675752a/transformed/react-android-0.81.5-release/prefab \
+  /Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/refs/react-native-reanimated/1t2y2d2n \
+  /Users/yoavwerdiger/DarkPoolApp_New-1/android/app/build/intermediates/cxx/refs/react-native-worklets/2t5uz2c3 \
+  /Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/70a03601a01bdc13a4041d0c5bf3e03e/transformed/hermes-android-0.81.5-release/prefab \
+  /Users/yoavwerdiger/.gradle/caches/8.14.3/transforms/b7e0eb2bd95e864fda3d2e201827629b/transformed/fbjni-0.7.0/prefab

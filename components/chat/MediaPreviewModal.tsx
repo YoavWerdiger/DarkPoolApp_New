@@ -31,6 +31,7 @@ interface MediaPreviewModalProps {
 
 import { chatPalette as COLORS } from './chatDesignTokens';
 import ChatComposerBar from './ChatComposerBar';
+import { useDesignTokens } from '../ui/DesignTokens';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -42,6 +43,7 @@ export default function MediaPreviewModal({
   mediaFiles
 }: MediaPreviewModalProps) {
   const insets = useSafeAreaInsets();
+  const tokens = useDesignTokens();
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
   const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
   
@@ -684,11 +686,11 @@ export default function MediaPreviewModal({
             )}
           </Pressable>
 
-          {/* ── פס תחתון זכוכית: בקרות וידאו + אינפוט + כפתור שליחה ירוק ── */}
+          {/* ── פס תחתון: וידאו ב-blur; אינפוט+שליחה מחוץ ל-blur (כפתור ירוק מלא) ── */}
           <Animated.View style={[styles.bottomGlassBar, animatedBottomBarStyle]}>
-            <BlurView intensity={80} tint="dark" style={styles.glassBarBlur}>
-              <View style={styles.bottomGlassContent}>
-                {currentMedia?.type === 'video' && (
+            {currentMedia?.type === 'video' && (
+              <BlurView intensity={80} tint="dark" style={styles.glassBarBlur}>
+                <View style={styles.bottomGlassContent}>
                   <View style={styles.videoControlsRow}>
                     <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
                       <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
@@ -706,15 +708,36 @@ export default function MediaPreviewModal({
                     </GestureDetector>
                     <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
                   </View>
-                )}
+                </View>
+              </BlurView>
+            )}
 
-                <ChatComposerBar
-                  value={captions[currentMedia.id] || ''}
-                  onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
-                  placeholder="הוסף כיתוב..."
-                  maxLength={500}
-                  onSend={handleSend}
-                />
+            <View style={styles.composerDock}>
+              <ChatComposerBar
+                value={captions[currentMedia.id] || ''}
+                onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
+                placeholder="הוסף כיתוב..."
+                maxLength={500}
+                onSend={handleSend}
+                trailing={
+                  <View
+                    style={[styles.sendBtnOuter, { backgroundColor: tokens.colors.primary.main }]}
+                    collapsable={false}
+                  >
+                    <Pressable
+                      onPress={handleSend}
+                      style={({ pressed }) => [
+                        styles.sendBtnTouchable,
+                        pressed ? { opacity: 0.82 } : null,
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="שליחה"
+                    >
+                      <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
+                    </Pressable>
+                  </View>
+                }
+              />
 
               {localFiles.length > 1 && (
                 <ScrollView
@@ -772,8 +795,7 @@ export default function MediaPreviewModal({
                   ))}
                 </ScrollView>
               )}
-              </View>
-            </BlurView>
+            </View>
           </Animated.View>
         </RNAnimatedView>
       </GestureHandlerRootView>
@@ -901,10 +923,36 @@ const styles = StyleSheet.create({
   bottomGlassContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  /** אינפוט+שליחה מחוץ ל-BlurView — כפתור ירוק לא נבלע ב-blur */
+  composerDock: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
     paddingBottom: 4,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     borderTopWidth: 0.5,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  sendBtnOuter: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginStart: 8,
+    alignSelf: 'flex-end',
+    marginBottom: 3,
+  },
+  sendBtnTouchable: {
+    width: 46,
+    height: 46,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   videoControlsRow: {
     flexDirection: 'row',

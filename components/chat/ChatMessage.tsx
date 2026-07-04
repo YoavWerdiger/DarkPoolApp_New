@@ -21,6 +21,7 @@ import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '
 import { format } from 'date-fns';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Image as ExpoImage } from 'expo-image';
 import MediaViewer from './MediaViewer';
 import MediaGridBubble from './MediaGridBubble';
@@ -342,6 +343,50 @@ function ChatMessage({
     message.message_type,
     message.media_urls,
     resolveRetry,
+  ]);
+
+  // Poster לבועת וידאו: אם אין thumbnail מהשרת (סרטונים ישנים / כשל ביצירה בהעלאה),
+  // מייצרים את הפריים הראשון מקומית מ-URI הווידאו כדי שהבועה לא תהיה ריקה מתחת ל-Play.
+  const [runtimeVideoThumb, setRuntimeVideoThumb] = useState<string | null>(null);
+  useEffect(() => {
+    if (message.message_type !== MessageType.VIDEO) return;
+    let cancelled = false;
+
+    const isDisplayable = (u: string | null | undefined) =>
+      !!u && (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
+
+    const hasRemoteThumb =
+      isDisplayable(resolvedMedia.thumb) ||
+      isDisplayable(getCachedChatMediaDisplayUri(message.media_thumbnail_url));
+    if (hasRemoteThumb) return;
+
+    const videoSource =
+      message.local_media_uri || resolvedMedia.main || null;
+    if (!isDisplayable(videoSource)) return;
+
+    setRuntimeVideoThumb(null);
+    (async () => {
+      try {
+        const { uri } = await VideoThumbnails.getThumbnailAsync(videoSource!, {
+          time: 0,
+          quality: 0.6,
+        });
+        if (!cancelled && uri) setRuntimeVideoThumb(uri);
+      } catch (error) {
+        logger.warn('ChatMessage', 'runtime video thumbnail failed', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    message.id,
+    message.message_type,
+    message.media_thumbnail_url,
+    message.local_media_uri,
+    resolvedMedia.thumb,
+    resolvedMedia.main,
   ]);
 
   // הודעות אופטימיסטיות (שלחנו) – מוצגות מיידית.
@@ -667,6 +712,7 @@ function ChatMessage({
             /* No time overlay — timestamp always in footer below the bubble */
             undefined,
             onStatusPress,
+            runtimeVideoThumb,
           )}
 
           {/* Text Content */}
@@ -790,6 +836,7 @@ function renderMediaContent(
   audioMeta?: AudioBubbleMeta,
   timeOverlayNode?: React.ReactNode,
   onStatusPress?: () => void,
+  videoPoster?: string | null,
 ) {
   const imageUri =
     message.local_media_uri || resolved.main || message.media_url;
@@ -853,6 +900,7 @@ function renderMediaContent(
       const thumbUri =
         resolved.thumb ||
         getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
+        videoPoster ||
         message.media_thumbnail_url ||
         null;
       const videoThumbOk =

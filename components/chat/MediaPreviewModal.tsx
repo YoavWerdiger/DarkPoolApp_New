@@ -1,10 +1,14 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, Modal, Pressable, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated,
-  Keyboard, ScrollView, TouchableOpacity } from 'react-native';
+  Keyboard, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import {
+  AndroidSoftInputModes,
+  KeyboardController,
+  useGenericKeyboardHandler,
+} from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Trash2, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
@@ -19,7 +23,6 @@ import Animated, {
   withSpring,
   withTiming,
   runOnJS,
-  Easing as ReanimatedEasing,
 } from 'react-native-reanimated';
 
 interface MediaPreviewModalProps {
@@ -32,9 +35,10 @@ interface MediaPreviewModalProps {
 import { chatPalette as COLORS } from './chatDesignTokens';
 import ChatComposerBar from './ChatComposerBar';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { chatComposerSafeBottomInset, CHAT_COMPOSER_KEYBOARD_GAP } from './chatInputLayout';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function MediaPreviewModal({
   visible,
@@ -44,11 +48,14 @@ export default function MediaPreviewModal({
 }: MediaPreviewModalProps) {
   const insets = useSafeAreaInsets();
   const tokens = useDesignTokens();
-  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const composerPaddingBottom = useMemo(
+    () => chatComposerSafeBottomInset(insets.bottom),
+    [insets.bottom],
+  );
+  const composerInsetSV = useSharedValue(composerPaddingBottom);
+  const keyboardGapSV = useSharedValue(CHAT_COMPOSER_KEYBOARD_GAP);
+  const composerDockTranslateY = useSharedValue(0);
   const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
-  
-  // Store insets.bottom as a constant for use in worklet
-  const safeAreaBottom = insets.bottom;
   
   const [localFiles, setLocalFiles] = useState(mediaFiles);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -77,20 +84,42 @@ export default function MediaPreviewModal({
   const modalOpacityAnim = useRef(new RNAnimated.Value(0)).current;
   // Controls are always visible - no animation needed
   
-  // Animated style for the bottom bar — עולה עם המקלדת (סגנון וואטסאפ)
-  const animatedBottomBarStyle = useAnimatedStyle(() => {
-    'worklet';
-    const kbHeight = Math.abs(keyboardHeight.value);
-    const isKeyboardOpen = kbHeight > 10;
-    const bottomPadding = isKeyboardOpen ? kbHeight : safeAreaBottom;
+  useEffect(() => {
+    composerInsetSV.value = composerPaddingBottom;
+  }, [composerPaddingBottom, composerInsetSV]);
 
-    return {
-      paddingBottom: withTiming(bottomPadding, {
-        duration: 150,
-        easing: ReanimatedEasing.bezier(0.25, 0.1, 0.25, 1),
-      }),
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'android') return;
+    KeyboardController.setInputMode(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
+    return () => {
+      KeyboardController.setDefaultMode();
     };
-  }, [safeAreaBottom]);
+  }, [visible]);
+
+  useGenericKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        composerDockTranslateY.value =
+          event.height <= 0
+            ? 0
+            : -Math.max(0, event.height - composerInsetSV.value + keyboardGapSV.value);
+      },
+      onEnd: (event) => {
+        'worklet';
+        composerDockTranslateY.value =
+          event.height <= 0
+            ? 0
+            : -Math.max(0, event.height - composerInsetSV.value + keyboardGapSV.value);
+      },
+    },
+    [],
+  );
+
+  /** פס תחתון עולה עם המקלדת — כמו ChatComposerDock בצ'אט הרגיל */
+  const animatedComposerDockStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: composerDockTranslateY.value }],
+  }));
   
   // Gesture shared values using reanimated
   const scale = useSharedValue(1);
@@ -526,10 +555,10 @@ export default function MediaPreviewModal({
       case 'image':
         return (
           <GestureDetector gesture={combinedGesture}>
-            <Animated.View style={[styles.mediaFill, animatedImageStyle]}>
+            <Animated.View style={[styles.fullMedia, animatedImageStyle]}>
               <ExpoImage
                 source={{ uri: currentMedia.uri }}
-                style={styles.mediaFill}
+                style={styles.fullMedia}
                 contentFit="contain"
                 placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
                 placeholderContentFit="contain"
@@ -546,11 +575,11 @@ export default function MediaPreviewModal({
 
       case 'video':
         return (
-          <View style={styles.mediaFill}>
+          <View style={styles.fullMedia}>
             {videoPosterUri && !videoPlaying ? (
               <ExpoImage
                 source={{ uri: videoPosterUri }}
-                style={styles.mediaFill}
+                style={styles.fullMediaInner}
                 contentFit="contain"
                 cachePolicy="memory-disk"
               />
@@ -563,7 +592,10 @@ export default function MediaPreviewModal({
             <Video
               ref={videoRef}
               source={{ uri: currentMedia.uri }}
-              style={[styles.mediaFill, videoPosterUri && !videoPlaying ? styles.hiddenVideo : null]}
+              style={[
+                styles.fullMediaInner,
+                videoPosterUri && !videoPlaying ? styles.hiddenVideo : null,
+              ]}
               resizeMode={ResizeMode.CONTAIN}
               useNativeControls={false}
               shouldPlay={videoPlaying}
@@ -631,36 +663,9 @@ export default function MediaPreviewModal({
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <RNAnimatedView style={[styles.container, { opacity: modalOpacityAnim, transform: [{ scale: modalScaleAnim }] }]}>
-          {/* ── פס עליון זכוכית (כמו MediaViewer) ── */}
-          <View style={styles.topGlassBar}>
-            <BlurView intensity={80} tint="dark" style={styles.glassBarBlur}>
-              <View style={[styles.topGlassContent, { paddingTop: insets.top + 8 }]}>
-                <GlassButton onPress={onClose}>
-                  <X size={24} color={COLORS.text} strokeWidth={2} />
-                </GlassButton>
-
-                {localFiles.length > 1 && (
-                  <View style={styles.counterBadge}>
-                    <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
-                      <View style={styles.counterInner}>
-                        <Text style={styles.counterText}>{currentIndex + 1}/{localFiles.length}</Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                <GlassButton onPress={() => removeMedia(currentMedia.id)}>
-                  <Trash2 size={22} color={COLORS.danger} strokeWidth={2} />
-                </GlassButton>
-              </View>
-            </BlurView>
-          </View>
-
-          {/* ── אזור מדיה באמצע: contain + letterbox שחור ── */}
-          <Pressable style={styles.mediaViewport} onPress={dismissKeyboard}>
-            <View style={styles.mediaContainLayer}>
-              {renderMediaContent()}
-            </View>
+          {/* ── מדיה מלאה מאחורי הפסים (כמו MediaViewer) ── */}
+          <Pressable style={styles.mediaContainer} onPress={dismissKeyboard}>
+            {renderMediaContent()}
 
             {localFiles.length > 1 && (
               <>
@@ -686,8 +691,39 @@ export default function MediaPreviewModal({
             )}
           </Pressable>
 
+          {/* ── פס עליון זכוכית (כמו MediaViewer) ── */}
+          <View style={styles.topGlassBar}>
+            <BlurView intensity={80} tint="dark" style={styles.glassBarBlur}>
+              <View style={[styles.topGlassContent, { paddingTop: insets.top + 8 }]}>
+                <GlassButton onPress={onClose}>
+                  <X size={24} color={COLORS.text} strokeWidth={2} />
+                </GlassButton>
+
+                {localFiles.length > 1 && (
+                  <View style={styles.counterBadge}>
+                    <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+                      <View style={styles.counterInner}>
+                        <Text style={styles.counterText}>{currentIndex + 1}/{localFiles.length}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                <GlassButton onPress={() => removeMedia(currentMedia.id)}>
+                  <Trash2 size={22} color={COLORS.danger} strokeWidth={2} />
+                </GlassButton>
+              </View>
+            </BlurView>
+          </View>
+
           {/* ── פס תחתון: וידאו ב-blur; אינפוט+שליחה מחוץ ל-blur (כפתור ירוק מלא) ── */}
-          <Animated.View style={[styles.bottomGlassBar, animatedBottomBarStyle]}>
+          <Animated.View
+            style={[
+              styles.bottomGlassBar,
+              { paddingBottom: composerPaddingBottom },
+              animatedComposerDockStyle,
+            ]}
+          >
             {currentMedia?.type === 'video' && (
               <BlurView intensity={80} tint="dark" style={styles.glassBarBlur}>
                 <View style={styles.bottomGlassContent}>
@@ -806,11 +842,28 @@ export default function MediaPreviewModal({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
     backgroundColor: '#000',
+  },
+  /** מדיה מלאה מאחורי הפסים — contain + letterbox כמו MediaViewer */
+  mediaContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  fullMedia: {
+    width: screenWidth,
+    height: screenHeight,
+  },
+  fullMediaInner: {
+    ...StyleSheet.absoluteFillObject,
   },
   /** פס עליון — blur/glass כמו MediaViewer */
   topGlassBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     zIndex: 2,
     overflow: 'hidden',
   },
@@ -827,33 +880,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  /** אזור המדיה באמצע — letterbox בתוך viewport בלבד */
-  mediaViewport: {
-    flex: 1,
-    minHeight: 0,
-    width: '100%',
-    backgroundColor: '#000',
-    position: 'relative',
-  },
-  mediaContainLayer: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-  },
-  /** מילוי מלא של viewport — contain על תמונה/וידאו */
-  mediaFill: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  hiddenVideo: {
-    opacity: 0,
-  },
-  loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 5,
-    backgroundColor: '#000',
+  /** פס תחתון — blur/glass + אינפוט, עולה עם המקלדת */
+  bottomGlassBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
   },
   glassButton: {
     overflow: 'hidden',
@@ -914,11 +947,15 @@ const styles = StyleSheet.create({
   navRight: {
     right: 16,
   },
-  /** פס תחתון — blur/glass + אינפוט */
-  bottomGlassBar: {
-    width: '100%',
-    zIndex: 2,
-    overflow: 'hidden',
+  hiddenVideo: {
+    opacity: 0,
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+    backgroundColor: 'transparent',
   },
   bottomGlassContent: {
     paddingHorizontal: 16,

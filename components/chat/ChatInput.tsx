@@ -12,6 +12,7 @@ import UICard from '../ui/UICard';
 import * as ImagePicker from 'expo-image-picker';
 import { Image as ExpoImage } from 'expo-image';
 import MediaPickerSheet from './MediaPickerSheet';
+import ChatComposerBar from './ChatComposerBar';
 import { runAfterSheetDismiss } from './mediaPickerLaunch';
 import PollCreationBottomSheet from './PollCreationBottomSheet';
 
@@ -1552,8 +1553,9 @@ function ChatInputImpl({
         </View>
       ) : null}
 
+      {(isRecording || isPaused) ? (
       <View style={styles.container}>
-        {/* Input Container - glass pill (no send button inside) */}
+        {/* Recording / preview UI — נשאר inline (ספציפי לצ'אט) */}
         <UICard
           variant="glass"
           glassIntensity="light"
@@ -1561,37 +1563,6 @@ function ChatInputImpl({
           style={styles.inputCardOuter}
           contentContainerStyle={styles.inputCardContent}
         >
-          {/* Attachment Button - hidden during recording */}
-          {!isRecording && !isPaused && (
-            <TouchableOpacity
-              onPress={() => {
-                void HapticFeedback.impactLight();
-                showAttachmentOptions();
-              }}
-              style={styles.iconButton}
-              disabled={disabled || isUploading}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="צירוף מדיה"
-            >
-              <Animated.View
-                style={{
-                  transform: [
-                    {
-                      rotate: attachmentIconRotate.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['0deg', '45deg'],
-                      }),
-                    },
-                  ],
-                }}
-              >
-                <Ionicons name="add" size={28} color={DesignTokens.colors.text.secondary} />
-              </Animated.View>
-            </TouchableOpacity>
-          )}
-
-          {/* Text Input or Recording UI */}
           {(isRecording || (isPaused && !recordedAudioUri)) ? (
             /* שורה אחת: משמאל עצירה+מחיקה · במרכז זמן+גלים · מימין שליחה */
             <View style={styles.recordingRowFull}>
@@ -1663,7 +1634,7 @@ function ChatInputImpl({
                 <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
               </TouchableOpacity>
             </View>
-          ) : isPaused && recordedAudioUri ? (
+          ) : (
             /* תצוגה לפני שליחה — אותה לוגיקה: שמאל ניגון+מחיקה · מרכז זמן+גלים · ימין שליחה */
             <View style={styles.recordingRowFull}>
               <View style={styles.recordingLeftCluster}>
@@ -1732,80 +1703,101 @@ function ChatInputImpl({
                 <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
               </TouchableOpacity>
             </View>
-          ) : (
-            <>
-              <TextInput
-                ref={textInputRef}
-                nativeID={CHAT_COMPOSER_NATIVE_ID}
-                style={styles.textInput}
-                placeholder={isUploading ? 'מעלה...' : 'הקלד הודעה...'}
-                placeholderTextColor={DesignTokens.colors.text.secondary}
-                value={text}
-                onChangeText={handleTextChange}
-                multiline
-                numberOfLines={2}
-                maxLength={10000}
-                editable={!disabled && !isUploading}
-                blurOnSubmit={false}
-                showSoftInputOnFocus
-                keyboardAppearance="dark"
-                importantForAutofill="no"
-              />
-              {/* L2: character counter – only shown when approaching the limit */}
-              {text.length > 8000 && (
-                <Text style={[
-                  styles.charCounter,
-                  text.length > 9500 && styles.charCounterDanger,
-                ]}>
-                  {10000 - text.length}
-                </Text>
-              )}
-            </>
           )}
         </UICard>
-
-        {/* Send / Mic button — OUTSIDE the pill, WhatsApp-style floating circle */}
-        {!isLocked && !isRecording && !isPaused && (
-          <View style={styles.sendBtnOuter}>
-            {hasText ? (
-              <Pressable
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  Animated.sequence([
-                    Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
-                    Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
-                  ]).start();
-                  handleSend();
-                }}
-                style={styles.sendBtnTouchable}
-                disabled={disabled || isUploading}
-                accessibilityRole="button"
-                accessibilityLabel="שליחת הודעה"
-              >
-                <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
-                  <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
-                </Animated.View>
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  handleMicTapToRecord();
-                }}
-                disabled={disabled || isUploading}
-                accessibilityRole="button"
-                accessibilityLabel="הקלטת הודעה קולית"
-                style={({ pressed }) => [
-                  styles.sendBtnTouchable,
-                  pressed && !disabled && !isUploading ? { opacity: 0.82 } : null,
-                ]}
-              >
-                <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
-              </Pressable>
-            )}
-          </View>
-        )}
       </View>
+      ) : (
+        <ChatComposerBar
+          value={text}
+          onChangeText={handleTextChange}
+          inputRef={textInputRef}
+          nativeID={CHAT_COMPOSER_NATIVE_ID}
+          placeholder={isUploading ? 'מעלה...' : 'הקלד הודעה...'}
+          placeholderTextColor={DesignTokens.colors.text.secondary}
+          editable={!disabled && !isUploading}
+          maxLength={10000}
+          numberOfLines={2}
+          containerStyle={{ paddingBottom: inputBottomPadding }}
+          leading={
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                showAttachmentOptions();
+              }}
+              style={styles.iconButton}
+              disabled={disabled || isUploading}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="צירוף מדיה"
+            >
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: attachmentIconRotate.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '45deg'],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <Ionicons name="add" size={28} color={DesignTokens.colors.text.secondary} />
+              </Animated.View>
+            </TouchableOpacity>
+          }
+          overlay={
+            text.length > 8000 ? (
+              <Text style={[
+                styles.charCounter,
+                text.length > 9500 && styles.charCounterDanger,
+              ]}>
+                {10000 - text.length}
+              </Text>
+            ) : null
+          }
+          trailing={
+            <View style={styles.sendBtnOuter}>
+              {hasText ? (
+                <Pressable
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    Animated.sequence([
+                      Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
+                      Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
+                    ]).start();
+                    handleSend();
+                  }}
+                  style={styles.sendBtnTouchable}
+                  disabled={disabled || isUploading}
+                  accessibilityRole="button"
+                  accessibilityLabel="שליחת הודעה"
+                >
+                  <Animated.View style={{ transform: [{ scale: sendBtnScale }] }}>
+                    <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
+                  </Animated.View>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    handleMicTapToRecord();
+                  }}
+                  disabled={disabled || isUploading}
+                  accessibilityRole="button"
+                  accessibilityLabel="הקלטת הודעה קולית"
+                  style={({ pressed }) => [
+                    styles.sendBtnTouchable,
+                    pressed && !disabled && !isUploading ? { opacity: 0.82 } : null,
+                  ]}
+                >
+                  <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
+                </Pressable>
+              )}
+            </View>
+          }
+        />
+      )}
 
       {/* Media Preview Modal */}
       {showMediaPreview && selectedMedia.length > 0 && (

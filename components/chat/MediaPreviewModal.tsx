@@ -1,13 +1,13 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { View, Text, Modal, Pressable, TextInput, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated, // React Native Animated for modal animations
+import { View, Text, Modal, Pressable, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated, // React Native Animated for modal animations
   KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
-import { X, Trash2, Send, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
+import { X, Trash2, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { Audio } from 'expo-av';
 import { MediaFile } from '../../services/mediaService';
@@ -30,8 +30,8 @@ interface MediaPreviewModalProps {
   mediaFiles: MediaFile[];
 }
 
-import { chatPalette as COLORS, chatRtlText } from './chatDesignTokens';
-import { useDesignTokens } from '../ui/DesignTokens';
+import { chatPalette as COLORS } from './chatDesignTokens';
+import ChatComposerBar from './ChatComposerBar';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -41,7 +41,6 @@ export default function MediaPreviewModal({
   onSend,
   mediaFiles
 }: MediaPreviewModalProps) {
-  const DesignTokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
   
@@ -498,9 +497,9 @@ export default function MediaPreviewModal({
               <ExpoImage
                 source={{ uri: currentMedia.uri }}
                 style={styles.fullImage}
-                contentFit="cover"
+                contentFit="contain"
                 placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-                placeholderContentFit="cover"
+                placeholderContentFit="contain"
                 transition={200}
                 onLoadStart={() => setIsLoading(false)} // ⚡ מיידי! לא מחכים
                 onLoad={() => setIsLoading(false)}
@@ -676,33 +675,14 @@ export default function MediaPreviewModal({
             </View>
           )}
 
-          {/* Caption Input — onboarding glass surface כמו שאר האפליקציה */}
-          <View style={styles.captionRow}>
-            <View
-              style={[
-                styles.captionGlass,
-                DesignTokens.onboardingInputSurface,
-                { borderRadius: DesignTokens.borderRadius.xl },
-              ]}
-            >
-              <TextInput
-                placeholder="הוסף כיתוב..."
-                placeholderTextColor={DesignTokens.colors.text.tertiary}
-                value={captions[currentMedia.id] || ''}
-                onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
-                style={[styles.captionInput, chatRtlText, { color: DesignTokens.colors.text.primary }]}
-                multiline
-                maxLength={500}
-              />
-            </View>
-
-            {/* Send Button */}
-            <Pressable onPress={handleSend} style={styles.sendBtn}>
-              <View style={[styles.sendBtnInner, { backgroundColor: DesignTokens.colors.primary.main }]}>
-                <Send size={22} color={DesignTokens.colors.text.inverse} strokeWidth={2.5} style={{ marginLeft: 2 }} />
-              </View>
-            </Pressable>
-          </View>
+          {/* Caption Input — קומפוננטת הקלט המשותפת, זהה לצ'אט הרגיל (עיצוב + לוגיקה) */}
+          <ChatComposerBar
+            value={captions[currentMedia.id] || ''}
+            onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
+            placeholder="הוסף כיתוב..."
+            maxLength={500}
+            onSend={handleSend}
+          />
 
           {/* Thumbnail Strip */}
           {localFiles.length > 1 && (

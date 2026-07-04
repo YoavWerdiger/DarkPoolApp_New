@@ -19,7 +19,6 @@ export class LikedArticlesService {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        console.log('❌ LikedArticlesService: No authenticated user');
         return false;
       }
 
@@ -31,13 +30,11 @@ export class LikedArticlesService {
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('❌ LikedArticlesService: Error checking if article is liked:', error);
         return false;
       }
 
       return !!data;
     } catch (error) {
-      console.error('❌ LikedArticlesService: Error in isArticleLiked:', error);
       return false;
     }
   }
@@ -48,7 +45,6 @@ export class LikedArticlesService {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        console.log('❌ LikedArticlesService: No authenticated user');
         return false;
       }
 
@@ -66,17 +62,13 @@ export class LikedArticlesService {
       if (error) {
         // אם זה שגיאת כפילות, זה בסדר - המשתמש כבר אהב את החדשה
         if (error.code === '23505') { // unique_violation
-          console.log('ℹ️ LikedArticlesService: Article already liked');
           return true;
         }
-        console.error('❌ LikedArticlesService: Error liking article:', error);
         return false;
       }
 
-      console.log('✅ LikedArticlesService: Article liked successfully');
       return true;
     } catch (error) {
-      console.error('❌ LikedArticlesService: Error in likeArticle:', error);
       return false;
     }
   }
@@ -87,7 +79,6 @@ export class LikedArticlesService {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        console.log('❌ LikedArticlesService: No authenticated user');
         return false;
       }
 
@@ -98,14 +89,11 @@ export class LikedArticlesService {
         .eq('article_id', articleId);
 
       if (error) {
-        console.error('❌ LikedArticlesService: Error unliking article:', error);
         return false;
       }
 
-      console.log('✅ LikedArticlesService: Article unliked successfully');
       return true;
     } catch (error) {
-      console.error('❌ LikedArticlesService: Error in unlikeArticle:', error);
       return false;
     }
   }
@@ -116,7 +104,6 @@ export class LikedArticlesService {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        console.log('❌ LikedArticlesService: No authenticated user');
         return [];
       }
 
@@ -127,14 +114,11 @@ export class LikedArticlesService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ LikedArticlesService: Error getting liked articles:', error);
         return [];
       }
 
-      console.log(`✅ LikedArticlesService: Retrieved ${data?.length || 0} liked articles`);
       return data || [];
     } catch (error) {
-      console.error('❌ LikedArticlesService: Error in getLikedArticles:', error);
       return [];
     }
   }
@@ -145,7 +129,6 @@ export class LikedArticlesService {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        console.log('❌ LikedArticlesService: No authenticated user');
         return [];
       }
 
@@ -155,13 +138,11 @@ export class LikedArticlesService {
         .eq('user_id', user.id);
 
       if (error) {
-        console.error('❌ LikedArticlesService: Error getting liked article IDs:', error);
         return [];
       }
 
       return data?.map(item => item.article_id) || [];
     } catch (error) {
-      console.error('❌ LikedArticlesService: Error in getLikedArticleIds:', error);
       return [];
     }
   }
@@ -172,7 +153,6 @@ export class LikedArticlesService {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        console.log('❌ LikedArticlesService: No authenticated user');
         return false;
       }
 
@@ -182,15 +162,30 @@ export class LikedArticlesService {
         .eq('user_id', user.id);
 
       if (error) {
-        console.error('❌ LikedArticlesService: Error clearing liked articles:', error);
         return false;
       }
 
-      console.log('✅ LikedArticlesService: All liked articles cleared successfully');
       return true;
     } catch (error) {
-      console.error('❌ LikedArticlesService: Error in clearAllLikedArticles:', error);
       return false;
+    }
+  }
+
+  // קבלת מספר המשתמשים שאהבו חדשה מסוימת
+  static async getArticleLikeCount(articleId: string): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('liked_articles')
+        .select('*', { count: 'exact', head: true })
+        .eq('article_id', articleId);
+
+      if (error) {
+        return 0;
+      }
+
+      return count || 0;
+    } catch (error) {
+      return 0;
     }
   }
 }

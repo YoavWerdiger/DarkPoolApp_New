@@ -7,29 +7,21 @@ const DISABLE_CACHE_WRITES = (process.env.EXPO_PUBLIC_DISABLE_CACHE_WRITES || ''
 
 export interface CachedEconomicEvent {
   id: string;
-  event_id: string;
   title: string;
   description?: string;
   country: string;
-  currency: string;
+  currency?: string;
   importance: 'high' | 'medium' | 'low';
-  event_date: string;
-  event_time?: string;
-  actual_value?: string;
-  forecast_value?: string;
-  previous_value?: string;
+  date: string;
+  time?: string;
+  actual?: string;
+  forecast?: string;
+  previous?: string;
   category?: string;
   source: string;
-  event_type?: string;
   period?: string;
-  comparison_type?: 'yoy' | 'qoq' | 'mom';
-  unit?: string;
-  value_number?: number;
-  is_historical: boolean;
-  is_upcoming: boolean;
-  created_at: string;
-  updated_at: string;
-  last_fetched_at: string;
+  last_updated?: string;
+  created_at?: string;
 }
 
 export interface CacheMetadata {
@@ -70,33 +62,22 @@ class EconomicDataCacheService {
   private async isCacheValid(cacheKey: string): Promise<boolean> {
     try {
       const { data, error } = await supabase
-        .from('economic_data_cache_meta')
-        .select('next_update, is_active, error_count')
-        .eq('cache_key', cacheKey)
+        .from('economic_cache_metadata')
+        .select('last_update')
+        .eq('id', cacheKey)
         .single();
 
       if (error || !data) {
         return false;
       }
 
-      // אם יש יותר מדי שגיאות, נשבית את ה-cache
-      if (data.error_count >= this.MAX_ERROR_COUNT) {
-        console.log(`⚠️ Cache ${cacheKey} disabled due to too many errors (${data.error_count})`);
-        return false;
-      }
-
-      // אם ה-cache לא פעיל
-      if (!data.is_active) {
-        return false;
-      }
-
-      // בדיקה אם הגיע הזמן לעדכון
-      const nextUpdate = new Date(data.next_update);
+      // בדיקה אם הגיע הזמן לעדכון (cache תקף ל-6 שעות)
+      const lastUpdate = new Date(data.last_update);
       const now = new Date();
+      const hoursSinceUpdate = (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
       
-      return now < nextUpdate;
+      return hoursSinceUpdate < this.CACHE_DURATION_HOURS;
     } catch (error) {
-      console.error('Error checking cache validity:', error);
       return false;
     }
   }
@@ -114,31 +95,19 @@ class EconomicDataCacheService {
         // כתיבה למסד מנוטרלת – דילוג שקט
         return;
       }
-      const nextUpdate = new Date();
-      nextUpdate.setHours(nextUpdate.getHours() + this.CACHE_DURATION_HOURS);
 
       const { error: upsertError } = await supabase
-        .from('economic_data_cache_meta')
+        .from('economic_cache_metadata')
         .upsert({
-          cache_key: cacheKey,
-          last_updated: new Date().toISOString(),
-          next_update: nextUpdate.toISOString(),
-          total_events: totalEvents,
+          id: cacheKey,
           source,
           country,
-          is_active: true,
-          error_count: error ? 1 : 0,
-          last_error: error || null
+          last_update: new Date().toISOString(),
+          total_events: totalEvents
         }, {
-          onConflict: 'cache_key'
+          onConflict: 'id'
         });
-
-      if (upsertError) {
-        // המרה לאזהרה כדי לא לזהם את הטרמינל בשגיאות, הזרימה ממשיכה
-        console.warn('Warning: cache metadata not updated (RLS/policy?):', upsertError?.message || upsertError);
-      }
     } catch (error) {
-      console.warn('Warning: updateCacheMetadata failed:', (error as any)?.message || String(error));
     }
   }
 
@@ -150,46 +119,35 @@ class EconomicDataCacheService {
         return 0;
       }
       const eventsToInsert = events.map(event => ({
-        event_id: event.id,
+        id: event.id,
         title: event.title,
         description: event.description,
         country: event.country || 'US',
-        currency: event.currency || 'USD',
         importance: event.importance,
-        event_date: event.date,
-        event_time: event.time || null,
-        actual_value: event.actual,
-        forecast_value: event.forecast,
-        previous_value: event.previous,
-        category: event.category,
-        source,
-        event_type: event.type,
+        date: event.date,
+        time: event.time || null,
+        actual: event.actual,
+        forecast: event.forecast,
+        previous: event.previous,
         period: event.period,
-        comparison_type: event.comparison,
-        unit: event.unit,
-        value_number: event.value,
-        is_historical: new Date(event.date) < new Date(),
-        is_upcoming: new Date(event.date) >= new Date(),
-        last_fetched_at: new Date().toISOString()
+        source,
+        last_updated: new Date().toISOString()
       }));
 
       // שימוש ב-upsert כדי למנוע כפילויות
       const { error } = await supabase
-        .from('economic_events')
+        .from('economic_events_cache')
         .upsert(eventsToInsert, {
-          onConflict: 'event_id',
+          onConflict: 'id',
           ignoreDuplicates: false
         });
 
       if (error) {
-        console.warn('Warning: events not saved to database (RLS/policy?):', error?.message || error);
         return 0;
       }
 
-      console.log(`✅ Saved ${eventsToInsert.length} events to database from ${source}`);
       return eventsToInsert.length;
     } catch (error) {
-      console.warn('Warning: saveEventsToDatabase failed:', (error as any)?.message || String(error));
       return 0;
     }
   }
@@ -202,11 +160,11 @@ class EconomicDataCacheService {
   ): Promise<CachedEconomicEvent[]> {
     try {
       let query = supabase
-        .from('economic_events')
+        .from('economic_events_cache')
         .select('*')
         .eq('country', country)
-        .order('event_date', { ascending: true })
-        .order('event_time', { ascending: true, nullsFirst: false });
+        .order('date', { ascending: true })
+        .order('time', { ascending: true, nullsFirst: false });
 
       if (importance && importance !== 'all') {
         query = query.eq('importance', importance);
@@ -214,20 +172,18 @@ class EconomicDataCacheService {
 
       if (dateRange) {
         query = query
-          .gte('event_date', dateRange.start)
-          .lte('event_date', dateRange.end);
+          .gte('date', dateRange.start)
+          .lte('date', dateRange.end);
       }
 
       const { data, error } = await query;
 
       if (error) {
-        console.error('Error loading events from cache:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in loadEventsFromCache:', error);
       return [];
     }
   }
@@ -244,32 +200,25 @@ class EconomicDataCacheService {
     try {
       // בדיקה אם cache תקף
       if (!forceRefresh && await this.isCacheValid(cacheKey)) {
-        console.log(`📦 Loading from cache: ${cacheKey}`);
         return await this.loadEventsFromCache(country, importance, dateRange);
       }
-
-      console.log(`🔄 Refreshing cache: ${cacheKey}`);
       
-      // טעינת נתונים חדשים
+      // טעינת נתונים חדשים - עכשיו מ-Benzinga דרך EODHD Service
       let events: EconomicEvent[] = [];
-      let source = 'FRED';
+      let source = 'Benzinga';
 
       try {
-        // ניסיון טעינה מ-EODHD
-        const isEODHDAvailable = await EODHDService.checkApiAvailability();
-        if (isEODHDAvailable) {
-          console.log('📊 Loading from EODHD API...');
-          const eodhdEvents = await EODHDService.getPopularEconomicIndicators();
-          events = eodhdEvents.map(event => EODHDService.convertToAppFormat(event));
-          source = 'EODHD';
-        } else {
-          throw new Error('EODHD not available');
-        }
-      } catch (eodhdError) {
-        console.log('⚠️ EODHD failed, falling back to FRED');
+        const eodhdEvents = await EODHDService.getPopularEconomicIndicators();
+        events = eodhdEvents.map(event => EODHDService.convertToAppFormat(event));
+        source = 'Benzinga';
+      } catch (benzingaError) {
         // גיבוי ל-FRED
-        events = await EconomicCalendarService.getEconomicEvents();
-        source = 'FRED';
+        try {
+          events = await EconomicCalendarService.getEconomicEvents();
+          source = 'FRED';
+        } catch (fredError) {
+          throw fredError;
+        }
       }
 
       // שמירה במסד הנתונים
@@ -282,13 +231,10 @@ class EconomicDataCacheService {
       return await this.loadEventsFromCache(country, importance, dateRange);
 
     } catch (error) {
-      console.error('Error in getEconomicEvents:', error);
-      
       // עדכון metadata עם שגיאה
-      await this.updateCacheMetadata(cacheKey, 'ERROR', country, 0, error.message);
-      
+      await this.updateCacheMetadata(cacheKey, 'ERROR', country, 0, (error as Error).message);
+
       // נסיון טעינה מ-cache ישן
-      console.log('📦 Falling back to cached data...');
       return await this.loadEventsFromCache(country, importance, dateRange);
     }
   }
@@ -297,19 +243,18 @@ class EconomicDataCacheService {
   async getEventsForDate(date: string, country: string = 'US'): Promise<CachedEconomicEvent[]> {
     try {
       const { data, error } = await supabase
-        .rpc('get_economic_events_by_date', {
-          target_date: date,
-          target_country: country
-        });
+        .from('economic_events_cache')
+        .select('*')
+        .eq('date', date)
+        .eq('country', country)
+        .order('time', { ascending: true, nullsFirst: false });
 
       if (error) {
-        console.error('Error getting events for date:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getEventsForDate:', error);
       return [];
     }
   }
@@ -317,28 +262,30 @@ class EconomicDataCacheService {
   // טעינת אירועים עתידיים
   async getUpcomingEvents(daysAhead: number = 30, country: string = 'US'): Promise<CachedEconomicEvent[]> {
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const futureDate = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
       const { data, error } = await supabase
-        .rpc('get_upcoming_economic_events', {
-          days_ahead: daysAhead,
-          target_country: country
-        });
+        .from('economic_events_cache')
+        .select('*')
+        .eq('country', country)
+        .gte('date', today)
+        .lte('date', futureDate)
+        .order('date', { ascending: true })
+        .order('time', { ascending: true, nullsFirst: false });
 
       if (error) {
-        console.error('Error getting upcoming events:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getUpcomingEvents:', error);
       return [];
     }
   }
 
   // עדכון מתוזמן של cache
   async scheduledCacheUpdate(): Promise<void> {
-    console.log('🔄 Starting scheduled cache update...');
-    
     try {
       // עדכון נתונים עתידיים (30 ימים קדימה)
       const futureDateRange = {
@@ -355,53 +302,46 @@ class EconomicDataCacheService {
       };
 
       await this.getEconomicEvents('US', undefined, historicalDateRange, true);
-      
-      console.log('✅ Scheduled cache update completed');
     } catch (error) {
-      console.error('❌ Scheduled cache update failed:', error);
     }
   }
 
   // ניקוי cache ישן
   async cleanupOldCache(): Promise<void> {
     try {
-      const { data, error } = await supabase
-        .rpc('cleanup_old_economic_events');
+      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from('economic_events_cache')
+        .delete()
+        .lt('date', oneYearAgo);
 
       if (error) {
-        console.error('Error cleaning up old cache:', error);
         return;
       }
-
-      console.log(`🧹 Cleaned up ${data} old events`);
     } catch (error) {
-      console.error('Error in cleanupOldCache:', error);
     }
   }
 
   // המרת CachedEconomicEvent ל-EconomicEvent
   convertToAppFormat(cachedEvent: CachedEconomicEvent): EconomicEvent {
     return {
-      id: cachedEvent.event_id,
+      id: cachedEvent.id,
       title: cachedEvent.title,
       description: cachedEvent.description,
       country: cachedEvent.country,
-      currency: cachedEvent.currency,
+      currency: cachedEvent.currency || 'USD',
       importance: cachedEvent.importance,
-      date: cachedEvent.event_date,
-      time: cachedEvent.event_time || '',
-      actual: cachedEvent.actual_value,
-      forecast: cachedEvent.forecast_value,
-      previous: cachedEvent.previous_value,
+      date: cachedEvent.date,
+      time: cachedEvent.time || '',
+      actual: cachedEvent.actual,
+      forecast: cachedEvent.forecast,
+      previous: cachedEvent.previous,
       category: cachedEvent.category,
       source: cachedEvent.source,
-      type: cachedEvent.event_type,
       period: cachedEvent.period,
-      comparison: cachedEvent.comparison_type,
-      unit: cachedEvent.unit,
-      value: cachedEvent.value_number,
-      createdAt: cachedEvent.created_at,
-      dateObject: new Date(cachedEvent.event_date)
+      createdAt: cachedEvent.created_at || '',
+      dateObject: new Date(cachedEvent.date)
     };
   }
 
@@ -414,29 +354,31 @@ class EconomicDataCacheService {
     sources: { [key: string]: number };
   }> {
     try {
+      const today = new Date().toISOString().split('T')[0];
+      
       const { data: totalData } = await supabase
-        .from('economic_events')
+        .from('economic_events_cache')
         .select('id', { count: 'exact' });
 
       const { data: upcomingData } = await supabase
-        .from('economic_events')
+        .from('economic_events_cache')
         .select('id', { count: 'exact' })
-        .eq('is_upcoming', true);
+        .gte('date', today);
 
       const { data: historicalData } = await supabase
-        .from('economic_events')
+        .from('economic_events_cache')
         .select('id', { count: 'exact' })
-        .eq('is_historical', true);
+        .lt('date', today);
 
       const { data: sourcesData } = await supabase
-        .from('economic_events')
+        .from('economic_events_cache')
         .select('source')
         .not('source', 'is', null);
 
       const { data: lastUpdateData } = await supabase
-        .from('economic_data_cache_meta')
-        .select('last_updated')
-        .order('last_updated', { ascending: false })
+        .from('economic_cache_metadata')
+        .select('last_update')
+        .order('last_update', { ascending: false })
         .limit(1)
         .single();
 
@@ -449,11 +391,10 @@ class EconomicDataCacheService {
         totalEvents: totalData?.length || 0,
         upcomingEvents: upcomingData?.length || 0,
         historicalEvents: historicalData?.length || 0,
-        lastUpdate: lastUpdateData?.last_updated || 'Never',
+        lastUpdate: lastUpdateData?.last_update || 'Never',
         sources
       };
     } catch (error) {
-      console.error('Error getting cache stats:', error);
       return {
         totalEvents: 0,
         upcomingEvents: 0,

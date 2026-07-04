@@ -186,6 +186,29 @@ export async function uploadImage(
       return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת תמונה' } };
     }
 
+    // ⚡ thumbnail קטן לבועה — נטען מיידית (כמו וידאו); הקובץ המלא נטען רק בצפייה מלאה.
+    // best-effort: כשל ביצירה לא מפיל את שליחת התמונה.
+    let thumbnailUrl: string | null = null;
+    try {
+      const thumb = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 600 } }],
+        { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+      );
+      if (thumb.base64) {
+        const thumbFileName = `${groupId}/${timestamp}-${randomId}-thumb.jpg`;
+        const { error: thumbError } = await supabase.storage
+          .from(CHAT_MEDIA_BUCKET)
+          .upload(thumbFileName, decode(thumb.base64), {
+            contentType: 'image/jpeg',
+            upsert: false,
+          });
+        if (!thumbError) thumbnailUrl = thumbFileName;
+      }
+    } catch {
+      logger.warn('ChatMedia', 'Could not generate image thumbnail');
+    }
+
     if (onProgress) {
       onProgress({ file_name: fileName, progress: 100, uploaded_bytes: fileInfo.size || 0, total_bytes: fileInfo.size || 0, url: fileName });
     }
@@ -193,7 +216,7 @@ export async function uploadImage(
     activeUploads.delete(uploadId);
     return {
       url: fileName,
-      thumbnail_url: null,
+      thumbnail_url: thumbnailUrl,
       width: imageToUpload.width,
       height: imageToUpload.height,
       size: fileInfo.size || 0,

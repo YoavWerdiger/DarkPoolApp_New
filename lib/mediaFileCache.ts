@@ -2,18 +2,21 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { logger } from '../utils/logger';
 
 /**
- * Cache כללי של קבצי מדיה (אודיו/וידאו/מסמכים) על המכשיר — לכניסה מיידית ולתמיכה offline.
+ * Cache כללי של קבצי מדיה (תמונות/אודיו/וידאו/מסמכים) על המכשיר — לכניסה מיידית ולתמיכה offline.
  * הקבצים ממופים לפי נתיב האחסון היציב (לא לפי ה-signed URL שמתחלף), עם namespace
  * לכל מקור (chat / stories / ...) כדי למנוע התנגשות שמות בין buckets שונים.
  *
- * תמונות לא נשמרות כאן — expo-image כבר שומר אותן לדיסק (cachePolicy="memory-disk").
+ * תמונות נשמרות כאן לפי הנתיב היציב: ה-signed URL מתחלף בכל חתימה מחדש, ולכן ה-cache
+ * של expo-image (שממופה ל-URL המלא) היה מפספס אחרי restart/פקיעת טוקן וגורם להורדה
+ * חוזרת של התמונה המלאה (איטי). מיפוי לפי נתיב מחזיר file:// מיידי אחרי ההורדה הראשונה.
  */
 const TAG = 'MediaFileCache';
 const CACHE_DIR = `${FileSystem.cacheDirectory}media-file-cache/`;
 const MAX_FILES = 400; // תקרת קבצים; מעליה מפנים את הישנים ביותר
 
-/** סיומות שכדאי לשמור מקומית (אודיו/וידאו/מסמכים). תמונות מטופלות ע"י expo-image. */
+/** סיומות שכדאי לשמור מקומית (תמונות/אודיו/וידאו/מסמכים). */
 const CACHEABLE_EXT = new Set([
+  'jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif', // images
   'm4a', 'mp3', 'aac', 'wav', 'ogg', 'opus', 'caf', 'amr', // audio
   'mp4', 'mov', 'm4v', 'webm', '3gp', // video
   'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', // docs

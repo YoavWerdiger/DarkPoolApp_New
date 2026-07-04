@@ -206,6 +206,10 @@ async function signStoragePathsBatch(paths: string[]): Promise<void> {
       for (const row of data) {
         if (row?.path && row.signedUrl && !row.error) {
           pathCache.set(row.path, { url: row.signedUrl, expiresAt: now + CACHE_MS });
+          // חימום ה-cache המקומי היציב מראש כדי שהצגה תהיה מיידית ותשרוד restart/חתימה מחדש
+          if (isCacheableMediaPath(row.path)) {
+            void downloadMediaToCache(row.path, row.signedUrl);
+          }
         }
       }
     } catch (e) {

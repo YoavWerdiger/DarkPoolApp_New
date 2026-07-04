@@ -21,11 +21,13 @@ const SIGN_TTL_SEC = 3600;
 const CACHE_MS = (SIGN_TTL_SEC - 600) * 1000;
 /**
  * חתימה היא קריאת metadata מהירה. ל-fetch של supabase אין timeout מובנה, ולכן
- * חיבור שנתקע (למשל רשת חלשה / Expo Go) היה משאיר את ה-Promise תלוי לנצח והמדיה
- * לא הייתה נטענת. ה-timeout הופך תקיעה לכשל רגיל (fallback), כך שהזרימה תמיד מתקדמת.
+ * חיבור שנתקע (למשל רשת חלשה / iOS cold start) היה משאיר את ה-Promise תלוי לנצח.
+ * ה-timeout הופך תקיעה לכשל רגיל, ו-retry מוודא שכשל חולף לא ישאיר את המדיה
+ * "לא נטענת" לצמיתות (הצרכן מציג ספינר עד שמתקבל URL תקין).
  */
-const SIGN_TIMEOUT_MS = 15000;
+const SIGN_TIMEOUT_MS = 10000;
 const SIGN_BATCH_TIMEOUT_MS = 20000;
+const SIGN_MAX_ATTEMPTS = 3;
 
 /** עוטף Promise ב-timeout כדי שתקיעת רשת לא תשאיר את הזרימה תלויה לנצח */
 function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
@@ -36,6 +38,30 @@ function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Pro
       (err) => { clearTimeout(timer); reject(err); },
     );
   });
+}
+
+/**
+ * חותם נתיב יחיד עם timeout + retry. מחזיר signed URL, או null רק אחרי שכל הניסיונות
+ * נכשלו — כדי שכשל חולף (timeout/רשת) יתאושש ולא יקבע ספינר קבוע בצד המציג.
+ */
+async function createSignedUrlWithRetry(path: string): Promise<string | null> {
+  for (let attempt = 1; attempt <= SIGN_MAX_ATTEMPTS; attempt++) {
+    try {
+      const { data, error } = await withTimeout(
+        supabase.storage.from(BUCKET).createSignedUrl(path, SIGN_TTL_SEC),
+        SIGN_TIMEOUT_MS,
+        'createSignedUrl',
+      );
+      if (!error && data?.signedUrl) return data.signedUrl;
+      logger.warn(TAG, 'createSignedUrl failed', { path, attempt, message: error?.message });
+    } catch (e) {
+      logger.warn(TAG, 'createSignedUrl exception', { path, attempt, error: String(e) });
+    }
+    if (attempt < SIGN_MAX_ATTEMPTS) {
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
+  }
+  return null;
 }
 
 type CacheEntry = { url: string; expiresAt: number };
@@ -106,28 +132,17 @@ export async function getChatMediaDisplayUri(ref: string | null | undefined): Pr
     return hit.url;
   }
 
-  try {
-    const { data, error } = await withTimeout(
-      supabase.storage.from(BUCKET).createSignedUrl(path, SIGN_TTL_SEC),
-      SIGN_TIMEOUT_MS,
-      'createSignedUrl',
-    );
-    if (error || !data?.signedUrl) {
-      logger.warn(TAG, 'createSignedUrl failed', { path, message: error?.message });
-      if (t.startsWith('http')) return t;
-      return null;
-    }
-    pathCache.set(path, { url: data.signedUrl, expiresAt: now + CACHE_MS });
-    // הורדה ברקע לדיסק כדי שהפעם הבאה תהיה מיידית/offline
-    if (isCacheableMediaPath(path)) {
-      void downloadMediaToCache(path, data.signedUrl);
-    }
-    return data.signedUrl;
-  } catch (e) {
-    logger.warn(TAG, 'createSignedUrl exception', e);
+  const signedUrl = await createSignedUrlWithRetry(path);
+  if (!signedUrl) {
     if (t.startsWith('http')) return t;
     return null;
   }
+  pathCache.set(path, { url: signedUrl, expiresAt: now + CACHE_MS });
+  // הורדה ברקע לדיסק כדי שהפעם הבאה תהיה מיידית/offline
+  if (isCacheableMediaPath(path)) {
+    void downloadMediaToCache(path, signedUrl);
+  }
+  return signedUrl;
 }
 
 export function invalidateChatMediaPathCache(path: string): void {

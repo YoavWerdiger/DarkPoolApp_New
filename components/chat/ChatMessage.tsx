@@ -242,10 +242,39 @@ function ChatMessage({
   const [resolvedMedia, setResolvedMedia] = useState<ResolvedMessageMedia>(() =>
     buildInitialResolvedMedia(message),
   );
+  // אם חתימת ה-URL נכשלה (timeout/רשת) main נשאר נתיב לא-מוצג והצרכן תקוע על ספינר.
+  // retry חסום-גבול מאפשר התאוששות כשהרשת חוזרת, בלי לולאה אינסופית.
+  const [resolveRetry, setResolveRetry] = useState(0);
+  const resolveRetryRef = useRef(0);
+  const resolveKeyRef = useRef<string>('');
 
   useEffect(() => {
     let cancelled = false;
+    const RESOLVE_MAX_RETRIES = 4;
+    const resolveKey = `${message.id}|${message.media_url ?? ''}|${message.media_thumbnail_url ?? ''}|${message.local_media_uri ?? ''}`;
+    if (resolveKeyRef.current !== resolveKey) {
+      resolveKeyRef.current = resolveKey;
+      resolveRetryRef.current = 0;
+    }
     setResolvedMedia(buildInitialResolvedMedia(message));
+
+    const isDisplayable = (u: string | null) =>
+      !!u && (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
+
+    const scheduleRetryIfNeeded = (main: string | null) => {
+      const needsRemote = !message.local_media_uri && !!message.media_url;
+      if (
+        needsRemote &&
+        !isDisplayable(main) &&
+        resolveRetryRef.current < RESOLVE_MAX_RETRIES
+      ) {
+        resolveRetryRef.current += 1;
+        const delay = 1500 * resolveRetryRef.current;
+        setTimeout(() => {
+          if (!cancelled) setResolveRetry((n) => n + 1);
+        }, delay);
+      }
+    };
 
     const run = async () => {
       if (message.local_media_uri) {
@@ -297,6 +326,7 @@ function ChatMessage({
 
       if (!cancelled) {
         setResolvedMedia({ main, thumb, audio, doc });
+        scheduleRetryIfNeeded(main);
       }
     };
 
@@ -311,6 +341,7 @@ function ChatMessage({
     message.local_media_uri,
     message.message_type,
     message.media_urls,
+    resolveRetry,
   ]);
 
   // הודעות אופטימיסטיות (שלחנו) – מוצגות מיידית.

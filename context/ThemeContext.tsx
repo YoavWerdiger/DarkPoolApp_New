@@ -44,7 +44,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setIsDarkMode(parsedSettings.darkMode ?? true);
       }
     } catch (error) {
-      console.error('Error loading theme:', error);
     } finally {
       setIsLoading(false);
     }
@@ -60,24 +59,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const newSettings = { ...settings, darkMode: newTheme };
       await AsyncStorage.setItem('appSettings', JSON.stringify(newSettings));
     } catch (error) {
-      console.error('Error saving theme:', error);
     }
   };
 
   const backgroundImage = isDarkMode 
-    ? 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/1.png'
-    : 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/2.png';
+    ? `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/backgrounds/1.png`
+    : `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/backgrounds/2.png`;
 
   const theme = {
-    background: isDarkMode ? '#121212' : '#F5F5F7',
-    cardBackground: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+    background: isDarkMode ? '#0A0E0A' : '#F5F5F7',
+    cardBackground: isDarkMode ? '#141F14' : '#FFFFFF',
     textPrimary: isDarkMode ? '#FFFFFF' : '#000000',
-    textSecondary: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)',
-    textTertiary: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)',
-    border: isDarkMode ? '#2a2a2a' : 'rgba(0,0,0,0.1)',
-    headerBorder: isDarkMode ? '#1a1a1a' : 'rgba(0,0,0,0.1)',
-    switchTrackOff: isDarkMode ? '#2a2a2a' : '#E5E5E7',
-    switchThumbOff: isDarkMode ? '#4a4a4a' : '#FFFFFF'
+    textSecondary: isDarkMode ? 'rgba(255,255,255,0.70)' : 'rgba(0,0,0,0.65)',
+    textTertiary: isDarkMode ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.45)',
+    border: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)',
+    headerBorder: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)',
+    switchTrackOff: isDarkMode ? '#142014' : '#E5E5E7',
+    switchThumbOff: isDarkMode ? '#FFFFFF' : '#FFFFFF'
   };
 
   if (isLoading) {

@@ -1,6 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { AuthService, AuthUser, LoginCredentials, RegisterCredentials } from '../services/authService';
+import { supabase } from '../services/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NotificationService } from '../services/notificationService';
+import { logger } from '../utils/logger';
+import { setUser as setSentryUser, clearUser as clearSentryUser } from '../utils/sentry';
+import { clearChatMessagesCache } from '../lib/chatMessagePersist';
+import { clearMediaFileCache } from '../lib/mediaFileCache';
+import { clearPersistedQueryCache } from '../lib/queryPersist';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -11,6 +18,11 @@ interface AuthContextType {
   updateProfile: (updates: Partial<AuthUser>) => Promise<{ error: string | null }>;
   setUser: (user: AuthUser | null) => void;
   attemptAutoLogin: () => Promise<void>;
+  signInWithGoogle: () => Promise<{ 
+    error: string | null;
+    isNewUser?: boolean;
+    googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
+  }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,93 +43,105 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    console.log('🔄 AuthContext: Initializing...');
-    initializeAuth();
-    const { data: { subscription } } = AuthService.onAuthStateChange((user) => {
-      console.log('🔄 AuthContext: Auth state changed, user:', user?.id);
-      setUser(user);
-      setIsLoading(false);
-    });
-    return () => subscription.unsubscribe();
+  const deviceTokenRegistered = React.useRef(false);
+
+  const registerTokenOnce = useCallback(async () => {
+    if (deviceTokenRegistered.current) return;
+    deviceTokenRegistered.current = true;
+    try {
+      await NotificationService.registerDeviceToken();
+    } catch (e) {
+      logger.warn('AuthContext', 'Failed to register device token');
+      deviceTokenRegistered.current = false;
+    }
   }, []);
 
-  const initializeAuth = async () => {
-    console.log('🔄 AuthContext: Initializing...');
-    const currentUser = await checkUser();
-    console.log('🔍 AuthContext: Current user after checkUser:', currentUser?.id);
-    
-    // אם אין משתמש מחובר, ננסה התחברות אוטומטית
-    if (!currentUser) {
-      console.log('🔄 AuthContext: No current user, attempting auto-login...');
-      await attemptAutoLogin();
-    }
-    
-    console.log('✅ AuthContext: Initialization complete, user:', user?.id);
-    setIsLoading(false);
-  };
-
-  const checkUser = async (): Promise<AuthUser | null> => {
-    console.log('🔍 AuthContext: Checking current user...');
+  const checkUser = useCallback(async (): Promise<AuthUser | null> => {
     try {
-      // בדיקה אם יש משתמש מחובר כרגע
-      const { user, error } = await AuthService.getCurrentUser();
+      const { user } = await AuthService.getCurrentUser();
       if (user) {
-        console.log('✅ AuthContext: Current user loaded:', user?.id);
         setUser(user);
         return user;
       }
-
-      console.log('❌ AuthContext: No current user found');
       setUser(null);
       return null;
     } catch (error) {
-      console.error('❌ AuthContext: Error checking user:', error);
+      logger.error('AuthContext', 'Error checking user', error);
       setUser(null);
       return null;
     }
-  };
+  }, []);
 
-  const attemptAutoLogin = async () => {
+  const initializeAuth = useCallback(async () => {
     try {
-      console.log('🔄 AuthContext: Attempting auto-login...');
-      const savedRememberMe = await AsyncStorage.getItem('remember_me');
-      const savedEmail = await AsyncStorage.getItem('saved_email');
-      const savedPassword = await AsyncStorage.getItem('saved_password');
-
-      if (savedRememberMe === 'true' && savedEmail && savedPassword) {
-        console.log('🔄 AuthContext: Found saved credentials, attempting auto-login...');
-        const { user, error } = await AuthService.signIn({ email: savedEmail, password: savedPassword });
-        if (error) {
-          console.log('❌ AuthContext: Auto-login failed:', error);
-          // אם ההתחברות האוטומטית נכשלת, נמחק את הנתונים השמורים
-          await AsyncStorage.removeItem('saved_email');
-          await AsyncStorage.removeItem('saved_password');
-          await AsyncStorage.removeItem('remember_me');
-        } else if (user) {
-          console.log('✅ AuthContext: Auto-login successful');
-          setUser(user);
-        }
+      const currentUser = await checkUser();
+      if (currentUser) {
+        setTimeout(() => registerTokenOnce(), 2000);
       }
     } catch (error) {
-      console.error('❌ AuthContext: Error during auto-login:', error);
+      logger.error('AuthContext', 'Error in initializeAuth', error);
     }
+    // isLoading נסגר רק אחרי אירוע onAuthStateChange הראשון — מונע הבהוב מסך התחברות
+  }, [checkUser, registerTokenOnce]);
+
+  useEffect(() => {
+    logger.debug('AuthContext', 'Initializing');
+
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false);
+    }, 15000);
+
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    (async () => {
+      // קודם טוענים סשן מלא — רק אחר כך מאזינים, כדי שלא INITIAL_SESSION עם null
+      // ידרוס את המשתמש לפני ש־getCurrentUser הסתיים (בעיקר באנדרואיד / דיסק איטי).
+      await initializeAuth();
+      const { data } = AuthService.onAuthStateChange(async (nextUser) => {
+        logger.debug('AuthContext', 'Auth state changed');
+        let resolved = nextUser;
+        if (!resolved) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session?.user) {
+            const { user: recovered } = await AuthService.getCurrentUser();
+            if (recovered) resolved = recovered;
+          }
+        }
+        setUser(resolved ?? null);
+        setIsLoading(false);
+
+        if (resolved) {
+          setSentryUser(resolved.id, resolved.email);
+          setTimeout(() => registerTokenOnce(), 2000);
+        } else {
+          clearSentryUser();
+          deviceTokenRegistered.current = false;
+        }
+      });
+      subscription = data.subscription;
+    })();
+
+    return () => {
+      clearTimeout(timeoutId);
+      subscription?.unsubscribe();
+    };
+  }, [initializeAuth, registerTokenOnce]);
+
+  const attemptAutoLogin = async () => {
+    // Supabase persistSession: true handles session renewal automatically.
+    // No need to store or re-use credentials.
   };
 
   const signIn = async (credentials: LoginCredentials): Promise<{ error: string | null }> => {
-    console.log('🔄 AuthContext: Signing in user with email:', credentials.email);
     setIsLoading(true);
     try {
       const { user, error } = await AuthService.signIn(credentials);
-      if (error) {
-        console.error('❌ AuthContext: Sign in error:', error);
-        return { error };
-      }
-      console.log('✅ AuthContext: User signed in successfully:', user?.id);
+      if (error) return { error };
       setUser(user);
+      setTimeout(() => registerTokenOnce(), 2000);
       return { error: null };
     } catch (error: any) {
-      console.error('❌ AuthContext: Sign in exception:', error);
+      logger.error('AuthContext', 'Sign in exception', error);
       return { error: error.message };
     } finally {
       setIsLoading(false);
@@ -125,19 +149,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signUp = async (credentials: RegisterCredentials): Promise<{ error: string | null }> => {
-    console.log('🔄 AuthContext: Signing up user with email:', credentials.email);
     setIsLoading(true);
     try {
       const { user, error } = await AuthService.signUp(credentials);
-      if (error) {
-        console.error('❌ AuthContext: Sign up error:', error);
-        return { error };
-      }
-      console.log('✅ AuthContext: User signed up successfully:', user?.id);
+      if (error) return { error };
       setUser(user);
       return { error: null };
     } catch (error: any) {
-      console.error('❌ AuthContext: Sign up exception:', error);
+      logger.error('AuthContext', 'Sign up exception', error);
       return { error: error.message };
     } finally {
       setIsLoading(false);
@@ -145,31 +164,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async (keepCredentials: boolean = false): Promise<{ error: string | null }> => {
-    setIsLoading(true);
     try {
+      const previousUserId = user?.id;
+      setUser(null);
+      setIsLoading(false);
+      deviceTokenRegistered.current = false;
+
+      // ניקוי גיבוי ההודעות המקומי כדי שלא ידלוף לחשבון אחר
+      if (previousUserId) {
+        try {
+          await clearChatMessagesCache(previousUserId);
+        } catch (_) { /* non-critical */ }
+      }
+      try {
+        await clearMediaFileCache();
+      } catch (_) { /* non-critical */ }
+      try {
+        await clearPersistedQueryCache();
+      } catch (_) { /* non-critical */ }
+
+      try {
+        await NotificationService.unregisterDeviceToken();
+      } catch (_) { /* non-critical */ }
+      
+      // Clean up any legacy stored credentials (security hardening)
+      try {
+        await AsyncStorage.multiRemove(['saved_email', 'saved_password', 'remember_me']);
+      } catch (_) { /* non-critical */ }
+      
       const { error } = await AuthService.signOut();
       if (error) return { error };
-      
-      // מחיקת נתוני התחברות שמורים בהתנתקות (אלא אם כן המשתמש בחר לשמור)
-      if (!keepCredentials) {
-        try {
-          await AsyncStorage.removeItem('saved_email');
-          await AsyncStorage.removeItem('saved_password');
-          await AsyncStorage.removeItem('remember_me');
-          console.log('✅ AuthContext: Cleared saved credentials on logout');
-        } catch (storageError) {
-          console.error('❌ AuthContext: Error clearing saved credentials:', storageError);
-        }
-      } else {
-        console.log('✅ AuthContext: Keeping saved credentials as requested');
-      }
-      
-      setUser(null);
       return { error: null };
     } catch (error: any) {
-      return { error: error.message };
-    } finally {
+      logger.error('AuthContext', 'Exception in sign out', error);
+      setUser(null);
       setIsLoading(false);
+      return { error: error.message };
     }
   };
 
@@ -184,7 +214,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const value: AuthContextType = {
+  const signInWithGoogle = async (): Promise<{ 
+    error: string | null;
+    isNewUser?: boolean;
+    googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
+  }> => {
+    setIsLoading(true);
+    try {
+      const result = await AuthService.signInWithGoogle();
+      if (result.error) return { error: result.error };
+      if (result.user) {
+        setUser(result.user);
+        setTimeout(() => registerTokenOnce(), 2000);
+      }
+      return { 
+        error: null, 
+        isNewUser: result.isNewUser, 
+        googleUser: result.googleUser 
+      };
+    } catch (error: any) {
+      logger.error('AuthContext', 'Google sign in exception', error);
+      return { error: error.message || 'שגיאה בהתחברות עם Google' };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const value = useMemo<AuthContextType>(() => ({
     user,
     isLoading,
     signIn,
@@ -193,7 +249,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateProfile,
     setUser,
     attemptAutoLogin,
-  };
+    signInWithGoogle,
+  }), [user, isLoading]);
 
   return (
     <AuthContext.Provider value={value}>

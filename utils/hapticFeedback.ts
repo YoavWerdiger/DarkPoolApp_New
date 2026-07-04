@@ -1,77 +1,159 @@
 import { Platform, Vibration } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export class HapticFeedback {
-  static async light() {
-    try {
-      if (Platform.OS === 'android') {
-        Vibration.vibrate(10); // רטט קצר של 10ms
-      }
-      // iOS - ננסה להשתמש בVibration או פשוט נתעלם
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(10);
-      }
-    } catch (error) {
-      // אם יש שגיאה, פשוט נתעלם
-      console.log('Haptic feedback not available');
-    }
+/** רטט לכפתור תפריט/מגירה — export נפרד כדי שלא ייעלם בגלל cache של Metro */
+export async function triggerDrawerMenuHaptic(): Promise<void> {
+  if (!HapticFeedback.isEnabled()) {
+    await HapticFeedback.init();
+    if (!HapticFeedback.isEnabled()) return;
   }
-
-  static async medium() {
+  try {
+    const Haptics = require('expo-haptics');
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  } catch {
     try {
-      if (Platform.OS === 'android') {
-        Vibration.vibrate(25);
-      }
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(25);
-      }
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
-  }
-
-  static async heavy() {
-    try {
-      if (Platform.OS === 'android') {
-        Vibration.vibrate(50);
-      }
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(50);
-      }
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
-  }
-
-  static async success() {
-    try {
-      Vibration.vibrate([0, 10, 50, 10]); // דפוס רטט להצלחה
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
-  }
-
-  static async warning() {
-    try {
-      Vibration.vibrate([0, 25, 25, 25]); // דפוס רטט לאזהרה
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
-  }
-
-  static async error() {
-    try {
-      Vibration.vibrate([0, 50, 50, 50, 50, 50]); // דפוס רטט לשגיאה
-    } catch (error) {
-      console.log('Haptic feedback not available');
-    }
-  }
-
-  static async selection() {
-    try {
-      Vibration.vibrate(5); // רטט קצר מאוד לבחירה
-    } catch (error) {
-      console.log('Haptic feedback not available');
+      Vibration.vibrate(Platform.OS === 'ios' ? 10 : 15);
+    } catch {
+      /* noop */
     }
   }
 }
 
+/** שם חלופי — אם קוד ישן קורא לפונקציה ולא ל־`HapticFeedback.drawerMenuTap` */
+export async function drawerMenuTap(): Promise<void> {
+  return triggerDrawerMenuHaptic();
+}
+
+export class HapticFeedback {
+  private static _enabled: boolean = true;
+  private static _initialized: boolean = false;
+
+  static async init() {
+    if (HapticFeedback._initialized) return;
+    HapticFeedback._initialized = true;
+    try {
+      const saved = await AsyncStorage.getItem('notificationSettings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        HapticFeedback._enabled = parsed.vibration !== false;
+      }
+    } catch {}
+  }
+
+  static setEnabled(enabled: boolean) {
+    HapticFeedback._enabled = enabled;
+  }
+
+  static isEnabled(): boolean {
+    return HapticFeedback._enabled;
+  }
+
+  private static async ensureInit() {
+    if (!HapticFeedback._initialized) {
+      await HapticFeedback.init();
+    }
+  }
+
+  static async light() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate(10);
+    } catch {}
+  }
+
+  static async medium() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate(25);
+    } catch {}
+  }
+
+  static async heavy() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate(50);
+    } catch {}
+  }
+
+  static async success() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate([0, 10, 50, 10]);
+    } catch {}
+  }
+
+  static async warning() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate([0, 25, 25, 25]);
+    } catch {}
+  }
+
+  static async error() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      Vibration.vibrate([0, 50, 50, 50, 50, 50]);
+    } catch {}
+  }
+
+  static async selection() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.selectionAsync();
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 10 : 8);
+      }
+    } catch {}
+  }
+
+  /**
+   * רטט עדין (מומלץ לכפתורים). קודם expo-haptics; אם נכשל — Vibration (עובד גם כש־Haptics לא זמין / Expo Go).
+   */
+  static async impactLight() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 8 : 12);
+      }
+    } catch {
+      /* noop */
+    }
+  }
+
+  /**
+   * רטט בינוני (מומלץ לבחירה משמעותית). קודם expo-haptics; אם נכשל — Vibration.
+   */
+  static async impactMedium() {
+    try {
+      await HapticFeedback.ensureInit();
+      if (!HapticFeedback._enabled) return;
+      try {
+        const Haptics = require('expo-haptics');
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {
+        Vibration.vibrate(Platform.OS === 'ios' ? 15 : 20);
+      }
+    } catch {
+      /* noop */
+    }
+  }
+
+  /**
+   * רטט לפתיחת תפריט / מגירה — לא תלוי ב־"רטט להתראות".
+   * @deprecated מעדיף `triggerDrawerMenuHaptic()` (ייבוא ישיר)
+   */
+  static drawerMenuTap = () => triggerDrawerMenuHaptic();
+}

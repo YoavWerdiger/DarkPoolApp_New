@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Keyboard,
   Pressable,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
@@ -38,6 +39,16 @@ const MAX_OPTIONS = 10;
 const MIN_OPTIONS = 2;
 const QUESTION_MAX_LEN = 180;
 const OPTION_MAX_LEN = 80;
+/** תואם את ה-clamp המקסימלי ב-BottomSheet (0.9) */
+const POLL_SHEET_SNAP = 0.9;
+/**
+ * Container של השיט הוא בגובה מסך מלא + translateY לפי snap —
+ * התחתית (1-snap) נמצאת מתחת ל-viewport. חייבים לפצות על זה
+ * כשיש footer ב-flex בסוף התוכן, אחרת הכפתור נחתך.
+ */
+const POLL_SHEET_OFFSCREEN_BELOW = Math.ceil(
+  Dimensions.get('window').height * (1 - POLL_SHEET_SNAP),
+);
 
 export default function PollCreationBottomSheet({
   visible,
@@ -51,6 +62,13 @@ export default function PollCreationBottomSheet({
   const { user } = useAuth();
   const animatedClose = useBottomSheetClose();
   const { addOptimisticMediaMessage, removeOptimisticMessage } = useChatActions();
+
+  /** ריפוד תחתון: אזור מחוץ למסך בגלל snap + safe area + מרווח נוחות */
+  const sheetBottomPad = useMemo(() => {
+    const minInset = Platform.OS === 'android' ? 24 : 20;
+    const safeBottom = Math.max(insets.bottom, minInset);
+    return POLL_SHEET_OFFSCREEN_BELOW + safeBottom + 12;
+  }, [insets.bottom]);
 
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
@@ -217,9 +235,9 @@ export default function PollCreationBottomSheet({
     <ChatBottomSheet
       visible={visible}
       onClose={handleClose}
-      snapPoints={[0.9]}
+      snapPoints={[POLL_SHEET_SNAP]}
       showBrandWatermark={false}
-      contentPaddingBottom={0}
+      contentPaddingBottom={sheetBottomPad}
     >
       <KeyboardAvoidingView
         style={styles.container}
@@ -267,8 +285,9 @@ export default function PollCreationBottomSheet({
             {/* Question card */}
             <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.counter}>{question.length}/{QUESTION_MAX_LEN}</Text>
+                {/* row-reverse: child ראשון = ימין */}
                 <Text style={styles.cardTitle}>שאלה</Text>
+                <Text style={styles.counter}>{question.length}/{QUESTION_MAX_LEN}</Text>
               </View>
               <TextInput
                 value={question}
@@ -289,8 +308,8 @@ export default function PollCreationBottomSheet({
             {/* Options card */}
             <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
               <View style={styles.cardHeaderRow}>
-                <Text style={styles.counter}>{options.length}/{MAX_OPTIONS}</Text>
                 <Text style={styles.cardTitle}>אפשרויות</Text>
+                <Text style={styles.counter}>{options.length}/{MAX_OPTIONS}</Text>
               </View>
 
               <View style={styles.optionsList}>
@@ -376,7 +395,7 @@ export default function PollCreationBottomSheet({
 
             {/* Settings card */}
             <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
-              <Text style={styles.cardTitle}>הגדרות</Text>
+              <Text style={[styles.cardTitle, styles.cardTitleBlock]}>הגדרות</Text>
 
               <View style={styles.segmented}>
                 <TouchableOpacity
@@ -414,8 +433,8 @@ export default function PollCreationBottomSheet({
           </Pressable>
         </ScrollView>
 
-        {/* Footer — safe area owned here (ChatBottomSheet contentPaddingBottom=0) */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        {/* Footer — bottom inset מגיע מ-contentPaddingBottom של השיט (כולל פיצוי off-screen) */}
+        <View style={styles.footer}>
           <TouchableOpacity
             onPress={handleCreatePoll}
             disabled={!canCreate}
@@ -515,17 +534,24 @@ const createStyles = (tokens: any) => {
       flexDirection: 'row-reverse' as any,
       alignItems: 'center',
       justifyContent: 'space-between',
+      width: '100%',
     },
     cardTitle: {
       fontSize: 15,
       fontWeight: '800',
       color: tokens.colors.text.primary,
       textAlign: 'right',
+      writingDirection: 'rtl' as any,
+    },
+    cardTitleBlock: {
+      alignSelf: 'stretch',
+      width: '100%',
     },
     counter: {
       fontSize: 12,
       fontWeight: '600',
       color: tokens.colors.text.secondary,
+      textAlign: 'left',
     },
 
     /* Question input */
@@ -668,10 +694,11 @@ const createStyles = (tokens: any) => {
       textAlign: 'right',
     },
 
-    /* Footer — paddingBottom applied inline via insets.bottom + 16 */
+    /* Footer — bottom inset מ-ChatBottomSheet contentPaddingBottom */
     footer: {
       paddingHorizontal: 16,
       paddingTop: 12,
+      paddingBottom: 8,
       gap: 10,
       borderTopWidth: 1,
       borderTopColor: borderColor,

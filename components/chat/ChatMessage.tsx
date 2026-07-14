@@ -98,7 +98,7 @@ interface ChatMessageProps {
 }
 
 /** מרווח בין בועות רצופות של אותו שולח (Spacer ב-ChatListRow) */
-export const CHAT_BUBBLE_MARGIN = 2;
+export const CHAT_BUBBLE_MARGIN = 4;
 /** מרווח גדול בגבול בין שולחים שונים (Spacer מול older) */
 export const CHAT_SENDER_CHANGE_MARGIN = 8;
 

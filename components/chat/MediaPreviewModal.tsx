@@ -20,7 +20,6 @@ import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-g
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
@@ -37,6 +36,7 @@ import ChatComposerBar from './ChatComposerBar';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { chatComposerSafeBottomInset, CHAT_COMPOSER_KEYBOARD_GAP } from './chatInputLayout';
 import * as VideoThumbnails from 'expo-video-thumbnails';
+import { useMediaZoomGestures } from './useMediaZoomGestures';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -120,17 +120,20 @@ export default function MediaPreviewModal({
   const animatedComposerDockStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: composerDockTranslateY.value }],
   }));
-  
-  // Gesture shared values using reanimated
-  const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
-  const lastTapTime = useSharedValue(0);
+
+  const dismissKeyboard = useCallback(() => {
+    Keyboard.dismiss();
+  }, []);
 
   const currentMedia = localFiles[currentIndex];
+
+  const { zoomGesture, animatedStyle: animatedImageStyle, resetZoomImmediate } =
+    useMediaZoomGestures({
+      resetKey: visible ? `${currentIndex}:${currentMedia?.id ?? ''}` : false,
+      width: screenWidth,
+      height: screenHeight,
+      onSingleTap: dismissKeyboard,
+    });
 
   useEffect(() => {
     if (currentMedia?.type !== 'video') return;
@@ -139,25 +142,11 @@ export default function MediaPreviewModal({
     }
   }, [videoPosition, videoDragging, currentMedia?.type]);
 
-  // Reset zoom when changing media
-  useEffect(() => {
-    resetZoom();
-  }, [currentIndex]);
-
-  const resetZoom = useCallback(() => {
-    scale.value = withSpring(1);
-    savedScale.value = 1;
-    translateX.value = withSpring(0);
-    translateY.value = withSpring(0);
-    savedTranslateX.value = 0;
-    savedTranslateY.value = 0;
-  }, []);
-
   useEffect(() => {
     if (visible) {
       // ⚡ לא מחכים ל-decode — מודאל נפתח מייד; thumb/full נטענים בשכבות
       setIsLoading(false);
-      resetZoom();
+      resetZoomImmediate();
       RNAnimated.parallel([
         RNAnimated.timing(modalScaleAnim, {
           toValue: 1,
@@ -173,95 +162,13 @@ export default function MediaPreviewModal({
     } else {
       modalScaleAnim.setValue(0.9);
       modalOpacityAnim.setValue(0);
+      resetZoomImmediate();
     }
-  }, [visible]);
+  }, [visible, resetZoomImmediate]);
 
   useEffect(() => {
     setLocalFiles(mediaFiles);
   }, [mediaFiles]);
-
-  // Controls are always visible in preview mode - no toggle needed
-
-  // Pinch gesture
-  const pinchGesture = Gesture.Pinch()
-    .onUpdate((e) => {
-      scale.value = savedScale.value * e.scale;
-    })
-    .onEnd(() => {
-      // Clamp scale between 1 and 5
-      if (scale.value < 1) {
-        scale.value = withSpring(1);
-        savedScale.value = 1;
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
-      } else if (scale.value > 5) {
-        scale.value = withSpring(5);
-        savedScale.value = 5;
-      } else {
-        savedScale.value = scale.value;
-      }
-    });
-
-  // Pan gesture
-  const panGesture = Gesture.Pan()
-    .onUpdate((e) => {
-      // Only allow pan when zoomed in
-      if (savedScale.value > 1) {
-        translateX.value = savedTranslateX.value + e.translationX;
-        translateY.value = savedTranslateY.value + e.translationY;
-      }
-    })
-    .onEnd(() => {
-      if (savedScale.value > 1) {
-        // Limit pan boundaries based on zoom level
-        const maxX = (screenWidth * (savedScale.value - 1)) / 2;
-        const maxY = (screenWidth * (savedScale.value - 1)) / 2;
-        
-        let newX = Math.max(-maxX, Math.min(maxX, translateX.value));
-        let newY = Math.max(-maxY, Math.min(maxY, translateY.value));
-        
-        translateX.value = withSpring(newX);
-        translateY.value = withSpring(newY);
-        savedTranslateX.value = newX;
-        savedTranslateY.value = newY;
-      }
-    });
-
-  // Tap gesture for double-tap zoom and single-tap toggle
-  const tapGesture = Gesture.Tap()
-    .numberOfTaps(1)
-    .onEnd(() => {
-      const now = Date.now();
-      if (now - lastTapTime.value < 300) {
-        // Double tap
-        if (savedScale.value > 1) {
-          // Zoom out
-          scale.value = withSpring(1);
-          savedScale.value = 1;
-          translateX.value = withSpring(0);
-          translateY.value = withSpring(0);
-          savedTranslateX.value = 0;
-          savedTranslateY.value = 0;
-        } else {
-          // Zoom in to 2x
-          scale.value = withSpring(2);
-          savedScale.value = 2;
-        }
-      } else {
-        // Single tap — סוגר את המקלדת (כמו לחיצה על אזור הצ'אט)
-        runOnJS(Keyboard.dismiss)();
-      }
-      lastTapTime.value = now;
-    });
-
-  // Combine gestures
-  const combinedGesture = Gesture.Simultaneous(pinchGesture, panGesture, tapGesture);
-
-  const dismissKeyboard = useCallback(() => {
-    Keyboard.dismiss();
-  }, []);
 
   // פריים ראשון לפריוויו וידאו (מקומי — אמין ב-iOS)
   useEffect(() => {
@@ -290,17 +197,6 @@ export default function MediaPreviewModal({
       cancelled = true;
     };
   }, [visible, currentIndex, currentMedia?.type, currentMedia?.uri]);
-
-  // Animated style for image
-  const animatedImageStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: scale.value },
-        { translateX: translateX.value },
-        { translateY: translateY.value },
-      ],
-    };
-  });
 
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '0:00';
@@ -554,35 +450,37 @@ export default function MediaPreviewModal({
     switch (currentMedia.type) {
       case 'image':
         return (
-          <GestureDetector gesture={combinedGesture}>
-            <Animated.View style={[styles.fullMedia, animatedImageStyle]}>
-              {/* שכבת thumb מיידית (כמו poster של וידאו) — בלי לחכות ל-decode מלא */}
-              {currentMedia.thumbnail_url ? (
+          <GestureDetector gesture={zoomGesture}>
+            <Animated.View style={styles.fullMedia} collapsable={false}>
+              <Animated.View style={[StyleSheet.absoluteFillObject, animatedImageStyle]}>
+                {/* שכבת thumb מיידית (כמו poster של וידאו) — בלי לחכות ל-decode מלא */}
+                {currentMedia.thumbnail_url ? (
+                  <ExpoImage
+                    source={{ uri: currentMedia.thumbnail_url }}
+                    style={styles.fullMedia}
+                    contentFit="contain"
+                    cachePolicy="memory-disk"
+                    transition={0}
+                    recyclingKey={`${currentMedia.id}-thumb`}
+                  />
+                ) : null}
                 <ExpoImage
-                  source={{ uri: currentMedia.thumbnail_url }}
-                  style={styles.fullMedia}
+                  source={{ uri: currentMedia.uri }}
+                  style={
+                    currentMedia.thumbnail_url
+                      ? [styles.fullMedia, styles.fullMediaOnTop]
+                      : styles.fullMedia
+                  }
                   contentFit="contain"
-                  cachePolicy="memory-disk"
                   transition={0}
-                  recyclingKey={`${currentMedia.id}-thumb`}
+                  priority="high"
+                  onLoadStart={() => setIsLoading(false)}
+                  onLoad={() => setIsLoading(false)}
+                  onError={() => setIsLoading(false)}
+                  cachePolicy="memory-disk"
+                  recyclingKey={currentMedia.id}
                 />
-              ) : null}
-              <ExpoImage
-                source={{ uri: currentMedia.uri }}
-                style={
-                  currentMedia.thumbnail_url
-                    ? [styles.fullMedia, styles.fullMediaOnTop]
-                    : styles.fullMedia
-                }
-                contentFit="contain"
-                transition={0}
-                priority="high"
-                onLoadStart={() => setIsLoading(false)}
-                onLoad={() => setIsLoading(false)}
-                onError={() => setIsLoading(false)}
-                cachePolicy="memory-disk"
-                recyclingKey={currentMedia.id}
-              />
+              </Animated.View>
             </Animated.View>
           </GestureDetector>
         );

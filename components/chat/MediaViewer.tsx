@@ -18,7 +18,6 @@ import Animated, {
   useAnimatedStyle,
   runOnJS,
   withTiming,
-  withSpring,
 } from 'react-native-reanimated';
 import {
   GestureDetector,
@@ -29,14 +28,9 @@ import { BlurView } from 'expo-blur';
 import { Image as ExpoImage } from 'expo-image';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { chatPalette as COLORS } from './chatDesignTokens';
+import { useMediaZoomGestures } from './useMediaZoomGestures';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-/** Soft spring — WhatsApp / Photos-like zoom settle */
-const ZOOM_SPRING = { damping: 22, stiffness: 180, mass: 0.85 };
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 5;
-const DOUBLE_TAP_ZOOM = 2.5;
 
 function isDisplayableMediaUri(u: string | null | undefined): u is string {
   return !!u && (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
@@ -253,181 +247,11 @@ export default function MediaViewer({
     }
   }, [visible, mediaUrl]);
 
-  // Animation values for zoom and pan
-  const scale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedScale = useSharedValue(1);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
-
-  // Pinch start snapshot (focal kept fixed under fingers)
-  const pinchFocalX = useSharedValue(0);
-  const pinchFocalY = useSharedValue(0);
-  const pinchStartScale = useSharedValue(1);
-  const pinchStartTranslateX = useSharedValue(0);
-  const pinchStartTranslateY = useSharedValue(0);
-  const isPinching = useSharedValue(false);
-
-  const clampTranslation = (tx: number, ty: number, s: number) => {
-    'worklet';
-    if (s <= 1) return { x: 0, y: 0 };
-    const maxX = (SCREEN_WIDTH * (s - 1)) / 2;
-    const maxY = (SCREEN_HEIGHT * (s - 1)) / 2;
-    return {
-      x: Math.max(-maxX, Math.min(maxX, tx)),
-      y: Math.max(-maxY, Math.min(maxY, ty)),
-    };
-  };
-
-  const commitTransform = (s: number, tx: number, ty: number, animate: boolean) => {
-    'worklet';
-    const clamped = clampTranslation(tx, ty, s);
-    if (animate) {
-      scale.value = withSpring(s, ZOOM_SPRING);
-      translateX.value = withSpring(clamped.x, ZOOM_SPRING);
-      translateY.value = withSpring(clamped.y, ZOOM_SPRING);
-    } else {
-      scale.value = s;
-      translateX.value = clamped.x;
-      translateY.value = clamped.y;
-    }
-    savedScale.value = s;
-    savedTranslateX.value = clamped.x;
-    savedTranslateY.value = clamped.y;
-  };
-
-  const resetZoom = () => {
-    'worklet';
-    commitTransform(1, 0, 0, true);
-  };
-
-  // Reset when modal closes
-  React.useEffect(() => {
-    if (!visible) {
-      scale.value = 1;
-      translateX.value = 0;
-      translateY.value = 0;
-      savedScale.value = 1;
-      savedTranslateX.value = 0;
-      savedTranslateY.value = 0;
-      isPinching.value = false;
-    }
-  }, [visible]);
-
-  // Pinch — Apple Photos focal-point math (keeps point under fingers fixed)
-  // newTranslate = focalOffset * (1 - ratio) + startTranslate * ratio
-  // where ratio = newScale / startScale. Using event.scale alone + bare startTranslate jumps when already panned.
-  const pinchGesture = Gesture.Pinch()
-    .onStart((event) => {
-      'worklet';
-      isPinching.value = true;
-      // Live values (not saved*) so mid-spring double-tap does not jump
-      pinchStartScale.value = scale.value;
-      pinchStartTranslateX.value = translateX.value;
-      pinchStartTranslateY.value = translateY.value;
-      pinchFocalX.value = event.focalX - SCREEN_WIDTH / 2;
-      pinchFocalY.value = event.focalY - SCREEN_HEIGHT / 2;
-    })
-    .onUpdate((event) => {
-      'worklet';
-      if (event.numberOfPointers < 2) return;
-      const rawScale = pinchStartScale.value * event.scale;
-      // Soft rubber-band below 1 / above max while dragging
-      let newScale = rawScale;
-      if (rawScale < MIN_ZOOM) {
-        newScale = MIN_ZOOM - (MIN_ZOOM - rawScale) * 0.35;
-      } else if (rawScale > MAX_ZOOM) {
-        newScale = MAX_ZOOM + (rawScale - MAX_ZOOM) * 0.25;
-      }
-      // Guard divide-by-zero if start scale was cleared mid-gesture
-      const start = pinchStartScale.value || 1;
-      const scaleRatio = newScale / start;
-      const focalX = pinchFocalX.value;
-      const focalY = pinchFocalY.value;
-      scale.value = newScale;
-      translateX.value =
-        focalX * (1 - scaleRatio) + pinchStartTranslateX.value * scaleRatio;
-      translateY.value =
-        focalY * (1 - scaleRatio) + pinchStartTranslateY.value * scaleRatio;
-    })
-    .onEnd(() => {
-      'worklet';
-      isPinching.value = false;
-      if (scale.value < MIN_ZOOM) {
-        resetZoom();
-        return;
-      }
-      const targetScale = Math.min(MAX_ZOOM, scale.value);
-      const clamped = clampTranslation(translateX.value, translateY.value, targetScale);
-      commitTransform(targetScale, clamped.x, clamped.y, true);
-    });
-
-  // Pan — one finger only so it never fights pinch translation
-  const panGesture = Gesture.Pan()
-    .maxPointers(1)
-    .minDistance(8)
-    .onStart(() => {
-      'worklet';
-      if (isPinching.value) return;
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-    })
-    .onUpdate((event) => {
-      'worklet';
-      if (isPinching.value || scale.value <= 1) return;
-      translateX.value = savedTranslateX.value + event.translationX;
-      translateY.value = savedTranslateY.value + event.translationY;
-    })
-    .onEnd((event) => {
-      'worklet';
-      if (isPinching.value) return;
-      if (scale.value <= 1) {
-        resetZoom();
-        return;
-      }
-      // Light momentum then clamp
-      const nextX = translateX.value + event.velocityX * 0.08;
-      const nextY = translateY.value + event.velocityY * 0.08;
-      const clamped = clampTranslation(nextX, nextY, scale.value);
-      translateX.value = withSpring(clamped.x, ZOOM_SPRING);
-      translateY.value = withSpring(clamped.y, ZOOM_SPRING);
-      savedTranslateX.value = clamped.x;
-      savedTranslateY.value = clamped.y;
-      savedScale.value = scale.value;
-    });
-
-  // Double tap — spring zoom in on tap point / spring zoom out
-  const doubleTapGesture = Gesture.Tap()
-    .numberOfTaps(2)
-    .maxDuration(280)
-    .onEnd((event) => {
-      'worklet';
-      if (scale.value > 1.05) {
-        resetZoom();
-        return;
-      }
-      const fX = event.x - SCREEN_WIDTH / 2;
-      const fY = event.y - SCREEN_HEIGHT / 2;
-      const nextX = -fX * (DOUBLE_TAP_ZOOM - 1);
-      const nextY = -fY * (DOUBLE_TAP_ZOOM - 1);
-      commitTransform(DOUBLE_TAP_ZOOM, nextX, nextY, true);
-    });
-
-  // Simultaneous: pinch+pan coexist; double-tap recognized without Exclusive delay on pan
-  const composedGesture = Gesture.Simultaneous(
-    pinchGesture,
-    panGesture,
-    doubleTapGesture
-  );
-
-  const imageAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
+  const { zoomGesture, animatedStyle: imageAnimatedStyle } = useMediaZoomGestures({
+    resetKey: visible ? mediaUrl : false,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  });
 
   const handleShare = async () => {
     try {
@@ -507,7 +331,7 @@ export default function MediaViewer({
                   </TouchableOpacity>
                 </View>
               ) : (
-                <GestureDetector gesture={composedGesture}>
+                <GestureDetector gesture={zoomGesture}>
                   <Animated.View style={styles.fullImage} collapsable={false}>
                     <Animated.Image
                       source={{ uri: displayUri }}

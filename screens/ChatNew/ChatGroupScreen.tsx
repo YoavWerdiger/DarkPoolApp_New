@@ -1336,6 +1336,8 @@ export default function ChatGroupScreen() {
         : Infinity;
       const showAvatar = !newerMessage || newerMessage.sender_id !== item.sender_id || timeDiff > 5 * 60 * 1000;
       const showSenderName = !isMe && showAvatar;
+      // מרווח גדול יותר רק כשההודעה הכרונולוגית הקודמת (older) היא משולח אחר
+      const isAfterSenderChange = !!olderMessage && olderMessage.sender_id !== item.sender_id;
       const showDivider = shouldShowDateDivider(item, olderMessage);
 
       return (
@@ -1344,6 +1346,7 @@ export default function ChatGroupScreen() {
             isMe={isMe}
             showAvatar={showAvatar}
             showSenderName={showSenderName}
+          isAfterSenderChange={isAfterSenderChange}
           showDateDivider={showDivider}
           dateDividerLabel={showDivider ? formatDateDivider(new Date(item.created_at)) : ''}
           showUnreadDivider={shouldShowUnreadDivider(item.id, index)}

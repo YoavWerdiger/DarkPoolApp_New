@@ -85,6 +85,8 @@ interface ChatMessageProps {
   isMe: boolean;
   showAvatar?: boolean;
   showSenderName?: boolean;
+  /** true כשההודעה הכרונולוגית הקודמת היא משולח אחר — מרווח גדול יותר בין קבוצות */
+  isAfterSenderChange?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
@@ -96,6 +98,11 @@ interface ChatMessageProps {
   onStatusPress?: () => void;
   isHighlighted?: boolean;
 }
+
+/** מרווח בין בועות רצופות של אותו שולח (כל צד) */
+export const CHAT_BUBBLE_MARGIN = 2;
+/** מרווח בצד הפונה לשולח הקודם כשמחליפים שולח */
+export const CHAT_SENDER_CHANGE_MARGIN = 12;
 
 // פונקציה לרנדור טקסט עם תיוגים (@mentions)
 const renderTextWithMentions = (
@@ -229,6 +236,7 @@ function ChatMessage({
   isMe,
   showAvatar = true,
   showSenderName = true,
+  isAfterSenderChange = false,
   onLongPress,
   onPress,
   onReply,
@@ -579,10 +587,19 @@ function ChatMessage({
     );
   }
 
+  const senderGapStyle = {
+    marginTop: CHAT_BUBBLE_MARGIN,
+    marginBottom: isAfterSenderChange ? CHAT_SENDER_CHANGE_MARGIN : CHAT_BUBBLE_MARGIN,
+  };
+
   // הודעה מחוקה
   if (message.is_deleted) {
     return (
-      <View style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]} accessibilityRole="text" accessibilityLabel="Deleted message">
+      <View
+        style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
+        accessibilityRole="text"
+        accessibilityLabel="Deleted message"
+      >
         <View style={[styles.bubble, isMe ? styles.myBubble : styles.theirBubble, styles.deletedBubble]}>
           <Text style={[styles.messageText, styles.deletedText]}>
             🚫 הודעה זו נמחקה
@@ -605,6 +622,7 @@ function ChatMessage({
     <Animated.View style={[
       styles.messageContainer,
       isMe ? styles.myMessage : styles.theirMessage,
+      senderGapStyle,
       isHighlighted && styles.highlightedMessage,
       { opacity: effectiveOpacity, transform: entryTransform },
     ]}>
@@ -1846,7 +1864,8 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
   if (a === b && prevProps.isHighlighted === nextProps.isHighlighted &&
       prevProps.isMe === nextProps.isMe &&
       prevProps.showAvatar === nextProps.showAvatar &&
-      prevProps.showSenderName === nextProps.showSenderName) {
+      prevProps.showSenderName === nextProps.showSenderName &&
+      prevProps.isAfterSenderChange === nextProps.isAfterSenderChange) {
     return true;
   }
 
@@ -1873,6 +1892,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.isMe === nextProps.isMe &&
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.showSenderName === nextProps.showSenderName &&
+    prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
     prevProps.isHighlighted === nextProps.isHighlighted
   );
 });
@@ -1882,10 +1902,10 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
 // ============================================
 
 const createStyles = (tokens: any) => StyleSheet.create({
-  /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות, בלי padding כפול מהרשימה */
+  /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות אותו שולח;
+     מרווח גדול יותר בהחלפת שולח מגיע מ-senderGapStyle (isAfterSenderChange) */
   messageContainer: {
     flexDirection: 'row',
-    marginVertical: 2,
     paddingHorizontal: 0,
     alignItems: 'flex-end',
   },

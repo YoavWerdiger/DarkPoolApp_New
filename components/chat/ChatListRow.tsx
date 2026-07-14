@@ -39,6 +39,7 @@ export type ChatListRowProps = {
   isMe: boolean;
   showAvatar: boolean;
   showSenderName: boolean;
+  isAfterSenderChange: boolean;
   showDateDivider: boolean;
   dateDividerLabel: string;
   showUnreadDivider: boolean;
@@ -60,6 +61,7 @@ function ChatListRow({
   isMe,
   showAvatar,
   showSenderName,
+  isAfterSenderChange,
   showDateDivider,
   dateDividerLabel,
   showUnreadDivider,
@@ -86,6 +88,7 @@ function ChatListRow({
         isMe={isMe}
         showAvatar={showAvatar}
         showSenderName={showSenderName}
+        isAfterSenderChange={isAfterSenderChange}
         onLongPress={onLongPress}
         onReply={onReply}
         onReactionPress={onReactionPress}
@@ -121,6 +124,7 @@ export default memo(ChatListRow, (prev, next) => {
     prev.isMe === next.isMe &&
     prev.showAvatar === next.showAvatar &&
     prev.showSenderName === next.showSenderName &&
+    prev.isAfterSenderChange === next.isAfterSenderChange &&
     prev.showDateDivider === next.showDateDivider &&
     prev.dateDividerLabel === next.dateDividerLabel &&
     prev.showUnreadDivider === next.showUnreadDivider &&

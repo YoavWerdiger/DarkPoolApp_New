@@ -74,9 +74,12 @@ export function ChatComposerDock({
     [],
   );
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+  const animatedStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ translateY: translateY.value }],
+    };
+  });
 
   return (
     <Animated.View style={[animatedStyle, style]} {...rest}>

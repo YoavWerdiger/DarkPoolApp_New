@@ -8,6 +8,7 @@ import Animated, {
   interpolate,
   Extrapolate,
   runOnJS,
+  runOnUI,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -134,14 +135,18 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const settleFitContentHeight = useCallback((animate: boolean) => {
     const target = visibleHeightPxRef.current;
-    const current = fitContentHeight.value;
-    if (Math.abs(current - target) <= FIT_CONTENT_HEIGHT_EPS) {
-      fitContentHeight.value = target;
-      return;
-    }
-    fitContentHeight.value = animate
-      ? withTiming(target, FIT_CONTENT_HEIGHT_TIMING)
-      : target;
+    // כתיבה/קריאה של shared value רק מ-UI thread — מונע WARN בזמן render/JS
+    runOnUI((to: number, shouldAnimate: boolean) => {
+      'worklet';
+      const current = fitContentHeight.value;
+      if (Math.abs(current - to) <= FIT_CONTENT_HEIGHT_EPS) {
+        fitContentHeight.value = to;
+        return;
+      }
+      fitContentHeight.value = shouldAnimate
+        ? withTiming(to, FIT_CONTENT_HEIGHT_TIMING)
+        : to;
+    })(target, animate);
   }, [fitContentHeight]);
 
   const onFitContentOpenComplete = useCallback(() => {
@@ -233,7 +238,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   useEffect(() => {
     if (!fitContent || !isOpen) return;
     if (!fitContentOpenDoneRef.current) {
-      fitContentHeight.value = visibleHeightPx;
+      runOnUI((h: number) => {
+        'worklet';
+        fitContentHeight.value = h;
+      })(visibleHeightPx);
       return;
     }
     settleFitContentHeight(true);

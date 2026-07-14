@@ -10,7 +10,7 @@ import { Video, ResizeMode } from 'expo-av';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
-import { captureRef } from 'react-native-view-shot';
+import ViewShot from 'react-native-view-shot';
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -710,7 +710,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   const [overlays, setOverlays] = useState<TextOverlayItem[]>([]);
   const [showTextEditor, setShowTextEditor] = useState(false);
   const [editingOverlayId, setEditingOverlayId] = useState<string | null>(null);
-  const captureAreaRef = useRef<View>(null);
+  const captureAreaRef = useRef<ViewShot>(null);
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [drawPaths, setDrawPaths] = useState<DrawPath[]>([]);
@@ -1010,46 +1010,71 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     if (!user?.id || !mediaUri) return;
     try {
       const hasOverlays = overlays.length > 0;
-      logger.debug('AddStoryFullScreen', `Starting upload: type=${mediaType}, overlays=${hasOverlays}`);
+      const hasDrawings = drawPaths.length > 0;
+      logger.debug(
+        'AddStoryFullScreen',
+        `Starting upload: type=${mediaType}, overlays=${overlays.length}, drawings=${drawPaths.length}`,
+      );
 
       let uploadUri = mediaUri;
       let overlayContent: string | undefined;
 
-      const hasDrawings = drawPaths.length > 0;
-      const shouldFlatten = mediaType === 'image' && (hasOverlays || hasDrawings) && captureAreaRef.current;
+      const serializeContent = () => JSON.stringify({
+        v: 2,
+        canvasWidth: SW,
+        canvasHeight: SH,
+        overlays: overlays.map(o => ({
+          type: o.type || 'text',
+          text: o.text,
+          color: o.color,
+          fontSize: o.fontSize,
+          bold: o.bold,
+          bgStyle: o.bgStyle,
+          x: o.x,
+          y: o.y,
+          scale: o.scale,
+        })),
+        drawings: drawPaths.map(p => ({
+          d: p.d,
+          color: p.color,
+          strokeWidth: p.strokeWidth,
+        })),
+      });
 
-      const serializeOverlays = () => JSON.stringify(overlays.map(o => ({
-        type: o.type || 'text',
-        text: o.text,
-        color: o.color,
-        fontSize: o.fontSize,
-        bold: o.bold,
-        bgStyle: o.bgStyle,
-        x: o.x,
-        y: o.y,
-        scale: o.scale,
-      })));
+      // For images: try to flatten overlays+drawings into the pixels via ViewShot.
+      // If that fails, we fall back to sending the raw image + JSON overlays and let
+      // the viewer re-render them on top.
+      const shouldFlatten =
+        mediaType === 'image' && (hasOverlays || hasDrawings) && captureAreaRef.current;
 
       if (shouldFlatten) {
         try {
+          const captureFn = captureAreaRef.current!.capture;
+          if (typeof captureFn !== 'function') {
+            throw new Error('ViewShot.capture is not available');
+          }
+          logger.debug('AddStoryFullScreen', 'Invoking ViewShot.capture()...');
           const capturedUri = await Promise.race([
-            captureRef(captureAreaRef, {
-              format: 'jpg',
-              quality: 0.92,
-              result: 'tmpfile',
-            }),
+            captureFn.call(captureAreaRef.current),
             new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('capture timeout')), 5000)
+              setTimeout(() => reject(new Error('capture timeout')), 20000)
             ),
           ]);
+          if (!capturedUri || typeof capturedUri !== 'string') {
+            throw new Error('ViewShot returned empty uri');
+          }
           uploadUri = capturedUri;
-          logger.debug('AddStoryFullScreen', 'Image+overlays flattened successfully');
+          logger.debug('AddStoryFullScreen', `Flattened OK → ${capturedUri.substring(0, 80)}`);
         } catch (captureErr: any) {
-          logger.debug('AddStoryFullScreen', `Capture failed (${captureErr?.message}), falling back to JSON overlays`);
-          if (hasOverlays) overlayContent = serializeOverlays();
+          logger.error(
+            'AddStoryFullScreen',
+            `Capture failed (${captureErr?.message}), sending overlays as JSON fallback`,
+            captureErr,
+          );
+          if (hasOverlays || hasDrawings) overlayContent = serializeContent();
         }
-      } else if (mediaType === 'video' && hasOverlays) {
-        overlayContent = serializeOverlays();
+      } else if (mediaType === 'video' && (hasOverlays || hasDrawings)) {
+        overlayContent = serializeContent();
       }
 
       setIsUploading(true);
@@ -1329,10 +1354,11 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   /* ═══════════════════════════════════════════════ */
   const renderPreview = () => (
     <View style={s.fullFlex}>
-      <View
+      <View style={StyleSheet.absoluteFillObject} collapsable={false}>
+      <ViewShot
         ref={captureAreaRef}
         style={StyleSheet.absoluteFillObject}
-        collapsable={false}
+        options={{ format: 'jpg', quality: 0.92, result: 'tmpfile' }}
       >
         <View style={StyleSheet.absoluteFillObject}>
           {mediaType === 'image' ? (
@@ -1368,6 +1394,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
             onCommitPosition={handleOverlayCommitPosition}
           />
         ))}
+      </ViewShot>
       </View>
 
       {/* Top bar – hidden while drawing */}

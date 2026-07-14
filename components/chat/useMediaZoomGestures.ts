@@ -54,8 +54,12 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
 
   const screenW = useSharedValue(width);
   const screenH = useSharedValue(height);
-  screenW.value = width;
-  screenH.value = height;
+
+  // אסור לכתוב ל-shared value בגוף ה-render — מציף WARN של Reanimated
+  useEffect(() => {
+    screenW.value = width;
+    screenH.value = height;
+  }, [width, height, screenW, screenH]);
 
   const clampTranslation = (tx: number, ty: number, s: number) => {
     'worklet';

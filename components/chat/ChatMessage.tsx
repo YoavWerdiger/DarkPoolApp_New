@@ -587,6 +587,9 @@ function ChatMessage({
     );
   }
 
+  // inverted FlatList: transform לא משנה layout בין תאים — marginBottom של ההודעה
+  // החדשה יותר נוגע ב-marginTop של הישנה יותר (older מעל ויזואלית).
+  // לכן מרווח גדול על marginBottom כש-older הוא שולח אחר.
   const senderGapStyle = {
     marginTop: CHAT_BUBBLE_MARGIN,
     marginBottom: isAfterSenderChange ? CHAT_SENDER_CHANGE_MARGIN : CHAT_BUBBLE_MARGIN,

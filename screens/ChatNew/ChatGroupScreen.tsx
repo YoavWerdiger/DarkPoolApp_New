@@ -744,9 +744,8 @@ export default function ChatGroupScreen() {
     }
   }, [messages.length, messages[0]?.id, applyScrollToBottom]);
 
-  useEffect(() => {
-    messagesRef.current = displayMessages;
-  }, [displayMessages]);
+  // סנכרון בזמן render (לא ב-useEffect) — renderItem קורא ל-neighbors לפני ה-effect
+  messagesRef.current = displayMessages;
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1328,16 +1327,19 @@ export default function ChatGroupScreen() {
   const renderMessage = useCallback(
     ({ item, index }: { item: ChatMessageType; index: number }) => {
       const isMe = item.sender_id === user?.id;
+      // inverted: [0]=חדש למטה, [index+1]=ישן יותר (מעל), [index-1]=חדש יותר (מתחת)
       const list = messagesRef.current;
       const olderMessage = index < list.length - 1 ? list[index + 1] : null;
       const newerMessage = index > 0 ? list[index - 1] : null;
-      const timeDiff = newerMessage
-        ? Math.abs(new Date(item.created_at).getTime() - new Date(newerMessage.created_at).getTime())
-        : Infinity;
-      const showAvatar = !newerMessage || newerMessage.sender_id !== item.sender_id || timeDiff > 5 * 60 * 1000;
-      const showSenderName = !isMe && showAvatar;
-      // מרווח גדול יותר רק כשההודעה הכרונולוגית הקודמת (older) היא משולח אחר
-      const isAfterSenderChange = !!olderMessage && olderMessage.sender_id !== item.sender_id;
+      // שם בראשונה כרונולוגית בקבוצה — אין older עם אותו sender_id
+      const showSenderName =
+        !isMe && (!olderMessage || olderMessage.sender_id !== item.sender_id);
+      // אווטאר באחרונה בקבוצה (לפני newer אחר / סוף הרצף)
+      const showAvatar =
+        !isMe && (!newerMessage || newerMessage.sender_id !== item.sender_id);
+      // מרווח גדול בגבול מול older (transform של inverted לא משפיע על layout בין תאים)
+      const isAfterSenderChange =
+        !!olderMessage && olderMessage.sender_id !== item.sender_id;
       const showDivider = shouldShowDateDivider(item, olderMessage);
 
       return (

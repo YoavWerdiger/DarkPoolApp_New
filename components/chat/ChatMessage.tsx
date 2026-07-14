@@ -85,7 +85,7 @@ interface ChatMessageProps {
   isMe: boolean;
   showAvatar?: boolean;
   showSenderName?: boolean;
-  /** true כשההודעה הכרונולוגית הקודמת היא משולח אחר — מרווח גדול יותר בין קבוצות */
+  /** true כש-older (מעל ב-inverted) משולח אחר — מרווח גדול ב-marginTop */
   isAfterSenderChange?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
@@ -99,9 +99,9 @@ interface ChatMessageProps {
   isHighlighted?: boolean;
 }
 
-/** מרווח בין בועות רצופות של אותו שולח (כל צד) */
+/** מרווח בין בועות רצופות של אותו שולח */
 export const CHAT_BUBBLE_MARGIN = 2;
-/** מרווח בצד הפונה לשולח הקודם כשמחליפים שולח */
+/** מרווח מול older כשמחליפים שולח (marginTop ב-inverted) */
 export const CHAT_SENDER_CHANGE_MARGIN = 12;
 
 // פונקציה לרנדור טקסט עם תיוגים (@mentions)
@@ -587,12 +587,11 @@ function ChatMessage({
     );
   }
 
-  // inverted FlatList: transform לא משנה layout בין תאים — marginBottom של ההודעה
-  // החדשה יותר נוגע ב-marginTop של הישנה יותר (older מעל ויזואלית).
-  // לכן מרווח גדול על marginBottom כש-older הוא שולח אחר.
+  // inverted FlatList (scaleY על הרשימה + על התא): אחרי ההיפוך הכפול,
+  // marginTop פונה ל-older (מעל), marginBottom ל-newer (מתחת).
+  // מרווח גדול ב-marginTop כש-older הוא שולח אחר — בלי marginBottom כפול.
   const senderGapStyle = {
-    marginTop: CHAT_BUBBLE_MARGIN,
-    marginBottom: isAfterSenderChange ? CHAT_SENDER_CHANGE_MARGIN : CHAT_BUBBLE_MARGIN,
+    marginTop: isAfterSenderChange ? CHAT_SENDER_CHANGE_MARGIN : CHAT_BUBBLE_MARGIN,
   };
 
   // הודעה מחוקה
@@ -1908,7 +1907,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
 
 const createStyles = (tokens: any) => StyleSheet.create({
   /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות אותו שולח;
-     מרווח גדול יותר בהחלפת שולח מגיע מ-senderGapStyle (isAfterSenderChange) */
+     מרווח גדול מול older בהחלפת שולח — senderGapStyle.marginTop (isAfterSenderChange) */
   messageContainer: {
     flexDirection: 'row',
     paddingHorizontal: 0,

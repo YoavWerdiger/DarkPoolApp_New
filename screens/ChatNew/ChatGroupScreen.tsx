@@ -1337,7 +1337,7 @@ export default function ChatGroupScreen() {
       // אווטאר באחרונה בקבוצה (לפני newer אחר / סוף הרצף)
       const showAvatar =
         !isMe && (!newerMessage || newerMessage.sender_id !== item.sender_id);
-      // מרווח גדול בגבול מול older (transform של inverted לא משפיע על layout בין תאים)
+      // מרווח גדול בגבול מול older — מוחל כ-marginTop בתוך ChatMessage (inverted)
       const isAfterSenderChange =
         !!olderMessage && olderMessage.sender_id !== item.sender_id;
       const showDivider = shouldShowDateDivider(item, olderMessage);

@@ -549,9 +549,11 @@ export class PollService {
 
       if (error) {
         logger.error('PollService', 'Failed to create poll message in chat', error);
+        throw error;
       }
     } catch (error) {
       logger.error('PollService', 'createPollMessage unexpected error', error);
+      throw error;
     }
   }
 }

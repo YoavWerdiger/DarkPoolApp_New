@@ -16,6 +16,8 @@ interface PollMessageProps {
   onPollUpdated: (updatedPoll: PollWithVotes) => void;
   isAdmin?: boolean;
   isMe?: boolean;
+  /** כשמרנדרים בתוך בועת ChatMessage — בלי רקע/מסגרת כפולה */
+  embeddedInBubble?: boolean;
 }
 
 function PollMessage({
@@ -23,12 +25,16 @@ function PollMessage({
   chatId,
   onPollUpdated,
   isAdmin = false,
-  isMe = false
+  isMe = false,
+  embeddedInBubble = false,
 }: PollMessageProps) {
   const { user } = useAuth();
   const { isDarkMode } = useTheme();
   const DesignTokens = useDesignTokens();
-  const styles = useMemo(() => createStyles(DesignTokens, isMe, isDarkMode), [DesignTokens, isMe, isDarkMode]);
+  const styles = useMemo(
+    () => createStyles(DesignTokens, isMe, isDarkMode, embeddedInBubble),
+    [DesignTokens, isMe, isDarkMode, embeddedInBubble],
+  );
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [isVoting, setIsVoting] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -289,13 +295,22 @@ function PollMessage({
 
 export default React.memo(PollMessage);
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>, isMe: boolean, isDarkMode: boolean) => StyleSheet.create({
+const createStyles = (
+  tokens: ReturnType<typeof useDesignTokens>,
+  isMe: boolean,
+  isDarkMode: boolean,
+  embeddedInBubble: boolean,
+) => StyleSheet.create({
   container: {
-    backgroundColor: isMe ? tokens.colors.primary.main : tokens.colors.background.secondary,
-    borderRadius: tokens.borderRadius.lg,
-    padding: tokens.spacing.lg,
-    marginBottom: tokens.spacing.md,
-    borderWidth: 1,
+    backgroundColor: embeddedInBubble
+      ? 'transparent'
+      : isMe
+        ? tokens.colors.primary.main
+        : tokens.colors.background.secondary,
+    borderRadius: embeddedInBubble ? 0 : tokens.borderRadius.lg,
+    padding: embeddedInBubble ? tokens.spacing.xs : tokens.spacing.lg,
+    marginBottom: embeddedInBubble ? 0 : tokens.spacing.md,
+    borderWidth: embeddedInBubble ? 0 : 1,
     borderColor: tokens.colors.border.primary,
   },
   header: {

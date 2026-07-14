@@ -35,8 +35,11 @@ import {
 } from '../../services/chat/chatSignedMediaUrl';
 import { downloadMediaToCache } from '../../lib/mediaFileCache';
 import TradeMessage from './TradeMessage';
+import PollMessage from './PollMessage';
 import LinkPreview, { extractFirstUrl } from './LinkPreview';
 import MessageReactions from './MessageReactions';
+import { useAuth } from '../../context/AuthContext';
+import { PollService, type PollWithVotes } from '../../services/pollService';
 
 type ResolvedMessageMedia = {
   main: string | null;
@@ -649,7 +652,8 @@ function ChatMessage({
               (message.message_type === MessageType.IMAGE ||
                 message.message_type === MessageType.VIDEO ||
                 message.message_type === MessageType.MEDIA_GROUP ||
-                message.message_type === MessageType.TRADE) &&
+                message.message_type === MessageType.TRADE ||
+                message.message_type === MessageType.POLL) &&
                 styles.mediaBubble,
               message.reply_to && { minWidth: 200 },
             ]}
@@ -708,6 +712,10 @@ function ChatMessage({
           )}
 
           {/* Media Content */}
+          {message.message_type === MessageType.POLL && (
+            <PollMessageContent message={message} isMe={isMe} />
+          )}
+
           {message.message_type === MessageType.TRADE &&
             (() => {
               const t = parseTradePayloadFromMessage(message);
@@ -755,7 +763,9 @@ function ChatMessage({
           )}
 
           {/* Text Content */}
-          {message.content && message.message_type !== MessageType.TRADE && (() => {
+          {message.content &&
+            message.message_type !== MessageType.TRADE &&
+            message.message_type !== MessageType.POLL && (() => {
             if (message.message_type === MessageType.AUDIO) return null;
 
             let displayContent = message.content;
@@ -1115,6 +1125,8 @@ function getMediaTypeText(type?: MessageType | string | null): string {
       return '🖼️ אלבום';
     case MessageType.TRADE:
       return '📈 טרייד';
+    case MessageType.POLL:
+      return '📊 סקר';
     default:
       return 'מדיה';
   }
@@ -1144,6 +1156,106 @@ function parseTradePayloadFromMessage(message: ChatMessageType): ParsedTrade | n
   } catch {
     return null;
   }
+}
+
+function buildStubPollFromMessage(message: ChatMessageType): PollWithVotes | null {
+  const data = message.system_message_data;
+  const rawOptions = Array.isArray(data?.options) ? data.options : [];
+  const options = rawOptions
+    .map((opt: any, index: number) => ({
+      id: typeof opt?.id === 'string' ? opt.id : `option_${index}`,
+      text: typeof opt?.text === 'string' ? opt.text : String(opt?.text ?? ''),
+      votes_count: typeof opt?.votes_count === 'number' ? opt.votes_count : 0,
+    }))
+    .filter((opt: { text: string }) => opt.text.length > 0);
+
+  if (!message.content?.trim() && options.length === 0) return null;
+
+  return {
+    id: typeof data?.poll_id === 'string' ? data.poll_id : `pending-${message.id}`,
+    chat_id: message.group_id,
+    creator_id: message.sender_id,
+    question: message.content?.trim() || 'סקר',
+    options,
+    multiple_choice: !!data?.multiple_choice,
+    is_locked: false,
+    created_at: message.created_at,
+    user_votes: [],
+    total_votes: options.reduce((sum: number, o: { votes_count: number }) => sum + o.votes_count, 0),
+  };
+}
+
+function PollMessageContent({
+  message,
+  isMe,
+}: {
+  message: ChatMessageType;
+  isMe: boolean;
+}) {
+  const { user } = useAuth();
+  const pollId =
+    typeof message.system_message_data?.poll_id === 'string'
+      ? message.system_message_data.poll_id
+      : null;
+  const [poll, setPoll] = useState<PollWithVotes | null>(() => buildStubPollFromMessage(message));
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    setPoll(buildStubPollFromMessage(message));
+  }, [
+    message.id,
+    message.content,
+    message.group_id,
+    message.sender_id,
+    message.created_at,
+    message.system_message_data?.poll_id,
+    message.system_message_data?.multiple_choice,
+  ]);
+
+  useEffect(() => {
+    if (!pollId || pollId.startsWith('pending-') || pollId.startsWith('temp')) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await PollService.getPollResults(pollId, user?.id);
+        if (!cancelled && result) {
+          setPoll(result);
+          setLoadError(false);
+        }
+      } catch {
+        if (!cancelled) setLoadError(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pollId, user?.id]);
+
+  if (!poll) {
+    return (
+      <View style={{ paddingVertical: 8, alignItems: 'center' }}>
+        {loadError ? (
+          <Text style={{ color: isMe ? 'rgba(255,255,255,0.85)' : '#9CA3AF', textAlign: 'right' }}>
+            לא ניתן לטעון את הסקר
+          </Text>
+        ) : (
+          <ActivityIndicator size="small" color={isMe ? '#fff' : undefined} />
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <PollMessage
+      poll={poll}
+      chatId={message.group_id}
+      onPollUpdated={setPoll}
+      isMe={isMe}
+      embeddedInBubble
+    />
+  );
 }
 
 /** תצוגת ריפליי — לא מציגים JSON של waveform מתוך תוכן אודיו */

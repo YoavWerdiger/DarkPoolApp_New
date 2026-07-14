@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Keyboard,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../ui/UICard';
@@ -20,7 +22,10 @@ import { ChatBottomSheet } from './ChatBottomSheet';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useAuth } from '../../context/AuthContext';
+import { useChatActions } from '../../context/ChatContext';
 import { PollService } from '../../services/pollService';
+import { makeLocalId } from '../../services/chat/chatOfflineQueue';
+import { ChatMessage, ChatMessageType } from '../../types/chat.types';
 
 interface PollCreationBottomSheetProps {
   visible: boolean;
@@ -45,6 +50,7 @@ export default function PollCreationBottomSheet({
   const styles = useMemo(() => createStyles(tokens, insets.bottom), [tokens, insets.bottom]);
   const { user } = useAuth();
   const animatedClose = useBottomSheetClose();
+  const { addOptimisticMediaMessage, removeOptimisticMessage } = useChatActions();
 
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
@@ -62,6 +68,10 @@ export default function PollCreationBottomSheet({
   const canCreate =
     hasQuestion && hasEnoughOptions && !hasEmptyOption && !hasDuplicateOptions && !isCreating;
 
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
+  };
+
   const resetForm = () => {
     setQuestion('');
     setOptions(['', '']);
@@ -69,6 +79,7 @@ export default function PollCreationBottomSheet({
   };
 
   const handleClose = () => {
+    dismissKeyboard();
     if (question.trim() || options.some((opt) => opt.trim())) {
       legacyAlert('ביטול יצירת סקר', 'האם אתה בטוח שברצונך לבטל? כל הנתונים יימחקו.', [
         { text: 'המשך עריכה', style: 'cancel' },
@@ -77,6 +88,7 @@ export default function PollCreationBottomSheet({
           style: 'destructive',
           onPress: () => {
             resetForm();
+            dismissKeyboard();
             (animatedClose ?? onClose)();
           },
         },
@@ -92,6 +104,7 @@ export default function PollCreationBottomSheet({
   };
 
   const removeOption = (index: number) => {
+    dismissKeyboard();
     if (options.length <= MIN_OPTIONS) return;
     setOptions((prev) => prev.filter((_, i) => i !== index));
   };
@@ -131,7 +144,49 @@ export default function PollCreationBottomSheet({
       legacyAlert('שגיאה', 'לא ניתן ליצור סקר - משתמש לא מזוהה');
       return;
     }
+
+    dismissKeyboard();
     setIsCreating(true);
+
+    const tempId = makeLocalId();
+    const now = new Date().toISOString();
+    const stubOptions = trimmedOptions.map((text, index) => ({
+      id: `temp_opt_${Date.now()}_${index}`,
+      text,
+    }));
+
+    const optimisticMessage: ChatMessage = {
+      id: tempId,
+      group_id: chatId,
+      sender_id: user.id,
+      content: trimmedQuestion,
+      message_type: ChatMessageType.POLL,
+      system_message_data: {
+        poll_id: tempId,
+        multiple_choice: multipleChoice,
+        options: stubOptions,
+      },
+      is_forwarded: false,
+      mentioned_users: [],
+      is_edited: false,
+      is_deleted: false,
+      deleted_for_everyone: false,
+      is_silent: false,
+      is_system_message: false,
+      created_at: now,
+      reactions_count: 0,
+      read_by_count: 0,
+      sender: {
+        id: user.id,
+        display_name: user.display_name || 'אני',
+        profile_picture: user.profile_picture,
+        is_online: true,
+      },
+      is_sending: true,
+    };
+
+    addOptimisticMediaMessage(optimisticMessage);
+
     try {
       const poll = await PollService.createPoll(
         chatId,
@@ -143,11 +198,15 @@ export default function PollCreationBottomSheet({
       if (poll) {
         onPollCreated(poll);
         resetForm();
+        dismissKeyboard();
         onClose();
+        // Realtime / ingestIncomingInsert מחליף את temp- לפי content + message_type
       } else {
+        removeOptimisticMessage(tempId);
         legacyAlert('שגיאה', 'לא ניתן ליצור את הסקר, נסה שוב');
       }
     } catch (error: any) {
+      removeOptimisticMessage(tempId);
       legacyAlert('שגיאה', error?.message || 'לא ניתן ליצור את הסקר');
     } finally {
       setIsCreating(false);
@@ -161,7 +220,7 @@ export default function PollCreationBottomSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <Pressable onPress={dismissKeyboard} style={styles.header}>
           <DayNavBlurButton
             onPress={handleClose}
             size={DAY_NAV_BUTTON_SIZE}
@@ -178,151 +237,175 @@ export default function PollCreationBottomSheet({
           </View>
 
           <TouchableOpacity
-            onPress={resetForm}
+            onPress={() => {
+              dismissKeyboard();
+              resetForm();
+            }}
             style={styles.headerTextButton}
             disabled={isCreating || (!question.trim() && options.every((o) => !o.trim()))}
           >
             <Text style={styles.headerTextButtonLabel}>נקה</Text>
           </TouchableOpacity>
-        </View>
+        </Pressable>
 
         {/* Body */}
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          onScrollBeginDrag={dismissKeyboard}
           showsVerticalScrollIndicator={false}
         >
-          {/* Question card */}
-          <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.counter}>{question.length}/{QUESTION_MAX_LEN}</Text>
-              <Text style={styles.cardTitle}>שאלה</Text>
-            </View>
-            <TextInput
-              value={question}
-              onChangeText={setQuestion}
-              placeholder="מה תרצה לשאול?"
-              placeholderTextColor={tokens.colors.text.secondary}
-              style={[styles.questionInput, { writingDirection: 'rtl' }]}
-              textAlign="right"
-              textAlignVertical="top"
-              multiline
-              maxLength={QUESTION_MAX_LEN}
-            />
-          </UICard>
+          <Pressable onPress={dismissKeyboard} style={{ gap: 12 }}>
+            {/* Question card */}
+            <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.counter}>{question.length}/{QUESTION_MAX_LEN}</Text>
+                <Text style={styles.cardTitle}>שאלה</Text>
+              </View>
+              <TextInput
+                value={question}
+                onChangeText={setQuestion}
+                placeholder="מה תרצה לשאול?"
+                placeholderTextColor={tokens.colors.text.secondary}
+                style={[styles.questionInput, { writingDirection: 'rtl' }]}
+                textAlign="right"
+                textAlignVertical="top"
+                multiline
+                maxLength={QUESTION_MAX_LEN}
+                blurOnSubmit
+                returnKeyType="done"
+                onSubmitEditing={dismissKeyboard}
+              />
+            </UICard>
 
-          {/* Options card */}
-          <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.counter}>{options.length}/{MAX_OPTIONS}</Text>
-              <Text style={styles.cardTitle}>אפשרויות</Text>
-            </View>
+            {/* Options card */}
+            <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
+              <View style={styles.cardHeaderRow}>
+                <Text style={styles.counter}>{options.length}/{MAX_OPTIONS}</Text>
+                <Text style={styles.cardTitle}>אפשרויות</Text>
+              </View>
 
-            <View style={styles.optionsList}>
-              {options.map((option, index) => {
-                const showRemove = options.length > MIN_OPTIONS;
-                return (
-                  <View key={`poll-option-${index}`} style={styles.optionRow}>
-                    {/* row-reverse: first child = rightmost */}
-                    <View style={styles.optionIndexPill}>
-                      <Text style={styles.optionIndexText}>{index + 1}</Text>
+              <View style={styles.optionsList}>
+                {options.map((option, index) => {
+                  const showRemove = options.length > MIN_OPTIONS;
+                  const isLast = index === options.length - 1;
+                  return (
+                    <View key={`poll-option-${index}`} style={styles.optionRow}>
+                      {/* row-reverse: first child = rightmost */}
+                      <View style={styles.optionIndexPill}>
+                        <Text style={styles.optionIndexText}>{index + 1}</Text>
+                      </View>
+
+                      <TextInput
+                        value={option}
+                        onChangeText={(text) => updateOption(index, text)}
+                        placeholder={`אפשרות ${index + 1}`}
+                        placeholderTextColor={tokens.colors.text.secondary}
+                        style={[styles.optionInput, { writingDirection: 'rtl' }]}
+                        textAlign="right"
+                        maxLength={OPTION_MAX_LEN}
+                        returnKeyType={isLast ? 'done' : 'next'}
+                        blurOnSubmit={isLast}
+                        onSubmitEditing={() => {
+                          if (isLast) {
+                            dismissKeyboard();
+                          }
+                        }}
+                      />
+
+                      {showRemove ? (
+                        <TouchableOpacity
+                          onPress={() => removeOption(index)}
+                          style={styles.removeOptionButton}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Trash2 size={16} color={tokens.colors.text.danger ?? '#EF4444'} strokeWidth={2} />
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={styles.removeOptionButtonPlaceholder} />
+                      )}
                     </View>
+                  );
+                })}
 
-                    <TextInput
-                      value={option}
-                      onChangeText={(text) => updateOption(index, text)}
-                      placeholder={`אפשרות ${index + 1}`}
-                      placeholderTextColor={tokens.colors.text.secondary}
-                      style={[styles.optionInput, { writingDirection: 'rtl' }]}
-                      textAlign="right"
-                      maxLength={OPTION_MAX_LEN}
-                    />
-
-                    {showRemove ? (
-                      <TouchableOpacity
-                        onPress={() => removeOption(index)}
-                        style={styles.removeOptionButton}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Trash2 size={16} color={tokens.colors.text.danger ?? '#EF4444'} strokeWidth={2} />
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={styles.removeOptionButtonPlaceholder} />
-                    )}
-                  </View>
-                );
-              })}
-
-              {/* Add option */}
-              <TouchableOpacity
-                onPress={addOption}
-                disabled={options.length >= MAX_OPTIONS}
-                style={[
-                  styles.addOptionRow,
-                  options.length >= MAX_OPTIONS && styles.addOptionRowDisabled,
-                ]}
-              >
-                <Text
+                {/* Add option */}
+                <TouchableOpacity
+                  onPress={addOption}
+                  disabled={options.length >= MAX_OPTIONS}
                   style={[
-                    styles.addOptionText,
-                    options.length >= MAX_OPTIONS && styles.addOptionTextDisabled,
+                    styles.addOptionRow,
+                    options.length >= MAX_OPTIONS && styles.addOptionRowDisabled,
                   ]}
                 >
-                  הוסף אפשרות
-                </Text>
-                <View style={styles.addOptionLeft}>
-                  <Ionicons
-                    name="add"
-                    size={18}
-                    color={
-                      options.length >= MAX_OPTIONS
-                        ? tokens.colors.text.secondary
-                        : tokens.colors.primary.main
-                    }
-                  />
-                </View>
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.addOptionText,
+                      options.length >= MAX_OPTIONS && styles.addOptionTextDisabled,
+                    ]}
+                  >
+                    הוסף אפשרות
+                  </Text>
+                  <View style={styles.addOptionLeft}>
+                    <Ionicons
+                      name="add"
+                      size={18}
+                      color={
+                        options.length >= MAX_OPTIONS
+                          ? tokens.colors.text.secondary
+                          : tokens.colors.primary.main
+                      }
+                    />
+                  </View>
+                </TouchableOpacity>
 
-              {hasDuplicateOptions && (
-                <Text style={styles.inlineWarning}>
-                  יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.
-                </Text>
-              )}
-            </View>
-          </UICard>
+                {hasDuplicateOptions && (
+                  <Text style={styles.inlineWarning}>
+                    יש אפשרויות כפולות — כל אפשרות צריכה להיות ייחודית.
+                  </Text>
+                )}
+              </View>
+            </UICard>
 
-          {/* Settings card */}
-          <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
-            <Text style={styles.cardTitle}>הגדרות</Text>
+            {/* Settings card */}
+            <UICard variant="blur" padding="none" contentContainerStyle={glassCardStyles.inner}>
+              <Text style={styles.cardTitle}>הגדרות</Text>
 
-            <View style={styles.segmented}>
-              <TouchableOpacity
-                onPress={() => setMultipleChoice(true)}
-                style={[styles.segment, multipleChoice && styles.segmentActive]}
-              >
-                <Text style={[styles.segmentText, multipleChoice && styles.segmentTextActive]}>
-                  בחירה מרובה
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setMultipleChoice(false)}
-                style={[styles.segment, !multipleChoice && styles.segmentActive]}
-              >
-                <Text style={[styles.segmentText, !multipleChoice && styles.segmentTextActive]}>
-                  בחירה יחידה
-                </Text>
-              </TouchableOpacity>
-            </View>
+              <View style={styles.segmented}>
+                <TouchableOpacity
+                  onPress={() => {
+                    dismissKeyboard();
+                    setMultipleChoice(true);
+                  }}
+                  style={[styles.segment, multipleChoice && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, multipleChoice && styles.segmentTextActive]}>
+                    בחירה מרובה
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    dismissKeyboard();
+                    setMultipleChoice(false);
+                  }}
+                  style={[styles.segment, !multipleChoice && styles.segmentActive]}
+                >
+                  <Text style={[styles.segmentText, !multipleChoice && styles.segmentTextActive]}>
+                    בחירה יחידה
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-            <Text style={styles.helperText}>
-              {multipleChoice
-                ? 'משתמשים יוכלו לבחור יותר מתשובה אחת.'
-                : 'משתמשים יוכלו לבחור תשובה אחת בלבד.'}
-            </Text>
-          </UICard>
+              <Text style={styles.helperText}>
+                {multipleChoice
+                  ? 'משתמשים יוכלו לבחור יותר מתשובה אחת.'
+                  : 'משתמשים יוכלו לבחור תשובה אחת בלבד.'}
+              </Text>
+            </UICard>
 
-          <View style={{ height: 8 }} />
+            <View style={{ height: 8 }} />
+          </Pressable>
         </ScrollView>
 
         {/* Footer — respects safe area */}

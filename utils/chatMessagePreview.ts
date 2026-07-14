@@ -24,6 +24,10 @@ export function getChatMessagePreview(
       return 'הקלטה';
     case ChatMessageType.DOCUMENT:
       return 'מסמך';
+    case ChatMessageType.POLL:
+      return 'סקר';
+    case ChatMessageType.TRADE:
+      return 'טרייד';
   }
 
   const trimmed = (content ?? '').trim();

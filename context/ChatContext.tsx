@@ -442,6 +442,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             );
           }
           return (
+            m.message_type === enrichedMessage.message_type &&
             m.content === enrichedMessage.content &&
             Math.abs(
               new Date(m.created_at).getTime() -

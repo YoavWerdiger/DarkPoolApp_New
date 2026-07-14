@@ -659,8 +659,8 @@ export default function ChatGroupScreen() {
     userScrolledUpRef.current = false;
     pendingScrollAfterSendRef.current = false;
     // חוסם עדכון FAB בזמן הגלילה — בלי setState לפני scroll (re-render מבטל jump ב-inverted)
-    // animated: חלון ארוך יותר עד שהאנימציה שוקעת + fallback אפשרי
-    ignoreFabUntilRef.current = Date.now() + (animated ? 2200 : 1500);
+    // animated: חלון ארוך יותר (גלילה מבוקרת עד ~900ms + watch + fallback)
+    ignoreFabUntilRef.current = Date.now() + (animated ? 2800 : 1500);
     blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
 
     scrollChatListToBottom(listScrollRefs, count, animated, undefined, {
@@ -693,7 +693,7 @@ export default function ChatGroupScreen() {
       pinScrollToBottomRef.current = false;
       programmaticScrollRef.current = false;
       pinScrollClearTimerRef.current = null;
-    }, animated ? 2800 : 4000);
+    }, animated ? 3200 : 4000);
   }, [confirmChatReadAtBottom, displayMessages.length, hideScrollFab, listScrollRefs]);
 
   useEffect(() => {

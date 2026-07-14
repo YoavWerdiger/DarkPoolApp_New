@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 import { HapticFeedback } from '../utils/hapticFeedback';
 import type { ChatMessage } from '../types/chat.types';
 import {
-  forceInvertedListToBottom,
+  scrollChatListToBottom,
   type ChatListRef,
 } from '../utils/chatListScrollToBottom';
 
@@ -305,23 +305,36 @@ export function useChatMessageScroll({
       programmaticScrollRef.current = true;
       const before = distFromBottomRef.current;
       logger.debug('useChatMessageScroll', `scrollToBottom distBefore=${before.toFixed(0)}`);
-      forceInvertedListToBottom(list, animated);
-      const settleMs = animated ? 380 : 50;
+      scrollChatListToBottom(
+        {
+          listRef,
+          contentHeightRef,
+          layoutHeightRef,
+          getDistFromBottom: () => distFromBottomRef.current,
+        },
+        messagesRef.current.length,
+        animated,
+        undefined,
+        {
+          startDist: before,
+          onDone: () => {
+            programmaticScrollRef.current = false;
+          },
+        },
+      );
+      // safety: אל תשאיר programmatic תקוע אם onDone לא יגיע
       setTimeout(() => {
-        const current = listRef.current ?? list;
-        // fallback קשיח רק אם האנימציה לא הגיעה לתחתית
-        if (distFromBottomRef.current > 80) {
-          forceInvertedListToBottom(current, false);
-        }
-      }, settleMs);
-      setTimeout(() => {
-        if (distFromBottomRef.current > 80) {
-          forceInvertedListToBottom(listRef.current ?? list, false);
-        }
         programmaticScrollRef.current = false;
-      }, animated ? 480 : 220);
+      }, animated ? 2000 : 400);
     },
-    [distFromBottomRef, listRef, messagesRef, programmaticScrollRef]
+    [
+      contentHeightRef,
+      distFromBottomRef,
+      layoutHeightRef,
+      listRef,
+      messagesRef,
+      programmaticScrollRef,
+    ]
   );
 
   const handleContentSizeChange = useCallback(() => {

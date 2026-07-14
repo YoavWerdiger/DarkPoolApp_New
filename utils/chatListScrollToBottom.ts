@@ -21,12 +21,20 @@ export type ScrollToBottomRetryOptions = {
 };
 
 const BOTTOM_REACHED_PX = 80;
-/** זמן לשקיעת אנימציית native לפני בדיקת הצלחה / fallback */
-const ANIMATED_SETTLE_MS = 380;
+/** מתחת לזה native animated מספיק קצר ונעים */
+const NATIVE_ANIM_MAX_DIST_PX = 220;
+const CONTROLLED_MIN_MS = 480;
+const CONTROLLED_MAX_MS = 900;
+/** כמה זמן בלי התקדמות לפני hard fallback (לא קוטעים אנימציה חיה) */
+const STUCK_IDLE_MS = 280;
+const PROGRESS_POLL_MS = 70;
+/** תקרת המתנה אחרי התחלת animated לפני שמוותרים */
+const ANIMATED_MAX_WAIT_MS = 1400;
 /** ניסיונות קשיחים אחרי ש-animated נכשל */
 const HARD_FALLBACK_ATTEMPTS = 6;
+const STUCK_EPS_PX = 3;
 
-/** מבטל timers של גלילה קודמת (לחיצה כפולה / שליחה באמצע אנימציה) */
+/** מבטל timers / RAF של גלילה קודמת (לחיצה כפולה / שליחה באמצע אנימציה) */
 let scrollGeneration = 0;
 
 /**
@@ -38,6 +46,14 @@ let scrollGeneration = 0;
 export function forceInvertedListToBottom(list: ChatListRef, animated: boolean): void {
   try {
     list.scrollToOffset({ offset: 0, animated });
+  } catch (e) {
+    logger.debug('chatListScrollToBottom', `scrollToOffset threw: ${String(e)}`);
+  }
+}
+
+function setInvertedOffset(list: ChatListRef, offset: number, animated: boolean): void {
+  try {
+    list.scrollToOffset({ offset: Math.max(0, offset), animated });
   } catch (e) {
     logger.debug('chatListScrollToBottom', `scrollToOffset threw: ${String(e)}`);
   }
@@ -55,9 +71,104 @@ function maxOffsetOf(refs: ScrollRefs): number {
   return Math.max(0, refs.contentHeightRef.current - refs.layoutHeightRef.current);
 }
 
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function durationForDistance(dist: number): number {
+  return Math.round(
+    Math.min(CONTROLLED_MAX_MS, Math.max(CONTROLLED_MIN_MS, 420 + dist * 0.09)),
+  );
+}
+
 /**
- * גלילה לתחתית — animated נעים כברירת מחדל למשתמש; fallback ל-animated:false רק אם האנימציה לא הגיעה.
- * בלי jiggle / בלי לקטוע אנימציה ב-RAF הבא.
+ * גלילה מבוקרת: interpolate offset עם duration קבוע לפי מרחק.
+ * iOS native animated:true על מרחק גדול נגמר ב-~250ms ונראה כקפיצה בטלפון;
+ * סימולטור מרגיש איטי יותר — לכן RAF נותן אותה תחושה בשניהם.
+ */
+function runControlledScrollToZero(
+  refs: ScrollRefs,
+  gen: number,
+  startDist: number,
+  onFrameDone: () => void,
+): void {
+  const list = refs.listRef.current;
+  if (!list || startDist <= BOTTOM_REACHED_PX) {
+    onFrameDone();
+    return;
+  }
+
+  const duration = durationForDistance(startDist);
+  const t0 = Date.now();
+
+  const frame = () => {
+    if (gen !== scrollGeneration) return;
+    const current = refs.listRef.current;
+    if (!current) {
+      onFrameDone();
+      return;
+    }
+
+    const t = Math.min(1, (Date.now() - t0) / duration);
+    const offset = startDist * (1 - easeOutCubic(t));
+    setInvertedOffset(current, offset, false);
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+      return;
+    }
+
+    forceInvertedListToBottom(current, false);
+    onFrameDone();
+  };
+
+  requestAnimationFrame(frame);
+}
+
+/**
+ * ממתין עד ליד התחתית, או עד שאין התקדמות (stuck) — בלי לקטוע אנימציה חיה מוקדם מדי.
+ */
+function watchUntilSettledOrStuck(
+  refs: ScrollRefs,
+  gen: number,
+  onSettled: (reached: boolean) => void,
+): void {
+  const startedAt = Date.now();
+  let lastDist = refs.getDistFromBottom?.() ?? Number.POSITIVE_INFINITY;
+  let lastProgressAt = startedAt;
+
+  const poll = () => {
+    if (gen !== scrollGeneration) return;
+
+    if (isNearBottom(refs)) {
+      onSettled(true);
+      return;
+    }
+
+    const now = Date.now();
+    const dist = refs.getDistFromBottom?.() ?? lastDist;
+    if (dist < lastDist - STUCK_EPS_PX) {
+      lastDist = dist;
+      lastProgressAt = now;
+    }
+
+    const idle = now - lastProgressAt >= STUCK_IDLE_MS;
+    const timedOut = now - startedAt >= ANIMATED_MAX_WAIT_MS;
+
+    if (idle || timedOut) {
+      onSettled(false);
+      return;
+    }
+
+    setTimeout(poll, PROGRESS_POLL_MS);
+  };
+
+  setTimeout(poll, PROGRESS_POLL_MS);
+}
+
+/**
+ * גלילה לתחתית — animated: גלילה מבוקרת (או native למרחק קצר);
+ * fallback ל-animated:false רק כשהאנימציה נתקעה / לא הגיעה.
  */
 export function scrollChatListToBottom(
   refs: ScrollRefs,
@@ -79,20 +190,31 @@ export function scrollChatListToBottom(
   }
 
   if (!retryOptions) {
-    forceInvertedListToBottom(list, animated);
-    if (animated) {
-      setTimeout(() => {
-        if (gen !== scrollGeneration) return;
-        if (isNearBottom(refs)) return;
-        const again = refs.listRef.current;
-        if (again) forceInvertedListToBottom(again, false);
-      }, ANIMATED_SETTLE_MS);
-    } else {
+    if (!animated) {
+      forceInvertedListToBottom(list, false);
       requestAnimationFrame(() => {
         if (gen !== scrollGeneration) return;
         const again = refs.listRef.current;
         if (again) forceInvertedListToBottom(again, false);
       });
+      return 0;
+    }
+
+    const dist = startDist > 0 ? startDist : refs.getDistFromBottom?.() ?? 0;
+    const afterAnim = () => {
+      if (gen !== scrollGeneration) return;
+      watchUntilSettledOrStuck(refs, gen, (reached) => {
+        if (gen !== scrollGeneration || reached) return;
+        const again = refs.listRef.current;
+        if (again) forceInvertedListToBottom(again, false);
+      });
+    };
+
+    if (dist <= NATIVE_ANIM_MAX_DIST_PX) {
+      forceInvertedListToBottom(list, true);
+      afterAnim();
+    } else {
+      runControlledScrollToZero(refs, gen, dist, afterAnim);
     }
     return 0;
   }
@@ -150,18 +272,32 @@ export function scrollChatListToBottom(
   };
 
   if (animated) {
-    // ניסיון אחד חלק — מחכים שישקע לפני fallback (לא לקטוע בפריים הבא)
-    forceInvertedListToBottom(list, true);
-    attempts = 1;
-    setTimeout(() => {
+    const dist = Math.max(0, startDist);
+    const beginWatch = () => {
       if (finished || gen !== scrollGeneration) return;
-      if (canDeclareSuccess()) {
-        finish(true);
-        return;
-      }
-      logger.debug('chatListScrollToBottom', 'animated miss → hard fallback');
-      hardTick();
-    }, ANIMATED_SETTLE_MS);
+      watchUntilSettledOrStuck(refs, gen, (reached) => {
+        if (finished || gen !== scrollGeneration) return;
+        if (reached && canDeclareSuccess()) {
+          finish(true);
+          return;
+        }
+        if (reached) {
+          finish(true);
+          return;
+        }
+        logger.debug('chatListScrollToBottom', 'animated stuck/miss → hard fallback');
+        hardTick();
+      });
+    };
+
+    if (dist <= NATIVE_ANIM_MAX_DIST_PX) {
+      forceInvertedListToBottom(list, true);
+      attempts = 1;
+      beginWatch();
+    } else {
+      attempts = 1;
+      runControlledScrollToZero(refs, gen, dist, beginWatch);
+    }
     return 0;
   }
 

@@ -1546,6 +1546,8 @@ export default function ChatGroupScreen() {
             ref={listRef}
             data={messagesListReady ? displayMessages : []}
           inverted
+          // NativeWind 4.1.x שבר scrollTo* ב-RN 0.81; cssInterop=false = FlatList מקורי
+          {...({ cssInterop: false } as object)}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           extraData={flatListExtraData}
@@ -1663,13 +1665,13 @@ export default function ChatGroupScreen() {
         {chatComposer}
       </ChatComposerDock>
 
-      {/* FAB מעל הקומפוזר ב-z-order — לא בתוך messagesArea (שעלול להיחתם/להיחסם) */}
+      {/* FAB מעל הקומפוזר — cssInterop=false כדי שלא ייעטף ב-NativeWind */}
       {showScrollToBottomButton && !keyboardShown && (
         <TouchableOpacity
+          {...({ cssInterop: false } as object)}
           activeOpacity={0.75}
           onPress={() => {
             void HapticFeedback.impactLight();
-            // animated:false — אמין יותר על inverted FlatList ב-RN 0.81
             scrollToBottom(false);
           }}
           hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}

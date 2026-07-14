@@ -11,66 +11,29 @@ export type ScrollRefs = {
   layoutHeightRef: MutableRefObject<number>;
   /** ב-inverted: מרחק מתחתית = contentOffset.y (0 = בתחתית) */
   getDistFromBottom?: () => number;
-  /** מונה שגדל בכל onScroll — מאמת שמד-המרחק התעדכן באמת */
   getScrollEpoch?: () => number;
 };
 
 export type ScrollToBottomRetryOptions = {
   maxAttempts?: number;
-  /** מרחק לפני תחילת הגלילה — אם גדול, מחייב תזוזה/onScroll לפני הצלחה */
   startDist?: number;
   onDone?: (result: { maxOffset: number; reachedBottom: boolean }) => void;
 };
 
 const BOTTOM_REACHED_PX = 80;
 
-type NativeScrollable = {
-  scrollTo?: (p: { x?: number; y: number; animated: boolean }) => void;
-};
-
-function getNativeScrollable(list: ChatListRef): NativeScrollable | null {
-  const anyList = list as unknown as {
-    getNativeScrollRef?: () => NativeScrollable | null;
-    getScrollResponder?: () => NativeScrollable | null;
-  };
-  return anyList.getNativeScrollRef?.() ?? anyList.getScrollResponder?.() ?? null;
-}
-
 /**
- * inverted FlatList (RN 0.81): קריאה בודדת ל-scrollToOffset(0) לעיתים נבלעת.
+ * inverted FlatList: data[0]=חדש, offset 0 = תחתית ויזואלית.
  *
- * אסטרטגיה (בלי scrollToIndex — הוא נלחם ב-offset על inverted):
- * 1) jiggle ל-offset 1 כדי לכפות תזוזה ב-native
- * 2) scrollToOffset(0) + native scrollTo({ y: 0 })
- * 3) חיזוק בפריים הבא
+ * שים לב: ב-RN 0.81 + NativeWind 4.1.x, scrollTo* נשברים ע"י css-interop.
+ * לכן ה-FlatList בצ'אט חייב cssInterop={false} (או NativeWind >= 4.2.1).
  */
 export function forceInvertedListToBottom(list: ChatListRef, animated: boolean): void {
-  const native = getNativeScrollable(list);
-
-  const goZero = (anim: boolean) => {
-    try {
-      list.scrollToOffset({ offset: 0, animated: anim });
-    } catch {
-      /* noop */
-    }
-    try {
-      native?.scrollTo?.({ y: 0, animated: anim });
-    } catch {
-      /* noop */
-    }
-  };
-
   try {
-    list.scrollToOffset({ offset: 1, animated: false });
-  } catch {
-    /* noop */
+    list.scrollToOffset({ offset: 0, animated });
+  } catch (e) {
+    logger.debug('chatListScrollToBottom', `scrollToOffset threw: ${String(e)}`);
   }
-
-  goZero(animated);
-
-  requestAnimationFrame(() => {
-    goZero(false);
-  });
 }
 
 function isNearBottom(refs: ScrollRefs): boolean {
@@ -82,12 +45,8 @@ function isNearBottom(refs: ScrollRefs): boolean {
 }
 
 /**
- * FlatList inverted: data[0]=הודעה חדשה, offset 0 = תחתית המסך.
- *
- * חשוב:
- * - אל תאפסו distFromBottomRef / אל תעשו setState לפני הקריאה
- * - אם startDist כבר ~0 (פתיחת מסך) — מותר succeeded בלי onScroll
- * - אם startDist גדול (FAB) — חובה epoch חדש / ירידה ב-dist
+ * גלילה לתחתית עם ניסיונות — בלי jiggle/scrollToIndex (נלחמים זה בזה).
+ * אל תאפסו distFromBottom / אל תעשו setState לפני הקריאה.
  */
 export function scrollChatListToBottom(
   refs: ScrollRefs,
@@ -100,10 +59,6 @@ export function scrollChatListToBottom(
   const startDist = retryOptions?.startDist ?? refs.getDistFromBottom?.() ?? -1;
 
   if (!list || messageCount <= 0) {
-    logger.debug(
-      'chatListScrollToBottom',
-      `SCROLL_RESULT abort hasList=${!!list} count=${messageCount}`,
-    );
     retryOptions?.onDone?.({
       maxOffset: Math.max(0, refs.contentHeightRef.current - refs.layoutHeightRef.current),
       reachedBottom: false,
@@ -111,48 +66,38 @@ export function scrollChatListToBottom(
     return 0;
   }
 
-  logger.debug(
-    'chatListScrollToBottom',
-    `SCROLL_CMD start distBefore=${Number(startDist).toFixed(0)} animated=${animated} count=${messageCount}`,
-  );
-
   if (!retryOptions) {
     forceInvertedListToBottom(list, animated);
     requestAnimationFrame(() => {
       const again = refs.listRef.current;
       if (again) forceInvertedListToBottom(again, false);
     });
-    setTimeout(() => {
-      const again = refs.listRef.current;
-      if (again) forceInvertedListToBottom(again, false);
-    }, 80);
     return 0;
   }
 
-  const maxAttempts = retryOptions.maxAttempts ?? 16;
+  const maxAttempts = retryOptions.maxAttempts ?? 12;
   const startEpoch = refs.getScrollEpoch?.() ?? 0;
-  const needProofOfMovement = startDist > BOTTOM_REACHED_PX;
+  const needProof = startDist > BOTTOM_REACHED_PX;
   let attempts = 0;
   let finished = false;
 
   const finish = (reachedBottom: boolean) => {
     if (finished) return;
     finished = true;
-    const distAfter = refs.getDistFromBottom?.() ?? -1;
     const maxOffset = Math.max(
       0,
       refs.contentHeightRef.current - refs.layoutHeightRef.current,
     );
     logger.debug(
       'chatListScrollToBottom',
-      `SCROLL_RESULT distBefore=${Number(startDist).toFixed(0)} distAfter=${Number(distAfter).toFixed(0)} reached=${reachedBottom} attempts=${attempts} epochΔ=${(refs.getScrollEpoch?.() ?? 0) - startEpoch}`,
+      `done reached=${reachedBottom} attempts=${attempts} distBefore=${Number(startDist).toFixed(0)} distAfter=${(refs.getDistFromBottom?.() ?? -1).toFixed(0)}`,
     );
     retryOptions.onDone?.({ maxOffset, reachedBottom });
   };
 
   const canDeclareSuccess = (): boolean => {
     if (!isNearBottom(refs)) return false;
-    if (!needProofOfMovement) return true;
+    if (!needProof) return true;
     const epoch = refs.getScrollEpoch?.() ?? 0;
     const dist = refs.getDistFromBottom?.() ?? startDist;
     return epoch > startEpoch || dist < startDist - 40;
@@ -160,14 +105,14 @@ export function scrollChatListToBottom(
 
   const tick = () => {
     if (finished) return;
-    const currentList = refs.listRef.current;
-    if (!currentList) {
+    const current = refs.listRef.current;
+    if (!current) {
       finish(false);
       return;
     }
 
     attempts += 1;
-    forceInvertedListToBottom(currentList, animated && attempts === 1);
+    forceInvertedListToBottom(current, animated && attempts === 1);
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -177,23 +122,16 @@ export function scrollChatListToBottom(
           return;
         }
         if (attempts >= maxAttempts) {
-          const last = refs.listRef.current;
-          if (last) forceInvertedListToBottom(last, false);
-          setTimeout(() => {
-            finish(canDeclareSuccess());
-          }, 50);
+          forceInvertedListToBottom(current, false);
+          setTimeout(() => finish(canDeclareSuccess()), 40);
           return;
         }
-        setTimeout(tick, 32 + attempts * 24);
+        setTimeout(tick, 40 + attempts * 20);
       });
     });
   };
 
-  // פריים אחד — לא מתחרים עם gesture של הלחיצה
-  requestAnimationFrame(() => {
-    tick();
-  });
-
+  requestAnimationFrame(tick);
   return 0;
 }
 

@@ -276,8 +276,9 @@ const createStyles = (
           minWidth: 220,
           maxWidth: 280,
           alignSelf: 'stretch',
-          paddingVertical: 4,
-          paddingHorizontal: 4,
+          paddingVertical: 2,
+          // הבועה כבר נותנת paddingHorizontal: 9 כמו טקסט; מעט נוסף כמו messageTextWithMedia
+          paddingHorizontal: 2,
           direction: 'rtl',
         }
       : {

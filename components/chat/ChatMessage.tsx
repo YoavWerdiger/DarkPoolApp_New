@@ -672,8 +672,7 @@ function ChatMessage({
               (message.message_type === MessageType.IMAGE ||
                 message.message_type === MessageType.VIDEO ||
                 message.message_type === MessageType.MEDIA_GROUP ||
-                message.message_type === MessageType.TRADE ||
-                message.message_type === MessageType.POLL) &&
+                message.message_type === MessageType.TRADE) &&
                 styles.mediaBubble,
               message.message_type === MessageType.POLL && styles.pollBubble,
               message.reply_to && { minWidth: 200 },
@@ -2068,6 +2067,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
   pollBubble: {
     minWidth: 220,
     alignSelf: 'stretch',
+    // כמו בועת טקסט רגילה — לא mediaBubble (xs) שמצמיד שאלה/שם לקצה
+    paddingVertical: 5,
+    paddingHorizontal: 9,
   },
   myBubble: {
     backgroundColor: tokens.colors.bubbleMe,

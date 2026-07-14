@@ -650,6 +650,7 @@ function ChatMessage({
           styles.gestureSwipeWrapper,
           isMe ? styles.gestureSwipeWrapperMe : styles.gestureSwipeWrapperThem,
           message.message_type === MessageType.AUDIO && styles.gestureSwipeWrapperAudio,
+          message.message_type === MessageType.POLL && styles.gestureSwipeWrapperPoll,
         ]}
       >
         <View
@@ -657,6 +658,7 @@ function ChatMessage({
             styles.messageContent,
             isMe && styles.messageContentMe,
             message.message_type === MessageType.AUDIO && styles.audioMessageContent,
+            message.message_type === MessageType.POLL && styles.pollMessageContent,
           ]}
         >
         <View style={[styles.bubbleStack, isMe && styles.bubbleStackMe]}>
@@ -673,6 +675,7 @@ function ChatMessage({
                 message.message_type === MessageType.TRADE ||
                 message.message_type === MessageType.POLL) &&
                 styles.mediaBubble,
+              message.message_type === MessageType.POLL && styles.pollBubble,
               message.reply_to && { minWidth: 200 },
             ]}
           >
@@ -1963,6 +1966,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     maxWidth: '78%',
     minWidth: 210,
   },
+  /** סקר: מונע התכווצות לרוחב אות בודדת אחרי הסרת כותרת האייקון */
+  gestureSwipeWrapperPoll: {
+    maxWidth: '80%',
+    minWidth: 220,
+  },
   messageContent: {
     maxWidth: '100%',
     alignItems: 'flex-start',
@@ -1972,6 +1980,12 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   audioMessageContent: {
     minWidth: 200,
+    maxWidth: 280,
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  pollMessageContent: {
+    minWidth: 220,
     maxWidth: 280,
     width: '100%',
     alignSelf: 'stretch',
@@ -2050,6 +2064,10 @@ const createStyles = (tokens: any) => StyleSheet.create({
   mediaBubble: {
     paddingVertical: tokens.spacing.xs,
     paddingHorizontal: tokens.spacing.xs,
+  },
+  pollBubble: {
+    minWidth: 220,
+    alignSelf: 'stretch',
   },
   myBubble: {
     backgroundColor: tokens.colors.bubbleMe,

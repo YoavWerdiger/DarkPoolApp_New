@@ -60,7 +60,7 @@ export default function PollResults({
                     color={lightOnBubble ? '#FFFFFF' : chatPalette.primary}
                   />
                 )}
-                <Text style={styles.optionText} numberOfLines={2}>
+                <Text style={styles.optionText} numberOfLines={1}>
                   {option.text}
                 </Text>
               </View>
@@ -124,6 +124,8 @@ const createStyles = (
       color: text,
       fontSize: 15,
       flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
       ...chatRtlText,
     },
     percent: {
@@ -131,6 +133,7 @@ const createStyles = (
       fontSize: tokens.typography.fontSize.sm,
       fontWeight: tokens.typography.fontWeight.semibold,
       minWidth: 34,
+      flexShrink: 0,
       textAlign: 'left',
     },
     footer: {

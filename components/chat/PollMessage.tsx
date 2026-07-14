@@ -210,8 +210,11 @@ function PollMessage({
                   }
                   size={18}
                   color={isSelected ? accent : mutedIcon}
+                  style={styles.optionIcon}
                 />
-                <Text style={styles.optionText}>{option.text}</Text>
+                <Text style={styles.optionText} numberOfLines={1}>
+                  {option.text}
+                </Text>
               </TouchableOpacity>
             );
           })}
@@ -270,6 +273,7 @@ const createStyles = (
     container: embeddedInBubble
       ? {
           width: '100%',
+          minWidth: 220,
           maxWidth: 280,
           alignSelf: 'stretch',
           paddingVertical: 4,
@@ -284,6 +288,7 @@ const createStyles = (
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: tokens.colors.border.primary,
           direction: 'rtl',
+          minWidth: 220,
           maxWidth: 300,
         },
     topMeta: {
@@ -292,12 +297,15 @@ const createStyles = (
       justifyContent: 'space-between',
       marginBottom: 6,
       minHeight: 16,
+      alignSelf: 'stretch',
     },
     topMetaLeft: {
       ...chatRtlRow,
       alignItems: 'center',
       gap: 8,
       flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
     },
     metaHint: {
       color: muted,
@@ -313,6 +321,7 @@ const createStyles = (
       ...chatRtlRow,
       alignItems: 'center',
       gap: 12,
+      flexShrink: 0,
     },
     question: {
       color: text,
@@ -324,10 +333,12 @@ const createStyles = (
     },
     optionsBlock: {
       gap: 8,
+      alignSelf: 'stretch',
     },
     optionButton: {
       ...chatRtlRow,
       alignItems: 'center',
+      alignSelf: 'stretch',
       gap: 10,
       paddingVertical: 10,
       paddingHorizontal: 12,
@@ -343,10 +354,15 @@ const createStyles = (
     optionButtonDisabled: {
       opacity: 0.5,
     },
+    optionIcon: {
+      flexShrink: 0,
+    },
     optionText: {
       color: text,
       fontSize: 15,
       flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
       ...chatRtlText,
     },
     voteButton: {

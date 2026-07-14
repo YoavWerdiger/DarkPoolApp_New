@@ -85,8 +85,6 @@ interface ChatMessageProps {
   isMe: boolean;
   showAvatar?: boolean;
   showSenderName?: boolean;
-  /** true כש-older (מעל ב-inverted) משולח אחר — מרווח גדול ב-marginTop */
-  isAfterSenderChange?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
@@ -99,10 +97,10 @@ interface ChatMessageProps {
   isHighlighted?: boolean;
 }
 
-/** מרווח בין בועות רצופות של אותו שולח */
+/** מרווח בין בועות רצופות של אותו שולח (Spacer ב-ChatListRow) */
 export const CHAT_BUBBLE_MARGIN = 2;
-/** מרווח מול older כשמחליפים שולח (marginTop ב-inverted) */
-export const CHAT_SENDER_CHANGE_MARGIN = 8;
+/** מרווח גדול בגבול בין שולחים שונים (Spacer מול older) */
+export const CHAT_SENDER_CHANGE_MARGIN = 16;
 
 // פונקציה לרנדור טקסט עם תיוגים (@mentions)
 const renderTextWithMentions = (
@@ -236,7 +234,6 @@ function ChatMessage({
   isMe,
   showAvatar = true,
   showSenderName = true,
-  isAfterSenderChange = false,
   onLongPress,
   onPress,
   onReply,
@@ -587,18 +584,11 @@ function ChatMessage({
     );
   }
 
-  // inverted FlatList (scaleY על הרשימה + על התא): אחרי ההיפוך הכפול,
-  // marginTop פונה ל-older (מעל), marginBottom ל-newer (מתחת).
-  // מרווח גדול ב-marginTop כש-older הוא שולח אחר — בלי marginBottom כפול.
-  const senderGapStyle = {
-    marginTop: isAfterSenderChange ? CHAT_SENDER_CHANGE_MARGIN : CHAT_BUBBLE_MARGIN,
-  };
-
   // הודעה מחוקה
   if (message.is_deleted) {
     return (
       <View
-        style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
+        style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}
         accessibilityRole="text"
         accessibilityLabel="Deleted message"
       >
@@ -624,7 +614,6 @@ function ChatMessage({
     <Animated.View style={[
       styles.messageContainer,
       isMe ? styles.myMessage : styles.theirMessage,
-      senderGapStyle,
       isHighlighted && styles.highlightedMessage,
       { opacity: effectiveOpacity, transform: entryTransform },
     ]}>
@@ -1868,8 +1857,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
   if (a === b && prevProps.isHighlighted === nextProps.isHighlighted &&
       prevProps.isMe === nextProps.isMe &&
       prevProps.showAvatar === nextProps.showAvatar &&
-      prevProps.showSenderName === nextProps.showSenderName &&
-      prevProps.isAfterSenderChange === nextProps.isAfterSenderChange) {
+      prevProps.showSenderName === nextProps.showSenderName) {
     return true;
   }
 
@@ -1896,7 +1884,6 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.isMe === nextProps.isMe &&
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.showSenderName === nextProps.showSenderName &&
-    prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
     prevProps.isHighlighted === nextProps.isHighlighted
   );
 });
@@ -1906,8 +1893,7 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
 // ============================================
 
 const createStyles = (tokens: any) => StyleSheet.create({
-  /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות אותו שולח;
-     מרווח גדול מול older בהחלפת שולח — senderGapStyle.marginTop (isAfterSenderChange) */
+  /* מרווחים בין שולחים: Spacer ב-ChatListRow (לא margin על הבועה) */
   messageContainer: {
     flexDirection: 'row',
     paddingHorizontal: 0,

@@ -1,6 +1,9 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import ChatMessage from './ChatMessage';
+import ChatMessage, {
+  CHAT_BUBBLE_MARGIN,
+  CHAT_SENDER_CHANGE_MARGIN,
+} from './ChatMessage';
 import UnreadDivider from './UnreadDivider';
 import { useDesignTokens } from '../ui/DesignTokens';
 import type { ChatMessage as ChatMessageType } from '../../types/chat.types';
@@ -77,18 +80,25 @@ function ChatListRow({
   onStatusPress,
   onUnreadDividerPress,
 }: ChatListRowProps) {
+  // FlatList inverted: תא עם column-reverse + scaleY על הרשימה ועל התא.
+  // marginTop/Bottom על הבועה עצמה מתהפכים בין גרסאות — Spacer כ-sibling
+  // (אותו מיקום עץ כמו DateDivider) נשאר בגבול מול older אחרי ההיפוך הכפול.
+  const gapAbove = isAfterSenderChange
+    ? CHAT_SENDER_CHANGE_MARGIN
+    : CHAT_BUBBLE_MARGIN;
+
   return (
     <View onLayout={(e) => onLayout(e.nativeEvent.layout.height)}>
       {showDateDivider ? <DateDivider label={dateDividerLabel} /> : null}
       {showUnreadDivider ? (
         <UnreadDivider unreadCount={unreadCount} onPress={onUnreadDividerPress} />
       ) : null}
+      <View style={{ height: gapAbove }} />
       <ChatMessage
         message={message}
         isMe={isMe}
         showAvatar={showAvatar}
         showSenderName={showSenderName}
-        isAfterSenderChange={isAfterSenderChange}
         onLongPress={onLongPress}
         onReply={onReply}
         onReactionPress={onReactionPress}

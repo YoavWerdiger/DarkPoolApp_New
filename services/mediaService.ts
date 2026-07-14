@@ -21,7 +21,10 @@ export interface MediaFile {
   name?: string;
   size?: number;
   duration?: number;
+  /** Preview/bubble thumb (file://) — generated locally like video posters */
   thumbnail_url?: string;
+  width?: number;
+  height?: number;
   waveformData?: number[];
 }
 

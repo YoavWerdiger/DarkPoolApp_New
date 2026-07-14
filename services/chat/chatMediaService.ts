@@ -100,13 +100,47 @@ function createUploadHandle(): { id: string; handle: { cancelled: boolean } } {
 }
 
 // ============================================
+// Thumbnail מקומי לתמונה (כמו VideoThumbnails לווידאו)
+// ============================================
+
+/**
+ * יוצר JPEG קטן (~480px) מה-URI המקומי — לפריוויו/בועה מיידיים בלי decode של הקובץ המלא.
+ * fire-and-forget ידידותי: כשל מחזיר null ולא זורק.
+ */
+export async function createLocalImageThumbnail(
+  uri: string,
+  maxWidth = 480,
+): Promise<string | null> {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: maxWidth } }],
+      { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG },
+    );
+    return result.uri || null;
+  } catch (error) {
+    logger.warn('ChatMedia', 'local image thumbnail failed', error);
+    return null;
+  }
+}
+
+async function readLocalThumbBase64(localThumbnailUri: string): Promise<string | null> {
+  try {
+    return await FileSystem.readAsStringAsync(localThumbnailUri, { encoding: 'base64' });
+  } catch {
+    return null;
+  }
+}
+
+// ============================================
 // העלאת תמונה
 // ============================================
 
 export async function uploadImage(
   uri: string,
   groupId: string,
-  onProgress?: (progress: ChatMediaUploadProgress) => void
+  onProgress?: (progress: ChatMediaUploadProgress) => void,
+  options?: { localThumbnailUri?: string | null },
 ): Promise<{ 
   url: string | null; 
   thumbnail_url: string | null;
@@ -143,19 +177,42 @@ export async function uploadImage(
       onProgress({ file_name: '', progress: 10, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
     }
 
-    let imageToUpload: { base64: string; width: number; height: number };
-    
-    try {
-      const compressed = await ImageManipulator.manipulateAsync(
-        uri,
-        [],
-        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
-      );
-      imageToUpload = { base64: compressed.base64!, width: compressed.width, height: compressed.height };
-    } catch {
-      const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-      imageToUpload = { base64, width: 0, height: 0 };
-    }
+    // ⚡ compress מלא + הכנת thumb במקביל (reuse thumb מקומי אם כבר נוצר בבחירה)
+    const localThumb = options?.localThumbnailUri || null;
+    const [compressedResult, thumbBase64Result] = await Promise.all([
+      (async (): Promise<{ base64: string; width: number; height: number }> => {
+        try {
+          const compressed = await ImageManipulator.manipulateAsync(
+            uri,
+            [],
+            { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+          );
+          return { base64: compressed.base64!, width: compressed.width, height: compressed.height };
+        } catch {
+          const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+          return { base64, width: 0, height: 0 };
+        }
+      })(),
+      (async (): Promise<string | null> => {
+        if (localThumb) {
+          const fromLocal = await readLocalThumbBase64(localThumb);
+          if (fromLocal) return fromLocal;
+        }
+        try {
+          const thumb = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 600 } }],
+            { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+          );
+          return thumb.base64 || null;
+        } catch {
+          return null;
+        }
+      })(),
+    ]);
+
+    const imageToUpload = compressedResult;
+    const thumbBase64 = thumbBase64Result;
 
     if (handle.cancelled) return CANCELLED_RESULT;
 
@@ -166,47 +223,46 @@ export async function uploadImage(
     const timestamp = Date.now();
     const randomId = generateSecureId();
     const fileName = `${groupId}/${timestamp}-${randomId}.jpg`;
+    const thumbFileName = `${groupId}/${timestamp}-${randomId}-thumb.jpg`;
 
-    // Retry up to 3 times for transient network errors
+    // העלאת מלא + thumb במקביל (thumb best-effort)
     let uploadError: any = null;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const result = await supabase.storage
-        .from(CHAT_MEDIA_BUCKET)
-        .upload(fileName, decode(imageToUpload.base64), {
-          contentType: 'image/jpeg',
-          upsert: false,
-        });
-      uploadError = result.error;
-      if (!uploadError) break;
-      if (attempt < 3) await new Promise(res => setTimeout(res, 600 * attempt));
-    }
-
-    if (uploadError) {
-      logger.error('ChatMedia', 'Image upload failed after retries', uploadError);
-      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת תמונה' } };
-    }
-
-    // ⚡ thumbnail קטן לבועה — נטען מיידית (כמו וידאו); הקובץ המלא נטען רק בצפייה מלאה.
-    // best-effort: כשל ביצירה לא מפיל את שליחת התמונה.
     let thumbnailUrl: string | null = null;
-    try {
-      const thumb = await ImageManipulator.manipulateAsync(
-        uri,
-        [{ resize: { width: 600 } }],
-        { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true },
-      );
-      if (thumb.base64) {
-        const thumbFileName = `${groupId}/${timestamp}-${randomId}-thumb.jpg`;
+
+    const uploadMain = async () => {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const result = await supabase.storage
+          .from(CHAT_MEDIA_BUCKET)
+          .upload(fileName, decode(imageToUpload.base64), {
+            contentType: 'image/jpeg',
+            upsert: false,
+          });
+        uploadError = result.error;
+        if (!uploadError) return;
+        if (attempt < 3) await new Promise(res => setTimeout(res, 600 * attempt));
+      }
+    };
+
+    const uploadThumb = async () => {
+      if (!thumbBase64) return;
+      try {
         const { error: thumbError } = await supabase.storage
           .from(CHAT_MEDIA_BUCKET)
-          .upload(thumbFileName, decode(thumb.base64), {
+          .upload(thumbFileName, decode(thumbBase64), {
             contentType: 'image/jpeg',
             upsert: false,
           });
         if (!thumbError) thumbnailUrl = thumbFileName;
+      } catch {
+        logger.warn('ChatMedia', 'Could not upload image thumbnail');
       }
-    } catch {
-      logger.warn('ChatMedia', 'Could not generate image thumbnail');
+    };
+
+    await Promise.all([uploadMain(), uploadThumb()]);
+
+    if (uploadError) {
+      logger.error('ChatMedia', 'Image upload failed after retries', uploadError);
+      return { url: null, thumbnail_url: null, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת תמונה' } };
     }
 
     if (onProgress) {
@@ -720,6 +776,7 @@ export function formatDuration(seconds: number): string {
 // ============================================
 
 export const chatMediaService = {
+  createLocalImageThumbnail,
   uploadImage,
   uploadVideo,
   uploadAudio,

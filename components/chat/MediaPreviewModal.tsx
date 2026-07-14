@@ -155,18 +155,18 @@ export default function MediaPreviewModal({
 
   useEffect(() => {
     if (visible) {
-      setIsLoading(true);
+      // ⚡ לא מחכים ל-decode — מודאל נפתח מייד; thumb/full נטענים בשכבות
+      setIsLoading(false);
       resetZoom();
-      // ⚡ OPTIMISTIC: אנימציה מהירה מאוד
       RNAnimated.parallel([
         RNAnimated.timing(modalScaleAnim, {
           toValue: 1,
-          duration: 50, // ⚡ מהיר יותר
+          duration: 50,
           useNativeDriver: true,
         }),
         RNAnimated.timing(modalOpacityAnim, {
           toValue: 1,
-          duration: 50, // ⚡ מהיר יותר
+          duration: 50,
           useNativeDriver: true,
         }),
       ]).start(() => {});
@@ -556,13 +556,27 @@ export default function MediaPreviewModal({
         return (
           <GestureDetector gesture={combinedGesture}>
             <Animated.View style={[styles.fullMedia, animatedImageStyle]}>
+              {/* שכבת thumb מיידית (כמו poster של וידאו) — בלי לחכות ל-decode מלא */}
+              {currentMedia.thumbnail_url ? (
+                <ExpoImage
+                  source={{ uri: currentMedia.thumbnail_url }}
+                  style={styles.fullMedia}
+                  contentFit="contain"
+                  cachePolicy="memory-disk"
+                  transition={0}
+                  recyclingKey={`${currentMedia.id}-thumb`}
+                />
+              ) : null}
               <ExpoImage
                 source={{ uri: currentMedia.uri }}
-                style={styles.fullMedia}
+                style={
+                  currentMedia.thumbnail_url
+                    ? [styles.fullMedia, styles.fullMediaOnTop]
+                    : styles.fullMedia
+                }
                 contentFit="contain"
-                placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-                placeholderContentFit="contain"
-                transition={200}
+                transition={0}
+                priority="high"
                 onLoadStart={() => setIsLoading(false)}
                 onLoad={() => setIsLoading(false)}
                 onError={() => setIsLoading(false)}
@@ -774,10 +788,11 @@ export default function MediaPreviewModal({
                       >
                         {media.type === 'image' ? (
                           <ExpoImage
-                            source={{ uri: media.uri }}
+                            source={{ uri: media.thumbnail_url || media.uri }}
                             style={styles.thumbnail}
                             contentFit="cover"
                             cachePolicy="memory-disk"
+                            transition={0}
                           />
                         ) : media.type === 'video' ? (
                           <View style={styles.thumbnailVideo}>
@@ -860,6 +875,10 @@ const styles = StyleSheet.create({
     height: screenHeight,
   },
   fullMediaInner: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  /** שכבת full מעל thumb — אחרי שה-decode הסתיים מכסה את ה-poster */
+  fullMediaOnTop: {
     ...StyleSheet.absoluteFillObject,
   },
   /** פס עליון — blur/glass כמו MediaViewer */

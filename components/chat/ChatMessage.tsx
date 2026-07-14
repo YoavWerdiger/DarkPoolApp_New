@@ -46,13 +46,16 @@ type ResolvedMessageMedia = {
 };
 
 function buildInitialResolvedMedia(message: ChatMessageType): ResolvedMessageMedia {
+  // thumb רק אם יש thumbnail מפורש — לא נופלים ל-full local (זה היה גורם ל-decode איטי בבועה)
+  const explicitThumb =
+    getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
+    message.media_thumbnail_url ||
+    null;
+
   if (message.local_media_uri) {
     return {
       main: message.local_media_uri,
-      thumb:
-        getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
-        message.media_thumbnail_url ||
-        message.local_media_uri,
+      thumb: explicitThumb,
       audio: message.message_type === MessageType.AUDIO ? message.media_url ?? null : null,
       doc: message.message_type === MessageType.DOCUMENT ? message.media_url ?? null : null,
     };
@@ -62,10 +65,7 @@ function buildInitialResolvedMedia(message: ChatMessageType): ResolvedMessageMed
       getCachedChatMediaDisplayUri(message.media_url) ||
       message.media_url ||
       null,
-    thumb:
-      getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
-      message.media_thumbnail_url ||
-      null,
+    thumb: explicitThumb,
     audio:
       message.message_type === MessageType.AUDIO
         ? getCachedChatMediaDisplayUri(message.media_url) || message.media_url || null
@@ -280,16 +280,15 @@ function ChatMessage({
 
     const run = async () => {
       if (message.local_media_uri) {
-        let thumbResolved =
-          message.media_thumbnail_url || message.local_media_uri;
+        // thumb מפורש בלבד — לא נופלים ל-full local (decode איטי בבועה)
+        let thumbResolved: string | null = message.media_thumbnail_url || null;
         if (
-          message.media_thumbnail_url &&
-          !message.media_thumbnail_url.startsWith('file:') &&
-          !message.media_thumbnail_url.startsWith('content:')
+          thumbResolved &&
+          !thumbResolved.startsWith('file:') &&
+          !thumbResolved.startsWith('content:')
         ) {
           thumbResolved =
-            (await getChatMediaDisplayUri(message.media_thumbnail_url)) ||
-            message.media_thumbnail_url;
+            (await getChatMediaDisplayUri(thumbResolved)) || thumbResolved;
         }
         const audioU =
           message.message_type === MessageType.AUDIO && message.media_url
@@ -898,26 +897,29 @@ function renderMediaContent(
       const thumbUri =
         resolved.thumb ||
         getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
+        message.media_thumbnail_url ||
         null;
-      const fullUri = imageUri || thumbUri || '';
-      const canShowFull =
-        !!fullUri &&
-        (fullUri.startsWith('http') ||
-          fullUri.startsWith('file:') ||
-          fullUri.startsWith('content:'));
+      const fullUri = imageUri || '';
+      const isDisplayableUri = (u: string | null | undefined) =>
+        !!u &&
+        (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
+      // ⚡ כמו וידאו: בועה מציגה thumb קטן; הקובץ המלא רק ב-MediaViewer
+      const bubbleUri =
+        (isDisplayableUri(thumbUri) ? thumbUri : null) ||
+        (isDisplayableUri(fullUri) ? fullUri : null) ||
+        '';
 
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9} disabled={message.is_uploading}>
           <View style={{ position: 'relative' }}>
-            {canShowFull ? (
+            {bubbleUri ? (
               <ExpoImage
-                source={{ uri: fullUri }}
-                placeholder={thumbUri && thumbUri !== fullUri ? { uri: thumbUri } : undefined}
+                source={{ uri: bubbleUri }}
                 style={[styles.mediaImage, { aspectRatio }, message.is_uploading && { opacity: 0.7 }]}
                 contentFit="cover"
-                transition={200}
+                transition={0}
                 cachePolicy="memory-disk"
-                recyclingKey={`${message.id}-${fullUri}`}
+                recyclingKey={`${message.id}-bubble-${bubbleUri}`}
               />
             ) : (
               <View style={[styles.mediaImage, styles.mediaImagePlaceholder, { aspectRatio }]}>

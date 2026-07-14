@@ -52,6 +52,39 @@ function warmImageCache(uris: string[]): void {
     });
 }
 
+/**
+ * יוצר thumbnail מקומי קטן לתמונות (כמו poster של וידאו) — לא חוסם את פתיחת הפריוויו.
+ * כשמוכן, מעדכן את selectedMedia כדי שהמודאל/בועה יציגו thumb מיידי.
+ */
+function attachLocalImageThumbs(
+  files: MediaFile[],
+  setMedia: React.Dispatch<React.SetStateAction<MediaFile[]>>,
+): void {
+  const needsThumb = files.filter((f) => f.type === 'image' && !f.thumbnail_url);
+  if (needsThumb.length === 0) return;
+
+  void Promise.all(
+    needsThumb.map(async (f) => {
+      const thumb = await chatMediaService.createLocalImageThumbnail(f.uri);
+      return thumb ? { id: f.id, thumb } : null;
+    }),
+  )
+    .then((results) => {
+      const byId = new Map<string, string>();
+      for (const r of results) {
+        if (r) byId.set(r.id, r.thumb);
+      }
+      if (byId.size === 0) return;
+      setMedia((prev) =>
+        prev.map((f) => (byId.has(f.id) ? { ...f, thumbnail_url: byId.get(f.id) } : f)),
+      );
+      warmImageCache([...byId.values()]);
+    })
+    .catch(() => {
+      /* best effort */
+    });
+}
+
 interface ChatInputProps {
   groupId: string;
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: ChatMessageType, metadata?: { waveformData?: number[];[key: string]: any }) => Promise<void>;
@@ -319,6 +352,10 @@ function ChatInputImpl({
         message_type: messageType,
         media_url: undefined,
         local_media_uri: mediaFile.uri,
+        // ⚡ thumb מקומי לבועה מיידית (כמו וידאו) — בלי decode של הקובץ המלא
+        media_thumbnail_url: mediaFile.thumbnail_url,
+        media_width: mediaFile.width,
+        media_height: mediaFile.height,
         is_uploading: true,
         upload_progress: 0,
         is_sending: true,
@@ -342,6 +379,13 @@ function ChatInputImpl({
 
       addOptimisticMediaMessage(optimisticMessage);
 
+      // אם ה-thumb עוד לא מוכן (שליחה מיידית) — יצירה ברקע ועדכון הבועה
+      if (mediaFile.type === 'image' && !mediaFile.thumbnail_url) {
+        void chatMediaService.createLocalImageThumbnail(mediaFile.uri).then((thumb) => {
+          if (thumb) updateOptimisticMessage(tempId, { media_thumbnail_url: thumb });
+        });
+      }
+
       setIsUploading(true);
       (async () => {
         try {
@@ -349,13 +393,17 @@ function ChatInputImpl({
             updateOptimisticMessage(tempId, { upload_progress: progress.progress });
           };
 
-          let uploadResult: { url: string | null; error: any };
+          let uploadResult: { url: string | null; error: any; thumbnail_url?: string | null };
           if (mediaFile.type === 'image') {
-            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress);
+            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress, {
+              localThumbnailUri: mediaFile.thumbnail_url,
+            });
           } else if (mediaFile.type === 'video') {
             uploadResult = await chatMediaService.uploadVideo(mediaFile.uri, groupId, onProgress);
           } else {
-            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress);
+            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress, {
+              localThumbnailUri: mediaFile.thumbnail_url,
+            });
           }
 
           if (uploadResult.error || !uploadResult.url) {
@@ -367,7 +415,12 @@ function ChatInputImpl({
             return;
           }
 
-          updateOptimisticMessage(tempId, { media_url: uploadResult.url, is_uploading: false, local_media_uri: undefined });
+          // משאירים media_thumbnail_url מקומי (אם יש) לבועה מיידית עד שהודעה אמיתית מגיעה
+          updateOptimisticMessage(tempId, {
+            media_url: uploadResult.url,
+            is_uploading: false,
+            local_media_uri: undefined,
+          });
 
           const metadata: Record<string, any> = { existing_optimistic_id: tempId };
           if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
@@ -416,6 +469,9 @@ function ChatInputImpl({
         message_type: messageType,
         media_url: undefined,
         local_media_uri: mediaFile.uri,
+        media_thumbnail_url: mediaFile.thumbnail_url,
+        media_width: mediaFile.width,
+        media_height: mediaFile.height,
         is_uploading: true,
         upload_progress: 0,
         is_sending: true,
@@ -438,6 +494,12 @@ function ChatInputImpl({
       };
 
       addOptimisticMediaMessage(optimisticMessage);
+
+      if (mediaFile.type === 'image' && !mediaFile.thumbnail_url) {
+        void chatMediaService.createLocalImageThumbnail(mediaFile.uri).then((thumb) => {
+          if (thumb) updateOptimisticMessage(itemTempId, { media_thumbnail_url: thumb });
+        });
+      }
     }
 
     setIsUploading(true);
@@ -452,11 +514,15 @@ function ChatInputImpl({
 
           let uploadResult: { url: string | null; error: any; thumbnail_url?: string | null;[key: string]: any };
           if (mediaFile.type === 'image') {
-            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress);
+            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress, {
+              localThumbnailUri: mediaFile.thumbnail_url,
+            });
           } else if (mediaFile.type === 'video') {
             uploadResult = await chatMediaService.uploadVideo(mediaFile.uri, groupId, onProgress);
           } else {
-            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress);
+            uploadResult = await chatMediaService.uploadImage(mediaFile.uri, groupId, onProgress, {
+              localThumbnailUri: mediaFile.thumbnail_url,
+            });
           }
 
           if (uploadResult.error || !uploadResult.url) {
@@ -468,8 +534,12 @@ function ChatInputImpl({
             return null;
           }
 
-          // עדכון במקום הסרה – מונע flicker
-          updateOptimisticMessage(itemTempId, { media_url: uploadResult.url, is_uploading: false, local_media_uri: undefined });
+          // עדכון במקום הסרה – מונע flicker; שומרים thumb מקומי לבועה
+          updateOptimisticMessage(itemTempId, {
+            media_url: uploadResult.url,
+            is_uploading: false,
+            local_media_uri: undefined,
+          });
 
           let messageType: ChatMessageType;
           switch (mediaFile.type) {
@@ -549,11 +619,12 @@ function ChatInputImpl({
           width: asset.width,
           height: asset.height,
         }));
-        // ⚡ חימום cache לפני ה-render כדי שהתצוגה תהיה מיידית לכל התמונות שנבחרו
-        warmImageCache(mediaFiles.map((f) => f.uri));
-        // ⚡ Show preview IMMEDIATELY
+        // ⚡ פריוויו מיידי — בלי לחכות ל-decode/thumb
         setSelectedMedia(mediaFiles);
         setShowMediaPreview(true);
+        warmImageCache(mediaFiles.map((f) => f.uri));
+        // ⚡ thumb מקומי ברקע (כמו poster לווידאו) — אז הפריוויו/בועה מרגישים מיידיים
+        attachLocalImageThumbs(mediaFiles, setSelectedMedia);
       }
     } catch (error) {
       Alert.alert('שגיאה', 'לא הצלחנו לבחור תמונה');
@@ -592,12 +663,14 @@ function ChatInputImpl({
           type: 'image',
           name: asset.fileName || 'photo.jpg',
           size: asset.fileSize,
+          width: asset.width,
+          height: asset.height,
         };
-        // ⚡ חימום cache לפני ה-render כדי שהתצוגה תהיה מיידית
-        warmImageCache([mediaFile.uri]);
-        // Set media and show preview immediately
+        // ⚡ פריוויו מיידי
         setSelectedMedia([mediaFile]);
         setShowMediaPreview(true);
+        warmImageCache([mediaFile.uri]);
+        attachLocalImageThumbs([mediaFile], setSelectedMedia);
       }
     } catch (error) {
       Alert.alert('שגיאה', 'לא הצלחנו לצלם תמונה');

@@ -1718,7 +1718,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             );
             break;
           default:
-            uploadResult = await chatMediaService.uploadImage(failed.local_media_uri, groupId, onProgress);
+            uploadResult = await chatMediaService.uploadImage(
+              failed.local_media_uri,
+              groupId,
+              onProgress,
+              {
+                localThumbnailUri:
+                  failed.media_thumbnail_url &&
+                  (failed.media_thumbnail_url.startsWith('file:') ||
+                    failed.media_thumbnail_url.startsWith('content:'))
+                    ? failed.media_thumbnail_url
+                    : null,
+              },
+            );
         }
 
         if (uploadResult.error || !uploadResult.url) {
@@ -1727,8 +1739,13 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         mediaUrl = uploadResult.url;
         if (uploadResult.thumbnail_url) {
-          thumbUrl = uploadResult.thumbnail_url;
           metadata.media_thumbnail_url = uploadResult.thumbnail_url;
+          // שומרים thumb מקומי להצגה מיידית; הנתיב בשרת נשמר ב-metadata לנתיב קבוע
+          const keepLocal =
+            !!failed.media_thumbnail_url &&
+            (failed.media_thumbnail_url.startsWith('file:') ||
+              failed.media_thumbnail_url.startsWith('content:'));
+          if (!keepLocal) thumbUrl = uploadResult.thumbnail_url;
         }
 
         setMessages(prev => prev.map(m =>

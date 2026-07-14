@@ -299,18 +299,27 @@ export function useChatMessageScroll({
   );
 
   const scrollToBottom = useCallback(
-    (animated = false) => {
+    (animated = true) => {
       const list = listRef.current;
       if (!list || messagesRef.current.length === 0) return;
       programmaticScrollRef.current = true;
       const before = distFromBottomRef.current;
       logger.debug('useChatMessageScroll', `scrollToBottom distBefore=${before.toFixed(0)}`);
       forceInvertedListToBottom(list, animated);
-      setTimeout(() => forceInvertedListToBottom(listRef.current ?? list, false), 50);
+      const settleMs = animated ? 380 : 50;
       setTimeout(() => {
-        forceInvertedListToBottom(listRef.current ?? list, false);
+        const current = listRef.current ?? list;
+        // fallback קשיח רק אם האנימציה לא הגיעה לתחתית
+        if (distFromBottomRef.current > 80) {
+          forceInvertedListToBottom(current, false);
+        }
+      }, settleMs);
+      setTimeout(() => {
+        if (distFromBottomRef.current > 80) {
+          forceInvertedListToBottom(listRef.current ?? list, false);
+        }
         programmaticScrollRef.current = false;
-      }, 220);
+      }, animated ? 480 : 220);
     },
     [distFromBottomRef, listRef, messagesRef, programmaticScrollRef]
   );

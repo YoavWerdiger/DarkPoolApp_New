@@ -21,6 +21,13 @@ export type ScrollToBottomRetryOptions = {
 };
 
 const BOTTOM_REACHED_PX = 80;
+/** זמן לשקיעת אנימציית native לפני בדיקת הצלחה / fallback */
+const ANIMATED_SETTLE_MS = 380;
+/** ניסיונות קשיחים אחרי ש-animated נכשל */
+const HARD_FALLBACK_ATTEMPTS = 6;
+
+/** מבטל timers של גלילה קודמת (לחיצה כפולה / שליחה באמצע אנימציה) */
+let scrollGeneration = 0;
 
 /**
  * inverted FlatList: data[0]=חדש, offset 0 = תחתית ויזואלית.
@@ -44,9 +51,13 @@ function isNearBottom(refs: ScrollRefs): boolean {
   return false;
 }
 
+function maxOffsetOf(refs: ScrollRefs): number {
+  return Math.max(0, refs.contentHeightRef.current - refs.layoutHeightRef.current);
+}
+
 /**
- * גלילה לתחתית עם ניסיונות — בלי jiggle/scrollToIndex (נלחמים זה בזה).
- * אל תאפסו distFromBottom / אל תעשו setState לפני הקריאה.
+ * גלילה לתחתית — animated נעים כברירת מחדל למשתמש; fallback ל-animated:false רק אם האנימציה לא הגיעה.
+ * בלי jiggle / בלי לקטוע אנימציה ב-RAF הבא.
  */
 export function scrollChatListToBottom(
   refs: ScrollRefs,
@@ -55,12 +66,13 @@ export function scrollChatListToBottom(
   _maxOffsetHint?: number,
   retryOptions?: ScrollToBottomRetryOptions,
 ): number {
+  const gen = ++scrollGeneration;
   const list = refs.listRef.current;
   const startDist = retryOptions?.startDist ?? refs.getDistFromBottom?.() ?? -1;
 
   if (!list || messageCount <= 0) {
     retryOptions?.onDone?.({
-      maxOffset: Math.max(0, refs.contentHeightRef.current - refs.layoutHeightRef.current),
+      maxOffset: maxOffsetOf(refs),
       reachedBottom: false,
     });
     return 0;
@@ -68,31 +80,36 @@ export function scrollChatListToBottom(
 
   if (!retryOptions) {
     forceInvertedListToBottom(list, animated);
-    requestAnimationFrame(() => {
-      const again = refs.listRef.current;
-      if (again) forceInvertedListToBottom(again, false);
-    });
+    if (animated) {
+      setTimeout(() => {
+        if (gen !== scrollGeneration) return;
+        if (isNearBottom(refs)) return;
+        const again = refs.listRef.current;
+        if (again) forceInvertedListToBottom(again, false);
+      }, ANIMATED_SETTLE_MS);
+    } else {
+      requestAnimationFrame(() => {
+        if (gen !== scrollGeneration) return;
+        const again = refs.listRef.current;
+        if (again) forceInvertedListToBottom(again, false);
+      });
+    }
     return 0;
   }
 
-  const maxAttempts = retryOptions.maxAttempts ?? 12;
   const startEpoch = refs.getScrollEpoch?.() ?? 0;
   const needProof = startDist > BOTTOM_REACHED_PX;
   let attempts = 0;
   let finished = false;
 
   const finish = (reachedBottom: boolean) => {
-    if (finished) return;
+    if (finished || gen !== scrollGeneration) return;
     finished = true;
-    const maxOffset = Math.max(
-      0,
-      refs.contentHeightRef.current - refs.layoutHeightRef.current,
-    );
     logger.debug(
       'chatListScrollToBottom',
-      `done reached=${reachedBottom} attempts=${attempts} distBefore=${Number(startDist).toFixed(0)} distAfter=${(refs.getDistFromBottom?.() ?? -1).toFixed(0)}`,
+      `done reached=${reachedBottom} attempts=${attempts} animated=${animated} distBefore=${Number(startDist).toFixed(0)} distAfter=${(refs.getDistFromBottom?.() ?? -1).toFixed(0)}`,
     );
-    retryOptions.onDone?.({ maxOffset, reachedBottom });
+    retryOptions.onDone?.({ maxOffset: maxOffsetOf(refs), reachedBottom });
   };
 
   const canDeclareSuccess = (): boolean => {
@@ -103,8 +120,9 @@ export function scrollChatListToBottom(
     return epoch > startEpoch || dist < startDist - 40;
   };
 
-  const tick = () => {
-    if (finished) return;
+  /** retries קשיחים — רק אחרי שנכשל animated (או מצב לא-מונפש) */
+  const hardTick = () => {
+    if (finished || gen !== scrollGeneration) return;
     const current = refs.listRef.current;
     if (!current) {
       finish(false);
@@ -112,11 +130,57 @@ export function scrollChatListToBottom(
     }
 
     attempts += 1;
-    forceInvertedListToBottom(current, animated && attempts === 1);
+    forceInvertedListToBottom(current, false);
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (finished) return;
+        if (finished || gen !== scrollGeneration) return;
+        if (canDeclareSuccess()) {
+          finish(true);
+          return;
+        }
+        if (attempts >= HARD_FALLBACK_ATTEMPTS) {
+          forceInvertedListToBottom(current, false);
+          setTimeout(() => finish(canDeclareSuccess()), 40);
+          return;
+        }
+        setTimeout(hardTick, 40 + attempts * 20);
+      });
+    });
+  };
+
+  if (animated) {
+    // ניסיון אחד חלק — מחכים שישקע לפני fallback (לא לקטוע בפריים הבא)
+    forceInvertedListToBottom(list, true);
+    attempts = 1;
+    setTimeout(() => {
+      if (finished || gen !== scrollGeneration) return;
+      if (canDeclareSuccess()) {
+        finish(true);
+        return;
+      }
+      logger.debug('chatListScrollToBottom', 'animated miss → hard fallback');
+      hardTick();
+    }, ANIMATED_SETTLE_MS);
+    return 0;
+  }
+
+  // לא-מונפש: אמין לפתיחה / שליחה / pin
+  const maxAttempts = retryOptions.maxAttempts ?? 12;
+  const tick = () => {
+    if (finished || gen !== scrollGeneration) return;
+    const current = refs.listRef.current;
+    if (!current) {
+      finish(false);
+      return;
+    }
+
+    attempts += 1;
+    forceInvertedListToBottom(current, false);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (finished || gen !== scrollGeneration) return;
         if (canDeclareSuccess()) {
           finish(true);
           return;

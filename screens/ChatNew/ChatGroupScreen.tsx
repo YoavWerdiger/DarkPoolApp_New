@@ -641,7 +641,7 @@ export default function ChatGroupScreen() {
   const applyInitialOpenScrollRef = useRef(applyInitialOpenScroll);
   applyInitialOpenScrollRef.current = applyInitialOpenScroll;
 
-  const scrollToBottom = useCallback((animated: boolean = false) => {
+  const scrollToBottom = useCallback((animated: boolean = true) => {
     const count = displayMessages.length;
     const list = listRef.current;
     const distBefore = distFromBottomRef.current;
@@ -653,16 +653,18 @@ export default function ChatGroupScreen() {
 
     if (count === 0 || !list) return;
 
-    pinScrollToBottomRef.current = true;
+    // pin מיידי רק בלי אנימציה — contentSize pin עם animated:false קוטע גלילה חלקה
+    pinScrollToBottomRef.current = !animated;
     programmaticScrollRef.current = true;
     userScrolledUpRef.current = false;
     pendingScrollAfterSendRef.current = false;
     // חוסם עדכון FAB בזמן הגלילה — בלי setState לפני scroll (re-render מבטל jump ב-inverted)
-    ignoreFabUntilRef.current = Date.now() + 1500;
+    // animated: חלון ארוך יותר עד שהאנימציה שוקעת + fallback אפשרי
+    ignoreFabUntilRef.current = Date.now() + (animated ? 2200 : 1500);
     blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
 
     scrollChatListToBottom(listScrollRefs, count, animated, undefined, {
-      maxAttempts: 18,
+      maxAttempts: animated ? 8 : 18,
       startDist: distBefore,
       onDone: ({ reachedBottom }) => {
         const distAfter = distFromBottomRef.current;
@@ -670,6 +672,7 @@ export default function ChatGroupScreen() {
           'ChatGroupScreen',
           `SCROLL_RESULT done reached=${reachedBottom} distBefore=${distBefore.toFixed(0)} distAfter=${distAfter.toFixed(0)}`,
         );
+        pinScrollToBottomRef.current = true;
         if (reachedBottom || distAfter <= SCROLL_AT_BOTTOM_PX) {
           scrollYRef.current = 0;
           distFromBottomRef.current = 0;
@@ -690,7 +693,7 @@ export default function ChatGroupScreen() {
       pinScrollToBottomRef.current = false;
       programmaticScrollRef.current = false;
       pinScrollClearTimerRef.current = null;
-    }, 4000);
+    }, animated ? 2800 : 4000);
   }, [confirmChatReadAtBottom, displayMessages.length, hideScrollFab, listScrollRefs]);
 
   useEffect(() => {
@@ -1672,7 +1675,7 @@ export default function ChatGroupScreen() {
           activeOpacity={0.75}
           onPress={() => {
             void HapticFeedback.impactLight();
-            scrollToBottom(false);
+            scrollToBottom(true);
           }}
           hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
           accessibilityRole="button"

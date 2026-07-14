@@ -443,9 +443,7 @@ function ChatMessage({
   ).current;
   const fadeAnim = useRef(new Animated.Value(isNewMessage ? 0 : 1)).current;
   const slideAnim = useRef(new Animated.Value(isNewMessage ? 8 : 0)).current;
-  const entryScale = useRef(new Animated.Value(isMe ? 0.94 : 1)).current;
   const hasAnimated = useRef(false);
-  const hasEntryAnimated = useRef(false);
 
   useEffect(() => {
     if (!isNewMessage || hasAnimated.current) return;
@@ -468,18 +466,6 @@ function ChatMessage({
     ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (!isMe || hasEntryAnimated.current) return;
-    hasEntryAnimated.current = true;
-    entryScale.setValue(0.94);
-    Animated.spring(entryScale, {
-      toValue: 1,
-      speed: 24,
-      bounciness: 4,
-      useNativeDriver: true,
-    }).start();
-  }, [isMe, message.id, entryScale]);
 
   const swipeTranslateX = useSharedValue(0);
 
@@ -604,18 +590,16 @@ function ChatMessage({
   const timeText = format(new Date(message.created_at), 'HH:mm');
   const isSending = !!message.is_sending;
   // הודעות שלי – תמיד opacity 1 (מונע היעלמות כשמחליפים מ-temp ל-real)
+  // בלי scale/zoom בכניסה — קפיצה לריפליי מרנדרת בועות מחדש והזום נראה מיותר
   const effectiveOpacity = isMe ? 1 : fadeAnim;
   const effectiveTranslateY = isMe ? 0 : slideAnim;
-  const entryTransform = isMe
-    ? [{ translateY: 0 as const }, { scale: entryScale }]
-    : [{ translateY: effectiveTranslateY }];
 
   return (
     <Animated.View style={[
       styles.messageContainer,
       isMe ? styles.myMessage : styles.theirMessage,
       isHighlighted && styles.highlightedMessage,
-      { opacity: effectiveOpacity, transform: entryTransform },
+      { opacity: effectiveOpacity, transform: [{ translateY: effectiveTranslateY }] },
     ]}>
       {/* Avatar */}
       {!isMe && (showAvatar ? (

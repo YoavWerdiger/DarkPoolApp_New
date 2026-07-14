@@ -464,6 +464,9 @@ export default function ChatGroupScreen() {
           if (markInitialDone && reachedBottom) {
             initialScrollDoneRef.current = true;
           }
+          if (reachedBottom || distFromBottomRef.current <= SCROLL_AT_BOTTOM_PX) {
+            hideScrollFab();
+          }
           // הרשימה כבר נחתה בתחתית — אפשר לחשוף אותה בלי קפיצה גלויה
           requestRevealMessagesRef.current();
         },
@@ -478,7 +481,7 @@ export default function ChatGroupScreen() {
       programmaticScrollRef.current = false;
       pinScrollClearTimerRef.current = null;
     }, 4500);
-  }, [displayMessages.length, listScrollRefs]);
+  }, [displayMessages.length, hideScrollFab, listScrollRefs]);
 
   const applyScrollToBottomRef = useRef(applyScrollToBottom);
   applyScrollToBottomRef.current = applyScrollToBottom;
@@ -538,9 +541,10 @@ export default function ChatGroupScreen() {
     pinScrollToBottomRef.current = true;
     userScrolledUpRef.current = false;
     isAtBottomRef.current = true;
-    hideScrollFab();
+    ignoreFabUntilRef.current = Date.now() + 1200;
+    // לא hideScrollFab כאן — setState לפני scroll מבטל jump ב-inverted
     applyScrollToBottom(false);
-  }, [applyScrollToBottom, hideScrollFab]);
+  }, [applyScrollToBottom]);
 
   /**
    * פתיחת צ'אט (WhatsApp-style):
@@ -637,16 +641,14 @@ export default function ChatGroupScreen() {
   const applyInitialOpenScrollRef = useRef(applyInitialOpenScroll);
   applyInitialOpenScrollRef.current = applyInitialOpenScroll;
 
-  const scrollToBottom = useCallback((animated: boolean = true) => {
+  const scrollToBottom = useCallback((animated: boolean = false) => {
     const count = displayMessages.length;
     const list = listRef.current;
     const distBefore = distFromBottomRef.current;
 
-    // לוג קשיח לדיבאג אצל המשתמש (dev console)
-    console.log('[FAB_PRESS]', { distBefore, count, hasList: !!list, animated });
     logger.info(
       'ChatGroupScreen',
-      `FAB_PRESS distBefore=${distBefore.toFixed(0)} count=${count} hasList=${!!list}`,
+      `FAB_PRESS distBefore=${distBefore.toFixed(0)} count=${count} hasList=${!!list} animated=${animated}`,
     );
 
     if (count === 0 || !list) return;
@@ -655,44 +657,15 @@ export default function ChatGroupScreen() {
     programmaticScrollRef.current = true;
     userScrolledUpRef.current = false;
     pendingScrollAfterSendRef.current = false;
-    ignoreFabUntilRef.current = Date.now() + 600;
+    // חוסם עדכון FAB בזמן הגלילה — בלי setState לפני scroll (re-render מבטל jump ב-inverted)
+    ignoreFabUntilRef.current = Date.now() + 1500;
     blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
 
-    hideScrollFab();
-
-    // ישיר ופשוט — בלי lock / epoch מורכב
-    console.log('[SCROLL_CMD]', 'scrollToOffset(0)', { distBefore });
-    try {
-      list.scrollToOffset({ offset: 0, animated });
-    } catch (e) {
-      console.log('[SCROLL_CMD] threw', e);
-    }
-
-    const bump = (label: string) => {
-      const l = listRef.current;
-      if (!l) return;
-      try {
-        l.scrollToOffset({ offset: 0, animated: false });
-      } catch {
-        /* noop */
-      }
-      console.log('[SCROLL_RESULT]', label, {
-        dist: distFromBottomRef.current,
-        offsetY: scrollYRef.current,
-      });
-    };
-
-    requestAnimationFrame(() => bump('raf'));
-    setTimeout(() => bump('t50'), 50);
-    setTimeout(() => bump('t150'), 150);
-    setTimeout(() => bump('t350'), 350);
-
     scrollChatListToBottom(listScrollRefs, count, animated, undefined, {
-      maxAttempts: 12,
+      maxAttempts: 18,
       startDist: distBefore,
       onDone: ({ reachedBottom }) => {
         const distAfter = distFromBottomRef.current;
-        console.log('[SCROLL_RESULT] done', { reachedBottom, distBefore, distAfter });
         logger.info(
           'ChatGroupScreen',
           `SCROLL_RESULT done reached=${reachedBottom} distBefore=${distBefore.toFixed(0)} distAfter=${distAfter.toFixed(0)}`,
@@ -1337,7 +1310,7 @@ export default function ChatGroupScreen() {
       // אווטאר באחרונה בקבוצה (לפני newer אחר / סוף הרצף)
       const showAvatar =
         !isMe && (!newerMessage || newerMessage.sender_id !== item.sender_id);
-      // מרווח גדול בגבול מול older — Spacer ב-ChatListRow (לא margin; inverted+column-reverse)
+      // מרווח גדול בגבול מול older — מוחל כ-marginTop בתוך ChatMessage (inverted)
       const isAfterSenderChange =
         !!olderMessage && olderMessage.sender_id !== item.sender_id;
       const showDivider = shouldShowDateDivider(item, olderMessage);
@@ -1695,10 +1668,9 @@ export default function ChatGroupScreen() {
         <TouchableOpacity
           activeOpacity={0.75}
           onPress={() => {
-            console.log('[FAB_PRESS] TouchableOpacity');
-            logger.info('ChatGroupScreen', 'FAB_PRESS TouchableOpacity');
             void HapticFeedback.impactLight();
-            scrollToBottom(true);
+            // animated:false — אמין יותר על inverted FlatList ב-RN 0.81
+            scrollToBottom(false);
           }}
           hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
           accessibilityRole="button"

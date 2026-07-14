@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Users, Lock } from 'lucide-react-native';
 import { PollOption } from '../../services/pollService';
-import { chatPalette } from './chatDesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
 
 interface PollResultsProps {
   options: PollOption[];
@@ -11,122 +11,133 @@ interface PollResultsProps {
   totalVotes: number;
   multipleChoice: boolean;
   isLocked: boolean;
+  isMe?: boolean;
+  embeddedInBubble?: boolean;
 }
 
 export default function PollResults({
   options,
   userVotes,
   totalVotes,
-  multipleChoice,
-  isLocked
+  multipleChoice: _multipleChoice,
+  isMe = false,
+  embeddedInBubble = false,
 }: PollResultsProps) {
+  const tokens = useDesignTokens();
+  const lightOnBubble = embeddedInBubble && isMe;
+  const styles = useMemo(
+    () => createStyles(tokens, lightOnBubble),
+    [tokens, lightOnBubble],
+  );
+
   const getVotePercentage = (votesCount: number): number => {
     if (totalVotes === 0) return 0;
     return Math.round((votesCount / totalVotes) * 100);
   };
 
-  const getVoteColor = (votesCount: number): string => {
-    if (votesCount === 0) return 'rgba(255,255,255,0.2)';
-    const percentage = getVotePercentage(votesCount);
-    if (percentage > 50) return chatPalette.primary;
-    if (percentage > 25) return chatPalette.success;
-    if (percentage > 10) return chatPalette.warning;
-    return chatPalette.danger;
-  };
-
-  const isUserVoted = (optionId: string): boolean => {
-    return userVotes.includes(optionId);
-  };
-
-  const getVoteIcon = (optionId: string): string => {
-    if (!isUserVoted(optionId)) return '';
-    
-    if (multipleChoice) {
-      return 'checkmark-circle';
-    } else {
-      return 'radio-button-on';
-    }
-  };
-
   return (
-    <View className="mt-4">
-      {/* Results Header */}
-      <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-white font-bold text-lg">תוצאות ההצבעה</Text>
-        <View className="flex-row items-center">
-          <Users size={16} color={chatPalette.primary} strokeWidth={2} />
-          <Text className="text-primary text-sm mr-1">
-            {totalVotes} הצבעות
-          </Text>
-          {isLocked && (
-            <View className="flex-row items-center mr-2">
-              <Lock size={14} color="#ff6b6b" strokeWidth={2} />
-              <Text className="text-red-400 text-xs mr-1">נעול</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      {/* Results List */}
-      {options.map((option, index) => {
+    <View style={styles.container}>
+      {options.map((option) => {
         const percentage = getVotePercentage(option.votes_count);
-        const isVoted = isUserVoted(option.id);
-        const voteIcon = getVoteIcon(option.id);
-        
+        const isVoted = userVotes.includes(option.id);
+        const fillColor = lightOnBubble
+          ? isVoted
+            ? 'rgba(255,255,255,0.28)'
+            : 'rgba(255,255,255,0.12)'
+          : isVoted
+            ? 'rgba(0, 200, 5, 0.28)'
+            : 'rgba(255,255,255,0.08)';
+
         return (
-          <View key={option.id} className="mb-3">
-            {/* Option Row */}
-            <View className="flex-row items-center justify-between mb-2">
-              <View className="flex-row items-center flex-1">
-                {/* Vote Icon */}
-                {voteIcon && (
+          <View key={option.id} style={styles.row}>
+            <View style={[styles.barFill, { width: `${percentage}%`, backgroundColor: fillColor }]} />
+            <View style={styles.rowContent}>
+              <View style={styles.labelRow}>
+                {isVoted && (
                   <Ionicons
-                    name={voteIcon as any}
-                    size={20}
-                    color={chatPalette.primary}
-                    style={{ marginRight: 8 }}
+                    name="checkmark"
+                    size={14}
+                    color={lightOnBubble ? '#FFFFFF' : chatPalette.primary}
                   />
                 )}
-                
-                {/* Option Text */}
-                <Text className="text-white text-base flex-1" numberOfLines={2}>
+                <Text style={styles.optionText} numberOfLines={2}>
                   {option.text}
                 </Text>
               </View>
-              
-              {/* Vote Count & Percentage */}
-              <View className="items-end">
-                <Text className="text-white font-bold text-sm">
-                  {option.votes_count}
-                </Text>
-                <Text className="text-gray-400 text-xs">
-                  {percentage}%
-                </Text>
-              </View>
-            </View>
-
-            {/* Progress Bar */}
-            <View className="bg-[#1a1a1a] rounded-full h-2 overflow-hidden">
-              <View
-                className="h-full rounded-full"
-                style={{
-                  width: `${percentage}%`,
-                  backgroundColor: getVoteColor(option.votes_count)
-                }}
-              />
-            </View>
-
-            {/* Option Details */}
-            <View className="flex-row items-center justify-between mt-1">
-              <Text className="text-gray-400 text-xs">
-                {isVoted ? 'בחרת באפשרות זו' : 'לא בחרת'}
-              </Text>
-              
+              <Text style={styles.percent}>{percentage}%</Text>
             </View>
           </View>
         );
       })}
 
+      <Text style={styles.footer}>
+        {totalVotes} {totalVotes === 1 ? 'הצבעה' : 'הצבעות'}
+      </Text>
     </View>
   );
 }
+
+const createStyles = (
+  tokens: ReturnType<typeof useDesignTokens>,
+  lightOnBubble: boolean,
+) => {
+  const text = lightOnBubble ? '#FFFFFF' : tokens.colors.text.primary;
+  const muted = lightOnBubble ? 'rgba(255,255,255,0.5)' : tokens.colors.text.tertiary;
+  const trackBg = lightOnBubble ? 'rgba(0,0,0,0.14)' : 'rgba(255,255,255,0.04)';
+
+  return StyleSheet.create({
+    container: {
+      gap: 8,
+      direction: 'rtl',
+    },
+    row: {
+      position: 'relative',
+      borderRadius: 10,
+      overflow: 'hidden',
+      backgroundColor: trackBg,
+      minHeight: 40,
+      justifyContent: 'center',
+    },
+    barFill: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      start: 0,
+      borderRadius: 10,
+    },
+    rowContent: {
+      ...chatRtlRow,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      gap: 8,
+    },
+    labelRow: {
+      ...chatRtlRow,
+      alignItems: 'center',
+      flex: 1,
+      minWidth: 0,
+      gap: 6,
+    },
+    optionText: {
+      color: text,
+      fontSize: 15,
+      flex: 1,
+      ...chatRtlText,
+    },
+    percent: {
+      color: muted,
+      fontSize: tokens.typography.fontSize.sm,
+      fontWeight: tokens.typography.fontWeight.semibold,
+      minWidth: 34,
+      textAlign: 'left',
+    },
+    footer: {
+      marginTop: 4,
+      color: muted,
+      fontSize: tokens.typography.fontSize.xs,
+      ...chatRtlText,
+    },
+  });
+};

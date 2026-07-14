@@ -32,6 +32,12 @@ import { chatPalette as COLORS } from './chatDesignTokens';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+/** Soft spring — WhatsApp / Photos-like zoom settle */
+const ZOOM_SPRING = { damping: 22, stiffness: 180, mass: 0.85 };
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 5;
+const DOUBLE_TAP_ZOOM = 2.5;
+
 function isDisplayableMediaUri(u: string | null | undefined): u is string {
   return !!u && (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
 }
@@ -255,23 +261,45 @@ export default function MediaViewer({
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
-  // Focal point saved at pinch start
+  // Pinch start snapshot (focal kept fixed under fingers)
   const pinchFocalX = useSharedValue(0);
   const pinchFocalY = useSharedValue(0);
   const pinchStartScale = useSharedValue(1);
   const pinchStartTranslateX = useSharedValue(0);
   const pinchStartTranslateY = useSharedValue(0);
+  const isPinching = useSharedValue(false);
 
-  const SPRING = { damping: 20, stiffness: 220 };
+  const clampTranslation = (tx: number, ty: number, s: number) => {
+    'worklet';
+    if (s <= 1) return { x: 0, y: 0 };
+    const maxX = (SCREEN_WIDTH * (s - 1)) / 2;
+    const maxY = (SCREEN_HEIGHT * (s - 1)) / 2;
+    return {
+      x: Math.max(-maxX, Math.min(maxX, tx)),
+      y: Math.max(-maxY, Math.min(maxY, ty)),
+    };
+  };
+
+  const commitTransform = (s: number, tx: number, ty: number, animate: boolean) => {
+    'worklet';
+    const clamped = clampTranslation(tx, ty, s);
+    if (animate) {
+      scale.value = withSpring(s, ZOOM_SPRING);
+      translateX.value = withSpring(clamped.x, ZOOM_SPRING);
+      translateY.value = withSpring(clamped.y, ZOOM_SPRING);
+    } else {
+      scale.value = s;
+      translateX.value = clamped.x;
+      translateY.value = clamped.y;
+    }
+    savedScale.value = s;
+    savedTranslateX.value = clamped.x;
+    savedTranslateY.value = clamped.y;
+  };
 
   const resetZoom = () => {
     'worklet';
-    scale.value = withSpring(1, SPRING);
-    translateX.value = withSpring(0, SPRING);
-    translateY.value = withSpring(0, SPRING);
-    savedScale.value = 1;
-    savedTranslateX.value = 0;
-    savedTranslateY.value = 0;
+    commitTransform(1, 0, 0, true);
   };
 
   // Reset when modal closes
@@ -283,103 +311,114 @@ export default function MediaViewer({
       savedScale.value = 1;
       savedTranslateX.value = 0;
       savedTranslateY.value = 0;
+      isPinching.value = false;
     }
   }, [visible]);
 
-  // Pinch gesture — tracks focal point for natural zoom origin
+  // Pinch — Apple Photos focal-point math (keeps point under fingers fixed)
+  // newTranslate = focalOffset * (1 - ratio) + startTranslate * ratio
+  // where ratio = newScale / startScale. Using event.scale alone + bare startTranslate jumps when already panned.
   const pinchGesture = Gesture.Pinch()
     .onStart((event) => {
       'worklet';
-      pinchStartScale.value = savedScale.value;
+      isPinching.value = true;
+      // Live values (not saved*) so mid-spring double-tap does not jump
+      pinchStartScale.value = scale.value;
       pinchStartTranslateX.value = translateX.value;
       pinchStartTranslateY.value = translateY.value;
-      // focal point relative to screen center
       pinchFocalX.value = event.focalX - SCREEN_WIDTH / 2;
       pinchFocalY.value = event.focalY - SCREEN_HEIGHT / 2;
     })
     .onUpdate((event) => {
       'worklet';
-      const newScale = Math.max(0.5, Math.min(6, pinchStartScale.value * event.scale));
+      if (event.numberOfPointers < 2) return;
+      const rawScale = pinchStartScale.value * event.scale;
+      // Soft rubber-band below 1 / above max while dragging
+      let newScale = rawScale;
+      if (rawScale < MIN_ZOOM) {
+        newScale = MIN_ZOOM - (MIN_ZOOM - rawScale) * 0.35;
+      } else if (rawScale > MAX_ZOOM) {
+        newScale = MAX_ZOOM + (rawScale - MAX_ZOOM) * 0.25;
+      }
+      // Guard divide-by-zero if start scale was cleared mid-gesture
+      const start = pinchStartScale.value || 1;
+      const scaleRatio = newScale / start;
+      const focalX = pinchFocalX.value;
+      const focalY = pinchFocalY.value;
       scale.value = newScale;
-      // Keep the focal point stationary as scale changes
-      const scaleRatio = event.scale;
-      translateX.value = pinchStartTranslateX.value + pinchFocalX.value * (1 - scaleRatio);
-      translateY.value = pinchStartTranslateY.value + pinchFocalY.value * (1 - scaleRatio);
+      translateX.value =
+        focalX * (1 - scaleRatio) + pinchStartTranslateX.value * scaleRatio;
+      translateY.value =
+        focalY * (1 - scaleRatio) + pinchStartTranslateY.value * scaleRatio;
     })
     .onEnd(() => {
       'worklet';
-      if (scale.value < 1) {
+      isPinching.value = false;
+      if (scale.value < MIN_ZOOM) {
         resetZoom();
-      } else if (scale.value > 5) {
-        scale.value = withSpring(5, SPRING);
-        savedScale.value = 5;
-        savedTranslateX.value = translateX.value;
-        savedTranslateY.value = translateY.value;
-      } else {
-        savedScale.value = scale.value;
-        savedTranslateX.value = translateX.value;
-        savedTranslateY.value = translateY.value;
+        return;
       }
+      const targetScale = Math.min(MAX_ZOOM, scale.value);
+      const clamped = clampTranslation(translateX.value, translateY.value, targetScale);
+      commitTransform(targetScale, clamped.x, clamped.y, true);
     });
 
-  // Pan gesture — only when zoomed, with spring boundary snap
+  // Pan — one finger only so it never fights pinch translation
   const panGesture = Gesture.Pan()
-    .minDistance(0)
-    .averageTouches(true)
+    .maxPointers(1)
+    .minDistance(8)
     .onStart(() => {
       'worklet';
+      if (isPinching.value) return;
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
     })
     .onUpdate((event) => {
       'worklet';
-      if (scale.value > 1) {
-        translateX.value = savedTranslateX.value + event.translationX;
-        translateY.value = savedTranslateY.value + event.translationY;
-      }
+      if (isPinching.value || scale.value <= 1) return;
+      translateX.value = savedTranslateX.value + event.translationX;
+      translateY.value = savedTranslateY.value + event.translationY;
     })
-    .onEnd(() => {
-      'worklet';
-      if (scale.value <= 1) {
-        translateX.value = withSpring(0, SPRING);
-        translateY.value = withSpring(0, SPRING);
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
-      } else {
-        const maxX = (SCREEN_WIDTH  * (scale.value - 1)) / 2;
-        const maxY = (SCREEN_HEIGHT * (scale.value - 1)) / 2;
-        const clampedX = Math.max(-maxX, Math.min(maxX, translateX.value));
-        const clampedY = Math.max(-maxY, Math.min(maxY, translateY.value));
-        translateX.value = withSpring(clampedX, SPRING);
-        translateY.value = withSpring(clampedY, SPRING);
-        savedTranslateX.value = clampedX;
-        savedTranslateY.value = clampedY;
-      }
-    });
-
-  // Double tap — zoom to 2.5x (spring) or reset
-  const doubleTapGesture = Gesture.Tap()
-    .numberOfTaps(2)
     .onEnd((event) => {
       'worklet';
-      if (savedScale.value > 1) {
+      if (isPinching.value) return;
+      if (scale.value <= 1) {
         resetZoom();
-      } else {
-        // Zoom centered on tap point
-        const fX = event.x - SCREEN_WIDTH  / 2;
-        const fY = event.y - SCREEN_HEIGHT / 2;
-        const targetScale = 2.5;
-        scale.value = withSpring(targetScale, SPRING);
-        translateX.value = withSpring(-fX * (targetScale - 1), SPRING);
-        translateY.value = withSpring(-fY * (targetScale - 1), SPRING);
-        savedScale.value = targetScale;
+        return;
       }
+      // Light momentum then clamp
+      const nextX = translateX.value + event.velocityX * 0.08;
+      const nextY = translateY.value + event.velocityY * 0.08;
+      const clamped = clampTranslation(nextX, nextY, scale.value);
+      translateX.value = withSpring(clamped.x, ZOOM_SPRING);
+      translateY.value = withSpring(clamped.y, ZOOM_SPRING);
+      savedTranslateX.value = clamped.x;
+      savedTranslateY.value = clamped.y;
+      savedScale.value = scale.value;
     });
 
-  // Pinch + pan simultaneously; doubleTap exclusive (takes priority)
-  const composedGesture = Gesture.Exclusive(
-    doubleTapGesture,
-    Gesture.Simultaneous(pinchGesture, panGesture)
+  // Double tap — spring zoom in on tap point / spring zoom out
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .maxDuration(280)
+    .onEnd((event) => {
+      'worklet';
+      if (scale.value > 1.05) {
+        resetZoom();
+        return;
+      }
+      const fX = event.x - SCREEN_WIDTH / 2;
+      const fY = event.y - SCREEN_HEIGHT / 2;
+      const nextX = -fX * (DOUBLE_TAP_ZOOM - 1);
+      const nextY = -fY * (DOUBLE_TAP_ZOOM - 1);
+      commitTransform(DOUBLE_TAP_ZOOM, nextX, nextY, true);
+    });
+
+  // Simultaneous: pinch+pan coexist; double-tap recognized without Exclusive delay on pan
+  const composedGesture = Gesture.Simultaneous(
+    pinchGesture,
+    panGesture,
+    doubleTapGesture
   );
 
   const imageAnimatedStyle = useAnimatedStyle(() => ({
@@ -469,14 +508,16 @@ export default function MediaViewer({
                 </View>
               ) : (
                 <GestureDetector gesture={composedGesture}>
-                  <Animated.Image
-                    source={{ uri: displayUri }}
-                    style={[styles.fullImage, imageAnimatedStyle]}
-                    resizeMode="contain"
-                    onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
-                    onLoadEnd={() => setIsLoading(false)}
-                    onError={() => { setIsLoading(false); setLoadError(true); }}
-                  />
+                  <Animated.View style={styles.fullImage} collapsable={false}>
+                    <Animated.Image
+                      source={{ uri: displayUri }}
+                      style={[StyleSheet.absoluteFillObject, imageAnimatedStyle]}
+                      resizeMode="contain"
+                      onLoadStart={() => { setIsLoading(true); setLoadError(false); }}
+                      onLoadEnd={() => setIsLoading(false)}
+                      onError={() => { setIsLoading(false); setLoadError(true); }}
+                    />
+                  </Animated.View>
                 </GestureDetector>
               )}
             </>

@@ -41,7 +41,10 @@ import { he } from 'date-fns/locale';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
-import { scrollChatListToBottom } from '../../utils/chatListScrollToBottom';
+import {
+  forceInvertedListToBottom,
+  scrollChatListToBottom,
+} from '../../utils/chatListScrollToBottom';
 
 // ── Skeleton bubble — shown while messages are loading ──────────────────────
 const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; width: DimensionValue; delay: number }) => {
@@ -378,6 +381,7 @@ export default function ChatGroupScreen() {
     handleScrollToIndexFailed,
     handleContentSizeChange,
     onMessageCellLayout,
+    getItemLayout,
     scrollToMessageInView,
     queueScrollToMessage,
   } = useChatMessageScroll({
@@ -636,12 +640,13 @@ export default function ChatGroupScreen() {
     if (count === 0 || !list) return;
 
     scrollToBottomLockRef.current = true;
+    const distBefore = distFromBottomRef.current;
 
     logger.info(
       'ChatGroupScreen',
-      `scrollToBottom pressed animated=${animated} dist=${distFromBottomRef.current.toFixed(0)} maxOffset=${maxScrollOffsetRef.current.toFixed(0)} count=${count} hasList=${!!list}`,
+      `scrollToBottom pressed animated=${animated} dist=${distBefore.toFixed(0)} maxOffset=${maxScrollOffsetRef.current.toFixed(0)} count=${count} hasList=${!!list}`,
     );
-    ignoreFabUntilRef.current = Date.now() + 400;
+    ignoreFabUntilRef.current = Date.now() + 600;
     blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
     verboseScrollLogUntilRef.current = Date.now() + 3000;
 
@@ -650,15 +655,10 @@ export default function ChatGroupScreen() {
     userScrolledUpRef.current = false;
     pendingScrollAfterSendRef.current = false;
 
-    // תגובה מיידית — לא מחכים ל-onScroll (שעלול לא להגיע אחרי scrollToOffset)
+    // UI מיידי בלבד — לא מאפסים distFromBottomRef לפני שהגלילה באמת מצליחה
+    // (איפוס מוקדם גרם ל-retry לחשוב שהגענו לתחתית בלי לזוז)
     hideScrollFab();
-    scrollYRef.current = 0;
-    distFromBottomRef.current = 0;
-    isAtBottomRef.current = true;
-    list.scrollToOffset({ offset: 0, animated });
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-    });
+    forceInvertedListToBottom(list, animated);
 
     const releaseScrollLock = (reachedBottom: boolean) => {
       logger.info(
@@ -666,10 +666,15 @@ export default function ChatGroupScreen() {
         `scrollToBottom done dist=${distFromBottomRef.current.toFixed(0)} offsetY=${scrollYRef.current.toFixed(0)} atBottom=${isAtBottomRef.current} maxOffset=${maxScrollOffsetRef.current.toFixed(0)} reached=${reachedBottom}`,
       );
       if (reachedBottom) {
+        scrollYRef.current = 0;
+        distFromBottomRef.current = 0;
+        isAtBottomRef.current = true;
         hideScrollFab();
         void confirmChatReadAtBottom();
       } else {
-        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+        // ניסיון אחרון + עדיין מסתירים FAB (המשתמש לחץ); metrics יתעדכנו מ-onScroll
+        const still = listRef.current;
+        if (still) forceInvertedListToBottom(still, false);
         scrollYRef.current = 0;
         distFromBottomRef.current = 0;
         isAtBottomRef.current = true;
@@ -679,8 +684,8 @@ export default function ChatGroupScreen() {
     };
 
     const watchdog = setTimeout(() => {
-      releaseScrollLock(isAtBottomRef.current);
-    }, 2000);
+      releaseScrollLock(distFromBottomRef.current <= SCROLL_AT_BOTTOM_PX || isAtBottomRef.current);
+    }, 2500);
 
     scrollChatListToBottom(listScrollRefs, count, animated, undefined, {
       maxAttempts: 24,
@@ -1551,6 +1556,7 @@ export default function ChatGroupScreen() {
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           extraData={flatListExtraData}
+          getItemLayout={getItemLayout}
           ListFooterComponent={renderFooter}
             scrollEnabled
             bounces

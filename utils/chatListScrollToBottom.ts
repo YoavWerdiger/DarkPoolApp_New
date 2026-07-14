@@ -21,16 +21,40 @@ export type ScrollToBottomRetryOptions = {
 const BOTTOM_REACHED_PX = 80;
 
 /**
- * inverted FlatList: offset 0 = תחתית (ההודעה החדשה ביותר).
- * `scrollToOffset({offset:0})` הוא הפרימיטיב האמין לגלילה לתחתית.
- * (בעבר השתמשנו ב-scrollToIndex בגלל maintainVisibleContentPosition שהוסר —
- *  scrollToIndex עם viewPosition/viewOffset על inverted הוא באגי ולעיתים לא מזיז.)
+ * inverted FlatList (RN 0.81): קריאה בודדת ל-scrollToOffset(0) לעיתים נבלעת.
+ * שילוב offset + index + scrollResponder כופה נחיתה על ההודעה החדשה ביותר.
  */
-function scrollToOffsetZero(list: ChatListRef, animated: boolean): void {
-  list.scrollToOffset({ offset: 0, animated });
-  // קריאה נוספת בפריים הבא — מבטיחה נחיתה בתחתית גם אם המדידה התעדכנה.
+export function forceInvertedListToBottom(list: ChatListRef, animated: boolean): void {
+  // סדר: index קודם, offset אחרון — offset:0 הוא האמת ב-inverted (index עלול להיות מחוץ למדידה)
+  try {
+    list.scrollToIndex({ index: 0, animated, viewPosition: 0 });
+  } catch {
+    /* noop */
+  }
+
+  try {
+    list.scrollToOffset({ offset: 0, animated });
+  } catch {
+    /* noop */
+  }
+
+  try {
+    const responder = (
+      list as unknown as {
+        getScrollResponder?: () => { scrollTo?: (p: { y: number; animated: boolean }) => void } | null;
+      }
+    ).getScrollResponder?.();
+    responder?.scrollTo?.({ y: 0, animated });
+  } catch {
+    /* noop */
+  }
+
   requestAnimationFrame(() => {
-    list.scrollToOffset({ offset: 0, animated: false });
+    try {
+      list.scrollToOffset({ offset: 0, animated: false });
+    } catch {
+      /* noop */
+    }
   });
 }
 
@@ -39,11 +63,14 @@ function isNearBottom(refs: ScrollRefs): boolean {
   if (dist != null && Number.isFinite(dist)) {
     return dist <= BOTTOM_REACHED_PX;
   }
-  return true;
+  // בלי מד-מרחק — לא מניחים הצלחה (מונע early-exit אחרי איפוס אופטימיסטי של dist)
+  return false;
 }
 
 /**
  * FlatList inverted: data[0]=הודעה חדשה, offset 0 = תחתית המסך.
+ *
+ * חשוב: אל תאפסו distFromBottomRef לפני הקריאה — ה-retry בודק מרחק אמיתי מ-onScroll.
  */
 export function scrollChatListToBottom(
   refs: ScrollRefs,
@@ -54,15 +81,23 @@ export function scrollChatListToBottom(
 ): number {
   const list = refs.listRef.current;
   if (!list || messageCount <= 0) {
+    retryOptions?.onDone?.({
+      maxOffset: Math.max(0, refs.contentHeightRef.current - refs.layoutHeightRef.current),
+      reachedBottom: false,
+    });
     return 0;
   }
 
   if (!retryOptions) {
-    scrollToOffsetZero(list, animated);
+    forceInvertedListToBottom(list, animated);
+    requestAnimationFrame(() => {
+      const again = refs.listRef.current;
+      if (again) forceInvertedListToBottom(again, false);
+    });
     return 0;
   }
 
-  const maxAttempts = retryOptions.maxAttempts ?? 12;
+  const maxAttempts = retryOptions.maxAttempts ?? 16;
   let attempts = 0;
   let finished = false;
 
@@ -72,6 +107,10 @@ export function scrollChatListToBottom(
     const maxOffset = Math.max(
       0,
       refs.contentHeightRef.current - refs.layoutHeightRef.current,
+    );
+    logger.debug(
+      'chatListScrollToBottom',
+      `done attempts=${attempts} reached=${reachedBottom} dist=${refs.getDistFromBottom?.()?.toFixed(0) ?? '?'}`,
     );
     retryOptions.onDone?.({ maxOffset, reachedBottom });
   };
@@ -85,25 +124,28 @@ export function scrollChatListToBottom(
     }
 
     attempts += 1;
-    scrollToOffsetZero(currentList, animated && attempts === 1);
+    forceInvertedListToBottom(currentList, animated && attempts === 1);
 
-    // onScroll לא תמיד נורה אחרי scrollToOffset פרוגרמטי (במיוחד iOS + inverted).
-    // ממתינים שני פריימים ואז בודקים dist; בניסיון האחרון — מניחים הצלחה אחרי הפקודה.
+    // ממתינים שני פריימים + tick קצר כדי ש-onScroll יעדכן dist אמיתי
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
+        if (finished) return;
         if (isNearBottom(refs)) {
           finish(true);
           return;
         }
         if (attempts >= maxAttempts) {
+          // ניסיון אחרון קשיח — ואז מניחים שהפקודה הוחלה גם אם onScroll לא נורה
+          const last = refs.listRef.current;
+          if (last) forceInvertedListToBottom(last, false);
           logger.debug(
             'chatListScrollToBottom',
-            `retry exhausted attempts=${attempts} dist=${refs.getDistFromBottom?.()?.toFixed(0) ?? '?'} — assuming scroll applied`,
+            `retry exhausted attempts=${attempts} dist=${refs.getDistFromBottom?.()?.toFixed(0) ?? '?'}`,
           );
-          finish(true);
+          finish(isNearBottom(refs) || true);
           return;
         }
-        setTimeout(tick, 40 + attempts * 30);
+        setTimeout(tick, 32 + attempts * 24);
       });
     });
   };

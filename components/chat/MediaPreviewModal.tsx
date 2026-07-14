@@ -34,7 +34,7 @@ interface MediaPreviewModalProps {
 import { chatPalette as COLORS } from './chatDesignTokens';
 import ChatComposerBar from './ChatComposerBar';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { chatComposerSafeBottomInset, CHAT_COMPOSER_KEYBOARD_GAP } from './chatInputLayout';
+import { chatComposerSafeBottomInset } from './chatInputLayout';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useMediaZoomGestures } from './useMediaZoomGestures';
 
@@ -53,8 +53,9 @@ export default function MediaPreviewModal({
     [insets.bottom],
   );
   const composerInsetSV = useSharedValue(composerPaddingBottom);
-  const keyboardGapSV = useSharedValue(CHAT_COMPOSER_KEYBOARD_GAP);
+  const keyboardGapSV = useSharedValue(0); // צמוד למקלדת — בלי גאפ צף
   const composerDockTranslateY = useSharedValue(0);
+  const keyboardHeightSV = useSharedValue(0);
   const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
   
   const [localFiles, setLocalFiles] = useState(mediaFiles);
@@ -100,25 +101,42 @@ export default function MediaPreviewModal({
     {
       onMove: (event) => {
         'worklet';
+        const h = Math.max(0, event.height);
+        keyboardHeightSV.value = h;
+        const pad = h <= 0 ? composerInsetSV.value : 0;
         composerDockTranslateY.value =
-          event.height <= 0
-            ? 0
-            : -Math.max(0, event.height - composerInsetSV.value + keyboardGapSV.value);
+          h <= 0 ? 0 : -(h - pad + keyboardGapSV.value);
       },
       onEnd: (event) => {
         'worklet';
+        const h = Math.max(0, event.height);
+        keyboardHeightSV.value = h;
+        const pad = h <= 0 ? composerInsetSV.value : 0;
         composerDockTranslateY.value =
-          event.height <= 0
-            ? 0
-            : -Math.max(0, event.height - composerInsetSV.value + keyboardGapSV.value);
+          h <= 0 ? 0 : -(h - pad + keyboardGapSV.value);
       },
     },
     [],
   );
 
-  /** פס תחתון עולה עם המקלדת — כמו ChatComposerDock בצ'אט הרגיל */
-  const animatedComposerDockStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: composerDockTranslateY.value }],
+  /** צמוד למקלדת: בלי safe-area שקוף; רקע שחור רציף כשהמקלדת פתוחה */
+  const animatedComposerDockStyle = useAnimatedStyle(() => {
+    const h = keyboardHeightSV.value;
+    const pad = h <= 0 ? composerInsetSV.value : 0;
+    return {
+      transform: [{ translateY: composerDockTranslateY.value }],
+      paddingBottom: pad,
+      backgroundColor: '#000',
+    };
+  });
+
+  /** Blur עדין רק כשהמקלדת סגורה; כשפתוחה — אטום מלא כמו וואטסאפ */
+  const animatedComposerSurfaceStyle = useAnimatedStyle(() => ({
+    backgroundColor: keyboardHeightSV.value > 0 ? '#000' : 'rgba(0, 0, 0, 0.45)',
+  }));
+
+  const animatedComposerBlurStyle = useAnimatedStyle(() => ({
+    opacity: keyboardHeightSV.value > 0 ? 0 : 1,
   }));
 
   const dismissKeyboard = useCallback(() => {
@@ -163,6 +181,8 @@ export default function MediaPreviewModal({
       modalScaleAnim.setValue(0.9);
       modalOpacityAnim.setValue(0);
       resetZoomImmediate();
+      keyboardHeightSV.value = 0;
+      composerDockTranslateY.value = 0;
     }
   }, [visible, resetZoomImmediate]);
 
@@ -628,17 +648,16 @@ export default function MediaPreviewModal({
             </BlurView>
           </View>
 
-          {/* ── פס תחתון: composer מעל timeline; timeline בתחתון ── */}
-          <Animated.View
-            style={[
-              styles.bottomGlassBar,
-              { paddingBottom: composerPaddingBottom },
-              animatedComposerDockStyle,
-            ]}
-          >
+          {/* ── פס תחתון: composer צמוד למקלדת; glass כשסגור ── */}
+          <Animated.View style={[styles.bottomGlassBar, animatedComposerDockStyle]}>
             <View style={styles.composerDock}>
-              <BlurView intensity={80} tint="dark" style={styles.composerDockBlur} pointerEvents="none" />
-              <View style={styles.composerDockContent}>
+              <Animated.View
+                style={[styles.composerDockBlur, animatedComposerBlurStyle]}
+                pointerEvents="none"
+              >
+                <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
+              </Animated.View>
+              <Animated.View style={[styles.composerDockContent, animatedComposerSurfaceStyle]}>
                 <ChatComposerBar
                   value={captions[currentMedia.id] || ''}
                   onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
@@ -722,13 +741,18 @@ export default function MediaPreviewModal({
                     ))}
                   </ScrollView>
                 )}
-              </View>
+              </Animated.View>
             </View>
 
             {currentMedia?.type === 'video' && (
               <View style={styles.videoControlsDock}>
-                <BlurView intensity={80} tint="dark" style={styles.composerDockBlur} pointerEvents="none" />
-                <View style={styles.videoControlsContent}>
+                <Animated.View
+                  style={[styles.composerDockBlur, animatedComposerBlurStyle]}
+                  pointerEvents="none"
+                >
+                  <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
+                </Animated.View>
+                <Animated.View style={[styles.videoControlsContent, animatedComposerSurfaceStyle]}>
                   <View style={styles.videoControlsRow}>
                     <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
                       <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
@@ -746,7 +770,7 @@ export default function MediaPreviewModal({
                     </GestureDetector>
                     <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
                   </View>
-                </View>
+                </Animated.View>
               </View>
             )}
           </Animated.View>
@@ -801,13 +825,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  /** פס תחתון — blur/glass + אינפוט, עולה עם המקלדת */
+  /** פס תחתון — עולה עם המקלדת; רקע שחור רציף (בלי פערים שקופים) */
   bottomGlassBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     zIndex: 2,
+    backgroundColor: '#000',
+    overflow: 'hidden',
   },
   glassButton: {
     overflow: 'hidden',
@@ -890,7 +916,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   /** timeline בתחתית המסך — מתחת ל-composer */
   videoControlsDock: {
@@ -903,7 +928,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   sendBtnOuter: {
     width: 46,

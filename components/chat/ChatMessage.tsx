@@ -1913,13 +1913,13 @@ const createStyles = (tokens: any) => StyleSheet.create({
 
   avatarContainer: {
     marginRight: 6,
-    marginBottom: 2,
+    // בלי marginBottom — אחרת שורת other גבוהה יותר מ-me ויוצרת מרווח קטן שונה
+    alignSelf: 'flex-end',
   },
+  /** רק רוחב ליישור בועות consecutive בלי אווטאר — בלי height/margin אנכי */
   avatarSpacer: {
-    width: 26,
-    height: 26,
+    width: 24,
     marginRight: 6,
-    marginBottom: 2,
   },
   avatar: {
     width: 24,

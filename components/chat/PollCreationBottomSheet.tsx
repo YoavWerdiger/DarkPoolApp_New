@@ -425,14 +425,6 @@ export default function PollCreationBottomSheet({
               <Text style={styles.primaryButtonText}>צור סקר</Text>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleClose}
-            disabled={isCreating}
-            style={styles.secondaryButton}
-          >
-            <Text style={styles.secondaryButtonText}>ביטול</Text>
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </ChatBottomSheet>
@@ -698,18 +690,6 @@ const createStyles = (tokens: any, safeAreaBottom: number) => {
       flexDirection: 'row-reverse' as any,
       alignItems: 'center',
       gap: 8,
-    },
-    secondaryButton: {
-      height: 44,
-      borderRadius: 14,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'rgba(255,255,255,0.06)',
-    },
-    secondaryButtonText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: tokens.colors.text.secondary,
     },
   });
 };

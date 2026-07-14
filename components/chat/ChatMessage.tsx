@@ -655,7 +655,7 @@ function ChatMessage({
             ]}
           >
           {message.reply_to && (
-            <TouchableOpacity
+            <GHTouchableOpacity
               key={`reply-${message.id}-${replyTargetId}`}
               style={[styles.replyContainer, isMe ? styles.replyContainerMe : styles.replyContainerThem]}
               onPress={handleReplyJump}
@@ -673,7 +673,7 @@ function ChatMessage({
                   {getReplyPreviewText(message.reply_to)}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </GHTouchableOpacity>
           )}
 
           <TouchableOpacity

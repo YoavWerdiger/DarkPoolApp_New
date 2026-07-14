@@ -4,7 +4,7 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager } from 'react-native';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager } from 'react-native';
 import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock } from '../../components/chat/ChatComposerDock';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,7 +14,6 @@ import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
 
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
-import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { MAIN_SCREEN_HEADER_HP } from '../../components/ui/MainDrawerScreenHeader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 
@@ -42,7 +41,6 @@ import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
 import {
-  forceInvertedListToBottom,
   scrollChatListToBottom,
 } from '../../utils/chatListScrollToBottom';
 
@@ -109,7 +107,6 @@ export default function ChatGroupScreen() {
   const endReachedMomentumRef = useRef(true);
   const programmaticScrollRef = useRef(false);
   const ignoreFabUntilRef = useRef(0);
-  const scrollToBottomLockRef = useRef(false);
   /** חוסם גלילה אוטומטית ל-lastRead אחרי FAB / גלילה ידנית לתחתית */
   const blockUnreadAutoScrollUntilRef = useRef(0);
   const unreadAutoScrollAppliedForGroupRef = useRef<string | null>(null);
@@ -640,68 +637,76 @@ export default function ChatGroupScreen() {
   const applyInitialOpenScrollRef = useRef(applyInitialOpenScroll);
   applyInitialOpenScrollRef.current = applyInitialOpenScroll;
 
-  const scrollToBottom = useCallback((animated: boolean = false) => {
-    if (scrollToBottomLockRef.current) return;
+  const scrollToBottom = useCallback((animated: boolean = true) => {
     const count = displayMessages.length;
     const list = listRef.current;
-    if (count === 0 || !list) {
-      logger.debug('ChatGroupScreen', `scrollToBottom abort count=${count} hasList=${!!list}`);
-      return;
-    }
-
-    scrollToBottomLockRef.current = true;
     const distBefore = distFromBottomRef.current;
-    const epochBefore = scrollEpochRef.current;
 
+    // לוג קשיח לדיבאג אצל המשתמש (dev console)
+    console.log('[FAB_PRESS]', { distBefore, count, hasList: !!list, animated });
     logger.info(
       'ChatGroupScreen',
-      `scrollToBottom pressed animated=${animated} dist=${distBefore.toFixed(0)} epoch=${epochBefore} maxOffset=${maxScrollOffsetRef.current.toFixed(0)} count=${count}`,
+      `FAB_PRESS distBefore=${distBefore.toFixed(0)} count=${count} hasList=${!!list}`,
     );
-    ignoreFabUntilRef.current = Date.now() + 800;
-    blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
-    verboseScrollLogUntilRef.current = Date.now() + 3000;
+
+    if (count === 0 || !list) return;
 
     pinScrollToBottomRef.current = true;
     programmaticScrollRef.current = true;
     userScrolledUpRef.current = false;
     pendingScrollAfterSendRef.current = false;
+    ignoreFabUntilRef.current = Date.now() + 600;
+    blockUnreadAutoScrollUntilRef.current = Date.now() + 5000;
 
-    // UI מיידי — בלי לאפס dist (מונע false-positive ב-retry)
     hideScrollFab();
-    forceInvertedListToBottom(list, animated);
 
-    const releaseScrollLock = (reachedBottom: boolean) => {
-      const distAfter = distFromBottomRef.current;
-      logger.info(
-        'ChatGroupScreen',
-        `scrollToBottom done reached=${reachedBottom} distBefore=${distBefore.toFixed(0)} distAfter=${distAfter.toFixed(0)} epochΔ=${scrollEpochRef.current - epochBefore}`,
-      );
-      if (reachedBottom || distAfter <= SCROLL_AT_BOTTOM_PX) {
-        scrollYRef.current = 0;
-        distFromBottomRef.current = 0;
-        isAtBottomRef.current = true;
-        hideScrollFab();
-        void confirmChatReadAtBottom();
-      } else {
-        // נכשל — מחזירים FAB ומנסים שוב עם force
-        const still = listRef.current;
-        if (still) forceInvertedListToBottom(still, false);
-        showScrollBtnRef.current = true;
-        setShowScrollToBottomButton(true);
+    // ישיר ופשוט — בלי lock / epoch מורכב
+    console.log('[SCROLL_CMD]', 'scrollToOffset(0)', { distBefore });
+    try {
+      list.scrollToOffset({ offset: 0, animated });
+    } catch (e) {
+      console.log('[SCROLL_CMD] threw', e);
+    }
+
+    const bump = (label: string) => {
+      const l = listRef.current;
+      if (!l) return;
+      try {
+        l.scrollToOffset({ offset: 0, animated: false });
+      } catch {
+        /* noop */
       }
-      scrollToBottomLockRef.current = false;
+      console.log('[SCROLL_RESULT]', label, {
+        dist: distFromBottomRef.current,
+        offsetY: scrollYRef.current,
+      });
     };
 
-    const watchdog = setTimeout(() => {
-      releaseScrollLock(distFromBottomRef.current <= SCROLL_AT_BOTTOM_PX);
-    }, 2800);
+    requestAnimationFrame(() => bump('raf'));
+    setTimeout(() => bump('t50'), 50);
+    setTimeout(() => bump('t150'), 150);
+    setTimeout(() => bump('t350'), 350);
 
     scrollChatListToBottom(listScrollRefs, count, animated, undefined, {
-      maxAttempts: 28,
+      maxAttempts: 12,
       startDist: distBefore,
       onDone: ({ reachedBottom }) => {
-        clearTimeout(watchdog);
-        releaseScrollLock(reachedBottom);
+        const distAfter = distFromBottomRef.current;
+        console.log('[SCROLL_RESULT] done', { reachedBottom, distBefore, distAfter });
+        logger.info(
+          'ChatGroupScreen',
+          `SCROLL_RESULT done reached=${reachedBottom} distBefore=${distBefore.toFixed(0)} distAfter=${distAfter.toFixed(0)}`,
+        );
+        if (reachedBottom || distAfter <= SCROLL_AT_BOTTOM_PX) {
+          scrollYRef.current = 0;
+          distFromBottomRef.current = 0;
+          isAtBottomRef.current = true;
+          hideScrollFab();
+          void confirmChatReadAtBottom();
+        } else {
+          showScrollBtnRef.current = true;
+          setShowScrollToBottomButton(true);
+        }
       },
     });
 
@@ -712,7 +717,7 @@ export default function ChatGroupScreen() {
       pinScrollToBottomRef.current = false;
       programmaticScrollRef.current = false;
       pinScrollClearTimerRef.current = null;
-    }, 5000);
+    }, 4000);
   }, [confirmChatReadAtBottom, displayMessages.length, hideScrollFab, listScrollRefs]);
 
   useEffect(() => {
@@ -1524,7 +1529,7 @@ export default function ChatGroupScreen() {
   );
 
   const chatMainColumn = (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, position: 'relative' }}>
       {/* Safe area top spacer + Header */}
       <View style={{ paddingTop: insets.top + 4, paddingBottom: 2 }}>
         {renderHeader()}
@@ -1573,7 +1578,7 @@ export default function ChatGroupScreen() {
           keyboardShouldPersistTaps="handled"
           initialNumToRender={10}
             maxToRenderPerBatch={8}
-          windowSize={9}
+          windowSize={21}
           updateCellsBatchingPeriod={50}
             removeClippedSubviews={false}
             onEndReached={() => {
@@ -1674,50 +1679,46 @@ export default function ChatGroupScreen() {
             </View>
           )}
         </View>
-
-        {showScrollToBottomButton && !keyboardShown && (
-          <View style={styles.scrollFabOverlay} pointerEvents="box-none">
-            <View style={styles.scrollFabButtonWrap} pointerEvents="auto">
-              <Pressable
-                onPress={() => {
-                  logger.info('ChatGroupScreen', 'scrollFab onPress');
-                  void HapticFeedback.impactLight();
-                  scrollToBottom(false);
-                }}
-                hitSlop={14}
-                accessibilityRole="button"
-                accessibilityLabel="גלול להודעות האחרונות"
-                style={styles.scrollFabPressable}
-              >
-                <View pointerEvents="none">
-                  <DayNavBlurButton
-                    size={36}
-                    glassIntensity="medium"
-                    accessibilityLabel="גלול להודעות האחרונות"
-                  >
-                    <Ionicons
-                      name="chevron-down"
-                      size={18}
-                      color={DesignTokens.colors.text.primary}
-                    />
-                  </DayNavBlurButton>
-                </View>
-              </Pressable>
-              {(initialUnreadInfo?.count ?? 0) > 0 && (
-                <View style={styles.scrollBadge} pointerEvents="none">
-                  <Text style={styles.scrollBadgeText}>
-                    {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
       </View>
 
       <ChatComposerDock bottomInset={composerPaddingBottom}>
         {chatComposer}
       </ChatComposerDock>
+
+      {/* FAB מעל הקומפוזר ב-z-order — לא בתוך messagesArea (שעלול להיחתם/להיחסם) */}
+      {showScrollToBottomButton && !keyboardShown && (
+        <TouchableOpacity
+          activeOpacity={0.75}
+          onPress={() => {
+            console.log('[FAB_PRESS] TouchableOpacity');
+            logger.info('ChatGroupScreen', 'FAB_PRESS TouchableOpacity');
+            void HapticFeedback.impactLight();
+            scrollToBottom(true);
+          }}
+          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+          accessibilityRole="button"
+          accessibilityLabel="גלול להודעות האחרונות"
+          style={[
+            styles.scrollFabAbsolute,
+            { bottom: Math.max(composerHeight + 8, 80) },
+          ]}
+        >
+          <View style={styles.scrollFabCircle}>
+            <Ionicons
+              name="chevron-down"
+              size={20}
+              color={DesignTokens.colors.text.primary}
+            />
+          </View>
+          {(initialUnreadInfo?.count ?? 0) > 0 && (
+            <View style={styles.scrollBadge} pointerEvents="none">
+              <Text style={styles.scrollBadgeText}>
+                {initialUnreadInfo!.count > 99 ? '99+' : initialUnreadInfo!.count}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
 
     </View>
   );
@@ -2159,22 +2160,19 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 12,
   },
-  scrollFabOverlay: {
+  scrollFabAbsolute: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 12,
-    alignItems: 'flex-start',
-    paddingHorizontal: 14,
-    zIndex: 2000,
-    elevation: 20,
+    left: 14,
+    zIndex: 9999,
+    elevation: 30,
   },
-  scrollFabButtonWrap: {
-    position: 'relative',
-  },
-  scrollFabPressable: {
-    width: 36,
-    height: 36,
+  scrollFabCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(28, 32, 28, 0.92)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
     justifyContent: 'center',
   },

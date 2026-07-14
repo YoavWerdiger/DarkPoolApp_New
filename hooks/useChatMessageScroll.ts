@@ -1,17 +1,15 @@
 import { useCallback, useRef } from 'react';
-import { InteractionManager } from 'react-native';
-import { HapticFeedback } from '../utils/hapticFeedback';
 import { logger } from '../utils/logger';
+import { HapticFeedback } from '../utils/hapticFeedback';
 import type { ChatMessage } from '../types/chat.types';
 import {
   forceInvertedListToBottom,
-  scrollChatListToBottom,
   type ChatListRef,
 } from '../utils/chatListScrollToBottom';
 
 const DEFAULT_ITEM_HEIGHT = 96;
-const MAX_SCROLL_RETRIES = 20;
-const POST_SUCCESS_CORRECTIONS = 8;
+const MAX_FIND_RETRIES = 20;
+const JUMP_CORRECTIONS = 10;
 
 type LoadAroundFn = (messageId: string) => Promise<{ success: boolean; error?: string }>;
 
@@ -28,7 +26,10 @@ interface UseChatMessageScrollOptions {
   maxScrollOffsetRef?: React.MutableRefObject<number>;
 }
 
-/** FlatList inverted: index 0 = הודעה חדשה, scrollToOffset(0) = תחתית */
+/**
+ * FlatList inverted: index 0 = הודעה חדשה.
+ * קפיצה להודעה = רק scrollToOffset עם אומדן גובה (scrollToIndex על inverted ב-RN 0.81 לא אמין).
+ */
 export function useChatMessageScroll({
   listRef,
   messagesRef,
@@ -39,7 +40,6 @@ export function useChatMessageScroll({
   isMountedRef,
   loadMessagesAround,
   onHighlight,
-  maxScrollOffsetRef,
 }: UseChatMessageScrollOptions) {
   const pendingScrollIdRef = useRef<string | null>(null);
   const scrollRetryRef = useRef(0);
@@ -74,95 +74,59 @@ export function useChatMessageScroll({
     [messagesRef]
   );
 
-  const estimateOffsetForIndex = useCallback((index: number) => {
-    const msgs = messagesRef.current;
-    let offset = 0;
-    for (let i = 0; i < index; i++) {
-      const id = msgs[i]?.id;
-      offset += id ? itemHeightsRef.current.get(id) ?? averageItemHeightRef.current : averageItemHeightRef.current;
-    }
-    return Math.max(0, offset);
-  }, [messagesRef]);
-
-  const itemLengthAt = useCallback(
+  const estimateOffsetForIndex = useCallback(
     (index: number) => {
-      const id = messagesRef.current[index]?.id;
-      return id
-        ? itemHeightsRef.current.get(id) ?? averageItemHeightRef.current
-        : averageItemHeightRef.current;
+      const msgs = messagesRef.current;
+      let offset = 0;
+      for (let i = 0; i < index; i++) {
+        const id = msgs[i]?.id;
+        offset += id
+          ? itemHeightsRef.current.get(id) ?? averageItemHeightRef.current
+          : averageItemHeightRef.current;
+      }
+      return Math.max(0, offset);
     },
-    [messagesRef],
+    [messagesRef]
   );
 
   const targetOffsetForIndex = useCallback(
     (index: number, viewPosition: number) => {
       const raw = estimateOffsetForIndex(index);
-      const itemH = itemLengthAt(index);
+      const id = messagesRef.current[index]?.id;
+      const itemH = id
+        ? itemHeightsRef.current.get(id) ?? averageItemHeightRef.current
+        : averageItemHeightRef.current;
       const layoutH = layoutHeightRef.current;
       if (layoutH <= 0) return raw;
+      // ממקם את הפריט ב-viewPosition היחסי ב-viewport (אותה מערכת צירים כמו scrollToOffset)
       return Math.max(0, raw - layoutH * viewPosition + itemH * viewPosition);
     },
-    [estimateOffsetForIndex, itemLengthAt, layoutHeightRef],
+    [estimateOffsetForIndex, layoutHeightRef, messagesRef]
   );
 
-  /**
-   * גלילה אמינה לפריט ב-inverted FlatList.
-   * scrollToIndex לבד לעיתים "מצליח" בלי לזוז → offset הוא הפקודה המנצחת.
-   */
-  const scrollToIndexNow = useCallback(
-    (index: number, animated: boolean): void => {
+  const scrollToOffsetNow = useCallback(
+    (offset: number, animated: boolean, label: string) => {
       const list = listRef.current;
-      if (!list || index < 0) return;
-
-      const viewPosition = scrollViewPositionRef.current;
-      const offset = targetOffsetForIndex(index, viewPosition);
-
+      if (!list) return;
+      const before = distFromBottomRef.current;
       logger.debug(
         'useChatMessageScroll',
-        `scrollToIndexNow index=${index} offset=${offset.toFixed(0)} animated=${animated}`,
+        `SCROLL_CMD ${label} offset=${offset.toFixed(0)} animated=${animated} distBefore=${before.toFixed(0)}`,
       );
-
-      // קודם מקרבים עם offset גולמי (לפני חישוב viewPosition) — חשוב ל־virtualization
-      try {
-        list.scrollToOffset({ offset: estimateOffsetForIndex(index), animated: false });
-      } catch {
-        /* noop */
-      }
-
-      try {
-        list.scrollToIndex({ index, animated, viewPosition });
-      } catch {
-        /* noop */
-      }
-
       try {
         list.scrollToOffset({ offset, animated });
-      } catch {
-        /* noop */
+      } catch (e) {
+        logger.debug('useChatMessageScroll', `SCROLL_CMD threw: ${String(e)}`);
       }
-
-      try {
-        const responder = (
-          list as unknown as {
-            getNativeScrollRef?: () => { scrollTo?: (p: { y: number; animated: boolean }) => void } | null;
-            getScrollResponder?: () => { scrollTo?: (p: { y: number; animated: boolean }) => void } | null;
-          }
-        );
-        const native = responder.getNativeScrollRef?.() ?? responder.getScrollResponder?.();
-        native?.scrollTo?.({ y: offset, animated });
-      } catch {
-        /* noop */
-      }
-
       requestAnimationFrame(() => {
-        try {
-          listRef.current?.scrollToOffset({ offset, animated: false });
-        } catch {
-          /* noop */
-        }
+        const after = distFromBottomRef.current;
+        logger.debug(
+          'useChatMessageScroll',
+          `SCROLL_RESULT ${label} distAfter=${after.toFixed(0)}`,
+        );
       });
     },
-    [estimateOffsetForIndex, listRef, targetOffsetForIndex]
+    [distFromBottomRef, listRef]
   );
 
   const attemptScroll = useCallback(
@@ -172,9 +136,9 @@ export function useChatMessageScroll({
 
       const index = findMessageIndex(messageId);
       if (index === -1) {
-        if (scrollRetryRef.current < MAX_SCROLL_RETRIES) {
+        if (scrollRetryRef.current < MAX_FIND_RETRIES) {
           scrollRetryRef.current += 1;
-          setTimeout(() => attemptScroll(messageId, animated), 80 + scrollRetryRef.current * 40);
+          setTimeout(() => attemptScroll(messageId, animated), 60 + scrollRetryRef.current * 40);
         } else {
           pendingScrollIdRef.current = null;
           logger.warn('useChatMessageScroll', `Message ${messageId} not found after retries`);
@@ -182,7 +146,15 @@ export function useChatMessageScroll({
         return;
       }
 
-      scrollToIndexNow(index, animated && scrollRetryRef.current === 0);
+      const viewPosition = scrollViewPositionRef.current;
+      const offset = targetOffsetForIndex(index, viewPosition);
+
+      logger.debug(
+        'useChatMessageScroll',
+        `REPLY_JUMP index=${index} id=${messageId} offset=${offset.toFixed(0)} try=${scrollRetryRef.current}`,
+      );
+
+      scrollToOffsetNow(offset, animated && scrollRetryRef.current === 0, `jump[${index}]`);
 
       if (scrollHighlightRef.current && highlightAppliedForRef.current !== messageId) {
         highlightAppliedForRef.current = messageId;
@@ -190,42 +162,39 @@ export function useChatMessageScroll({
       }
 
       scrollRetryRef.current += 1;
-
-      if (scrollRetryRef.current < POST_SUCCESS_CORRECTIONS) {
-        setTimeout(() => attemptScroll(messageId, false), 50 + scrollRetryRef.current * 40);
+      if (scrollRetryRef.current < JUMP_CORRECTIONS) {
+        setTimeout(() => attemptScroll(messageId, false), 60 + scrollRetryRef.current * 35);
         return;
       }
 
       pendingScrollIdRef.current = null;
       scrollRetryRef.current = 0;
-      logger.debug('useChatMessageScroll', `jump done id=${messageId} index=${index}`);
+      logger.debug('useChatMessageScroll', `REPLY_JUMP done id=${messageId} index=${index}`);
     },
-    [findMessageIndex, flashHighlight, isMountedRef, scrollToIndexNow]
+    [
+      findMessageIndex,
+      flashHighlight,
+      isMountedRef,
+      scrollToOffsetNow,
+      targetOffsetForIndex,
+    ]
   );
 
   const handleScrollToIndexFailed = useCallback(
     (info: { index: number; averageItemLength: number }) => {
-      const list = listRef.current;
-      if (!list) return;
-
       averageItemHeightRef.current = Math.round(info.averageItemLength) || DEFAULT_ITEM_HEIGHT;
-      const offset = targetOffsetForIndex(info.index, scrollViewPositionRef.current);
+      const offset = Math.max(0, info.index * averageItemHeightRef.current);
       logger.debug(
         'useChatMessageScroll',
-        `onScrollToIndexFailed index=${info.index} avg=${info.averageItemLength} → offset=${offset.toFixed(0)}`,
+        `onScrollToIndexFailed index=${info.index} → offset=${offset}`,
       );
-      try {
-        list.scrollToOffset({ offset, animated: false });
-      } catch {
-        /* noop */
-      }
-
+      scrollToOffsetNow(offset, false, 'indexFailed');
       const pendingId = pendingScrollIdRef.current;
       if (pendingId) {
-        setTimeout(() => attemptScroll(pendingId, true), 80);
+        setTimeout(() => attemptScroll(pendingId, false), 80);
       }
     },
-    [attemptScroll, listRef, targetOffsetForIndex]
+    [attemptScroll, scrollToOffsetNow]
   );
 
   const queueScrollToMessage = useCallback(
@@ -234,7 +203,7 @@ export function useChatMessageScroll({
       animated = true,
       options?: { viewPosition?: number; highlight?: boolean },
     ) => {
-      scrollViewPositionRef.current = options?.viewPosition ?? 0.5;
+      scrollViewPositionRef.current = options?.viewPosition ?? 0.45;
       scrollHighlightRef.current = options?.highlight ?? true;
       pendingScrollIdRef.current = messageId;
       scrollRetryRef.current = 0;
@@ -245,21 +214,17 @@ export function useChatMessageScroll({
 
       logger.debug('useChatMessageScroll', `queueScrollToMessage id=${messageId}`);
 
-      // מיידי — לא מחכים ל-InteractionManager (עלול להיתקע אחרי gesture)
+      // מיידי + תיקונים — בלי InteractionManager (נתקע אחרי gesture)
       requestAnimationFrame(() => attemptScroll(messageId, animated));
       setTimeout(() => {
-        if (pendingScrollIdRef.current === messageId) {
-          attemptScroll(messageId, false);
-        }
-      }, 120);
-      InteractionManager.runAfterInteractions(() => {
-        if (pendingScrollIdRef.current === messageId) {
-          attemptScroll(messageId, false);
-        }
-      });
+        if (pendingScrollIdRef.current === messageId) attemptScroll(messageId, false);
+      }, 100);
+      setTimeout(() => {
+        if (pendingScrollIdRef.current === messageId) attemptScroll(messageId, false);
+      }, 280);
       setTimeout(() => {
         programmaticScrollRef.current = false;
-      }, 1200);
+      }, 1400);
     },
     [attemptScroll, programmaticScrollRef]
   );
@@ -275,7 +240,7 @@ export function useChatMessageScroll({
         highlight: options?.highlight ?? false,
       });
     },
-    [queueScrollToMessage, isMountedRef],
+    [queueScrollToMessage, isMountedRef]
   );
 
   const waitForMessageInList = useCallback(
@@ -296,28 +261,38 @@ export function useChatMessageScroll({
       if (!messageId || !isMountedRef.current) return;
 
       void HapticFeedback.selection();
-      logger.info('useChatMessageScroll', `handleJumpToMessage id=${messageId}`);
+      logger.info('useChatMessageScroll', `REPLY_PRESS id=${messageId}`);
 
       flashHighlight(messageId);
       highlightAppliedForRef.current = messageId;
 
       let index = findMessageIndex(messageId);
+      logger.debug(
+        'useChatMessageScroll',
+        `REPLY_PRESS indexInList=${index} total=${messagesRef.current.length}`,
+      );
 
       if (index === -1) {
         const result = await loadMessagesAround(messageId);
-        if (!result.success || !isMountedRef.current) return;
-
+        if (!result.success || !isMountedRef.current) {
+          logger.warn('useChatMessageScroll', `REPLY_PRESS loadAround failed id=${messageId}`);
+          return;
+        }
         index = await waitForMessageInList(messageId);
-        if (index === -1 || !isMountedRef.current) return;
+        if (index === -1 || !isMountedRef.current) {
+          logger.warn('useChatMessageScroll', `REPLY_PRESS still missing after load id=${messageId}`);
+          return;
+        }
       }
 
-      queueScrollToMessage(messageId, true, { highlight: true, viewPosition: 0.4 });
+      queueScrollToMessage(messageId, true, { highlight: true, viewPosition: 0.35 });
     },
     [
       findMessageIndex,
       flashHighlight,
       isMountedRef,
       loadMessagesAround,
+      messagesRef,
       queueScrollToMessage,
       waitForMessageInList,
     ]
@@ -326,62 +301,28 @@ export function useChatMessageScroll({
   const scrollToBottom = useCallback(
     (animated = true) => {
       const list = listRef.current;
-      const count = messagesRef.current.length;
-      if (!list || count === 0) return;
-
+      if (!list || messagesRef.current.length === 0) return;
       programmaticScrollRef.current = true;
-      const fromDist = distFromBottomRef.current;
-      logger.debug(
-        'useChatMessageScroll',
-        `scrollToBottom animated=${animated} count=${count} dist=${fromDist.toFixed(0)}`,
-      );
-
+      const before = distFromBottomRef.current;
+      logger.debug('useChatMessageScroll', `scrollToBottom distBefore=${before.toFixed(0)}`);
       forceInvertedListToBottom(list, animated);
-
-      InteractionManager.runAfterInteractions(() => {
-        const maxHint = maxScrollOffsetRef?.current;
-        scrollChatListToBottom(
-          {
-            listRef,
-            contentHeightRef,
-            layoutHeightRef,
-            getDistFromBottom: () => distFromBottomRef.current,
-          },
-          count,
-          animated,
-          maxHint,
-          {
-            maxAttempts: 12,
-            startDist: fromDist,
-            onDone: () => {
-              programmaticScrollRef.current = false;
-            },
-          },
-        );
-      });
+      setTimeout(() => forceInvertedListToBottom(list, false), 50);
+      setTimeout(() => {
+        forceInvertedListToBottom(list, false);
+        programmaticScrollRef.current = false;
+      }, 200);
     },
-    [
-      contentHeightRef,
-      distFromBottomRef,
-      layoutHeightRef,
-      listRef,
-      maxScrollOffsetRef,
-      messagesRef,
-      programmaticScrollRef,
-    ]
+    [distFromBottomRef, listRef, messagesRef, programmaticScrollRef]
   );
 
   const handleContentSizeChange = useCallback(() => {
     const pendingId = pendingScrollIdRef.current;
-    if (pendingId) {
-      attemptScroll(pendingId, true);
-    }
+    if (pendingId) attemptScroll(pendingId, false);
   }, [attemptScroll]);
 
   const onMessageCellLayout = useCallback((messageId: string, height: number) => {
     if (height <= 0) return;
     itemHeightsRef.current.set(messageId, height);
-
     const heights = Array.from(itemHeightsRef.current.values());
     if (heights.length > 0) {
       averageItemHeightRef.current = Math.round(
@@ -392,21 +333,12 @@ export function useChatMessageScroll({
 
   const getItemLayout = useCallback(
     (_data: ArrayLike<ChatMessage> | null | undefined, index: number) => {
-      const msgs = messagesRef.current;
-      let offset = 0;
-      for (let i = 0; i < index; i++) {
-        const id = msgs[i]?.id;
-        offset += id
-          ? itemHeightsRef.current.get(id) ?? averageItemHeightRef.current
-          : averageItemHeightRef.current;
-      }
-      const id = msgs[index]?.id;
-      const length = id
-        ? itemHeightsRef.current.get(id) ?? averageItemHeightRef.current
-        : averageItemHeightRef.current;
-      return { length, offset, index };
+      const length =
+        itemHeightsRef.current.get(messagesRef.current[index]?.id ?? '') ??
+        averageItemHeightRef.current;
+      return { length, offset: estimateOffsetForIndex(index), index };
     },
-    [messagesRef],
+    [estimateOffsetForIndex, messagesRef]
   );
 
   return {

@@ -21,13 +21,25 @@ import BottomSheet, {
   useBottomSheetClose,
   SHEET_MOTION_MS,
 } from '../ui/BottomSheet/BottomSheet';
+import {
+  SHEET_OPEN_TIMING,
+  SHEET_CLOSE_TIMING,
+  SHEET_SNAP_SPRING,
+} from '../ui/BottomSheet/sheetMotion';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
 
 export const CHAT_SHEET_BACKDROP_OPACITY = 0.4;
 export const CHAT_SHEET_WATERMARK_SCALE = 0.58;
-export { BOTTOM_SHEET_EDGE_HANDLE_HEIGHT, useBottomSheetClose, SHEET_MOTION_MS };
+export {
+  BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
+  useBottomSheetClose,
+  SHEET_MOTION_MS,
+  SHEET_OPEN_TIMING,
+  SHEET_CLOSE_TIMING,
+  SHEET_SNAP_SPRING,
+};
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 

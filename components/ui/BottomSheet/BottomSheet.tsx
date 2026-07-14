@@ -8,7 +8,6 @@ import Animated, {
   interpolate,
   Extrapolate,
   runOnJS,
-  Easing,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,46 +18,23 @@ import { BottomSheetProps } from './BottomSheet.types';
 import { createStyles } from './BottomSheet.styles';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import * as NavigationBar from 'expo-navigation-bar';
+import {
+  SHEET_OPEN_TIMING,
+  SHEET_CLOSE_TIMING,
+  FIT_CONTENT_OPEN_TIMING,
+  FIT_CONTENT_HEIGHT_TIMING,
+  SHEET_SNAP_SPRING,
+} from './sheetMotion';
 
 const SHEET_SURFACE_COLOR = '#0A0E0A';
 const NAV_BAR_TRANSPARENT = '#00000000';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DEFAULT_SNAP_POINTS = [0.5];
-// שיט רגיל — snap מהיר
-const SPRING_CONFIG = {
-  damping: 24,
-  stiffness: 280,
-  mass: 0.4,
-};
-// fitContent — חזרה ל-snap אחרי גרירה
-const SPRING_CONFIG_SNAP = {
-  damping: 30,
-  stiffness: 200,
-  mass: 0.55,
-};
-/** סגירה — כל השיטים */
-const SHEET_MOTION_MS = 280;
-const SHEET_CLOSE_TIMING = {
-  duration: SHEET_MOTION_MS,
-  easing: Easing.in(Easing.cubic),
-};
-/** @deprecated alias — לתאימות cache / worklets ישנים */
-const FIT_CONTENT_CLOSE_TIMING = SHEET_CLOSE_TIMING;
-/** פתיחה — כל השיטים (הפוך מהסגירה) */
-const SHEET_OPEN_TIMING = {
-  duration: SHEET_MOTION_MS,
-  easing: Easing.out(Easing.cubic),
-};
-/** @deprecated alias */
-const FIT_CONTENT_OPEN_TIMING = SHEET_OPEN_TIMING;
-/** fitContent — התאמת גובה אחרי onLayout */
-const FIT_CONTENT_HEIGHT_TIMING = {
-  duration: 220,
-  easing: Easing.out(Easing.cubic),
-};
 const CLOSE_THRESHOLD = 88;
 const VELOCITY_THRESHOLD = 650;
+/** התעלמות משינויי גובה זעירים אחרי מדידה (מונע "קפיצה" בסוף פתיחה) */
+const FIT_CONTENT_HEIGHT_EPS = 2;
 /** handle + padding ב-edgeToEdge (paddingTop 14 + margins + handle 4 + paddingBottom 4) */
 export const BOTTOM_SHEET_EDGE_HANDLE_HEIGHT = 42;
 
@@ -156,13 +132,22 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     visibleHeightPxRef.current = visibleHeightPx;
   }, [visibleHeightPx]);
 
-  const settleFitContentHeight = useCallback(() => {
-    fitContentHeight.value = withTiming(visibleHeightPxRef.current, FIT_CONTENT_HEIGHT_TIMING);
+  const settleFitContentHeight = useCallback((animate: boolean) => {
+    const target = visibleHeightPxRef.current;
+    const current = fitContentHeight.value;
+    if (Math.abs(current - target) <= FIT_CONTENT_HEIGHT_EPS) {
+      fitContentHeight.value = target;
+      return;
+    }
+    fitContentHeight.value = animate
+      ? withTiming(target, FIT_CONTENT_HEIGHT_TIMING)
+      : target;
   }, [fitContentHeight]);
 
   const onFitContentOpenComplete = useCallback(() => {
     fitContentOpenDoneRef.current = true;
-    settleFitContentHeight();
+    // סנכרון שקט בסוף פתיחה — בלי אנימציית "התייצבות" נוספת אם כבר קרוב
+    settleFitContentHeight(false);
   }, [settleFitContentHeight]);
 
   const animateClose = useCallback(() => {
@@ -243,12 +228,17 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, snapValues, closedTranslateY, fitContent, visibleHeightPx, onFitContentOpenComplete]);
 
-  // fitContent: עדכון גובה רק אחרי שהפתיחה הסתיימה (מונע קפיצה בסוף)
+  // fitContent: בזמן פתיחה מעדכנים גובה מיד (בלי אנימציה כפולה);
+  // אחרי פתיחה — התאמה קצרה ושקטה רק אם המדידה השתנתה משמעותית
   useEffect(() => {
-    if (!fitContent || !isOpen || !fitContentOpenDoneRef.current) return;
-    fitContentHeight.value = withTiming(visibleHeightPx, FIT_CONTENT_HEIGHT_TIMING);
+    if (!fitContent || !isOpen) return;
+    if (!fitContentOpenDoneRef.current) {
+      fitContentHeight.value = visibleHeightPx;
+      return;
+    }
+    settleFitContentHeight(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleHeightPx, fitContent, isOpen]);
+  }, [visibleHeightPx, fitContent, isOpen, settleFitContentHeight]);
 
   const findNearestSnapPoint = useCallback((currentY: number, snapVals: number[]): number => {
     'worklet';
@@ -303,7 +293,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         if (!enablePanDownToClose) {
           const nearestIndex = findNearestSnapPoint(currentY, currentSnapValues);
           const targetY = currentSnapValues[nearestIndex];
-          translateY.value = withSpring(targetY, fitContent ? SPRING_CONFIG_SNAP : SPRING_CONFIG);
+          translateY.value = withSpring(targetY, SHEET_SNAP_SPRING);
           
           const prevIndex = currentSnapIndex.value;
           currentSnapIndex.value = nearestIndex;
@@ -343,7 +333,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         const nearestIndex = findNearestSnapPoint(currentY, currentSnapValues);
         const targetY = currentSnapValues[nearestIndex];
 
-        translateY.value = withSpring(targetY, fitContent ? SPRING_CONFIG_SNAP : SPRING_CONFIG);
+        translateY.value = withSpring(targetY, SHEET_SNAP_SPRING);
         
         const prevIndex = currentSnapIndex.value;
         currentSnapIndex.value = nearestIndex;
@@ -565,4 +555,8 @@ export {
   SHEET_CLOSE_TIMING,
   SHEET_OPEN_TIMING,
   SHEET_MOTION_MS,
-};
+  SHEET_SNAP_SPRING,
+  FIT_CONTENT_HEIGHT_TIMING,
+  SHEET_EASE_OUT,
+  SHEET_EASE_IN,
+} from './sheetMotion';

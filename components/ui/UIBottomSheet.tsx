@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from './DesignTokens';
+import { SHEET_MOTION_MS } from './BottomSheet/sheetMotion';
 
 export interface UIBottomSheetProps {
   visible: boolean;
@@ -29,6 +30,10 @@ export interface UIBottomSheetProps {
 }
 
 const screenHeight = Dimensions.get('window').height;
+
+/** RN Animated — bezier קרוב ל־sheetMotion (WhatsApp-like) */
+const SHEET_EASE_OUT_RN = Easing.bezier(0.32, 0.72, 0, 1);
+const SHEET_EASE_IN_RN = Easing.bezier(0.32, 0, 0.67, 0);
 
 const styles = StyleSheet.create({
   modalRoot: {
@@ -63,28 +68,30 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: Math.round(SHEET_MOTION_MS * 0.7),
           useNativeDriver: true,
-          easing: Easing.out(Easing.ease),
+          easing: SHEET_EASE_OUT_RN,
         }),
         Animated.timing(translateY, {
           toValue: 0,
-          duration: 250,
+          duration: SHEET_MOTION_MS,
           useNativeDriver: true,
-          easing: Easing.out(Easing.cubic),
+          easing: SHEET_EASE_OUT_RN,
         }),
       ]).start();
     } else {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 150,
+          duration: Math.round(SHEET_MOTION_MS * 0.55),
           useNativeDriver: true,
+          easing: SHEET_EASE_IN_RN,
         }),
         Animated.timing(translateY, {
           toValue: screenHeight,
-          duration: 200,
+          duration: SHEET_MOTION_MS,
           useNativeDriver: true,
+          easing: SHEET_EASE_IN_RN,
         }),
       ]).start(() => {
         setIsMounted(false);
@@ -107,8 +114,9 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
         } else {
           Animated.timing(translateY, {
             toValue: 0,
-            duration: 200,
+            duration: SHEET_MOTION_MS,
             useNativeDriver: true,
+            easing: SHEET_EASE_OUT_RN,
           }).start();
         }
       },

@@ -20,6 +20,10 @@ import {
   GestureHandlerStateChangeEvent,
 } from "react-native-gesture-handler";
 import { HapticFeedback } from "../../utils/hapticFeedback";
+import {
+  SHEET_OPEN_TIMING,
+  SHEET_CLOSE_TIMING,
+} from "./BottomSheet/sheetMotion";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -74,12 +78,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const openSheet = () => {
     isOpen.value = true;
-    translateY.value = withTiming(0, { duration: 350 });
+    translateY.value = withTiming(0, SHEET_OPEN_TIMING);
   };
 
   const closeSheet = () => {
     isOpen.value = false;
-    translateY.value = withTiming(SCREEN_HEIGHT, { duration: 300 }, () => {
+    translateY.value = withTiming(SCREEN_HEIGHT, SHEET_CLOSE_TIMING, () => {
       runOnJS(onClose)();
     });
   };
@@ -110,7 +114,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         runOnJS(closeSheet)();
       } else {
         // החזרה למקום
-        translateY.value = withTiming(0, { duration: 250 });
+        translateY.value = withTiming(0, SHEET_OPEN_TIMING);
       }
     }
   };

@@ -47,7 +47,7 @@ export default function PollCreationBottomSheet({
 }: PollCreationBottomSheetProps) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(tokens, insets.bottom), [tokens, insets.bottom]);
+  const styles = useMemo(() => createStyles(tokens), [tokens]);
   const { user } = useAuth();
   const animatedClose = useBottomSheetClose();
   const { addOptimisticMediaMessage, removeOptimisticMessage } = useChatActions();
@@ -214,7 +214,13 @@ export default function PollCreationBottomSheet({
   };
 
   return (
-    <ChatBottomSheet visible={visible} onClose={handleClose} snapPoints={[0.9]} showBrandWatermark={false}>
+    <ChatBottomSheet
+      visible={visible}
+      onClose={handleClose}
+      snapPoints={[0.9]}
+      showBrandWatermark={false}
+      contentPaddingBottom={0}
+    >
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -408,8 +414,8 @@ export default function PollCreationBottomSheet({
           </Pressable>
         </ScrollView>
 
-        {/* Footer — respects safe area */}
-        <View style={styles.footer}>
+        {/* Footer — safe area owned here (ChatBottomSheet contentPaddingBottom=0) */}
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
           <TouchableOpacity
             onPress={handleCreatePoll}
             disabled={!canCreate}
@@ -439,7 +445,7 @@ const glassCardStyles = StyleSheet.create({
 });
 
 /* ── Main styles ── */
-const createStyles = (tokens: any, safeAreaBottom: number) => {
+const createStyles = (tokens: any) => {
   const borderColor = 'rgba(255,255,255,0.1)';
 
   return StyleSheet.create({
@@ -662,11 +668,10 @@ const createStyles = (tokens: any, safeAreaBottom: number) => {
       textAlign: 'right',
     },
 
-    /* Footer — safe area aware */
+    /* Footer — paddingBottom applied inline via insets.bottom + 16 */
     footer: {
       paddingHorizontal: 16,
       paddingTop: 12,
-      paddingBottom: Math.max(safeAreaBottom, 16),
       gap: 10,
       borderTopWidth: 1,
       borderTopColor: borderColor,

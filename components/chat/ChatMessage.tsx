@@ -102,7 +102,7 @@ interface ChatMessageProps {
 /** מרווח בין בועות רצופות של אותו שולח */
 export const CHAT_BUBBLE_MARGIN = 2;
 /** מרווח מול older כשמחליפים שולח (marginTop ב-inverted) */
-export const CHAT_SENDER_CHANGE_MARGIN = 12;
+export const CHAT_SENDER_CHANGE_MARGIN = 8;
 
 // פונקציה לרנדור טקסט עם תיוגים (@mentions)
 const renderTextWithMentions = (

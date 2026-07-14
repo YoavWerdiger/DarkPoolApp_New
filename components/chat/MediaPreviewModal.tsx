@@ -53,8 +53,6 @@ export default function MediaPreviewModal({
     [insets.bottom],
   );
   const composerInsetSV = useSharedValue(composerPaddingBottom);
-  const keyboardGapSV = useSharedValue(0); // צמוד למקלדת — בלי גאפ צף
-  const composerDockTranslateY = useSharedValue(0);
   const keyboardHeightSV = useSharedValue(0);
   const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
   
@@ -101,36 +99,49 @@ export default function MediaPreviewModal({
     {
       onMove: (event) => {
         'worklet';
-        const h = Math.max(0, event.height);
-        keyboardHeightSV.value = h;
-        const pad = h <= 0 ? composerInsetSV.value : 0;
-        composerDockTranslateY.value =
-          h <= 0 ? 0 : -(h - pad + keyboardGapSV.value);
+        keyboardHeightSV.value = Math.max(0, event.height);
       },
       onEnd: (event) => {
         'worklet';
-        const h = Math.max(0, event.height);
-        keyboardHeightSV.value = h;
-        const pad = h <= 0 ? composerInsetSV.value : 0;
-        composerDockTranslateY.value =
-          h <= 0 ? 0 : -(h - pad + keyboardGapSV.value);
+        keyboardHeightSV.value = Math.max(0, event.height);
       },
     },
     [],
   );
 
-  /** צמוד למקלדת: בלי safe-area שקוף; רקע שחור רציף כשהמקלדת פתוחה */
+  /**
+   * ב-Modal, event.height של המקלדת לעיתים קצר ב־~safe-area לעומת הצ'אט הרגיל.
+   * לכן: כשפתוח — paddingBottom=0 ו-translate = -(h + inset) (לא רק -h / נוסחת ChatComposer),
+   * ובנוסף backdrop שחור מתחתית המסך שסוגר כל under-report שנשאר.
+   */
   const animatedComposerDockStyle = useAnimatedStyle(() => {
     const h = keyboardHeightSV.value;
-    const pad = h <= 0 ? composerInsetSV.value : 0;
+    const inset = composerInsetSV.value;
+    const open = h > 0;
     return {
-      transform: [{ translateY: composerDockTranslateY.value }],
-      paddingBottom: pad,
+      transform: [
+        {
+          // open: lift past under-reported keyboard; closed: sit on safe area
+          translateY: open ? -(h + inset) : 0,
+        },
+      ],
+      paddingBottom: open ? 0 : inset,
       backgroundColor: '#000',
     };
   });
 
-  /** Blur עדין רק כשהמקלדת סגורה; כשפתוחה — אטום מלא כמו וואטסאפ */
+  /** ממלא מתחתית המסך מעל/מאחורי המקלדת — אין "חלון" לתמונה גם אם ה-translate קצר */
+  const animatedKeyboardBackdropStyle = useAnimatedStyle(() => {
+    const h = keyboardHeightSV.value;
+    const inset = composerInsetSV.value;
+    const open = h > 0;
+    return {
+      height: open ? h + inset + 64 : 0,
+      opacity: open ? 1 : 0,
+    };
+  });
+
+  /** Blur רק כשהמקלדת סגורה; כשפתוחה — אטום מלא */
   const animatedComposerSurfaceStyle = useAnimatedStyle(() => ({
     backgroundColor: keyboardHeightSV.value > 0 ? '#000' : 'rgba(0, 0, 0, 0.45)',
   }));
@@ -182,7 +193,6 @@ export default function MediaPreviewModal({
       modalOpacityAnim.setValue(0);
       resetZoomImmediate();
       keyboardHeightSV.value = 0;
-      composerDockTranslateY.value = 0;
     }
   }, [visible, resetZoomImmediate]);
 
@@ -648,7 +658,13 @@ export default function MediaPreviewModal({
             </BlurView>
           </View>
 
-          {/* ── פס תחתון: composer צמוד למקלדת; glass כשסגור ── */}
+          {/* שכבה שחורה מתחתית המסך — סוגרת פער אם גובה המקלדת ב-Modal מדווח חסר */}
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.keyboardBackdrop, animatedKeyboardBackdropStyle]}
+          />
+
+          {/* ── פס תחתון: כמו ChatComposerDock — צמוד למקלדת עם רקע אטום ── */}
           <Animated.View style={[styles.bottomGlassBar, animatedComposerDockStyle]}>
             <View style={styles.composerDock}>
               <Animated.View
@@ -825,7 +841,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  /** פס תחתון — עולה עם המקלדת; רקע שחור רציף (בלי פערים שקופים) */
+  /** פס תחתון — עולה עם המקלדת; רקע שחור רציף כולל padding (בלי חלון לתמונה) */
   bottomGlassBar: {
     position: 'absolute',
     bottom: 0,
@@ -833,7 +849,15 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 2,
     backgroundColor: '#000',
-    overflow: 'hidden',
+  },
+  /** מכסה את אזור המקלדת + under-report מ-Modal */
+  keyboardBackdrop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+    backgroundColor: '#000',
   },
   glassButton: {
     overflow: 'hidden',

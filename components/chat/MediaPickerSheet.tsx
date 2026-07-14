@@ -1,18 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Image,
-  Dimensions,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { ChatBottomSheet } from './ChatBottomSheet';
-import { BOTTOM_SHEET_EDGE_HANDLE_HEIGHT } from '../ui/BottomSheet/BottomSheet';
 import { chatRtlText } from './chatDesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { runAfterSheetDismiss } from './mediaPickerLaunch';
@@ -28,7 +25,6 @@ interface MediaPickerSheetProps {
   onPoll?: () => void;
 }
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
 
 type PickerOption = {
@@ -51,12 +47,6 @@ export default function MediaPickerSheet({
 }: MediaPickerSheetProps) {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
-  const [contentHeight, setContentHeight] = useState<number | null>(null);
-
-  const sheetBottomPad = useMemo(() => {
-    const minBottom = Platform.OS === 'android' ? 16 : 8;
-    return Math.max(insets.bottom, minBottom);
-  }, [insets.bottom]);
 
   const options = useMemo<PickerOption[]>(
     () => [
@@ -76,42 +66,14 @@ export default function MediaPickerSheet({
 
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
-  const handleContentLayout = useCallback((height: number) => {
-    if (height > 0) {
-      setContentHeight((prev) => (prev === height ? prev : height));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!visible) {
-      setContentHeight(null);
-    }
-  }, [visible]);
-
-  const snapPoint = useMemo(() => {
-    if (contentHeight != null && contentHeight > 0) {
-      const totalPx = contentHeight + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT;
-      return Math.min(0.62, Math.max(0.22, totalPx / SCREEN_HEIGHT));
-    }
-
-    const rows = Math.ceil(options.length / 4);
-    const estimatedPx = 68 + rows * 88 + sheetBottomPad + BOTTOM_SHEET_EDGE_HANDLE_HEIGHT;
-    return Math.min(0.55, Math.max(0.24, estimatedPx / SCREEN_HEIGHT));
-  }, [contentHeight, options.length, sheetBottomPad]);
-
   return (
     <ChatBottomSheet
       visible={visible}
       onClose={onClose}
-      snapPoints={[snapPoint]}
-      fitContent
+      snapPoints={[0.38]}
       showBrandWatermark={false}
-      contentPaddingBottom={0}
     >
-      <View
-        style={[styles.container, { paddingBottom: sheetBottomPad }]}
-        onLayout={(e) => handleContentLayout(e.nativeEvent.layout.height)}
-      >
+      <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>צרף קובץ</Text>
         </View>
@@ -133,11 +95,11 @@ export default function MediaPickerSheet({
                 {option.icon === 'poll-image' ? (
                   <Image
                     source={require('../../assets/icons/ico-40-poll-2.png')}
-                    style={{ width: 26, height: 26, tintColor: option.color }}
+                    style={{ width: 28, height: 28, tintColor: option.color }}
                     resizeMode="contain"
                   />
                 ) : (
-                  <Ionicons name={option.icon as keyof typeof Ionicons.glyphMap} size={26} color={option.color} />
+                  <Ionicons name={option.icon as keyof typeof Ionicons.glyphMap} size={28} color={option.color} />
                 )}
               </View>
               <Text style={[styles.optionLabel, { color: tokens.colors.text.primary }]} numberOfLines={1}>
@@ -154,48 +116,49 @@ export default function MediaPickerSheet({
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
     container: {
-      paddingHorizontal: tokens.spacing.lg,
+      paddingHorizontal: tokens.spacing.md,
       direction: 'rtl',
       backgroundColor: 'transparent',
     },
     header: {
       alignItems: 'center',
-      paddingBottom: 14,
+      paddingTop: tokens.spacing.xs,
+      paddingBottom: tokens.spacing.sm,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: SHEET_BORDER,
     },
     headerTitle: {
       ...chatRtlText,
       fontSize: 20,
-      fontWeight: '800',
-      letterSpacing: -0.35,
+      fontWeight: '700',
       textAlign: 'center',
       width: '100%',
     },
     grid: {
       flexDirection: 'row-reverse',
       flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 12,
-      paddingTop: 16,
-      paddingBottom: 4,
+      justifyContent: 'space-between',
+      marginTop: tokens.spacing.sm,
+      marginBottom: tokens.spacing.sm,
     },
     optionItem: {
-      width: '22%',
-      minWidth: 72,
-      maxWidth: 88,
-      alignItems: 'center',
-      gap: 8,
-    },
-    iconContainer: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: '31%',
+      aspectRatio: 1.2,
+      marginBottom: 16,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
     },
+    iconContainer: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 12,
+    },
     optionLabel: {
-      fontSize: 13,
+      fontSize: 16,
       fontWeight: '600',
       ...chatRtlText,
     },

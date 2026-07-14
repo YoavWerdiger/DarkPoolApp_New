@@ -1,26 +1,36 @@
 /**
  * שפת תנועה אחידה ל־BottomSheet (סגנון וואטסאפ):
- * ease-out חלק, בלי overshoot/bounce.
+ * ease חלק, בלי overshoot/bounce.
+ * פתיחה ≈ סגירה בתחושה (open מעט ארוך יותר כי ease-out נתפס כמהיר).
  */
 import { Easing, WithSpringConfig, WithTimingConfig } from 'react-native-reanimated';
 
-/** משך פתיחה/סגירה — מספיק רך, בלי תחושת קפיצה בסוף */
-export const SHEET_MOTION_MS = 300;
+/** משך סגירה — הבסיס שמרגיש נכון */
+export const SHEET_CLOSE_MS = 300;
+/**
+ * משך פתיחה — מעט ארוך יותר מהסגירה כדי לאזן את ease-out
+ * (שכולס מרחק מוקדם יותר מאשר ease-in בסגירה).
+ */
+export const SHEET_OPEN_MS = 360;
+
+/** @deprecated — alias ל־close; העדף SHEET_OPEN_MS / SHEET_CLOSE_MS */
+export const SHEET_MOTION_MS = SHEET_CLOSE_MS;
 
 /**
- * cubic-bezier קרוב ל־iOS / WhatsApp sheet:
- * האצה מהירה בהתחלה, נחיתה חלקה בלי overshoot.
+ * פתיחה: ease-out רך (לא ה־bezier האגרסיבי שדוהר בהתחלה).
+ * cubic-bezier קרוב ל־CSS ease — נחיתה חלקה בלי overshoot.
  */
-export const SHEET_EASE_OUT = Easing.bezier(0.32, 0.72, 0, 1);
+export const SHEET_EASE_OUT = Easing.bezier(0.25, 0.1, 0.25, 1);
+/** סגירה: ease-in מראה — יציאה מדודה */
 export const SHEET_EASE_IN = Easing.bezier(0.32, 0, 0.67, 0);
 
 export const SHEET_OPEN_TIMING: WithTimingConfig = {
-  duration: SHEET_MOTION_MS,
+  duration: SHEET_OPEN_MS,
   easing: SHEET_EASE_OUT,
 };
 
 export const SHEET_CLOSE_TIMING: WithTimingConfig = {
-  duration: SHEET_MOTION_MS,
+  duration: SHEET_CLOSE_MS,
   easing: SHEET_EASE_IN,
 };
 

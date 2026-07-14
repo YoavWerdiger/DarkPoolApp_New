@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from './DesignTokens';
-import { SHEET_MOTION_MS } from './BottomSheet/sheetMotion';
+import { SHEET_OPEN_MS, SHEET_CLOSE_MS } from './BottomSheet/sheetMotion';
 
 export interface UIBottomSheetProps {
   visible: boolean;
@@ -31,8 +31,8 @@ export interface UIBottomSheetProps {
 
 const screenHeight = Dimensions.get('window').height;
 
-/** RN Animated — bezier קרוב ל־sheetMotion (WhatsApp-like) */
-const SHEET_EASE_OUT_RN = Easing.bezier(0.32, 0.72, 0, 1);
+/** RN Animated — זהה ל־sheetMotion (open≈close, בלי bounce) */
+const SHEET_EASE_OUT_RN = Easing.bezier(0.25, 0.1, 0.25, 1);
 const SHEET_EASE_IN_RN = Easing.bezier(0.32, 0, 0.67, 0);
 
 const styles = StyleSheet.create({
@@ -68,13 +68,13 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: Math.round(SHEET_MOTION_MS * 0.7),
+          duration: Math.round(SHEET_OPEN_MS * 0.7),
           useNativeDriver: true,
           easing: SHEET_EASE_OUT_RN,
         }),
         Animated.timing(translateY, {
           toValue: 0,
-          duration: SHEET_MOTION_MS,
+          duration: SHEET_OPEN_MS,
           useNativeDriver: true,
           easing: SHEET_EASE_OUT_RN,
         }),
@@ -83,13 +83,13 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: Math.round(SHEET_MOTION_MS * 0.55),
+          duration: Math.round(SHEET_CLOSE_MS * 0.55),
           useNativeDriver: true,
           easing: SHEET_EASE_IN_RN,
         }),
         Animated.timing(translateY, {
           toValue: screenHeight,
-          duration: SHEET_MOTION_MS,
+          duration: SHEET_CLOSE_MS,
           useNativeDriver: true,
           easing: SHEET_EASE_IN_RN,
         }),
@@ -114,7 +114,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
         } else {
           Animated.timing(translateY, {
             toValue: 0,
-            duration: SHEET_MOTION_MS,
+            duration: SHEET_OPEN_MS,
             useNativeDriver: true,
             easing: SHEET_EASE_OUT_RN,
           }).start();

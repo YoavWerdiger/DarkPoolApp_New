@@ -26,6 +26,20 @@ export interface BottomSheetProps {
   brandWatermarkScale?: number;
   /** דריסת ריפוד תחתון לתוכן השיט (למשל 0 כשה-footer מטפל ב-safe area בעצמו) */
   contentPaddingBottom?: number;
+  /**
+   * כשtrue: הרקע יהיה `BlurView` (frosted glass) + tint כהה עדין, במקום
+   * הרקע המותגי (`showBrandBackground`). מתאים לשיטים שרוצים לרחף מעל
+   * תוכן צבעוני (למשל שיטי צ'אט / StoryViewer). כאשר `useGlassBackground`
+   * פעיל — `showBrandBackground` מתעלמים ממנו.
+   */
+  useGlassBackground?: boolean;
+  /** עוצמת הטשטוש (0–100). ברירת מחדל 95 — frosted מספיק אטום מעל צ׳אט. */
+  glassIntensity?: number;
+  /**
+   * שכבת tint כהה מעל ה-BlurView.
+   * ברירת מחדל: `rgba(10,14,10,0.82)` — זכוכית אטומה מספיק בלי לשטוף את ה-blur.
+   */
+  glassOverlayColor?: string;
 }
 
 

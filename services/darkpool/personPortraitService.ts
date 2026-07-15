@@ -107,7 +107,7 @@ export function clearPersonPortraitMemCache() {
   memCache.clear();
 }
 
-/** רשימת פרופילים לגריד גילוי — ישירות מ-cache תמונות */
+/** @deprecated לגריד גילוי — השתמש ב-fetchCuratedExploreGrid */
 export async function fetchExploreProfilesGrid(): Promise<
   import('./uwExploreService').ExplorePerson[]
 > {

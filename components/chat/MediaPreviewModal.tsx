@@ -216,6 +216,13 @@ export default function MediaPreviewModal({
           });
           if (!cancelled && uri) {
             setVideoPosterUri(uri);
+            setLocalFiles((prev) =>
+              prev.map((f, i) =>
+                i === currentIndex && f.type === 'video' && !f.thumbnail_url
+                  ? { ...f, thumbnail_url: uri }
+                  : f,
+              ),
+            );
             return;
           }
         } catch {
@@ -441,7 +448,15 @@ export default function MediaPreviewModal({
 
     const callback = (status: { isLoaded?: boolean; durationMillis?: number; positionMillis?: number }) => {
       if (status.isLoaded) {
-        if (status.durationMillis != null) setVideoDuration(status.durationMillis / 1000);
+        if (status.durationMillis != null) {
+          const sec = status.durationMillis / 1000;
+          setVideoDuration(sec);
+          setLocalFiles((prev) =>
+            prev.map((f, i) =>
+              i === currentIndex && f.type === 'video' ? { ...f, duration: sec } : f,
+            ),
+          );
+        }
         if (!videoDraggingRef.current) {
           const reported = (status.positionMillis ?? 0) / 1000;
           const target = videoLastSeekTargetRef.current;

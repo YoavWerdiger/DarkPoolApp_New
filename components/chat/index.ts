@@ -1,5 +1,6 @@
 export { default as MediaBubble } from './MediaBubble';
 export { default as MediaViewer } from './MediaViewer';
+export { default as MediaGalleryViewer } from './MediaGalleryViewer';
 export { default as MediaPicker } from './MediaPicker';
 export { default as MediaPreviewModal } from './MediaPreviewModal';
 export { default as ReactionPicker } from './ReactionPicker';
@@ -11,7 +12,6 @@ export { default as SeenBySheet } from './SeenBySheet';
 export { default as MentionPicker } from './MentionPicker';
 export { default as UnreadDivider } from './UnreadDivider';
 export { default as UnreadCounter } from './UnreadCounter';
-export { default as PinnedMessagesHeader } from './PinnedMessagesHeader';
 export { default as LongPressOverlay } from './LongPressOverlay';
 export { default as ReactionBar } from './ReactionBar';
 export { default as ContextMenu } from './ContextMenu';

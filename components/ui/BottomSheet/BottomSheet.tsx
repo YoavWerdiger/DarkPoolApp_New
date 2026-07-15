@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { useDesignTokens } from '../DesignTokens';
 import { BrandTransbackWatermark } from '../BrandTransbackWatermark';
 import { ScreenGradientBackground } from '../../VideoBackground';
@@ -63,6 +64,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   topCornerRadius,
   fitContent = false,
   contentPaddingBottom: contentPaddingBottomOverride,
+  useGlassBackground = false,
+  glassIntensity = 95,
+  glassOverlayColor = 'rgba(10,14,10,0.82)',
 }) => {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
@@ -393,7 +397,10 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     return Math.max(insets.bottom, minBottom);
   }, [insets.bottom]);
 
-  const styles = createStyles(tokens.colors.overlay || 'rgba(0,0,0,0.6)');
+  // Solid black — opacity alone is controlled by `backdropOpacity`
+  // (ChatBottomSheet uses CHAT_SHEET_BACKDROP_OPACITY = 0.4 ≡ DesignTokens.colors.backdrop).
+  // Do not use colors.overlay (already rgba alpha) or the values compound.
+  const styles = createStyles('#000');
 
   // Modal שקוף + nav bar שקוף ב-Android → רקע חלון Modal לבן מתחת לכפתורי המערכת
   useEffect(() => {
@@ -453,7 +460,18 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         ]}
         collapsable={false}
       >
-        {showBrandBackground ? (
+        {useGlassBackground ? (
+          /* Frosted-glass: BlurView + opaque-enough dark tint (chat should not bleed through). */
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 0 }]}>
+            <BlurView intensity={glassIntensity} tint="dark" style={StyleSheet.absoluteFill} />
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: glassOverlayColor },
+              ]}
+            />
+          </View>
+        ) : showBrandBackground ? (
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 0 }]}>
             <View
               style={[StyleSheet.absoluteFill, { backgroundColor: SHEET_SURFACE_COLOR }]}

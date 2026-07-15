@@ -50,8 +50,10 @@ export function buildExploreProfileGrid(
   );
 
   const kind = opts?.kind ?? 'all';
-  if (kind !== 'all') {
-    list = list.filter((p) => p.kind === kind);
+  if (kind === 'politician') {
+    list = list.filter((p) => p.kind === 'politician');
+  } else if (kind === 'insider') {
+    list = list.filter((p) => p.kind === 'insider' || p.kind === 'fund_manager');
   }
 
   const q = opts?.query?.trim().toLowerCase();

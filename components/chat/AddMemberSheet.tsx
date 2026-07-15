@@ -20,10 +20,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useDesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens, DesignTokens } from '../ui/DesignTokens';
 import { searchUsers } from '../../services/chat/chatSearchService';
 import { BlurView } from 'expo-blur';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { isUserPresenceOnline } from '../../utils/userPresence';
 
 interface User {
   id: string;
@@ -31,6 +32,7 @@ interface User {
   full_name: string | null;
   profile_picture: string | null;
   is_online?: boolean;
+  last_active?: string | null;
 }
 
 interface AddMemberSheetProps {
@@ -102,7 +104,7 @@ export default function AddMemberSheet({
               </Text>
             </View>
           )}
-          {item.is_online && (
+          {isUserPresenceOnline(item.is_online, item.last_active) && (
             <View style={[styles.onlineDot, { backgroundColor: DesignTokens.colors.text.success ?? '#4CAF50', borderColor: DesignTokens.colors.background.secondary }]} />
           )}
         </View>
@@ -226,7 +228,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: DesignTokens.colors.backdrop,
   },
   sheet: {
     borderTopLeftRadius: 20,

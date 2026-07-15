@@ -115,7 +115,7 @@ export async function searchMessagesInAllGroups(
           display_name,
           profile_picture
         ),
-        chat_groups (
+        chat_groups!chat_messages_group_id_fkey (
           id,
           name,
           avatar_url

@@ -1,11 +1,6 @@
--- ============================================
--- עדכון שמות קבוצות רשמיות + הוספת חדרים חדשים
--- ============================================
--- מריצים ב-Supabase SQL Editor על DB קיים.
--- משמר IDs של 9 החדרים הוותיקים; מוסיף 3 חדשים.
--- ============================================
+-- Sync official chat group names (12 rooms). Rename in place; insert missing rooms.
+-- Safe to re-run: updates names by fixed UUID; upserts new rooms.
 
--- Rename in place (IDs 001–009)
 UPDATE public.chat_groups SET name = 'הכרזות', updated_at = NOW()
 WHERE id = '00000000-0000-0000-0000-000000000001';
 
@@ -24,7 +19,8 @@ WHERE id = '00000000-0000-0000-0000-000000000005';
 UPDATE public.chat_groups SET name = 'מסחר יומי 🌟🔇', updated_at = NOW()
 WHERE id = '00000000-0000-0000-0000-000000000006';
 
--- ...007 (חדשות מתפרצות) הוסר — ראו supabase/migrations/070_remove_breaking_news_chat_group.sql
+UPDATE public.chat_groups SET name = 'חדשות מתפרצות 🌟🔇', updated_at = NOW()
+WHERE id = '00000000-0000-0000-0000-000000000007';
 
 UPDATE public.chat_groups SET name = 'סווינגים והשקעות 🌟🔇', updated_at = NOW()
 WHERE id = '00000000-0000-0000-0000-000000000008';
@@ -32,7 +28,6 @@ WHERE id = '00000000-0000-0000-0000-000000000008';
 UPDATE public.chat_groups SET name = 'פניסטוקס (סיכון גבוה)🌟🔇', updated_at = NOW()
 WHERE id = '00000000-0000-0000-0000-000000000009';
 
--- New official rooms (IDs 00a–00c)
 INSERT INTO public.chat_groups (id, name, description, avatar_url, created_by, settings)
 VALUES
 (
@@ -81,21 +76,3 @@ ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   description = EXCLUDED.description,
   updated_at = NOW();
-
--- Verify
-SELECT id, name
-FROM public.chat_groups
-WHERE id IN (
-  '00000000-0000-0000-0000-000000000001',
-  '00000000-0000-0000-0000-000000000002',
-  '00000000-0000-0000-0000-000000000003',
-  '00000000-0000-0000-0000-000000000004',
-  '00000000-0000-0000-0000-000000000005',
-  '00000000-0000-0000-0000-000000000006',
-  '00000000-0000-0000-0000-000000000008',
-  '00000000-0000-0000-0000-000000000009',
-  '00000000-0000-0000-0000-00000000000a',
-  '00000000-0000-0000-0000-00000000000b',
-  '00000000-0000-0000-0000-00000000000c'
-)
-ORDER BY id;

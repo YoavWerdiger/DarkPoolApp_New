@@ -1,6 +1,11 @@
 import { supabase } from '../../lib/supabase';
 import type { ExplorePerson } from './uwExploreService';
 import { knownPortraitForInvestor } from '../../screens/DarkPool/utils/knownInvestorPortraits';
+import {
+  CURATED_EXPLORE_PROFILES,
+  isCuratedExploreId,
+  isTrustedPortraitUrl,
+} from '../../screens/DarkPool/utils/curatedExploreProfiles';
 
 export interface FeaturedProfile {
   id: string;
@@ -57,4 +62,37 @@ export function featuredToExplorePerson(row: FeaturedProfile): ExplorePerson {
     ticker: row.ticker ?? undefined,
     metric_label: 'מומלץ',
   };
+}
+
+/**
+ * גריד גילוי — רק פרופילים מאוצרים (רשימה סטטית + מומלצים מ-DB שברשימה).
+ * לא מושך את כל dark_pool_person_portraits (מניעת תמונות Wikipedia שגויות).
+ */
+export async function fetchCuratedExploreGrid(): Promise<ExplorePerson[]> {
+  const byId = new Map<string, ExplorePerson>();
+  for (const p of CURATED_EXPLORE_PROFILES) {
+    byId.set(p.id, { ...p });
+  }
+
+  try {
+    const featured = await fetchFeaturedProfiles();
+    for (const row of featured) {
+      if (!isCuratedExploreId(row.person_id)) continue;
+      const existing = byId.get(row.person_id);
+      const dbImage =
+        row.image_url && isTrustedPortraitUrl(row.image_url) ? row.image_url : null;
+      if (existing) {
+        if (dbImage) existing.image_url = dbImage;
+        if (row.subtitle?.trim()) existing.subtitle = row.subtitle;
+      } else {
+        byId.set(row.person_id, featuredToExplorePerson(row));
+      }
+    }
+  } catch {
+    /* static list is enough */
+  }
+
+  return Array.from(byId.values()).sort(
+    (a, b) => (b.activity_score ?? 0) - (a.activity_score ?? 0)
+  );
 }

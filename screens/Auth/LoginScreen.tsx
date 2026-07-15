@@ -273,7 +273,7 @@ export default function LoginScreen({ navigation }: any) {
                         style={{ paddingVertical: 17, alignItems: 'center' }}
                       >
                         <Text style={{ color: colors.text.inverse, fontSize: 17, fontWeight: '800' }}>
-                          התחל
+                          התחל כאן
                         </Text>
                       </TouchableOpacity>
                     </LinearGradient>
@@ -294,7 +294,7 @@ export default function LoginScreen({ navigation }: any) {
                       }}
                     >
                       <Text style={{ color: colors.text.primary, fontSize: 16, fontWeight: '700' }}>
-                        כבר יש לי חשבון
+                        יש לי כבר חשבון
                       </Text>
                     </TouchableOpacity>
                   </View>

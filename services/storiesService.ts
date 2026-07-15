@@ -338,6 +338,55 @@ export async function markStoryViewed(storyId: string, viewerId: string): Promis
   }
 }
 
+export interface StoryViewer {
+  story_id: string;
+  viewer_id: string;
+  viewed_at: string;
+  user: {
+    id: string;
+    display_name: string | null;
+    full_name: string | null;
+    profile_picture: string | null;
+  };
+}
+
+/**
+ * Get all viewers of a story (for the story owner). Joined with users so
+ * we can render avatar + display name in the viewers sheet.
+ */
+export async function getStoryViewers(storyId: string): Promise<StoryViewer[]> {
+  const { data, error } = await supabase
+    .from('user_story_views')
+    .select('story_id, viewer_id, viewed_at')
+    .eq('story_id', storyId)
+    .order('viewed_at', { ascending: false });
+
+  if (error) {
+    logger.error('StoriesService', 'getStoryViewers failed', error);
+    return [];
+  }
+  if (!data || data.length === 0) return [];
+
+  const ids = [...new Set(data.map((v: any) => v.viewer_id))];
+  const { data: users } = await supabase
+    .from('users')
+    .select('id, display_name, full_name, profile_picture')
+    .in('id', ids);
+  const userMap = new Map((users || []).map((u) => [u.id, u]));
+
+  return (data as any[]).map((v) => ({
+    story_id: v.story_id,
+    viewer_id: v.viewer_id,
+    viewed_at: v.viewed_at,
+    user: userMap.get(v.viewer_id) ?? {
+      id: v.viewer_id,
+      display_name: null,
+      full_name: null,
+      profile_picture: null,
+    },
+  }));
+}
+
 export async function createStory(
   userId: string,
   input: {
@@ -375,4 +424,143 @@ export async function deleteStory(storyId: string, userId: string): Promise<void
     .eq('user_id', userId);
 
   if (error) throw error;
+}
+
+/* ============================================
+ *  Story Reactions
+ * ============================================ */
+
+export interface StoryReaction {
+  id: string;
+  story_id: string;
+  reactor_id: string;
+  emoji: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Send / update a reaction to a story.
+ * If the user already reacted, the emoji is replaced (upsert).
+ * Returns null on success or an error message.
+ */
+export async function reactToStory(
+  storyId: string,
+  reactorId: string,
+  emoji: string,
+): Promise<string | null> {
+  try {
+    const { error } = await supabase
+      .from('user_story_reactions')
+      .upsert(
+        {
+          story_id: storyId,
+          reactor_id: reactorId,
+          emoji,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'story_id,reactor_id' },
+      );
+
+    if (error) {
+      // Table missing (migration 013 not yet applied) → quiet debug log.
+      // Don't spam Sentry until the DB catches up.
+      if ((error as any).code === '42P01') {
+        logger.debug('StoriesService', 'reactToStory: table missing (migration not applied yet)');
+        return 'טבלת הריאקציות עדיין לא נוצרה במסד';
+      }
+      logger.error('StoriesService', 'reactToStory failed', error);
+      return error.message || 'שגיאה בשליחת ריאקציה';
+    }
+    return null;
+  } catch (e: any) {
+    logger.error('StoriesService', 'reactToStory exception', e);
+    return e?.message || 'שגיאה בשליחת ריאקציה';
+  }
+}
+
+/**
+ * Remove the current user's reaction from a story.
+ */
+export async function removeStoryReaction(
+  storyId: string,
+  reactorId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('user_story_reactions')
+    .delete()
+    .eq('story_id', storyId)
+    .eq('reactor_id', reactorId);
+
+  if (error) {
+    logger.error('StoriesService', 'removeStoryReaction failed', error);
+    throw error;
+  }
+}
+
+/**
+ * Return the current user's own reaction to a specific story, if any.
+ */
+export async function getMyStoryReaction(
+  storyId: string,
+  reactorId: string,
+): Promise<StoryReaction | null> {
+  const { data, error } = await supabase
+    .from('user_story_reactions')
+    .select('*')
+    .eq('story_id', storyId)
+    .eq('reactor_id', reactorId)
+    .maybeSingle();
+
+  if (error) {
+    // Table missing (migration 013 not yet applied) — silent, no Sentry noise.
+    if ((error as any).code === '42P01') {
+      logger.debug('StoriesService', 'getMyStoryReaction: table missing (migration not applied yet)');
+      return null;
+    }
+    logger.error('StoriesService', 'getMyStoryReaction failed', error);
+    return null;
+  }
+  return (data as StoryReaction) || null;
+}
+
+/**
+ * Get all reactions on a story (for the story owner to see).
+ * Joins with users so we can show avatars/names.
+ */
+export async function getStoryReactions(
+  storyId: string,
+): Promise<Array<StoryReaction & { user: { id: string; display_name: string | null; full_name: string | null; profile_picture: string | null } }>> {
+  const { data, error } = await supabase
+    .from('user_story_reactions')
+    .select('*')
+    .eq('story_id', storyId)
+    .order('updated_at', { ascending: false });
+
+  if (error) {
+    if ((error as any).code === '42P01') {
+      logger.debug('StoriesService', 'getStoryReactions: table missing (migration not applied yet)');
+      return [];
+    }
+    logger.error('StoriesService', 'getStoryReactions failed', error);
+    return [];
+  }
+  if (!data || data.length === 0) return [];
+
+  const reactorIds = [...new Set(data.map((r: any) => r.reactor_id))];
+  const { data: users } = await supabase
+    .from('users')
+    .select('id, display_name, full_name, profile_picture')
+    .in('id', reactorIds);
+  const userMap = new Map((users || []).map((u) => [u.id, u]));
+
+  return (data as StoryReaction[]).map((r) => ({
+    ...r,
+    user: userMap.get(r.reactor_id) ?? {
+      id: r.reactor_id,
+      display_name: null,
+      full_name: null,
+      profile_picture: null,
+    },
+  }));
 }

@@ -4,12 +4,12 @@ import { HapticFeedback } from '../utils/hapticFeedback';
 import type { ChatMessage } from '../types/chat.types';
 import {
   scrollChatListToBottom,
+  scrollChatListToOffset,
   type ChatListRef,
 } from '../utils/chatListScrollToBottom';
 
 const DEFAULT_ITEM_HEIGHT = 96;
 const MAX_FIND_RETRIES = 20;
-const JUMP_CORRECTIONS = 10;
 
 type LoadAroundFn = (messageId: string) => Promise<{ success: boolean; error?: string }>;
 
@@ -105,28 +105,55 @@ export function useChatMessageScroll({
   );
 
   const scrollToOffsetNow = useCallback(
-    (offset: number, animated: boolean, label: string) => {
+    (offset: number, animated: boolean, label: string, onDone?: () => void) => {
       const list = listRef.current;
-      if (!list) return;
+      if (!list) {
+        onDone?.();
+        return;
+      }
       const before = distFromBottomRef.current;
       logger.debug(
         'useChatMessageScroll',
         `SCROLL_CMD ${label} offset=${offset.toFixed(0)} animated=${animated} distBefore=${before.toFixed(0)}`,
       );
-      try {
-        list.scrollToOffset({ offset, animated });
-      } catch (e) {
-        logger.debug('useChatMessageScroll', `SCROLL_CMD threw: ${String(e)}`);
+
+      if (!animated) {
+        try {
+          list.scrollToOffset({ offset, animated: false });
+        } catch (e) {
+          logger.debug('useChatMessageScroll', `SCROLL_CMD threw: ${String(e)}`);
+        }
+        requestAnimationFrame(() => {
+          const after = distFromBottomRef.current;
+          logger.debug(
+            'useChatMessageScroll',
+            `SCROLL_RESULT ${label} distAfter=${after.toFixed(0)}`,
+          );
+          onDone?.();
+        });
+        return;
       }
-      requestAnimationFrame(() => {
-        const after = distFromBottomRef.current;
-        logger.debug(
-          'useChatMessageScroll',
-          `SCROLL_RESULT ${label} distAfter=${after.toFixed(0)}`,
-        );
-      });
+
+      scrollChatListToOffset(
+        {
+          listRef,
+          contentHeightRef,
+          layoutHeightRef,
+          getDistFromBottom: () => distFromBottomRef.current,
+        },
+        offset,
+        true,
+        () => {
+          const after = distFromBottomRef.current;
+          logger.debug(
+            'useChatMessageScroll',
+            `SCROLL_RESULT ${label} distAfter=${after.toFixed(0)}`,
+          );
+          onDone?.();
+        },
+      );
     },
-    [distFromBottomRef, listRef]
+    [contentHeightRef, distFromBottomRef, layoutHeightRef, listRef]
   );
 
   const attemptScroll = useCallback(
@@ -151,30 +178,44 @@ export function useChatMessageScroll({
 
       logger.debug(
         'useChatMessageScroll',
-        `REPLY_JUMP index=${index} id=${messageId} offset=${offset.toFixed(0)} try=${scrollRetryRef.current}`,
+        `REPLY_JUMP index=${index} id=${messageId} offset=${offset.toFixed(0)} animated=${animated}`,
       );
-
-      scrollToOffsetNow(offset, animated && scrollRetryRef.current === 0, `jump[${index}]`);
 
       if (scrollHighlightRef.current && highlightAppliedForRef.current !== messageId) {
         highlightAppliedForRef.current = messageId;
         flashHighlight(messageId);
       }
 
-      scrollRetryRef.current += 1;
-      if (scrollRetryRef.current < JUMP_CORRECTIONS) {
-        setTimeout(() => attemptScroll(messageId, false), 60 + scrollRetryRef.current * 35);
-        return;
-      }
+      // גלילה אחת מבוקרת. תיקון יחיד רק ב-onDone — בלי setTimeout שחותך באמצע
+      scrollToOffsetNow(offset, animated, `jump[${index}]`, () => {
+        if (pendingScrollIdRef.current !== messageId || !isMountedRef.current) return;
 
-      pendingScrollIdRef.current = null;
-      scrollRetryRef.current = 0;
-      logger.debug('useChatMessageScroll', `REPLY_JUMP done id=${messageId} index=${index}`);
+        // תיקון דיוק אחד שקט אחרי שהאנימציה הסתיימה (גבהים נמדדו)
+        const idx2 = findMessageIndex(messageId);
+        if (idx2 === -1) {
+          pendingScrollIdRef.current = null;
+          return;
+        }
+        const refined = targetOffsetForIndex(idx2, scrollViewPositionRef.current);
+        const list = listRef.current;
+        if (list && Math.abs(refined - distFromBottomRef.current) > 24) {
+          try {
+            list.scrollToOffset({ offset: refined, animated: false });
+          } catch {
+            /* ignore */
+          }
+        }
+        pendingScrollIdRef.current = null;
+        scrollRetryRef.current = 0;
+        logger.debug('useChatMessageScroll', `REPLY_JUMP done id=${messageId} index=${idx2}`);
+      });
     },
     [
+      distFromBottomRef,
       findMessageIndex,
       flashHighlight,
       isMountedRef,
+      listRef,
       scrollToOffsetNow,
       targetOffsetForIndex,
     ]
@@ -214,17 +255,11 @@ export function useChatMessageScroll({
 
       logger.debug('useChatMessageScroll', `queueScrollToMessage id=${messageId}`);
 
-      // מיידי + תיקונים — בלי InteractionManager (נתקע אחרי gesture)
+      // גלילה חלקה אחת — בלי retries מוקדמים של animated:false שחותכים את האנימציה
       requestAnimationFrame(() => attemptScroll(messageId, animated));
       setTimeout(() => {
-        if (pendingScrollIdRef.current === messageId) attemptScroll(messageId, false);
-      }, 100);
-      setTimeout(() => {
-        if (pendingScrollIdRef.current === messageId) attemptScroll(messageId, false);
-      }, 280);
-      setTimeout(() => {
         programmaticScrollRef.current = false;
-      }, 1400);
+      }, 1600);
     },
     [attemptScroll, programmaticScrollRef]
   );

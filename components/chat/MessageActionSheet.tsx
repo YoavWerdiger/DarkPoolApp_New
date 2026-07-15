@@ -6,8 +6,11 @@ import {
   Modal,
   Pressable,
   Animated,
-  Dimensions
+  Dimensions,
+  StyleSheet,
+  Platform,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { Mic, FileText, MessageCircle, RotateCcw, Copy, Edit, Heart } from 'lucide-react-native';
 import { Message, ReactionSummary } from '../../services/supabase';
@@ -197,9 +200,10 @@ export default function MessageActionSheet({
         className="flex-1"
         style={{ opacity: fadeAnim }}
       >
-        {/* Blur Background */}
+        {/* Backdrop — same dimmer as ChatBottomSheet / DesignTokens.colors.backdrop */}
         <Pressable 
-          className="flex-1 bg-black/60"
+          className="flex-1"
+          style={{ backgroundColor: DesignTokens.colors.backdrop }}
           onPress={onClose}
         />
         
@@ -246,9 +250,9 @@ export default function MessageActionSheet({
           <View 
             className="rounded-t-3xl p-6" 
             style={{
-              backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
-              borderTopWidth: 0.5,
-              borderTopColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)',
+              overflow: 'hidden',
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: 'rgba(255,255,255,0.15)',
               shadowColor: '#000',
               shadowOffset: { width: 0, height: -4 },
               shadowOpacity: 0.2,
@@ -256,8 +260,15 @@ export default function MessageActionSheet({
               elevation: 10
             }}
           >
+            {Platform.OS === 'ios' ? (
+              <BlurView intensity={95} tint="dark" style={StyleSheet.absoluteFill} />
+            ) : null}
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,14,10,0.82)' }]}
+            />
             {/* Header */}
-            <View className="items-center mb-6">
+            <View className="items-center mb-6" style={{ zIndex: 1 }}>
               <View 
                 className="w-12 h-1 rounded-full mb-4" 
                 style={{ backgroundColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)' }}
@@ -275,7 +286,7 @@ export default function MessageActionSheet({
             </View>
 
             {/* Actions Grid */}
-            <View className="flex-row flex-wrap justify-center">
+            <View className="flex-row flex-wrap justify-center" style={{ zIndex: 1 }}>
               {/* Reply */}
               <Pressable
                 onPress={() => handleAction(onReply)}

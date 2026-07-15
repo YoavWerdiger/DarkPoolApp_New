@@ -1,7 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
-import { useDesignTokens } from '../ui/DesignTokens';
+import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
 interface ReactionBarProps {
@@ -12,15 +10,8 @@ interface ReactionBarProps {
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥'];
 
 export default function ReactionBar({ onReaction, currentReaction }: ReactionBarProps) {
-  const tokens = useDesignTokens();
-
   return (
-    <BlurView
-      intensity={Platform.OS === 'ios' ? 50 : 25}
-      tint="dark"
-      style={styles.pill}
-    >
-      <View style={[StyleSheet.absoluteFill, styles.pillOverlay]} />
+    <View style={styles.row}>
       {EMOJIS.map(emoji => {
         const isSelected = currentReaction === emoji;
         return (
@@ -42,25 +33,19 @@ export default function ReactionBar({ onReaction, currentReaction }: ReactionBar
           </Pressable>
         );
       })}
-    </BlurView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  pill: {
+  // יושב ישירות על ChatBottomSheet glass — בלי pill/card מקונן
+  row: {
     flexDirection: 'row',
-    borderRadius: 999,
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.18)',
-    overflow: 'hidden',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
     gap: 2,
-  },
-  pillOverlay: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 999,
   },
   emojiBtn: {
     width: 44,

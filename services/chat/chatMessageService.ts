@@ -161,13 +161,40 @@ export async function sendChatMessage(
       const result = await retryWithBackoff(async () => {
         
         // Workaround: Store waveform data in content field for audio messages
-        // Format: {"waveform": [...], "caption": "optional"}
+        // Format: {"waveform":[...],"waveformData":[...],"duration":n,"caption":"..."}
         let contentToStore = input.content;
         if (input.message_type === 'audio' && input.metadata?.waveformData) {
-          const audioContent = {
-            waveform: input.metadata.waveformData,
-            caption: input.content || '',
+          let caption = '';
+          let durationFromContent: number | undefined;
+          const rawContent = (input.content || '').trim();
+          if (rawContent.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(rawContent) as Record<string, unknown>;
+              if (typeof parsed.caption === 'string') caption = parsed.caption;
+              else if (
+                parsed.waveform == null &&
+                parsed.waveformData == null &&
+                typeof parsed.duration !== 'number'
+              ) {
+                caption = rawContent;
+              }
+              if (typeof parsed.duration === 'number') durationFromContent = parsed.duration;
+            } catch {
+              caption = rawContent;
+            }
+          } else {
+            caption = rawContent;
+          }
+          const wave = input.metadata.waveformData;
+          const audioContent: Record<string, unknown> = {
+            waveform: wave,
+            waveformData: wave,
+            caption,
           };
+          const duration = input.media_duration ?? durationFromContent ?? input.metadata?.media_duration;
+          if (typeof duration === 'number' && duration > 0) {
+            audioContent.duration = duration;
+          }
           contentToStore = JSON.stringify(audioContent);
         }
         
@@ -1029,7 +1056,7 @@ export async function getStarredMessages(
             display_name,
             profile_picture
           ),
-          chat_groups (
+          chat_groups!chat_messages_group_id_fkey (
             id,
             name,
             avatar_url

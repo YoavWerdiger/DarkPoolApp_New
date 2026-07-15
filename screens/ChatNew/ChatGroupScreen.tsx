@@ -29,15 +29,14 @@ import ForwardMessageModal from '../../components/chat/ForwardMessageModal';
 import ChatListRow from '../../components/chat/ChatListRow';
 import LongPressOverlay from '../../components/chat/LongPressOverlay';
 import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
-import PinnedMessagesHeader from '../../components/chat/PinnedMessagesHeader';
 import SeenBySheet from '../../components/chat/SeenBySheet';
-import { pinChatMessage } from '../../services/chat/chatPinnedService';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
 import { ChatMessage as ChatMessageType, ChatMessageType as MessageType } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { logger } from '../../utils/logger';
+import { isAnnouncementGroup as checkIsAnnouncementGroup } from '../../utils/isAnnouncementGroup';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
 import {
@@ -148,12 +147,11 @@ export default function ChatGroupScreen() {
 
   const initialUnreadInfoRef = useRef(initialUnreadInfo);
 
-  // בדיקה אם זו קבוצת הכרזות
-  const isAnnouncementGroup = useMemo(() => {
-    if (!currentGroup?.name) return false;
-    const lowerName = currentGroup.name.toLowerCase();
-    return lowerName.includes('הכרזות') || lowerName.includes('announcement');
-  }, [currentGroup?.name]);
+  // בדיקה אם זו קבוצת הכרזות (id מדויק / שם מדויק — לא includes)
+  const isAnnouncementGroup = useMemo(
+    () => checkIsAnnouncementGroup(currentGroup?.name, currentGroup?.id),
+    [currentGroup?.name, currentGroup?.id],
+  );
 
   // Context + FlatList inverted: messages[0]=חדש בתחתית המסך
   const hasInitiallyRenderedRef = useRef(false);
@@ -370,7 +368,6 @@ export default function ChatGroupScreen() {
   const [longPressMessage, setLongPressMessage] = useState<MessageSnapshot | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const [seenByMessage, setSeenByMessage] = useState<ChatMessageType | null>(null);
-  const [pinnedRefreshKey, setPinnedRefreshKey] = useState(0);
 
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef<boolean>(true);
@@ -980,9 +977,6 @@ export default function ChatGroupScreen() {
         case 'star':
           handleStar(message);
           break;
-        case 'pin':
-          handlePinMessage(message);
-          break;
         case 'info':
           handleMessageInfo(message);
           break;
@@ -1029,21 +1023,6 @@ export default function ChatGroupScreen() {
       }
     } catch (e) {
       logger.error('ChatGroupScreen', 'Star/unstar failed', e);
-    }
-  };
-
-  const handlePinMessage = async (message: ChatMessageType) => {
-    if (!user?.id) return;
-    try {
-      const { success, error } = await pinChatMessage(groupId, message.id, user.id);
-      if (!success) {
-        legacyAlert('שגיאה', error || 'לא ניתן להצמיד את ההודעה');
-      } else {
-        void HapticFeedback.impactLight();
-        setPinnedRefreshKey((k) => k + 1);
-      }
-    } catch {
-      legacyAlert('שגיאה', 'שגיאה בהצמדת ההודעה');
     }
   };
 
@@ -1330,6 +1309,7 @@ export default function ChatGroupScreen() {
           showUnreadDivider={shouldShowUnreadDivider(item.id, index)}
           unreadCount={initialUnreadInfo?.count || 0}
           isHighlighted={item.id === highlightedMessageId}
+          boldText={isAnnouncementGroup}
           onLayout={(h) => onMessageCellLayout(item.id, h)}
             onLongPress={() => handleMessageLongPress(item)}
             onReply={() => handleReply(item)}
@@ -1357,6 +1337,7 @@ export default function ChatGroupScreen() {
       user?.id,
       highlightedMessageId,
       initialUnreadInfo?.count,
+      isAnnouncementGroup,
       handleMessageLongPress,
       handleReply,
       handleReactionPress,
@@ -1529,18 +1510,6 @@ export default function ChatGroupScreen() {
         </View>
       )}
 
-      <PinnedMessagesHeader
-        groupId={groupId}
-        refreshKey={pinnedRefreshKey}
-        onMessagePress={(messageId) => {
-          if (messageId === 'refresh_pinned') {
-            setPinnedRefreshKey((k) => k + 1);
-            return;
-          }
-          handleJumpToMessage(messageId);
-        }}
-      />
-
       <View style={styles.messagesSection}>
         <View style={styles.messagesAreaFlex}>
           <RNAnimated.View style={[styles.flatListTransparent, { opacity: listOpacity }]}>
@@ -1557,7 +1526,7 @@ export default function ChatGroupScreen() {
           ListFooterComponent={renderFooter}
             scrollEnabled
             bounces
-            keyboardDismissMode="none"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
           initialNumToRender={10}
             maxToRenderPerBatch={8}

@@ -1,6 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, ScrollView, Dimensions, Animated, StyleSheet } from 'react-native';
+import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, ScrollView, Dimensions, Animated, StyleSheet, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { Clock, Sun, Moon, ChevronUp } from 'lucide-react-native';
@@ -1042,6 +1043,7 @@ interface EarningsDetailSheetProps {
 
 const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, report, onClose }) => {
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const getSurpriseColor = (percent: number | null): string => {
     if (!percent) return DesignTokens.colors.text.secondary;
     if (percent > 0) return DesignTokens.colors.primary.main;
@@ -1139,20 +1141,9 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       }
     }
     
-    // המרת צבע hex ל-rgba
-    const hexToRgba = (hex: string, alpha: number = 1): string => {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      if (result) {
-        const r = parseInt(result[1], 16);
-        const g = parseInt(result[2], 16);
-        const b = parseInt(result[3], 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-      }
-      return backgroundColor;
-    };
-    
-    const bgRgba = hexToRgba(backgroundColor, 0);
-    const gridColor = hexToRgba(backgroundColor, 0);
+    // #0A0E0A בפורמט rgba — TradingView לא מקבל hex, רק rgba
+    const SHEET_BG = 'rgba(10, 14, 10, 1)';
+    const GRID_COLOR = 'rgba(255, 255, 255, 0.06)';
 
     const config = {
       allow_symbol_change: true,
@@ -1174,9 +1165,9 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       symbol: symbolForChart,
       theme: 'dark',
       timezone: 'Asia/Jerusalem',
-      isTransparent: true,
-      backgroundColor: bgRgba,
-      gridColor,
+      isTransparent: false,
+      backgroundColor: SHEET_BG,
+      gridColor: GRID_COLOR,
       watchlist: [],
       withdateranges: false,
       compareSymbols: [],
@@ -1202,7 +1193,7 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       padding: 0;
       height: 100%;
       width: 100%;
-      background-color: transparent;
+      background-color: #0A0E0A;
       overflow: hidden;
       -webkit-overflow-scrolling: touch;
     }
@@ -1222,6 +1213,7 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       width: 100% !important;
       height: 100% !important;
       border: none !important;
+      background: #0A0E0A !important;
     }
     .tradingview-widget-copyright {
       display: none !important;
@@ -1393,11 +1385,20 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
 
         <ScrollView
           style={sheetStyles.scroll}
-          contentContainerStyle={sheetStyles.scrollContent}
+          contentContainerStyle={[
+            sheetStyles.scrollContent,
+            { paddingBottom: Math.max(insets.bottom + 16, 32) },
+          ]}
           showsVerticalScrollIndicator={false}
         >
-          <UICard variant="blur" padding="none" style={sheetStyles.chartCard}>
+          <UICard
+            variant="blur"
+            padding="none"
+            style={sheetStyles.chartCard}
+            contentContainerStyle={{ flex: 1 }}
+          >
             <WebView
+              key={`tv-${report.id ?? report.code}`}
               source={{
                 html: getTradingViewChartHTML(
                   report.code,
@@ -1408,6 +1409,8 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
                 ),
               }}
               style={sheetStyles.chartWebView}
+              androidLayerType="hardware"
+              allowsTransparency
               javaScriptEnabled
               domStorageEnabled
               thirdPartyCookiesEnabled
@@ -1698,7 +1701,6 @@ function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignToke
     scrollContent: {
       paddingHorizontal: 16,
       paddingTop: 14,
-      paddingBottom: 24,
       gap: 12,
       direction: 'rtl',
     },
@@ -1709,7 +1711,7 @@ function createEarningsDetailSheetStyles(tokens: ReturnType<typeof useDesignToke
     },
     chartWebView: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: '#0A0E0A',
     },
     sectionCard: {
       borderRadius: 24,

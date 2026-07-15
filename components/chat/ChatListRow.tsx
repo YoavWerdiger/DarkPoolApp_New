@@ -1,9 +1,6 @@
 import React, { memo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import ChatMessage, {
-  CHAT_BUBBLE_MARGIN,
-  CHAT_SENDER_CHANGE_MARGIN,
-} from './ChatMessage';
+import ChatMessage from './ChatMessage';
 import UnreadDivider from './UnreadDivider';
 import { useDesignTokens } from '../ui/DesignTokens';
 import type { ChatMessage as ChatMessageType } from '../../types/chat.types';
@@ -57,6 +54,7 @@ export type ChatListRowProps = {
   onRetry?: () => void;
   onStatusPress?: () => void;
   onUnreadDividerPress: () => void;
+  boldText?: boolean;
 };
 
 function ChatListRow({
@@ -79,26 +77,20 @@ function ChatListRow({
   onRetry,
   onStatusPress,
   onUnreadDividerPress,
+  boldText = false,
 }: ChatListRowProps) {
-  // FlatList inverted: תא עם column-reverse + scaleY על הרשימה ועל התא.
-  // marginTop/Bottom על הבועה עצמה מתהפכים בין גרסאות — Spacer כ-sibling
-  // (אותו מיקום עץ כמו DateDivider) נשאר בגבול מול older אחרי ההיפוך הכפול.
-  const gapAbove = isAfterSenderChange
-    ? CHAT_SENDER_CHANGE_MARGIN
-    : CHAT_BUBBLE_MARGIN;
-
   return (
     <View onLayout={(e) => onLayout(e.nativeEvent.layout.height)}>
       {showDateDivider ? <DateDivider label={dateDividerLabel} /> : null}
       {showUnreadDivider ? (
         <UnreadDivider unreadCount={unreadCount} onPress={onUnreadDividerPress} />
       ) : null}
-      <View style={{ height: gapAbove }} />
       <ChatMessage
         message={message}
         isMe={isMe}
         showAvatar={showAvatar}
         showSenderName={showSenderName}
+        isAfterSenderChange={isAfterSenderChange}
         onLongPress={onLongPress}
         onReply={onReply}
         onReactionPress={onReactionPress}
@@ -107,6 +99,7 @@ function ChatListRow({
         onRetry={onRetry}
         onStatusPress={onStatusPress}
         isHighlighted={isHighlighted}
+        boldText={boldText}
       />
     </View>
   );
@@ -139,6 +132,7 @@ export default memo(ChatListRow, (prev, next) => {
     prev.dateDividerLabel === next.dateDividerLabel &&
     prev.showUnreadDivider === next.showUnreadDivider &&
     prev.unreadCount === next.unreadCount &&
-    prev.isHighlighted === next.isHighlighted
+    prev.isHighlighted === next.isHighlighted &&
+    prev.boldText === next.boldText
   );
 });

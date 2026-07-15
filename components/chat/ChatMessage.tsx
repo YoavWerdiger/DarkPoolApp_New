@@ -12,6 +12,7 @@ import Reanimated, {
   Easing as ReanimatedEasing,
   runOnJS,
   useAnimatedStyle,
+  useFrameCallback,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
@@ -23,8 +24,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Image as ExpoImage } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import MediaViewer from './MediaViewer';
 import MediaGridBubble from './MediaGridBubble';
+import VoiceWaveformWithProgress from './VoiceWaveformWithProgress';
+import { extractWaveformData, WAVEFORM_STORE_BARS } from '../../utils/waveformSamples';
+import { resolveMessageWaveform } from '../../utils/audioWaveformPeaks';
 import * as WebBrowser from 'expo-web-browser';
 import { logger } from '../../utils/logger';
 import {
@@ -85,6 +90,8 @@ interface ChatMessageProps {
   isMe: boolean;
   showAvatar?: boolean;
   showSenderName?: boolean;
+  /** true כש-older (מעל ב-inverted) משולח אחר — מרווח גדול ב-marginTop */
+  isAfterSenderChange?: boolean;
   onLongPress?: () => void;
   onPress?: () => void;
   onReply?: () => void;
@@ -95,12 +102,14 @@ interface ChatMessageProps {
   onRetry?: () => void;
   onStatusPress?: () => void;
   isHighlighted?: boolean;
+  /** הודעות בערוץ הכרזות — טקסט בולד */
+  boldText?: boolean;
 }
 
-/** מרווח בין בועות רצופות של אותו שולח (Spacer ב-ChatListRow) */
-export const CHAT_BUBBLE_MARGIN = 4;
-/** מרווח גדול בגבול בין שולחים שונים (Spacer מול older) */
-export const CHAT_SENDER_CHANGE_MARGIN = 8;
+/** מרווח בין בועות רצופות של אותו שולח */
+export const CHAT_BUBBLE_MARGIN = 2;
+/** מרווח מול older כשמחליפים שולח (marginTop ב-inverted) */
+export const CHAT_SENDER_CHANGE_MARGIN = 12;
 
 // פונקציה לרנדור טקסט עם תיוגים (@mentions)
 const renderTextWithMentions = (
@@ -234,6 +243,7 @@ function ChatMessage({
   isMe,
   showAvatar = true,
   showSenderName = true,
+  isAfterSenderChange = false,
   onLongPress,
   onPress,
   onReply,
@@ -244,6 +254,7 @@ function ChatMessage({
   onRetry,
   onStatusPress,
   isHighlighted = false,
+  boldText = false,
 }: ChatMessageProps) {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
@@ -362,7 +373,7 @@ function ChatMessage({
   useEffect(() => {
     setVideoServerThumbFailed(false);
     setRuntimeVideoThumb(null);
-  }, [message.id, message.media_thumbnail_url, resolvedMedia.thumb]);
+  }, [message.id]);
 
   useEffect(() => {
     if (message.message_type !== MessageType.VIDEO) return;
@@ -373,11 +384,19 @@ function ChatMessage({
     const isLocal = (u: string | null | undefined): u is string =>
       !!u && (u.startsWith('file:') || u.startsWith('content:'));
 
+    // אם כבר יש thumb מקומי/חתום — אין צורך לייצר; רק אם חסר או נכשל
+    const existingThumb =
+      (isLocal(message.media_thumbnail_url) && message.media_thumbnail_url) ||
+      (isDisplayable(resolvedMedia.thumb) && resolvedMedia.thumb) ||
+      null;
+    if (existingThumb && !videoServerThumbFailed) {
+      return;
+    }
+
     const genFrom = async (src: string): Promise<string | null> => {
-      // AVAssetImageGenerator לעיתים נכשל על time מסוים — מנסים כמה נקודות
-      for (const time of [1000, 0, 100]) {
+      for (const time of [1000, 0, 100, 2000]) {
         try {
-          const { uri } = await VideoThumbnails.getThumbnailAsync(src, { time, quality: 0.6 });
+          const { uri } = await VideoThumbnails.getThumbnailAsync(src, { time, quality: 0.65 });
           if (uri) return uri;
         } catch {
           /* ננסה נקודת זמן/מקור הבא */
@@ -388,7 +407,6 @@ function ChatMessage({
 
     (async () => {
       try {
-        // 1) מקור מקומי אמין: local_media_uri או וידאו שכבר במטמון הדיסק
         const cachedLocal = getCachedChatMediaDisplayUri(message.media_url);
         const localSource =
           (isLocal(message.local_media_uri) && message.local_media_uri) ||
@@ -401,12 +419,10 @@ function ChatMessage({
           uri = await genFrom(localSource);
         }
 
-        // 2) URL מרוחק חתום (מהיר אם עובד)
         if (!uri && resolvedMedia.main && resolvedMedia.main.startsWith('http')) {
           uri = await genFrom(resolvedMedia.main);
         }
 
-        // 3) נפילה אמינה: הורדת הווידאו ל-disk (dedup עם ה-cache הקיים) ויצירה מקומית
         if (!uri) {
           const path = chatMediaStoragePathFromRef(message.media_url);
           if (path && resolvedMedia.main && resolvedMedia.main.startsWith('http')) {
@@ -432,6 +448,7 @@ function ChatMessage({
     message.local_media_uri,
     resolvedMedia.thumb,
     resolvedMedia.main,
+    videoServerThumbFailed,
   ]);
 
   // הודעות אופטימיסטיות (שלחנו) – מוצגות מיידית.
@@ -443,6 +460,7 @@ function ChatMessage({
   ).current;
   const fadeAnim = useRef(new Animated.Value(isNewMessage ? 0 : 1)).current;
   const slideAnim = useRef(new Animated.Value(isNewMessage ? 8 : 0)).current;
+  const highlightOpacity = useRef(new Animated.Value(0)).current;
   const hasAnimated = useRef(false);
 
   useEffect(() => {
@@ -466,6 +484,33 @@ function ChatMessage({
     ]).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // הדגשת קפיצה להודעה — רק פלאש שקיפות רך, בלי translate/slide של הבועה
+  useEffect(() => {
+    if (!isHighlighted) {
+      highlightOpacity.setValue(0);
+      return;
+    }
+    highlightOpacity.setValue(0);
+    const anim = Animated.sequence([
+      Animated.timing(highlightOpacity, {
+        toValue: 1,
+        duration: 160,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.delay(1400),
+      Animated.timing(highlightOpacity, {
+        toValue: 0,
+        duration: 480,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
+    anim.start();
+    return () => anim.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHighlighted]);
 
   const swipeTranslateX = useSharedValue(0);
 
@@ -570,11 +615,18 @@ function ChatMessage({
     );
   }
 
+  // inverted FlatList (scaleY על הרשימה + על התא): אחרי ההיפוך הכפול,
+  // marginTop פונה ל-older (מעל), marginBottom ל-newer (מתחת).
+  // מרווח גדול ב-marginTop כש-older הוא שולח אחר — בלי marginBottom כפול.
+  const senderGapStyle = {
+    marginTop: isAfterSenderChange ? CHAT_SENDER_CHANGE_MARGIN : CHAT_BUBBLE_MARGIN,
+  };
+
   // הודעה מחוקה
   if (message.is_deleted) {
     return (
       <View
-        style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage]}
+        style={[styles.messageContainer, isMe ? styles.myMessage : styles.theirMessage, senderGapStyle]}
         accessibilityRole="text"
         accessibilityLabel="Deleted message"
       >
@@ -598,9 +650,13 @@ function ChatMessage({
     <Animated.View style={[
       styles.messageContainer,
       isMe ? styles.myMessage : styles.theirMessage,
-      isHighlighted && styles.highlightedMessage,
+      senderGapStyle,
       { opacity: effectiveOpacity, transform: [{ translateY: effectiveTranslateY }] },
     ]}>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.highlightOverlay, { opacity: highlightOpacity }]}
+      />
       {/* Avatar */}
       {!isMe && (showAvatar ? (
         <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
@@ -772,6 +828,7 @@ function ChatMessage({
               styles.messageText,
               isMe ? styles.myMessageText : styles.theirMessageText,
               message.media_url && styles.messageTextWithMedia,
+              boldText && styles.messageTextBold,
               { textAlign: detectTextDirection(displayContent) }
             ];
             const mentionStyle = {
@@ -813,21 +870,37 @@ function ChatMessage({
               </TouchableOpacity>
             ) : (
               <View style={styles.metadataRow}>
-                {message.is_edited && (
-                  <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>נערך · </Text>
+                {message.is_starred_by_me ? (
+                  <Ionicons
+                    name="star"
+                    size={11}
+                    color={
+                      isMe
+                        ? DesignTokens.colors.bubbleMeMetaText
+                        : DesignTokens.colors.text.tertiary
+                    }
+                    style={styles.starredFooterIcon}
+                  />
+                ) : (
+                  <View style={styles.starredFooterSpacer} />
                 )}
-                <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText]}>{timeText}</Text>
-                <MessageStatusIcon
-                  isMe={isMe}
-                  isSending={isSending}
-                  hasError={!!message.send_error}
-                  styles={styles}
-                  tertiaryColor={
-                    isMe
-                      ? DesignTokens.colors.bubbleMeMetaText
-                      : DesignTokens.colors.text.tertiary
-                  }
-                />
+                <View style={styles.metadataTimeGroup}>
+                  {message.is_edited && (
+                    <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>נערך · </Text>
+                  )}
+                  <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText]}>{timeText}</Text>
+                  <MessageStatusIcon
+                    isMe={isMe}
+                    isSending={isSending}
+                    hasError={!!message.send_error}
+                    styles={styles}
+                    tertiaryColor={
+                      isMe
+                        ? DesignTokens.colors.bubbleMeMetaText
+                        : DesignTokens.colors.text.tertiary
+                    }
+                  />
+                </View>
               </View>
             )}
           </View>
@@ -946,33 +1019,33 @@ function renderMediaContent(
     }
 
     case MessageType.VIDEO: {
+      const isDisplayableUri = (u: string | null | undefined): u is string =>
+        !!u &&
+        (u.startsWith('http') || u.startsWith('file:') || u.startsWith('content:'));
+
       const serverThumb =
         resolved.thumb ||
         getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
+        (isDisplayableUri(message.media_thumbnail_url) ? message.media_thumbnail_url : null) ||
         null;
       const serverThumbOk =
-        !!serverThumb &&
-        !videoServerThumbFailed &&
-        (serverThumb.startsWith('http') ||
-          serverThumb.startsWith('file:') ||
-          serverThumb.startsWith('content:'));
-      const thumbUri = serverThumbOk ? serverThumb : (videoPoster || null);
-      const videoThumbOk =
-        !!thumbUri &&
-        (thumbUri.startsWith('http') ||
-          thumbUri.startsWith('file:') ||
-          thumbUri.startsWith('content:'));
+        isDisplayableUri(serverThumb) && !videoServerThumbFailed;
+
+      // העדפה: פריים מקומי שנוצר (אמין) → thumb שרת → runtime poster
+      const thumbUri =
+        (isDisplayableUri(videoPoster) ? videoPoster : null) ||
+        (serverThumbOk ? serverThumb : null) ||
+        null;
+      const videoThumbOk = isDisplayableUri(thumbUri);
 
       return (
         <TouchableOpacity onPress={onMediaPress} activeOpacity={0.9}>
           <View style={styles.mediaVideo}>
             {videoThumbOk ? (
-              <ExpoImage
+              <Image
                 source={{ uri: thumbUri }}
-                style={styles.mediaImage}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                recyclingKey={`${message.id}-vid-${thumbUri}`}
+                style={styles.mediaVideoFrame}
+                resizeMode="cover"
                 onError={() => onVideoThumbError?.()}
               />
             ) : (
@@ -981,28 +1054,33 @@ function renderMediaContent(
               </View>
             )}
 
-            {/* Overlay כהה */}
-            <View style={styles.videoOverlay} />
+            {/* Overlay עדין — לא מסתיר את הפריים */}
+            <View style={styles.videoOverlay} pointerEvents="none" />
 
-            {/* כפתור Play */}
-            <View style={styles.playButtonContainer}>
+            <View style={styles.playButtonContainer} pointerEvents="none">
               <View style={styles.playButton}>
                 <Ionicons name="play" size={28} color={tokens.colors.text.primary} style={{ marginLeft: 3 }} />
               </View>
             </View>
 
-            {/* משך הסרטון — WhatsApp style: ▶ 0:12 bottom-left */}
-            {message.media_duration && message.media_duration > 0 && (
-              <View style={styles.videoDuration}>
-                <Ionicons name="play" size={10} color="rgba(255,255,255,0.93)" />
-                <Text style={styles.videoDurationText}>
-                  {formatDuration(message.media_duration)}
-                </Text>
-              </View>
-            )}
-
-            {/* Timestamp overlay */}
-            {timeOverlayNode}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.55)']}
+              locations={[0, 1]}
+              style={styles.videoBottomBanner}
+              pointerEvents="none"
+            >
+              {message.media_duration && message.media_duration > 0 ? (
+                <View style={styles.videoDuration}>
+                  <Ionicons name="play" size={10} color="rgba(255,255,255,0.93)" />
+                  <Text style={styles.videoDurationText}>
+                    {formatDuration(message.media_duration)}
+                  </Text>
+                </View>
+              ) : (
+                <View />
+              )}
+              {timeOverlayNode}
+            </LinearGradient>
           </View>
         </TouchableOpacity>
       );
@@ -1446,9 +1524,21 @@ function AudioPlayer({
   const [position, setPosition] = useState(0);
   const [actualDuration, setActualDuration] = useState(duration);
   const [playbackRate, setPlaybackRate] = useState(1.0);
-  const positionIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const waveformContainerRef = useRef<View | null>(null);
   const isMountedRef = useRef(true);
+  const isScrubbingRef = useRef(false);
+  const wasPlayingBeforeScrubRef = useRef(false);
+  const playbackRateRef = useRef(playbackRate);
+
+  const progressSV = useSharedValue(0);
+  const isPlayingSV = useSharedValue(0);
+  const isScrubbingSV = useSharedValue(0);
+  const durationSV = useSharedValue(Math.max(0, duration));
+  const rateSV = useSharedValue(1);
+
+  useEffect(() => {
+    playbackRateRef.current = playbackRate;
+    rateSV.value = playbackRate;
+  }, [playbackRate, rateSV]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -1470,6 +1560,56 @@ function AudioPlayer({
     }).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (duration > 0) {
+      setActualDuration((prev) => (prev > 0 ? prev : duration));
+      durationSV.value = duration;
+    }
+  }, [duration, durationSV]);
+
+  useEffect(() => {
+    if (actualDuration > 0) {
+      durationSV.value = actualDuration;
+    }
+  }, [actualDuration, durationSV]);
+
+  const resetPlayheadToStart = useCallback(async () => {
+    progressSV.value = 0;
+    setPosition(0);
+    setIsPlaying(false);
+    isPlayingSV.value = 0;
+    if (soundRef.current) {
+      try {
+        await soundRef.current.setPositionAsync(0);
+      } catch (e) {
+        if (isMountedRef.current) {
+          logger.error('ChatMessage', 'Audio reset error', e);
+        }
+      }
+    }
+  }, [progressSV, isPlayingSV]);
+
+  const syncProgressFromAudio = useCallback(
+    (posSeconds: number, durSeconds: number) => {
+      if (isScrubbingRef.current) return;
+      const d = Math.max(durSeconds, 0.001);
+      const p = Math.max(0, Math.min(1, posSeconds / d));
+      progressSV.value = p;
+      setPosition(posSeconds);
+    },
+    [progressSV],
+  );
+
+  // פלייהד חלק על ה-UI thread — כמו הוויבפורם החי (dt בין פריימים)
+  useFrameCallback((frame) => {
+    'worklet';
+    if (isPlayingSV.value < 0.5 || isScrubbingSV.value > 0.5) return;
+    const d = durationSV.value;
+    if (d <= 0) return;
+    const dt = Math.min(1 / 20, (frame.timeSincePreviousFrame ?? 16) / 1000);
+    progressSV.value = Math.min(1, progressSV.value + (dt * rateSV.value) / d);
+  }, true);
+
   const createSoundWithSignedUrlRetry = async (initialUri: string) => {
     let uri = initialUri;
     if (!isPlayableMediaUri(uri) && message.media_url) {
@@ -1480,7 +1620,10 @@ function AudioPlayer({
       }
     }
     try {
-      return await Audio.Sound.createAsync({ uri });
+      return await Audio.Sound.createAsync(
+        { uri },
+        { progressUpdateIntervalMillis: 80 },
+      );
     } catch (first) {
       const ref = message.media_url;
       if (!ref) throw first;
@@ -1489,74 +1632,60 @@ function AudioPlayer({
       const fresh = await getChatMediaDisplayUri(ref);
       if (!fresh || fresh === uri) throw first;
       currentUriRef.current = fresh;
-      return await Audio.Sound.createAsync({ uri: fresh });
+      return await Audio.Sound.createAsync(
+        { uri: fresh },
+        { progressUpdateIntervalMillis: 80 },
+      );
     }
   };
 
-  // Duration from message metadata — avoid probing every voice bubble on mount (noisy AVFoundation errors).
-  useEffect(() => {
-    if (duration > 0 && actualDuration === 0) {
-      setActualDuration(duration);
-    }
-  }, [duration, actualDuration]);
-
-  // Update position while playing - עדכון מהיר יותר לחלקות
-  useEffect(() => {
-    if (isPlaying && soundRef.current) {
-      positionIntervalRef.current = setInterval(async () => {
-        if (!isMountedRef.current) return;
-        try {
-          if (soundRef.current) {
-            const status = await soundRef.current.getStatusAsync();
-            if (!isMountedRef.current) return;
-            if (status.isLoaded) {
-              const posMillis = status.positionMillis || 0;
-              const posSeconds = posMillis / 1000;
-              setPosition(posSeconds);
-
-              if (actualDuration === 0 && status.durationMillis && status.durationMillis > 0) {
-                setActualDuration(status.durationMillis / 1000);
-              }
-
-              if (status.didJustFinish) {
-                setIsPlaying(false);
-                setPosition(0);
-                if (soundRef.current && status.isLoaded) {
-                  try {
-                    await soundRef.current.setPositionAsync(0);
-                  } catch (e) {
-                    if (isMountedRef.current) {
-                      logger.error('ChatMessage', 'Audio playback error', e);
-                    }
-                  }
-                }
-              } else if (!status.isPlaying && isPlaying) {
-                setIsPlaying(false);
-              }
-            }
-          }
-        } catch (error) {
-          if (isMountedRef.current) {
-            logger.error('ChatMessage', 'Audio playback error', error);
-          }
+  const handlePlaybackStatus = useCallback(
+    (status: any) => {
+      if (!isMountedRef.current || !status?.isLoaded) return;
+      if (status.durationMillis && status.durationMillis > 0) {
+        const sec = status.durationMillis / 1000;
+        setActualDuration(sec);
+        durationSV.value = sec;
+      }
+      if (status.didJustFinish) {
+        void resetPlayheadToStart();
+        return;
+      }
+      if (isScrubbingRef.current) return;
+      const pos = (status.positionMillis ?? 0) / 1000;
+      const dur =
+        status.durationMillis && status.durationMillis > 0
+          ? status.durationMillis / 1000
+          : actualDuration || duration;
+      if (dur > 0) {
+        const reported = Math.min(1, pos / dur);
+        // סנכרון רק כשיש סטייה — שומר חלקות של ה-frame callback
+        if (Math.abs(reported - progressSV.value) > 0.03) {
+          syncProgressFromAudio(pos, dur);
+        } else {
+          setPosition(pos);
         }
-      }, 100);
-    } else {
-      if (positionIntervalRef.current) {
-        clearInterval(positionIntervalRef.current);
-        positionIntervalRef.current = null;
       }
-    }
-
-    return () => {
-      if (positionIntervalRef.current) {
-        clearInterval(positionIntervalRef.current);
-        positionIntervalRef.current = null;
+      if (status.isPlaying) {
+        setIsPlaying(true);
+        isPlayingSV.value = 1;
+      } else if (!status.isPlaying && isPlayingSV.value > 0.5) {
+        setIsPlaying(false);
+        isPlayingSV.value = 0;
+        progressSV.value = dur > 0 ? Math.min(1, pos / dur) : 0;
       }
-    };
-  }, [isPlaying, actualDuration]);
+    },
+    [
+      actualDuration,
+      duration,
+      durationSV,
+      isPlayingSV,
+      progressSV,
+      resetPlayheadToStart,
+      syncProgressFromAudio,
+    ],
+  );
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -1564,11 +1693,86 @@ function AudioPlayer({
         void soundRef.current.unloadAsync();
         soundRef.current = null;
       }
-      if (positionIntervalRef.current) {
-        clearInterval(positionIntervalRef.current);
-      }
     };
   }, []);
+
+  const seekToProgress = useCallback(
+    async (progress01: number, resumeIfNeeded: boolean) => {
+      const dur = actualDuration > 0 ? actualDuration : duration;
+      if (dur <= 0) return;
+      const clamped = Math.max(0, Math.min(1, progress01));
+      const targetMs = clamped * dur * 1000;
+      progressSV.value = clamped;
+      setPosition(clamped * dur);
+
+      try {
+        if (!soundRef.current) {
+          if (!isPlayableMediaUri(currentUriRef.current) && message.media_url) {
+            const signed = await getChatMediaDisplayUri(message.media_url);
+            if (signed) currentUriRef.current = signed;
+          }
+          if (!isPlayableMediaUri(currentUriRef.current)) return;
+          const { sound } = await createSoundWithSignedUrlRetry(currentUriRef.current);
+          await sound.setRateAsync(playbackRateRef.current, true);
+          sound.setOnPlaybackStatusUpdate(handlePlaybackStatus);
+          soundRef.current = sound;
+          const st = await sound.getStatusAsync();
+          if (st.isLoaded && st.durationMillis && st.durationMillis > 0) {
+            setActualDuration(st.durationMillis / 1000);
+            durationSV.value = st.durationMillis / 1000;
+          }
+        }
+        await soundRef.current.setPositionAsync(targetMs);
+        if (resumeIfNeeded) {
+          await soundRef.current.setRateAsync(playbackRateRef.current, true);
+          await soundRef.current.playAsync();
+          setIsPlaying(true);
+          isPlayingSV.value = 1;
+        }
+      } catch (error) {
+        if (isMountedRef.current) {
+          logger.error('ChatMessage', 'Audio seek error', error);
+        }
+      }
+    },
+    [
+      actualDuration,
+      duration,
+      progressSV,
+      durationSV,
+      isPlayingSV,
+      handlePlaybackStatus,
+      message.media_url,
+    ],
+  );
+
+  const onScrubStart = useCallback(() => {
+    isScrubbingRef.current = true;
+    isScrubbingSV.value = 1;
+    wasPlayingBeforeScrubRef.current = isPlayingSV.value > 0.5;
+    if (soundRef.current && wasPlayingBeforeScrubRef.current) {
+      void soundRef.current.pauseAsync();
+      setIsPlaying(false);
+      isPlayingSV.value = 0;
+    }
+  }, [isScrubbingSV, isPlayingSV]);
+
+  const onScrubUpdate = useCallback(
+    (progress01: number) => {
+      const dur = actualDuration > 0 ? actualDuration : duration;
+      if (dur > 0) setPosition(progress01 * dur);
+    },
+    [actualDuration, duration],
+  );
+
+  const onScrubEnd = useCallback(
+    (progress01: number) => {
+      isScrubbingRef.current = false;
+      isScrubbingSV.value = 0;
+      void seekToProgress(progress01, wasPlayingBeforeScrubRef.current);
+    },
+    [isScrubbingSV, seekToProgress],
+  );
 
   const togglePlayPause = async () => {
     if (Platform.OS !== 'web') {
@@ -1589,44 +1793,54 @@ function AudioPlayer({
       }
 
       if (!soundRef.current) {
-        // Load and play
         const { sound } = await createSoundWithSignedUrlRetry(currentUriRef.current);
-        await sound.setRateAsync(playbackRate, true);
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded) {
-            if (status.didJustFinish) {
-              setIsPlaying(false);
-              setPosition(0);
-            }
+        await sound.setRateAsync(playbackRateRef.current, true);
+        sound.setOnPlaybackStatusUpdate(handlePlaybackStatus);
+        const startProgress = progressSV.value;
+        if (startProgress > 0.01) {
+          const dur = actualDuration > 0 ? actualDuration : duration;
+          if (dur > 0) {
+            await sound.setPositionAsync(startProgress * dur * 1000);
           }
-        });
+        }
         await sound.playAsync();
         soundRef.current = sound;
         setIsPlaying(true);
+        isPlayingSV.value = 1;
         const status = await sound.getStatusAsync();
         if (status.isLoaded && status.durationMillis && status.durationMillis > 0) {
           setActualDuration(status.durationMillis / 1000);
+          durationSV.value = status.durationMillis / 1000;
         } else if (duration > 0 && actualDuration === 0) {
-          // אם ה-duration לא נטען מה-sound, נשתמש ב-duration prop
           setActualDuration(duration);
+          durationSV.value = duration;
         }
       } else {
-        // Toggle play/pause - וודא שה-rate נשמר
         const status = await soundRef.current.getStatusAsync();
         if (status.isLoaded) {
           if (status.isPlaying) {
             await soundRef.current.pauseAsync();
             setIsPlaying(false);
+            isPlayingSV.value = 0;
+            const pos = (status.positionMillis ?? 0) / 1000;
+            const dur =
+              status.durationMillis && status.durationMillis > 0
+                ? status.durationMillis / 1000
+                : actualDuration;
+            if (dur > 0) {
+              progressSV.value = Math.min(1, pos / dur);
+              setPosition(pos);
+            }
           } else {
-            // אם ההקלטה הסתיימה או קרובה לסיום, התחל מחדש מההתחלה
-            if (status.didJustFinish || (actualDuration > 0 && position >= actualDuration - 0.1)) {
+            if (status.didJustFinish || progressSV.value >= 0.995) {
               await soundRef.current.setPositionAsync(0);
+              progressSV.value = 0;
               setPosition(0);
             }
-            // הפעל עם ה-rate הנוכחי
-            await soundRef.current.setRateAsync(playbackRate, true);
+            await soundRef.current.setRateAsync(playbackRateRef.current, true);
             await soundRef.current.playAsync();
             setIsPlaying(true);
+            isPlayingSV.value = 1;
           }
         }
       }
@@ -1647,14 +1861,13 @@ function AudioPlayer({
     const currentIndex = rates.indexOf(playbackRate);
     const nextRate = rates[(currentIndex + 1) % rates.length];
     setPlaybackRate(nextRate);
+    rateSV.value = nextRate;
 
     if (soundRef.current) {
       try {
         const status = await soundRef.current.getStatusAsync();
         if (status.isLoaded) {
-          // הפעל את ה-rate גם אם זה לא מנגן כרגע
           await soundRef.current.setRateAsync(nextRate, true);
-          // אם זה מנגן, המשך לנגן עם ה-rate החדש
           if (status.isPlaying) {
             await soundRef.current.playAsync();
           }
@@ -1665,68 +1878,39 @@ function AudioPlayer({
     }
   };
 
-  // חישוב progress עם דיוק גבוה יותר לחלקות
-  const progress = actualDuration > 0 ? Math.min(100, Math.max(0, (position / actualDuration) * 100)) : 0;
-  // שימוש ב-actualDuration אם הוא קיים ויותר מ-0, אחרת ב-duration prop
-  const displayDuration = (actualDuration > 0) ? actualDuration : (duration > 0 ? duration : 0);
-  // יצירת waveformData - שימוש בנתונים אמיתיים אם קיימים, אחרת placeholder
-  const waveformData = useMemo(() => {
-    const FIXED_BARS_COUNT = 30;
+  const displayDuration = actualDuration > 0 ? actualDuration : duration > 0 ? duration : 0;
 
-    // Try to get waveform from metadata first
-    let realWaveformData = message.metadata?.waveformData;
+  // raw samples — VoiceWaveformWithProgress מנרמל ל־DISPLAY_BARS (מתיחה, לא ריפוד באפסים)
+  const storedWaveform = useMemo(
+    () => extractWaveformData(message),
+    [message.content, message.metadata],
+  );
+  const [recoveredWaveform, setRecoveredWaveform] = useState<number[] | undefined>();
 
-    if (!realWaveformData && message.content) {
-      try {
-        const parsed = JSON.parse(message.content);
-        realWaveformData = parsed.waveformData || parsed.waveform;
-      } catch {
-        // Not JSON content
-      }
+  // אם אין waveform שמור — מנסים peaks מקובץ מקומי (WAV) / URI זמני
+  useEffect(() => {
+    if (storedWaveform && storedWaveform.length >= 2) {
+      setRecoveredWaveform(undefined);
+      return;
     }
-
-    if (realWaveformData && Array.isArray(realWaveformData) && realWaveformData.length > 0) {
-      // נרמל את הנתונים ל-20 bars קבועים
-      const normalizedData: number[] = [];
-      const step = realWaveformData.length / FIXED_BARS_COUNT;
-
-      for (let i = 0; i < FIXED_BARS_COUNT; i++) {
-        const index = Math.floor(i * step);
-        const value = realWaveformData[index] || 0.3;
-        normalizedData.push(value);
+    const local = message.local_media_uri;
+    if (!local || typeof local !== 'string') return;
+    let cancelled = false;
+    void (async () => {
+      const peaks = await resolveMessageWaveform(local, [], WAVEFORM_STORE_BARS);
+      if (!cancelled && peaks.length >= 2 && Math.max(...peaks) > 0.12) {
+        setRecoveredWaveform(peaks);
       }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [storedWaveform, message.local_media_uri]);
 
-      // Enhance contrast - stretch values to fill 0.15-1.0 range
-      const minVal = Math.min(...normalizedData);
-      const maxVal = Math.max(...normalizedData);
-      const range = maxVal - minVal;
-
-      if (range > 0.05) {
-        // Stretch to show more variation
-        return normalizedData.map(v => 0.15 + ((v - minVal) / range) * 0.85);
-      }
-
-      // If range is too small, add some artificial variation
-      return normalizedData.map((v, i) => {
-        const variation = Math.sin(i * 0.5) * 0.2;
-        return Math.max(0.2, Math.min(1.0, v + variation));
-      });
-    }
-
-    // אם אין נתונים אמיתיים, יצירת placeholder דטרמיניסטי
-    const seed = audioUrl ? audioUrl.length : 0;
-    const data = [];
-    for (let i = 0; i < FIXED_BARS_COUNT; i++) {
-      const pseudoRandom = Math.sin((seed + i) * 12.9898) * 43758.5453;
-      const normalized = (pseudoRandom % 1 + 1) / 2;
-      data.push(0.2 + normalized * 0.8);
-    }
-    return data;
-  }, [audioUrl, message]);
+  const waveformData = storedWaveform ?? recoveredWaveform;
 
   return (
     <View style={styles.mediaAudio}>
-      {/* שורה אחת: פליי + waves + מהירות — alignItems:center לגובה הגלים בלבד */}
       <View style={styles.mediaAudioControlsRow}>
         <TouchableOpacity
           onPress={togglePlayPause}
@@ -1743,45 +1927,24 @@ function AudioPlayer({
 
         <View style={styles.audioWaveformFlex}>
           <View style={styles.audioWaveformWrapper}>
-            <View style={styles.audioWaveformContainer}>
-              <View style={styles.audioWaveformClip}>
-                <View
-                  ref={waveformContainerRef}
-                  style={styles.audioWaveformBars}
-                >
-                  {waveformData.map((value: number, index: number) => {
-                    const barHeight = Math.max(3, value * 16);
-                    const audioUrlHash = audioUrl ? audioUrl.substring(audioUrl.length - 10) : 'no-url';
-                    const uniqueKey = `${audioUrlHash}-waveform-${index}-${value.toFixed(4)}`;
-                    const barColor = isMe
-                      ? 'rgba(255,255,255,0.88)'
-                      : 'rgba(255,255,255,0.55)';
-
-                    return (
-                      <View
-                        key={uniqueKey}
-                        style={[
-                          styles.audioWaveformBar,
-                          {
-                            height: barHeight,
-                            backgroundColor: barColor,
-                          }
-                        ]}
-                      />
-                    );
-                  })}
-                </View>
-              </View>
-              <View
-                style={[
-                  styles.audioProgressIndicator,
-                  {
-                    left: `${Math.min(96, Math.max(4, progress))}%`,
-                    backgroundColor: tokens.colors.accent.main,
-                  }
-                ]}
-              />
-            </View>
+            <VoiceWaveformWithProgress
+              progress={progressSV}
+              duration={displayDuration}
+              isPlaying={isPlaying}
+              waveformData={waveformData}
+              interactive
+              onScrubStart={onScrubStart}
+              onScrubUpdate={onScrubUpdate}
+              onScrubEnd={onScrubEnd}
+              thumbColor={tokens.colors.accent.main}
+              activeColor={tokens.colors.primary.main}
+              inactiveColor={
+                isMe ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.22)'
+              }
+              nearActiveColor={
+                isMe ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.4)'
+              }
+            />
           </View>
         </View>
 
@@ -1796,6 +1959,14 @@ function AudioPlayer({
 
       <View style={styles.audioMetadataMerged}>
         <View style={styles.audioMetadataLeft}>
+          {message.is_starred_by_me ? (
+            <Ionicons
+              name="star"
+              size={11}
+              color={isMe ? tokens.colors.bubbleMeMetaText : tokens.colors.text.tertiary}
+              style={styles.starredFooterIcon}
+            />
+          ) : null}
           {isEdited && (
             <Text style={[styles.timeText, isMe ? styles.myTimeText : styles.theirTimeText, styles.editedText]}>
               נערך ·{' '}
@@ -1841,7 +2012,9 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
   if (a === b && prevProps.isHighlighted === nextProps.isHighlighted &&
       prevProps.isMe === nextProps.isMe &&
       prevProps.showAvatar === nextProps.showAvatar &&
-      prevProps.showSenderName === nextProps.showSenderName) {
+      prevProps.showSenderName === nextProps.showSenderName &&
+      prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
+      prevProps.boldText === nextProps.boldText) {
     return true;
   }
 
@@ -1868,7 +2041,9 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
     prevProps.isMe === nextProps.isMe &&
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.showSenderName === nextProps.showSenderName &&
-    prevProps.isHighlighted === nextProps.isHighlighted
+    prevProps.isAfterSenderChange === nextProps.isAfterSenderChange &&
+    prevProps.isHighlighted === nextProps.isHighlighted &&
+    prevProps.boldText === nextProps.boldText
   );
 });
 
@@ -1877,7 +2052,8 @@ export default memo(ChatMessage, (prevProps, nextProps) => {
 // ============================================
 
 const createStyles = (tokens: any) => StyleSheet.create({
-  /* מרווחים בין שולחים: Spacer ב-ChatListRow (לא margin על הבועה) */
+  /* מרווחים בסגנון WhatsApp: צפיפות בין הודעות אותו שולח;
+     מרווח גדול מול older בהחלפת שולח — senderGapStyle.marginTop (isAfterSenderChange) */
   messageContainer: {
     flexDirection: 'row',
     paddingHorizontal: 0,
@@ -1889,21 +2065,21 @@ const createStyles = (tokens: any) => StyleSheet.create({
   theirMessage: {
     justifyContent: 'flex-start',
   },
-  highlightedMessage: {
-    backgroundColor: tokens.colors.primary.dim,
+  highlightOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: tokens.colors.primary.subtle,
     borderRadius: tokens.borderRadius.md,
-    marginHorizontal: 2,
   },
 
   avatarContainer: {
     marginRight: 6,
-    // בלי marginBottom — אחרת שורת other גבוהה יותר מ-me ויוצרת מרווח קטן שונה
-    alignSelf: 'flex-end',
+    marginBottom: 2,
   },
-  /** רק רוחב ליישור בועות consecutive בלי אווטאר — בלי height/margin אנכי */
   avatarSpacer: {
-    width: 24,
+    width: 26,
+    height: 26,
     marginRight: 6,
+    marginBottom: 2,
   },
   avatar: {
     width: 24,
@@ -2123,6 +2299,11 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginBottom: 4,
     overflow: 'hidden',
     alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
+  mediaVideoFrame: {
+    width: '100%',
+    height: '100%',
   },
   videoPlaceholder: {
     width: '100%',
@@ -2152,7 +2333,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
   videoOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
   },
   playButtonContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -2169,14 +2350,24 @@ const createStyles = (tokens: any) => StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  videoDuration: {
+  videoBottomBanner: {
     position: 'absolute',
-    bottom: 8,
-    left: 8,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    minHeight: 44,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    paddingTop: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  videoDuration: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
@@ -2379,6 +2570,9 @@ const createStyles = (tokens: any) => StyleSheet.create({
     marginBottom: 0,
     color: tokens.colors.text.primary,
   },
+  messageTextBold: {
+    fontWeight: '700',
+  },
   messageTextWithMedia: {
     marginTop: 8,
     paddingHorizontal: 2,
@@ -2396,11 +2590,12 @@ const createStyles = (tokens: any) => StyleSheet.create({
   },
 
   metadata: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     marginTop: 1,
     gap: 4,
-    justifyContent: 'flex-start',
+    justifyContent: 'flex-end',
+    alignSelf: 'stretch',
   },
   editedText: {
     fontStyle: 'italic',
@@ -2421,12 +2616,33 @@ const createStyles = (tokens: any) => StyleSheet.create({
 
   metadataRow: {
     flexDirection: 'row',
+    direction: 'ltr',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  metadataTimeGroup: {
+    flexDirection: 'row',
+    direction: 'ltr',
     alignItems: 'center',
     gap: 3,
+    flexShrink: 0,
+    marginLeft: 'auto',
   },
   statusIcon: {
     marginLeft: 2,
     opacity: 0.8,
+  },
+  starredFooterIcon: {
+    opacity: 0.85,
+    marginTop: 1,
+  },
+  starredFooterSpacer: {
+    width: 0,
+    height: 0,
   },
   retryRow: {
     flexDirection: 'row-reverse',

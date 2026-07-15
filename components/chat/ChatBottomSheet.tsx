@@ -30,7 +30,10 @@ import { useDesignTokens } from '../ui/DesignTokens';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
 import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
 
-export const CHAT_SHEET_BACKDROP_OPACITY = 0.4;
+export const CHAT_SHEET_BACKDROP_OPACITY = 0.48;
+/** Blur + tint — אטום מספיק מעל צ׳אט, עדיין עם מראה זכוכית. */
+export const CHAT_SHEET_GLASS_INTENSITY = 95;
+export const CHAT_SHEET_GLASS_OVERLAY = 'rgba(10,14,10,0.82)';
 export const CHAT_SHEET_WATERMARK_SCALE = 0.58;
 export {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
@@ -93,9 +96,19 @@ type ChatBottomSheetProps = {
   fitContent?: boolean;
   edgeToEdge?: boolean;
   brandWatermarkScale?: number;
+  /** ברירת מחדל: false. השיט משתמש ב-glass (BlurView) במקום ברקע המותגי. */
   showBrandBackground?: boolean;
   showBrandWatermark?: boolean;
   contentPaddingBottom?: number;
+  /**
+   * ברירת מחדל: true. רקע זכוכית קפואה (BlurView + tint כהה) — כמו שיט
+   * הצפיות/ריאקציות ב-StoryViewer. העברה false מחזירה לרקע המותגי הקודם.
+   */
+  useGlassBackground?: boolean;
+  /** עוצמת ה-blur כשהזכוכית פעילה (0–100). ברירת מחדל: 95. */
+  glassIntensity?: number;
+  /** tint כהה מעל ה-blur. ברירת מחדל: CHAT_SHEET_GLASS_OVERLAY. */
+  glassOverlayColor?: string;
   children: React.ReactNode;
 };
 
@@ -106,9 +119,12 @@ export function ChatBottomSheet({
   fitContent,
   edgeToEdge = true,
   brandWatermarkScale = CHAT_SHEET_WATERMARK_SCALE,
-  showBrandBackground = true,
+  showBrandBackground = false,
   showBrandWatermark,
   contentPaddingBottom,
+  useGlassBackground = true,
+  glassIntensity = CHAT_SHEET_GLASS_INTENSITY,
+  glassOverlayColor = CHAT_SHEET_GLASS_OVERLAY,
   children,
 }: ChatBottomSheetProps) {
   return (
@@ -126,6 +142,9 @@ export function ChatBottomSheet({
       fitContent={fitContent}
       brandWatermarkScale={brandWatermarkScale}
       contentPaddingBottom={contentPaddingBottom}
+      useGlassBackground={useGlassBackground}
+      glassIntensity={glassIntensity}
+      glassOverlayColor={glassOverlayColor}
     >
       {children}
     </BottomSheet>
@@ -135,13 +154,16 @@ export function ChatBottomSheet({
 export function ChatSheetContent({
   children,
   style,
+  onLayout,
 }: {
   children: React.ReactNode;
   style?: ViewStyle;
+  onLayout?: (e: LayoutChangeEvent) => void;
 }) {
   const tokens = useDesignTokens();
   return (
     <View
+      onLayout={onLayout}
       style={[
         {
           backgroundColor: 'transparent',

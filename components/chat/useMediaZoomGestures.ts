@@ -24,6 +24,8 @@ export type UseMediaZoomGesturesOptions = {
   height?: number;
   /** Optional single-tap (e.g. dismiss keyboard in preview). Exclusive with double-tap. */
   onSingleTap?: () => void;
+  /** Fires when zoom settles above/below 1 (e.g. to disable gallery paging). */
+  onZoomChange?: (zoomed: boolean) => void;
 };
 
 /**
@@ -36,6 +38,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     width = DEFAULT_WIDTH,
     height = DEFAULT_HEIGHT,
     onSingleTap,
+    onZoomChange,
   } = options;
 
   const scale = useSharedValue(1);
@@ -72,6 +75,13 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     };
   };
 
+  const notifyZoomChange = useCallback(
+    (zoomed: boolean) => {
+      onZoomChange?.(zoomed);
+    },
+    [onZoomChange]
+  );
+
   const commitTransform = (s: number, tx: number, ty: number, animate: boolean) => {
     'worklet';
     const clamped = clampTranslation(tx, ty, s);
@@ -87,6 +97,7 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     savedScale.value = s;
     savedTranslateX.value = clamped.x;
     savedTranslateY.value = clamped.y;
+    runOnJS(notifyZoomChange)(s > 1.05);
   };
 
   const resetZoomWorklet = () => {
@@ -102,7 +113,8 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
     isPinching.value = false;
-  }, []);
+    onZoomChange?.(false);
+  }, [onZoomChange]);
 
   const resetZoom = useCallback(() => {
     scale.value = withSpring(1, MEDIA_ZOOM_SPRING);
@@ -112,7 +124,8 @@ export function useMediaZoomGestures(options: UseMediaZoomGesturesOptions = {}) 
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
     isPinching.value = false;
-  }, []);
+    onZoomChange?.(false);
+  }, [onZoomChange]);
 
   useEffect(() => {
     if (resetKey === undefined) return;

@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { X, ImageIcon, FileText, Mic } from 'lucide-react-native';
 import { useState, useRef, useEffect } from 'react';
 import { chatPalette } from './chatDesignTokens';
+import { DesignTokens } from '../ui/DesignTokens';
 
 interface AttachmentPickerProps {
   visible: boolean;
@@ -79,8 +80,8 @@ export default function AttachmentPicker({
       onRequestClose={onClose}
     >
       <Animated.View 
-        className="flex-1 bg-black/50 justify-end"
-        style={{ opacity: fadeAnim }}
+        className="flex-1 justify-end"
+        style={{ opacity: fadeAnim, backgroundColor: DesignTokens.colors.backdrop }}
       >
         <Pressable className="flex-1" onPress={onClose} />
         <Animated.View 

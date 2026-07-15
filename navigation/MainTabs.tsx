@@ -150,9 +150,9 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       ]}
     >
       <View style={drawerStyles.brandHeader}>
-        <Image source={require('../assets/icon.png')} style={drawerStyles.brandLogo} resizeMode="contain" />
+        <Image source={require('../assets/bull-bear-drawer.png')} style={drawerStyles.brandLogo} resizeMode="contain" />
         <View style={drawerStyles.brandTextWrap}>
-          <Text style={drawerStyles.brand}>אפליקציית DarkPool</Text>
+          <Text style={drawerStyles.brand}>DarkPool</Text>
           <Text style={drawerStyles.hint}>הבית של הסוחרים בישראל</Text>
         </View>
       </View>

@@ -1135,9 +1135,28 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     if (input.existing_optimistic_id) {
       // מדיה – עדכן את ההודעה הקיימת (לא להסיר ולהוסיף – מונע flicker)
-      setMessages(prev => prev.map(m =>
-        m.id === tempId ? { ...m, ...optimisticMessage } : m
-      ));
+      // שמירה על content/metadata.waveform מהאופטימיסטי כששולחים content ריק
+      setMessages(prev => prev.map(m => {
+        if (m.id !== tempId) return m;
+        const next = { ...m, ...optimisticMessage };
+        if (!optimisticMessage.content && m.content) {
+          next.content = m.content;
+        }
+        if (m.metadata?.waveformData && !optimisticMessage.metadata?.waveformData) {
+          next.metadata = { ...optimisticMessage.metadata, ...m.metadata };
+        } else if (m.metadata?.waveformData || optimisticMessage.metadata?.waveformData) {
+          next.metadata = {
+            ...m.metadata,
+            ...optimisticMessage.metadata,
+            waveformData:
+              optimisticMessage.metadata?.waveformData ?? m.metadata?.waveformData,
+          };
+        }
+        if (m.local_media_uri && !optimisticMessage.media_url) {
+          next.local_media_uri = m.local_media_uri;
+        }
+        return next;
+      }));
     } else {
       setMessages(prev => [optimisticMessage, ...prev]);
     }
@@ -1148,8 +1167,22 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (data) {
         processedMessageIds.current.add(data.id);
 
+        // שומרים waveform מהאופטימיסטי אם השרת לא מחזיר metadata (נשמר ב־content)
+        const prior = messagesRef.current.find((m) => m.id === tempId);
+        const mergedMetadata = {
+          ...(prior?.metadata || {}),
+          ...(input.metadata || {}),
+          ...(data.metadata || {}),
+        };
+        if (!mergedMetadata.waveformData && prior?.metadata?.waveformData) {
+          mergedMetadata.waveformData = prior.metadata.waveformData;
+        }
+
         const finalMessage = asServerMessage(data, {
           reply_to: data.reply_to || replyToData,
+          metadata: Object.keys(mergedMetadata).length > 0 ? mergedMetadata : data.metadata,
+          // content מהשרת כבר כולל waveform; אם ריק — שמור אופטימיסטי
+          content: data.content || prior?.content || input.content || '',
         });
 
         // החלף את האופטימיסטי בהודעה האמיתית
@@ -1586,44 +1619,56 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     const appStateRef = { current: AppState.currentState };
 
+    const presenceHeartbeat = setInterval(() => {
+      if (AppState.currentState === 'active') {
+        chatRealtimeService.updateOnlineStatus(user.id, true);
+      }
+    }, 90_000);
+
     const appStateSub = AppState.addEventListener('change', (nextState) => {
       const prevState = appStateRef.current;
       appStateRef.current = nextState;
 
-      if (!prevState.match(/inactive|background/) || nextState !== 'active') {
+      if (nextState.match(/inactive|background/)) {
+        chatRealtimeService.updateOnlineStatus(user.id, false);
         return;
       }
 
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null;
-        chatRealtimeService.clearFailedChannels();
-        void chatRealtimeService.subscribeToAllUserGroups(
-          user.id,
-          handleGlobalNewMessage,
-          (groupId, data) => {
-            logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
-            setGroups(prev => prev.map(g => {
-              if (g.id !== groupId) return g;
-              const newUnread = data.unread_count ?? g.unread_count;
-              const newMentioned = data.mentioned_count ?? g.mentioned_count;
-              if (newUnread === g.unread_count &&
-                  newMentioned === g.mentioned_count &&
-                  !data.last_message_at && !data.name && !data.avatar_url) {
-                return g;
-              }
-              return { ...g, ...data };
-            }));
-          },
-          handleMembershipRemoved,
-          { force: true }
-        );
-        resubscribeActiveGroupRef.current?.();
-      }, 800);
+      if (prevState.match(/inactive|background/) && nextState === 'active') {
+        chatRealtimeService.updateOnlineStatus(user.id, true);
+
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          chatRealtimeService.clearFailedChannels();
+          void chatRealtimeService.subscribeToAllUserGroups(
+            user.id,
+            handleGlobalNewMessage,
+            (groupId, data) => {
+              logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
+              setGroups(prev => prev.map(g => {
+                if (g.id !== groupId) return g;
+                const newUnread = data.unread_count ?? g.unread_count;
+                const newMentioned = data.mentioned_count ?? g.mentioned_count;
+                if (newUnread === g.unread_count &&
+                    newMentioned === g.mentioned_count &&
+                    !data.last_message_at && !data.name && !data.avatar_url) {
+                  return g;
+                }
+                return { ...g, ...data };
+              }));
+            },
+            handleMembershipRemoved,
+            { force: true }
+          );
+          resubscribeActiveGroupRef.current?.();
+        }, 800);
+      }
     });
 
     return () => {
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      clearInterval(presenceHeartbeat);
       appStateSub.remove();
       chatRealtimeService.updateOnlineStatus(user.id, false);
       chatRealtimeService.stopTypingCleanup();
@@ -1684,6 +1729,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       let mediaUrl = failed.media_url;
       let thumbUrl = failed.media_thumbnail_url;
       const metadata: Record<string, unknown> = { existing_optimistic_id: tempId };
+      if (failed.metadata?.waveformData) {
+        metadata.waveformData = failed.metadata.waveformData;
+      }
+      if (failed.media_duration != null) {
+        metadata.media_duration = failed.media_duration;
+      }
 
       if (failed.local_media_uri) {
         const onProgress = (progress: { progress: number }) => {

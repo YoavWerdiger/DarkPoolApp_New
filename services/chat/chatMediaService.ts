@@ -124,6 +124,25 @@ export async function createLocalImageThumbnail(
   }
 }
 
+/**
+ * פריים מקומי מווידאו — לבועה / פריוויו (iOS לא אמין על URL מרוחק).
+ */
+export async function createLocalVideoThumbnail(uri: string): Promise<string | null> {
+  for (const time of [1000, 0, 100, 2000]) {
+    try {
+      const { uri: thumb } = await VideoThumbnails.getThumbnailAsync(uri, {
+        time,
+        quality: 0.65,
+      });
+      if (thumb) return thumb;
+    } catch {
+      /* נקודת זמן הבאה */
+    }
+  }
+  logger.warn('ChatMedia', 'local video thumbnail failed', { uri: uri.slice(0, 80) });
+  return null;
+}
+
 async function readLocalThumbBase64(localThumbnailUri: string): Promise<string | null> {
   try {
     return await FileSystem.readAsStringAsync(localThumbnailUri, { encoding: 'base64' });
@@ -650,6 +669,7 @@ export async function getGroupMediaGallery(
       .from('chat_messages')
       .select(`
         id,
+        content,
         media_url,
         media_thumbnail_url,
         media_type,
@@ -777,6 +797,7 @@ export function formatDuration(seconds: number): string {
 
 export const chatMediaService = {
   createLocalImageThumbnail,
+  createLocalVideoThumbnail,
   uploadImage,
   uploadVideo,
   uploadAudio,

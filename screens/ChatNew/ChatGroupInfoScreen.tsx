@@ -4,7 +4,19 @@
 
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Switch, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Switch,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
@@ -15,11 +27,14 @@ import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import ChatSearchBottomSheet from '../../components/chat/ChatSearchBottomSheet';
 import { chatGroupService } from '../../services/chat';
 import { getChatMediaDisplayUri } from '../../services/chat/chatSignedMediaUrl';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { chatRtlRoot, chatRtlRow, chatRtlText } from '../../components/chat/chatDesignTokens';
+import {
+  formatUserPresenceLabel,
+  isUserPresenceOnline,
+} from '../../utils/userPresence';
 
 export default function ChatGroupInfoScreen() {
   const navigation = useNavigation();
@@ -29,13 +44,14 @@ export default function ChatGroupInfoScreen() {
   useLockParentDrawerWhileFocused();
 
   const { groupId } = route.params as { groupId: string };
-  const { currentGroup, leaveGroup, updateGroup, messages, refreshCurrentGroupDetails } = useChat();
+  const { currentGroup, leaveGroup, messages, refreshCurrentGroupDetails } = useChat();
 
-  const [isMuted, setIsMuted] = useState(currentGroup?.is_muted || false);
   const [promptVisible, setPromptVisible] = useState(false);
   const [promptTitle, setPromptTitle] = useState('');
   const [promptValue, setPromptValue] = useState('');
   const [promptCallback, setPromptCallback] = useState<((value: string) => void) | null>(null);
+  const [isMuted, setIsMuted] = useState(!!currentGroup?.is_muted);
+  const [presenceTick, setPresenceTick] = useState(0);
 
   const showPrompt = (title: string, defaultValue: string, callback: (value: string) => void) => {
     setPromptTitle(title);
@@ -43,8 +59,6 @@ export default function ChatGroupInfoScreen() {
     setPromptCallback(() => callback);
     setPromptVisible(true);
   };
-  const [searchVisible, setSearchVisible] = useState(false);
-  
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   
   // Extract media from group messages
@@ -76,14 +90,17 @@ export default function ChatGroupInfoScreen() {
     [DesignTokens.spacing.xs],
   );
 
-  /** בתוך עץ RTL — chevron-back בקצה השמאלי (סוף השורה) */
-  const settingsDisclosureIcon = 'chevron-back' as const;
-
   useFocusEffect(
     useCallback(() => {
       void refreshCurrentGroupDetails();
+      const timer = setInterval(() => setPresenceTick((t) => t + 1), 30_000);
+      return () => clearInterval(timer);
     }, [refreshCurrentGroupDetails])
   );
+
+  useEffect(() => {
+    setIsMuted(!!currentGroup?.is_muted);
+  }, [currentGroup?.is_muted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,6 +119,36 @@ export default function ChatGroupInfoScreen() {
 
   const isAdmin = currentGroup?.is_admin || false;
 
+  const presenceNow = Date.now() + presenceTick * 0;
+
+  const getMemberPresence = useCallback(
+    (member: ChatGroupMember) => {
+      const isSelf = member.user_id === user?.id;
+      const isOnline = isSelf
+        ? true
+        : isUserPresenceOnline(member.user?.is_online, member.user?.last_active, presenceNow);
+      const label = isSelf
+        ? 'מחובר/ת'
+        : formatUserPresenceLabel(member.user?.is_online, member.user?.last_active, presenceNow);
+      return { isOnline, label };
+    },
+    [user?.id, presenceNow],
+  );
+
+  const sortedMembers = useMemo(() => {
+    const list = [...(currentGroup?.members || [])];
+    return list.sort((a, b) => {
+      if (a.role === 'admin' && b.role !== 'admin') return -1;
+      if (a.role !== 'admin' && b.role === 'admin') return 1;
+
+      const aOnline = getMemberPresence(a).isOnline;
+      const bOnline = getMemberPresence(b).isOnline;
+      if (aOnline !== bOnline) return aOnline ? -1 : 1;
+
+      return (a.user?.display_name || '').localeCompare(b.user?.display_name || '', 'he');
+    });
+  }, [currentGroup?.members, getMemberPresence]);
+
   // ============================================
   // Handle Actions
   // ============================================
@@ -111,15 +158,13 @@ export default function ChatGroupInfoScreen() {
     navigation.goBack();
   };
 
-  const renderSectionCaption = (label: string, inline = false) => (
-    <View style={inline ? styles.membersCaptionWrap : styles.sectionCaptionWrap}>
-      <Text style={[styles.sectionCaption, inline && styles.sectionCaptionInline]}>{label}</Text>
-    </View>
-  );
-
-  const renderSettingIcon = (name: keyof typeof Ionicons.glyphMap) => (
-    <View style={styles.settingIconWrap}>
-      <Ionicons name={name} size={20} color={DesignTokens.colors.primary.main} />
+  const renderCardHeader = (
+    title: string,
+    action?: React.ReactNode,
+  ) => (
+    <View style={styles.cardHeader}>
+      <Text style={styles.cardHeaderTitle}>{title}</Text>
+      {action}
     </View>
   );
 
@@ -223,9 +268,14 @@ export default function ChatGroupInfoScreen() {
     );
   };
 
+  const handleStarredMessages = () => {
+    (navigation as any).navigate('ChatGroupStarredMessages', { groupId });
+  };
+
   const handleToggleMute = async (value: boolean) => {
-    setIsMuted(value);
     if (!user?.id) return;
+    setIsMuted(value);
+    void HapticFeedback.selection();
     const { success } = await chatGroupService.toggleGroupMute(groupId, user.id, value);
     if (!success) {
       setIsMuted(!value);
@@ -233,35 +283,12 @@ export default function ChatGroupInfoScreen() {
     }
   };
 
-  const handlePinnedMessages = () => {
-    (navigation as any).navigate('ChatGroupPinnedMessages', { groupId });
-  };
-
-  const handleSearchMessages = () => {
-    setSearchVisible(true);
-  };
-
-  const handleSavedMedia = () => {
-    (navigation as any).navigate('SavedMedia', { groupId });
-  };
-
-  const handleGroupSettings = () => {
-    if (!isAdmin || !currentGroup) return;
-    showPrompt('שנה שם קבוצה', currentGroup.name || '', async (newName) => {
-      if (!newName?.trim()) return;
-      const { success, error } = await updateGroup(groupId, { name: newName.trim() });
-      if (!success) {
-        legacyAlert('שגיאה', error || 'לא ניתן לעדכן את הקבוצה');
-      }
+  const handleOpenGallery = (initialMediaId?: string) => {
+    void HapticFeedback.selection();
+    (navigation as any).navigate('GroupMediaGallery', {
+      groupId,
+      ...(initialMediaId ? { initialMediaId } : {}),
     });
-  };
-
-  const handlePrivacyAndSupport = () => {
-    (navigation as any).navigate('PrivacySupport');
-  };
-
-  const handleJumpToMessage = (messageId: string) => {
-    (navigation as any).navigate('ChatGroup', { groupId, scrollToMessageId: messageId });
   };
 
   const handleLeaveGroup = () => {
@@ -314,13 +341,6 @@ export default function ChatGroupInfoScreen() {
     );
   }
 
-  // Sort members: admins first
-  const sortedMembers = [...(currentGroup.members || [])].sort((a, b) => {
-    if (a.role === 'admin' && b.role !== 'admin') return -1;
-    if (a.role !== 'admin' && b.role === 'admin') return 1;
-    return 0;
-  });
-
   return (
     <ChatScreenShell>
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -332,40 +352,64 @@ export default function ChatGroupInfoScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-          <UICard variant="glass" glassIntensity="light" padding="lg" style={[styles.sectionCard, styles.sectionBlock]}>
+          <UICard
+            variant="glass"
+            glassIntensity="light"
+            padding="none"
+            style={[styles.heroCard, styles.sectionBlock]}
+          >
             <View style={styles.heroBlock}>
-              <View style={styles.avatarContainer}>
-                {currentGroup.avatar_url ? (
-                  <Image source={{ uri: currentGroup.avatar_url }} style={styles.avatar} />
-                ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <Ionicons name="people" size={48} color={DesignTokens.colors.text.secondary} />
-                  </View>
-                )}
-              </View>
+              {currentGroup.avatar_url ? (
+                <Image source={{ uri: currentGroup.avatar_url }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="people" size={44} color={DesignTokens.colors.text.secondary} />
+                </View>
+              )}
               <Text style={styles.groupName} numberOfLines={2}>
                 {currentGroup.name}
               </Text>
-              <Text style={styles.groupStatus}>{sortedMembers.length} חברים</Text>
+              <Text style={styles.groupStatus}>
+                {sortedMembers.length} חברים
+              </Text>
+              {currentGroup.description ? (
+                <>
+                  <View style={styles.heroDivider} />
+                  <Text style={styles.aboutText}>{currentGroup.description}</Text>
+                </>
+              ) : null}
             </View>
           </UICard>
 
-          {currentGroup.description ? (
-            <View style={styles.sectionBlock}>
-              {renderSectionCaption('תיאור')}
-              <UICard variant="glass" glassIntensity="light" padding="lg" style={styles.sectionCard}>
-                <Text style={styles.aboutText}>{currentGroup.description}</Text>
-              </UICard>
-            </View>
-          ) : null}
-
-          <View style={styles.sectionBlock}>
-            {renderSectionCaption('גלריה')}
-            <UICard variant="glass" glassIntensity="light" padding="lg" style={styles.sectionCard}>
+          <UICard
+            variant="glass"
+            glassIntensity="subtle"
+            padding="none"
+            showGlassBorder={false}
+            style={[styles.sectionSurface, styles.sectionBlock]}
+          >
+            {renderCardHeader(
+              'מדיה',
+              groupMediaItems.length > 0 ? (
+                <TouchableOpacity
+                  onPress={() => handleOpenGallery()}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.cardHeaderAction}>הצג הכל</Text>
+                </TouchableOpacity>
+              ) : undefined,
+            )}
+            <View style={styles.sectionBody}>
               {groupMediaItems.length > 0 ? (
                 <View style={styles.mediaGrid}>
                   {groupMediaItems.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.mediaItem} activeOpacity={0.85}>
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.mediaItem}
+                      activeOpacity={0.85}
+                      onPress={() => handleOpenGallery(item.id)}
+                    >
                       <Image
                         source={{ uri: gallerySignedThumbs[item.id] || item.thumbnail }}
                         style={styles.mediaImage}
@@ -381,86 +425,69 @@ export default function ChatGroupInfoScreen() {
               ) : (
                 <Text style={styles.emptyMediaText}>אין מדיה בקבוצה זו</Text>
               )}
-            </UICard>
-          </View>
+            </View>
+          </UICard>
 
-          <View style={styles.sectionBlock}>
-            {renderSectionCaption('הגדרות')}
-            <UICard variant="glass" glassIntensity="light" padding="none" style={styles.sectionCard}>
-              <View style={styles.settingRow}>
-                {renderSettingIcon('notifications-outline')}
-                <Text style={styles.settingText}>השתק התראות</Text>
-                <Switch
-                  value={isMuted}
-                  onValueChange={handleToggleMute}
-                  trackColor={{
-                    false: DesignTokens.colors.background.tertiary,
-                    true: DesignTokens.colors.primary.main,
-                  }}
-                  thumbColor="#FFFFFF"
-                />
+          <UICard
+            variant="glass"
+            glassIntensity="subtle"
+            padding="none"
+            showGlassBorder={false}
+            style={[styles.sectionSurface, styles.sectionBlock]}
+          >
+            {renderCardHeader('פעולות')}
+            <View style={styles.quickPanel}>
+              <View style={styles.quickPanelRow}>
+                <View style={styles.quickMuteBlock}>
+                  <View style={styles.quickMuteIconWrap}>
+                    <Ionicons
+                      name={isMuted ? 'notifications-off-outline' : 'notifications-outline'}
+                      size={20}
+                      color={DesignTokens.colors.primary.main}
+                    />
+                  </View>
+                  <View style={styles.quickMuteTextWrap}>
+                    <Text style={styles.quickPanelTitle}>התראות</Text>
+                    <Text style={styles.quickPanelHint}>
+                      {isMuted ? 'מושתק' : 'פעילות'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={isMuted}
+                    onValueChange={(v) => { void handleToggleMute(v); }}
+                    trackColor={{
+                      false: DesignTokens.colors.background.tertiary,
+                      true: DesignTokens.colors.primary.main,
+                    }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
               </View>
               <View style={styles.separator} />
               <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => { void HapticFeedback.selection(); handlePinnedMessages(); }}
+                style={styles.quickStarRow}
+                onPress={() => { void HapticFeedback.selection(); handleStarredMessages(); }}
                 activeOpacity={0.7}
               >
-                {renderSettingIcon('pin-outline')}
-                <Text style={styles.settingText}>הודעות מוצמדות</Text>
-                <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
+                <View style={styles.quickMuteIconWrap}>
+                  <Ionicons name="star" size={20} color={DesignTokens.colors.primary.main} />
+                </View>
+                <Text style={styles.quickPanelTitleGrow}>הודעות מסומנות</Text>
+                <Ionicons name="chevron-back" size={20} color={DesignTokens.colors.text.tertiary} />
               </TouchableOpacity>
-              <View style={styles.separator} />
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => { void HapticFeedback.selection(); handleSearchMessages(); }}
-                activeOpacity={0.7}
-              >
-                {renderSettingIcon('search-outline')}
-                <Text style={styles.settingText}>חפש בהודעות</Text>
-                <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
-              </TouchableOpacity>
-              <View style={styles.separator} />
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => { void HapticFeedback.selection(); handleSavedMedia(); }}
-                activeOpacity={0.7}
-              >
-                {renderSettingIcon('folder-outline')}
-                <Text style={styles.settingText}>שמירת מדיה</Text>
-                <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
-              </TouchableOpacity>
-              {isAdmin && (
-                <>
-                  <View style={styles.separator} />
-                  <TouchableOpacity
-                    style={styles.settingRow}
-                    onPress={() => { void HapticFeedback.selection(); handleGroupSettings(); }}
-                    activeOpacity={0.7}
-                  >
-                    {renderSettingIcon('settings-outline')}
-                    <Text style={styles.settingText}>הגדרות קבוצה</Text>
-                    <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
-                  </TouchableOpacity>
-                </>
-              )}
-              <View style={styles.separator} />
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => { void HapticFeedback.selection(); handlePrivacyAndSupport(); }}
-                activeOpacity={0.7}
-              >
-                {renderSettingIcon('shield-outline')}
-                <Text style={styles.settingText}>פרטיות ותמיכה</Text>
-                <Ionicons name={settingsDisclosureIcon} size={20} color={DesignTokens.colors.text.tertiary} />
-              </TouchableOpacity>
-            </UICard>
-          </View>
+            </View>
+          </UICard>
 
-          <View style={styles.sectionBlock}>
-            <View style={styles.membersSectionHeader}>
-              {renderSectionCaption(`חברים (${sortedMembers.length})`, true)}
-              {isAdmin ? (
+          <UICard
+            variant="glass"
+            glassIntensity="subtle"
+            padding="none"
+            showGlassBorder={false}
+            style={[styles.sectionSurface, styles.sectionBlock]}
+          >
+            {renderCardHeader(
+              `חברים · ${sortedMembers.length}`,
+              isAdmin ? (
                 <TouchableOpacity
                   onPress={() => { void HapticFeedback.selection(); handleAddMembers(); }}
                   style={styles.addButton}
@@ -469,11 +496,12 @@ export default function ChatGroupInfoScreen() {
                   <Ionicons name="add" size={18} color={DesignTokens.colors.primary.main} />
                   <Text style={styles.addButtonText}>הוסף</Text>
                 </TouchableOpacity>
-              ) : null}
-            </View>
+              ) : undefined,
+            )}
+            {sortedMembers.map((member, index) => {
+              const { isOnline, label } = getMemberPresence(member);
 
-            <UICard variant="glass" glassIntensity="light" padding="none" style={styles.sectionCard}>
-              {sortedMembers.map((member, index) => (
+              return (
                 <React.Fragment key={member.id}>
                   <TouchableOpacity
                     style={styles.memberRow}
@@ -481,15 +509,18 @@ export default function ChatGroupInfoScreen() {
                     disabled={!isAdmin && member.user_id !== user?.id}
                     activeOpacity={0.7}
                   >
-                    {member.user?.profile_picture ? (
-                      <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
-                    ) : (
-                      <View style={styles.memberAvatarPlaceholder}>
-                        <Text style={styles.memberAvatarText}>
-                          {member.user?.display_name?.charAt(0) || '?'}
-                        </Text>
-                      </View>
-                    )}
+                    <View style={styles.memberAvatarWrap}>
+                      {member.user?.profile_picture ? (
+                        <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
+                      ) : (
+                        <View style={styles.memberAvatarPlaceholder}>
+                          <Text style={styles.memberAvatarText}>
+                            {member.user?.display_name?.charAt(0) || '?'}
+                          </Text>
+                        </View>
+                      )}
+                      {isOnline ? <View style={styles.avatarOnlineDot} /> : null}
+                    </View>
                     <View style={styles.memberInfo}>
                       <View style={styles.memberNameRow}>
                         <Text style={styles.memberName} numberOfLines={1}>
@@ -505,42 +536,29 @@ export default function ChatGroupInfoScreen() {
                           <Text style={styles.youLabel}>(אתה)</Text>
                         )}
                       </View>
-                      {member.user?.is_online ? (
-                        <View style={styles.onlineStatus}>
-                          <View style={styles.onlineDot} />
-                          <Text style={styles.onlineText}>מחובר</Text>
-                        </View>
-                      ) : (
-                        <Text style={styles.offlineText}>אופליין</Text>
-                      )}
+                      {label ? (
+                        <Text style={isOnline ? styles.onlineText : styles.lastSeenText} numberOfLines={1}>
+                          {label}
+                        </Text>
+                      ) : null}
                     </View>
                   </TouchableOpacity>
-                  {index < sortedMembers.length - 1 && <View style={styles.separator} />}
+                  {index < sortedMembers.length - 1 ? <View style={styles.separator} /> : null}
                 </React.Fragment>
-              ))}
-            </UICard>
-          </View>
+              );
+            })}
+          </UICard>
 
           <TouchableOpacity
             activeOpacity={0.75}
             onPress={() => { void HapticFeedback.impactLight(); handleLeaveGroup(); }}
-            style={styles.leaveButtonWrap}
+            style={styles.leaveButton}
           >
-            <UICard variant="glass" glassIntensity="light" padding="md" style={styles.leaveCard}>
-              <Text style={styles.leaveButtonText}>עזוב קבוצה</Text>
-            </UICard>
+            <Text style={styles.leaveButtonText}>עזוב קבוצה</Text>
           </TouchableOpacity>
           </ScrollView>
         </View>
       </SafeAreaView>
-
-      {/* Chat Search Bottom Sheet */}
-      <ChatSearchBottomSheet
-        visible={searchVisible}
-        onClose={() => setSearchVisible(false)}
-        groupId={groupId}
-        onMessagePress={handleJumpToMessage}
-      />
 
       {/* Cross-platform prompt modal */}
       <Modal visible={promptVisible} transparent animationType="fade" onRequestClose={() => setPromptVisible(false)}>
@@ -590,7 +608,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   scrollContent: {
     paddingHorizontal: tokens.spacing.base,
-    paddingTop: tokens.spacing.md,
+    paddingTop: tokens.spacing.sm,
     paddingBottom: tokens.spacing['3xl'],
   },
   errorStateBody: {
@@ -599,56 +617,66 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     paddingHorizontal: tokens.spacing.base,
   },
+  heroCard: {
+    borderRadius: tokens.borderRadius.xl,
+    overflow: 'hidden',
+  },
   heroBlock: {
     alignItems: 'center',
-    paddingBottom: 0,
+    paddingTop: tokens.spacing.xl,
+    paddingBottom: tokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.base,
   },
   sectionBlock: {
-    marginBottom: tokens.spacing.lg,
-  },
-  sectionCard: {
-    borderRadius: tokens.borderRadius.lg,
-  },
-  sectionCaptionWrap: {
-    alignSelf: 'stretch',
-    width: '100%',
-  },
-  sectionCaption: {
-    ...chatRtlText,
-    fontSize: tokens.typography.caption.size,
-    fontWeight: tokens.typography.fontWeight.bold as '700',
-    lineHeight: tokens.typography.caption.lineHeight,
-    color: tokens.colors.text.tertiary,
-    marginBottom: tokens.spacing.sm,
-    textTransform: 'uppercase',
-    letterSpacing: tokens.typography.letterSpacing.wide,
-  },
-  sectionCaptionInline: {
-    marginBottom: 0,
-  },
-  membersCaptionWrap: {
-    flex: 1,
-    alignSelf: 'stretch',
-  },
-  avatarContainer: {
     marginBottom: tokens.spacing.md,
   },
+  sectionSurface: {
+    borderRadius: tokens.borderRadius.lg,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    ...chatRtlRow,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: tokens.spacing.sm,
+    paddingHorizontal: tokens.spacing.base,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: tokens.spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: tokens.colors.border.divider,
+  },
+  cardHeaderTitle: {
+    ...chatRtlText,
+    flex: 1,
+    fontSize: tokens.typography.subhead.size,
+    fontWeight: tokens.typography.fontWeight.semibold as '600',
+    lineHeight: tokens.typography.subhead.lineHeight,
+    color: tokens.colors.text.secondary,
+  },
+  cardHeaderAction: {
+    ...chatRtlText,
+    fontSize: tokens.typography.bodySmall.size,
+    fontWeight: tokens.typography.fontWeight.semibold as '600',
+    color: tokens.colors.primary.main,
+  },
+  sectionBody: {
+    paddingHorizontal: tokens.spacing.base,
+    paddingVertical: tokens.spacing.md,
+  },
   avatar: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: tokens.colors.border.subtle,
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    marginBottom: tokens.spacing.md,
   },
   avatarPlaceholder: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    marginBottom: tokens.spacing.md,
     backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: tokens.colors.border.subtle,
   },
   groupName: {
     ...chatRtlText,
@@ -669,12 +697,22 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
+  heroDivider: {
+    alignSelf: 'stretch',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: tokens.colors.border.divider,
+    marginTop: tokens.spacing.md,
+    marginBottom: tokens.spacing.sm,
+    marginHorizontal: tokens.spacing.lg,
+  },
   aboutText: {
     ...chatRtlText,
     fontSize: tokens.typography.body.size,
     fontWeight: tokens.typography.body.weight as '400',
     lineHeight: tokens.typography.body.lineHeight,
-    color: tokens.colors.text.primary,
+    color: tokens.colors.text.secondary,
+    textAlign: 'center',
+    paddingHorizontal: tokens.spacing.xs,
   },
   mediaGrid: {
     ...chatRtlRow,
@@ -705,15 +743,19 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     lineHeight: tokens.typography.bodySmall.lineHeight,
     color: tokens.colors.text.tertiary,
   },
-  settingRow: {
+  quickPanel: {
+    paddingVertical: tokens.spacing.xs,
+  },
+  quickPanelRow: {
+    paddingHorizontal: tokens.spacing.base,
+    paddingVertical: tokens.spacing.sm,
+  },
+  quickMuteBlock: {
     ...chatRtlRow,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: tokens.spacing.md,
-    paddingHorizontal: tokens.spacing.base,
     gap: tokens.spacing.md,
   },
-  settingIconWrap: {
+  quickMuteIconWrap: {
     width: 36,
     height: 36,
     borderRadius: tokens.borderRadius.sm,
@@ -721,7 +763,18 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'center',
   },
-  settingText: {
+  quickMuteTextWrap: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  quickPanelTitle: {
+    ...chatRtlText,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.fontWeight.semibold as '600',
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
+  },
+  quickPanelTitleGrow: {
     ...chatRtlText,
     flex: 1,
     fontSize: tokens.typography.body.size,
@@ -729,17 +782,24 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.text.primary,
   },
+  quickPanelHint: {
+    ...chatRtlText,
+    fontSize: tokens.typography.footnote.size,
+    lineHeight: tokens.typography.footnote.lineHeight,
+    color: tokens.colors.text.tertiary,
+    marginTop: 1,
+  },
+  quickStarRow: {
+    ...chatRtlRow,
+    alignItems: 'center',
+    paddingHorizontal: tokens.spacing.base,
+    paddingVertical: tokens.spacing.md,
+    gap: tokens.spacing.md,
+  },
   separator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: tokens.colors.border.divider,
     marginHorizontal: tokens.spacing.base,
-  },
-  membersSectionHeader: {
-    ...chatRtlRow,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: tokens.spacing.sm,
-    marginBottom: tokens.spacing.sm,
   },
   memberRow: {
     ...chatRtlRow,
@@ -747,6 +807,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     paddingVertical: tokens.spacing.md,
     paddingHorizontal: tokens.spacing.base,
     gap: tokens.spacing.md,
+  },
+  memberAvatarWrap: {
+    position: 'relative',
   },
   memberAvatar: {
     width: 44,
@@ -765,6 +828,17 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.subhead.size,
     fontWeight: tokens.typography.fontWeight.semibold as '600',
     color: tokens.colors.primary.main,
+  },
+  avatarOnlineDot: {
+    position: 'absolute',
+    bottom: 0,
+    end: 0,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    backgroundColor: tokens.colors.success.main,
+    borderWidth: 2,
+    borderColor: tokens.colors.background.primary,
   },
   memberInfo: {
     flex: 1,
@@ -804,24 +878,13 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     fontSize: tokens.typography.footnote.size,
     color: tokens.colors.text.tertiary,
   },
-  onlineStatus: {
-    ...chatRtlRow,
-    alignItems: 'center',
-    gap: tokens.spacing.xs,
-  },
-  onlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: tokens.colors.success.main,
-  },
   onlineText: {
     ...chatRtlText,
     fontSize: tokens.typography.footnote.size,
     lineHeight: tokens.typography.footnote.lineHeight,
     color: tokens.colors.success.main,
   },
-  offlineText: {
+  lastSeenText: {
     ...chatRtlText,
     fontSize: tokens.typography.footnote.size,
     lineHeight: tokens.typography.footnote.lineHeight,
@@ -839,21 +902,24 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     lineHeight: tokens.typography.buttonSmall.lineHeight,
     color: tokens.colors.primary.main,
   },
-  leaveButtonWrap: {
-    marginTop: tokens.spacing.sm,
+  leaveButton: {
+    marginTop: tokens.spacing.md,
     marginBottom: tokens.spacing.lg,
-  },
-  leaveCard: {
-    borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.xl,
+    borderRadius: tokens.borderRadius.full,
+    overflow: 'hidden',
+    backgroundColor: `${tokens.colors.danger.main}1A`,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: `${tokens.colors.danger.main}40`,
+    borderColor: `${tokens.colors.danger.main}55`,
   },
   leaveButtonText: {
     ...chatRtlText,
-    fontSize: tokens.typography.buttonSmall.size,
+    fontSize: tokens.typography.body.size,
     fontWeight: tokens.typography.buttonSmall.weight as '600',
-    lineHeight: tokens.typography.buttonSmall.lineHeight,
+    lineHeight: tokens.typography.body.lineHeight,
     color: tokens.colors.danger.main,
     textAlign: 'center',
   },

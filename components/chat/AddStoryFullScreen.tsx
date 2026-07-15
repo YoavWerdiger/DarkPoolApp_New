@@ -1,7 +1,7 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { logger } from '../../utils/logger';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Pressable, Image, Dimensions, StatusBar, TextInput, KeyboardAvoidingView, Platform, ScrollView, FlatList, Animated, Keyboard } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -10,12 +10,14 @@ import { Video, ResizeMode } from 'expo-av';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
-import ViewShot from 'react-native-view-shot';
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
   interpolate,
+  Extrapolation,
+  cancelAnimation,
   runOnJS,
 } from 'react-native-reanimated';
 import {
@@ -25,6 +27,7 @@ import {
 } from 'react-native-gesture-handler';
 import { PanResponder } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
 import { uploadStoryImage, uploadStoryVideo, createStory } from '../../services/storiesService';
 import { chatPalette } from './chatDesignTokens';
@@ -63,6 +66,40 @@ const DRAW_COLORS = [
 ];
 
 const DRAW_STROKE_WIDTHS = [3, 6, 10, 16];
+
+/** ב-expo-camera, selectedLens תואם ל-localizedName ולא ל-deviceType — בוחרים עדשת wide 1x */
+function pickWideAngleLens(lenses: string[]): string | undefined {
+  if (!lenses.length) return undefined;
+  const scored = lenses.map((name) => {
+    const n = name.toLowerCase();
+    let score = 50;
+    if (/ultra|אולטרה|fisheye/.test(n)) score -= 120;
+    if (/tele|טלפוטו|טל\.?/.test(n)) score -= 60;
+    if (/dual|triple|כפול|משולש/.test(n)) score -= 45;
+    if (/truedepth|lidar|continuity|depth/.test(n)) score -= 90;
+    if (/wide|רחב/.test(n)) score += 25;
+    if (/back camera|rear camera|מצלמה אחורית/.test(n) && !/ultra|dual|triple/.test(n)) score += 40;
+    score -= name.length * 0.15;
+    return { name, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0]?.name;
+}
+
+function pickBestPictureSize(sizes: string[]): string | undefined {
+  let best: string | undefined;
+  let bestPixels = 0;
+  for (const size of sizes) {
+    const [w, h] = size.split('x').map(Number);
+    if (!w || !h) continue;
+    const pixels = w * h;
+    if (pixels > bestPixels) {
+      bestPixels = pixels;
+      best = size;
+    }
+  }
+  return best;
+}
 
 const POPULAR_EMOJIS = [
   '😀','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳',
@@ -103,6 +140,9 @@ interface DrawPath {
 }
 
 /* ─────────────── Draggable Text Component ─────────────── */
+const DELETE_Y_ACTIVATE = SH - 220; // start giving visual feedback here
+const DELETE_Y_TRIGGER = SH - 130;  // release below this = delete
+
 function DraggableText({
   item,
   onDoubleTap,
@@ -112,7 +152,7 @@ function DraggableText({
 }: {
   item: TextOverlayItem;
   onDoubleTap: (id: string) => void;
-  onDragStateChange?: (dragging: boolean, y: number) => void;
+  onDragStateChange?: (dragging: boolean, y: number, hovering: boolean) => void;
   onRequestDelete?: (id: string) => void;
   onCommitPosition?: (id: string, x: number, y: number, scale: number) => void;
 }) {
@@ -123,15 +163,35 @@ function DraggableText({
   const savedTranslateY = useSharedValue(item.y);
   const savedScale = useSharedValue(item.scale);
 
-  const DELETE_Y_THRESHOLD = SH - 160;
+  // Continuous "close-to-trash" progress in [0..1] driven on UI thread for smoothness
+  const deleteProgress = useSharedValue(0);
+  const isDragging = useSharedValue(0);
+  const wasHovering = useSharedValue(0);
 
-  const notifyDragStart = () => onDragStateChange?.(true, translateY.value);
-  const notifyDragMove = (absY: number) => onDragStateChange?.(true, absY);
+  const triggerHapticImpact = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  };
+  const triggerHapticSelection = () => {
+    Haptics.selectionAsync().catch(() => {});
+  };
+  const triggerHapticSuccess = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+  };
+
+  const notifyDragStart = () => {
+    onDragStateChange?.(true, translateY.value, false);
+    triggerHapticImpact();
+  };
+  const notifyDragMove = (absY: number, hovering: boolean) => {
+    onDragStateChange?.(true, absY, hovering);
+  };
   const notifyDragEnd = (absY: number) => {
-    onDragStateChange?.(false, absY);
-    const shouldDelete = absY >= DELETE_Y_THRESHOLD;
+    onDragStateChange?.(false, absY, false);
+    const shouldDelete = absY >= DELETE_Y_TRIGGER;
     if (shouldDelete && onRequestDelete) {
-      onRequestDelete(item.id);
+      triggerHapticSuccess();
+      // Let the shrink-to-0 animation play, then actually remove the item
+      setTimeout(() => onRequestDelete(item.id), 180);
     } else if (onCommitPosition) {
       onCommitPosition(item.id, translateX.value, translateY.value, scale.value);
     }
@@ -139,18 +199,46 @@ function DraggableText({
 
   const panGesture = Gesture.Pan()
     .onStart(() => {
+      'worklet';
+      isDragging.value = 1;
+      wasHovering.value = 0;
+      deleteProgress.value = 0;
       runOnJS(notifyDragStart)();
     })
     .onUpdate((e) => {
+      'worklet';
       translateX.value = savedTranslateX.value + e.translationX;
       translateY.value = savedTranslateY.value + e.translationY;
+
       const absY = (SH / 2 - 60) + translateY.value;
-      runOnJS(notifyDragMove)(absY);
+      // Ramp from 0 (safe) → 1 (fully over trash)
+      const raw = (absY - DELETE_Y_ACTIVATE) / (DELETE_Y_TRIGGER - DELETE_Y_ACTIVATE);
+      const clamped = Math.max(0, Math.min(1, raw));
+      deleteProgress.value = clamped;
+
+      const hovering = absY >= DELETE_Y_TRIGGER;
+      if (hovering && wasHovering.value === 0) {
+        wasHovering.value = 1;
+        runOnJS(triggerHapticSelection)();
+      } else if (!hovering && wasHovering.value === 1) {
+        wasHovering.value = 0;
+        runOnJS(triggerHapticSelection)();
+      }
+      runOnJS(notifyDragMove)(absY, hovering);
     })
     .onEnd(() => {
+      'worklet';
+      isDragging.value = 0;
+      const absY = (SH / 2 - 60) + translateY.value;
+      const willDelete = absY >= DELETE_Y_TRIGGER;
+      if (willDelete) {
+        // Shrink to nothing before removal
+        scale.value = withTiming(0, { duration: 180 });
+      } else {
+        deleteProgress.value = withSpring(0, { damping: 20, stiffness: 200 });
+      }
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
-      const absY = (SH / 2 - 60) + translateY.value;
       runOnJS(notifyDragEnd)(absY);
     });
 
@@ -174,13 +262,20 @@ function DraggableText({
     doubleTapGesture,
   );
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
+  const animStyle = useAnimatedStyle(() => {
+    'worklet';
+    // Shrink to 55% and fade to 40% opacity when fully over trash
+    const shrink = interpolate(deleteProgress.value, [0, 1], [1, 0.55]);
+    const fade = interpolate(deleteProgress.value, [0, 1], [1, 0.4]);
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value * shrink },
+      ],
+      opacity: fade,
+    };
+  });
 
   const isEmoji = item.type === 'emoji';
   const bgColor = isEmoji
@@ -674,6 +769,142 @@ function DrawingCanvas({
   );
 }
 
+/* ─────────────── Trash Drop Zone ─────────────── */
+function TrashZone({
+  visible,
+  hovering,
+  bottomOffset,
+}: {
+  visible: boolean;
+  hovering: boolean;
+  bottomOffset: number;
+}) {
+  const appear = useSharedValue(0);
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    appear.value = withSpring(visible ? 1 : 0, { damping: 18, stiffness: 220, mass: 0.6 });
+  }, [visible]);
+
+  useEffect(() => {
+    if (hovering) {
+      // Loop-ish pulse using two-step timing
+      pulse.value = withTiming(1.28, { duration: 220 }, () => {
+        'worklet';
+        pulse.value = withTiming(1.12, { duration: 240 });
+      });
+    } else {
+      pulse.value = withSpring(1, { damping: 18, stiffness: 220 });
+    }
+  }, [hovering]);
+
+  const wrapStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      opacity: appear.value,
+      transform: [
+        { translateY: interpolate(appear.value, [0, 1], [40, 0]) },
+      ],
+    };
+  });
+
+  const bgStyle = useAnimatedStyle(() => {
+    'worklet';
+    return {
+      transform: [{ scale: pulse.value }],
+    };
+  });
+
+  // Radial glow that intensifies when hovering
+  const glowStyle = useAnimatedStyle(() => {
+    'worklet';
+    const spread = hovering ? 1.9 : 1.2;
+    return {
+      opacity: appear.value * (hovering ? 0.65 : 0.22),
+      transform: [{ scale: pulse.value * spread }],
+    };
+  });
+
+  return (
+    <Reanimated.View
+      pointerEvents="none"
+      style={[trashStyles.zone, { bottom: bottomOffset }, wrapStyle]}
+    >
+      <View style={trashStyles.stack}>
+        <Reanimated.View style={[trashStyles.glow, glowStyle]} />
+
+        <Reanimated.View style={[
+          trashStyles.circle,
+          hovering && trashStyles.circleActive,
+          bgStyle,
+        ]}>
+          <Ionicons
+            name={hovering ? 'trash' : 'trash-outline'}
+            size={hovering ? 30 : 24}
+            color="#fff"
+          />
+        </Reanimated.View>
+      </View>
+
+      <Text style={[trashStyles.hint, hovering && trashStyles.hintActive]}>
+        {hovering ? 'שחרר למחיקה' : 'גרור לכאן למחיקה'}
+      </Text>
+    </Reanimated.View>
+  );
+}
+
+const trashStyles = StyleSheet.create({
+  zone: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 28,
+  },
+  stack: {
+    width: 88,
+    height: 88,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  glow: {
+    position: 'absolute',
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: '#FF3B30',
+  },
+  circle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0,0,0,0.72)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  circleActive: {
+    backgroundColor: 'rgba(255,59,48,0.95)',
+    borderColor: '#fff',
+    borderWidth: 3,
+  },
+  hint: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  hintActive: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+});
+
 /* ─────────────── Main Component ─────────────── */
 interface AddStoryFullScreenProps {
   visible: boolean;
@@ -694,6 +925,9 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  /** iOS: שם עדשה מקומי (לא deviceType) — בוחרים wide 1x ולא ultrawide 0.5x */
+  const [selectedLens, setSelectedLens] = useState<string | undefined>(undefined);
+  const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
 
   const [mediaUri, setMediaUri] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
@@ -710,7 +944,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   const [overlays, setOverlays] = useState<TextOverlayItem[]>([]);
   const [showTextEditor, setShowTextEditor] = useState(false);
   const [editingOverlayId, setEditingOverlayId] = useState<string | null>(null);
-  const captureAreaRef = useRef<ViewShot>(null);
+  const captureAreaRef = useRef<View>(null);
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [drawPaths, setDrawPaths] = useState<DrawPath[]>([]);
@@ -772,6 +1006,62 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     transform: [{ translateX: -modeIndex.value * SW }],
   }));
 
+  /* ── Swipe-down-to-close gesture (Instagram/WhatsApp-like) ── */
+  const dismissY = useSharedValue(0);
+  const DISMISS_THRESHOLD = SH * 0.2;
+  const DISMISS_VELOCITY = 900;
+
+  const triggerCloseHaptic = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+  };
+
+  const handleDismissClose = useCallback(() => {
+    cancelAnimation(dismissY);
+    dismissY.value = 0;
+    Keyboard.dismiss();
+    triggerCloseHaptic();
+    onClose();
+  }, [onClose]);
+
+  // Disable dismiss while: uploading, drawing, recording video, or interactive modals are open
+  const dismissDisabled =
+    phase === 'uploading' ||
+    drawMode ||
+    isRecording ||
+    showTextEditor ||
+    showEmojiPicker;
+
+  const dismissGesture = Gesture.Pan()
+    .activeOffsetY([25, 9999])
+    .failOffsetX([-30, 30])
+    .enabled(!dismissDisabled)
+    .onUpdate((e) => {
+      'worklet';
+      dismissY.value = e.translationY > 0
+        ? e.translationY
+        : e.translationY * 0.15;
+    })
+    .onEnd((e) => {
+      'worklet';
+      const dist = dismissY.value;
+      const shouldClose = dist > DISMISS_THRESHOLD || e.velocityY > DISMISS_VELOCITY;
+      if (shouldClose) {
+        runOnJS(handleDismissClose)();
+      } else {
+        dismissY.value = withSpring(0, { damping: 22, stiffness: 220, mass: 0.6 });
+      }
+    });
+
+  const dismissAnimStyle = useAnimatedStyle(() => {
+    'worklet';
+    const clamped = Math.max(0, dismissY.value);
+    return {
+      transform: [{ translateY: clamped }],
+      opacity: interpolate(clamped, [0, SH * 0.55], [1, 0.5], Extrapolation.CLAMP),
+    };
+  });
+
+
   const indicatorAnimStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: modeIndex.value * (PILL_W + PILL_GAP) }],
   }));
@@ -787,6 +1077,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       setPhase('capture');
       setMode('camera');
       modeIndex.value = 0;
+      cancelAnimation(dismissY);
+      dismissY.value = 0;
       setMediaUri(null);
       setMediaType('image');
       setIsUploading(false);
@@ -804,7 +1096,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       setDrawStrokeWidth(DRAW_STROKE_WIDTHS[1]);
       setDraggingOverlayId(null);
       setTrashHover(false);
+      Keyboard.dismiss();
     } else {
+      cancelAnimation(dismissY);
+      dismissY.value = 0;
       loadRecentPhotos();
       if (!permission?.granted) {
         requestPermission();
@@ -860,11 +1155,31 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     }
   };
 
+  const configureCamera = useCallback(async () => {
+    const cam = cameraRef.current;
+    if (!cam) return;
+    try {
+      if (Platform.OS === 'ios' && typeof cam.getAvailableLensesAsync === 'function') {
+        const lenses = await cam.getAvailableLensesAsync();
+        const wide = pickWideAngleLens(lenses);
+        if (wide) setSelectedLens(wide);
+      }
+      if (typeof cam.getAvailablePictureSizesAsync === 'function') {
+        const sizes = await cam.getAvailablePictureSizesAsync();
+        const best = pickBestPictureSize(sizes);
+        if (best) setPictureSize(best);
+      }
+    } catch (err) {
+      logger.warn('AddStoryFullScreen', 'Camera configure failed', err);
+    }
+  }, []);
+
   const takePicture = async () => {
     if (!cameraRef.current) return;
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.85,
+        quality: 1,
+        shutterSound: true,
       });
       if (photo?.uri) {
         setMediaUri(photo.uri);
@@ -915,7 +1230,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       mediaTypes: ['images', 'videos'],
       allowsEditing: true,
       aspect: [9, 16],
-      quality: 0.85,
+      quality: 1,
       videoMaxDuration: 30,
     });
     if (result.canceled || !result.assets[0]) return;
@@ -978,10 +1293,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     setShowEmojiPicker(false);
   }, []);
 
-  const handleOverlayDragChange = useCallback((id: string, dragging: boolean, absY: number) => {
+  const handleOverlayDragChange = useCallback((id: string, dragging: boolean, absY: number, hovering: boolean) => {
     if (dragging) {
       setDraggingOverlayId(id);
-      setTrashHover(absY >= SH - 160);
+      setTrashHover(hovering);
     } else {
       setDraggingOverlayId(null);
       setTrashHover(false);
@@ -1016,75 +1331,41 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         `Starting upload: type=${mediaType}, overlays=${overlays.length}, drawings=${drawPaths.length}`,
       );
 
-      let uploadUri = mediaUri;
-      let overlayContent: string | undefined;
-
-      const serializeContent = () => JSON.stringify({
-        v: 2,
-        canvasWidth: SW,
-        canvasHeight: SH,
-        overlays: overlays.map(o => ({
-          type: o.type || 'text',
-          text: o.text,
-          color: o.color,
-          fontSize: o.fontSize,
-          bold: o.bold,
-          bgStyle: o.bgStyle,
-          x: o.x,
-          y: o.y,
-          scale: o.scale,
-        })),
-        drawings: drawPaths.map(p => ({
-          d: p.d,
-          color: p.color,
-          strokeWidth: p.strokeWidth,
-        })),
-      });
-
-      // For images: try to flatten overlays+drawings into the pixels via ViewShot.
-      // If that fails, we fall back to sending the raw image + JSON overlays and let
-      // the viewer re-render them on top.
-      const shouldFlatten =
-        mediaType === 'image' && (hasOverlays || hasDrawings) && captureAreaRef.current;
-
-      if (shouldFlatten) {
-        try {
-          const captureFn = captureAreaRef.current!.capture;
-          if (typeof captureFn !== 'function') {
-            throw new Error('ViewShot.capture is not available');
-          }
-          logger.debug('AddStoryFullScreen', 'Invoking ViewShot.capture()...');
-          const capturedUri = await Promise.race([
-            captureFn.call(captureAreaRef.current),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('capture timeout')), 20000)
-            ),
-          ]);
-          if (!capturedUri || typeof capturedUri !== 'string') {
-            throw new Error('ViewShot returned empty uri');
-          }
-          uploadUri = capturedUri;
-          logger.debug('AddStoryFullScreen', `Flattened OK → ${capturedUri.substring(0, 80)}`);
-        } catch (captureErr: any) {
-          logger.error(
-            'AddStoryFullScreen',
-            `Capture failed (${captureErr?.message}), sending overlays as JSON fallback`,
-            captureErr,
-          );
-          if (hasOverlays || hasDrawings) overlayContent = serializeContent();
-        }
-      } else if (mediaType === 'video' && (hasOverlays || hasDrawings)) {
-        overlayContent = serializeContent();
-      }
+      // Always send overlays/drawings as JSON alongside the raw media.
+      // The viewer re-renders them on top at view time. This is reliable across
+      // image/video, Reanimated, SVG, RN new architecture and older devices.
+      const overlayContent: string | undefined = (hasOverlays || hasDrawings)
+        ? JSON.stringify({
+            v: 2,
+            canvasWidth: SW,
+            canvasHeight: SH,
+            overlays: overlays.map(o => ({
+              type: o.type || 'text',
+              text: o.text,
+              color: o.color,
+              fontSize: o.fontSize,
+              bold: o.bold,
+              bgStyle: o.bgStyle,
+              x: o.x,
+              y: o.y,
+              scale: o.scale,
+            })),
+            drawings: drawPaths.map(p => ({
+              d: p.d,
+              color: p.color,
+              strokeWidth: p.strokeWidth,
+            })),
+          })
+        : undefined;
 
       setIsUploading(true);
       setPhase('uploading');
 
       const { url, error } = mediaType === 'video'
-        ? await uploadStoryVideo(uploadUri, user.id)
-        : await uploadStoryImage(uploadUri, user.id);
+        ? await uploadStoryVideo(mediaUri, user.id)
+        : await uploadStoryImage(mediaUri, user.id);
 
-      logger.debug('AddStoryFullScreen', `Upload result: url=${url}, error=${error}`);
+      logger.debug('AddStoryFullScreen', `Upload result: url=${url}, error=${error}, contentLen=${overlayContent?.length ?? 0}`);
 
       if (error || !url) {
         legacyAlert('שגיאה', error || 'לא הצלחנו להעלות');
@@ -1159,6 +1440,15 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
               facing={facing}
               mode={isRecording ? 'video' : 'picture'}
               flash={flash ? 'on' : 'off'}
+              zoom={0}
+              videoQuality="1080p"
+              {...(pictureSize ? { pictureSize } : {})}
+              {...(selectedLens ? { selectedLens } : {})}
+              onCameraReady={configureCamera}
+              onAvailableLensesChanged={({ lenses }) => {
+                const wide = pickWideAngleLens(lenses);
+                if (wide && wide !== selectedLens) setSelectedLens(wide);
+              }}
             />
           ) : (
             <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
@@ -1265,7 +1555,11 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 
               <TouchableOpacity
                 style={s.flipBtn}
-                onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')}
+                onPress={() => {
+                  setSelectedLens(undefined);
+                  setPictureSize(undefined);
+                  setFacing((f) => (f === 'back' ? 'front' : 'back'));
+                }}
                 activeOpacity={0.7}
               >
                 <Ionicons name="camera-reverse-outline" size={26} color="#fff" />
@@ -1354,11 +1648,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   /* ═══════════════════════════════════════════════ */
   const renderPreview = () => (
     <View style={s.fullFlex}>
-      <View style={StyleSheet.absoluteFillObject} collapsable={false}>
-      <ViewShot
+      <View
         ref={captureAreaRef}
         style={StyleSheet.absoluteFillObject}
-        options={{ format: 'jpg', quality: 0.92, result: 'tmpfile' }}
+        collapsable={false}
       >
         <View style={StyleSheet.absoluteFillObject}>
           {mediaType === 'image' ? (
@@ -1389,12 +1682,11 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
             key={item.id}
             item={item}
             onDoubleTap={openTextEditor}
-            onDragStateChange={(dragging, absY) => handleOverlayDragChange(item.id, dragging, absY)}
+            onDragStateChange={(dragging, absY, hovering) => handleOverlayDragChange(item.id, dragging, absY, hovering)}
             onRequestDelete={handleOverlayDelete}
             onCommitPosition={handleOverlayCommitPosition}
           />
         ))}
-      </ViewShot>
       </View>
 
       {/* Top bar – hidden while drawing */}
@@ -1404,14 +1696,8 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
           style={[s.previewTopGrad, { paddingTop: insets.top + 12 }]}
           pointerEvents="box-none"
         >
+          {/* direction:ltr — כמו StoryViewer: Modal לא תמיד מכבד forceRTL */}
           <View style={s.previewTopRow}>
-            <Pressable
-              onPress={() => { setMediaUri(null); setOverlays([]); setDrawPaths([]); setDrawMode(false); setPhase('capture'); }}
-              hitSlop={16}
-            >
-              <Ionicons name="arrow-forward" size={26} color="#fff" />
-            </Pressable>
-
             <View style={s.previewToolbar}>
               <TouchableOpacity style={s.previewToolBtn} onPress={() => openTextEditor()} activeOpacity={0.7}>
                 <MaterialCommunityIcons name="format-text" size={22} color="#fff" />
@@ -1431,6 +1717,16 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                 <Ionicons name="brush-outline" size={22} color="#fff" />
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              onPress={() => { setMediaUri(null); setOverlays([]); setDrawPaths([]); setDrawMode(false); setPhase('capture'); }}
+              hitSlop={16}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="חזרה"
+            >
+              <Ionicons name="chevron-forward" size={28} color="#fff" />
+            </TouchableOpacity>
           </View>
         </LinearGradient>
       )}
@@ -1511,53 +1807,32 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         </>
       )}
 
-      {/* Bottom share – hidden while drawing */}
+      {/* Bottom upload – ממורכז כמו FAB «תיק חדש» ב-PortfoliosHub */}
       {!drawMode && (
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.65)']}
-          style={[s.previewBottomGrad, { paddingBottom: insets.bottom + 24 }]}
+          style={[s.previewBottomGrad, { paddingBottom: insets.bottom + 16 }]}
           pointerEvents="box-none"
         >
           <TouchableOpacity
-            style={s.shareButton}
             onPress={handleShareMedia}
             disabled={isUploading}
-            activeOpacity={0.8}
+            style={[s.shareFabBtn, isUploading && { opacity: 0.82 }]}
+            activeOpacity={0.88}
+            accessibilityRole="button"
+            accessibilityLabel="העלאה"
           >
-            <LinearGradient
-              colors={[chatPalette.primary, chatPalette.primaryDark]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={s.shareButtonInner}
-            >
-              <Text style={s.shareButtonText}>שתף לסטטוס</Text>
-              <Ionicons name="paper-plane" size={18} color="#fff" />
-            </LinearGradient>
+            <Text style={s.shareFabBtnText}>העלאה</Text>
           </TouchableOpacity>
         </LinearGradient>
       )}
 
       {/* Trash drop zone – visible while dragging an overlay */}
-      {draggingOverlayId && (
-        <View
-          pointerEvents="none"
-          style={[s.trashZone, { bottom: insets.bottom + 24 }]}
-        >
-          <View style={[
-            s.trashCircle,
-            trashHover && s.trashCircleActive,
-          ]}>
-            <Ionicons
-              name="trash"
-              size={trashHover ? 28 : 24}
-              color="#fff"
-            />
-          </View>
-          <Text style={s.trashHint}>
-            {trashHover ? 'שחרר למחיקה' : 'גרור לכאן למחיקה'}
-          </Text>
-        </View>
-      )}
+      <TrashZone
+        visible={!!draggingOverlayId}
+        hovering={trashHover}
+        bottomOffset={insets.bottom + 24}
+      />
 
       <TextEditorOverlay
         visible={showTextEditor}
@@ -1587,36 +1862,38 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <GestureHandlerRootView style={s.fullFlex}>
-        <View style={s.root}>
-          {phase === 'capture' && renderCapturePhase()}
-          {phase === 'preview' && mediaUri && renderPreview()}
+        <GestureDetector gesture={dismissGesture}>
+          <Reanimated.View style={[s.root, dismissAnimStyle]}>
+            {phase === 'capture' && renderCapturePhase()}
+            {phase === 'preview' && mediaUri && renderPreview()}
 
-          {/* Animated mode switcher – floats above everything in capture phase */}
-          {phase === 'capture' && (
-            <View style={[s.modeSwitcherOverlay, { bottom: insets.bottom + 14 }]}>
-              <View style={s.modeSwitcherTrack}>
-                {/* Animated highlight pill */}
-                <Reanimated.View style={[s.modeSwitcherHighlight, indicatorAnimStyle]} />
-                <TouchableOpacity style={s.modePill} onPress={() => switchMode('camera')} activeOpacity={0.7}>
-                  <Reanimated.Text style={[s.modePillText, cameraPillOpacity]}>מצלמה</Reanimated.Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.modePill} onPress={() => switchMode('text')} activeOpacity={0.7}>
-                  <Reanimated.Text style={[s.modePillText, textPillOpacity]}>טקסט</Reanimated.Text>
-                </TouchableOpacity>
+            {/* Animated mode switcher – floats above everything in capture phase */}
+            {phase === 'capture' && (
+              <View style={[s.modeSwitcherOverlay, { bottom: insets.bottom + 14 }]}>
+                <View style={s.modeSwitcherTrack}>
+                  {/* Animated highlight pill */}
+                  <Reanimated.View style={[s.modeSwitcherHighlight, indicatorAnimStyle]} />
+                  <TouchableOpacity style={s.modePill} onPress={() => switchMode('camera')} activeOpacity={0.7}>
+                    <Reanimated.Text style={[s.modePillText, cameraPillOpacity]}>מצלמה</Reanimated.Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.modePill} onPress={() => switchMode('text')} activeOpacity={0.7}>
+                    <Reanimated.Text style={[s.modePillText, textPillOpacity]}>טקסט</Reanimated.Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          )}
+            )}
 
-          {phase === 'uploading' && (
-            <View style={s.uploadOverlay}>
-              <View style={s.uploadCard}>
-                <ActivityIndicator size="large" color={chatPalette.primary} />
-                <Text style={s.uploadTitle}>מעלה סטטוס...</Text>
-                <Text style={s.uploadSub}>רק רגע</Text>
+            {phase === 'uploading' && (
+              <View style={s.uploadOverlay}>
+                <View style={s.uploadCard}>
+                  <ActivityIndicator size="large" color={chatPalette.primary} />
+                  <Text style={s.uploadTitle}>מעלה סטטוס...</Text>
+                  <Text style={s.uploadSub}>רק רגע</Text>
+                </View>
               </View>
-            </View>
-          )}
-        </View>
+            )}
+          </Reanimated.View>
+        </GestureDetector>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -1906,12 +2183,15 @@ const s = StyleSheet.create({
     zIndex: 10,
   },
   previewTopRow: {
+    /** כמו StoryViewer progressRow — נועל LTR כדי שהסדר לא יהפוך פעמיים ב-Modal */
     flexDirection: 'row',
+    direction: 'ltr',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   previewToolbar: {
     flexDirection: 'row',
+    direction: 'ltr',
     gap: 8,
   },
   previewToolBtn: {
@@ -1927,31 +2207,25 @@ const s = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 50,
     zIndex: 10,
     alignItems: 'center',
   },
-  shareButton: {
-    borderRadius: 28,
-    overflow: 'hidden',
-    elevation: 6,
-    shadowColor: chatPalette.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-  },
-  shareButtonInner: {
-    flexDirection: 'row',
+  /** כמו fabBtn ב-PortfoliosHubScreen / PortfolioDetailScreen */
+  shareFabBtn: {
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 32,
-    gap: 10,
+    gap: 8,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 28,
+    backgroundColor: chatPalette.primary,
   },
-  shareButtonText: {
-    color: '#fff',
-    fontSize: 17,
+  shareFabBtnText: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#fff',
   },
 
   /* ---- Drawing mode ---- */

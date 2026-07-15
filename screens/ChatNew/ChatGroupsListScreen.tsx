@@ -35,18 +35,19 @@ import { supabase } from '../../lib/supabase';
 import { ChatGroup } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
 import { Search } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
 import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
 import { ChatBottomSheet, ChatSheetEmptyState, ChatSheetLoading } from '../../components/chat/ChatBottomSheet';
 import { ChatSearchResult } from '../../types/chat.types';
 import StoryViewer from '../../components/chat/StoryViewer';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
+import StoryAvatarRing from '../../components/chat/StoryAvatarRing';
 import { getUsersWithStories, StoryWithUser } from '../../services/storiesService';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
+import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
 import { legacyAlert } from '../../utils/appDialog';
 import { HapticFeedback, triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
@@ -92,26 +93,56 @@ interface GroupWithMembership extends Omit<ChatGroup, 'my_role'> {
   } | null;
 }
 
-// מיפוי תמונות לקבוצות
+// מיפוי תמונות לקבוצות (שמות רשמיים + וריאציות ישנות)
+const ANNOUNCEMENTS_GROUP_IMAGE =
+  Image.resolveAssetSource(require('../../assets/group-announcements.png')).uri;
+const ISRAELI_EXCHANGE_GROUP_IMAGE =
+  Image.resolveAssetSource(require('../../assets/group-israeli-exchange.png')).uri;
+const LIVE_QUESTIONS_GROUP_IMAGE =
+  Image.resolveAssetSource(require('../../assets/group-live-questions.png')).uri;
+const PENNY_DISCUSSIONS_GROUP_IMAGE =
+  Image.resolveAssetSource(require('../../assets/group-penny-discussions.png')).uri;
+const SWINGS_INVESTMENTS_GROUP_IMAGE =
+  Image.resolveAssetSource(require('../../assets/group-swings-investments.png')).uri;
+const ANALYSES_IDEAS_GROUP_IMAGE =
+  Image.resolveAssetSource(require('../../assets/group-analyses-ideas.png')).uri;
+
 const GROUP_IMAGES: { [key: string]: string } = {
-  'הכרזות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111.png`,
-  '🔔 הכרזות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111.png`,
+  'הכרזות': ANNOUNCEMENTS_GROUP_IMAGE,
+  '🔔 הכרזות': ANNOUNCEMENTS_GROUP_IMAGE,
   'דיונים - כללי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.PNG`,
+  'דיונים - כללי 🗣️': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.PNG`,
   '💬 דיונים - כללי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.PNG`,
-  'נטו ניתוחים!': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/666.PNG`,
-  '📊 נטו ניתוחים!': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/666.PNG`,
-  'דיוני - פניסטוקס': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/999.PNG`,
-  '💰 דיוני - פניסטוקס': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/999.PNG`,
+  'שאלות תשובות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
+  'שאלות תשובות ⁉️🗣️': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
   'שאלות ותשובות בשוק': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
   '❓ שאלות ותשובות בשוק': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
+  'דיוני פניסטוק': PENNY_DISCUSSIONS_GROUP_IMAGE,
+  'דיוני - פניסטוקס': PENNY_DISCUSSIONS_GROUP_IMAGE,
+  'דיוני - פניסטוקס 🚨🗣️': PENNY_DISCUSSIONS_GROUP_IMAGE,
+  '💰 דיוני - פניסטוקס': PENNY_DISCUSSIONS_GROUP_IMAGE,
+  'סווינגים והשקעות': SWINGS_INVESTMENTS_GROUP_IMAGE,
+  'סווינגים והשקעות 🌟🔇': SWINGS_INVESTMENTS_GROUP_IMAGE,
+  'סווינגים וסטאפים': SWINGS_INVESTMENTS_GROUP_IMAGE,
+  '🔄 סווינגים וסטאפים': SWINGS_INVESTMENTS_GROUP_IMAGE,
+  'ניתוחים ורעיונות': ANALYSES_IDEAS_GROUP_IMAGE,
+  'ניתוחים ורעיונות שלכם': ANALYSES_IDEAS_GROUP_IMAGE,
+  'ניתוחים ורעיונות שלכם 🗣️': ANALYSES_IDEAS_GROUP_IMAGE,
+  'נטו ניתוחים!': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/666.PNG`,
+  '📊 נטו ניתוחים!': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/666.PNG`,
+  'רווחים והצלחות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
+  'רווחים והצלחות 💰': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
+  '🎯 רווחים והצלחות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
+  'שאלות בלייבים': LIVE_QUESTIONS_GROUP_IMAGE,
+  'שאלות בלייבים 🎥🗣️': LIVE_QUESTIONS_GROUP_IMAGE,
+  'מסחר יומי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
+  'מסחר יומי 🌟🔇': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
   'עסקאות מסחר יומי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
   '📈 עסקאות מסחר יומי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
-  'רווחים והצלחות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
-  '🎯 רווחים והצלחות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
-  'חדשות מתפרצות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.png`,
-  '⚡ חדשות מתפרצות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.png`,
-  'סווינגים וסטאפים': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/555.PNG`,
-  '🔄 סווינגים וסטאפים': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/555.PNG`,
+  'בורסה ישראלית': ISRAELI_EXCHANGE_GROUP_IMAGE,
+  'בורסה ישראלית 🇮🇱🗣️': ISRAELI_EXCHANGE_GROUP_IMAGE,
+  'פניסטוקס (סיכון גבוה)': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
+  'פניסטוקס (סיכון גבוה)🌟🔇': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
   'מסחר פניסטוקס - סיכון גבוה': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
   '⚠️ מסחר פניסטוקס - סיכון גבוה': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
 };
@@ -120,25 +151,49 @@ const getImageByGroupName = (groupName: string): string | null => {
   if (GROUP_IMAGES[groupName]) {
     return GROUP_IMAGES[groupName];
   }
-  
-  const nameWithoutEmoji = groupName.replace(/^[\u{1F300}-\u{1F9FF}]+\s*/u, '').trim();
-  if (GROUP_IMAGES[nameWithoutEmoji]) {
-    return GROUP_IMAGES[nameWithoutEmoji];
+
+  const nameWithoutLeadingEmoji = groupName.replace(/^[\u{1F300}-\u{1F9FF}]+\s*/u, '').trim();
+  if (GROUP_IMAGES[nameWithoutLeadingEmoji]) {
+    return GROUP_IMAGES[nameWithoutLeadingEmoji];
   }
-  
+
+  const baseName = groupName
+    .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]+/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (GROUP_IMAGES[baseName]) {
+    return GROUP_IMAGES[baseName];
+  }
+
   return null;
 };
 
 const GROUP_ICONS: { [key: string]: keyof typeof Ionicons.glyphMap } = {
   'הכרזות': 'megaphone',
   'דיונים - כללי': 'chatbubbles',
-  'נטו ניתוחים!': 'analytics',
-  'דיוני - פניסטוקס': 'trending-up',
+  'דיונים - כללי 🗣️': 'chatbubbles',
+  'שאלות תשובות': 'help-circle',
+  'שאלות תשובות ⁉️🗣️': 'help-circle',
   'שאלות ותשובות בשוק': 'help-circle',
-  'עסקאות מסחר יומי': 'flash',
-  'רווחים והצלחות': 'trophy',
-  'חדשות מתפרצות': 'newspaper',
+  'דיוני - פניסטוקס': 'trending-up',
+  'דיוני - פניסטוקס 🚨🗣️': 'trending-up',
+  'סווינגים והשקעות': 'swap-horizontal',
+  'סווינגים והשקעות 🌟🔇': 'swap-horizontal',
   'סווינגים וסטאפים': 'swap-horizontal',
+  'ניתוחים ורעיונות שלכם': 'analytics',
+  'ניתוחים ורעיונות שלכם 🗣️': 'analytics',
+  'נטו ניתוחים!': 'analytics',
+  'רווחים והצלחות': 'trophy',
+  'רווחים והצלחות 💰': 'trophy',
+  'שאלות בלייבים': 'videocam',
+  'שאלות בלייבים 🎥🗣️': 'videocam',
+  'מסחר יומי': 'flash',
+  'מסחר יומי 🌟🔇': 'flash',
+  'עסקאות מסחר יומי': 'flash',
+  'בורסה ישראלית': 'flag',
+  'בורסה ישראלית 🇮🇱🗣️': 'flag',
+  'פניסטוקס (סיכון גבוה)': 'warning',
+  'פניסטוקס (סיכון גבוה)🌟🔇': 'warning',
   'מסחר פניסטוקס - סיכון גבוה': 'warning',
 };
 
@@ -424,12 +479,6 @@ export default function ChatGroupsListScreen() {
     return null;
   };
 
-  // בדיקה אם זו קבוצת הכרזות
-  const isAnnouncementGroup = (name: string) => {
-    const lowerName = name.toLowerCase();
-    return lowerName.includes('הכרזות') || lowerName.includes('announcement');
-  };
-
   // Filter groups - הכרזות למעלה עם רווח אחריהן
   const filteredGroups = useMemo(() => {
     let filtered = allGroups;
@@ -461,8 +510,8 @@ export default function ChatGroupsListScreen() {
     }
 
     // מיון: הכרזות למעלה
-    const announcements = filtered.filter(g => isAnnouncementGroup(g.name));
-    const regular = filtered.filter(g => !isAnnouncementGroup(g.name));
+    const announcements = filtered.filter(g => isAnnouncementGroup(g.name, g.id));
+    const regular = filtered.filter(g => !isAnnouncementGroup(g.name, g.id));
 
     // 🔥 מיון לפי last_message_at - קבוצות עם הודעות חדשות למעלה (כמו וואטסאפ)
     const sortByLastMessage = (groups: typeof filtered) => {
@@ -483,7 +532,7 @@ export default function ChatGroupsListScreen() {
 
   // מספר קבוצות ההכרזות (לחישוב הרווח)
   const announcementCount = useMemo(() => 
-    filteredGroups.filter(g => isAnnouncementGroup(g.name)).length,
+    filteredGroups.filter(g => isAnnouncementGroup(g.name, g.id)).length,
     [filteredGroups]
   );
 
@@ -703,7 +752,15 @@ export default function ChatGroupsListScreen() {
             </View>
           )}
           <View style={styles.searchRowBody}>
-            <Text style={styles.searchRowTitle} numberOfLines={1}>{group.name}</Text>
+            <Text
+              style={[
+                styles.searchRowTitle,
+                isAnnouncementGroup(group.name, group.id) && styles.chatNameBold,
+              ]}
+              numberOfLines={1}
+            >
+              {group.name}
+            </Text>
             <Text style={styles.searchRowSubtitle} numberOfLines={1}>{preview}</Text>
           </View>
         </TouchableOpacity>
@@ -747,7 +804,7 @@ export default function ChatGroupsListScreen() {
     const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
     const hasUnread = (item.unread_count || 0) > 0;
     const hasMentions = (item.mentioned_count || 0) > 0;
-    const isAnnouncement = isAnnouncementGroup(item.name);
+    const isAnnouncement = isAnnouncementGroup(item.name, item.id);
     const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
     const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
     const isLastAnnouncement = isAnnouncement && index === announcementCount - 1 && announcementCount > 0;
@@ -794,7 +851,7 @@ export default function ChatGroupsListScreen() {
           {/* Text content */}
           <View style={styles.chatBody}>
             <View style={styles.chatRow1}>
-              <Text style={[styles.chatName, hasUnread && styles.chatNameBold]} numberOfLines={1}>
+              <Text style={[styles.chatName, (isAnnouncement || hasUnread) && styles.chatNameBold]} numberOfLines={1}>
                 {item.name}
               </Text>
               {!!timeLabel && (
@@ -956,6 +1013,7 @@ export default function ChatGroupsListScreen() {
               const displayName = s.user?.display_name || s.user?.full_name || 'משתמש';
               const isUnread = s.has_viewed === false;
               const isOwn = s.user_id === user?.id;
+              const count = Math.max(1, s.story_count || 1);
               return (
                 <TouchableOpacity
                   key={s.user_id}
@@ -966,49 +1024,37 @@ export default function ChatGroupsListScreen() {
                   }}
                   activeOpacity={0.7}
                 >
-                  {isUnread ? (
-                    <LinearGradient
-                      colors={[tokens.colors.primary.main, tokens.colors.primary.light, tokens.colors.secondary.main]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.storyRingGradient}
-                    >
-                      <View style={styles.storyRingInner}>
-                        {avatar ? (
-                          <Image source={{ uri: avatar }} style={styles.statusCircleImage} resizeMode="cover" />
-                        ) : (
-                          <View style={styles.storyAvatarPlaceholder}>
-                            <Ionicons name="person" size={22} color={tokens.colors.text.secondary} />
-                          </View>
-                        )}
+                  <StoryAvatarRing
+                    size={68}
+                    storyCount={count}
+                    hasViewed={!isUnread}
+                  >
+                    {avatar ? (
+                      <Image source={{ uri: avatar }} style={styles.statusCircleImage} resizeMode="cover" />
+                    ) : (
+                      <View style={styles.storyAvatarPlaceholder}>
+                        <Ionicons
+                          name="person"
+                          size={22}
+                          color={
+                            isUnread
+                              ? tokens.colors.text.secondary
+                              : tokens.colors.text.tertiary
+                          }
+                        />
                       </View>
-                    </LinearGradient>
-                  ) : (
-                    <View style={styles.storyRingViewed}>
-                      <View style={styles.storyRingInner}>
-                        {avatar ? (
-                          <Image source={{ uri: avatar }} style={styles.statusCircleImage} resizeMode="cover" />
-                        ) : (
-                          <View style={styles.storyAvatarPlaceholder}>
-                            <Ionicons name="person" size={22} color={tokens.colors.text.tertiary} />
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  )}
+                    )}
+                  </StoryAvatarRing>
                   <Text style={[styles.statusLabel, isOwn && { color: tokens.colors.primary.main }]} numberOfLines={1}>
                     {isOwn ? 'שלי' : displayName}
                   </Text>
-                  {isUnread && s.story_count > 1 && (
-                    <View style={styles.storyCountBadge}>
-                      <Text style={styles.storyCountText}>{s.story_count}</Text>
-                    </View>
-                  )}
                 </TouchableOpacity>
               );
             })}
             </ScrollView>
           </View>
+
+          <View style={styles.storiesDivider} />
 
           {/* Chat list card – raised surface with rounded top corners */}
           <View style={styles.listCard}>
@@ -1275,35 +1321,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     borderWidth: 2,
     borderColor: tokens.colors.background.primary,
   },
-  storyRingGradient: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  storyRingViewed: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    borderWidth: 1.5,
-    borderColor: tokens.colors.border.hover,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  storyRingInner: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    borderWidth: 2.5,
-    borderColor: tokens.colors.background.primary,
-    backgroundColor: tokens.colors.background.tertiary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
   storyAvatarPlaceholder: {
     width: '100%',
     height: '100%',
@@ -1311,21 +1328,6 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     alignItems: 'center',
     backgroundColor: tokens.colors.border.divider,
   },
-  storyCountBadge: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    backgroundColor: tokens.colors.primary.main,
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    borderWidth: 1.5,
-    borderColor: tokens.colors.background.primary,
-  },
-  storyCountText: { color: tokens.colors.text.primary, fontSize: 9, fontWeight: '700' },
   statusLabel: {
     fontSize: 11,
     color: tokens.colors.text.secondary,
@@ -1333,7 +1335,14 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     textAlign: 'center',
     marginTop: 2,
   },
-  statusCircleImage: { width: 56, height: 56, borderRadius: 28 },
+  statusCircleImage: { width: '100%', height: '100%' },
+  storiesDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: tokens.colors.border.divider,
+    marginHorizontal: HP,
+    marginTop: 2,
+    marginBottom: 4,
+  },
 
   /* ── Search + Filters ── */
   searchSection: {

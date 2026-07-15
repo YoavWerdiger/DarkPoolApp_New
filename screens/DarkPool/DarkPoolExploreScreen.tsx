@@ -22,10 +22,8 @@ import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
 import { appQueryKeys } from '../../lib/appQueryKeys';
-import { useDarkPoolExplore } from '../../hooks/useDarkPoolExplore';
 import { useInvestorSearch } from '../../hooks/useInvestorSearch';
-import { fetchExploreProfilesGrid } from '../../services/darkpool/personPortraitService';
-import { triggerPersonPortraitSync } from '../../services/darkpool/darkPoolDbCacheService';
+import { fetchCuratedExploreGrid } from '../../services/darkpool/featuredProfilesService';
 import {
   dispatchOpenMainDrawer,
   type DrawerParentNavigation,
@@ -38,13 +36,12 @@ import { ExploreKindFilterBar } from './components/ExploreKindFilter';
 import type { ExplorePerson } from '../../services/darkpool/uwExploreService';
 import {
   buildExploreProfileGrid,
-  collectExploreSources,
   type ExploreKindFilter,
   withResolvedPhoto,
 } from './utils/exploreGrid';
 
 async function loadExploreGridPeople(): Promise<ExplorePerson[]> {
-  return fetchExploreProfilesGrid();
+  return fetchCuratedExploreGrid();
 }
 
 export default function DarkPoolExploreScreen() {
@@ -52,7 +49,6 @@ export default function DarkPoolExploreScreen() {
   const drawerNav = useNavigation();
   const stackNav = useDarkPoolStackNav();
   const bottomPad = useDarkPoolTabBarHeight();
-  const explore = useDarkPoolExplore();
   const [query, setQuery] = useState('');
   const [kindFilter, setKindFilter] = useState<ExploreKindFilter>('all');
   const search = useInvestorSearch(query);
@@ -86,19 +82,10 @@ export default function DarkPoolExploreScreen() {
     [stackNav]
   );
 
-  const fallbackSources = useMemo(
-    () => collectExploreSources(explore.data, []),
-    [explore.data]
+  const allProfiles = useMemo(
+    () => buildExploreProfileGrid(gridQuery.data ?? []),
+    [gridQuery.data]
   );
-
-  const allProfiles = useMemo(() => {
-    const portraitRows = gridQuery.data ?? [];
-    const merged = buildExploreProfileGrid(
-      portraitRows.length ? portraitRows : fallbackSources
-    );
-    if (merged.length) return merged;
-    return buildExploreProfileGrid(fallbackSources);
-  }, [gridQuery.data, fallbackSources]);
 
   const filtered = useMemo(
     () =>
@@ -121,15 +108,16 @@ export default function DarkPoolExploreScreen() {
     () => ({
       all: allProfiles.length,
       politician: allProfiles.filter((p) => p.kind === 'politician').length,
-      insider: allProfiles.filter((p) => p.kind === 'insider').length,
+      insider: allProfiles.filter(
+        (p) => p.kind === 'insider' || p.kind === 'fund_manager'
+      ).length,
     }),
     [allProfiles]
   );
 
   const handleRefresh = useCallback(async () => {
-    await triggerPersonPortraitSync(true).catch(() => undefined);
-    await Promise.all([gridQuery.refetch(), explore.refetch()]);
-  }, [gridQuery, explore]);
+    await gridQuery.refetch();
+  }, [gridQuery]);
 
   const styles = useMemo(
     () =>
@@ -170,8 +158,7 @@ export default function DarkPoolExploreScreen() {
     [tokens, bottomPad]
   );
 
-  const loading =
-    (explore.loading && !explore.data) || (gridQuery.isLoading && !gridQuery.data);
+  const loading = gridQuery.isLoading && !gridQuery.data;
 
   if (loading) {
     return (
@@ -188,7 +175,7 @@ export default function DarkPoolExploreScreen() {
   }
 
   const displayPeople = isSearching ? searchGrid : filtered;
-  const refreshing = explore.refreshing || gridQuery.isRefetching;
+  const refreshing = gridQuery.isRefetching;
 
   return (
     <ScreenChrome rtl withBrandWatermark>
@@ -224,7 +211,9 @@ export default function DarkPoolExploreScreen() {
 
           {!isSearching ? (
             <>
-              <Text style={styles.hint}>לחץ על פרופיל לפתיחת תיק · תמונות מ-STIR ו-Form 4</Text>
+              <Text style={styles.hint}>
+                פרופילים מובילים · חיפוש למציאת משקיעים נוספים
+              </Text>
               <ExploreKindFilterBar
                 value={kindFilter}
                 onChange={setKindFilter}
@@ -233,13 +222,13 @@ export default function DarkPoolExploreScreen() {
             </>
           ) : null}
 
-          {(explore.error || gridQuery.error) && (
+          {gridQuery.error ? (
             <UICard variant="outlined" padding="md" style={styles.errCard}>
               <Text style={styles.errorText}>
-                {(explore.error || (gridQuery.error as Error)?.message) ?? 'שגיאה'}
+                {(gridQuery.error as Error).message ?? 'שגיאה'}
               </Text>
             </UICard>
-          )}
+          ) : null}
 
           {isSearching && search.loading ? (
             <ActivityIndicator
@@ -254,7 +243,7 @@ export default function DarkPoolExploreScreen() {
             emptyMessage={
               isSearching
                 ? 'לא נמצא פרופיל'
-                : 'אין פרופילים. משוך למטה לסנכרון תמונות.'
+                : 'אין פרופילים להצגה — משוך למטה לרענון'
             }
           />
         </ScrollView>

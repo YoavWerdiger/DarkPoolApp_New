@@ -35,6 +35,44 @@ import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
 import MentionPicker from './MentionPicker';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import {
+  normalizeWaveformSamples,
+  WAVEFORM_DISPLAY_BARS,
+  WAVEFORM_STORE_BARS,
+} from '../../utils/waveformSamples';
+import { meteringDbToLevel, resolveMessageWaveform } from '../../utils/audioWaveformPeaks';
+import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
+
+/**
+ * iOS: WAV/PCM — חילוץ peaks אמיתיים מהקובץ אחרי עצירה.
+ * Android: AAC/m4a — fallback ל־metering envelope (MediaRecorder לא תומך WAV).
+ */
+const VOICE_RECORDING_OPTIONS: Audio.RecordingOptions = {
+  isMeteringEnabled: true,
+  android: {
+    extension: '.m4a',
+    outputFormat: Audio.AndroidOutputFormat.MPEG_4,
+    audioEncoder: Audio.AndroidAudioEncoder.AAC,
+    sampleRate: 44100,
+    numberOfChannels: 1,
+    bitRate: 128000,
+  },
+  ios: {
+    extension: '.wav',
+    outputFormat: Audio.IOSOutputFormat.LINEARPCM,
+    audioQuality: Audio.IOSAudioQuality.HIGH,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {
+    mimeType: 'audio/webm',
+    bitsPerSecond: 128000,
+  },
+};
 
 /**
  * חימום cache של expo-image ברגע שיש URI מקומי — כדי שהפריוויו יציג מיידית
@@ -66,6 +104,36 @@ function attachLocalImageThumbs(
   void Promise.all(
     needsThumb.map(async (f) => {
       const thumb = await chatMediaService.createLocalImageThumbnail(f.uri);
+      return thumb ? { id: f.id, thumb } : null;
+    }),
+  )
+    .then((results) => {
+      const byId = new Map<string, string>();
+      for (const r of results) {
+        if (r) byId.set(r.id, r.thumb);
+      }
+      if (byId.size === 0) return;
+      setMedia((prev) =>
+        prev.map((f) => (byId.has(f.id) ? { ...f, thumbnail_url: byId.get(f.id) } : f)),
+      );
+      warmImageCache([...byId.values()]);
+    })
+    .catch(() => {
+      /* best effort */
+    });
+}
+
+/** פריים מקומי לסרטונים — בלי זה הבועה נשארת שחורה עד שהשרת/runtime מסיימים */
+function attachLocalVideoThumbs(
+  files: MediaFile[],
+  setMedia: React.Dispatch<React.SetStateAction<MediaFile[]>>,
+): void {
+  const needsThumb = files.filter((f) => f.type === 'video' && !f.thumbnail_url);
+  if (needsThumb.length === 0) return;
+
+  void Promise.all(
+    needsThumb.map(async (f) => {
+      const thumb = await chatMediaService.createLocalVideoThumbnail(f.uri);
       return thumb ? { id: f.id, thumb } : null;
     }),
   )
@@ -180,7 +248,12 @@ function ChatInputImpl({
   const recordingAccumMsRef = useRef(0);
   const previewPositionInterval = useRef<NodeJS.Timeout | null>(null);
   const recordingDotOpacity = useRef(new Animated.Value(1)).current;
-  const timelineProgress = useRef(new Animated.Value(0)).current;
+  const timelineProgress = useSharedValue(0);
+  const previewPlayingSV = useSharedValue(0);
+  const previewScrubbingSV = useSharedValue(0);
+  const previewDurationSV = useSharedValue(0);
+  const isPreviewScrubbingRef = useRef(false);
+  const wasPreviewPlayingBeforeScrubRef = useRef(false);
   const sendBtnScale = useRef(new Animated.Value(1)).current;
   const attachmentIconRotate = useRef(new Animated.Value(0)).current;
   const isStartingRecordingRef = useRef<boolean>(false);
@@ -356,6 +429,10 @@ function ChatInputImpl({
         media_thumbnail_url: mediaFile.thumbnail_url,
         media_width: mediaFile.width,
         media_height: mediaFile.height,
+        media_duration:
+          mediaFile.type === 'video' && mediaFile.duration && mediaFile.duration > 0
+            ? mediaFile.duration
+            : undefined,
         is_uploading: true,
         upload_progress: 0,
         is_sending: true,
@@ -382,6 +459,11 @@ function ChatInputImpl({
       // אם ה-thumb עוד לא מוכן (שליחה מיידית) — יצירה ברקע ועדכון הבועה
       if (mediaFile.type === 'image' && !mediaFile.thumbnail_url) {
         void chatMediaService.createLocalImageThumbnail(mediaFile.uri).then((thumb) => {
+          if (thumb) updateOptimisticMessage(tempId, { media_thumbnail_url: thumb });
+        });
+      }
+      if (mediaFile.type === 'video' && !mediaFile.thumbnail_url) {
+        void chatMediaService.createLocalVideoThumbnail(mediaFile.uri).then((thumb) => {
           if (thumb) updateOptimisticMessage(tempId, { media_thumbnail_url: thumb });
         });
       }
@@ -425,6 +507,9 @@ function ChatInputImpl({
           const metadata: Record<string, any> = { existing_optimistic_id: tempId };
           if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
             metadata.media_thumbnail_url = uploadResult.thumbnail_url;
+          }
+          if (mediaFile.type === 'video' && mediaFile.duration && mediaFile.duration > 0) {
+            metadata.media_duration = mediaFile.duration;
           }
 
           await onSendMessage(firstCaption.trim(), uploadResult.url, messageType, metadata);
@@ -472,6 +557,10 @@ function ChatInputImpl({
         media_thumbnail_url: mediaFile.thumbnail_url,
         media_width: mediaFile.width,
         media_height: mediaFile.height,
+        media_duration:
+          mediaFile.type === 'video' && mediaFile.duration && mediaFile.duration > 0
+            ? mediaFile.duration
+            : undefined,
         is_uploading: true,
         upload_progress: 0,
         is_sending: true,
@@ -497,6 +586,11 @@ function ChatInputImpl({
 
       if (mediaFile.type === 'image' && !mediaFile.thumbnail_url) {
         void chatMediaService.createLocalImageThumbnail(mediaFile.uri).then((thumb) => {
+          if (thumb) updateOptimisticMessage(itemTempId, { media_thumbnail_url: thumb });
+        });
+      }
+      if (mediaFile.type === 'video' && !mediaFile.thumbnail_url) {
+        void chatMediaService.createLocalVideoThumbnail(mediaFile.uri).then((thumb) => {
           if (thumb) updateOptimisticMessage(itemTempId, { media_thumbnail_url: thumb });
         });
       }
@@ -552,6 +646,9 @@ function ChatInputImpl({
           const metadata: Record<string, any> = { existing_optimistic_id: itemTempId };
           if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
             metadata.media_thumbnail_url = uploadResult.thumbnail_url;
+          }
+          if (mediaFile.type === 'video' && mediaFile.duration && mediaFile.duration > 0) {
+            metadata.media_duration = mediaFile.duration;
           }
 
           await onSendMessage(
@@ -714,20 +811,21 @@ function ChatInputImpl({
           is_deleted: false,
           deleted_for_everyone: false,
           is_silent: false,
-          is_system_message: false,
-          created_at: new Date().toISOString(),
-          reactions_count: 0,
-          read_by_count: 0,
-          sender: {
-            id: user.id,
-            display_name: user.display_name || 'אני',
-            profile_picture: user.profile_picture,
-            is_online: true,
-          },
-        };
+      is_system_message: false,
+      created_at: new Date().toISOString(),
+      reactions_count: 0,
+      read_by_count: 0,
+      metadata: { waveformData: waveform },
+      sender: {
+        id: user.id,
+        display_name: user.display_name || 'אני',
+        profile_picture: user.profile_picture,
+        is_online: true,
+      },
+    };
 
-        // Add optimistic message immediately - user sees it right away!
-        addOptimisticMediaMessage(optimisticMessage);
+    // Add optimistic message immediately - user sees it right away!
+    addOptimisticMediaMessage(optimisticMessage);
 
         setIsUploading(true);
         (async () => {
@@ -796,39 +894,28 @@ function ChatInputImpl({
   // Record Audio
   // ============================================
 
-  // דגימת metering אחת → מעדכן ref חי + אוסף samples להודעה. ללא setState.
-  const sampleMetering = useCallback(async () => {
-    try {
-      const rec = recordingRef.current;
-      if (!rec) return;
-      const status = await rec.getStatusAsync();
-      if (!status.isRecording) return;
+  /**
+   * Metering חי: דגימה גולמית ל־envelope (שמירה), smoothing רק ל־UI של ההקלטה.
+   * הויבפורם הסופי בהודעה נבנה מפיקי הקובץ (WAV) כשאפשר.
+   */
+  const handleRecordingStatus = useCallback((status: Audio.RecordingStatus) => {
+    if (!status.isRecording) return;
+    const metering = status.metering;
+    if (typeof metering !== 'number') return;
 
-      const metering = (status as any).metering;
-      let normalizedValue: number;
-      if (metering !== undefined && typeof metering === 'number') {
-        // טווח ממוקד דיבור: -50 עד -5 dB; עקומת power להגברת רגישות
-        const MIN_DB = -50;
-        const MAX_DB = -5;
-        const clamped = Math.max(MIN_DB, Math.min(MAX_DB, metering));
-        const linear = (clamped - MIN_DB) / (MAX_DB - MIN_DB);
-        const curved = Math.pow(linear, 0.55);
-        normalizedValue = 0.06 + curved * 0.94;
-      } else {
-        normalizedValue = 0.25 + Math.random() * 0.75;
-      }
+    const raw = meteringDbToLevel(metering);
+    waveformSamplesRef.current.push(raw);
 
-      audioLevelRef.current = normalizedValue;
+    const prev = audioLevelRef.current;
+    // סף שקט נמוך יותר + מעקב מהיר יותר אחרי דיבור רך
+    const next = raw <= 0.012 ? prev * 0.48 : prev * 0.18 + raw * 0.82;
+    audioLevelRef.current = next < 0.012 ? 0 : Math.min(1, next);
+  }, []);
 
-      // שמירת samples להודעה (downsample ל-100)
-      const samples = waveformSamplesRef.current;
-      if (samples.length < 100) {
-        samples.push(normalizedValue);
-      } else {
-        samples[Math.floor(Math.random() * 100)] = normalizedValue;
-      }
-    } catch (error) {
-      logger.error('ChatInput', 'Recording error', error);
+  const clearWaveformPolling = useCallback(() => {
+    if (waveformIntervalRef.current) {
+      clearInterval(waveformIntervalRef.current);
+      waveformIntervalRef.current = null;
     }
   }, []);
 
@@ -877,23 +964,23 @@ function ChatInputImpl({
         playsInSilentModeIOS: true,
       });
 
-      // יצירת recording חדש
+      // יצירת recording — iOS WAV לפיקים מהקובץ; Android m4a + metering
       const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      // רענון metering מהיר (ברירת המחדל 500ms גורמת לגלים להיראות שטוחים)
-      recording.setProgressUpdateInterval(80);
+      await recording.prepareToRecordAsync(VOICE_RECORDING_OPTIONS);
+      recording.setOnRecordingStatusUpdate(handleRecordingStatus);
+      recording.setProgressUpdateInterval(50);
       await recording.startAsync();
 
       recordingRef.current = recording;
       setIsRecording(true);
       setRecordingDuration(0);
       setAudioLevel(0);
-      setWaveformSamples([]); // איפוס ה-waveform data
+      setWaveformSamples([]);
       audioLevelRef.current = 0;
       waveformSamplesRef.current = [];
       recordingStartRef.current = Date.now();
       recordingAccumMsRef.current = 0;
-      timelineProgress.setValue(0); // איפוס הטיימליין
+      timelineProgress.value = 0;
 
       pulseAnimationRef.current?.stop();
       const pulseAnim = Animated.loop(
@@ -922,19 +1009,14 @@ function ChatInputImpl({
         const elapsedMs = recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
         const seconds = Math.floor(elapsedMs / 1000);
         const progress = Math.min(seconds / MAX_RECORDING_DURATION, 1);
-        timelineProgress.setValue(progress);
+        timelineProgress.value = progress;
         setRecordingDuration(seconds);
       }, 250);
 
-      // קריאת metering בזמן אמת → ref בלבד (ללא setState, בלי לעמיס את ה-JS thread)
-      waveformIntervalRef.current = setInterval(() => {
-        void sampleMetering();
-      }, 60);
-
-      isStartingRecordingRef.current = false; // איפוס ה-flag אחרי הצלחה
+      isStartingRecordingRef.current = false;
     } catch (error) {
       Alert.alert('שגיאה', 'לא הצלחנו להתחיל הקלטה');
-      isStartingRecordingRef.current = false; // איפוס ה-flag גם במקרה של שגיאה
+      isStartingRecordingRef.current = false;
 
       // נקה את recordingRef אם יש
       if (recordingRef.current) {
@@ -967,18 +1049,18 @@ function ChatInputImpl({
         recordingTimerRef.current = null;
       }
 
-      // Stop waveform updates
-      if (waveformIntervalRef.current) {
-        clearInterval(waveformIntervalRef.current);
-        waveformIntervalRef.current = null;
-      }
+      clearWaveformPolling();
+      recordingRef.current?.setOnRecordingStatusUpdate(null);
 
       setIsRecording(false);
       setIsPaused(true);
       setAudioLevel(0);
       audioLevelRef.current = 0;
-      // flush של ה-samples שנאספו ל-state עבור תצוגת ה-preview
-      setWaveformSamples([...waveformSamplesRef.current]);
+      const pausedPreview = normalizeWaveformSamples(
+        waveformSamplesRef.current,
+        WAVEFORM_DISPLAY_BARS,
+      );
+      setWaveformSamples(pausedPreview);
 
       pulseAnimationRef.current?.stop();
       pulseAnimationRef.current = null;
@@ -1027,14 +1109,12 @@ function ChatInputImpl({
         const elapsedMs = recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
         const seconds = Math.floor(elapsedMs / 1000);
         const progress = Math.min(seconds / MAX_RECORDING_DURATION, 1);
-        timelineProgress.setValue(progress);
+        timelineProgress.value = progress;
         setRecordingDuration(seconds);
       }, 250);
 
-      // Restart waveform updates → ref בלבד
-      waveformIntervalRef.current = setInterval(() => {
-        void sampleMetering();
-      }, 60);
+      recordingRef.current.setOnRecordingStatusUpdate(handleRecordingStatus);
+      recordingRef.current.setProgressUpdateInterval(50);
     } catch (error) {
       logger.error('ChatInput', 'Recording error', error);
       Alert.alert('שגיאה', 'לא הצלחנו להמשיך את ההקלטה');
@@ -1059,13 +1139,12 @@ function ChatInputImpl({
         recordingTimerRef.current = null;
       }
 
-      if (waveformIntervalRef.current) {
-        clearInterval(waveformIntervalRef.current);
-        waveformIntervalRef.current = null;
-      }
+      clearWaveformPolling();
+      recordingRef.current.setOnRecordingStatusUpdate(null);
 
       const status = await recordingRef.current.getStatusAsync();
       const uri = recordingRef.current.getURI();
+      const liveSamples = [...waveformSamplesRef.current];
       await recordingRef.current.stopAndUnloadAsync();
       recordingRef.current = null;
 
@@ -1079,16 +1158,19 @@ function ChatInputImpl({
       setIsPaused(true);
       setAudioLevel(0);
       audioLevelRef.current = 0;
-      setWaveformSamples([...waveformSamplesRef.current]);
-
-      // Stop pulse animation
       recordingDotOpacity.setValue(1);
+
+      // peaks מהקובץ (WAV) או envelope מה-metering
+      const finalWave = await resolveMessageWaveform(uri, liveSamples, WAVEFORM_STORE_BARS);
+      waveformSamplesRef.current = finalWave;
+      setWaveformSamples(normalizeWaveformSamples(finalWave, WAVEFORM_DISPLAY_BARS));
 
       if (uri) {
         setRecordedAudioUri(uri);
-        // הזמן נשאר כמו שהוא - לא מאפסים
-        // אפס את הטיימליין - הוא יתעדכן כאשר נשמיע את ההקלטה
-        timelineProgress.setValue(0);
+        setPreviewDuration(totalMs);
+        previewDurationSV.value = totalMs;
+        setPreviewPosition(0);
+        timelineProgress.value = 0;
       }
     } catch (error) {
       logger.error('ChatInput', 'Recording error', error);
@@ -1097,86 +1179,109 @@ function ChatInputImpl({
     }
   };
 
-  // שמיעת ההקלטה (preview)
+  // פלייהד חלק בפריוויו — UI thread
+  useFrameCallback((frame) => {
+    'worklet';
+    if (previewPlayingSV.value < 0.5 || previewScrubbingSV.value > 0.5) return;
+    const d = previewDurationSV.value;
+    if (d <= 0) return;
+    const dt = Math.min(1 / 20, (frame.timeSincePreviousFrame ?? 16) / 1000);
+    timelineProgress.value = Math.min(1, timelineProgress.value + dt / (d / 1000));
+  }, true);
+
+  const resetPreviewPlayhead = useCallback(async () => {
+    timelineProgress.value = 0;
+    setPreviewPosition(0);
+    setIsPlayingPreview(false);
+    previewPlayingSV.value = 0;
+    if (previewPositionInterval.current) {
+      clearInterval(previewPositionInterval.current);
+      previewPositionInterval.current = null;
+    }
+    if (soundRef.current) {
+      try {
+        await soundRef.current.setPositionAsync(0);
+      } catch {
+        /* noop */
+      }
+    }
+  }, [timelineProgress, previewPlayingSV]);
+
+  // שמיעת ההקלטה (preview) — resume ממקום השהייה/סקראב
   const playPreview = async () => {
     if (!recordedAudioUri) return;
 
     try {
-      // עצור שמיעה קודמת אם יש
       if (soundRef.current) {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          if (status.didJustFinish || timelineProgress.value >= 0.995) {
+            await soundRef.current.setPositionAsync(0);
+            timelineProgress.value = 0;
+            setPreviewPosition(0);
+          }
+          await soundRef.current.playAsync();
+          setIsPlayingPreview(true);
+          previewPlayingSV.value = 1;
+          return;
+        }
         await soundRef.current.unloadAsync();
         soundRef.current = null;
       }
 
-      // טען את ההקלטה
+      const startMs = timelineProgress.value > 0.01 && previewDuration > 0
+        ? timelineProgress.value * previewDuration
+        : 0;
+
       const { sound } = await Audio.Sound.createAsync(
         { uri: recordedAudioUri },
-        { shouldPlay: true }
+        {
+          shouldPlay: true,
+          positionMillis: startMs,
+          progressUpdateIntervalMillis: 80,
+        },
       );
 
       soundRef.current = sound;
       setIsPlayingPreview(true);
-      setPreviewPosition(0);
+      previewPlayingSV.value = 1;
 
-      // קבל את אורך ההקלטה
       const status = await sound.getStatusAsync();
       if (status.isLoaded) {
-        setPreviewDuration(status.durationMillis || 0);
+        const dur = status.durationMillis || 0;
+        setPreviewDuration(dur);
+        previewDurationSV.value = dur;
+        if (dur > 0) {
+          timelineProgress.value = (status.positionMillis || startMs) / dur;
+        }
       }
 
-      // עדכן את המיקום בזמן אמת
-      previewPositionInterval.current = setInterval(async () => {
-        if (soundRef.current) {
-          const status = await soundRef.current.getStatusAsync();
-          if (status.isLoaded) {
-            const position = status.positionMillis || 0;
-            const duration = status.durationMillis || previewDuration;
-            setPreviewPosition(position);
-
-            // עדכן את הטיימליין
-            if (duration > 0) {
-              const progress = position / duration;
-              timelineProgress.setValue(progress);
-            }
-
-            // אם הסתיימה השמיעה
-            if (status.didJustFinish) {
-              setIsPlayingPreview(false);
-              setPreviewPosition(0);
-              timelineProgress.setValue(0);
-              if (previewPositionInterval.current) {
-                clearInterval(previewPositionInterval.current);
-                previewPositionInterval.current = null;
-              }
-              if (soundRef.current) {
-                await soundRef.current.unloadAsync();
-                soundRef.current = null;
-              }
-            }
-          }
+      sound.setOnPlaybackStatusUpdate((st) => {
+        if (!st.isLoaded) return;
+        if (st.durationMillis && st.durationMillis > 0) {
+          setPreviewDuration(st.durationMillis);
+          previewDurationSV.value = st.durationMillis;
         }
-      }, 100);
-
-      // האזן לסיום
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded) {
-          if (status.didJustFinish) {
-            setIsPlayingPreview(false);
-            setPreviewPosition(0);
-            timelineProgress.setValue(0);
-            if (previewPositionInterval.current) {
-              clearInterval(previewPositionInterval.current);
-              previewPositionInterval.current = null;
-            }
-          } else {
-            // עדכן את הטיימליין בזמן אמת
-            const position = status.positionMillis || 0;
-            const duration = status.durationMillis || previewDuration;
-            if (duration > 0) {
-              const progress = position / duration;
-              timelineProgress.setValue(progress);
-            }
+        if (st.didJustFinish) {
+          void resetPreviewPlayhead();
+          return;
+        }
+        if (isPreviewScrubbingRef.current) return;
+        const dur = st.durationMillis || previewDurationSV.value;
+        if (dur > 0) {
+          const pos = st.positionMillis || 0;
+          const reported = pos / dur;
+          if (Math.abs(reported - timelineProgress.value) > 0.03) {
+            timelineProgress.value = reported;
           }
+          setPreviewPosition(pos);
+        }
+        if (st.isPlaying) {
+          setIsPlayingPreview(true);
+          previewPlayingSV.value = 1;
+        } else {
+          setIsPlayingPreview(false);
+          previewPlayingSV.value = 0;
         }
       });
     } catch (error) {
@@ -1188,14 +1293,102 @@ function ChatInputImpl({
   // עצירת שמיעת ההקלטה
   const pausePreview = async () => {
     if (soundRef.current) {
-      await soundRef.current.pauseAsync();
+      try {
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded) {
+          await soundRef.current.pauseAsync();
+          const dur = status.durationMillis || previewDuration;
+          if (dur > 0) {
+            timelineProgress.value = (status.positionMillis || 0) / dur;
+            setPreviewPosition(status.positionMillis || 0);
+          }
+        }
+      } catch (error) {
+        logger.error('ChatInput', 'Pause preview error', error);
+      }
       setIsPlayingPreview(false);
+      previewPlayingSV.value = 0;
       if (previewPositionInterval.current) {
         clearInterval(previewPositionInterval.current);
         previewPositionInterval.current = null;
       }
     }
   };
+
+  const onPreviewScrubStart = useCallback(() => {
+    isPreviewScrubbingRef.current = true;
+    previewScrubbingSV.value = 1;
+    wasPreviewPlayingBeforeScrubRef.current = previewPlayingSV.value > 0.5;
+    if (soundRef.current && wasPreviewPlayingBeforeScrubRef.current) {
+      void soundRef.current.pauseAsync();
+      setIsPlayingPreview(false);
+      previewPlayingSV.value = 0;
+    }
+  }, [previewScrubbingSV, previewPlayingSV]);
+
+  const onPreviewScrubUpdate = useCallback(
+    (progress01: number) => {
+      if (previewDuration > 0) {
+        setPreviewPosition(progress01 * previewDuration);
+      }
+    },
+    [previewDuration],
+  );
+
+  const onPreviewScrubEnd = useCallback(
+    async (progress01: number) => {
+      isPreviewScrubbingRef.current = false;
+      previewScrubbingSV.value = 0;
+      const dur = previewDuration > 0 ? previewDuration : previewDurationSV.value;
+      if (dur <= 0 || !recordedAudioUri) return;
+      const clamped = Math.max(0, Math.min(1, progress01));
+      const targetMs = clamped * dur;
+      timelineProgress.value = clamped;
+      setPreviewPosition(targetMs);
+
+      try {
+        if (!soundRef.current) {
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: recordedAudioUri },
+            { progressUpdateIntervalMillis: 80, positionMillis: targetMs },
+          );
+          soundRef.current = sound;
+          sound.setOnPlaybackStatusUpdate((st) => {
+            if (!st.isLoaded) return;
+            if (st.didJustFinish) {
+              void resetPreviewPlayhead();
+              return;
+            }
+            if (isPreviewScrubbingRef.current) return;
+            const d = st.durationMillis || previewDurationSV.value;
+            if (d > 0) {
+              timelineProgress.value = (st.positionMillis || 0) / d;
+              setPreviewPosition(st.positionMillis || 0);
+            }
+          });
+        } else {
+          await soundRef.current.setPositionAsync(targetMs);
+        }
+
+        if (wasPreviewPlayingBeforeScrubRef.current) {
+          await soundRef.current.playAsync();
+          setIsPlayingPreview(true);
+          previewPlayingSV.value = 1;
+        }
+      } catch (error) {
+        logger.error('ChatInput', 'Preview seek error', error);
+      }
+    },
+    [
+      previewDuration,
+      previewDurationSV,
+      previewScrubbingSV,
+      previewPlayingSV,
+      recordedAudioUri,
+      timelineProgress,
+      resetPreviewPlayhead,
+    ],
+  );
 
   // שליחת ההקלטה
   const sendRecordedAudio = async () => {
@@ -1204,14 +1397,23 @@ function ChatInputImpl({
     const tempId = `temp-audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const audioUri = recordedAudioUri;
     const duration = recordingDuration;
-    const waveform = normalizeWaveformSamples(waveformSamples, 20);
+    // אחרי stopRecording כבר יש peaks סופיים ב-ref; אם חסר — מחלצים שוב מהקובץ
+    let waveform =
+      waveformSamplesRef.current.length >= 2
+        ? normalizeWaveformSamples(waveformSamplesRef.current, WAVEFORM_STORE_BARS)
+        : await resolveMessageWaveform(
+            audioUri,
+            waveformSamples.length >= 2 ? waveformSamples : [],
+            WAVEFORM_STORE_BARS,
+          );
+    waveformSamplesRef.current = waveform;
 
     // Create optimistic message immediately
     const optimisticMessage: ChatMessage = {
       id: tempId,
       group_id: groupId,
       sender_id: user.id,
-      content: '',
+      content: JSON.stringify({ waveform, waveformData: waveform, duration }),
       message_type: ChatMessageType.AUDIO,
       media_url: undefined,
       local_media_uri: audioUri,
@@ -1229,6 +1431,7 @@ function ChatInputImpl({
       created_at: new Date().toISOString(),
       reactions_count: 0,
       read_by_count: 0,
+      metadata: { waveformData: waveform },
       sender: {
         id: user.id,
         display_name: user.display_name || 'אני',
@@ -1254,6 +1457,7 @@ function ChatInputImpl({
     setWaveformSamples([]);
     setIsPaused(false);
     setIsPlayingPreview(false);
+    previewPlayingSV.value = 0;
     setPreviewPosition(0);
 
     setIsUploading(true);
@@ -1296,52 +1500,8 @@ function ChatInputImpl({
     })();
   };
 
-  // פונקציה לנרמול ה-waveform samples למספר קבוע
-  // לוקח את המקסימום מכל חלון כדי לשמר את הפיקים
-  const normalizeWaveformSamples = (samples: number[], targetCount: number): number[] => {
-    if (samples.length === 0) return Array(targetCount).fill(0.3);
-    if (samples.length <= targetCount) {
-      // Pad with existing values if not enough
-      const padded = [...samples];
-      while (padded.length < targetCount) {
-        padded.push(samples[padded.length % samples.length]);
-      }
-      return padded;
-    }
-
-    const result: number[] = [];
-    const windowSize = samples.length / targetCount;
-
-    for (let i = 0; i < targetCount; i++) {
-      const start = Math.floor(i * windowSize);
-      const end = Math.floor((i + 1) * windowSize);
-
-      // Take the maximum value in this window to preserve peaks
-      let maxValue = 0;
-      for (let j = start; j < end && j < samples.length; j++) {
-        maxValue = Math.max(maxValue, samples[j]);
-      }
-      result.push(maxValue);
-    }
-
-    // Enhance contrast - find min/max and stretch
-    const minVal = Math.min(...result);
-    const maxVal = Math.max(...result);
-    const range = maxVal - minVal;
-
-    if (range > 0.1) {
-      // Stretch to 0.2-1.0 range for better visibility
-      return result.map(v => 0.2 + ((v - minVal) / range) * 0.8);
-    }
-
-    return result;
-  };
-
   const cancelRecording = () => {
-    if (waveformIntervalRef.current) {
-      clearInterval(waveformIntervalRef.current);
-      waveformIntervalRef.current = null;
-    }
+    clearWaveformPolling();
     pulseAnimationRef.current?.stop();
     pulseAnimationRef.current = null;
     recordingDotOpacity.setValue(1);
@@ -1361,15 +1521,19 @@ function ChatInputImpl({
     setIsRecording(false);
     setIsPaused(false);
     setIsPlayingPreview(false);
+    previewPlayingSV.value = 0;
     setPreviewPosition(0);
     setIsLocked(false);
     isLockedRef.current = false;
-    timelineProgress.setValue(0);
+    timelineProgress.value = 0;
 
     if (recordingRef.current) {
+      recordingRef.current.setOnRecordingStatusUpdate(null);
       recordingRef.current.stopAndUnloadAsync().catch((error) => { logger.error('ChatInput', 'Recording error', error); });
       recordingRef.current = null;
     }
+    waveformSamplesRef.current = [];
+    setWaveformSamples([]);
   };
 
   // ============================================
@@ -1388,32 +1552,36 @@ function ChatInputImpl({
         clearInterval(recordingTimerRef.current);
         recordingTimerRef.current = null;
       }
-      if (waveformIntervalRef.current) {
-        clearInterval(waveformIntervalRef.current);
-        waveformIntervalRef.current = null;
-      }
+      clearWaveformPolling();
+      recordingRef.current.setOnRecordingStatusUpdate(null);
 
       const uri = recordingRef.current.getURI();
       const duration = recordingDuration;
-      const samples = [...waveformSamples];
+      const liveSamples = [...waveformSamplesRef.current];
       await recordingRef.current.stopAndUnloadAsync();
       recordingRef.current = null;
+
+      const samples = await resolveMessageWaveform(uri, liveSamples, WAVEFORM_STORE_BARS);
+      waveformSamplesRef.current = samples;
 
       setIsRecording(false);
       setIsPaused(false);
       setAudioLevel(0);
       setRecordingDuration(0);
       setWaveformSamples([]);
-      timelineProgress.setValue(0);
+      timelineProgress.value = 0;
 
       if (uri && duration >= 1 && user) {
         const tempId = `temp-${Date.now()}`;
-        const optimisticMessage = {
+        const optimisticMessage: ChatMessage = {
           id: tempId,
           group_id: groupId,
-          content: JSON.stringify({ duration, waveformData: samples }),
+          content: JSON.stringify({ duration, waveform: samples, waveformData: samples }),
           message_type: ChatMessageType.AUDIO,
           sender_id: user.id,
+          media_url: undefined,
+          local_media_uri: uri,
+          media_duration: duration,
           is_uploading: true,
           upload_progress: 0,
           is_sending: true,
@@ -1427,6 +1595,7 @@ function ChatInputImpl({
           created_at: new Date().toISOString(),
           reactions_count: 0,
           read_by_count: 0,
+          metadata: { waveformData: samples },
           sender: {
             id: user.id,
             display_name: user.display_name || 'אני',
@@ -1447,7 +1616,7 @@ function ChatInputImpl({
               updateOptimisticMessage(tempId, { is_uploading: false, is_sending: false, send_error: uploadResult.error?.message || 'שגיאה בהעלאה' });
             } else {
               await onSendMessage(
-                JSON.stringify({ duration, waveformData: samples }),
+                '',
                 uploadResult.url,
                 ChatMessageType.AUDIO,
                 { waveformData: samples, media_duration: duration, existing_optimistic_id: tempId }
@@ -1529,13 +1698,18 @@ function ChatInputImpl({
           type: 'video' as const,
           name: asset.fileName || `video_${index + 1}.mp4`,
           size: asset.fileSize,
-          duration: asset.duration ?? undefined,
+          // ImagePicker מחזיר duration במילישניות — שומרים בשניות כמו אודיו
+          duration:
+            asset.duration != null && asset.duration > 0
+              ? asset.duration / 1000
+              : undefined,
           width: asset.width,
           height: asset.height,
         }));
         // ⚡ Show preview IMMEDIATELY
         setSelectedMedia(mediaFiles);
         setShowMediaPreview(true);
+        attachLocalVideoThumbs(mediaFiles, setSelectedMedia);
       }
     } catch (error) {
       Alert.alert('שגיאה', 'לא הצלחנו לבחור סרטון');
@@ -1628,7 +1802,7 @@ function ChatInputImpl({
 
       {(isRecording || isPaused) ? (
       <View style={styles.container}>
-        {/* Recording / preview UI — נשאר inline (ספציפי לצ'אט) */}
+        {/* הקלטה — שליחה מחוץ לגלולה כמו באינפוט רגיל */}
         <UICard
           variant="glass"
           glassIntensity="light"
@@ -1637,7 +1811,6 @@ function ChatInputImpl({
           contentContainerStyle={styles.inputCardContent}
         >
           {(isRecording || (isPaused && !recordedAudioUri)) ? (
-            /* שורה אחת: משמאל עצירה+מחיקה · במרכז זמן+גלים · מימין שליחה */
             <View style={styles.recordingRowFull}>
               <View style={styles.recordingLeftCluster}>
                 <TouchableOpacity
@@ -1648,7 +1821,7 @@ function ChatInputImpl({
                   style={styles.cancelButton}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.text.danger} />
+                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                 </TouchableOpacity>
                 {isRecording ? (
                   <TouchableOpacity
@@ -1688,27 +1861,8 @@ function ChatInputImpl({
                   )}
                 </View>
               </View>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.medium();
-                  setIsLocked(false);
-                  isLockedRef.current = false;
-                  if (recordedAudioUri) {
-                    sendRecordedAudio();
-                  } else {
-                    stopAndSendRecording();
-                  }
-                }}
-                style={styles.sendButton}
-                disabled={isUploading}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
-              </TouchableOpacity>
             </View>
           ) : (
-            /* תצוגה לפני שליחה — אותה לוגיקה: שמאל ניגון+מחיקה · מרכז זמן+גלים · ימין שליחה */
             <View style={styles.recordingRowFull}>
               <View style={styles.recordingLeftCluster}>
                 <TouchableOpacity
@@ -1719,7 +1873,7 @@ function ChatInputImpl({
                   style={styles.cancelButton}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="trash-outline" size={20} color={DesignTokens.colors.text.danger} />
+                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -1748,6 +1902,10 @@ function ChatInputImpl({
                     duration={previewDuration}
                     isPlaying={isPlayingPreview}
                     waveformData={waveformSamples}
+                    interactive
+                    onScrubStart={onPreviewScrubStart}
+                    onScrubUpdate={onPreviewScrubUpdate}
+                    onScrubEnd={onPreviewScrubEnd}
                   />
                 </View>
                 <View style={styles.timerContainer}>
@@ -1757,27 +1915,30 @@ function ChatInputImpl({
                   ) : null}
                 </View>
               </View>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.medium();
-                  setIsLocked(false);
-                  isLockedRef.current = false;
-                  if (recordedAudioUri) {
-                    sendRecordedAudio();
-                  } else {
-                    stopAndSendRecording();
-                  }
-                }}
-                style={styles.sendButton}
-                disabled={isUploading}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="send" size={24} color={DesignTokens.colors.text.inverse} />
-              </TouchableOpacity>
             </View>
           )}
         </UICard>
+
+        <View style={styles.sendBtnOuter}>
+          <Pressable
+            onPress={() => {
+              void HapticFeedback.medium();
+              setIsLocked(false);
+              isLockedRef.current = false;
+              if (recordedAudioUri) {
+                sendRecordedAudio();
+              } else {
+                stopAndSendRecording();
+              }
+            }}
+            style={styles.sendBtnTouchable}
+            disabled={isUploading}
+            accessibilityRole="button"
+            accessibilityLabel="שליחת הקלטה"
+          >
+            <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
+          </Pressable>
+        </View>
       </View>
       ) : (
         <ChatComposerBar
@@ -2048,7 +2209,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     fontWeight: tokens.typography.fontWeight.semibold,
   },
 
-  /** שורת הקלטה: שמאל עצירה+מחיקה · מרכז זמן+גלים · ימין שליחה (ltr כדי שיתאים למסך) */
+  /** שורת הקלטה: מחיקה+עצירה · זמן+גלים (שליחה מחוץ לגלולה) */
   recordingRowFull: {
     flex: 1,
     flexDirection: 'row',
@@ -2185,7 +2346,7 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: tokens.colors.border.primary,
+    backgroundColor: 'rgba(255, 59, 48, 0.16)',
     justifyContent: 'center',
     alignItems: 'center',
   },

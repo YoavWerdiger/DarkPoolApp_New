@@ -190,7 +190,6 @@ export async function enrichChatMessageSender(
       id: userRow.id,
       display_name: userRow.display_name,
       profile_picture: userRow.profile_picture,
-      is_online: true,
     },
   };
 }

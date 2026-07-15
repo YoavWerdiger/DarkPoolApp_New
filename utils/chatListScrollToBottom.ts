@@ -86,19 +86,25 @@ function durationForDistance(dist: number): number {
  * iOS native animated:true על מרחק גדול נגמר ב-~250ms ונראה כקפיצה בטלפון;
  * סימולטור מרגיש איטי יותר — לכן RAF נותן אותה תחושה בשניהם.
  */
-function runControlledScrollToZero(
+function runControlledScroll(
   refs: ScrollRefs,
   gen: number,
-  startDist: number,
+  fromOffset: number,
+  toOffset: number,
   onFrameDone: () => void,
 ): void {
   const list = refs.listRef.current;
-  if (!list || startDist <= BOTTOM_REACHED_PX) {
+  const start = Math.max(0, fromOffset);
+  const end = Math.max(0, toOffset);
+  const dist = Math.abs(end - start);
+
+  if (!list || dist < 2) {
+    if (list) setInvertedOffset(list, end, false);
     onFrameDone();
     return;
   }
 
-  const duration = durationForDistance(startDist);
+  const duration = durationForDistance(dist);
   const t0 = Date.now();
 
   const frame = () => {
@@ -110,7 +116,7 @@ function runControlledScrollToZero(
     }
 
     const t = Math.min(1, (Date.now() - t0) / duration);
-    const offset = startDist * (1 - easeOutCubic(t));
+    const offset = start + (end - start) * easeOutCubic(t);
     setInvertedOffset(current, offset, false);
 
     if (t < 1) {
@@ -118,11 +124,65 @@ function runControlledScrollToZero(
       return;
     }
 
-    forceInvertedListToBottom(current, false);
+    setInvertedOffset(current, end, false);
     onFrameDone();
   };
 
   requestAnimationFrame(frame);
+}
+
+function runControlledScrollToZero(
+  refs: ScrollRefs,
+  gen: number,
+  startDist: number,
+  onFrameDone: () => void,
+): void {
+  runControlledScroll(refs, gen, startDist, 0, () => {
+    const current = refs.listRef.current;
+    if (current) forceInvertedListToBottom(current, false);
+    onFrameDone();
+  });
+}
+
+/**
+ * גלילה מבוקרת ל-offset כלשהו (jump-to-reply) — אותה תחושה כמו FAB בטלפון.
+ * תמיד מבוקרת (לא native animated) כדי שלא תקפוץ בטלפון.
+ * מבטל גלילה קודמת (generation++) כדי שלחיצה כפולה לא תתנגש.
+ */
+export function scrollChatListToOffset(
+  refs: ScrollRefs,
+  targetOffset: number,
+  animated: boolean,
+  onDone?: () => void,
+): void {
+  const gen = ++scrollGeneration;
+  const list = refs.listRef.current;
+  if (!list) {
+    onDone?.();
+    return;
+  }
+
+  const end = Math.max(0, targetOffset);
+  const start = Math.max(0, refs.getDistFromBottom?.() ?? end);
+
+  if (!animated) {
+    setInvertedOffset(list, end, false);
+    requestAnimationFrame(() => {
+      if (gen !== scrollGeneration) return;
+      const again = refs.listRef.current;
+      if (again) setInvertedOffset(again, end, false);
+      onDone?.();
+    });
+    return;
+  }
+
+  // תמיד controlled — גם למרחק קצר — כדי שריפליי ירגיש כמו FAB בטלפון
+  runControlledScroll(refs, gen, start, end, () => {
+    if (gen !== scrollGeneration) return;
+    const again = refs.listRef.current;
+    if (again) setInvertedOffset(again, end, false);
+    onDone?.();
+  });
 }
 
 /**

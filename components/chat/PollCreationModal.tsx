@@ -1,18 +1,11 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Trash2 } from 'lucide-react-native';
 import { PollService } from '../../services/pollService';
+import { useAuth } from '../../context/AuthContext';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface PollCreationModalProps {
   visible: boolean;
@@ -27,8 +20,10 @@ export default function PollCreationModal({
   chatId,
   onPollCreated
 }: PollCreationModalProps) {
+  const { user } = useAuth();
+  const DesignTokens = useDesignTokens();
   const [question, setQuestion] = useState('');
-  const [options, setOptions] = useState(['', '']); // מינימום 2 אפשרויות
+  const [options, setOptions] = useState(['', '']);
   const [multipleChoice, setMultipleChoice] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -53,17 +48,17 @@ export default function PollCreationModal({
 
   const validateForm = (): boolean => {
     if (!question.trim()) {
-      Alert.alert('שגיאה', 'יש להזין שאלה לסקר');
+      legacyAlert('שגיאה', 'יש להזין שאלה לסקר');
       return false;
     }
 
     if (options.some(option => !option.trim())) {
-      Alert.alert('שגיאה', 'יש למלא את כל האפשרויות');
+      legacyAlert('שגיאה', 'יש למלא את כל האפשרויות');
       return false;
     }
 
     if (options.length < 2) {
-      Alert.alert('שגיאה', 'יש צורך לפחות ב-2 אפשרויות');
+      legacyAlert('שגיאה', 'יש צורך לפחות ב-2 אפשרויות');
       return false;
     }
 
@@ -79,18 +74,18 @@ export default function PollCreationModal({
         chatId,
         question.trim(),
         options.map(opt => opt.trim()),
+        user?.id || '',
         multipleChoice
       );
 
       if (poll) {
-        Alert.alert('הצלחה', 'הסקר נוצר בהצלחה!');
+        legacyAlert('הצלחה', 'הסקר נוצר בהצלחה!');
         onPollCreated(poll);
         resetForm();
         onClose();
       }
     } catch (error: any) {
-      console.error('❌ Error creating poll:', error);
-      Alert.alert('שגיאה', error.message || 'לא ניתן ליצור את הסקר');
+      legacyAlert('שגיאה', error.message || 'לא ניתן ליצור את הסקר');
     } finally {
       setIsCreating(false);
     }
@@ -104,7 +99,7 @@ export default function PollCreationModal({
 
   const handleClose = () => {
     if (question.trim() || options.some(opt => opt.trim())) {
-      Alert.alert(
+      legacyAlert(
         'ביטול יצירת סקר',
         'האם אתה בטוח שברצונך לבטל? כל הנתונים יימחקו.',
         [
@@ -157,7 +152,7 @@ export default function PollCreationModal({
                 onChangeText={setQuestion}
                 placeholder="הזן את השאלה שלך..."
                 placeholderTextColor="#666"
-                className="bg-[#111111] border border-[#333] rounded-xl px-4 py-3 text-white text-lg"
+                className="bg-[#141F14] border border-[#1A2B1A] rounded-xl px-4 py-3 text-white text-lg"
                 multiline
                 numberOfLines={3}
                 textAlign="right"
@@ -168,13 +163,13 @@ export default function PollCreationModal({
             <View className="mb-6">
               <TouchableOpacity
                 onPress={() => setMultipleChoice(!multipleChoice)}
-                className="flex-row items-center justify-center bg-[#111111] border border-[#333] rounded-xl px-4 py-3"
+                className="flex-row items-center justify-center bg-[#141F14] border border-[#1A2B1A] rounded-xl px-4 py-3"
               >
                 <View className="flex-row items-center">
                   <Ionicons
                     name={multipleChoice ? 'checkbox' : 'radio-button-off'}
                     size={24}
-                    color={multipleChoice ? '#00E654' : '#666'}
+                    color={multipleChoice ? DesignTokens.colors.primary.main : DesignTokens.colors.text.tertiary}
                   />
                   <Text className="text-white text-lg mr-3">
                     {multipleChoice ? 'בחירה מרובה' : 'בחירה יחידה'}
@@ -185,7 +180,7 @@ export default function PollCreationModal({
 
             {/* Options */}
             <View className="mb-6">
-              <View className="flex-row-reverse items-center justify-between mb-3">
+              <View className="flex-row items-center justify-between mb-3">
                 <Text className="text-white font-bold text-lg text-right" style={{ flex: 1 }}>אפשרויות בחירה</Text>
                 <TouchableOpacity
                   onPress={addOption}
@@ -201,14 +196,14 @@ export default function PollCreationModal({
               </View>
 
               {options.map((option, index) => (
-                <View key={index} className="flex-row-reverse items-center mb-3">
+                <View key={index} className="flex-row items-center mb-3">
                   <View className="flex-1 ml-3">
                     <TextInput
                       value={option}
                       onChangeText={(text) => updateOption(index, text)}
                       placeholder={`אפשרות ${index + 1}`}
                       placeholderTextColor="#666"
-                      className="bg-[#111111] border border-[#333] rounded-xl px-4 py-3 text-white text-lg"
+                      className="bg-[#141F14] border border-[#1A2B1A] rounded-xl px-4 py-3 text-white text-lg"
                       textAlign="right"
                     />
                   </View>
@@ -231,7 +226,7 @@ export default function PollCreationModal({
             {/* Preview */}
             <View className="mb-6">
               <Text className="text-white font-bold text-lg mb-3 text-right">תצוגה מקדימה</Text>
-              <View className="bg-[#111111] border border-[#333] rounded-xl p-4">
+              <View className="bg-[#141F14] border border-[#1A2B1A] rounded-xl p-4">
                 <Text className="text-white font-bold text-lg mb-3 text-right">
                   {question || 'שאלת הסקר תופיע כאן'}
                 </Text>
@@ -243,7 +238,7 @@ export default function PollCreationModal({
                         <Ionicons
                           name={multipleChoice ? 'checkbox-outline' : 'radio-button-off'}
                           size={20}
-                          color="#00E654"
+                          color={DesignTokens.colors.primary.main}
                           style={{ marginRight: 8 }}
                         />
                         <Text className="text-white text-base">{option}</Text>

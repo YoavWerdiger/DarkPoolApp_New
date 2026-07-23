@@ -1,13 +1,51 @@
 import { supabase } from './supabase';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as base64js from 'base64-js';
+import { logger } from '../utils/logger';
+
+const MAX_UPLOAD_SIZE = 50 * 1024 * 1024; // 50MB
+
+function toUploadErrorMessage(err: unknown, fallback: string): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (!raw || raw === 'Unknown error') return fallback;
+  if (/network request failed|failed to fetch|load failed|נכשל/i.test(raw)) {
+    return 'אין חיבור יציב לרשת או לשרת. בדוק אינטרנט/־VPN ונסה שוב.';
+  }
+  return raw;
+}
+
+export interface MediaFile {
+  id: string;
+  uri: string;
+  type: 'image' | 'video' | 'audio' | 'document';
+  name?: string;
+  size?: number;
+  duration?: number;
+  /** Preview/bubble thumb (file://) — generated locally like video posters */
+  thumbnail_url?: string;
+  width?: number;
+  height?: number;
+  waveformData?: number[];
+}
+
+export interface MediaMetadata {
+  file_name?: string;
+  file_size?: number;
+  content_type?: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  [key: string]: any;
+}
 
 export interface LessonMedia {
   id?: string;
   course_id: string;
   lesson_id: string;
-  vimeo_id: string;
-  vimeo_url: string;
+  vimeo_id?: string;
+  vimeo_url?: string;
+  youtube_id?: string;
+  youtube_url?: string;
   thumbnail_url?: string;
   title: string;
   description?: string;
@@ -28,13 +66,13 @@ class MediaService {
         .single();
 
       if (error) {
-        console.error('Error saving lesson media:', error);
+        logger.error('MediaService', 'Error saving lesson media', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in saveLessonMedia:', error);
+      logger.error('MediaService', 'Error in saveLessonMedia', error);
       return null;
     }
   }
@@ -51,13 +89,13 @@ class MediaService {
         .single();
 
       if (error) {
-        console.error('Error getting lesson media:', error);
+        logger.error('MediaService', 'Error getting lesson media', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in getLessonMedia:', error);
+      logger.error('MediaService', 'Error in getLessonMedia', error);
       return null;
     }
   }
@@ -73,13 +111,13 @@ class MediaService {
         .order('lesson_id');
 
       if (error) {
-        console.error('Error getting course media:', error);
+        logger.error('MediaService', 'Error getting course media', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Error in getCourseMedia:', error);
+      logger.error('MediaService', 'Error in getCourseMedia', error);
       return [];
     }
   }
@@ -95,14 +133,41 @@ class MediaService {
         .single();
 
       if (error) {
-        console.error('Error updating lesson media:', error);
+        logger.error('MediaService', 'Error updating lesson media', error);
         return null;
       }
 
       return data;
     } catch (error) {
-      console.error('Error in updateLessonMedia:', error);
+      logger.error('MediaService', 'Error in updateLessonMedia', error);
       return null;
+    }
+  }
+
+  // עדכון duration של שיעור לפי course_id ו-lesson_id
+  async updateLessonDuration(courseId: string, lessonId: string, durationSeconds: number): Promise<boolean> {
+    try {
+      const durationMinutes = Math.round(durationSeconds / 60);
+
+      const { error } = await supabase
+        .from('lesson_media_links')
+        .update({
+          duration_minutes: durationMinutes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('course_id', courseId)
+        .eq('lesson_id', lessonId);
+
+      if (error) {
+        logger.error('MediaService', 'Error updating lesson duration', error);
+        return false;
+      }
+
+      
+      return true;
+    } catch (error) {
+      logger.error('MediaService', 'Error in updateLessonDuration', error);
+      return false;
     }
   }
 
@@ -115,13 +180,13 @@ class MediaService {
         .eq('id', mediaId);
 
       if (error) {
-        console.error('Error deleting lesson media:', error);
+        logger.error('MediaService', 'Error deleting lesson media', error);
         return false;
       }
 
       return true;
     } catch (error) {
-      console.error('Error in deleteLessonMedia:', error);
+      logger.error('MediaService', 'Error in deleteLessonMedia', error);
       return false;
     }
   }
@@ -237,8 +302,46 @@ class MediaService {
 
       return true;
     } catch (error) {
-      console.error('Error in createWhalesCourseMedia:', error);
+      logger.error('MediaService', 'Error in createWhalesCourseMedia', error);
       return false;
+    }
+  }
+
+  // יצירת שיעור עם קישור יוטיוב לקורס הכשרה של דוד
+  async createDavidTrainingLessonMedia(
+    courseId: string,
+    lessonId: string,
+    title: string,
+    youtubeUrl: string,
+    description?: string,
+    durationMinutes?: number
+  ): Promise<LessonMedia | null> {
+    try {
+      // חילוץ YouTube ID מהקישור
+      const youtubeIdMatch = youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+      const youtubeId = youtubeIdMatch ? youtubeIdMatch[1] : null;
+
+      if (!youtubeId) {
+        logger.error('MediaService', 'Invalid YouTube URL');
+        return null;
+      }
+
+      const media: Omit<LessonMedia, 'id'> = {
+        course_id: courseId,
+        lesson_id: lessonId,
+        youtube_id: youtubeId,
+        youtube_url: youtubeUrl,
+        thumbnail_url: `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`,
+        title: title,
+        description: description,
+        duration_minutes: durationMinutes,
+        is_active: true,
+      };
+
+      return await this.saveLessonMedia(media);
+    } catch (error) {
+      logger.error('MediaService', 'Error in createDavidTrainingLessonMedia', error);
+      return null;
     }
   }
 
@@ -250,58 +353,46 @@ class MediaService {
     error?: string;
   }> {
     try {
-      console.log('📤 MediaService: Uploading media:', { uri, type });
-      
-      // יצירת שם קובץ ייחודי
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+
+      if (!fileInfo.exists) {
+        return { success: false, error: 'File does not exist' };
+      }
+
+      if (fileInfo.size && fileInfo.size > MAX_UPLOAD_SIZE) {
+        return { success: false, error: `File too large (max ${MAX_UPLOAD_SIZE / 1024 / 1024}MB)` };
+      }
+
       const timestamp = Date.now();
       const fileExtension = uri.split('.').pop() || 'bin';
       const fileName = `${type}_${timestamp}.${fileExtension}`;
       const filePath = `chat-media/${fileName}`;
-      
-      console.log('📁 MediaService: File path:', filePath);
-      
-      // קריאת הקובץ כ-ArrayBuffer
-      const fileInfo = await FileSystem.getInfoAsync(uri);
-      console.log('📁 MediaService: File info:', fileInfo);
-      
-      if (!fileInfo.exists) {
-        throw new Error('File does not exist');
-      }
-      
-      console.log('📁 MediaService: Reading file as Base64...');
+
       const fileData = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      
-      console.log('📁 MediaService: File data length:', fileData.length);
-      
-      // המרה מ-Base64 ל-ArrayBuffer
+
       const bytes = base64js.toByteArray(fileData);
-      console.log('📁 MediaService: Bytes length:', bytes.length);
-      
-      // העלאה ל-Supabase Storage
-      console.log('📤 MediaService: Uploading to Supabase Storage...');
-      const { data, error } = await supabase.storage
+
+      const { error } = await supabase.storage
         .from('app-media')
         .upload(filePath, bytes, {
           contentType: this.getMimeType(type, fileExtension),
           upsert: false
         });
-      
+
       if (error) {
-        console.error('❌ MediaService: Upload error:', error);
-        return { success: false, error: error.message };
+        logger.error('MediaService', 'Upload error', error);
+        return {
+          success: false,
+          error: toUploadErrorMessage(error, error.message || 'העלאה נכשלה'),
+        };
       }
-      
-      console.log('✅ MediaService: Upload successful, data:', data);
-      
-      // קבלת URL ציבורי
+
       const { data: urlData } = supabase.storage
         .from('app-media')
         .getPublicUrl(filePath);
-      
-      console.log('✅ MediaService: Media uploaded successfully:', urlData.publicUrl);
-      
+
       return {
         success: true,
         url: urlData.publicUrl,
@@ -312,14 +403,14 @@ class MediaService {
         }
       };
     } catch (error) {
-      console.error('❌ MediaService: Upload error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      logger.error('MediaService', 'Upload error', error);
+      return {
+        success: false,
+        error: toUploadErrorMessage(error, 'העלאה נכשלה — נסה שוב'),
       };
     }
   }
-  
+
   private getMimeType(type: string, extension: string): string {
     const mimeTypes: Record<string, Record<string, string>> = {
       image: {
@@ -348,7 +439,7 @@ class MediaService {
         txt: 'text/plain'
       }
     };
-    
+
     return mimeTypes[type]?.[extension.toLowerCase()] || 'application/octet-stream';
   }
 }

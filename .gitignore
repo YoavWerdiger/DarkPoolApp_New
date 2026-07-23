@@ -31,7 +31,47 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+.env.production
 
 # typescript
 *.tsbuildinfo
+
+# Firebase / FCM service account key (never commit)
+*firebase*adminsdk*.json
+*-service-account*.json
+google-service-account-key.json
+
+# Google OAuth client credentials (never commit)
+google-oauth-credentials.json
+
+# Root-level Firebase config – NEVER commit (only the platform copy in android/app/ is needed)
+/google-services.json
+
+# Build artifacts – NEVER commit; use EAS/Play/App Store for distribution
+*.aab
+*.apk
+*.ipa
+build-*.log
+final-build.log
+*.log
+
+# Stale/ghost duplicate projects (do not re-import)
+DarkPoolApp_New/
+DASHBOARD_DEPLOY/
+
+# Loose Edge Function copies that belong under supabase/functions/
+/payment-callback-function.ts
+/payment-success-function.ts
+/send-push-direct.ts
+
+# IDE caches (workspace.xml etc. churn constantly)
+.idea/workspace.xml
+.idea/caches/
+
+# Swift PM (חבילת צ׳אט נייטיבית)
+packages/DarkPoolChatSwift/.build/
+
+# Cursor agent transcripts/tooling (per-machine)
+/.cursor/projects/

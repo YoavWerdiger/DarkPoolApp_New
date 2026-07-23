@@ -1,32 +1,52 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { View } from 'react-native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import UserProfileScreen from '../screens/Profile/UserProfileScreen';
 import EditProfileScreen from '../screens/Profile/EditProfileScreen';
 import NotificationsScreen from '../screens/Profile/NotificationsScreen';
 import SettingsScreen from '../screens/Profile/SettingsScreen';
-import SubscriptionScreen from '../screens/Profile/SubscriptionScreen';
 import SubscriptionPlansScreen from '../screens/Profile/SubscriptionPlansScreen';
-import CheckoutScreen from '../screens/Payment/CheckoutScreen';
 import CreditCardCheckoutScreen from '../screens/Payment/CreditCardCheckoutScreen';
+import { ChatSessionBackdrop } from '../components/chat/ChatSessionBackdrop';
 
-const Stack = createStackNavigator();
+/** אותו רקע כמו מערכת הצ'אט — גרדיאנט + שור ודוב */
+function withProfileChatShell<P extends object>(ScreenComponent: React.ComponentType<P>): React.FC<P> {
+  return function WrappedScreen(props: P) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+        <ChatSessionBackdrop />
+        <ScreenComponent {...props} />
+      </View>
+    );
+  };
+}
+
+const ProfileMainScreen = withProfileChatShell(UserProfileScreen);
+const EditProfileWithShell = withProfileChatShell(EditProfileScreen);
+const NotificationsWithShell = withProfileChatShell(NotificationsScreen);
+const SettingsWithShell = withProfileChatShell(SettingsScreen);
+const SubscriptionPlansWithShell = withProfileChatShell(SubscriptionPlansScreen);
+const CreditCardCheckoutWithShell = withProfileChatShell(CreditCardCheckoutScreen as any);
+
+const Stack = createNativeStackNavigator();
 
 export default function ProfileStack() {
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#121212' }
+        contentStyle: { backgroundColor: '#0A0E0A' },
+        animation: 'fade',
+        gestureEnabled: true,
+        animationDuration: 200,
       }}
     >
-      <Stack.Screen name="ProfileMain" component={UserProfileScreen} />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-      <Stack.Screen name="Notifications" component={NotificationsScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
-      <Stack.Screen name="Subscription" component={SubscriptionScreen} />
-      <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansScreen} />
-      <Stack.Screen name="Checkout" component={CheckoutScreen as any} />
-      <Stack.Screen name="CreditCardCheckout" component={CreditCardCheckoutScreen as any} />
+      <Stack.Screen name="ProfileMain" component={ProfileMainScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileWithShell} />
+      <Stack.Screen name="Notifications" component={NotificationsWithShell} />
+      <Stack.Screen name="Settings" component={SettingsWithShell} />
+      <Stack.Screen name="SubscriptionPlans" component={SubscriptionPlansWithShell} />
+      <Stack.Screen name="CreditCardCheckout" component={CreditCardCheckoutWithShell} />
     </Stack.Navigator>
   );
 }

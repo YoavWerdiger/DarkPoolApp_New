@@ -49,12 +49,11 @@ export class NewsService {
   // קבלת חדשות עם פילטרים
   async getNews(filters: NewsFilters = {}): Promise<NewsArticle[]> {
     try {
-      console.log('📰 NewsService: Fetching news with filters:', filters);
 
       let query = supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
-        .order('published_at', { ascending: false });
+        .order('time', { ascending: false });
 
       // יישום פילטרים
       if (filters.category) {
@@ -88,14 +87,11 @@ export class NewsService {
       const { data, error } = await query;
 
       if (error) {
-        console.error('❌ NewsService: Error fetching news:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully fetched news:', data?.length || 0, 'articles');
       return data || [];
     } catch (error) {
-      console.error('❌ NewsService: Exception in getNews:', error);
       throw error;
     }
   }
@@ -103,24 +99,20 @@ export class NewsService {
   // קבלת חדשות מומלצות/חשובות
   async getFeaturedNews(limit: number = 5): Promise<NewsArticle[]> {
     try {
-      console.log('⭐ NewsService: Fetching featured news');
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
         .eq('is_featured', true)
         .order('published_at', { ascending: false })
         .limit(limit);
 
       if (error) {
-        console.error('❌ NewsService: Error fetching featured news:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully fetched featured news:', data?.length || 0, 'articles');
       return data || [];
     } catch (error) {
-      console.error('❌ NewsService: Exception in getFeaturedNews:', error);
       throw error;
     }
   }
@@ -128,24 +120,20 @@ export class NewsService {
   // קבלת חדשות לפי קטגוריה
   async getNewsByCategory(category: string, limit: number = 20): Promise<NewsArticle[]> {
     try {
-      console.log('📂 NewsService: Fetching news by category:', category);
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
         .eq('category', category)
         .order('published_at', { ascending: false })
         .limit(limit);
 
       if (error) {
-        console.error('❌ NewsService: Error fetching news by category:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully fetched category news:', data?.length || 0, 'articles');
       return data || [];
     } catch (error) {
-      console.error('❌ NewsService: Exception in getNewsByCategory:', error);
       throw error;
     }
   }
@@ -153,25 +141,21 @@ export class NewsService {
   // קבלת קטגוריות זמינות
   async getCategories(): Promise<string[]> {
     try {
-      console.log('📂 NewsService: Fetching available categories');
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('category')
         .not('category', 'is', null);
 
       if (error) {
-        console.error('❌ NewsService: Error fetching categories:', error);
         throw error;
       }
 
       // הסרת כפילויות ומיון
       const categories = [...new Set(data?.map(item => item.category).filter(Boolean))].sort();
       
-      console.log('✅ NewsService: Successfully fetched categories:', categories.length, 'categories');
       return categories;
     } catch (error) {
-      console.error('❌ NewsService: Exception in getCategories:', error);
       throw error;
     }
   }
@@ -179,25 +163,21 @@ export class NewsService {
   // קבלת מקורות זמינים
   async getSources(): Promise<string[]> {
     try {
-      console.log('📰 NewsService: Fetching available sources');
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('source')
         .not('source', 'is', null);
 
       if (error) {
-        console.error('❌ NewsService: Error fetching sources:', error);
         throw error;
       }
 
       // הסרת כפילויות ומיון
       const sources = [...new Set(data?.map(item => item.source).filter(Boolean))].sort();
       
-      console.log('✅ NewsService: Successfully fetched sources:', sources.length, 'sources');
       return sources;
     } catch (error) {
-      console.error('❌ NewsService: Exception in getSources:', error);
       throw error;
     }
   }
@@ -205,58 +185,50 @@ export class NewsService {
   // חיפוש חדשות
   async searchNews(query: string, limit: number = 20): Promise<NewsArticle[]> {
     try {
-      console.log('🔍 NewsService: Searching news for:', query);
 
       const { data, error } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*')
         .or(`title.ilike.%${query}%,content.ilike.%${query}%,summary.ilike.%${query}%`)
         .order('published_at', { ascending: false })
         .limit(limit);
 
       if (error) {
-        console.error('❌ NewsService: Error searching news:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully searched news:', data?.length || 0, 'results');
       return data || [];
     } catch (error) {
-      console.error('❌ NewsService: Exception in searchNews:', error);
       throw error;
     }
   }
 
   // הגדרת realtime subscription לעדכונים חדשים
   subscribeToNewsUpdates(callback: (newArticle: NewsArticle) => void): () => void {
-    console.log('🔄 NewsService: Setting up realtime subscription for news updates');
-
-    // ביטול subscription קיים אם קיים
     if (this.realtimeSubscription) {
-      this.realtimeSubscription.unsubscribe();
+      void supabase.removeChannel(this.realtimeSubscription);
+      this.realtimeSubscription = null;
     }
 
+    const channelName = `app_news_clean_svc_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     this.realtimeSubscription = supabase
-      .channel('app_news_changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'app_news'
+          table: 'app_news_clean'
         },
         (payload) => {
-          console.log('📰 NewsService: New article received via realtime:', payload.new);
           callback(payload.new as NewsArticle);
         }
       )
       .subscribe();
 
-    // פונקציה לביטול ה-subscription
     return () => {
-      console.log('🔄 NewsService: Unsubscribing from news updates');
       if (this.realtimeSubscription) {
-        this.realtimeSubscription.unsubscribe();
+        void supabase.removeChannel(this.realtimeSubscription);
         this.realtimeSubscription = null;
       }
     };
@@ -269,7 +241,6 @@ export class NewsService {
     filters: NewsFilters = {}
   ): Promise<{ articles: NewsArticle[]; hasMore: boolean; total: number }> {
     try {
-      console.log('📰 NewsService: Fetching news with pagination:', { page, limit, filters });
 
       const offset = (page - 1) * limit;
       
@@ -282,16 +253,11 @@ export class NewsService {
 
       // בדיקה אם יש עוד נתונים
       const { count } = await supabase
-        .from('app_news')
+        .from('app_news_clean')
         .select('*', { count: 'exact', head: true });
 
       const hasMore = offset + articles.length < (count || 0);
 
-      console.log('✅ NewsService: Pagination result:', {
-        articlesCount: articles.length,
-        hasMore,
-        total: count || 0
-      });
 
       return {
         articles,
@@ -299,35 +265,138 @@ export class NewsService {
         total: count || 0
       };
     } catch (error) {
-      console.error('❌ NewsService: Exception in getNewsWithPagination:', error);
       throw error;
     }
+  }
+
+  /**
+   * יצירת חדשה ידנית על־ידי admin (נכנסת ל-`app_news_clean` ומפעילה את הטריגר ל-Push).
+   *
+   * סכימת הטבלה (מבוסס SQL היסטורי בפרויקט): id, label, text, source, time, img.
+   * (אין `content` / `image_url` / `published_at` כעמודות אמיתיות — אלו רק כינויים שהטריגר מצפה להם.)
+   *
+   * אם הטריגר ל-Push דורש `NEW.content` / `NEW.image_url` והם לא קיימים — צריך לעדכן את הטריגר
+   * בצד השרת כך שיקרא ל-`NEW.text` / `NEW.img`. אנחנו מצידנו מכניסים לעמודות שקיימות.
+   */
+  async createNews(input: {
+    title: string;
+    content: string;
+    source?: string;
+    image_url?: string | null;
+    author?: string;
+  }): Promise<NewsArticle> {
+    const trimmedTitle = (input.title || '').trim();
+    const trimmedContent = (input.content || '').trim();
+
+    if (!trimmedTitle) {
+      throw new Error('חובה להזין כותרת');
+    }
+    if (!trimmedContent) {
+      throw new Error('חובה להזין תוכן');
+    }
+
+    const nowIso = new Date().toISOString();
+    const id = `admin_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const source = (input.source || '').trim() || 'DarkPool';
+    const imageUrl = input.image_url || null;
+
+    // PostgREST מחזיר שגיאת "column does not exist" כ-PGRST204.
+    // הטבלה כיום משתמשת בעמודות label/text/time/img (לפי ה-SQL ההיסטורי בפרויקט).
+    // ננסה קודם עם השמות הישנים — הם הקיימים בפועל.
+    const legacyPayload: Record<string, unknown> = {
+      id,
+      label: trimmedTitle,
+      text: trimmedContent,
+      source,
+      time: nowIso,
+      img: imageUrl,
+    };
+
+    let { data, error } = await supabase
+      .from('app_news_clean')
+      .insert(legacyPayload)
+      .select('*')
+      .single();
+
+    // אם דווקא העמודות הישנות לא קיימות — ננסה את הסכימה המודרנית.
+    const isColumnMissingError = (e: typeof error) =>
+      !!e &&
+      ((e as { code?: string }).code === '42703' ||
+        (e as { code?: string }).code === 'PGRST204' ||
+        /column .* does not exist|Could not find the .* column/i.test(e.message || ''));
+
+    if (isColumnMissingError(error)) {
+      const modernPayload: Record<string, unknown> = {
+        id,
+        title: trimmedTitle,
+        content: trimmedContent,
+        source,
+        image_url: imageUrl,
+        published_at: nowIso,
+      };
+      const retry = await supabase
+        .from('app_news_clean')
+        .insert(modernPayload)
+        .select('*')
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error) {
+      const code = (error as { code?: string }).code;
+      if (code === '42501') {
+        throw new Error('אין הרשאה לכתוב לטבלת החדשות. צריך להריץ RLS policy בצד השרת.');
+      }
+      if (code === '23505') {
+        throw new Error('כבר קיימת חדשה עם אותו מזהה. נסה שוב.');
+      }
+      throw new Error(
+        `שגיאה מ-Supabase (${code || 'unknown'}): ${error.message || 'שגיאה לא ידועה'}`,
+      );
+    }
+
+    return {
+      id: data?.id ?? id,
+      label: data?.label ?? trimmedTitle,
+      title: data?.title ?? data?.label ?? trimmedTitle,
+      content: data?.content ?? data?.text ?? trimmedContent,
+      summary: data?.summary ?? undefined,
+      source: data?.source ?? source,
+      source_url: data?.source_url ?? '',
+      author: data?.author ?? (input.author || ''),
+      image_url: data?.image_url ?? data?.img ?? imageUrl ?? undefined,
+      published_at: data?.published_at ?? data?.time ?? nowIso,
+      created_at: data?.created_at ?? nowIso,
+      category: data?.category ?? 'כללי',
+      tags: data?.tags ?? [],
+      is_featured: data?.is_featured ?? false,
+      view_count: data?.view_count ?? 0,
+      sentiment: data?.sentiment ?? 'neutral',
+      relevance_score: data?.relevance_score ?? 0,
+      reading_time: data?.reading_time ?? 1,
+    } as NewsArticle;
   }
 
   // עדכון מספר צפיות
   async incrementViewCount(articleId: string): Promise<void> {
     try {
-      console.log('👁️ NewsService: Incrementing view count for article:', articleId);
 
       const { error } = await supabase.rpc('increment_news_view_count', {
         article_id: articleId
       });
 
       if (error) {
-        console.error('❌ NewsService: Error incrementing view count:', error);
         throw error;
       }
 
-      console.log('✅ NewsService: Successfully incremented view count');
     } catch (error) {
-      console.error('❌ NewsService: Exception in incrementViewCount:', error);
       throw error;
     }
   }
 
   // ניקוי משאבים
   cleanup(): void {
-    console.log('🧹 NewsService: Cleaning up resources');
     if (this.realtimeSubscription) {
       this.realtimeSubscription.unsubscribe();
       this.realtimeSubscription = null;
@@ -340,11 +409,9 @@ export const newsService = NewsService.getInstance();
 
 // פונקציות עזר
 export const formatNewsDate = (dateString: string): string => {
-  console.log('🕐 formatNewsDate: Input dateString:', dateString);
   
   if (!dateString) {
-    console.log('⚠️ formatNewsDate: Empty dateString, using current time');
-    return 'לפני פחות משעה';
+    return 'תאריך לא זמין';
   }
 
   // ניסיון לפרסר את התאריך
@@ -360,60 +427,42 @@ export const formatNewsDate = (dateString: string): string => {
       } else { // במילישניות
         date = new Date(timestamp);
       }
-      console.log('🕐 formatNewsDate: Parsed as Unix timestamp:', date);
     } else {
       date = new Date(dateString);
-      console.log('🕐 formatNewsDate: Parsed as date string:', date);
     }
 
     // בדיקה אם התאריך תקין
     if (isNaN(date.getTime()) || date.getTime() < 0) {
-      console.log('❌ formatNewsDate: Invalid date, using current time');
-      date = new Date();
+      return 'תאריך לא זמין';
     }
   } catch (error) {
-    console.log('❌ formatNewsDate: Error parsing date, using current time:', error);
-    date = new Date();
+    return 'תאריך לא זמין';
   }
 
-  // המרה לשעון ישראל - עם בדיקת תקינות
-  let israelDate: Date;
-  let israelNow: Date;
-  
+  // תצוגת תאריך ושעה לפי שעון ישראל
   try {
-    israelDate = new Date(date.toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
-    const now = new Date();
-    israelNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Jerusalem"}));
+    // המרה ישירה לשעון ישראל
+    const formatted = date.toLocaleString('he-IL', {
+      timeZone: 'Asia/Jerusalem',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
     
-    // בדיקה נוספת אם ההמרה הצליחה
-    if (isNaN(israelDate.getTime()) || isNaN(israelNow.getTime())) {
-      throw new Error('Invalid timezone conversion');
-    }
+    
+    return formatted;
   } catch (error) {
-    console.log('❌ formatNewsDate: Timezone conversion failed, using UTC:', error);
-    // נפילה ל-UTC אם המרת timezone נכשלת
-    israelDate = date;
-    israelNow = new Date();
+    // נפילה - תצוגה פשוטה
+    return date.toLocaleDateString('he-IL', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
-  
-  const diffInMs = israelNow.getTime() - israelDate.getTime();
-  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-  console.log('🕐 formatNewsDate: Formatted date:', {
-    originalDate: dateString,
-    israelDate: israelDate.toISOString()
-  });
-
-  // תצוגת תאריך ושעה פשוטה
-  return israelDate.toLocaleDateString('he-IL', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
 };
 
 export const truncateText = (text: string, maxLength: number = 150): string => {

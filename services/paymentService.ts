@@ -1,217 +1,175 @@
 import { supabase } from '../lib/supabase';
 
-// CardCom API Configuration - פרטי החברה האמיתיים (API v11)
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+
 export const CARDCOM_CONFIG = {
-  terminalNumber: 147763, // מסוף 147763 - סניף מרכזי
-  apiName: 'y5N7Nh1YfRIrqaa1TFzY', // שם משתמש ממשקים מעודכן
-  apiPassword: 'IQWEk245ICRSmSJHJ3Ya', // סיסמת משתמש ממשקים מעודכנת
+  terminalNumber: Number(process.env.EXPO_PUBLIC_CARDCOM_TERMINAL) || 0,
+  apiName: process.env.EXPO_PUBLIC_CARDCOM_API_NAME ?? '',
+  apiPassword: process.env.EXPO_PUBLIC_CARDCOM_API_PASSWORD ?? '',
   baseUrl: 'https://secure.cardcom.solutions/api/v11',
-  successUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-action',
-  errorUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/smart-action',
-  callbackUrl: 'https://wpmrtczbfcijoocguime.supabase.co/functions/v1/rapid-responder'
+  successUrl: `${supabaseUrl}/functions/v1/smart-action`,
+  errorUrl: `${supabaseUrl}/functions/v1/smart-action`,
+  callbackUrl: `${supabaseUrl}/functions/v1/rapid-responder`,
 };
 
-// בדיקת תקינות המפתח
 export const validateCardcomConfig = () => {
-  console.log('🔍 CardCom Config Validation:');
-  console.log('  Terminal Number:', CARDCOM_CONFIG.terminalNumber);
-  console.log('  API Name:', CARDCOM_CONFIG.apiName);
-  console.log('  API Password:', CARDCOM_CONFIG.apiPassword ? '***' + CARDCOM_CONFIG.apiPassword.slice(-4) : 'MISSING');
-  console.log('  Base URL:', CARDCOM_CONFIG.baseUrl);
-  console.log('  Full Endpoint:', `${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`);
+  if (!CARDCOM_CONFIG.terminalNumber || !CARDCOM_CONFIG.apiName || !CARDCOM_CONFIG.apiPassword) {
+    return false;
+  }
+  return true;
 };
 
-// Subscription Plans Configuration - מסלולים חיים
+/** תשלום מנוי — פעיל רק כש-Cardcom מוגדר (סולק) */
+export const isSubscriptionCheckoutEnabled = () => validateCardcomConfig();
+
+// Subscription Plans Configuration - מסלולים כמו בדף הנחיתה darkpool.site
 export const SUBSCRIPTION_PLANS = {
   // מסלול חינמי
   free: {
     id: 'free',
     name: 'חינמי',
-    description: 'גישה בסיסית לחדשות כלכליות',
+    description: 'גישה חינמית לתכנים הציבוריים',
     price: 0,
     period: 'monthly',
     features: [
-      'חדשות כלכליות יומיות',
-      'הכרזות רשמיות',
-      'קבוצה חינמית אחת'
+      'חדשות כלכליות',
+      'לייב מסחר יומי ביוטיוב',
+      'תמיכה בערוץ היוטיוב',
+      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
     ],
     excludedFeatures: [
+      'מענה על שאלות',
+      'יחס אישי וליווי קהילתי',
       'חדשות מתפרצות בזמן אמת',
-      'גישה לקהילה',
-      'חדרי סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'איתותי Penny Stocks',
-      'יומן מסחר אישי',
-      'קורס הלוויתנים'
+      'רשימת מעקב למסחר יומי עם יעדים ברורים',
+      'ניתוחים וסטאפים לסווינגים',
+      'שיתוף תיק השקעות של הצוות',
+      'קורס הלוויתנים',
     ],
     role: 'free_user',
     popular: false,
-    color: '#6B7280'
+    color: '#E2E8F0',
+    badge: null as string | null,
   },
-  
-  // מסלול Gold
-  gold_monthly: {
-    id: 'gold_monthly',
-    name: 'Gold',
-    description: 'חדשות בזמן אמת וקהילה פעילה',
-    price: 99,
-    period: 'monthly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית'
-    ],
-    excludedFeatures: [
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'איתותי Penny Stocks',
-      'יומן מסחר אישי',
-      'קורס הלוויתנים'
-    ],
-    role: 'gold_user',
-    popular: true,
-    color: '#F59E0B'
-  },
-  gold_quarterly: {
-    id: 'gold_quarterly',
-    name: 'Gold',
-    description: 'חדשות בזמן אמת וקהילה פעילה',
+
+  // מסלול חודשי - ₪249 ללא התחייבות
+  monthly: {
+    id: 'monthly',
+    name: 'חודשי',
+    description: 'ללא התחייבות',
     price: 249,
-    period: 'quarterly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'הנחה של 16%'
-    ],
-    excludedFeatures: [
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'איתותי Penny Stocks',
-      'יומן מסחר אישי',
-      'קורס הלוויתנים'
-    ],
-    role: 'gold_user',
-    popular: false,
-    color: '#F59E0B'
-  },
-  
-  // מסלול Premium
-  premium_monthly: {
-    id: 'premium_monthly',
-    name: 'Premium',
-    description: 'הבחירה של רוב הסוחרים',
-    price: 149,
     period: 'monthly',
     features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי'
+      'מענה על שאלות',
+      'יחס אישי וליווי קהילתי',
+      'חדשות מתפרצות בזמן אמת',
+      'חדשות כלכליות',
+      'לייב מסחר יומי ביוטיוב',
+      'רשימת מעקב למסחר יומי עם יעדים ברורים',
+      'ניתוחים וסטאפים לסווינגים',
+      'שיתוף תיק השקעות של הצוות',
+      'תמיכה בערוץ היוטיוב',
+      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
+      'קורס הלוויתנים',
     ],
-    excludedFeatures: [
-      'איתותי Penny Stocks',
-      'קורס הלוויתנים'
-    ],
+    excludedFeatures: [],
     role: 'premium_user',
-    popular: true,
-    color: '#3B82F6'
+    popular: false,
+    color: '#3B82F6',
+    badge: null as string | null,
   },
-  premium_quarterly: {
-    id: 'premium_quarterly',
-    name: 'Premium',
-    description: 'הבחירה של רוב הסוחרים',
+
+  // מסלול רבעוני - ₪399 ל-3 חודשים (חסוך 47%)
+  quarterly: {
+    id: 'quarterly',
+    name: 'רבעוני',
+    description: 'חסוך 47% ברבעון',
     price: 399,
     period: 'quarterly',
     features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי',
-      'הנחה של 11%'
-    ],
-    excludedFeatures: [
-      'איתותי Penny Stocks',
-      'קורס הלוויתנים'
-    ],
-    role: 'premium_user',
-    popular: false,
-    color: '#3B82F6'
-  },
-  
-  // מסלול Platinum
-  platinum_monthly: {
-    id: 'platinum_monthly',
-    name: 'Platinum',
-    description: 'גישה מלאה לכל העולמות',
-    price: 199,
-    period: 'monthly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי',
-      'איתותי Penny Stocks'
-    ],
-    excludedFeatures: [
-      'קורס הלוויתנים'
-    ],
-    role: 'platinum_user',
-    popular: false,
-    color: '#8B5CF6'
-  },
-  platinum_quarterly: {
-    id: 'platinum_quarterly',
-    name: 'Platinum',
-    description: 'גישה מלאה לכל העולמות',
-    price: 549,
-    period: 'quarterly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי',
-      'איתותי Penny Stocks',
-      'הנחה של 8%'
-    ],
-    excludedFeatures: [
-      'קורס הלוויתנים'
-    ],
-    role: 'platinum_user',
-    popular: false,
-    color: '#8B5CF6'
-  },
-  
-  // מסלול Platinum Pro (שנתי)
-  platinum_pro_yearly: {
-    id: 'platinum_pro_yearly',
-    name: 'Platinum Pro',
-    description: 'חבילת הפרימיום המלאה ביותר',
-    price: 1849,
-    period: 'yearly',
-    features: [
-      'חדשות כלכליות יומיות',
-      'חדשות מתפרצות בזמן אמת וציוצים',
-      'גישה לקהילה הכללית',
-      'חדר סווינגים והשקעות',
-      'איתותי מסחר יומי',
-      'יומן מסחר אישי',
-      'איתותי Penny Stocks',
-      'קורס הלוויתנים במתנה',
-      'חיסכון של ₪350'
+      'מענה על שאלות',
+      'יחס אישי וליווי קהילתי',
+      'חדשות מתפרצות בזמן אמת',
+      'חדשות כלכליות',
+      'לייב מסחר יומי ביוטיוב',
+      'רשימת מעקב למסחר יומי עם יעדים ברורים',
+      'ניתוחים וסטאפים לסווינגים',
+      'שיתוף תיק השקעות של הצוות',
+      'תמיכה בערוץ היוטיוב',
+      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
+      'קורס הלוויתנים',
     ],
     excludedFeatures: [],
-    role: 'platinum_pro_user',
+    role: 'premium_user',
+    popular: true,
+    color: '#10B981',
+    badge: 'מסלול חדש' as string | null,
+  },
+
+  // מסלול שנתי - ₪117/חודש (₪1,404/שנה) חסוך 53%
+  yearly: {
+    id: 'yearly',
+    name: 'חודשי - שנתי',
+    description: 'חסוך 53% בשנה',
+    price: 1404,
+    period: 'yearly',
+    features: [
+      'מענה על שאלות',
+      'יחס אישי וליווי קהילתי',
+      'חדשות מתפרצות בזמן אמת',
+      'חדשות כלכליות',
+      'לייב מסחר יומי ביוטיוב',
+      'רשימת מעקב למסחר יומי עם יעדים ברורים',
+      'ניתוחים וסטאפים לסווינגים',
+      'שיתוף תיק השקעות של הצוות',
+      'תמיכה בערוץ היוטיוב',
+      'קבוצת השקעות בבורסה הישראלית 🇮🇱',
+      'קורס הלוויתנים',
+    ],
+    excludedFeatures: [],
+    role: 'premium_user',
     popular: false,
-    color: '#F59E0B'
+    color: '#F59E0B',
+    badge: 'המסלול החסכוני' as string | null,
+  },
+
+  // תוספת לייבים (אד-און)
+  live_addon: {
+    id: 'live_addon',
+    name: 'תוספת לייבים',
+    description: '4 לייבים אקסקלוסיביים בחודש - לייב אחד כל שבוע בזום',
+    price: 99,
+    period: 'monthly',
+    features: [
+      '4 לייבים אקסקלוסיביים בחודש',
+      'לייב אחד כל שבוע בזום'
+    ],
+    excludedFeatures: [],
+    role: 'live_user',
+    popular: false,
+    color: '#10B981',
+    badge: null as string | null,
+    isAddon: true
+  },
+
+  // קורס הלוויתנים (תשלום חד פעמי)
+  whales_course: {
+    id: 'whales_course',
+    name: 'קורס הלוויתנים',
+    description: 'קורס הלוויתנים - תשלום חד פעמי',
+    price: 531,
+    period: 'one_time',
+    features: [
+      'קורס הלוויתנים המלא',
+      'גישה לכל החומרים',
+      'תמיכה צמודה'
+    ],
+    excludedFeatures: [],
+    role: 'whales_user',
+    popular: false,
+    color: '#F59E0B',
+    badge: null as string | null,
+    isOneTime: true
   }
 };
 
@@ -223,6 +181,8 @@ export interface PaymentRequest {
   planId: string;
   userEmail: string;
   userName: string;
+  /** מנוי חוזר (CardCom operation 2) */
+  isRecurring?: boolean;
   userPhone?: string;
   cardDetails?: {
     cardNumber: string;
@@ -249,6 +209,7 @@ export interface PaymentCallback {
   amount: number;
   planId: string;
   userId: string;
+  cardcomTransactionId?: string;
 }
 
 class PaymentService {
@@ -259,17 +220,19 @@ class PaymentService {
     try {
       // בדיקת תקינות הקונפיגורציה
       validateCardcomConfig();
-      
-      console.log('🔄 PaymentService: Creating payment request with LowProfile API:', request);
 
       // יצירת מזהה עסקה ייחודי
       const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // הכנת נתוני התשלום ל-CardCom LowProfile API
-      const paymentData = {
+      // Operation: 2 = Charge + Create Token (למנויים חוזרים)
+      // Operation: 1 = ChargeOnly (תשלום חד פעמי בלבד)
+      const operation = request.isRecurring ? "2" : "ChargeOnly";
+      
+      const paymentData: any = {
         TerminalNumber: CARDCOM_CONFIG.terminalNumber,
         ApiName: CARDCOM_CONFIG.apiName,
-        Operation: "ChargeOnly",
+        Operation: operation,
         ReturnValue: transactionId,
         Amount: request.amount,
         SuccessRedirectUrl: CARDCOM_CONFIG.successUrl,
@@ -302,11 +265,11 @@ class PaymentService {
         ]
       };
 
-      console.log('🔄 PaymentService: Sending request to CardCom LowProfile API');
-      console.log('🔄 PaymentService: API Name:', CARDCOM_CONFIG.apiName);
-      console.log('🔄 PaymentService: Terminal:', CARDCOM_CONFIG.terminalNumber);
-      console.log('🔄 PaymentService: Full URL:', `${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`);
-      console.log('🔄 PaymentService: Request Data:', JSON.stringify(paymentData, null, 2));
+      // אם זה recurring payment - מוסיפים פרמטרים ל-BillGold
+      if (request.isRecurring) {
+        // אפשר להוסיף פרמטרים נוספים ל-RecurringPayments אם נדרש
+        // (צריך לבדוק עם Cardcom מה הפרמטרים המדויקים)
+      }
 
       // שליחת בקשת תשלום ל-CardCom LowProfile API
       const response = await fetch(`${CARDCOM_CONFIG.baseUrl}/LowProfile/Create`, {
@@ -318,12 +281,7 @@ class PaymentService {
         body: JSON.stringify(paymentData)
       });
 
-      console.log('🔄 PaymentService: Response status:', response.status);
-      console.log('🔄 PaymentService: Response headers:', Object.fromEntries(response.headers.entries()));
-
       const result = await response.json();
-
-      console.log('🔄 PaymentService: CardCom LowProfile API response:', result);
 
       if (result.ResponseCode === 0) {
         // שמירת פרטי העסקה במסד הנתונים
@@ -337,22 +295,18 @@ class PaymentService {
           paymentUrl: result.Url
         });
 
-        console.log('✅ PaymentService: Payment request created successfully');
-
         return {
           success: true,
           transactionId: transactionId,
           paymentUrl: result.Url
         };
       } else {
-        console.error('❌ PaymentService: CardCom LowProfile API error:', result);
         return {
           success: false,
           error: result.Description || 'שגיאה ביצירת בקשת התשלום'
         };
       }
     } catch (error) {
-      console.error('❌ PaymentService: Error creating payment request:', error);
       return {
         success: false,
         error: 'שגיאה ביצירת בקשת התשלום'
@@ -365,31 +319,41 @@ class PaymentService {
    */
   async processPaymentCallback(callback: PaymentCallback): Promise<boolean> {
     try {
-      console.log('🔄 PaymentService: Processing payment callback:', callback);
+      // Idempotency: check if this Cardcom transaction was already processed
+      if (callback.cardcomTransactionId) {
+        const { data: existing } = await supabase
+          .from('payment_transactions')
+          .select('id, status')
+          .eq('cardcom_transaction_id', callback.cardcomTransactionId)
+          .maybeSingle();
+
+        if (existing && existing.status === 'success') {
+          // Already processed — return true without re-extending subscription
+          return true;
+        }
+      }
 
       // עדכון סטטוס העסקה
       const { error: updateError } = await supabase
         .from('payment_transactions')
         .update({
           status: callback.status,
+          cardcom_transaction_id: callback.cardcomTransactionId ?? null,
           updated_at: new Date().toISOString()
         })
         .eq('id', callback.transactionId);
 
       if (updateError) {
-        console.error('❌ PaymentService: Error updating transaction:', updateError);
         return false;
       }
 
       // אם התשלום הצליח, עדכון המנוי של המשתמש
       if (callback.status === 'success') {
-        await this.updateUserSubscription(callback.userId, callback.planId);
+        await this.updateUserSubscription(callback.userId, callback.planId, callback.transactionId);
       }
 
-      console.log('✅ PaymentService: Payment callback processed successfully');
       return true;
     } catch (error) {
-      console.error('❌ PaymentService: Error processing payment callback:', error);
       return false;
     }
   }
@@ -405,11 +369,9 @@ class PaymentService {
     status: string;
     cardcomLowProfileId?: string;
     cardcomTransactionId?: string;
-    paymentUrl: string;
+    paymentUrl?: string;
   }) {
     try {
-      console.log('🔄 PaymentService: Preparing transaction data:', JSON.stringify(transaction, null, 2));
-
       // ניסיון 1: Edge Function (מומלץ)
       try {
         const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -429,20 +391,16 @@ class PaymentService {
         });
 
         if (error) {
-          console.error('❌ PaymentService: Edge function error:', error);
           throw error;
         }
 
         if (data && !data.success) {
-          console.error('❌ PaymentService: Edge function returned error:', data);
           throw new Error(JSON.stringify(data));
         }
 
-        console.log('✅ PaymentService: Transaction saved via Edge Function');
         return;
       } catch (edgeFunctionError) {
-        console.warn('⚠️ PaymentService: Edge Function failed, trying direct insert...', edgeFunctionError);
-        
+        console.warn('[PaymentService] Edge function failed, falling back to direct insert:', edgeFunctionError);
         // ניסיון 2: הכנסה ישירה (fallback)
         const { error: directError } = await supabase
           .from('payment_transactions')
@@ -460,14 +418,13 @@ class PaymentService {
           });
 
         if (directError) {
-          console.error('❌ PaymentService: Direct insert also failed:', directError);
+          console.error('[PaymentService] Direct insert also failed:', directError);
           throw directError;
         }
-
-        console.log('✅ PaymentService: Transaction saved via direct insert');
+        console.warn('[PaymentService] Transaction saved via direct insert fallback. id=', transaction.id);
       }
     } catch (error) {
-      console.error('❌ PaymentService: All save attempts failed:', error);
+      console.error('[PaymentService] saveTransaction failed completely:', error);
       throw error;
     }
   }
@@ -475,13 +432,21 @@ class PaymentService {
   /**
    * מעדכן את המנוי של המשתמש
    */
-  private async updateUserSubscription(userId: string, planId: string) {
+  private async updateUserSubscription(userId: string, planId: string, sourceTransactionId?: string) {
     try {
-      console.log('🔄 PaymentService: Updating user subscription:', { userId, planId });
-
       const plan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
       if (!plan) {
         throw new Error('Plan not found');
+      }
+
+      // Idempotency: skip if this transaction already granted a subscription
+      if (sourceTransactionId) {
+        const { data: existing } = await supabase
+          .from('user_subscriptions')
+          .select('id')
+          .eq('source_transaction_id', sourceTransactionId)
+          .maybeSingle();
+        if (existing) return; // already processed
       }
 
       // חישוב תאריך התפוגה לפי התקופה
@@ -493,7 +458,7 @@ class PaymentService {
       } else if (plan.period === 'yearly') {
         expiresAt.setFullYear(expiresAt.getFullYear() + 1);
       } else {
-        expiresAt.setMonth(expiresAt.getMonth() + 1); // ברירת מחדל
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
       }
 
       // עדכון פרטי המשתמש
@@ -507,12 +472,9 @@ class PaymentService {
         })
         .eq('id', userId);
 
-      if (userError) {
-        console.error('❌ PaymentService: Error updating user:', userError);
-        throw userError;
-      }
+      if (userError) throw userError;
 
-      // יצירת רשומת מנוי
+      // יצירת רשומת מנוי (עם source_transaction_id למניעת כפילויות)
       const { error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .insert({
@@ -521,17 +483,12 @@ class PaymentService {
           status: 'active',
           starts_at: new Date().toISOString(),
           expires_at: expiresAt.toISOString(),
+          source_transaction_id: sourceTransactionId ?? null,
           created_at: new Date().toISOString()
         });
 
-      if (subscriptionError) {
-        console.error('❌ PaymentService: Error creating subscription:', subscriptionError);
-        throw subscriptionError;
-      }
-
-      console.log('✅ PaymentService: User subscription updated successfully');
+      if (subscriptionError) throw subscriptionError;
     } catch (error) {
-      console.error('❌ PaymentService: Error updating user subscription:', error);
       throw error;
     }
   }
@@ -561,13 +518,11 @@ class PaymentService {
         .single();
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
-        console.error('❌ PaymentService: Error getting subscription:', error);
         throw error;
       }
 
       return data;
     } catch (error) {
-      console.error('❌ PaymentService: Error getting current subscription:', error);
       return null;
     }
   }
@@ -585,13 +540,11 @@ class PaymentService {
         .limit(10);
 
       if (error) {
-        console.error('❌ PaymentService: Error getting payment history:', error);
         throw error;
       }
 
       return data || [];
     } catch (error) {
-      console.error('❌ PaymentService: Error getting payment history:', error);
       return [];
     }
   }
@@ -601,8 +554,6 @@ class PaymentService {
    */
   async cancelSubscription(userId: string) {
     try {
-      console.log('🔄 PaymentService: Cancelling subscription for user:', userId);
-
       // עדכון סטטוס המנוי
       const { error } = await supabase
         .from('user_subscriptions')
@@ -614,7 +565,6 @@ class PaymentService {
         .eq('status', 'active');
 
       if (error) {
-        console.error('❌ PaymentService: Error cancelling subscription:', error);
         throw error;
       }
 
@@ -629,15 +579,129 @@ class PaymentService {
         .eq('id', userId);
 
       if (userError) {
-        console.error('❌ PaymentService: Error updating user after cancellation:', userError);
         throw userError;
       }
 
-      console.log('✅ PaymentService: Subscription cancelled successfully');
       return true;
     } catch (error) {
-      console.error('❌ PaymentService: Error cancelling subscription:', error);
       return false;
+    }
+  }
+
+  /**
+   * יוצר recurring payment באמצעות Token שנשמר
+   * זה נקרא אוטומטית כשה-auto_renew = true והמנוי פג
+   */
+  async createRecurringPayment(userId: string, planId: string): Promise<PaymentResponse> {
+    try {
+      // קבלת פרטי המנוי עם Token
+      const { data: subscription, error: subError } = await supabase
+        .from('user_subscriptions')
+        .select('*, subscription_plans(*)')
+        .eq('user_id', userId)
+        .eq('plan_id', planId)
+        .eq('auto_renew', true)
+        .single();
+
+      if (subError || !subscription) {
+        throw new Error('Subscription not found or auto-renew disabled');
+      }
+
+      if (!subscription.cardcom_token) {
+        throw new Error('No payment token found for recurring payment');
+      }
+
+      const plan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
+      if (!plan) {
+        throw new Error('Plan not found');
+      }
+
+      // יצירת transaction ID חדש
+      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // יצירת recurring payment באמצעות Transaction API עם Token
+      const transactionData = {
+        TerminalNumber: CARDCOM_CONFIG.terminalNumber,
+        ApiName: CARDCOM_CONFIG.apiName,
+        Amount: plan.price,
+        Token: subscription.cardcom_token,
+        ISOCoinId: 1,
+        ExternalUniqTranId: transactionId,
+        CustomFields: [
+          {
+            Name: "userId",
+            Value: userId
+          },
+          {
+            Name: "planId",
+            Value: planId
+          },
+          {
+            Name: "transactionId",
+            Value: transactionId
+          },
+          {
+            Name: "isRecurring",
+            Value: "true"
+          }
+        ]
+      };
+
+      const response = await fetch(`${CARDCOM_CONFIG.baseUrl}/Transactions/Transaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(transactionData)
+      });
+
+      const result = await response.json();
+
+      if (result.ResponseCode === 0) {
+        // שמירת העסקה
+        await this.saveTransaction({
+          id: transactionId,
+          userId: userId,
+          planId: planId,
+          amount: plan.price,
+          status: 'success',
+          cardcomLowProfileId: undefined,
+          paymentUrl: undefined,
+          cardcomTransactionId: result.TranzactionId?.toString()
+        });
+
+        // עדכון תאריך תפוגה
+        const expiresAt = new Date();
+        if (plan.period === 'monthly') {
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+        } else if (plan.period === 'quarterly') {
+          expiresAt.setMonth(expiresAt.getMonth() + 3);
+        } else if (plan.period === 'yearly') {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        }
+
+        await supabase
+          .from('user_subscriptions')
+          .update({
+            expires_at: expiresAt.toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId)
+          .eq('plan_id', planId);
+
+        return {
+          success: true,
+          transactionId: transactionId
+        };
+      } else {
+        throw new Error(result.Description || 'שגיאה ביצירת תשלום חוזר');
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'שגיאה ביצירת תשלום חוזר'
+      };
     }
   }
 }

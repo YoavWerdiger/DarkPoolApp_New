@@ -20,6 +20,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pinned_messages_unique ON pinned_messages(
 -- Enable RLS
 ALTER TABLE pinned_messages ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view pinned messages in channels they are members of" ON pinned_messages;
+DROP POLICY IF EXISTS "Admins and owners can pin messages" ON pinned_messages;
+DROP POLICY IF EXISTS "Admins and owners can unpin messages" ON pinned_messages;
+
 -- Create RLS policies
 CREATE POLICY "Users can view pinned messages in channels they are members of" ON pinned_messages
   FOR SELECT USING (
@@ -51,37 +56,40 @@ CREATE OR REPLACE FUNCTION get_pinned_messages(channel_uuid UUID)
 RETURNS TABLE (
   id UUID,
   message_id UUID,
-  content TEXT,
-  type TEXT,
-  sender_id UUID,
-  sender_name TEXT,
-  sender_avatar TEXT,
+  message_content TEXT,
+  message_type TEXT,
+  message_created_at TIMESTAMP WITH TIME ZONE,
   pinned_by UUID,
   pinned_by_name TEXT,
-  pinned_at TIMESTAMP WITH TIME ZONE,
-  created_at TIMESTAMP WITH TIME ZONE
-) AS $$
+  pinned_at TIMESTAMP WITH TIME ZONE
+) 
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
 BEGIN
   RETURN QUERY
   SELECT 
     pm.id,
     pm.message_id,
-    m.content,
-    m.type,
-    m.sender_id,
-    COALESCE(m.sender->>'full_name', 'משתמש') as sender_name,
-    m.sender->>'avatar_url' as sender_avatar,
+    m.content as message_content,
+    COALESCE(m.type, 'text') as message_type,
+    m.created_at as message_created_at,
     pm.pinned_by,
-    COALESCE(pb.sender->>'full_name', 'משתמש') as pinned_by_name,
-    pm.pinned_at,
-    m.created_at
+    COALESCE(u_pinner.full_name, u_pinner.display_name, 'משתמש') as pinned_by_name,
+    pm.pinned_at
   FROM pinned_messages pm
-  JOIN messages m ON pm.message_id = m.id
-  LEFT JOIN messages pb ON pm.pinned_by = pb.sender_id
+  INNER JOIN messages m ON pm.message_id = m.id
+  LEFT JOIN users u_pinner ON pm.pinned_by = u_pinner.id
   WHERE pm.channel_id = channel_uuid
+    -- Check that the user is a member of the channel
+    AND EXISTS (
+      SELECT 1 FROM channel_members cm
+      WHERE cm.channel_id = channel_uuid
+      AND cm.user_id = auth.uid()
+    )
   ORDER BY pm.pinned_at DESC;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION get_pinned_messages(UUID) TO authenticated;

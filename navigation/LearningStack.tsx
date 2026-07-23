@@ -1,28 +1,73 @@
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LearningScreen from '../screens/Learning';
-import { DesignTokens } from '../components/ui/DesignTokens';
+import { CoursesScreen } from '../screens/Learning/CoursesScreen';
+import { CourseDetailScreen } from '../screens/Learning/CourseDetailScreen';
+import { CoursePreviewScreen } from '../screens/Learning/CoursePreviewScreen';
+import { MyNotesScreen } from '../screens/Learning/MyNotesScreen';
+import { LessonPlayerScreen } from '../screens/Learning/LessonPlayerScreen';
+import { withVideoBackground } from '../components/VideoBackground';
+
+/** CoursesScreen — ScreenChrome + שכבת transback (שור ודוב) פנימית */
+const CoursesScreenPlain = CoursesScreen;
+const LearningWithVideo = withVideoBackground(LearningScreen);
+const CourseDetailWithVideo = withVideoBackground(CourseDetailScreen);
+const CoursePreviewWithVideo = withVideoBackground(CoursePreviewScreen);
+/** מסך שיעור: בלי withVideoBackground — רקע ירוק־שחור מאחורי blur גרם לכתם ירוק; המסך מגדיר רקע נייטרלי משלו */
+const LessonPlayerPlain = LessonPlayerScreen;
+const MyNotesWithVideo = withVideoBackground(MyNotesScreen);
 
 export type LearningStackParamList = {
-  LearningScreen: undefined;
+  CoursesScreen: undefined;
+  LearningScreen: { courseId?: string; lessonId?: string };
+  CourseDetailScreen: { courseId: string };
+  CoursePreviewScreen: { youtubeLinks?: string[] };
+  LessonPlayerScreen: { lessonId: string; initialBlockIndex?: number };
+  MyNotesScreen: undefined;
 };
 
-const Stack = createStackNavigator<LearningStackParamList>();
+const Stack = createNativeStackNavigator<LearningStackParamList>();
 
 export default function LearningStack() {
   return (
     <Stack.Navigator
-      initialRouteName="LearningScreen"
+      initialRouteName="CoursesScreen"
       screenOptions={{
         headerShown: false,
-        cardStyle: {
-          backgroundColor: DesignTokens.colors.background.primary,
-        },
+        contentStyle: { backgroundColor: '#0A0E0A' },
+        animation: 'fade',
+        gestureEnabled: true,
+        animationDuration: 200,
       }}
     >
+      <Stack.Screen
+        name="CoursesScreen"
+        component={CoursesScreenPlain}
+        options={{ title: 'קורסים' }}
+      />
       <Stack.Screen 
         name="LearningScreen" 
-        component={LearningScreen}
-        options={{ title: 'קורסים' }}
+        component={LearningWithVideo}
+        options={{ title: 'קורס' }}
+      />
+      <Stack.Screen
+        name="CourseDetailScreen"
+        component={CourseDetailWithVideo}
+        options={{ title: 'פרטי קורס' }}
+      />
+      <Stack.Screen
+        name="CoursePreviewScreen"
+        component={CoursePreviewWithVideo}
+        options={{ title: 'תצוגה מקדימה' }}
+      />
+      <Stack.Screen
+        name="LessonPlayerScreen"
+        component={LessonPlayerPlain}
+        options={{ title: 'שיעור', headerShown: false }}
+      />
+      <Stack.Screen
+        name="MyNotesScreen"
+        component={MyNotesWithVideo}
+        options={{ title: 'ההערות שלי' }}
       />
     </Stack.Navigator>
   );

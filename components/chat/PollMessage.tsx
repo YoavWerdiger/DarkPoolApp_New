@@ -1,19 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  Modal,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform
-} from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BarChart3, Lock, Trash2, Clock, X } from 'lucide-react-native';
-import { PollService, PollWithVotes, PollOption } from '../../services/pollService';
+import { Lock, Trash2 } from 'lucide-react-native';
+import { PollService, PollWithVotes } from '../../services/pollService';
 import PollResults from './PollResults';
 import { useAuth } from '../../context/AuthContext';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
 
 interface PollMessageProps {
   poll: PollWithVotes;
@@ -21,25 +16,31 @@ interface PollMessageProps {
   onPollUpdated: (updatedPoll: PollWithVotes) => void;
   isAdmin?: boolean;
   isMe?: boolean;
+  /** כשמרנדרים בתוך בועת ChatMessage — בלי רקע/מסגרת כפולה */
+  embeddedInBubble?: boolean;
 }
 
-export default function PollMessage({
+function PollMessage({
   poll,
-  chatId,
   onPollUpdated,
   isAdmin = false,
-  isMe = false
+  isMe = false,
+  embeddedInBubble = false,
 }: PollMessageProps) {
   const { user } = useAuth();
+  const DesignTokens = useDesignTokens();
+  const lightOnBubble = embeddedInBubble && isMe;
+  const styles = useMemo(
+    () => createStyles(DesignTokens, isMe, lightOnBubble, embeddedInBubble),
+    [DesignTokens, isMe, lightOnBubble, embeddedInBubble],
+  );
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [isVoting, setIsVoting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [currentPoll, setCurrentPoll] = useState<PollWithVotes>(poll);
 
-  // עדכון הסקר כאשר הוא משתנה
   useEffect(() => {
     setCurrentPoll(poll);
-    // אם המשתמש כבר הצביע, הצג תוצאות
     if (poll.user_votes && poll.user_votes.length > 0) {
       setShowResults(true);
     }
@@ -49,58 +50,45 @@ export default function PollMessage({
     if (currentPoll.is_locked) return;
 
     if (currentPoll.multiple_choice) {
-      // בחירה מרובה - toggle
-      setSelectedOptions(prev => {
+      setSelectedOptions((prev) => {
         if (prev.includes(optionId)) {
-          return prev.filter(id => id !== optionId);
-        } else {
-          return [...prev, optionId];
+          return prev.filter((id) => id !== optionId);
         }
+        return [...prev, optionId];
       });
     } else {
-      // בחירה יחידה - החלף
       setSelectedOptions([optionId]);
     }
   };
 
   const handleVote = async () => {
     if (selectedOptions.length === 0) {
-      Alert.alert('שגיאה', 'יש לבחור לפחות אפשרות אחת');
+      legacyAlert('שגיאה', 'יש לבחור לפחות אפשרות אחת');
       return;
     }
 
     if (!currentPoll.multiple_choice && selectedOptions.length > 1) {
-      Alert.alert('שגיאה', 'סקר זה מאפשר רק תשובה אחת');
+      legacyAlert('שגיאה', 'סקר זה מאפשר רק תשובה אחת');
       return;
     }
 
     setIsVoting(true);
     try {
-      await PollService.votePoll(
-        currentPoll.id,
-        selectedOptions,
-        user?.id || ''
-      );
+      await PollService.votePoll(currentPoll.id, selectedOptions, user?.id || '');
 
-      // רענן את הסקר
-      console.log('🔄 Refreshing poll after vote...');
       const updatedPoll = await PollService.getPollResults(currentPoll.id, user?.id);
-      console.log('🔄 Updated poll received:', updatedPoll);
-      
+
       if (updatedPoll) {
         setCurrentPoll(updatedPoll);
         onPollUpdated(updatedPoll);
         setShowResults(true);
         setSelectedOptions([]);
-        console.log('✅ Poll updated successfully');
-      } else {
-        console.log('❌ No updated poll received');
+        void HapticFeedback.impactLight();
+        legacyAlert('הצלחה', 'ההצבעה נשלחה בהצלחה!');
       }
-
-      Alert.alert('הצלחה', 'ההצבעה נשלחה בהצלחה!');
     } catch (error: any) {
-      console.error('❌ Error voting:', error);
-      Alert.alert('שגיאה', error.message || 'לא ניתן לשלוח את ההצבעה');
+      void HapticFeedback.error();
+      legacyAlert('שגיאה', error.message || 'לא ניתן לשלוח את ההצבעה');
     } finally {
       setIsVoting(false);
     }
@@ -109,216 +97,297 @@ export default function PollMessage({
   const handleLockPoll = async () => {
     if (!isAdmin || currentPoll.creator_id !== user?.id) return;
 
-    Alert.alert(
-      'נעילת סקר',
-      'האם אתה בטוח שברצונך לנעול את הסקר? לא ניתן יהיה להצביע יותר.',
-      [
-        { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'נעל',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await PollService.lockPoll(currentPoll.id, user?.id || '');
-              
-              // רענן את הסקר
-              const updatedPoll = await PollService.getPollResults(currentPoll.id, user?.id);
-              if (updatedPoll) {
-                setCurrentPoll(updatedPoll);
-                onPollUpdated(updatedPoll);
-              }
-
-              Alert.alert('הצלחה', 'הסקר ננעל בהצלחה');
-            } catch (error: any) {
-              console.error('❌ Error locking poll:', error);
-              Alert.alert('שגיאה', error.message || 'לא ניתן לנעול את הסקר');
+    legacyAlert('נעילת סקר', 'האם אתה בטוח שברצונך לנעול את הסקר? לא ניתן יהיה להצביע יותר.', [
+      { text: 'ביטול', style: 'cancel' },
+      {
+        text: 'נעל',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await PollService.lockPoll(currentPoll.id, user?.id || '');
+            const updatedPoll = await PollService.getPollResults(currentPoll.id, user?.id);
+            if (updatedPoll) {
+              setCurrentPoll(updatedPoll);
+              onPollUpdated(updatedPoll);
+              void HapticFeedback.impactLight();
             }
+            legacyAlert('הצלחה', 'הסקר ננעל בהצלחה');
+          } catch (error: any) {
+            legacyAlert('שגיאה', error.message || 'לא ניתן לנעול את הסקר');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const handleDeletePoll = async () => {
     if (!isAdmin || currentPoll.creator_id !== user?.id) return;
 
-    Alert.alert(
-      'מחיקת סקר',
-      'האם אתה בטוח שברצונך למחוק את הסקר? פעולה זו אינה הפיכה!',
-      [
-        { text: 'ביטול', style: 'cancel' },
-        {
-          text: 'מחק',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await PollService.deletePoll(currentPoll.id, user?.id || '');
-              Alert.alert('הצלחה', 'הסקר נמחק בהצלחה');
-              // כאן צריך להודיע להורה על המחיקה
-            } catch (error: any) {
-              console.error('❌ Error deleting poll:', error);
-              Alert.alert('שגיאה', error.message || 'לא ניתן למחוק את הסקר');
-            }
+    legacyAlert('מחיקת סקר', 'האם אתה בטוח שברצונך למחוק את הסקר? פעולה זו אינה הפיכה!', [
+      { text: 'ביטול', style: 'cancel' },
+      {
+        text: 'מחק',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await PollService.deletePoll(currentPoll.id, user?.id || '');
+            legacyAlert('הצלחה', 'הסקר נמחק בהצלחה');
+          } catch (error: any) {
+            legacyAlert('שגיאה', error.message || 'לא ניתן למחוק את הסקר');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const isUserVoted = currentPoll.user_votes && currentPoll.user_votes.length > 0;
   const canVote = !currentPoll.is_locked && !isUserVoted;
-  
-  console.log('🔍 PollMessage Debug:', {
-    pollId: currentPoll.id,
-    userId: user?.id,
-    isMe,
-    isAdmin,
-    isUserVoted,
-    canVote,
-    userVotes: currentPoll.user_votes,
-    isLocked: currentPoll.is_locked
-  });
+  const showAdmin = isAdmin && currentPoll.creator_id === user?.id;
+
+  const accent = lightOnBubble ? '#FFFFFF' : chatPalette.primary;
+  const mutedIcon = lightOnBubble ? 'rgba(255,255,255,0.5)' : DesignTokens.colors.text.tertiary;
 
   return (
-    <View className={`${isMe ? 'bg-[#00E654]' : 'bg-[#111111]'} border border-[#333] rounded-xl p-4 mb-3`}>
-      {/* Poll Header */}
-      <View className="flex-row items-center justify-between mb-3">
-        <View className="flex-row items-center">
-          <BarChart3 size={20} color="#00E654" strokeWidth={2} />
-          <Text className={`${isMe ? 'text-black' : 'text-primary'} font-bold text-sm mr-2`}>סקר</Text>
-          {currentPoll.multiple_choice && (
-            <View className="bg-gray-600 px-2 py-1 rounded-lg mr-2">
-              <Text className="text-white text-xs">בחירה מרובה</Text>
-            </View>
-          )}
-        </View>
-        
-        <View className="flex-row items-center">
-          {currentPoll.is_locked && (
-            <View className="flex-row items-center mr-2">
-              <Lock size={14} color="#ff6b6b" strokeWidth={2} />
-              <Text className="text-red-400 text-xs">נעול</Text>
-            </View>
-          )}
-          
-          {/* Admin Actions */}
-          {isAdmin && currentPoll.creator_id === user?.id && (
-            <View className="flex-row">
+    <View style={styles.container}>
+      {(currentPoll.multiple_choice || currentPoll.is_locked || showAdmin) && (
+        <View style={styles.topMeta}>
+          <View style={styles.topMetaLeft}>
+            {currentPoll.multiple_choice && (
+              <Text style={styles.metaHint}>בחירה מרובה</Text>
+            )}
+            {currentPoll.is_locked && (
+              <Text style={styles.lockedHint}>נעול</Text>
+            )}
+          </View>
+          {showAdmin && (
+            <View style={styles.adminActions}>
               {!currentPoll.is_locked && (
                 <TouchableOpacity
                   onPress={handleLockPoll}
-                  className="bg-yellow-600 p-2 rounded-lg mr-2"
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Lock size={16} color="#fff" strokeWidth={2} />
+                  <Lock size={14} color={mutedIcon} strokeWidth={2} />
                 </TouchableOpacity>
               )}
-              
               <TouchableOpacity
                 onPress={handleDeletePoll}
-                className="bg-red-600 p-2 rounded-lg"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Trash2 size={16} color="#fff" strokeWidth={2} />
+                <Trash2 size={14} color={chatPalette.danger} strokeWidth={2} />
               </TouchableOpacity>
             </View>
           )}
         </View>
-      </View>
+      )}
 
-      {/* Question */}
-      <Text className={`${isMe ? 'text-black' : 'text-white'} font-bold text-lg mb-4 text-center`}>
-        {currentPoll.question}
-      </Text>
+      <Text style={styles.question}>{currentPoll.question}</Text>
 
-      {/* Options */}
       {!showResults ? (
-        <View>
-          {currentPoll.options.map((option) => (
-            <TouchableOpacity
-              key={option.id}
-              onPress={() => handleOptionSelect(option.id)}
-              disabled={!canVote}
-              className={`mb-3 p-3 rounded-xl border-2 ${
-                selectedOptions.includes(option.id)
-                  ? isMe ? 'border-black bg-black/20' : 'border-primary bg-primary/20'
-                  : isMe ? 'border-[#333] bg-white/10' : 'border-[#333] bg-[#1a1a1a]'
-              } ${!canVote ? 'opacity-50' : ''}`}
-            >
-              <View className="flex-row items-center">
+        <View style={styles.optionsBlock}>
+          {currentPoll.options.map((option) => {
+            const isSelected = selectedOptions.includes(option.id);
+            return (
+              <TouchableOpacity
+                key={option.id}
+                onPress={() => handleOptionSelect(option.id)}
+                disabled={!canVote}
+                activeOpacity={0.7}
+                style={[
+                  styles.optionButton,
+                  isSelected && styles.optionButtonSelected,
+                  !canVote && styles.optionButtonDisabled,
+                ]}
+              >
                 <Ionicons
                   name={
                     currentPoll.multiple_choice
-                      ? selectedOptions.includes(option.id)
+                      ? isSelected
                         ? 'checkbox'
                         : 'checkbox-outline'
-                      : selectedOptions.includes(option.id)
-                      ? 'radio-button-on'
-                      : 'radio-button-off'
+                      : isSelected
+                        ? 'radio-button-on'
+                        : 'radio-button-off'
                   }
-                  size={20}
-                  color={selectedOptions.includes(option.id) ? '#00E654' : '#666'}
-                  style={{ marginRight: 12 }}
+                  size={18}
+                  color={isSelected ? accent : mutedIcon}
+                  style={styles.optionIcon}
                 />
-                <Text className={`${isMe ? 'text-black' : 'text-white'} text-base flex-1`}>{option.text}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.optionText} numberOfLines={1}>
+                  {option.text}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
 
-          {/* Vote Button - הצבעה ישירה */}
           {canVote && selectedOptions.length > 0 && (
             <TouchableOpacity
               onPress={handleVote}
               disabled={isVoting}
-              className={`mt-4 py-3 rounded-xl ${
-                isVoting ? 'bg-gray-600' : isMe ? 'bg-black' : 'bg-primary'
-              }`}
+              activeOpacity={0.85}
+              style={[styles.voteButton, isVoting && styles.voteButtonDisabled]}
             >
-              <Text
-                className={`text-center font-bold text-lg ${
-                  isVoting ? 'text-gray-400' : isMe ? 'text-white' : 'text-black'
-                }`}
-              >
+              <Text style={styles.voteButtonText}>
                 {isVoting ? 'שולח...' : 'הצבע'}
               </Text>
             </TouchableOpacity>
           )}
 
-          {/* Show Results Button */}
           {isUserVoted && (
-            <TouchableOpacity
-              onPress={() => setShowResults(true)}
-              className="mt-3 py-2 rounded-xl bg-[#1a1a1a] border border-[#333]"
-            >
-              <Text className="text-white text-center font-bold">
-                הצג תוצאות
-              </Text>
+            <TouchableOpacity onPress={() => setShowResults(true)} style={styles.showResultsButton}>
+              <Text style={styles.showResultsText}>הצג תוצאות</Text>
             </TouchableOpacity>
           )}
         </View>
       ) : (
-        /* Results View */
         <PollResults
           options={currentPoll.options}
           userVotes={currentPoll.user_votes || []}
           totalVotes={currentPoll.total_votes}
           multipleChoice={currentPoll.multiple_choice}
           isLocked={currentPoll.is_locked}
+          isMe={isMe}
+          embeddedInBubble={embeddedInBubble}
         />
       )}
-
-      {/* Footer */}
-      <View className="flex-row items-center justify-between mt-4 pt-3 border-t border-[#333]">
-        <Text className="text-gray-400 text-xs">
-          נוצר על ידי {currentPoll.creator_id === user?.id ? 'אתה' : 'משתמש אחר'}
-        </Text>
-        
-        <View className="flex-row items-center">
-          <Clock size={14} color="#666" strokeWidth={2} />
-          <Text className="text-gray-400 text-xs mr-1">
-            {new Date(currentPoll.created_at).toLocaleDateString('he-IL')}
-          </Text>
-        </View>
-      </View>
-
     </View>
   );
 }
+
+export default React.memo(PollMessage);
+
+const createStyles = (
+  tokens: ReturnType<typeof useDesignTokens>,
+  isMe: boolean,
+  lightOnBubble: boolean,
+  embeddedInBubble: boolean,
+) => {
+  const text = lightOnBubble ? '#FFFFFF' : tokens.colors.text.primary;
+  const muted = lightOnBubble ? 'rgba(255,255,255,0.55)' : tokens.colors.text.tertiary;
+  const optionBorder = lightOnBubble ? 'rgba(255,255,255,0.22)' : tokens.colors.border.primary;
+  const optionSelectedBg = lightOnBubble ? 'rgba(255,255,255,0.14)' : tokens.colors.primary.dim;
+  const optionSelectedBorder = lightOnBubble ? 'rgba(255,255,255,0.45)' : tokens.colors.border.accent;
+  const voteBg = lightOnBubble ? '#FFFFFF' : chatPalette.primary;
+  const voteFg = lightOnBubble ? tokens.colors.bubbleMe : '#0A0E0A';
+
+  return StyleSheet.create({
+    container: embeddedInBubble
+      ? {
+          width: '100%',
+          minWidth: 220,
+          maxWidth: 280,
+          alignSelf: 'stretch',
+          paddingVertical: 2,
+          // הבועה כבר נותנת paddingHorizontal: 9 כמו טקסט; מעט נוסף כמו messageTextWithMedia
+          paddingHorizontal: 2,
+          direction: 'rtl',
+        }
+      : {
+          backgroundColor: isMe ? tokens.colors.bubbleMe : tokens.colors.background.secondary,
+          borderRadius: tokens.borderRadius.lg,
+          padding: tokens.spacing.md,
+          marginBottom: tokens.spacing.md,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: tokens.colors.border.primary,
+          direction: 'rtl',
+          minWidth: 220,
+          maxWidth: 300,
+        },
+    topMeta: {
+      ...chatRtlRow,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+      minHeight: 16,
+      alignSelf: 'stretch',
+    },
+    topMetaLeft: {
+      ...chatRtlRow,
+      alignItems: 'center',
+      gap: 8,
+      flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
+    },
+    metaHint: {
+      color: muted,
+      fontSize: tokens.typography.fontSize.xs,
+      ...chatRtlText,
+    },
+    lockedHint: {
+      color: chatPalette.danger,
+      fontSize: tokens.typography.fontSize.xs,
+      ...chatRtlText,
+    },
+    adminActions: {
+      ...chatRtlRow,
+      alignItems: 'center',
+      gap: 12,
+      flexShrink: 0,
+    },
+    question: {
+      color: text,
+      fontWeight: tokens.typography.fontWeight.semibold,
+      fontSize: tokens.typography.fontSize.base,
+      lineHeight: 22,
+      marginBottom: 12,
+      ...chatRtlText,
+    },
+    optionsBlock: {
+      gap: 8,
+      alignSelf: 'stretch',
+    },
+    optionButton: {
+      ...chatRtlRow,
+      alignItems: 'center',
+      alignSelf: 'stretch',
+      gap: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: optionBorder,
+      backgroundColor: 'transparent',
+    },
+    optionButtonSelected: {
+      borderColor: optionSelectedBorder,
+      backgroundColor: optionSelectedBg,
+    },
+    optionButtonDisabled: {
+      opacity: 0.5,
+    },
+    optionIcon: {
+      flexShrink: 0,
+    },
+    optionText: {
+      color: text,
+      fontSize: 15,
+      flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
+      ...chatRtlText,
+    },
+    voteButton: {
+      marginTop: 4,
+      paddingVertical: 11,
+      borderRadius: 10,
+      backgroundColor: voteBg,
+    },
+    voteButtonDisabled: {
+      opacity: 0.5,
+    },
+    voteButtonText: {
+      textAlign: 'center',
+      fontWeight: tokens.typography.fontWeight.bold,
+      fontSize: 15,
+      color: voteFg,
+    },
+    showResultsButton: {
+      paddingVertical: 8,
+    },
+    showResultsText: {
+      color: muted,
+      textAlign: 'center',
+      fontSize: tokens.typography.fontSize.sm,
+    },
+  });
+};

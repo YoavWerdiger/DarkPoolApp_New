@@ -1,9 +1,10 @@
 import React from 'react';
 import { Pressable, Text, View, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DesignTokens from './DesignTokens';
+import { useDesignTokens } from './DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
-export type UIButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
+export type UIButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline' | 'hairline';
 export type UIButtonSize = 'sm' | 'md' | 'lg';
 
 export interface UIButtonProps {
@@ -19,6 +20,8 @@ export interface UIButtonProps {
   style?: ViewStyle;
   textStyle?: TextStyle;
   children?: React.ReactNode;
+  /** השבתת רטט בלחיצה (ברירת מחדל: רטט קל פעיל) */
+  haptic?: boolean;
 }
 
 const UIButton: React.FC<UIButtonProps> = ({
@@ -34,130 +37,131 @@ const UIButton: React.FC<UIButtonProps> = ({
   style,
   textStyle,
   children,
+  haptic = true,
 }) => {
+  const DesignTokens = useDesignTokens();
   const { colors, typography, spacing, borderRadius, shadows } = DesignTokens;
 
-  // Variant Styles
   const getVariantStyles = (): { container: ViewStyle; text: TextStyle } => {
     switch (variant) {
       case 'primary':
         return {
           container: {
-            backgroundColor: colors.primary,
-            ...shadows.md,
+            backgroundColor: colors.primary.main,
+            borderRadius: borderRadius.md,
+            ...shadows.green,
           },
           text: {
-            color: '#000000',
-            fontWeight: typography.fontWeight.semibold,
+            color: colors.text.inverse,
+            fontWeight: typography.button.weight,
           },
         };
-      
       case 'secondary':
         return {
           container: {
-            backgroundColor: colors.surface,
+            backgroundColor: colors.glass?.card?.bg ?? 'rgba(255,255,255,0.05)',
             borderWidth: 1,
-            borderColor: colors.border,
-            ...shadows.sm,
+            borderColor: colors.glass?.card?.border ?? 'rgba(255,255,255,0.10)',
+            borderRadius: borderRadius.md,
           },
           text: {
-            color: colors.textPrimary,
-            fontWeight: typography.fontWeight.medium,
-          },
-        };
-      
-      case 'danger':
-        return {
-          container: {
-            backgroundColor: colors.danger,
-            ...shadows.md,
-          },
-          text: {
-            color: colors.textPrimary,
+            color: colors.text.primary,
             fontWeight: typography.fontWeight.semibold,
           },
         };
-      
+      case 'danger':
+        return {
+          container: {
+            backgroundColor: colors.danger.main,
+            borderRadius: borderRadius.md,
+            ...shadows.md,
+          },
+          text: {
+            color: '#FFFFFF',
+            fontWeight: typography.fontWeight.bold,
+          },
+        };
       case 'ghost':
         return {
           container: {
             backgroundColor: 'transparent',
           },
           text: {
-            color: colors.primary,
-            fontWeight: typography.fontWeight.medium,
+            color: colors.primary.main,
+            fontWeight: typography.fontWeight.semibold,
           },
         };
-      
       case 'outline':
         return {
           container: {
             backgroundColor: 'transparent',
-            borderWidth: 1,
-            borderColor: colors.primary,
+            borderWidth: 1.5,
+            borderColor: colors.primary.main,
+            borderRadius: borderRadius.md,
           },
           text: {
-            color: colors.primary,
+            color: colors.primary.main,
+            fontWeight: typography.fontWeight.semibold,
+          },
+        };
+      case 'hairline':
+        return {
+          container: {
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderColor: colors.border.hover,
+            borderRadius: borderRadius.md,
+          },
+          text: {
+            color: colors.text.primary,
             fontWeight: typography.fontWeight.medium,
           },
         };
-      
       default:
         return {
           container: {
-            backgroundColor: colors.primary,
+            backgroundColor: colors.primary.main,
+            borderRadius: borderRadius.md,
             ...shadows.md,
           },
           text: {
-            color: '#000000',
-            fontWeight: typography.fontWeight.semibold,
+            color: colors.text.inverse,
+            fontWeight: typography.fontWeight.bold,
           },
         };
     }
   };
 
-  // Size Styles
   const getSizeStyles = (): { container: ViewStyle; text: TextStyle; icon: number } => {
     switch (size) {
       case 'sm':
         return {
           container: {
-            paddingHorizontal: spacing.md,
+            paddingHorizontal: spacing.lg,
             paddingVertical: spacing.sm,
-            borderRadius: borderRadius.md,
-            minHeight: 36,
+            minHeight: 40,
           },
-          text: {
-            fontSize: typography.fontSize.sm,
-          },
+          text: { fontSize: typography.caption.size },
           icon: 16,
         };
-      
       case 'lg':
         return {
           container: {
             paddingHorizontal: spacing['2xl'],
             paddingVertical: spacing.lg,
-            borderRadius: borderRadius.xl,
             minHeight: 56,
           },
-          text: {
-            fontSize: typography.fontSize.lg,
-          },
+          text: { fontSize: typography.body.size },
           icon: 24,
         };
-      
-      default: // md
+      default:
         return {
           container: {
             paddingHorizontal: spacing.xl,
             paddingVertical: spacing.md,
-            borderRadius: borderRadius.lg,
-            minHeight: 48,
+            minHeight: 52,
           },
-          text: {
-            fontSize: typography.fontSize.base,
-          },
+          text: { fontSize: typography.button.size },
           icon: 20,
         };
     }
@@ -233,16 +237,28 @@ const UIButton: React.FC<UIButtonProps> = ({
     );
   };
 
+  const handlePress = () => {
+    if (disabled || loading) return;
+    if (haptic) {
+      if (variant === 'danger') {
+        void HapticFeedback.medium();
+      } else {
+        void HapticFeedback.impactLight();
+      }
+    }
+    onPress?.();
+  };
+
   return (
     <Pressable
       style={({ pressed }) => [
         containerStyle,
         pressed && {
-          opacity: 0.8,
-          transform: [{ scale: 0.98 }],
+          opacity: 0.92,
+          transform: [{ scale: 0.985 }],
         },
       ]}
-      onPress={disabled || loading ? undefined : onPress}
+      onPress={disabled || loading ? undefined : handlePress}
       disabled={disabled || loading}
     >
       {renderContent()}

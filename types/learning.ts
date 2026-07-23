@@ -32,6 +32,8 @@ export interface Course {
   tags: string[];
   created_at: string;
   updated_at: string;
+  instructor_name?: string;
+  instructor_avatar?: string;
   // Relations
   owner?: Instructor;
   modules?: Module[];
@@ -55,6 +57,8 @@ export interface Lesson {
   id: string;
   module_id: string;
   title: string;
+  /** תקציר לרשימת שיעורים (אופציונלי) */
+  description?: string;
   duration_seconds?: number;
   is_preview: boolean;
   sort_index: number;
@@ -152,7 +156,8 @@ export interface ModuleWithLessons extends Module {
 }
 
 export interface CourseWithModules extends Course {
-  modules: ModuleWithLessons[];
+  modules?: ModuleWithLessons[];
+  lessons?: LessonWithProgress[];
   enrollment?: Enrollment;
 }
 
@@ -190,6 +195,9 @@ export interface ProgressUpdateRequest {
   lesson_id: string;
   status: ProgressStatus;
   last_position_seconds?: number;
+  total_duration_seconds?: number;
+  /** ל־invalidate של cache לפי קורס (אופציונלי) */
+  course_id?: string;
 }
 
 export interface QuizAttemptRequest {
@@ -250,6 +258,7 @@ export interface ProgressRingProps {
   size?: number;
   strokeWidth?: number;
   color?: string;
+  centerLabel?: string;
 }
 
 export interface AccessBadgeProps {

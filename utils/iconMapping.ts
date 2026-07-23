@@ -130,6 +130,7 @@ export const iconMapping: Record<string, any> = {
   'trending-up-outline': TrendingUp,
   'color-palette': Palette,
   'notifications': Bell,
+  'notifications-outline': Bell,
   'notifications-off': BellOff,
   'ellipsis-vertical': MoreVertical,
   'eye-off-outline': EyeOff,
@@ -161,6 +162,5 @@ export const getIcon = (ioniconName: string, size: number = 24, color: string = 
   }
   
   // אם לא נמצא, החזר אייקון ברירת מחדל
-  console.warn(`Icon not found: ${ioniconName}`);
   return X({ size, color, strokeWidth });
 };

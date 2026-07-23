@@ -21,15 +21,15 @@ export const useMentions = (text: string) => {
   const inputRef = useRef<any>(null);
 
   const insertMention = useCallback((user: { id: string; display: string }) => {
-    console.log('🎯 insertMention called with user:', user);
-    
     // Find the @ symbol position in the current text
     const currentText = text || '';
     const atSymbolIndex = currentText.lastIndexOf('@');
     if (atSymbolIndex === -1) {
-      console.log('❌ No @ symbol found in text');
-      return;
+      return undefined;
     }
+
+    // וידוא שה-display מתחיל עם @ (אם לא - נוסיף)
+    const displayText = user.display.startsWith('@') ? user.display : `@${user.display}`;
 
     // Create new text with mention inserted
     const beforeMention = currentText.substring(0, atSymbolIndex);
@@ -39,36 +39,30 @@ export const useMentions = (text: string) => {
     let newText: string;
     if (spaceIndex === -1) {
       // No space after @, replace everything after @
-      newText = beforeMention + user.display + ' ';
+      newText = beforeMention + displayText + ' ';
     } else {
       // Space found, replace text between @ and space
-      newText = beforeMention + user.display + ' ' + afterMention.substring(spaceIndex + 1);
+      newText = beforeMention + displayText + ' ' + afterMention.substring(spaceIndex + 1);
     }
-
-    console.log('🎯 New text created:', newText);
 
     // Add mention token
     const newToken: MentionToken = {
       id: user.id,
-      display: user.display,
+      display: displayText,
       start: atSymbolIndex,
-      end: atSymbolIndex + user.display.length,
+      end: atSymbolIndex + displayText.length,
     };
 
-    console.log('🎯 New mention token:', newToken);
-
     setMentionTokens(prev => {
-      console.log('🎯 Previous mention tokens:', prev);
-      
       // Remove any overlapping tokens
       const filtered = prev.filter(token => 
-        token.end <= atSymbolIndex || token.start >= atSymbolIndex + user.display.length
+        token.end <= atSymbolIndex || token.start >= atSymbolIndex + displayText.length
       );
       
       // Adjust positions of tokens that come after
       const adjusted = filtered.map(token => {
         if (token.start > atSymbolIndex) {
-          const shift = user.display.length + 1;
+          const shift = displayText.length + 1;
           return {
             ...token,
             start: token.start + shift,
@@ -79,7 +73,6 @@ export const useMentions = (text: string) => {
       });
 
       const result = [...adjusted, newToken].sort((a, b) => a.start - b.start);
-      console.log('🎯 Updated mention tokens:', result);
       return result;
     });
 
@@ -90,44 +83,49 @@ export const useMentions = (text: string) => {
     return newText;
   }, [text]);
 
-  const handleInputChange = useCallback((text: string) => {
-    console.log('🎯 handleInputChange called with text:', text);
+  const handleInputChange = useCallback((inputText: string) => {
+    // Handle empty text
+    if (!inputText || inputText.length === 0) {
+      setShowMentionPicker(false);
+      setMentionSearchQuery('');
+      setMentionTokens([]);
+      return;
+    }
     
     // Check for @ symbol to show mention picker
-    const lastAtSymbol = text.lastIndexOf('@');
+    const lastAtSymbol = inputText.lastIndexOf('@');
     if (lastAtSymbol !== -1) {
-      const afterAt = text.substring(lastAtSymbol + 1);
+      const afterAt = inputText.substring(lastAtSymbol + 1);
       const spaceIndex = afterAt.indexOf(' ');
+      const newlineIndex = afterAt.indexOf('\n');
       
-      console.log('🎯 Found @ at position:', lastAtSymbol);
-      console.log('🎯 Text after @:', afterAt);
-      console.log('🎯 Space index:', spaceIndex);
+      // בדיקה אם יש רווח או שורה חדשה
+      const hasDelimiter = spaceIndex !== -1 || newlineIndex !== -1;
       
-      // Only show mention picker if there's no space after @ and we're still typing
-      if (spaceIndex === -1 && afterAt.length > 0) {
-        console.log('🎯 Showing mention picker');
+      // Only show mention picker if there's no delimiter after @ and we're still typing
+      // גם כשיש רק @ בלי תווים אחריו - נציג את הפיקר
+      if (!hasDelimiter) {
         setShowMentionPicker(true);
         setMentionSearchQuery(afterAt);
         return;
-      } else {
-        console.log('🎯 Hiding mention picker - space found or no text after @');
       }
     }
     
     // Hide mention picker if no @ or if there's a space after @
     setShowMentionPicker(false);
+    setMentionSearchQuery('');
     
-    // Update mention tokens positions if text changed
+    // Update mention tokens - validate that each token still exists in text
     setMentionTokens(prev => {
-      return prev.map(token => {
-        const tokenText = text.substring(token.start, token.end);
-        if (tokenText === token.display) {
-          return token; // Token is still valid
+      return prev.filter(token => {
+        // בדיקת גבולות - וידוא שה-token עדיין בגבולות הטקסט
+        if (token.start < 0 || token.end > inputText.length) {
+          return false;
         }
         
-        // Token was modified, remove it
-        return null;
-      }).filter(Boolean) as MentionToken[];
+        const tokenText = inputText.substring(token.start, token.end);
+        return tokenText === token.display;
+      });
     });
   }, []);
 
@@ -136,31 +134,17 @@ export const useMentions = (text: string) => {
       const token = prev.find(t => t.id === tokenId);
       if (!token) return prev;
 
-      // Remove the token from text
-      if (inputRef.current) {
-        const currentText = inputRef.current.value || '';
-        const beforeToken = currentText.substring(0, token.start);
-        const afterToken = currentText.substring(token.end);
-        const newText = beforeToken + afterToken;
-
-        inputRef.current.value = newText;
-        
-        // Trigger input change
-        if (inputRef.current.onChangeText) {
-          inputRef.current.onChangeText(newText);
-        }
-      }
-
-      // Remove token and adjust positions
+      // Remove token and adjust positions of later tokens
+      const tokenLength = token.end - token.start;
+      
       return prev
         .filter(t => t.id !== tokenId)
         .map(t => {
           if (t.start > token.start) {
-            const shift = token.end - token.start;
             return {
               ...t,
-              start: t.start - shift,
-              end: t.end - shift,
+              start: t.start - tokenLength,
+              end: t.end - tokenLength,
             };
           }
           return t;
@@ -182,6 +166,13 @@ export const useMentions = (text: string) => {
     setMentionSearchQuery('');
   }, []);
 
+  // איפוס כל ה-mentions (קריאה כששולחים הודעה)
+  const clearAllMentions = useCallback(() => {
+    setMentionTokens([]);
+    setShowMentionPicker(false);
+    setMentionSearchQuery('');
+  }, []);
+
   return {
     mentionTokens,
     showMentionPicker,
@@ -192,5 +183,6 @@ export const useMentions = (text: string) => {
     removeMention,
     getMentionRanges,
     closeMentionPicker,
+    clearAllMentions,
   };
 };

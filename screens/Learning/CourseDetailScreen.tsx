@@ -1,30 +1,45 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useCourse, useEnrollInCourse, useCourseProgress } from '../../hooks/useLearning';
-import { ModuleSection } from '../../components/learning';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { AcademySubScreenBar, ModuleSection, LessonRow } from '../../components/learning';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { LessonWithProgress } from '../../types/learning';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
+import { ScreenChrome } from '../../components/ui';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import {
+  ACADEMY_CARD_HP,
+  academyCardFrameStyle,
+} from '../../components/learning/academyCardLayout';
+import { getAcademyCourseTier } from '../../components/learning/academyCourses';
 
 export const CourseDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { courseId } = route.params as { courseId: string };
   
+  const DesignTokens = useDesignTokens();
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const mainTabsHeight = useMainTabsHeight();
+  
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   
-  const { data: course, isLoading, error } = useCourse(courseId);
-  const { progressPercentage, lastLessonId } = useCourseProgress(courseId);
+  const { data: course, isLoading, error, refetch } = useCourse(courseId);
+  const { data: progressData, refetch: refetchProgress } = useCourseProgress(courseId);
+  
+  // טעינה מחדש של הנתונים כשהמשתמש חוזר למסך (למשל אחרי שצפה בסרטון)
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+      refetchProgress();
+    }, [refetch, refetchProgress])
+  );
+  const progressPercentage = progressData?.progressPercentage || 0;
+  const lastLessonId = progressData?.lastLessonId || null;
   const enrollMutation = useEnrollInCourse();
 
   const toggleModule = useCallback((moduleId: string) => {
@@ -40,16 +55,17 @@ export const CourseDetailScreen: React.FC = () => {
   }, []);
 
   const handleLessonPress = useCallback((lesson: LessonWithProgress) => {
-    navigation.navigate('LessonPlayerScreen' as never, { 
-      lessonId: lesson.id 
-    } as never);
-  }, [navigation]);
+    (navigation as any).navigate('LessonPlayerScreen', {
+      lessonId: lesson.id,
+      courseId,
+    });
+  }, [navigation, courseId]);
 
   const handleEnroll = useCallback(async () => {
     if (!course) return;
 
     if (course.access === 'paid') {
-      Alert.alert(
+      legacyAlert(
         'קורס בתשלום',
         'קורס זה דורש תשלום. התכונה תהיה זמינה בקרוב.',
         [{ text: 'אישור' }]
@@ -59,13 +75,13 @@ export const CourseDetailScreen: React.FC = () => {
 
     try {
       await enrollMutation.mutateAsync(course.id);
-      Alert.alert(
+      legacyAlert(
         'הצלחה!',
         'נרשמת בהצלחה לקורס',
         [{ text: 'אישור' }]
       );
     } catch (error) {
-      Alert.alert(
+      legacyAlert(
         'שגיאה',
         'לא ניתן להירשם לקורס כרגע. נסה שוב מאוחר יותר.',
         [{ text: 'אישור' }]
@@ -75,474 +91,485 @@ export const CourseDetailScreen: React.FC = () => {
 
   const handleContinueLearning = useCallback(() => {
     if (lastLessonId) {
-      navigation.navigate('LessonPlayerScreen' as never, { 
-        lessonId: lastLessonId 
-      } as never);
+      (navigation as any).navigate('LessonPlayerScreen', {
+        lessonId: lastLessonId,
+        courseId,
+      });
     }
-  }, [lastLessonId, navigation]);
+  }, [lastLessonId, navigation, courseId]);
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary} />
-        <Text style={styles.loadingText}>טוען קורס...</Text>
-      </View>
+      <ScreenChrome withBrandWatermark>
+        <StatusBar style="light" />
+        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+            <Text style={styles.loadingText}>טוען קורס...</Text>
+          </View>
+        </RNSafeAreaView>
+      </ScreenChrome>
     );
   }
 
   if (error || !course) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorTitle}>שגיאה בטעינת הקורס</Text>
-        <Text style={styles.errorMessage}>
-          {error?.message || 'הקורס לא נמצא'}
-        </Text>
-      </View>
+      <ScreenChrome withBrandWatermark>
+        <StatusBar style="light" />
+        <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>שגיאה בטעינת הקורס</Text>
+            <Text style={styles.errorMessage}>
+              {error?.message || 'הקורס לא נמצא'}
+            </Text>
+          </View>
+        </RNSafeAreaView>
+      </ScreenChrome>
     );
   }
 
   const isEnrolled = !!course.enrollment;
-  const totalLessons = course.modules?.reduce((sum, module) => 
-    sum + (module.lessons?.length || 0), 0) || 0;
+  const frameTier = getAcademyCourseTier(course) === 'premium' ? 'premium' : 'free';
 
   return (
-    <View style={{ flex: 1 }}>
-      <LinearGradient
-        colors={['rgba(0, 230, 84, 0.25)', 'transparent', 'rgba(0, 230, 84, 0.15)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        pointerEvents="none"
-      />
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Cover Image */}
-      <View style={styles.coverContainer}>
-        {course.cover_url ? (
-          <Image
-            source={{ uri: course.cover_url }}
-            style={styles.coverImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.coverPlaceholder}>
-            <Text style={styles.coverPlaceholderText}>📚</Text>
+    <ScreenChrome withBrandWatermark>
+      <StatusBar style="light" />
+      <RNSafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+          <ScrollView 
+            style={styles.container} 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+        <AcademySubScreenBar onBackPress={() => navigation.goBack()} />
+
+        <View style={{ paddingHorizontal: ACADEMY_CARD_HP }}>
+        {/* Cover Image */}
+        <View style={[styles.coverContainer, academyCardFrameStyle(frameTier)]}>
+          {course.cover_url ? (
+            <Image
+              source={{ uri: course.cover_url }}
+              style={styles.coverImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={styles.coverPlaceholder}>
+              <Text style={styles.coverPlaceholderText}>📚</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Content */}
+          <UICard
+            variant="blur"
+            padding="lg"
+            showGlassBorder={false}
+            style={[styles.infoCard, academyCardFrameStyle(frameTier)]}
+          >
+            <View style={styles.courseInfoStack}>
+              <View style={styles.titleBlock}>
+                <Text style={styles.title}>{course.title}</Text>
+                {course.subtitle ? <Text style={styles.subtitle}>{course.subtitle}</Text> : null}
+              </View>
+
+            {/* Instructor */}
+            {course.owner && (
+              <View style={styles.instructorContainer}>
+                <View style={styles.instructorAvatar}>
+                  {course.owner.avatar_url ? (
+                    <Image
+                      source={{ uri: course.owner.avatar_url }}
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.avatarPlaceholder}>
+                      {course.owner.display_name.charAt(0)}
+                    </Text>
+                  )}
+                </View>
+                <View style={styles.instructorInfo}>
+                  <Text style={styles.instructorName}>{course.owner.display_name}</Text>
+                  {course.owner.bio && (
+                    <Text style={styles.instructorBio} numberOfLines={2}>
+                      {course.owner.bio}
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Progress (if enrolled) */}
+            {isEnrolled && (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressHeader}>
+                  <Text style={styles.progressTitle}>התקדמות</Text>
+                  <Text style={styles.progressPercentage}>
+                    {Math.round(progressPercentage)}%
+                  </Text>
+                </View>
+                <View style={styles.progressBar}>
+                  <View 
+                    style={[
+                      styles.progressFill, 
+                      { width: `${progressPercentage}%` }
+                    ]} 
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Description */}
+            {course.description && (
+              <View style={styles.descriptionContainer}>
+                <Text style={styles.descriptionTitle}>תיאור הקורס</Text>
+                <Text style={styles.description}>{course.description}</Text>
+              </View>
+            )}
+
+            {/* Tags */}
+            {course.tags && course.tags.length > 0 && (
+              <View style={styles.tagsContainer}>
+                <Text style={styles.tagsTitle}>תגיות</Text>
+                <View style={styles.tagsRow}>
+                  {course.tags.map((tag, index) => (
+                    <View key={index} style={styles.tag}>
+                      <Text style={styles.tagText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+            </View>
+          </UICard>
+
+          {/* Action Button */}
+          <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+            {isEnrolled ? (
+              <TouchableOpacity
+                style={styles.continueButton}
+                onPress={handleContinueLearning}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.continueButtonText}>
+                  {lastLessonId ? 'המשך למידה ←' : 'התחל ←'}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.enrollButton}
+                onPress={handleEnroll}
+                disabled={enrollMutation.isPending}
+                activeOpacity={0.8}
+              >
+                {enrollMutation.isPending ? (
+                  <ActivityIndicator color={DesignTokens.colors.text.primary} size="small" />
+                ) : (
+                  <Text style={styles.enrollButtonText}>
+                    {course.access === 'free' ? 'הירשם בחינם' : 
+                     course.access === 'registration' ? 'הירשם לקורס' : 
+                     'קנה קורס'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Modules */}
+          {course.modules && course.modules.length > 0 && courseId !== 'david-training-course' && (
+            <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <Text style={styles.modulesTitle}>תוכן הקורס</Text>
+            {course.modules.map((module, moduleIndex) => {
+              // חישוב האינדקס ההתחלתי של השיעורים במודול זה
+              let lessonStartIndex = 0;
+              for (let i = 0; i < moduleIndex; i++) {
+                lessonStartIndex += course.modules![i].lessons?.length || 0;
+              }
+              
+              return (
+                <ModuleSection
+                  key={module.id}
+                  module={module}
+                  isExpanded={expandedModules.has(module.id)}
+                  onToggle={() => toggleModule(module.id)}
+                  onLessonPress={handleLessonPress}
+                  enrollment={course.enrollment}
+                  courseId={courseId}
+                  lessonStartIndex={lessonStartIndex}
+                />
+              );
+            })}
           </View>
         )}
         
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      <View style={styles.content}>
-        {/* Course Info */}
-        <View style={styles.courseInfo}>
-          <Text style={styles.title}>{course.title}</Text>
-          
-          {course.subtitle && (
-            <Text style={styles.subtitle}>{course.subtitle}</Text>
-          )}
-
-          {/* Instructor */}
-          {course.owner && (
-            <View style={styles.instructorContainer}>
-              <View style={styles.instructorAvatar}>
-                {course.owner.avatar_url ? (
-                  <Image
-                    source={{ uri: course.owner.avatar_url }}
-                    style={styles.avatarImage}
-                  />
-                ) : (
-                  <Text style={styles.avatarPlaceholder}>
-                    {course.owner.display_name.charAt(0)}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.instructorInfo}>
-                <Text style={styles.instructorName}>{course.owner.display_name}</Text>
-                {course.owner.bio && (
-                  <Text style={styles.instructorBio} numberOfLines={2}>
-                    {course.owner.bio}
-                  </Text>
-                )}
-              </View>
-            </View>
-          )}
-
-          {/* Course Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{totalLessons}</Text>
-              <Text style={styles.statLabel}>שיעורים</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{course.modules?.length || 0}</Text>
-              <Text style={styles.statLabel}>מודולים</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{course.language}</Text>
-              <Text style={styles.statLabel}>שפה</Text>
-            </View>
-          </View>
-
-          {/* Progress (if enrolled) */}
-          {isEnrolled && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressHeader}>
-                <Text style={styles.progressTitle}>התקדמות</Text>
-                <Text style={styles.progressPercentage}>
-                  {Math.round(progressPercentage)}%
-                </Text>
-              </View>
-              <View style={styles.progressBar}>
-                <View 
-                  style={[
-                    styles.progressFill, 
-                    { width: `${progressPercentage}%` }
-                  ]} 
-                />
-              </View>
-            </View>
-          )}
-
-          {/* Description */}
-          {course.description && (
-            <View style={styles.descriptionContainer}>
-              <Text style={styles.descriptionTitle}>תיאור הקורס</Text>
-              <Text style={styles.description}>{course.description}</Text>
-            </View>
-          )}
-
-          {/* Tags */}
-          {course.tags && course.tags.length > 0 && (
-            <View style={styles.tagsContainer}>
-              <Text style={styles.tagsTitle}>תגיות</Text>
-              <View style={styles.tagsRow}>
-                {course.tags.map((tag, index) => (
-                  <View key={index} style={styles.tag}>
-                    <Text style={styles.tagText}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Action Button */}
-        <View style={styles.actionContainer}>
-          {isEnrolled ? (
-            <TouchableOpacity
-              style={styles.continueButton}
-              onPress={handleContinueLearning}
-            >
-              <Text style={styles.continueButtonText}>
-                {lastLessonId ? 'המשך למידה' : 'התחל למידה'}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.enrollButton}
-              onPress={handleEnroll}
-              disabled={enrollMutation.isPending}
-            >
-              {enrollMutation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.enrollButtonText}>
-                  {course.access === 'free' ? 'הירשם בחינם' : 
-                   course.access === 'registration' ? 'הירשם לקורס' : 
-                   'קנה קורס'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Modules */}
-        {course.modules && course.modules.length > 0 && (
-          <View style={styles.modulesContainer}>
-            <Text style={styles.modulesTitle}>תוכן הקורס</Text>
-            {course.modules.map((module) => (
-              <ModuleSection
-                key={module.id}
-                module={module}
-                isExpanded={expandedModules.has(module.id)}
-                onToggle={() => toggleModule(module.id)}
-                onLessonPress={handleLessonPress}
+          {/* Lessons directly (for courses without modules like david-training-course) */}
+          {course.lessons && course.lessons.length > 0 && (courseId === 'david-training-course' || !course.modules || course.modules.length === 0) && (
+            <View style={{ marginBottom: DesignTokens.spacing.lg }}>
+              <Text style={styles.modulesTitle}>תוכן הקורס</Text>
+            {course.lessons.map((lesson, index) => (
+              <LessonRow
+                key={lesson.id}
+                lesson={lesson}
+                onPress={handleLessonPress}
                 enrollment={course.enrollment}
+                isLocked={!course.enrollment && !lesson.is_preview}
+                courseId={courseId}
+                index={index}
               />
             ))}
           </View>
         )}
-      </View>
-      </ScrollView>
-    </View>
+        </View>
+          </ScrollView>
+        </View>
+      </RNSafeAreaView>
+    </ScreenChrome>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background,
+  },
+  scrollContent: {
+    paddingBottom: tokens.spacing['5xl'],
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: DesignTokens.colors.background,
   },
   loadingText: {
-    marginTop: DesignTokens.spacing.md,
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.textSecondary,
+    marginTop: tokens.spacing.md,
+    fontSize: tokens.typography.fontSize.base,
+    color: tokens.colors.text.secondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: DesignTokens.spacing.lg,
-    backgroundColor: DesignTokens.colors.background,
+    paddingHorizontal: tokens.spacing.lg,
   },
   errorIcon: {
     fontSize: 48,
-    marginBottom: DesignTokens.spacing.lg,
+    marginBottom: tokens.spacing.lg,
   },
   errorTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
+    marginBottom: tokens.spacing.sm,
     textAlign: 'center',
   },
   errorMessage: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   coverContainer: {
-    position: 'relative',
     height: 200,
+    marginBottom: tokens.spacing.lg,
+    overflow: 'hidden',
+  },
+  infoCard: {
+    marginBottom: tokens.spacing.lg,
   },
   coverImage: {
     width: '100%',
     height: '100%',
-  },
+  } as any,
   coverPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: DesignTokens.colors.elevated,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   coverPlaceholderText: {
     fontSize: 48,
   },
-  backButton: {
-    position: 'absolute',
-    top: DesignTokens.spacing.lg,
-    right: DesignTokens.spacing.lg,
-    width: 40,
-    height: 40,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+  courseInfoStack: {
+    width: '100%',
+    gap: tokens.spacing.sm,
   },
-  backButtonText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    color: '#FFFFFF',
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-  },
-  content: {
-    padding: DesignTokens.spacing.lg,
-  },
-  courseInfo: {
-    marginBottom: DesignTokens.spacing.lg,
+  titleBlock: {
+    width: '100%',
+    gap: tokens.spacing.xs,
+    alignItems: 'stretch',
   },
   title: {
-    fontSize: DesignTokens.typography.fontSize['2xl'],
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize['2xl'],
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize['2xl'] * 1.22),
   },
   subtitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    color: DesignTokens.colors.textSecondary,
-    marginBottom: DesignTokens.spacing.lg,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: '500' as any,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.base * 1.45),
   },
   instructorContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
-    marginBottom: DesignTokens.spacing.lg,
   },
   instructorAvatar: {
     width: 50,
     height: 50,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: DesignTokens.colors.elevated,
+    borderRadius: tokens.borderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: DesignTokens.spacing.md,
+    marginRight: tokens.spacing.md,
   },
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: DesignTokens.borderRadius.full,
-  },
+    borderRadius: tokens.borderRadius.full,
+  } as any,
   avatarPlaceholder: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.text.primary,
   },
   instructorInfo: {
     flex: 1,
   },
   instructorName: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.xs,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.base * 1.35),
+    marginBottom: tokens.spacing.micro,
   },
   instructorBio: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.md,
-    backgroundColor: DesignTokens.colors.surface,
-    borderRadius: DesignTokens.borderRadius.lg,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.primary,
-    marginBottom: DesignTokens.spacing.xs,
-  },
-  statLabel: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.45),
   },
   progressContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    width: '100%',
   },
   progressHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: DesignTokens.spacing.sm,
+    marginBottom: tokens.spacing.sm,
   },
   progressTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.fontSize.base * 1.3),
   },
   progressPercentage: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.bold,
-    color: DesignTokens.colors.primary,
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.primary.main,
+    lineHeight: Math.round(tokens.typography.fontSize.base * 1.3),
   },
   progressBar: {
     height: 8,
-    backgroundColor: DesignTokens.colors.border,
-    borderRadius: DesignTokens.borderRadius.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: tokens.borderRadius.sm,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: DesignTokens.colors.primary,
-    borderRadius: DesignTokens.borderRadius.sm,
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: tokens.borderRadius.sm,
   },
   descriptionContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    width: '100%',
+    gap: tokens.spacing.sm,
   },
   descriptionTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.35),
   },
   description: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
-    lineHeight: DesignTokens.typography.lineHeight.relaxed * DesignTokens.typography.fontSize.sm,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.secondary,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.52),
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   tagsContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    width: '100%',
+    gap: tokens.spacing.sm,
   },
   tagsTitle: {
-    fontSize: DesignTokens.typography.fontSize.base,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.sm,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
+    writingDirection: 'rtl',
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.35),
   },
   tagsRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
-    gap: DesignTokens.spacing.sm,
+    gap: tokens.spacing.xs,
   },
   tag: {
-    backgroundColor: DesignTokens.colors.elevated,
-    paddingHorizontal: DesignTokens.spacing.md,
-    paddingVertical: DesignTokens.spacing.sm,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.sm,
   },
   tagText: {
-    fontSize: DesignTokens.typography.fontSize.sm,
-    color: DesignTokens.colors.textSecondary,
-  },
-  actionContainer: {
-    marginBottom: DesignTokens.spacing.lg,
+    fontSize: tokens.typography.fontSize.sm,
+    color: tokens.colors.text.primary,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.3),
   },
   enrollButton: {
-    backgroundColor: DesignTokens.colors.primary,
-    paddingVertical: DesignTokens.spacing.lg,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.primary.main,
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
-    ...DesignTokens.shadows.green,
+    justifyContent: 'center',
+    minHeight: 50,
+    ...tokens.shadows.md,
   },
   enrollButtonText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
   },
   continueButton: {
-    backgroundColor: DesignTokens.colors.success,
-    paddingVertical: DesignTokens.spacing.lg,
-    borderRadius: DesignTokens.borderRadius.lg,
+    backgroundColor: tokens.colors.primary.main,
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    borderRadius: tokens.borderRadius.lg,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+    ...tokens.shadows.md,
   },
   continueButtonText: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: '#FFFFFF',
-  },
-  modulesContainer: {
-    marginBottom: DesignTokens.spacing['4xl'],
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
   },
   modulesTitle: {
-    fontSize: DesignTokens.typography.fontSize.lg,
-    fontWeight: DesignTokens.typography.fontWeight.semibold,
-    color: DesignTokens.colors.textPrimary,
-    marginBottom: DesignTokens.spacing.lg,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
+    marginBottom: tokens.spacing.lg,
     textAlign: 'right',
   },
 });

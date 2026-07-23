@@ -1,17 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// EODHD API configuration
-const EODHD_API_KEY = '68c99499978585.44924748';
-const EODHD_BASE_URL = 'https://eodhd.com/api';
+const BENZINGA_API_KEY = Deno.env.get('BENZINGA_API_KEY') ?? '';
+const BENZINGA_BASE_URL = 'https://api.benzinga.com/api/v2';
 
-// FRED API configuration  
-const FRED_API_KEY = 'f4d63bd9fddd00b175c1c99ca49b4247';
+const FRED_API_KEY = Deno.env.get('FRED_API_KEY') ?? '';
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred';
 
 serve(async (req) => {
@@ -79,23 +77,23 @@ async function updateEconomicData(supabaseClient: any) {
     
     const startTime = Date.now();
     let totalEvents = 0;
-    let source = 'FRED';
+    let source = 'Benzinga';
 
-    // Try EODHD first
+    // Try Benzinga first
     try {
-      console.log('📊 Trying EODHD API...')
-      const eodhdEvents = await fetchEODHDEvents();
-      if (eodhdEvents.length > 0) {
-        await saveEventsToDatabase(supabaseClient, eodhdEvents, 'EODHD');
-        totalEvents += eodhdEvents.length;
-        source = 'EODHD';
-        console.log(`✅ EODHD: Loaded ${eodhdEvents.length} events`)
+      console.log('📊 Trying Benzinga API...')
+      const benzingaEvents = await fetchBenzingaEvents();
+      if (benzingaEvents.length > 0) {
+        await saveEventsToDatabase(supabaseClient, benzingaEvents, 'Benzinga');
+        totalEvents += benzingaEvents.length;
+        source = 'Benzinga';
+        console.log(`✅ Benzinga: Loaded ${benzingaEvents.length} events`)
       }
-    } catch (eodhdError) {
-      console.log('⚠️ EODHD failed, trying FRED:', eodhdError.message)
+    } catch (benzingaError) {
+      console.log('⚠️ Benzinga failed, trying FRED:', benzingaError.message)
     }
 
-    // Fallback to FRED if EODHD failed or returned no data
+    // Fallback to FRED if Benzinga failed or returned no data
     if (totalEvents === 0) {
       console.log('📊 Trying FRED API...')
       const fredEvents = await fetchFREDEvents();
@@ -137,50 +135,68 @@ async function updateEconomicData(supabaseClient: any) {
   }
 }
 
-// Fetch events from EODHD API
-async function fetchEODHDEvents() {
+// Fetch events from Benzinga API
+async function fetchBenzingaEvents() {
   const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - 7); // שבוע אחורה
   const futureDate = new Date(today);
-  futureDate.setDate(futureDate.getDate() + 30);
+  futureDate.setMonth(futureDate.getMonth() + 3); // 3 חודשים קדימה
   
-  const todayStr = today.toISOString().split('T')[0];
-  const futureStr = futureDate.toISOString().split('T')[0];
+  const fromDate = startDate.toISOString().split('T')[0];
+  const toDate = futureDate.toISOString().split('T')[0];
 
-  const url = `${EODHD_BASE_URL}/economic-events?api_token=${EODHD_API_KEY}&fmt=json&country=US&from=${todayStr}&to=${futureStr}&limit=100`;
+  const url = new URL(`${BENZINGA_BASE_URL}/calendar/economics`);
+  url.searchParams.append('token', BENZINGA_API_KEY);
+  url.searchParams.append('accept', 'application/json');
+  url.searchParams.append('parameters[date_from]', fromDate);
+  url.searchParams.append('parameters[date_to]', toDate);
+  url.searchParams.append('parameters[country]', 'US');
+  url.searchParams.append('parameters[importance]', '2'); // חשיבות 2 ומעלה
+  url.searchParams.append('pagesize', '1000');
   
-  const response = await fetch(url);
+  const response = await fetch(url.toString());
   
   if (!response.ok) {
-    throw new Error(`EODHD API error: ${response.status}`);
+    throw new Error(`Benzinga API error: ${response.status}`);
   }
 
   const data = await response.json();
   
-  if (!Array.isArray(data)) {
+  if (!data.economics || !Array.isArray(data.economics)) {
     return [];
   }
 
-  return data.map((event: any) => ({
-    event_id: `eodhd_${event.id || event.date}_${event.time}`,
-    title: event.event || event.type || 'Economic Event',
-    description: `${event.type} - ${event.country}`,
-    country: 'US',
-    currency: 'USD',
-    importance: mapImportance(event.importance),
-    event_date: event.date,
-    event_time: event.time || '00:00',
-    actual_value: event.actual?.toString(),
-    forecast_value: event.estimate?.toString(),
-    previous_value: event.previous?.toString(),
-    category: mapCategory(event.type),
-    source: 'EODHD',
-    event_type: event.type,
-    period: event.period,
-    comparison_type: event.comparison,
-    is_historical: new Date(event.date) < new Date(),
-    is_upcoming: new Date(event.date) >= new Date(),
-    last_fetched_at: new Date().toISOString()
-  }));
+  return data.economics.map((event: any) => {
+    // ממיר importance של Benzinga (0-5) לפורמט של האפליקציה
+    let importance: 'high' | 'medium' | 'low' = 'low';
+    if (event.importance >= 4) {
+      importance = 'high';
+    } else if (event.importance >= 2) {
+      importance = 'medium';
+    }
+
+    return {
+      event_id: `benzinga_${event.id}`,
+      title: event.event_name,
+      description: event.description || event.event_name,
+      country: event.country || 'US',
+      currency: 'USD',
+      importance,
+      event_date: event.date,
+      event_time: event.time || '00:00:00',
+      actual_value: event.actual || null,
+      forecast_value: event.consensus || null,
+      previous_value: event.prior || null,
+      category: mapCategory(event.event_name),
+      source: 'Benzinga',
+      event_type: event.event_name,
+      period: event.event_period || null,
+      is_historical: new Date(event.date) < new Date(),
+      is_upcoming: new Date(event.date) >= new Date(),
+      last_fetched_at: new Date().toISOString()
+    };
+  });
 }
 
 // Fetch events from FRED API

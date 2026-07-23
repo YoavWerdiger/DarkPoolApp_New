@@ -19,7 +19,7 @@ export const Icon: React.FC<IconProps> = ({
   const IconComponent = getIcon(name, size, color, strokeWidth);
   
   if (React.isValidElement(IconComponent)) {
-    return React.cloneElement(IconComponent, { style });
+    return React.cloneElement(IconComponent as React.ReactElement<{ style?: object }>, { style });
   }
   
   return IconComponent;

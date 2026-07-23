@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,7 +37,8 @@ serve(async (req) => {
       ReturnValue,
       UIValues,
       TranzactionInfo,
-      DocumentInfo
+      DocumentInfo,
+      TokenInfo  // TokenInfo contains Token for recurring payments!
     } = callbackData
 
     // Extract our internal data from ReturnValue
@@ -71,13 +72,50 @@ serve(async (req) => {
       }
     }
 
+    // Extract TokenInfo for recurring payments
+    let paymentToken = ''
+    let tokenExpDate = null
+    let cardLast4 = ''
+    let cardBrand = ''
+    
+    if (TokenInfo) {
+      try {
+        const tokenInfo = JSON.parse(TokenInfo)
+        paymentToken = tokenInfo.Token || ''
+        tokenExpDate = tokenInfo.TokenExDate || null
+        console.log('🔄 Payment Callback: TokenInfo extracted:', {
+          hasToken: !!paymentToken,
+          tokenExpDate: tokenExpDate
+        })
+      } catch (e) {
+        console.error('❌ Payment Callback: Error parsing TokenInfo:', e)
+      }
+    }
+    
+    // Extract card info from TranzactionInfo if available
+    if (TranzactionInfo) {
+      try {
+        const tranzactionInfo = JSON.parse(TranzactionInfo)
+        cardLast4 = tranzactionInfo.Last4CardDigitsString || tranzactionInfo.Last4CardDigits || ''
+        cardBrand = tranzactionInfo.Brand || ''
+        console.log('🔄 Payment Callback: Card info extracted:', {
+          last4: cardLast4,
+          brand: cardBrand
+        })
+      } catch (e) {
+        console.error('❌ Payment Callback: Error parsing TranzactionInfo:', e)
+      }
+    }
+
     console.log('🔄 Payment Callback: Extracted data:', {
       userId,
       planId,
       transactionId,
       cardcomTransactionId: TranzactionId,
       responseCode: ResponseCode,
-      amount: Amount
+      amount: Amount,
+      hasToken: !!paymentToken,
+      cardLast4: cardLast4
     })
 
     // Determine payment status based on CardCom response
@@ -151,25 +189,41 @@ serve(async (req) => {
           console.log('✅ Payment Callback: User subscription updated')
         }
 
-        // Create or update user subscription record
+        // Create or update user subscription record with Token for recurring payments
+        const subscriptionData: any = {
+          user_id: userId,
+          plan_id: planId,
+          status: 'active',
+          starts_at: new Date().toISOString(),
+          expires_at: expiresAt.toISOString(),
+          auto_renew: true,
+          updated_at: new Date().toISOString()
+        }
+        
+        // Add token info if available (for recurring payments)
+        if (paymentToken) {
+          subscriptionData.cardcom_token = paymentToken
+          subscriptionData.cardcom_token_exp_date = tokenExpDate
+          subscriptionData.card_last4_digits = cardLast4
+          subscriptionData.card_brand = cardBrand
+          console.log('🔄 Payment Callback: Adding token for recurring payments:', {
+            hasToken: true,
+            tokenExpDate: tokenExpDate,
+            cardLast4: cardLast4
+          })
+        }
+        
         const { error: subscriptionError } = await supabaseClient
           .from('user_subscriptions')
-          .upsert({
-            user_id: userId,
-            plan_id: planId,
-            status: 'active',
-            starts_at: new Date().toISOString(),
-            expires_at: expiresAt.toISOString(),
-            auto_renew: true,
-            updated_at: new Date().toISOString()
-          }, {
+          .upsert(subscriptionData, {
             onConflict: 'user_id,plan_id'
           })
 
         if (subscriptionError) {
           console.error('❌ Payment Callback: Error creating subscription:', subscriptionError)
         } else {
-          console.log('✅ Payment Callback: User subscription record created/updated')
+          console.log('✅ Payment Callback: User subscription record created/updated', 
+            paymentToken ? 'with recurring payment token' : 'without token')
         }
       }
     }

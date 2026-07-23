@@ -2,9 +2,9 @@
 // שולף אירועי יומן כלכלי מ-EODHD
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
 
-const EODHD_API_KEY = '68e3c3af900997.85677801'
+const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
 
 // תרגום כותרות לעברית
 function translateTitle(eventType: string): string {
@@ -94,6 +94,121 @@ function translateTitle(eventType: string): string {
   return eventType;
 }
 
+// חילוץ תאריך ושעה נכון מ-EODHD API
+function parseEventDateTime(eodhdDateString: string): { date: string; time: string; fullDateTime: Date } {
+  try {
+    // EODHD API מחזיר פורמט: "YYYY-MM-DD HH:MM:SS" או "YYYY-MM-DD"
+    // האירועים הכלכליים בארה"ב בדרך כלל בשעה המקומית (EST/EDT) או UTC
+    // ננסה לפרסר כמה פורמטים
+    
+    if (!eodhdDateString || eodhdDateString.trim() === '') {
+      throw new Error('Empty date string');
+    }
+    
+    let dateTimeStr = eodhdDateString.trim();
+    
+    // אם אין שעה, נניח 08:30 (זמן פרסום נפוץ בארה"ב)
+    if (!dateTimeStr.includes(' ')) {
+      dateTimeStr = `${dateTimeStr} 08:30:00`;
+    }
+    
+    // ניסיון 1: פרסר ישירות (JavaScript מפרש לפי local time)
+    let parsedDate = new Date(dateTimeStr);
+    
+    // ניסיון 2: אם נכשל, ננסה כ-UTC
+    if (isNaN(parsedDate.getTime())) {
+      parsedDate = new Date(dateTimeStr + ' UTC');
+    }
+    
+    // ניסיון 3: בנייה ידנית מ-components
+    if (isNaN(parsedDate.getTime())) {
+      const [datePart, timePart] = dateTimeStr.split(' ');
+      if (datePart && timePart) {
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute, second] = timePart.split(':').map(Number);
+        
+        // נניח שזה EST/EDT (אירועים כלכליים בארה"ב)
+        // EST = UTC-5, EDT = UTC-4
+        // לכן נוסיף 5-6 שעות כדי לקבל UTC, ואז נוסיף 2-3 לשעון ישראל
+        const tempDate = new Date(year, month - 1, day);
+        const estOffset = isEDT(tempDate) ? 4 : 5; // שעות הפרש מ-UTC
+        const utcHour = (hour || 8) + estOffset;
+        parsedDate = new Date(Date.UTC(year, month - 1, day, utcHour, minute || 30, second || 0));
+      }
+    }
+    
+    // אם עדיין נכשל, fallback פשוט
+    if (isNaN(parsedDate.getTime())) {
+      const [datePart, timePart] = dateTimeStr.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = (timePart || '08:30').split(':').map(Number);
+      parsedDate = new Date(Date.UTC(year, month - 1, day, hour || 8, minute || 30, 0));
+    }
+    
+    // המרה לשעון ישראל (UTC+2 בחורף, UTC+3 בקיץ)
+    // אם parsedDate כבר ב-UTC, נוסיף את הפרש השעות
+    const isDST = isIsraelDST(parsedDate);
+    const israelOffsetHours = isDST ? 3 : 2;
+    
+    // יצירת תאריך בשעון ישראל
+    const israelDate = new Date(parsedDate.getTime() + israelOffsetHours * 60 * 60 * 1000);
+    
+    // חילוץ תאריך ושעה בפורמט שלנו (בשעון ישראל)
+    const date = israelDate.toISOString().split('T')[0];
+    const hours = israelDate.getHours().toString().padStart(2, '0');
+    const minutes = israelDate.getMinutes().toString().padStart(2, '0');
+    const time = `${hours}:${minutes}`;
+    
+    return { date, time, fullDateTime: israelDate };
+  } catch (error) {
+    console.log('❌ Error parsing date/time:', eodhdDateString, error);
+    // fallback - חילוץ פשוט
+    const datePart = eodhdDateString.split(' ')[0];
+    const timePart = eodhdDateString.includes(' ') ? eodhdDateString.split(' ')[1].substring(0, 5) : '08:30';
+    return { 
+      date: datePart, 
+      time: timePart,
+      fullDateTime: new Date(datePart + 'T' + timePart)
+    };
+  }
+}
+
+// בדיקה אם ארה"ב ב-EDT (Daylight Saving Time)
+function isEDT(date: Date): boolean {
+  const month = date.getMonth() + 1; // 1-12
+  // EDT: מרץ-נובמבר (בערך)
+  return month >= 4 && month <= 10;
+}
+
+// בדיקה אם ישראל ב-DST (Daylight Saving Time)
+function isIsraelDST(date: Date): boolean {
+  // DST בישראל: מארס-אוקטובר (בערך)
+  const month = date.getUTCMonth() + 1; // 1-12
+  // דיוק יותר: DST מתחיל בסוף מרץ ומסתיים בסוף אוקטובר
+  // לצורך פשטות, נשתמש בחישוב משוער
+  return month >= 4 && month <= 9;
+}
+
+// תיקון תאריך לפי פריסה נכונה - אירועים ב-00:00-06:00 עוברים ליום הקודם
+function adjustDateForEarlyEvents(date: string, time: string): string {
+  try {
+    const [hours, minutes] = time.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes;
+    
+    // אם השעה היא בין 00:00-06:00, העבר ליום הקודם
+    if (totalMinutes < 6 * 60) {
+      const eventDate = new Date(date);
+      eventDate.setDate(eventDate.getDate() - 1);
+      return eventDate.toISOString().split('T')[0];
+    }
+    
+    return date;
+  } catch (error) {
+    console.log('Error adjusting date:', error);
+    return date;
+  }
+}
+
 serve(async (req) => {
   try {
     console.log('🚀 Economic Calendar Sync Started')
@@ -132,45 +247,74 @@ serve(async (req) => {
     
     // המרה לפורמט שלנו
     const events = apiData.map((e: any) => {
-      const [date, time] = e.date.split(' ')
-      const shortTime = time ? time.substring(0, 5) : '00:00'
-      
-      const originalType = e.type || 'Economic Event'
-      const translatedTitle = translateTitle(originalType)
-      
-      console.log(`🔄 "${originalType}" → "${translatedTitle}"`)
-      
-      // קביעת חשיבות
-      const type = originalType.toLowerCase()
-      let importance = 'medium'
-      if (type.includes('cpi') || type.includes('nfp') || type.includes('employment') || 
-          type.includes('gdp') || type.includes('fomc') || type.includes('pce') || 
-          type.includes('ppi') || type.includes('retail sales') || type.includes('unemployment')) {
-        importance = 'high'
-      }
-      
-      // קטגוריה
-      let category = 'כלכלה'
-      if (type.includes('cpi') || type.includes('ppi') || type.includes('inflation') || type.includes('pce')) category = 'אינפלציה'
-      else if (type.includes('employ') || type.includes('nfp') || type.includes('jobless')) category = 'תעסוקה'
-      else if (type.includes('gdp')) category = 'צמיחה'
-      else if (type.includes('fed') || type.includes('fomc') || type.includes('rate')) category = 'מדיניות מוניטרית'
-      
-      return {
-        id: `econ_${e.type}_${e.date}`.replace(/[^a-zA-Z0-9_]/g, '_'),
-        title: translatedTitle,
-        country: 'ארצות הברית',
-        currency: 'USD',
-        importance,
-        date,
-        time: shortTime,
-        actual: e.actual?.toString() || '',
-        forecast: e.estimate?.toString() || '',
-        previous: e.previous?.toString() || '',
-        description: `${e.type}${e.period ? ` (${e.period})` : ''}`,
-        category,
-        impact: importance,
-        source: 'EODHD'
+      try {
+        // חילוץ תאריך ושעה נכון מ-EODHD API
+        const { date: parsedDate, time: parsedTime } = parseEventDateTime(e.date || '');
+        
+        // תיקון תאריך - אירועים מוקדמים (00:00-06:00) עוברים ליום הקודם
+        const adjustedDate = adjustDateForEarlyEvents(parsedDate, parsedTime);
+        
+        const originalType = e.type || 'Economic Event'
+        const translatedTitle = translateTitle(originalType)
+        
+        console.log(`🔄 "${originalType}" → "${translatedTitle}" - Date: ${e.date} → ${adjustedDate} ${parsedTime}`)
+        
+        // קביעת חשיבות
+        const type = originalType.toLowerCase()
+        let importance = 'medium'
+        if (type.includes('cpi') || type.includes('nfp') || type.includes('employment') || 
+            type.includes('gdp') || type.includes('fomc') || type.includes('pce') || 
+            type.includes('ppi') || type.includes('retail sales') || type.includes('unemployment')) {
+          importance = 'high'
+        }
+        
+        // קטגוריה
+        let category = 'כלכלה'
+        if (type.includes('cpi') || type.includes('ppi') || type.includes('inflation') || type.includes('pce')) category = 'אינפלציה'
+        else if (type.includes('employ') || type.includes('nfp') || type.includes('jobless')) category = 'תעסוקה'
+        else if (type.includes('gdp')) category = 'צמיחה'
+        else if (type.includes('fed') || type.includes('fomc') || type.includes('rate')) category = 'מדיניות מוניטרית'
+        
+        // יצירת ID ייחודי
+        const eventId = `econ_${(e.type || '').replace(/[^a-zA-Z0-9]/g, '_')}_${adjustedDate}_${parsedTime.replace(':', '')}`.replace(/[^a-zA-Z0-9_]/g, '_');
+        
+        return {
+          id: eventId,
+          title: translatedTitle,
+          country: 'ארצות הברית',
+          currency: 'USD',
+          importance,
+          date: adjustedDate,
+          time: parsedTime,
+          actual: e.actual?.toString() || '',
+          forecast: e.estimate?.toString() || '',
+          previous: e.previous?.toString() || '',
+          description: `${e.type}${e.period ? ` (${e.period})` : ''}`,
+          category,
+          impact: importance,
+          source: 'EODHD'
+        }
+      } catch (error) {
+        console.error('❌ Error processing event:', e, error);
+        // fallback פשוט
+        const [date, time] = (e.date || '').split(' ');
+        const shortTime = time ? time.substring(0, 5) : '00:00';
+        return {
+          id: `econ_${(e.type || 'event').replace(/[^a-zA-Z0-9_]/g, '_')}_${date}_${shortTime.replace(':', '')}`,
+          title: e.type || 'Economic Event',
+          country: 'ארצות הברית',
+          currency: 'USD',
+          importance: 'medium',
+          date: date || new Date().toISOString().split('T')[0],
+          time: shortTime,
+          actual: e.actual?.toString() || '',
+          forecast: e.estimate?.toString() || '',
+          previous: e.previous?.toString() || '',
+          description: e.type || '',
+          category: 'כלכלה',
+          impact: 'medium',
+          source: 'EODHD'
+        };
       }
     })
     

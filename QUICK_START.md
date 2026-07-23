@@ -1,111 +1,99 @@
-# 🚀 הפעלה מהירה - מערכת הלמידה
+# 🚀 התחלה מהירה - 5 דקות!
 
-## שלב 1: הגדרת מסד הנתונים
+## פשוט העתק והדבק את הפקודות האלה בטרמינל:
 
-1. **פתח את Supabase Dashboard**
-2. **עבור ל-SQL Editor**
-3. **הפעל את הקבצים הבאים בסדר:**
-
-```sql
--- 1. צור סכמה וטבלאות
-\i learning_schema.sql
-
--- 2. הפעל מדיניות RLS
-\i learning_rls_policies.sql
-
--- 3. הפעל מדיניות Storage
-\i learning_storage_policies.sql
-
--- 4. הוסף נתוני דוגמה (אופציונלי)
-\i learning_sample_data.sql
-```
-
-## שלב 2: הגדרת Storage
-
-1. **עבור ל-Storage ב-Supabase**
-2. **צור buckets חדשים:**
-   - `course-media` (private)
-   - `course-covers` (public)
-
-## שלב 3: הגדרת Edge Functions
-
-1. **התקן Supabase CLI:**
+### 1️⃣ התחברות (יפתח דפדפן)
 ```bash
-npm install -g supabase
+cd /Users/yoavwerdiger/DarkPoolApp_New-1
+npm run supabase:login
 ```
 
-2. **התחבר לפרויקט:**
+### 2️⃣ חיבור לפרויקט
 ```bash
-supabase login
-supabase link --project-ref YOUR_PROJECT_REF
+npm run supabase:link
 ```
 
-3. **העלה Functions:**
+בחר את הפרויקט שלך מהרשימה.
+
+### 3️⃣ יצירת טבלאות
+
+**אפשרות א': דרך Dashboard (מומלץ)**
+1. פתח: https://supabase.com/dashboard
+2. בחר את הפרויקט שלך
+3. SQL Editor → New Query
+4. העתק והדבק את התוכן של: `database/benzinga_economic_events_table.sql`
+5. לחץ Run
+
+**אפשרות ב': דרך קובץ**
 ```bash
-supabase functions deploy get-signed-media-url
-supabase functions deploy finalize-quiz
+# בדוק את ה-DB URL
+npm run supabase:status
+
+# הרץ את הסקריפט (צריך את הסיסמה)
+psql "postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres" \
+  -f database/benzinga_economic_events_table.sql
 ```
 
-## שלב 4: הפעלת האפליקציה
-
-1. **התקן תלויות:**
+### 4️⃣ פריסה מלאה!
 ```bash
-npm install
+npm run benzinga:setup
 ```
 
-2. **הפעל את האפליקציה:**
+זה יעשה:
+- ✅ הגדרת API Key
+- ✅ פריסת כל ה-3 Functions
+
+### 5️⃣ בדיקה
 ```bash
-npm start
+# צפה בלוגים
+npm run supabase:logs:economics
 ```
-
-3. **בחר פלטפורמה:**
-   - `a` עבור Android
-   - `i` עבור iOS
-   - `w` עבור Web
-
-## שלב 5: בדיקה
-
-1. **פתח את האפליקציה**
-2. **עבור לטאב "קורסים"**
-3. **בדוק שהקורסים נטענים**
-4. **נסה להירשם לקורס**
-5. **בדוק נגן השיעורים**
-
-## 🔧 פתרון בעיות נפוצות
-
-### שגיאת "Unauthorized"
-- בדוק שה-RLS policies הופעלו
-- ודא שהמשתמש מחובר
-
-### וידאו לא נטען
-- בדוק שה-Edge Function הועלה
-- ודא שה-bucket `course-media` קיים
-
-### שגיאות TypeScript
-- הרץ `npm install` שוב
-- בדוק שהקבצים נשמרו נכון
-
-## 📱 תכונות לבדיקה
-
-- [ ] רשימת קורסים
-- [ ] פרטי קורס
-- [ ] הרשמה לקורס
-- [ ] נגן וידאו
-- [ ] מעקב התקדמות
-- [ ] חידונים
-- [ ] מסך "הלמידה שלי"
-
-## 🎯 השלבים הבאים
-
-1. **הוסף קורסים אמיתיים**
-2. **העלה קבצי וידאו**
-3. **צור חידונים**
-4. **התאם אישית את העיצוב**
-5. **הוסף תכונות נוספות**
 
 ---
 
-**זמן הפעלה משוער**: 15-30 דקות  
-**רמת קושי**: בינונית  
-**דרישות**: Supabase project, Node.js, Expo CLI
+## 🎯 זהו! עכשיו רק צריך להגדיר Cron Jobs
 
+1. עבור ל: https://supabase.com/dashboard
+2. בחר את הפרויקט שלך
+3. Database → Cron Jobs → Create a new cron job
+
+### Job #1: Earnings
+**Schedule:** `0 6,18 * * *`
+```sql
+SELECT net.http_post(
+  url := 'https://[YOUR_PROJECT_REF].supabase.co/functions/v1/daily-earnings-sync-simple',
+  headers := '{"Authorization": "Bearer [YOUR_ANON_KEY]"}'::jsonb
+);
+```
+
+### Job #2: Economics  
+**Schedule:** `0 */6 * * *`
+```sql
+SELECT net.http_post(
+  url := 'https://[YOUR_PROJECT_REF].supabase.co/functions/v1/benzinga-economics-sync',
+  headers := '{"Authorization": "Bearer [YOUR_ANON_KEY]"}'::jsonb
+);
+```
+
+**איפה למצוא את הערכים:**
+```bash
+npm run supabase:status
+```
+
+זה יראה לך את:
+- API URL (יש בו את PROJECT_REF)
+- anon key (זה ANON_KEY)
+
+---
+
+## ✅ בדיקה סופית
+
+```sql
+-- עבור ל-SQL Editor והרץ:
+SELECT COUNT(*) FROM economic_events_cache;
+SELECT COUNT(*) FROM earnings_calendar;
+```
+
+---
+
+**זהו! המערכת מוכנה! 🎉**

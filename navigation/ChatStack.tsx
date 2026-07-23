@@ -1,45 +1,82 @@
-  import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
-import ChatsListScreen from '../screens/Chat/ChatsListScreen';
-import ChatRoomScreen from '../screens/Chat/ChatRoomScreen';
-import GroupInfoScreen from '../screens/Chat/GroupInfoScreen';
-import MediaGalleryScreen from '../screens/Chat/MediaGalleryScreen';
-import ChannelsScreen from '../screens/Chat/ChannelsScreen';
+import React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import ChatGroupsListScreen from '../screens/ChatNew/ChatGroupsListScreen';
+import ChatGroupScreen from '../screens/ChatNew/ChatGroupScreen';
+import ChatGroupInfoScreen from '../screens/ChatNew/ChatGroupInfoScreen';
+import ChatGroupSettingsScreen from '../screens/ChatNew/ChatGroupSettingsScreen';
+import SavedMediaScreen from '../screens/ChatNew/SavedMediaScreen';
+import GroupMediaGalleryScreen from '../screens/ChatNew/GroupMediaGalleryScreen';
+import PrivacySupportScreen from '../screens/ChatNew/PrivacySupportScreen';
+import ChatGroupStarredMessagesScreen from '../screens/ChatNew/ChatGroupStarredMessagesScreen';
 import { ChatProvider } from '../context/ChatContext';
-import { useAuth } from '../context/AuthContext';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
-function ChatRoomScreenWithProvider({ route }: any) {
-  const { user } = useAuth();
-  const { chatId } = route.params;
-  
-  console.log('🔧 ChatStack: ChatRoomScreenWithProvider rendered with:', { user: user?.id, chatId });
-  
-  if (!user) {
-    console.log('❌ ChatStack: No user found');
-    return null;
-  }
-  
-  if (!chatId) {
-    console.log('⚠️ ChatStack: No chatId provided');
-  }
-  
+function ChatStackNavigator() {
   return (
-    <ChatProvider userId={user.id} initialChatId={chatId}>
-      <ChatRoomScreen />
-    </ChatProvider>
+    <Stack.Navigator 
+      screenOptions={{ 
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: 'transparent',
+        },
+        animation: 'fade',
+        gestureEnabled: true,
+        animationDuration: 200,
+      }}
+    >
+      <Stack.Screen 
+        name="ChatGroupsList" 
+        component={ChatGroupsListScreen}
+      />
+      <Stack.Screen 
+        name="ChatGroup" 
+        component={ChatGroupScreen}
+        options={{
+          presentation: 'card',
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="ChatGroupInfo" 
+        component={ChatGroupInfoScreen}
+      />
+      <Stack.Screen
+        name="ChatGroupSettings"
+        component={ChatGroupSettingsScreen}
+        options={{
+          presentation: 'card',
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="SavedMedia" 
+        component={SavedMediaScreen}
+      />
+      <Stack.Screen
+        name="GroupMediaGallery"
+        component={GroupMediaGalleryScreen}
+        options={{
+          presentation: 'card',
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="PrivacySupport" 
+        component={PrivacySupportScreen}
+      />
+      <Stack.Screen
+        name="ChatGroupStarredMessages"
+        component={ChatGroupStarredMessagesScreen}
+      />
+    </Stack.Navigator>
   );
 }
 
 export default function ChatStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ChatsList" component={ChatsListScreen} />
-      <Stack.Screen name="Channels" component={ChannelsScreen} />
-      <Stack.Screen name="ChatRoom" component={ChatRoomScreenWithProvider} />
-      <Stack.Screen name="GroupInfo" component={GroupInfoScreen} />
-      <Stack.Screen name="MediaGallery" component={MediaGalleryScreen} />
-    </Stack.Navigator>
+    <ChatProvider>
+      <ChatStackNavigator />
+    </ChatProvider>
   );
 }

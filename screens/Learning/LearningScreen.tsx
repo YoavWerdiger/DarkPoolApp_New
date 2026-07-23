@@ -1,28 +1,50 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Alert, Platform, TextInput, SafeAreaView, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Modal, Linking } from 'react-native';
-import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Animated, Dimensions, Platform, TextInput, SafeAreaView, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Modal, Linking, ActivityIndicator } from 'react-native';
+// import { BottomSheetModal, BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import * as ImagePicker from 'expo-image-picker';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { ScreenChrome } from '../../components/ui';
+import { AcademySubScreenBar } from '../../components/learning';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DesignTokens } from '../../components/ui/DesignTokens';
+import { ACADEMY_CARD_HP, ACADEMY_CARD_RADIUS, academyCardWidth } from '../../components/learning/academyCardLayout';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import UICard from '../../components/ui/UICard';
+import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 import { Ionicons } from '@expo/vector-icons';
-import { XCircle, CheckCircle2, ArrowRight, RefreshCw, ChevronLeft, ChevronRight, Edit3, ChevronUp, Save, X, Type, ImageIcon, Palette, PlusCircle, Star, Clock, TrendingUp, Video as VideoIcon } from 'lucide-react-native';
+import { XCircle, CheckCircle2, ArrowRight, RefreshCw, ChevronLeft, ChevronRight, Edit3, ChevronUp, ChevronDown, Save, Type, ImageIcon, Palette, PlusCircle, Star, Clock, TrendingUp, Video as VideoIcon } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { WebView } from 'react-native-webview';
+import YoutubePlayer from 'react-native-youtube-iframe';
 import { learningProgressService } from '../../services/learningProgressService';
 import { courseService } from '../../services/courseService';
 import { mediaService } from '../../services/mediaService';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 
 const { width: screenWidth } = Dimensions.get('window');
+
+const NOTES_SHEET_BORDER = 'rgba(255, 255, 255, 0.10)';
+
+/** טקסט עברי בתוך עץ RTL */
+const rtlText = {
+  writingDirection: 'rtl' as const,
+  textAlign: 'left' as const,
+};
 
 const DEMO_COURSE = {
   id: 'demo-course-1',
   title: 'קורס הלוויתנים',
   description: 'קורס דיגיטלי פרקטי ומעשי שכולל בתוכו קונספטים ואסטרטגיית מסחר יומי מוכחת! \nהקורס פונה לסוחרים מתקדמים בשוק ההון שרוצים לקחת את המסחר שלהם לרמה הבאה! וללמוד אסטרטגיית מסחר מקצועית במסחר יומי!',
-  cover_url: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/Wheles.png',
+  cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/Wheles.png`,
     instructor: {
       name: 'דוד אריאל',
-      avatar: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg',
+      avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
     rating: 4.9,
     students: 1250
   },
@@ -134,7 +156,17 @@ const DEMO_COURSE = {
 };
 
 function LearningScreen() {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const mainTabsHeight = useMainTabsHeight();
+  const { courseId: routeCourseId, lessonId: routeLessonId } = route.params as { courseId?: string; lessonId?: string } || {};
   const { user } = useAuth();
+  const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
+  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const handleBackToAcademy = useCallback(() => {
+    (navigation as { navigate: (n: string) => void }).navigate('CoursesScreen');
+  }, [navigation]);
   const [selectedLesson, setSelectedLesson] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -143,33 +175,17 @@ function LearningScreen() {
   const [lessonProgress, setLessonProgress] = useState(0); // התקדמות השיעור הנוכחי
   const [totalProgress, setTotalProgress] = useState(0); // התקדמות כללית של הקורס
   const [userNotes, setUserNotes] = useState(''); // הערות המשתמש
-  const notesBottomSheetRef = useRef<BottomSheetModal>(null);
+  const [notesModalVisible, setNotesModalVisible] = useState(false);
   const textInputRef = useRef<TextInput>(null);
-  
-  // הגדרת snap points לbottom sheet
-  const snapPoints = useMemo(() => ['70%', '90%'], []);
-  
-  // רינדור backdrop
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-      />
-    ),
-    []
-  );
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkText, setLinkText] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [selectedColor, setSelectedColor] = useState('#FFFFFF');
+  const [selectedColor, setSelectedColor] = useState(DesignTokens.colors.text.primary);
   const [richTextContent, setRichTextContent] = useState<any[]>([]);
   const [currentFormatting, setCurrentFormatting] = useState({
     bold: false,
-    color: '#FFFFFF',
+    color: DesignTokens.colors.text.primary,
     link: null,
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -179,36 +195,194 @@ function LearningScreen() {
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [courseData, setCourseData] = useState<any>(null); // נתוני הקורס מהמסד
   const [lessonsData, setLessonsData] = useState<any[]>([]); // נתוני השיעורים מהמסד
+  /** טעינת רשימת השיעורים — כדי להציג פרוגרס גם לפני סיום ולא 0/0 מטעה */
+  const [lessonsProgressLoading, setLessonsProgressLoading] = useState(false);
   const videoRef = useRef(null);
-  const [animatedValues] = useState(() => 
-    DEMO_COURSE.lessons.map(() => new Animated.Value(1))
-  );
+  const youtubePlayerRef = useRef<any>(null);
+  const vimeoWebViewRef = useRef<any>(null);
+  const [initialVideoPosition, setInitialVideoPosition] = useState<number>(0);
+  const [animatedValues, setAnimatedValues] = useState<Animated.Value[]>([]);
+  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isYouTubePlayerReady, setIsYouTubePlayerReady] = useState(false);
+  const durationUpdatedRef = useRef<Set<string>>(new Set()); // מעקב אחרי שיעורים שכבר עדכנו את ה-duration
+  const durationCheckInProgressRef = useRef<Set<string>>(new Set()); // מעקב אחרי שיעורים שבתהליך בדיקה
+  const lastProgressSaveTimeRef = useRef<number>(0); // מעקב אחרי הזמן האחרון שעודכן במסד נתונים
+  const lastProgressPercentageRef = useRef<number>(0); // מעקב אחרי האחוז האחרון (למניעת קפיצות ל-0)
 
+  // מעקב התקדמות YouTube דרך interval
+  useEffect(() => {
+    // ניקוי interval קודם אם קיים
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+    
+    if (selectedLesson && youtubePlayerRef.current && isYouTubePlayerReady) {
+      const isYouTube = !!(selectedLesson.youtubeId || selectedLesson.youtubeUrl);
+      if (isYouTube) {
+        // התחלת מעקב התקדמות דרך getCurrentTime ו-getDuration
+        progressIntervalRef.current = setInterval(async () => {
+          // בדיקה אם ה-ref עדיין קיים
+          if (!youtubePlayerRef.current) {
+            if (progressIntervalRef.current) {
+              clearInterval(progressIntervalRef.current);
+              progressIntervalRef.current = null;
+            }
+            return;
+          }
+          
+          try {
+            const currentTime = await youtubePlayerRef.current.getCurrentTime();
+            const duration = await youtubePlayerRef.current.getDuration();
+            
+            // עדכון גם אם הסרטון לא מנגן (כדי לראות את המיקום)
+            if (duration > 0 && currentTime >= 0) {
+              setProgress(currentTime);
+              setDuration(duration);
+              const progressPercentage = Math.round((currentTime / duration) * 100);
+              
+              // בדיקה שהפרוגרס תקין ולא קופץ ל-0 (למניעת קפיצות)
+              if (progressPercentage >= 0 && progressPercentage <= 100) {
+                // אם הפרוגרס קופץ ל-0 בעוד שהיה ערך לפני, נשמור את הערך הקודם
+                if (progressPercentage === 0 && lastProgressPercentageRef.current > 0 && currentTime > 1) {
+                  // לא נעדכן אם הפרוגרס קופץ ל-0 בעוד שהזמן הנוכחי הוא יותר מ-1 שנייה
+                } else {
+                  setLessonProgress(progressPercentage);
+                  lastProgressPercentageRef.current = progressPercentage;
+                }
+              }
+              
+              // עדכון duration במסד נתונים ובכרטיסיה אם זה שיעור YouTube
+              if (selectedLesson && courseData && duration > 0) {
+                const isYouTube = !!(selectedLesson.youtubeId || selectedLesson.youtubeUrl);
+                if (isYouTube) {
+                  // עדכון מיידי של ה-duration ב-lessonsData כדי שהכרטיסיה תתעדכן
+                  const formatDuration = (seconds: number): string => {
+                    const hours = Math.floor(seconds / 3600);
+                    const remainingSeconds = seconds % 3600;
+                    const minutes = Math.floor(remainingSeconds / 60);
+                    const secs = remainingSeconds % 60;
+                    
+                    if (hours > 0) {
+                      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    } else {
+                      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+                    }
+                  };
+                  
+                  const formattedDuration = formatDuration(duration);
+                  
+                  // עדכון lessonsData ישירות
+                  setLessonsData((prevLessons: any[]) => {
+                    const updated = prevLessons.map((lesson: any) => {
+                      if (lesson.id === selectedLesson.id) {
+                        return {
+                          ...lesson,
+                          duration: formattedDuration,
+                          duration_seconds: duration
+                        };
+                      }
+                      return lesson;
+                    });
+                    return updated;
+                  });
+                  
+                  const lessonKey = `${courseData.id}_${selectedLesson.id}`;
+                  // עדכון duration במסד נתונים רק פעם אחת לכל שיעור
+                  if (!durationUpdatedRef.current.has(lessonKey) && !durationCheckInProgressRef.current.has(lessonKey)) {
+                    durationCheckInProgressRef.current.add(lessonKey);
+                    // בדיקה אם יש duration במסד נתונים
+                    const checkAndUpdateDuration = async () => {
+                      try {
+                        const media = await mediaService.getLessonMedia(courseData.id, selectedLesson.id);
+                        if (media && (!media.duration_minutes || media.duration_minutes === 0)) {
+                          durationUpdatedRef.current.add(lessonKey);
+                          // עדכון duration במסד נתונים
+                          await mediaService.updateLessonDuration(courseData.id, selectedLesson.id, duration);
+                        }
+                      } catch (error) {
+                      } finally {
+                        durationCheckInProgressRef.current.delete(lessonKey);
+                      }
+                    };
+                    checkAndUpdateDuration();
+                  }
+                }
+              }
+              
+              // עדכון התקדמות במסד נתונים כל 5 שניות (רק כשמנגן)
+              // שיפור: בודקים שהזמן השתנה ב-5 שניות לפחות מהעדכון האחרון
+              const currentTimeInt = Math.floor(currentTime);
+              if (isPlaying && currentTimeInt > 0 && currentTimeInt % 5 === 0 && currentTimeInt !== lastProgressSaveTimeRef.current) {
+                lastProgressSaveTimeRef.current = currentTimeInt;
+                updateLessonProgress(currentTime, duration);
+              }
+            }
+          } catch (error) {
+            // לא עוצרים את ה-interval גם אם יש שגיאה - מנסים שוב בפעם הבאה
+          }
+        }, 1000); // בדיקה כל שנייה
+      }
+    }
+    
+    // ניקוי ה-interval כשהקומפוננטה נסגרת או כשהשיעור משתנה
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+        progressIntervalRef.current = null;
+      }
+      // איפוס refs כשהקומפוננטה נסגרת
+      lastProgressSaveTimeRef.current = 0;
+      lastProgressPercentageRef.current = 0;
+    };
+  }, [selectedLesson?.id, isYouTubePlayerReady]);
 
   // טעינת נתונים מהמסד
   useEffect(() => {
-    console.log('useEffect triggered, user:', user?.id);
     loadCourseData();
-  }, [user]);
+  }, [user, routeCourseId]);
+
+  // פתיחת שיעור ספציפי אם יש lessonId
+  useEffect(() => {
+    if (routeLessonId && lessonsData.length > 0 && courseData) {
+      const lesson = lessonsData.find((l: any) => l.id === routeLessonId);
+      if (lesson) {
+        // נשתמש ב-handleLessonPress כדי לפתוח את השיעור
+        const lessonIndex = lessonsData.findIndex((l: any) => l.id === routeLessonId);
+        if (lessonIndex !== -1) {
+          handleLessonPress(lesson, lessonIndex);
+        }
+      }
+    }
+  }, [routeLessonId, lessonsData, courseData]);
 
   // טעינת נתוני הקורס
   const loadCourseData = async () => {
-    console.log('loadCourseData called');
+    if (!routeCourseId) {
+      return;
+    }
+    setLessonsProgressLoading(true);
     try {
       // נטען את הקורס מהמסד (או ניצור אותו אם לא קיים)
-      const courseId = 'whales-course-1';
-      console.log('Getting course by ID:', courseId);
+      const courseId = routeCourseId;
       let course = await courseService.getCourseById(courseId);
-      console.log('Course from database:', course);
       
       if (!course) {
-        // אם הקורס לא קיים, ניצור אותו
-        await courseService.createWhalesCourse();
+        // אם הקורס לא קיים, ניצור אותו בהתאם לסוג הקורס
+        if (courseId === 'david-training-course' || courseId === 'david-training-course-1') {
+          await courseService.createDavidTrainingCourse();
+        } else {
+          await courseService.createWhalesCourse();
+        }
         course = await courseService.getCourseById(courseId);
         
         // ניצור גם את קישורי המדיה
         if (course) {
-          await mediaService.createWhalesCourseMedia(courseId);
+          if (courseId === 'david-training-course' || courseId === 'david-training-course-1') {
+            // קישורי המדיה של דוד איראל נוצרים יחד עם השיעורים
+          } else {
+            await mediaService.createWhalesCourseMedia(courseId);
+          }
         }
       }
 
@@ -216,86 +390,80 @@ function LearningScreen() {
         setCourseData(course);
         
         // נטען את השיעורים
-        console.log('Getting course lessons...');
         const lessons = await courseService.getCourseLessons(courseId);
-        console.log('Loaded lessons from database:', lessons);
-        console.log('Number of lessons found:', lessons?.length || 0);
         
         if (lessons && lessons.length > 0) {
           // נטען את קישורי המדיה לכל השיעורים בבת אחת
-          console.log('Getting course media...');
           const mediaLinks = await mediaService.getCourseMedia(courseId);
-          console.log('Loaded media links:', mediaLinks);
-          console.log('Number of media links found:', mediaLinks.length);
           
           // נטען את ההתקדמות של כל שיעור ואת קישורי המדיה
-          console.log('Processing lessons with media...');
           const updatedLessons = await Promise.all(
             lessons.map(async (lesson: any) => {
-              console.log(`Processing lesson: ${lesson.id} - ${lesson.title}`);
               const userProgress = user ? await learningProgressService.getUserProgress(user.id, courseId, lesson.id) : null;
               const media = mediaLinks.find(m => m.lesson_id === lesson.id);
-              console.log(`Lesson ${lesson.id} media:`, media);
               
-              // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE
+              // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE או מהמסד נתונים
               let duration = '00:00';
+              
+              // פונקציה לעיצוב duration בפורמט MM:SS או HH:MM:SS
+              const formatDuration = (minutes?: number) => {
+                if (!minutes) return '00:00';
+                const totalSeconds = minutes * 60;
+                const hours = Math.floor(totalSeconds / 3600);
+                const remainingSeconds = totalSeconds % 3600;
+                const mins = Math.floor(remainingSeconds / 60);
+                const secs = remainingSeconds % 60;
+                
+                if (hours > 0) {
+                  return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                } else {
+                  return `${mins}:${secs.toString().padStart(2, '0')}`;
+                }
+              };
               
               // נחפש את השיעור בנתונים האמיתיים
               const demoLesson = DEMO_COURSE.lessons.find(demo => demo.id === lesson.id);
-              console.log(`Lesson ${lesson.id} demo lesson:`, demoLesson);
               if (demoLesson?.duration) {
                 duration = demoLesson.duration;
-                console.log(`Lesson ${lesson.id} using demo duration:`, duration);
               } else if (media?.duration_minutes) {
-                const minutes = media.duration_minutes;
-                const hours = Math.floor(minutes / 60);
-                const remainingMinutes = minutes % 60;
-                duration = hours > 0 ? `${hours}:${remainingMinutes.toString().padStart(2, '0')}` : `${remainingMinutes.toString().padStart(2, '0')}:00`;
+                duration = formatDuration(media.duration_minutes);
               } else if (lesson.duration_minutes) {
-                const minutes = lesson.duration_minutes;
-                const hours = Math.floor(minutes / 60);
-                const remainingMinutes = minutes % 60;
-                duration = hours > 0 ? `${hours}:${remainingMinutes.toString().padStart(2, '0')}` : `${remainingMinutes.toString().padStart(2, '0')}:00`;
+                duration = formatDuration(lesson.duration_minutes);
               }
               
-              // נשתמשאמבנייל מ-Vimeo במקום placeholder
-              const thumbnailUrl = media?.vimeo_id ? `https://vumbnail.com/${media.vimeo_id}.jpg` : `https://vumbnail.com/${lesson.id}.jpg`;
-              console.log(`Lesson ${lesson.id} thumbnail URL:`, thumbnailUrl);
-              console.log(`Lesson ${lesson.id} media vimeo_id:`, media?.vimeo_id);
-              console.log(`Lesson ${lesson.id} lesson id:`, lesson.id);
-              console.log(`Lesson ${lesson.id} duration:`, duration);
-              console.log(`Lesson ${lesson.id} vimeoId:`, media?.vimeo_id);
-              console.log(`Lesson ${lesson.id} final data:`, {
-                title: lesson.title,
-                thumbnail: thumbnailUrl,
-                duration: duration,
-                vimeoId: media?.vimeo_id,
-                demoLesson: demoLesson
-              });
+              // נשתמש ב-thumbnail מ-Vimeo או YouTube
+              let thumbnailUrl = '';
+              if (media?.vimeo_id) {
+                thumbnailUrl = `https://vumbnail.com/${media.vimeo_id}.jpg`;
+              } else if (media?.youtube_id) {
+                thumbnailUrl = `https://img.youtube.com/vi/${media.youtube_id}/maxresdefault.jpg`;
+              } else if (lesson.youtubeId) {
+                thumbnailUrl = `https://img.youtube.com/vi/${lesson.youtubeId}/maxresdefault.jpg`;
+              } else {
+                thumbnailUrl = `https://vumbnail.com/${lesson.id}.jpg`;
+              }
               
               return {
                 ...lesson,
                 completed: userProgress?.is_completed || false,
                 progress: userProgress?.progress_percentage || 0,
-                vimeoId: media?.vimeo_id || lesson.id,
+                vimeoId: media?.vimeo_id || undefined,
+                youtubeId: media?.youtube_id || lesson.youtubeId || undefined,
+                youtubeUrl: media?.youtube_url || lesson.youtubeUrl || undefined,
                 thumbnail: thumbnailUrl,
-                videoUrl: media?.vimeo_url || `https://vimeo.com/${media?.vimeo_id || lesson.id}?share=copy`,
+                videoUrl: media?.vimeo_url || media?.youtube_url || `https://vimeo.com/${media?.vimeo_id || lesson.id}?share=copy`,
                 duration: duration,
                 type: 'video'
               };
             })
           );
-          console.log('Updated lessons with media:', updatedLessons);
-          console.log('Setting lessons data...');
           setLessonsData(updatedLessons);
-          console.log('Lessons data set successfully');
-          console.log('First lesson thumbnail:', updatedLessons[0]?.thumbnail);
-          console.log('First lesson duration:', updatedLessons[0]?.duration);
-          console.log('All lessons durations:', updatedLessons.map(l => ({ id: l.id, title: l.title, duration: l.duration })));
+          // עדכון animatedValues למספר השיעורים
+          setAnimatedValues(updatedLessons.map(() => new Animated.Value(1)));
         } else {
-          // אם אין שיעורים במסד, נשתמש בנתונים הבסיסיים
-          console.log('No lessons found in database, using demo data');
-          setLessonsData(DEMO_COURSE.lessons);
+          // אם אין שיעורים במסד, לא נציג כלום
+          setLessonsData([]);
+          setAnimatedValues([]);
         }
         
         // נטען את ההתקדמות הכללית
@@ -304,17 +472,18 @@ function LearningScreen() {
           setTotalProgress(totalProgress);
         }
       } else {
-        // אם אין קורס במסד, נשתמש בנתונים הבסיסיים
-        setCourseData(DEMO_COURSE);
-        setLessonsData(DEMO_COURSE.lessons);
+        // אם אין קורס במסד, לא נציג כלום (לא DEMO_COURSE)
+        setCourseData(null);
+        setLessonsData([]);
         setTotalProgress(0);
       }
     } catch (error) {
-      console.error('Error loading course data:', error);
-      // אם יש שגיאה, נשתמש בנתונים הבסיסיים
-      setCourseData(DEMO_COURSE);
-      setLessonsData(DEMO_COURSE.lessons);
+      // אם יש שגיאה, לא נציג כלום (לא DEMO_COURSE)
+      setCourseData(null);
+      setLessonsData([]);
       setTotalProgress(0);
+    } finally {
+      setLessonsProgressLoading(false);
     }
   };
 
@@ -346,7 +515,6 @@ function LearningScreen() {
         setUserNotes('');
       }
     } catch (error) {
-      console.error('Error loading user notes:', error);
       setUserNotes('');
     }
   };
@@ -359,7 +527,6 @@ function LearningScreen() {
       const media = await mediaService.getLessonMedia(courseData.id, lessonId);
       return media;
     } catch (error) {
-      console.error('Error loading lesson media:', error);
       return null;
     }
   };
@@ -394,7 +561,7 @@ function LearningScreen() {
         });
       }
     } catch (error) {
-      console.error('Error saving user notes:', error);
+      // Error saving user notes
     }
   };
 
@@ -411,7 +578,7 @@ function LearningScreen() {
   const addImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -428,8 +595,7 @@ function LearningScreen() {
         }, 100);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('שגיאה', 'לא ניתן לבחור תמונה');
+      legacyAlert('שגיאה', 'לא ניתן לבחור תמונה');
     }
   };
 
@@ -486,7 +652,7 @@ function LearningScreen() {
   const addImageElement = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
@@ -500,8 +666,7 @@ function LearningScreen() {
           });
         }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('שגיאה', 'לא ניתן לבחור תמונה');
+      legacyAlert('שגיאה', 'לא ניתן לבחור תמונה');
     }
   };
 
@@ -636,32 +801,31 @@ function LearningScreen() {
               type: 'text',
               content: notes.notes_content,
               bold: false,
-              color: '#FFFFFF'
+              color: DesignTokens.colors.text.primary
             }]);
             setLastSavedContent(JSON.stringify([{
               id: Date.now().toString(),
               type: 'text',
               content: notes.notes_content,
               bold: false,
-              color: '#FFFFFF'
+              color: DesignTokens.colors.text.primary
             }]));
           }
         } catch (parseError) {
           // אם יש שגיאת JSON, יוצר אלמנט טקסט מהתוכן
-          console.log('JSON parse error, treating as plain text:', parseError);
           setRichTextContent([{
             id: Date.now().toString(),
             type: 'text',
             content: notes.notes_content,
             bold: false,
-            color: '#FFFFFF'
+            color: DesignTokens.colors.text.primary
           }]);
           setLastSavedContent(JSON.stringify([{
             id: Date.now().toString(),
             type: 'text',
             content: notes.notes_content,
             bold: false,
-            color: '#FFFFFF'
+            color: DesignTokens.colors.text.primary
           }]));
         }
       } else {
@@ -670,16 +834,12 @@ function LearningScreen() {
         setLastSavedContent('');
       }
     } catch (error) {
-      console.error('Error loading notes:', error);
       setRichTextContent([]);
       setLastSavedContent('');
     } finally {
       setIsLoadingNotes(false);
     }
   };
-
-
-
 
   const renderRichTextElement = (element: any, index: number) => {
     const renderContent = () => {
@@ -690,7 +850,7 @@ function LearningScreen() {
               style={[
                 styles.flowingText,
                 element.bold && styles.boldText,
-                { color: element.color || '#000000' }
+                { color: element.color || DesignTokens.colors.text.primary }
               ]}
             >
               {element.content}
@@ -770,7 +930,7 @@ function LearningScreen() {
                   style={[
                     styles.notesText,
                     element.bold && styles.boldText,
-                    { color: element.color || '#FFFFFF' }
+                    { color: element.color || DesignTokens.colors.text.primary }
                   ]}
                 >
                   {element.content}
@@ -795,13 +955,14 @@ function LearningScreen() {
 
   const handleLessonPress = async (lesson: any, index: number) => {
     // אנימציה של לחיצה
+    const animatedValue = animatedValues[index] || new Animated.Value(1);
     Animated.sequence([
-      Animated.timing(animatedValues[index], {
+      Animated.timing(animatedValue, {
         toValue: 0.95,
         duration: 100,
         useNativeDriver: true,
       }),
-      Animated.timing(animatedValues[index], {
+      Animated.timing(animatedValue, {
         toValue: 1,
         duration: 100,
         useNativeDriver: true,
@@ -810,17 +971,36 @@ function LearningScreen() {
 
     setSelectedLesson(lesson);
     
+    // איפוס refs כששיעור חדש נבחר
+    lastProgressSaveTimeRef.current = 0;
+    lastProgressPercentageRef.current = 0;
+    
     // נטען את ההתקדמות הקיימת של המשתמש
     if (user && courseData) {
       const userProgress = await learningProgressService.getUserProgress(user.id, courseData.id, lesson.id);
+      
+      // בדיקה אם זה YouTube או Vimeo (ללא שימוש בפונקציה חיצונית)
+      const isYouTube = !!(lesson.youtubeId || lesson.youtubeUrl);
+      
       if (userProgress) {
+        
         setLessonProgress(userProgress.progress_percentage);
         setProgress(userProgress.current_time_seconds);
         setDuration(userProgress.total_duration_seconds);
+        lastProgressPercentageRef.current = userProgress.progress_percentage;
+        
+        // שמירת המיקום האחרון רק עבור YouTube (Vimeo מטפל בזה בעצמו)
+        if (isYouTube) {
+          setInitialVideoPosition(userProgress.current_time_seconds);
+        } else {
+          setInitialVideoPosition(0); // Vimeo לא צריך את זה - הוא מטפל בזה בעצמו
+        }
       } else {
         setLessonProgress(0);
         setProgress(0);
         setDuration(0);
+        setInitialVideoPosition(0);
+        lastProgressPercentageRef.current = 0;
       }
       
       // נטען את ההערות של המשתמש עבור השיעור הספציפי
@@ -829,24 +1009,33 @@ function LearningScreen() {
 
     // נטען את קישורי המדיה אם לא קיימים
     if (courseData && (!lesson.vimeoId || !lesson.thumbnail)) {
-      console.log(`Loading media for lesson ${lesson.id}`);
       const media = await loadLessonMedia(lesson.id);
-      console.log(`Media for lesson ${lesson.id}:`, media);
       if (media) {
-        // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE
+        // חישוב משך הזמן - נשתמש בנתונים האמיתיים מ-DEMO_COURSE או מהמסד נתונים
         let duration = lesson.duration || '00:00';
+        
+        // פונקציה לעיצוב duration בפורמט MM:SS או HH:MM:SS
+        const formatDuration = (minutes?: number) => {
+          if (!minutes) return '00:00';
+          const totalSeconds = minutes * 60;
+          const hours = Math.floor(totalSeconds / 3600);
+          const remainingSeconds = totalSeconds % 3600;
+          const mins = Math.floor(remainingSeconds / 60);
+          const secs = remainingSeconds % 60;
+          
+          if (hours > 0) {
+            return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+          } else {
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+          }
+        };
         
         // נחפש את השיעור בנתונים האמיתיים
         const demoLesson = DEMO_COURSE.lessons.find(demo => demo.id === lesson.id);
-        console.log(`Lesson ${lesson.id} demo lesson in handleLessonPress:`, demoLesson);
         if (demoLesson?.duration) {
           duration = demoLesson.duration;
-          console.log(`Lesson ${lesson.id} using demo duration in handleLessonPress:`, duration);
         } else if (media.duration_minutes) {
-          const minutes = media.duration_minutes;
-          const hours = Math.floor(minutes / 60);
-          const remainingMinutes = minutes % 60;
-          duration = hours > 0 ? `${hours}:${remainingMinutes.toString().padStart(2, '0')}` : `${remainingMinutes.toString().padStart(2, '0')}:00`;
+          duration = formatDuration(media.duration_minutes);
         }
         
         const updatedLesson = {
@@ -856,7 +1045,6 @@ function LearningScreen() {
           videoUrl: media.vimeo_url,
           duration: duration
         };
-        console.log(`Updated lesson with media:`, updatedLesson);
         setSelectedLesson(updatedLesson);
       }
     }
@@ -864,20 +1052,20 @@ function LearningScreen() {
 
   // חישוב התקדמות כללית של הקורס
   const calculateTotalProgress = () => {
-    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
+    const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+    if (lessons.length === 0) return 0;
     const completedLessons = lessons.filter((lesson: any) => lesson.completed).length;
     const totalLessons = lessons.length;
     return Math.round((completedLessons / totalLessons) * 100);
   };
 
-  // עדכון התקדמות השיעור הנוכחי
+  // עדכון התקדמות השיעור הנוכחי במסד נתונים
+  // הערה: lessonProgress מתעדכן ישירות ב-onProgress, כאן רק שומרים למסד נתונים
   const updateLessonProgress = async (currentTime: number, totalTime: number) => {
     if (totalTime > 0) {
-      const progress = (currentTime / totalTime) * 100;
-      setLessonProgress(Math.round(progress));
-      
-      // שמירה במסד נתונים
+      // שמירה במסד נתונים בלבד (lessonProgress מתעדכן ב-onProgress)
       if (user && courseData && selectedLesson) {
+        const progress = Math.round((currentTime / totalTime) * 100);
         await learningProgressService.updateWatchingTime(
           user.id,
           courseData.id,
@@ -912,8 +1100,6 @@ function LearningScreen() {
         );
         setLessonsData(updatedLessons);
       }
-      
-      console.log(`שיעור ${selectedLesson.title} הושלם!`);
     }
   };
 
@@ -926,9 +1112,13 @@ function LearningScreen() {
     setProgress(status.positionMillis / 1000);
   };
 
-  const handleVideoEnd = () => {
+  const handleVideoEnd = async () => {
     setIsPlaying(false);
-    Alert.alert('מעולה!', 'השיעור הושלם בהצלחה!', [
+    // שמירת המיקום האחרון לפני סגירה
+    if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
+      await updateLessonProgress(progress, duration);
+    }
+    legacyAlert('מעולה!', 'השיעור הושלם בהצלחה!', [
       { text: 'המשך', onPress: () => setSelectedLesson(null) }
     ]);
   };
@@ -943,23 +1133,18 @@ function LearningScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-
   const renderLessonCard = (lesson: any, index: number) => {
-    console.log(`Rendering lesson card ${index}:`, lesson.title, 'thumbnail:', lesson.thumbnail, 'duration:', lesson.duration);
-    console.log(`Lesson ${lesson.id} thumbnail check:`, {
-      hasThumbnail: !!lesson.thumbnail,
-      thumbnailUrl: lesson.thumbnail,
-      vimeoId: lesson.vimeoId,
-      duration: lesson.duration
-    });
+    const animatedValue = animatedValues[index] || new Animated.Value(1);
+    // משתמשים ב-duration ב-key כדי ש-React יעדכן את הקומפוננטה כשהערך משתנה
+    const lessonKey = `${lesson.id}_${lesson.duration || '00:00'}`;
     return (
     <Animated.View
-      key={lesson.id}
+      key={lessonKey}
       style={[
-        styles.lessonCard,
-        { transform: [{ scale: animatedValues[index] }] }
+        { marginBottom: DesignTokens.spacing.lg, transform: [{ scale: animatedValue }] }
       ]}
     >
+      <UICard variant="blur" padding="none" style={styles.lessonGlassCard}>
       <TouchableOpacity
         style={styles.lessonTouchable}
         onPress={() => handleLessonPress(lesson, index)}
@@ -970,88 +1155,215 @@ function LearningScreen() {
           <Image 
             source={{ uri: lesson.thumbnail }} 
             style={styles.thumbnailImage}
-              onError={(error) => {
-              // אם התמונה לא נטענת, נשתמש בצבע רקע
-                console.log('Thumbnail failed to load for lesson:', lesson.title, 'URL:', lesson.thumbnail, 'Error:', error);
-              }}
-              onLoad={() => {
-                console.log('Thumbnail loaded successfully for lesson:', lesson.title, 'URL:', lesson.thumbnail);
-            }}
+            resizeMode="cover"
+              onError={() => {}}
+              onLoad={() => {}}
           />
           ) : (
-            <View style={[styles.thumbnailImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
-              <Text style={{ color: 'white', fontSize: 24 }}>🎥</Text>
+            <View style={[styles.thumbnailImage, { backgroundColor: DesignTokens.colors.background.secondary, justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ color: DesignTokens.colors.text.primary, fontSize: DesignTokens.typography.fontSize['2xl'] }}>🎥</Text>
             </View>
           )}
-          <View style={styles.thumbnailGradient} />
-          <View style={styles.durationBadge}>
-            <Text style={styles.durationText}>{lesson.duration || '00:00'}</Text>
+          <View style={styles.lessonNumberOnThumb} accessibilityLabel={`שיעור ${index + 1}`}>
+            <Text style={styles.lessonNumberOnThumbText}>{index + 1}</Text>
+          </View>
+          <View style={[
+            styles.durationBadge,
+            {
+              backgroundColor: isDarkMode ? DesignTokens.colors.overlay : DesignTokens.colors.background.secondary,
+            }
+          ]}>
+            <Text style={[
+              styles.durationText,
+              {
+                color: DesignTokens.colors.text.primary,
+              }
+            ]}>{lesson.duration || '00:00'}</Text>
           </View>
           {lesson.completed && (
-            <View style={styles.completedBadge}>
+            <View style={[
+              styles.completedBadge,
+              {
+                backgroundColor: isDarkMode ? DesignTokens.colors.overlay : DesignTokens.colors.background.secondary,
+              }
+            ]}>
               <CheckCircle2 size={24} color={DesignTokens.colors.primary.main} strokeWidth={2} />
             </View>
           )}
         </View>
         
         <View style={styles.lessonContent}>
-          <View style={styles.lessonCardHeader}>
-              <Text style={styles.lessonCardTitle}>{lesson.title}</Text>
-            <View style={styles.lessonNumber}>
-              <Text style={styles.lessonNumberText}>{index + 1}</Text>
-            </View>
+          <View style={styles.lessonCardTextCol}>
+            <Text style={styles.lessonCardTitle} numberOfLines={2}>
+              {lesson.title}
+            </Text>
+            {lesson.description ? (
+              <Text style={styles.lessonDescription} numberOfLines={3}>
+                {lesson.description}
+              </Text>
+            ) : null}
           </View>
-          <Text style={styles.lessonDescription}>{lesson.description}</Text>
         </View>
       </TouchableOpacity>
+      </UICard>
     </Animated.View>
   );
   };
 
-  if (selectedLesson) {
+  const renderChapterBlock = (
+    chapterNum: number,
+    title: string,
+    lessons: any[],
+    startIndex: number,
+  ) => {
+    if (lessons.length === 0) return null;
     return (
-      <View style={styles.lessonContainer}>
-        {/* Header - extends to top of screen */}
-        <View style={styles.newLessonHeader}>
-          <View style={styles.newHeaderContent}>
-            <Text style={styles.newLessonNumber}>
-              שיעור {(() => {
-                const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-                const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                return currentIndex + 1;
-              })()}
-            </Text>
-            <Text style={styles.newLessonTitle} numberOfLines={2}>
-              {selectedLesson.title}
+      <View key={`chapter-${chapterNum}`} style={styles.chapterSection}>
+        <View style={styles.chapterHeaderRow}>
+          <Text style={styles.chapterHeaderTitle}>{title}</Text>
+          <View
+            style={[
+              styles.chapterHeaderBadge,
+              { backgroundColor: DesignTokens.colors.primary.dim },
+            ]}
+          >
+            <Text
+              style={[
+                styles.chapterHeaderBadgeText,
+                { color: DesignTokens.colors.primary.main },
+              ]}
+            >
+              פרק {chapterNum}
             </Text>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.newBackButton}
-            onPress={() => setSelectedLesson(null)}
-          >
-            <ArrowRight size={20} color="white" strokeWidth={2} />
-          </TouchableOpacity>
         </View>
-        
-        {/* Safe Area for content */}
-        <SafeAreaView style={styles.safeAreaContent}>
-          {/* Background Gradient - only between header and content */}
-          <LinearGradient
-            colors={['rgba(0, 230, 84, 0.08)', 'rgba(0, 230, 84, 0.03)', 'rgba(0, 230, 84, 0.05)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.contentGradient}
-          />
-          
-          {/* Main Content */}
-          <View style={styles.lessonMainContent}>
-          {/* Video Section */}
-          <View style={styles.videoSection}>
-            <View style={styles.videoContainer}>
-            <WebView
-              source={{ 
-                html: `
+        {lessons.map((lesson, index) => renderLessonCard(lesson, startIndex + index))}
+      </View>
+    );
+  };
+
+  // פונקציה לחילוץ YouTube ID מקישור
+  const extractYouTubeId = (url: string): string | null => {
+    if (!url) return null;
+    
+    // ניקוי URL
+    const cleanUrl = url.trim();
+    
+    // דפוסים שונים של קישורי YouTube
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+      /youtu\.be\/([^&\n?#]+)/,
+      /youtube\.com\/embed\/([^&\n?#]+)/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = cleanUrl.match(pattern);
+      if (match && match[1]) {
+        const videoId = match[1];
+        return videoId;
+      }
+    }
+    
+    // אם זה כבר ID (11 תווים)
+    if (/^[a-zA-Z0-9_-]{11}$/.test(cleanUrl)) {
+      return cleanUrl;
+    }
+    
+    return null;
+  };
+
+  // בדיקה אם השיעור הוא מיוטיוב או מ-Vimeo
+  const getVideoType = (lesson: any): 'youtube' | 'vimeo' | null => {
+    if (lesson.youtubeId || lesson.youtubeUrl) {
+      return 'youtube';
+    }
+    if (lesson.vimeoId || lesson.vimeoUrl) {
+      return 'vimeo';
+    }
+    return null;
+  };
+
+  const getVideoId = (lesson: any): string | null => {
+    const videoType = getVideoType(lesson);
+    
+    if (videoType === 'youtube') {
+      // נסה קודם youtubeId
+      if (lesson.youtubeId) {
+        return lesson.youtubeId;
+      }
+      // אם אין, נסה לחלץ מ-youtubeUrl
+      if (lesson.youtubeUrl) {
+        const extractedId = extractYouTubeId(lesson.youtubeUrl);
+        if (extractedId) {
+          return extractedId;
+        }
+      }
+    }
+    
+    if (videoType === 'vimeo') {
+      return lesson.vimeoId || null;
+    }
+    
+    return null;
+  };
+
+  if (selectedLesson) {
+    const videoType = getVideoType(selectedLesson);
+    const videoId = getVideoId(selectedLesson);
+    
+    // יצירת HTML לפי סוג הוידאו
+    const getVideoHTML = () => {
+      if (videoType === 'youtube' && videoId) {
+        // שימוש ב-YouTube embed URL ישירות ללא API
+        return `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+              <style>
+                * {
+                  margin: 0;
+                  padding: 0;
+                  box-sizing: border-box;
+                }
+                html, body {
+                  width: 100%;
+                  height: 100%;
+                  overflow: hidden;
+                  background: #000;
+                }
+                .video-container { 
+                  position: relative; 
+                  width: 100%; 
+                  height: 100%;
+                  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+                }
+                iframe { 
+                  position: absolute; 
+                  top: 0; 
+                  left: 0; 
+                  width: 100%; 
+                  height: 100%; 
+                  border: none; 
+                }
+              </style>
+            </head>
+            <body>
+              <div class="video-container">
+                <iframe 
+                  src="https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1&controls=1&showinfo=0" 
+                  frameborder="0" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                  allowfullscreen
+                  title="${selectedLesson.title}">
+                </iframe>
+              </div>
+            </body>
+          </html>
+        `;
+      } else if (videoType === 'vimeo' && videoId) {
+        return `
                   <!DOCTYPE html>
                   <html>
                     <head>
@@ -1078,7 +1390,7 @@ function LearningScreen() {
                       <div class="video-container">
                         <iframe 
                           id="vimeo-player"
-                          src="https://player.vimeo.com/video/${selectedLesson.vimeoId}?badge=0&autopause=0&player_id=0&app_id=58479" 
+                  src="https://player.vimeo.com/video/${videoId}?badge=0&autopause=0&player_id=0&app_id=58479" 
                           frameborder="0" 
                           allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share" 
                           referrerpolicy="strict-origin-when-cross-origin" 
@@ -1121,13 +1433,179 @@ function LearningScreen() {
                       </script>
                     </body>
                   </html>
-                `
-              }}
+        `;
+      }
+      return null;
+    };
+
+    const videoHTML = getVideoHTML();
+
+    const progressSeconds = Math.max(0, Math.floor(progress));
+    const durationSeconds = Math.max(0, Math.floor(duration));
+    const timeLine =
+      durationSeconds <= 0 && isLoading
+        ? 'טוען…'
+        : `${formatTime(progressSeconds)} / ${formatTime(durationSeconds)}`;
+    const pctDisplay =
+      durationSeconds <= 0 && isLoading ? '…' : `${Math.min(100, Math.max(0, Math.round(lessonProgress)))}%`;
+    const barWidthPct =
+      durationSeconds > 0
+        ? Math.min(100, Math.max(0, Math.round((progressSeconds / durationSeconds) * 100)))
+        : isLoading
+          ? 0
+          : Math.min(100, Math.max(0, Math.round(lessonProgress)));
+
+    const rawLessonDescription =
+      typeof selectedLesson.description === 'string' ? selectedLesson.description : '';
+    const lessonDescriptionDisplay = rawLessonDescription
+      .replace(/\r\n/g, '\n')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
+    const lessonsForNav = lessonsData && lessonsData.length > 0 ? lessonsData : [];
+    const currentLessonIndex = lessonsForNav.findIndex((l: any) => l.id === selectedLesson.id);
+    const lessonNumberLabel = currentLessonIndex >= 0 ? currentLessonIndex + 1 : 1;
+    const lessonPlayerVideoHeight = Math.round((screenWidth * 9) / 16);
+    const canGoPrev = currentLessonIndex > 0;
+    const canGoNext = currentLessonIndex >= 0 && currentLessonIndex < lessonsForNav.length - 1;
+    const goToPrevLesson = () => {
+      if (!canGoPrev) return;
+      handleLessonPress(lessonsForNav[currentLessonIndex - 1], currentLessonIndex - 1);
+    };
+    const goToNextLesson = () => {
+      if (!canGoNext) return;
+      handleLessonPress(lessonsForNav[currentLessonIndex + 1], currentLessonIndex + 1);
+    };
+
+    return (
+      <ScreenChrome withBrandWatermark>
+        <StatusBar style="light" />
+        <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
+        <AcademySubScreenBar
+          onBackPress={async () => {
+            if (user && courseData && selectedLesson && progress > 0 && duration > 0) {
+              await updateLessonProgress(progress, duration);
+            }
+            setIsYouTubePlayerReady(false);
+            durationUpdatedRef.current.clear();
+            durationCheckInProgressRef.current.clear();
+            setSelectedLesson(null);
+          }}
+          title={selectedLesson.title}
+          subtitle={
+            courseData?.title
+              ? `שיעור ${lessonNumberLabel} · ${courseData.title}`
+              : `שיעור ${lessonNumberLabel}`
+          }
+        />
+
+          <View style={styles.lessonMainContent}>
+          <ScrollView
+            style={styles.contentSection}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.contentContainer}
+          >
+            {/* וידאו — מלא רוחב, מנותק מהכרטיסיות */}
+            <View style={[styles.lessonVideoBleed, { height: lessonPlayerVideoHeight }]}>
+              <View style={styles.videoContainer}>
+            {videoType === 'youtube' && videoId ? (
+              <YoutubePlayer
+                ref={youtubePlayerRef}
+                height={lessonPlayerVideoHeight}
+                videoId={videoId}
+                play={isPlaying}
+                onChangeState={(event: string) => {
+                  if (event === 'ended') {
+                    markLessonAsCompleted();
+                  } else if (event === 'playing') {
+                    setIsPlaying(true);
+                  } else if (event === 'paused') {
+                    setIsPlaying(false);
+                  }
+                }}
+                onReady={() => {
+                  setIsLoading(false);
+                  setIsYouTubePlayerReady(true); // סמן שהפלייר מוכן להתחיל מעקב
+                  
+                  // הצבת הסרטון במיקום האחרון כשהפלייר מוכן
+                  if (initialVideoPosition > 0 && youtubePlayerRef.current) {
+                    setTimeout(() => {
+                      try {
+                        youtubePlayerRef.current?.seekTo(initialVideoPosition, true);
+                      } catch (error) {
+                        // Error seeking YouTube player
+                      }
+                    }, 500); // המתנה קצרה כדי לוודא שהפלייר מוכן
+                  }
+                }}
+                onProgress={(data: { currentTime: number; duration: number }) => {
+                  // מעקב התקדמות - בדומה ל-Vimeo
+                  const currentTime = data.currentTime;
+                  const duration = data.duration;
+                  
+                  if (duration > 0 && currentTime >= 0) {
+                    setProgress(currentTime);
+                    setDuration(duration);
+                    // עדכון ה-timeline כל הזמן (לצורך תצוגה)
+                    const progressPercentage = Math.round((currentTime / duration) * 100);
+                    
+                    // בדיקה שהפרוגרס תקין ולא קופץ ל-0 (למניעת קפיצות)
+                    if (progressPercentage >= 0 && progressPercentage <= 100) {
+                      // אם הפרוגרס קופץ ל-0 בעוד שהיה ערך לפני, נשמור את הערך הקודם
+                      if (progressPercentage === 0 && lastProgressPercentageRef.current > 0 && currentTime > 1) {
+                        // לא נעדכן אם הפרוגרס קופץ ל-0 בעוד שהזמן הנוכחי הוא יותר מ-1 שנייה
+                      } else {
+                        setLessonProgress(progressPercentage);
+                        lastProgressPercentageRef.current = progressPercentage;
+                      }
+                    }
+                    
+                    // עדכון התקדמות במסד נתונים כל 5 שניות (כדי לא להעמיס על המסד נתונים)
+                    // שיפור: בודקים שהזמן השתנה ב-5 שניות לפחות מהעדכון האחרון
+                    const currentTimeInt = Math.floor(currentTime);
+                    if (currentTimeInt > 0 && currentTimeInt % 5 === 0 && currentTimeInt !== lastProgressSaveTimeRef.current) {
+                      lastProgressSaveTimeRef.current = currentTimeInt;
+                      updateLessonProgress(currentTime, duration);
+                    }
+                  }
+                }}
+                onError={(error: any) => {
+                  legacyAlert('שגיאה', 'שגיאה בטעינת הסרטון. נסה לפתוח ב-YouTube.');
+                }}
+                initialPlayerParams={{
+                  modestbranding: 1,
+                  rel: 0,
+                  controls: 1,
+                  start: initialVideoPosition > 0 ? Math.floor(initialVideoPosition) : undefined,
+                  enablejsapi: 1,
+                }}
+                webViewStyle={{ opacity: 0.99 }}
+                webViewProps={{
+                  allowsInlineMediaPlayback: true,
+                  mediaPlaybackRequiresUserAction: false,
+                }}
+              />
+            ) : videoType === 'vimeo' && videoHTML ? (
+              <WebView
+                source={{ html: videoHTML }}
               style={styles.videoPlayer}
               allowsFullscreenVideo={true}
               mediaPlaybackRequiresUserAction={false}
-              onLoadStart={() => setIsLoading(true)}
-              onLoadEnd={() => setIsLoading(false)}
+              javaScriptEnabled={true}
+              domStorageEnabled={true}
+              startInLoadingState={true}
+              onLoadStart={() => {
+                setIsLoading(true);
+              }}
+              onLoadEnd={() => {
+                setIsLoading(false);
+              }}
+              onError={(syntheticEvent) => {
+                const { nativeEvent } = syntheticEvent;
+                legacyAlert('שגיאה', `שגיאה בטעינת הסרטון: ${nativeEvent.description || 'שגיאה לא ידועה'}`);
+              }}
+              onHttpError={() => {}}
               onMessage={(event) => {
                 try {
                   const data = JSON.parse(event.nativeEvent.data);
@@ -1142,224 +1620,289 @@ function LearningScreen() {
                     setDuration(data.duration);
                   }
                 } catch (error) {
-                  console.log('Error parsing message:', error);
+                  // Error parsing message
                 }
               }}
             />
-              
-              {/* Loading Overlay */}
+            ) : (
+              <View style={styles.videoErrorContainer}>
+                <Text style={styles.videoErrorIcon}>⚠️</Text>
+                <Text style={styles.videoErrorText}>וידאו לא זמין</Text>
+                {selectedLesson.youtubeUrl && (
+                  <TouchableOpacity 
+                    style={styles.youtubeButton}
+                    onPress={() => {
+                      Linking.openURL(selectedLesson.youtubeUrl);
+                    }}
+                  >
+                    <Text style={styles.youtubeButtonText}>פתח ב-YouTube</Text>
+                  </TouchableOpacity>
+                )}
+                {!selectedLesson.youtubeId && !selectedLesson.youtubeUrl && (
+                  <Text style={styles.videoErrorSubtext}>
+                    לא נמצא קישור יוטיוב לשיעור זה
+                  </Text>
+                )}
+              </View>
+            )}
+                </View>
               {isLoading && (
                 <View style={styles.loadingOverlay}>
                   <View style={styles.loadingSpinner}>
-                    <RefreshCw size={32} color="white" strokeWidth={2} />
+                    <RefreshCw size={32} color={DesignTokens.colors.text.primary} strokeWidth={2} />
                   </View>
                   <Text style={styles.loadingText}>טוען וידאו...</Text>
                 </View>
               )}
             </View>
-            </View>
-            
-          {/* Content Section - פשוט וממוקד */}
-          <ScrollView 
-            style={styles.contentSection}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.contentContainer}
-          >
-            {/* Lesson Info - פשוט */}
-            <View style={styles.simpleLessonInfo}>
-              <Text style={styles.simpleLessonTitle}>{selectedLesson.title}</Text>
-              <Text style={styles.simpleLessonDescription}>{selectedLesson.description}</Text>
-              
-              {/* זמן והתקדמות */}
-              <View style={styles.lessonProgressInfo}>
-                <View style={styles.progressTimeRow}>
-                  <Text style={styles.progressTimeText}>
-                    {Math.floor(progress / 60)}:{(progress % 60).toFixed(0).padStart(2, '0')} / {Math.floor(duration / 60)}:{(duration % 60).toFixed(0).padStart(2, '0')}
-                  </Text>
-                  <Text style={styles.progressPercentageText}>{lessonProgress}%</Text>
-                </View>
-                <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBarFill, { width: `${lessonProgress}%` }]} />
-                </View>
-                {selectedLesson.completed && (
-                  <View style={styles.completedStatus}>
-                    <CheckCircle2 size={16} color={DesignTokens.colors.success.main} strokeWidth={2} />
-                    <Text style={styles.completedText}>הושלם</Text>
+
+            {/* פרטי שיעור + פרוגרס */}
+            <UICard variant="blur" padding="md" style={styles.lessonGlassCard}>
+              <Text style={styles.lessonPlayerIndex}>שיעור {lessonNumberLabel}</Text>
+              <Text style={styles.lessonCardTitle} numberOfLines={3}>
+                {selectedLesson.title}
+              </Text>
+              {lessonDescriptionDisplay ? (
+                <Text style={styles.lessonDescription} numberOfLines={4}>
+                  {lessonDescriptionDisplay}
+                </Text>
+              ) : null}
+
+              <View
+                style={[
+                  styles.lessonPlayerProgressBlock,
+                  !lessonDescriptionDisplay ? styles.lessonPlayerProgressBlockCompact : null,
+                ]}
+              >
+                  <View style={styles.progressTimeRow}>
+                    <Text style={styles.progressTimeText}>{timeLine}</Text>
+                    <Text style={styles.progressPercentageText}>{pctDisplay}</Text>
                   </View>
-                )}
+                  <View style={styles.progressBarContainer}>
+                    <View
+                      style={[
+                        styles.progressBarFill,
+                        {
+                          width: `${Math.min(100, Math.max(0, barWidthPct))}%`,
+                          minWidth: barWidthPct > 0 ? 4 : 0,
+                        },
+                      ]}
+                    />
+                  </View>
+                  {selectedLesson.completed && (
+                    <View style={styles.completedStatus}>
+                      <CheckCircle2 size={16} color={DesignTokens.colors.success.main} strokeWidth={2} />
+                      <Text style={styles.completedText}>הושלם</Text>
+                    </View>
+                  )}
               </View>
+            </UICard>
+
+            {/* ניווט שיעורים — כמו יומן כלכלי / מעבר ימים */}
+            <UICard
+              variant="blur"
+              glassIntensity="subtle"
+              padding="sm"
+              style={styles.lessonNavShell}
+            >
+              <View style={styles.lessonNavRowStandard}>
+                <DayNavBlurButton
+                  onPress={goToPrevLesson}
+                  disabled={!canGoPrev}
+                  glassIntensity="subtle"
+                >
+                  <Ionicons
+                    name="chevron-back"
+                    size={20}
+                    color={canGoPrev ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary}
+                  />
+                </DayNavBlurButton>
+
+                <View style={styles.lessonNavCenter}>
+                  <Text style={styles.lessonNavCenterTitle} numberOfLines={2}>
+                    שיעור {lessonNumberLabel} מתוך {lessonsForNav.length || 1}
+                  </Text>
+                  {(canGoPrev || canGoNext) && (
+                    <Text style={styles.lessonNavCenterSub} numberOfLines={1}>
+                      ניווט בין שיעורים
+                    </Text>
+                  )}
+                </View>
+
+                <DayNavBlurButton
+                  onPress={goToNextLesson}
+                  disabled={!canGoNext}
+                  glassIntensity="subtle"
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color={canGoNext ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary}
+                  />
+                </DayNavBlurButton>
+              </View>
+            </UICard>
+
+            {/* הערות אישיות — שורת הגדרות סטנדרטית */}
+            <UICard variant="blur" padding="none" style={styles.lessonGlassCard}>
+              <TouchableOpacity
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  setNotesModalVisible(true);
+                }}
+                activeOpacity={0.7}
+                style={styles.notesSettingsRow}
+              >
+                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                <View style={styles.notesSettingsTextCol}>
+                  <Text style={styles.notesSettingsTitle}>הערות אישיות</Text>
+                  <Text style={styles.notesSettingsSubtitle} numberOfLines={2}>
+                    {userNotes.trim()
+                      ? userNotes.length > 80
+                        ? `${userNotes.substring(0, 80)}...`
+                        : userNotes
+                      : 'לחץ לעריכה והוספת הערות לשיעור'}
+                  </Text>
+                </View>
+                <View style={styles.notesSettingsIcon}>
+                  <Edit3 size={20} color={DesignTokens.colors.primary.main} strokeWidth={2} />
+                </View>
+              </TouchableOpacity>
+            </UICard>
+          </ScrollView>
+          </View>
+        {/* Notes Bottom Sheet */}
+        <BottomSheet
+          isOpen={notesModalVisible}
+          onClose={() => {
+            if (!isSaving) {
+              setNotesModalVisible(false);
+            }
+          }}
+          snapPoints={[0.85]}
+          enablePanDownToClose={!isSaving}
+          backdropOpacity={0.5}
+          edgeToEdge
+          showHandle
+          showBrandBackground
+          showBrandWatermark={false}
+          contentPaddingBottom={0}
+          topCornerRadius={28}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.notesSheetContent}
+          >
+            <View style={styles.notesSheetHeader}>
+              <DayNavBlurButton
+                onPress={() => !isSaving && setNotesModalVisible(false)}
+                size={DAY_NAV_BUTTON_SIZE}
+                glassIntensity="subtle"
+                style={styles.notesSheetHeaderIcon}
+                accessibilityLabel="סגור"
+                disabled={isSaving}
+              >
+                <Ionicons name="chevron-forward" size={22} color={DesignTokens.colors.text.primary} />
+              </DayNavBlurButton>
+
+              <View style={styles.notesSheetHeaderCenter}>
+                <Text style={[styles.notesSheetHeaderTitle, rtlText, { color: DesignTokens.colors.text.primary }]}>
+                  הערות אישיות
+                </Text>
+                <Text
+                  style={[styles.notesSheetHeaderSubtitle, rtlText, { color: DesignTokens.colors.text.secondary }]}
+                  numberOfLines={1}
+                >
+                  {selectedLesson?.title ?? 'נשמרות לחשבון שלך מכל מכשיר'}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  void HapticFeedback.selection();
+                  setUserNotes('');
+                }}
+                style={styles.notesSheetHeaderTextBtn}
+                disabled={!userNotes.length || isSaving}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text
+                  style={[
+                    styles.notesSheetHeaderTextBtnLabel,
+                    (!userNotes.length || isSaving) && styles.notesSheetHeaderTextBtnLabelDisabled,
+                  ]}
+                >
+                  נקה
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Navigation Buttons - פשוט */}
-            <View style={styles.simpleNavigationButtons}>
-                  <TouchableOpacity
-                style={[styles.simpleNavButton, { opacity: (() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex < lessons.length - 1 ? 1 : 0.5;
-                })() }]}
-                    onPress={() => {
-                      const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-                      const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  if (currentIndex < lessons.length - 1) {
-                    const nextLesson = lessons[currentIndex + 1];
-                    handleLessonPress(nextLesson, currentIndex + 1);
-                  }
-                }}
-                disabled={(() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex >= lessons.length - 1;
-                })()}
-              >
-                <ChevronLeft size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                <Text style={styles.simpleNavButtonText}>שיעור הבא</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.simpleNavButton, { opacity: (() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex > 0 ? 1 : 0.5;
-                })() }]}
-                onPress={() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  if (currentIndex > 0) {
-                    const prevLesson = lessons[currentIndex - 1];
-                    handleLessonPress(prevLesson, currentIndex - 1);
-                  }
-                }}
-                disabled={(() => {
-                  const lessons = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-                  const currentIndex = lessons.findIndex((l: any) => l.id === selectedLesson.id);
-                  return currentIndex <= 0;
-                })()}
-              >
-                <Text style={styles.simpleNavButtonText}>שיעור קודם</Text>
-                <ChevronRight size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </TouchableOpacity>
-          </View>
-          
-            {/* Notes Section - כפתור לפתיחת Bottom Sheet */}
-            <TouchableOpacity 
-              style={styles.simpleNotesSection}
-              onPress={() => notesBottomSheetRef.current?.present()}
+            <ScrollView
+              style={styles.notesSheetScroll}
+              contentContainerStyle={styles.notesSheetScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
             >
-              <View style={styles.simpleNotesHeader}>
-                <Edit3 size={20} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-                <Text style={styles.simpleNotesTitle}>הערות שלי</Text>
-                <ChevronUp size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                  </View>
-              <Text style={styles.notesPreview}>
-                {userNotes.trim() ? 
-                  (userNotes.length > 100 ? userNotes.substring(0, 100) + '...' : userNotes) : 
-                  'לחץ לכתיבת הערות...'}
+              <UICard variant="inputGlass" padding="none" style={styles.notesSheetInputShell}>
+                <TextInput
+                  ref={textInputRef}
+                  style={[
+                    styles.notesSheetInput,
+                    rtlText,
+                    { color: DesignTokens.colors.text.primary },
+                    Platform.OS === 'android' && { includeFontPadding: false },
+                  ]}
+                  placeholder="כתבו מחשבות, רעיונות ותזכורות מהשיעור..."
+                  placeholderTextColor={DesignTokens.colors.text.tertiary}
+                  value={userNotes}
+                  onChangeText={setUserNotes}
+                  multiline
+                  autoFocus
+                  textAlignVertical="top"
+                />
+              </UICard>
+
+              <Text style={[styles.notesSheetHint, rtlText, { color: DesignTokens.colors.text.tertiary }]}>
+                ההערות נשמרות לחשבון שלך וזמינות מכל מכשיר
               </Text>
-                </TouchableOpacity>
-          </ScrollView>
-              </View>
-              
-        {/* Notes Bottom Sheet */}
-        <BottomSheetModal
-          ref={notesBottomSheetRef}
-          index={0}
-          snapPoints={snapPoints}
-          enablePanDownToClose
-          onDismiss={() => {}}
-          backdropComponent={renderBackdrop}
-          backgroundStyle={{ backgroundColor: '#1C1C1E' }}
-          handleIndicatorStyle={{ backgroundColor: 'rgba(255,255,255,0.3)', width: 40 }}
-        >
-          {/* Header - פשוט ומינימלי */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' }}>
-            <TouchableOpacity 
-              onPress={() => notesBottomSheetRef.current?.dismiss()}
-              style={{ 
-                width: 36, 
-                height: 36, 
-                borderRadius: 18, 
-                backgroundColor: 'rgba(255,255,255,0.08)', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}
-            >
-              <X size={20} color="#FFFFFF" strokeWidth={2} />
-            </TouchableOpacity>
-            
-            <Text style={{ fontSize: 20, fontWeight: '700', color: '#FFFFFF' }}>
-              הערות שלי
-            </Text>
-            
-            <TouchableOpacity 
-              onPress={async () => {
-                if (selectedLesson) {
-                  try {
-                    setIsSaving(true);
-                    await saveUserNotes(selectedLesson.id, userNotes);
-                    Alert.alert('נשמר!', 'ההערות נשמרו בהצלחה');
-                  } catch (error) {
-                    console.error('Error saving notes:', error);
-                    Alert.alert('שגיאה', 'לא ניתן לשמור את ההערות');
-                  } finally {
-                    setIsSaving(false);
+            </ScrollView>
+
+            <RNSafeAreaView edges={['bottom']} style={styles.notesSheetFooter}>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (selectedLesson && !isSaving) {
+                    void HapticFeedback.medium();
+                    try {
+                      setIsSaving(true);
+                      await saveUserNotes(selectedLesson.id, userNotes);
+                      legacyAlert('נשמר!', 'ההערות נשמרו בהצלחה');
+                      setNotesModalVisible(false);
+                    } catch (error) {
+                      legacyAlert('שגיאה', 'לא ניתן לשמור את ההערות');
+                    } finally {
+                      setIsSaving(false);
+                    }
                   }
-                }
-              }}
-              style={{ 
-                width: 36, 
-                height: 36, 
-                borderRadius: 18, 
-                backgroundColor: 'rgba(0, 230, 84, 0.15)', 
-                alignItems: 'center', 
-                justifyContent: 'center' 
-              }}
-            >
-              {isSaving ? (
-                <RefreshCw size={20} color="#00E654" strokeWidth={2} />
-              ) : (
-                <Save size={20} color="#00E654" strokeWidth={2} />
-              )}
-            </TouchableOpacity>
-          </View>
-          
-          {/* איזור כתיבה - עם רקע ומסגרת נפרדים */}
-          <BottomSheetScrollView 
-            style={{ flex: 1, backgroundColor: '#1C1C1E' }}
-            contentContainerStyle={{ padding: 20, paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-            keyboardBehavior="interactive"
-          >
-            <View style={{
-              backgroundColor: '#2C2C2E',
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
-              padding: 16,
-              minHeight: 400
-            }}>
-              <TextInput
-                ref={textInputRef}
-                style={{
-                  fontSize: 16,
-                  color: '#FFFFFF',
-                  textAlign: 'right',
-                  textAlignVertical: 'top',
-                  minHeight: 400,
-                  lineHeight: 24
                 }}
-                placeholder="התחל לכתוב הערות..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={userNotes}
-                onChangeText={setUserNotes}
-                multiline
-                autoFocus
-              />
-            </View>
-          </BottomSheetScrollView>
-          
-          
-        </BottomSheetModal>
+                disabled={isSaving}
+                activeOpacity={0.85}
+                style={[styles.notesSheetSavePrimary, isSaving && styles.notesSheetSavePrimaryDisabled]}
+                accessibilityRole="button"
+                accessibilityLabel="שמור הערות"
+              >
+                {isSaving ? (
+                  <View style={styles.notesSheetSavePrimaryContent}>
+                    <ActivityIndicator size="small" color="#fff" />
+                    <Text style={styles.notesSheetSavePrimaryText}>שומר…</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.notesSheetSavePrimaryText}>שמור הערות</Text>
+                )}
+              </TouchableOpacity>
+            </RNSafeAreaView>
+          </KeyboardAvoidingView>
+        </BottomSheet>
 
         {/* Link Dialog */}
         <Modal
@@ -1413,7 +1956,7 @@ function LearningScreen() {
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>בחירת צבע</Text>
               <View style={styles.colorPicker}>
-                {['#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500'].map((color) => (
+                {[DesignTokens.colors.text.primary, '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500'].map((color) => (
                   <TouchableOpacity
                     key={color}
                     style={[styles.colorOption, { backgroundColor: color }, selectedColor === color && styles.selectedColor]}
@@ -1441,148 +1984,252 @@ function LearningScreen() {
             </View>
           </View>
         </Modal>
-        </SafeAreaView>
-      </View>
+        </RNSafeAreaView>
+      </ScreenChrome>
     );
   }
 
+  // נתוני הקורס להצגה - לא נציג DEMO_COURSE אם עדיין טוען או אם אין courseData
+  const displayCourse = courseData;
+  const displayCoverUrl = courseData?.cover_url;
+  const displayTitle = courseData?.title;
+  const displayDescription = (courseData?.description ?? '').trim();
+  const displayInstructorName = courseData?.instructor_name || courseData?.owner?.display_name;
+  const displayInstructorAvatar = courseData?.instructor_avatar || courseData?.owner?.avatar_url;
+
+  if (!courseData) {
+    return null;
+  }
+
+  const lessonsList = Array.isArray(lessonsData) ? lessonsData : [];
+  const totalLessonsCount = lessonsList.length;
+  const completedLessonsCount = lessonsList.filter((lesson: { completed?: boolean }) => lesson.completed).length;
+  const courseProgressPct =
+    totalLessonsCount > 0
+      ? Math.min(100, Math.round((completedLessonsCount / totalLessonsCount) * 100))
+      : 0;
+  const courseProgressLabel =
+    totalLessonsCount === 0
+      ? 'אין שיעורים בקורס'
+      : `${completedLessonsCount}/${totalLessonsCount} הושלמו`;
+  const courseHeroHeight = Math.round(academyCardWidth(screenWidth) * 0.58);
+
   return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* כותרת הקורס */}
-      <View style={styles.courseHeader}>
-        <View style={styles.courseImageContainer}>
-          <Image source={{ uri: DEMO_COURSE.cover_url }} style={styles.courseImage} />
-        </View>
-        
-        <View style={styles.courseInfo}>
-        <Text style={styles.courseTitle}>{DEMO_COURSE.title}</Text>
-        <Text style={styles.courseDescription}>{DEMO_COURSE.description}</Text>
-          
-          {/* דירוג ומידע */}
-          <View style={styles.ratingContainer}>
-            <View style={styles.rating}>
-              <Star size={16} color="#F59E0B" strokeWidth={2} />
-              <Text style={styles.ratingText}>{DEMO_COURSE.rating}</Text>
-              <Text style={styles.ratingCount}>({DEMO_COURSE.students} תלמידים)</Text>
-            </View>
-          </View>
-          
-          {/* מרצה */}
-          <View style={styles.instructorContainer}>
-            <Image source={{ uri: DEMO_COURSE.instructor.avatar }} style={styles.instructorAvatar} />
-            <View style={styles.instructorInfo}>
-              <Text style={styles.instructorName}>{DEMO_COURSE.instructor.name}</Text>
-              <View style={styles.instructorRating}>
-                <Star size={14} color="#F59E0B" strokeWidth={2} />
-                <Text style={styles.instructorRatingText}>{DEMO_COURSE.instructor.rating}</Text>
-                <Text style={styles.instructorStudents}>({DEMO_COURSE.instructor.students} תלמידים)</Text>
-              </View>
-            </View>
-          </View>
-          
-          {/* מטא דאטה */}
-          <View style={styles.courseMeta}>
-            <View style={styles.metaItem}>
-              <Clock size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              <Text style={styles.metaValue}>{DEMO_COURSE.duration}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <TrendingUp size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-              <Text style={styles.metaValue}>{DEMO_COURSE.level}</Text>
-            </View>
-              <View style={styles.metaItem}>
-                <VideoIcon size={16} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                <Text style={styles.metaValue}>{(lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons).length} שיעורים</Text>
-              </View>
-          </View>
-        </View>
-      </View>
-
-      {/* רשימת השיעורים */}
-      <View style={styles.lessonsSection}>
-        {/* Background Gradient - only for lessons section */}
-        <LinearGradient
-          colors={['rgba(0, 230, 84, 0.04)', 'rgba(0, 230, 84, 0.03)', 'rgba(0, 230, 84, 0.05)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.lessonsGradient}
+    <ScreenChrome withBrandWatermark>
+      <StatusBar style="light" />
+      <RNSafeAreaView style={styles.safeAreaContent} edges={['top']}>
+        <AcademySubScreenBar
+          onBackPress={handleBackToAcademy}
+          title={displayTitle ?? 'קורס'}
+          subtitle={
+            displayInstructorName
+              ? `${displayInstructorName}${totalLessonsCount > 0 ? ` · ${totalLessonsCount} שיעורים` : ''}`
+              : totalLessonsCount > 0
+                ? `${totalLessonsCount} שיעורים`
+                : undefined
+          }
         />
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>שיעורי הקורס</Text>
-          <View style={styles.progressContainer}>
-            {(() => {
-              const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-              const completedLessons = lessonsToRender.filter(lesson => lesson.completed).length;
-              const totalLessons = lessonsToRender.length;
-              const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
-              
-              return (
-                <>
-                  <Text style={styles.progressText}>{completedLessons}/{totalLessons} הושלמו</Text>
-                  <View style={[styles.progressBar, { width: 120, height: 6 }]}>
-                    <View style={[styles.progressFill, { 
-                      width: `${progressPercentage}%`,
-                      backgroundColor: DesignTokens.colors.primary.main,
-                      borderRadius: 3
-                    }]} />
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.courseListScroll,
+            { paddingBottom: Math.max(mainTabsHeight, DesignTokens.spacing['5xl']) },
+          ]}
+        >
+          <View style={styles.courseListBody}>
+            {/* באנר בכרטיס — תמונה + גרדיאנט שחור + שם */}
+            <UICard variant="blur" padding="none" style={styles.lessonGlassCard}>
+              <View style={[styles.courseHeroCover, { height: courseHeroHeight }]}>
+                {displayCoverUrl ? (
+                  <Image
+                    source={{ uri: displayCoverUrl }}
+                    style={styles.courseHeroImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.courseHeroImage, styles.courseCoverPlaceholder]}>
+                    <Text style={styles.courseCoverPlaceholderIcon}>📚</Text>
                   </View>
-                </>
-              );
-            })()}
-          </View>
-        </View>
-        
-        {/* פרק 1 - כמה דברים לפני שמתחילים */}
-        <View style={styles.chapterSection}>
-          <View style={styles.chapterHeader}>
-            <Text style={styles.chapterTitle}>פרק 1 - כמה דברים לפני שמתחילים</Text>
-          </View>
-          <View style={styles.chapterDivider} />
-          {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-            const chapter1Lessons = lessonsToRender.slice(0, 1); // שיעור ראשון
-            return chapter1Lessons.map((lesson, index) => renderLessonCard(lesson, index));
-          })()}
-        </View>
+                )}
+                <LinearGradient
+                  colors={[
+                    'rgba(0,0,0,0)',
+                    'rgba(0,0,0,0.45)',
+                    'rgba(0,0,0,0.88)',
+                  ]}
+                  locations={[0, 0.42, 1]}
+                  style={styles.courseHeroGradient}
+                  pointerEvents="none"
+                />
+                <View style={styles.courseHeroText}>
+                  <Text style={styles.courseHeroTitle} numberOfLines={3}>
+                    {displayTitle}
+                  </Text>
+                  {courseData?.subtitle ? (
+                    <Text style={styles.courseHeroSubtitle} numberOfLines={2}>
+                      {courseData.subtitle}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            </UICard>
 
-        {/* פרק 2 - קונספטים ואסטרטגיה */}
-        <View style={styles.chapterSection}>
-          <View style={styles.chapterHeader}>
-            <Text style={styles.chapterTitle}>פרק 2 - קונספטים ואסטרטגיה</Text>
-          </View>
-          <View style={styles.chapterDivider} />
-          {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-            const chapter2Lessons = lessonsToRender.slice(1, 8); // שיעורים 2-8
-            return chapter2Lessons.map((lesson, index) => renderLessonCard(lesson, index + 1));
-          })()}
-        </View>
+            {/* פרטי קורס + התקדמות */}
+            <UICard variant="blur" padding="md" style={styles.lessonGlassCard}>
+              {displayDescription ? (
+                <Text style={styles.courseDescription}>{displayDescription}</Text>
+              ) : null}
 
-        {/* פרק 3 - כמה דברים לקראת סיום */}
-        <View style={styles.chapterSection}>
-          <View style={styles.chapterHeader}>
-            <Text style={styles.chapterTitle}>פרק 3 - כמה דברים לקראת סיום</Text>
+              {displayInstructorName ? (
+                <View style={styles.instructorContainer}>
+                  {displayInstructorAvatar ? (
+                    <Image source={{ uri: displayInstructorAvatar }} style={styles.instructorAvatar} />
+                  ) : (
+                    <View style={[styles.instructorAvatar, styles.instructorAvatarFallback]}>
+                      <Text style={styles.instructorAvatarInitial}>
+                        {displayInstructorName.charAt(0)}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.instructorInfo}>
+                    <Text style={styles.instructorName}>{displayInstructorName}</Text>
+                    <Text style={styles.instructorRole}>
+                      {courseData?.owner?.bio || 'מרצה הקורס'}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              <View
+                style={[
+                  styles.lessonPlayerProgressBlock,
+                  !displayDescription && !courseData?.subtitle && !displayInstructorName
+                    ? styles.lessonPlayerProgressBlockCompact
+                    : null,
+                ]}
+              >
+                {lessonsProgressLoading ? (
+                  <>
+                    <View style={styles.progressTextRow}>
+                      <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
+                      <Text style={styles.progressTextMuted}>טוען התקדמות…</Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View style={[styles.progressFill, { width: '0%' }]} />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.progressTimeRow}>
+                      <Text style={styles.progressText}>{courseProgressLabel}</Text>
+                      <Text style={styles.progressPercentageText}>{courseProgressPct}%</Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${courseProgressPct}%`,
+                            minWidth: courseProgressPct > 0 ? 4 : 0,
+                          },
+                        ]}
+                      />
+                    </View>
+                  </>
+                )}
+              </View>
+            </UICard>
+
+            {/* רשימת שיעורים */}
+            <View style={styles.lessonsSection}>
+              <Text style={styles.courseListSectionTitle}>שיעורי הקורס</Text>
+
+              {renderChapterBlock(1, 'כמה דברים לפני שמתחילים', lessonsList.slice(0, 1), 0)}
+              {renderChapterBlock(2, 'קונספטים ואסטרטגיה', lessonsList.slice(1, 8), 1)}
+              {renderChapterBlock(3, 'כמה דברים לקראת סיום', lessonsList.slice(8), 8)}
+            </View>
           </View>
-          <View style={styles.chapterDivider} />
-          {(() => {
-            const lessonsToRender = lessonsData && lessonsData.length > 0 ? lessonsData : DEMO_COURSE.lessons;
-            const chapter3Lessons = lessonsToRender.slice(8); // שיעור אחרון
-            return chapter3Lessons.map((lesson, index) => renderLessonCard(lesson, index + 8));
-          })()}
-        </View>
-      </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </RNSafeAreaView>
+    </ScreenChrome>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.primary,
+    backgroundColor: tokens.colors.background.primary,
   },
-  
+  courseListScroll: {
+    paddingTop: tokens.spacing.sm,
+  },
+  courseListBody: {
+    paddingHorizontal: ACADEMY_CARD_HP,
+    paddingTop: tokens.spacing.sm,
+  },
+  courseHeroCover: {
+    width: '100%',
+    position: 'relative',
+    backgroundColor: '#000',
+    overflow: 'hidden',
+  },
+  courseHeroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  courseHeroGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '72%',
+  },
+  courseHeroText: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: tokens.spacing.lg,
+    gap: tokens.spacing.xs,
+  },
+  courseHeroTitle: {
+    fontSize: tokens.typography.fontSize['2xl'],
+    fontWeight: '800' as const,
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.fontSize['2xl'] * 1.2),
+    writingDirection: 'rtl',
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+  courseHeroSubtitle: {
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: '500' as const,
+    color: 'rgba(255,255,255,0.82)',
+    textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
+    writingDirection: 'rtl',
+  },
+  courseCoverPlaceholder: {
+    backgroundColor: tokens.colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  courseCoverPlaceholderIcon: {
+    fontSize: 48,
+  },
+  courseListSectionTitle: {
+    fontSize: tokens.typography.caption.size,
+    fontWeight: '800' as const,
+    color: tokens.colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: tokens.typography.letterSpacing.wide,
+    textAlign: 'right',
+    marginBottom: tokens.spacing.lg,
+    writingDirection: 'rtl',
+  },
   // Background Gradient
   backgroundGradient: {
     position: 'absolute',
@@ -1593,88 +2240,106 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   
-  // Lesson Page Styles
+  // Lesson Page Styles - הרקע מגיע מהגרדיאנט
   lessonContainer: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.primary,
   },
   safeAreaContent: {
     flex: 1,
   },
-  contentGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
-  },
-  // New Lesson Header Styles
+  // New Lesson Header Styles - Glassmorphism שקוף
   newLessonHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingTop: 50, // Add top padding for status bar
-    paddingBottom: 16,
-    backgroundColor: DesignTokens.colors.background.secondary,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingBottom: tokens.spacing.md,
+    backgroundColor: tokens.colors.background.cardSolid,
     borderBottomWidth: 1,
-    borderBottomColor: DesignTokens.colors.border.primary,
-    minHeight: 100,
+    borderBottomColor: tokens.colors.border.primary,
+    minHeight: 88,
+    gap: tokens.spacing.md,
   },
   newBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 44,
+    height: 44,
+    borderRadius: tokens.borderRadius.full,
+    backgroundColor: tokens.colors.background.secondary,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.strong,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 16,
   },
   newHeaderContent: {
     flex: 1,
     alignItems: 'flex-end',
-    marginTop: 8, // Add margin from top instead of center
+    minWidth: 0,
   },
   newLessonNumber: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: DesignTokens.colors.primary.main,
+    fontSize: tokens.typography.label.size,
+    fontWeight: tokens.typography.label.weight as any,
+    letterSpacing: tokens.typography.label.letterSpacing,
+    color: tokens.colors.primary.main,
     marginBottom: 2,
   },
   newLessonTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
-    lineHeight: 24,
+    fontSize: tokens.typography.titleSmall.size,
+    fontWeight: tokens.typography.titleSmall.weight as any,
+    letterSpacing: tokens.typography.titleSmall.letterSpacing,
+    color: tokens.colors.text.primary,
+    lineHeight: tokens.typography.titleSmall.size * tokens.typography.lineHeight.normal,
     textAlign: 'right',
+  },
+  lessonCardTextCol: {
+    width: '100%',
+    alignItems: 'stretch',
   },
   lessonCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
-    flex: 1,
-    marginRight: 12,
+    lineHeight: Math.round(tokens.typography.titleXs.size * 1.35),
+    letterSpacing: 0.15,
+    writingDirection: 'rtl',
   },
   lessonDuration: {
-    fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.tertiary,
     textAlign: 'right',
   },
   menuButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.sm,
+    backgroundColor: tokens.colors.border.primary,
   },
   lessonMainContent: {
     flex: 1,
   },
-  videoSection: {
+  lessonGlassCard: {
+    marginBottom: tokens.spacing.lg,
+    borderRadius: ACADEMY_CARD_RADIUS,
+    overflow: 'hidden',
+  },
+  lessonVideoBleed: {
+    marginHorizontal: -ACADEMY_CARD_HP,
+    marginBottom: tokens.spacing.lg,
     backgroundColor: '#000',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  lessonPlayerIndex: {
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: '700' as const,
+    color: tokens.colors.primary.main,
+    textAlign: 'right',
+    marginBottom: tokens.spacing.xs,
+    writingDirection: 'rtl',
   },
   videoContainer: {
-    aspectRatio: 16/9,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#000',
+    overflow: 'hidden',
   },
   videoPlayer: {
     width: '100%',
@@ -1685,17 +2350,99 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   contentContainer: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: ACADEMY_CARD_HP,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: tokens.spacing['5xl'],
+  },
+  lessonPlayerProgressBlock: {
+    width: '100%',
+    marginTop: tokens.spacing.md,
+    paddingTop: tokens.spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    gap: tokens.spacing.sm,
+  },
+  lessonPlayerProgressBlockCompact: {
+    marginTop: 0,
+    paddingTop: 0,
+    borderTopWidth: 0,
+  },
+  lessonNavShell: {
+    marginBottom: tokens.spacing.lg,
+    borderRadius: tokens.borderRadius.full,
+    overflow: 'hidden',
+  },
+  lessonNavRowStandard: {
+    flexDirection: 'row',
+    direction: 'ltr',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  lessonNavCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  lessonNavCenterTitle: {
+    fontSize: tokens.typography.fontSize.base,
+    fontWeight: '600' as const,
+    lineHeight: 21,
+    color: tokens.colors.text.primary,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  lessonNavCenterSub: {
+    marginTop: 2,
+    fontSize: 11,
+    fontWeight: '600' as const,
+    color: tokens.colors.primary.main,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+  },
+  notesSettingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.base,
+  },
+  notesSettingsTextCol: {
+    flex: 1,
+    marginHorizontal: tokens.spacing.md,
+  },
+  notesSettingsTitle: {
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
+    marginBottom: tokens.spacing.xs / 2,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  notesSettingsSubtitle: {
+    fontSize: tokens.typography.bodySmall.size,
+    fontWeight: tokens.typography.bodySmall.weight as any,
+    lineHeight: tokens.typography.bodySmall.lineHeight,
+    color: tokens.colors.text.tertiary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  notesSettingsIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: tokens.borderRadius.sm,
+    backgroundColor: `${tokens.colors.primary.main}1A`,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   
-  // Lesson Info Card
+  // Lesson Info Card - Glassmorphism
   lessonInfoCard: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: 16,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: tokens.borderRadius.lg,
     padding: 20,
     marginBottom: 20,
-    ...DesignTokens.shadows.md,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.primary,
   },
   lessonInfoHeader: {
     flexDirection: 'row',
@@ -1707,18 +2454,19 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   lessonInfoTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
-    marginBottom: 8,
-    lineHeight: 28,
+    lineHeight: Math.round(tokens.typography.fontSize.xl * tokens.typography.lineHeight.normal),
+    writingDirection: 'rtl',
   },
   lessonInfoDescription: {
-    fontSize: 16,
-    color: DesignTokens.colors.text.secondary,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
-    lineHeight: 24,
+    lineHeight: tokens.typography.body.lineHeight,
+    writingDirection: 'rtl',
   },
   lessonInfoRight: {
     alignItems: 'flex-end',
@@ -1732,8 +2480,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statText: {
-    fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.tertiary,
     textAlign: 'right',
   },
   
@@ -1743,10 +2491,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   progressCard: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: 16,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: tokens.borderRadius.lg,
     padding: 20,
-    ...DesignTokens.shadows.sm,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.primary,
   },
   progressCardHeader: {
     flexDirection: 'row',
@@ -1755,34 +2504,34 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   progressCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     flex: 1,
     marginRight: 12,
   },
   progressCardPercentage: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: DesignTokens.colors.primary.main,
+    fontSize: tokens.typography.titleSmall.size,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.primary.main,
     textAlign: 'right',
   },
   progressCardBar: {
     height: 8,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 8,
   },
   progressCardFill: {
     height: '100%',
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     borderRadius: 4,
   },
   progressCardTime: {
-    fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.tertiary,
     textAlign: 'right',
   },
   
@@ -1794,20 +2543,19 @@ const styles = StyleSheet.create({
   },
   primaryActionButton: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     paddingVertical: 16,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: tokens.borderRadius.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    ...DesignTokens.shadows.sm,
   },
   primaryActionButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
     textAlign: 'right',
   },
   secondaryActionButton: {
@@ -1815,18 +2563,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: DesignTokens.colors.primary.main,
+    borderRadius: tokens.borderRadius.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   secondaryActionButtonText: {
-    color: DesignTokens.colors.primary.main,
-    fontSize: 16,
-    fontWeight: '600',
+    color: tokens.colors.primary.main,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
     textAlign: 'right',
   },
   
@@ -1838,29 +2584,31 @@ const styles = StyleSheet.create({
   },
   navButton: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: tokens.colors.background.cardSolid,
     paddingVertical: 16,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: tokens.borderRadius.md,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    ...DesignTokens.shadows.sm,
   },
   navButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.fontWeight.medium as any,
+    color: tokens.colors.text.primary,
     textAlign: 'center',
   },
   
-  // Notes Card
+  // Notes Card - Glassmorphism
   notesCard: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: 16,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: tokens.borderRadius.lg,
     padding: 20,
-    ...DesignTokens.shadows.sm,
+    borderWidth: 1,
+    borderColor: tokens.colors.border.primary,
   },
   notesCardHeader: {
     flexDirection: 'row',
@@ -1869,9 +2617,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   notesCardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.titleSmall.size,
+    fontWeight: tokens.typography.titleSmall.weight as any,
+    letterSpacing: tokens.typography.titleSmall.letterSpacing,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     flex: 1,
     marginRight: 12,
@@ -1881,118 +2630,212 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   notesActionButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    padding: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.sm,
+    backgroundColor: tokens.colors.background.tertiary,
   },
   notesInput: {
-    backgroundColor: DesignTokens.colors.background.tertiary,
-    borderRadius: 12,
+    backgroundColor: tokens.colors.background.tertiary,
+    borderRadius: tokens.borderRadius.md,
     padding: 16,
     marginBottom: 12,
     minHeight: 100,
   },
   notesTextInput: {
-    fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.primary,
     textAlignVertical: 'top',
-    lineHeight: 24,
+    lineHeight: tokens.typography.body.lineHeight,
     textAlign: 'right',
   },
   notesHint: {
-    fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.tertiary,
     fontStyle: 'italic',
     textAlign: 'right',
   },
   
-  // Simple Lesson Page Styles
+  // Simple Lesson Page Styles - Glassmorphism
   simpleLessonInfo: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: 16,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: tokens.borderRadius.lg,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    ...DesignTokens.shadows.sm,
-  },
-  simpleLessonTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'right',
-    marginBottom: 8,
-    lineHeight: 28,
+    borderColor: tokens.colors.border.primary,
   },
   simpleLessonDescription: {
-    fontSize: 16,
-    color: DesignTokens.colors.text.secondary,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
-    lineHeight: 24,
-  },
-  simpleNavigationButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  simpleNavButton: {
-    flex: 1,
-    backgroundColor: DesignTokens.colors.background.secondary,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    ...DesignTokens.shadows.sm,
-  },
-  simpleNavButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'center',
+    lineHeight: Math.round(tokens.typography.body.size * 1.45),
+    writingDirection: 'rtl',
+    width: '100%',
   },
   simpleNotesSection: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: 16,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: tokens.borderRadius.lg,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    ...DesignTokens.shadows.sm,
+    borderColor: tokens.colors.border.primary,
   },
   simpleNotesHeader: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    minHeight: 40,
+    marginBottom: tokens.spacing.xs,
+  },
+  simpleNotesHeaderIconsRow: {
+    zIndex: 2,
+    width: '100%',
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: tokens.spacing.xs,
+  },
+  simpleNotesTitleOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 80,
+    zIndex: 0,
   },
   simpleNotesTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
-    textAlign: 'right',
+    width: '100%',
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
+    color: tokens.colors.text.primary,
+    textAlign: 'center',
+    writingDirection: 'rtl',
   },
   simpleNotesInput: {
-    backgroundColor: DesignTokens.colors.background.tertiary,
-    borderRadius: 12,
+    backgroundColor: tokens.colors.background.tertiary,
+    borderRadius: tokens.borderRadius.md,
     padding: 16,
     minHeight: 100,
   },
   simpleNotesTextInput: {
-    fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.primary,
     textAlignVertical: 'top',
-    lineHeight: 24,
+    lineHeight: tokens.typography.body.lineHeight,
     textAlign: 'right',
   },
   notesPreview: {
-    fontSize: 14,
-    color: DesignTokens.colors.text.secondary,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
     fontStyle: 'italic',
+    width: '100%',
+    lineHeight: Math.round(tokens.typography.bodySmall.size * 1.4),
+    writingDirection: 'rtl',
+  },
+
+  notesSheetContent: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    direction: 'rtl',
+  },
+  notesSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: tokens.spacing.lg,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: NOTES_SHEET_BORDER,
+    gap: 10,
+  },
+  notesSheetHeaderIcon: {
+    alignSelf: 'center',
+  },
+  notesSheetHeaderCenter: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  notesSheetHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.3,
+  },
+  notesSheetHeaderSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  notesSheetHeaderTextBtn: {
+    minWidth: DAY_NAV_BUTTON_SIZE,
+    height: DAY_NAV_BUTTON_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesSheetHeaderTextBtnLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: tokens.colors.primary.main,
+  },
+  notesSheetHeaderTextBtnLabelDisabled: {
+    color: tokens.colors.text.tertiary,
+  },
+  notesSheetScroll: {
+    flex: 1,
+  },
+  notesSheetScrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingVertical: 14,
+    gap: 12,
+    direction: 'rtl',
+  },
+  notesSheetInputShell: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  notesSheetInput: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    fontSize: 15,
+    lineHeight: tokens.typography.body.lineHeight,
+    textAlignVertical: 'top',
+    minHeight: 220,
+    width: '100%',
+    paddingVertical: 4,
+  },
+  notesSheetHint: {
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  notesSheetFooter: {
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'android' ? 8 : 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: NOTES_SHEET_BORDER,
+    backgroundColor: tokens.colors.background.secondary,
+  },
+  notesSheetSavePrimary: {
+    height: 50,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: tokens.colors.primary.main,
+  },
+  notesSheetSavePrimaryDisabled: {
+    opacity: 0.65,
+  },
+  notesSheetSavePrimaryContent: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+  },
+  notesSheetSavePrimaryText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#fff',
   },
   
   // Bottom Sheet Styles
@@ -2002,14 +2845,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: tokens.colors.backdrop,
     justifyContent: 'flex-end',
   },
   bottomSheet: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderTopLeftRadius: tokens.borderRadius.xl,
+    borderTopRightRadius: tokens.borderRadius.xl,
     maxHeight: '90%',
+    borderTopWidth: 1,
+    borderColor: tokens.colors.border.primary,
     minHeight: '60%',
   },
   bottomSheetHeader: {
@@ -2018,7 +2863,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: DesignTokens.colors.border.primary,
+    borderBottomColor: tokens.colors.border.primary,
     minHeight: 60,
   },
   dragHandle: {
@@ -2028,14 +2873,14 @@ const styles = StyleSheet.create({
     marginLeft: -20,
     width: 40,
     height: 4,
-    backgroundColor: DesignTokens.colors.text.tertiary,
+    backgroundColor: tokens.colors.text.tertiary,
     borderRadius: 2,
     alignSelf: 'center',
   },
   bottomSheetTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     lineHeight: 24,
     textAlignVertical: 'center',
@@ -2043,9 +2888,9 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   closeButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: tokens.spacing.sm,
+    borderRadius: tokens.borderRadius.sm,
+    backgroundColor: tokens.colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2054,16 +2899,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: DesignTokens.colors.border.primary,
+    borderBottomColor: tokens.colors.border.primary,
     gap: 12,
     minHeight: 60,
     justifyContent: 'space-around',
     alignItems: 'center',
   },
   toolbarButton: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.sm,
+    backgroundColor: tokens.colors.border.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2075,10 +2920,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notesTextArea: {
-    fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.primary,
     textAlignVertical: 'top',
-    lineHeight: 24,
+    lineHeight: tokens.typography.body.lineHeight,
     textAlign: 'right',
     minHeight: 200,
   },
@@ -2091,57 +2936,60 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    borderRadius: tokens.borderRadius.md,
+    backgroundColor: tokens.colors.background.tertiary,
     alignItems: 'center',
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.secondary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
+    color: tokens.colors.text.secondary,
   },
   saveButton: {
     flex: 1,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: DesignTokens.colors.primary.main,
+    borderRadius: tokens.borderRadius.md,
+    backgroundColor: tokens.colors.primary.main,
     alignItems: 'center',
   },
   saveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
+    color: tokens.colors.text.primary,
   },
   
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: tokens.colors.backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: 16,
+    backgroundColor: tokens.colors.background.cardSolid,
+    borderRadius: tokens.borderRadius.lg,
     padding: 20,
     width: '80%',
+    borderWidth: 1,
+    borderColor: tokens.colors.border.primary,
     maxWidth: 400,
     alignSelf: 'center',
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.titleSmall.size,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    letterSpacing: tokens.typography.titleSmall.letterSpacing,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 20,
   },
   modalInput: {
-    backgroundColor: DesignTokens.colors.background.tertiary,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    backgroundColor: tokens.colors.background.tertiary,
+    borderRadius: tokens.borderRadius.sm,
+    padding: tokens.spacing.md,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 16,
   },
@@ -2151,22 +2999,22 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: tokens.spacing.md,
     paddingHorizontal: 20,
-    borderRadius: 8,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    borderRadius: tokens.borderRadius.sm,
+    backgroundColor: tokens.colors.background.tertiary,
     alignItems: 'center',
   },
   modalButtonPrimary: {
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
   },
   modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.secondary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
+    color: tokens.colors.text.secondary,
   },
   modalButtonTextPrimary: {
-    color: 'white',
+    color: tokens.colors.text.primary,
   },
   colorPicker: {
     flexDirection: 'row',
@@ -2177,12 +3025,10 @@ const styles = StyleSheet.create({
   colorOption: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
+    borderRadius: tokens.borderRadius.full,
     borderColor: 'transparent',
   },
   selectedColor: {
-    borderColor: DesignTokens.colors.primary.main,
     borderWidth: 3,
   },
   
@@ -2195,9 +3041,9 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   richTextElement: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
     marginBottom: 8,
     textAlign: 'right',
   },
@@ -2205,31 +3051,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   richImageElement: {
-    borderRadius: 8,
+    borderRadius: tokens.borderRadius.sm,
     marginVertical: 8,
     alignSelf: 'center',
   },
   linkText: {
-    color: DesignTokens.colors.primary.main,
+    color: tokens.colors.primary.main,
     textDecorationLine: 'underline',
   },
   datetimeText: {
-    color: DesignTokens.colors.text.secondary,
-    fontSize: 14,
+    color: tokens.colors.text.secondary,
+    fontSize: tokens.typography.bodySmall.size,
     fontStyle: 'italic',
   },
   listText: {
     marginLeft: 16,
   },
   placeholderText: {
-    fontSize: 16,
-    color: DesignTokens.colors.text.tertiary,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.tertiary,
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 40,
   },
   activeToolbarButton: {
-    backgroundColor: DesignTokens.colors.primary.main + '20',
+    backgroundColor: tokens.colors.primary.main + '20',
   },
   
   // Text Input Styles
@@ -2240,17 +3086,17 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingBottom: Platform.OS === 'ios' ? 8 : 12,
     borderTopWidth: 1,
-    borderTopColor: DesignTokens.colors.border.primary,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    borderTopColor: tokens.colors.border.primary,
+    backgroundColor: tokens.colors.background.tertiary,
   },
   textInput: {
     flex: 1,
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: 20,
+    backgroundColor: tokens.colors.background.secondary,
+    borderRadius: tokens.borderRadius['3xl'],
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     maxHeight: 100,
     marginRight: 8,
@@ -2258,8 +3104,8 @@ const styles = StyleSheet.create({
   addTextButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: DesignTokens.colors.primary.main,
+    borderRadius: tokens.borderRadius.full,
+    backgroundColor: tokens.colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2271,8 +3117,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: 10,
+    backgroundColor: tokens.colors.background.secondary,
+    borderRadius: tokens.borderRadius.md,
     padding: 2,
   },
   
@@ -2285,14 +3131,14 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   flowingText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 4,
   },
   flowingImage: {
-    borderRadius: 8,
+    borderRadius: tokens.borderRadius.sm,
     marginVertical: 8,
     alignSelf: 'center',
   },
@@ -2313,9 +3159,9 @@ const styles = StyleSheet.create({
   },
   inlineTextInput: {
     flex: 1,
-    fontSize: 16,
-    lineHeight: 24,
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     textAlignVertical: 'top',
     minHeight: 200,
@@ -2324,23 +3170,21 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: DesignTokens.colors.border.primary,
+    borderTopColor: tokens.colors.border.primary,
   },
   addNoteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: DesignTokens.colors.background.tertiary,
-    borderRadius: 8,
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.lg,
+    backgroundColor: tokens.colors.background.tertiary,
+    borderRadius: tokens.borderRadius.sm,
     marginTop: 16,
-    borderWidth: 1,
-    borderColor: DesignTokens.colors.border.primary,
   },
   addNoteText: {
-    fontSize: 16,
-    color: DesignTokens.colors.primary.main,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.primary.main,
     marginLeft: 8,
     fontWeight: '500',
   },
@@ -2361,8 +3205,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   savingText: {
-    fontSize: 12,
-    color: DesignTokens.colors.primary.main,
+    fontSize: tokens.typography.caption.size,
+    color: tokens.colors.primary.main,
     marginLeft: 4,
   },
   
@@ -2371,14 +3215,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notesText: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#FFFFFF',
+    fontSize: tokens.typography.body.size,
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
     marginBottom: 4,
   },
   notesImage: {
-    borderRadius: 8,
+    borderRadius: tokens.borderRadius.sm,
     marginVertical: 8,
     alignSelf: 'center',
   },
@@ -2386,45 +3230,52 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   formatText: {
-    fontSize: 12,
-    color: DesignTokens.colors.text.secondary,
+    fontSize: tokens.typography.caption.size,
+    color: tokens.colors.text.secondary,
     textAlign: 'center',
   },
   
   // Lesson Progress Info
   lessonProgressInfo: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: DesignTokens.colors.border.primary,
+    marginTop: 0,
+    width: '100%',
+    paddingTop: tokens.spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  lessonProgressInfoNoDescription: {
+    paddingTop: 0,
+    borderTopWidth: 0,
   },
   progressTimeRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: tokens.spacing.sm,
   },
   progressTimeText: {
-    fontSize: 14,
-    color: DesignTokens.colors.text.secondary,
-    fontWeight: '500',
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.secondary,
+    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   progressPercentageText: {
-    fontSize: 14,
-    color: DesignTokens.colors.primary.main,
-    fontWeight: '600',
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.primary.main,
+    fontWeight: tokens.typography.titleXs.weight as any,
   },
   progressBarContainer: {
-    height: 4,
-    backgroundColor: DesignTokens.colors.background.tertiary,
-    borderRadius: 2,
+    height: 6,
+    backgroundColor: tokens.colors.background.tertiary,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: tokens.spacing.sm,
+    borderWidth: 1,
+    borderColor: `${tokens.colors.border.primary}99`,
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: DesignTokens.colors.primary.main,
-    borderRadius: 2,
+    backgroundColor: tokens.colors.primary.main,
+    borderRadius: 3,
   },
   completedStatus: {
     flexDirection: 'row',
@@ -2432,19 +3283,20 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   completedText: {
-    fontSize: 14,
-    color: DesignTokens.colors.success.main,
-    fontWeight: '500',
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.success.main,
+    fontWeight: tokens.typography.fontWeight.medium as any,
   },
   
-  // Course Header
+  // Course Header - שקוף עם הגרדיאנט מאחורה
   courseHeader: {
     padding: 0,
-    backgroundColor: DesignTokens.colors.background.secondary,
+    backgroundColor: 'transparent',
   },
   courseImageContainer: {
     position: 'relative',
     marginBottom: 0,
+    overflow: 'hidden',
   },
   courseImage: {
     width: '100%',
@@ -2457,54 +3309,67 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 100,
-    backgroundColor: 'rgba(0, 216, 74, 0.3)',
+    backgroundColor: tokens.colors.background.primary,
   },
   priceContainer: {
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: tokens.colors.overlay,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: DesignTokens.borderRadius.md,
+    borderRadius: tokens.borderRadius.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   originalPrice: {
-    fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.tertiary,
     textDecorationLine: 'line-through',
   },
   currentPrice: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: DesignTokens.colors.success.main,
+    fontSize: tokens.typography.titleSmall.size,
+    fontWeight: tokens.typography.fontWeight.bold as any,
+    color: tokens.colors.success.main,
   },
   
   courseInfo: {
-    gap: 12,
-    padding: 20,
+    gap: tokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.xl,
+    paddingBottom: tokens.spacing.lg,
+  },
+  courseTitleBlock: {
+    gap: tokens.spacing.xs,
+    width: '100%',
   },
   courseTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
-    lineHeight: 34,
+    fontSize: tokens.typography.displaySmall.size,
+    fontWeight: tokens.typography.displaySmall.weight as any,
+    letterSpacing: tokens.typography.displaySmall.letterSpacing,
+    color: tokens.colors.text.primary,
+    lineHeight: Math.round(tokens.typography.displaySmall.size * 1.22),
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   courseSubtitle: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: DesignTokens.colors.text.secondary,
-    marginBottom: 0,
+    fontSize: tokens.typography.titleSmall.size,
+    fontWeight: tokens.typography.fontWeight.medium as any,
+    letterSpacing: tokens.typography.titleSmall.letterSpacing,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.titleSmall.size * 1.35),
+    writingDirection: 'rtl',
   },
   courseDescription: {
-    fontSize: 16,
-    color: DesignTokens.colors.text.tertiary,
-    lineHeight: 24,
+    fontSize: tokens.typography.body.size,
+    color: tokens.colors.text.tertiary,
+    lineHeight: Math.round(tokens.typography.body.size * 1.5),
     textAlign: 'right',
+    writingDirection: 'rtl',
+    width: '100%',
+    alignSelf: 'stretch',
   },
   
   // Rating
@@ -2512,167 +3377,199 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   rating: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   ratingText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
+    color: tokens.colors.text.primary,
   },
   ratingCount: {
-    fontSize: 14,
-    color: DesignTokens.colors.text.tertiary,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.tertiary,
   },
   
   // Instructor
   instructorContainer: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 8,
+    gap: tokens.spacing.md,
+    marginTop: tokens.spacing.xs,
   },
   instructorAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
   },
+  instructorAvatarFallback: {
+    backgroundColor: tokens.colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instructorAvatarInitial: {
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.fontSize.xl,
+    fontWeight: tokens.typography.fontWeight.semibold as any,
+  },
   instructorInfo: {
     flex: 1,
   },
   instructorName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.titleXs.size * 1.3),
+    writingDirection: 'rtl',
+  },
+  instructorRole: {
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.secondary,
+    textAlign: 'right',
+    marginTop: tokens.spacing.xs,
+    lineHeight: Math.round(tokens.typography.bodySmall.size * 1.35),
   },
   instructorRating: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginTop: 2,
   },
   instructorRatingText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: DesignTokens.colors.text.secondary,
+    fontSize: tokens.typography.bodySmall.size,
+    fontWeight: tokens.typography.fontWeight.medium as any,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
   instructorStudents: {
-    fontSize: 12,
-    color: DesignTokens.colors.text.tertiary,
+    fontSize: tokens.typography.caption.size,
+    color: tokens.colors.text.tertiary,
     textAlign: 'right',
   },
   
   // Meta
   courseMeta: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 20,
     marginTop: 16,
   },
   metaItem: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
   metaValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: DesignTokens.colors.text.primary,
+    fontSize: tokens.typography.bodySmall.size,
+    fontWeight: tokens.typography.fontWeight.medium as any,
+    color: tokens.colors.text.primary,
+    textAlign: 'right',
+  },
+  metaLabel: {
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.secondary,
     textAlign: 'right',
   },
   
   // Lessons Section
   lessonsSection: {
-    padding: 20,
-    position: 'relative',
-  },
-  lessonsGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
+    paddingTop: tokens.spacing.md,
+    paddingBottom: tokens.spacing.xl,
   },
   
   // Chapter Sections
   chapterSection: {
-    marginBottom: 32,
+    marginBottom: tokens.spacing.xl,
   },
-  chapterHeader: {
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  chapterTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#00D84A',
-    textAlign: 'right',
-  },
-  chapterDivider: {
-    height: 1,
-    backgroundColor: '#00D84A',
-    marginBottom: 20,
-  },
-  sectionHeader: {
+  chapterHeaderRow: {
     flexDirection: 'row-reverse',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    gap: tokens.spacing.md,
+    marginBottom: tokens.spacing.md,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: DesignTokens.colors.text.primary,
+  chapterHeaderTitle: {
+    flex: 1,
+    fontSize: tokens.typography.fontSize.lg,
+    fontWeight: '800' as const,
+    color: tokens.colors.text.primary,
     textAlign: 'right',
+    lineHeight: Math.round(tokens.typography.fontSize.lg * 1.25),
+    writingDirection: 'rtl',
+  },
+  chapterHeaderBadge: {
+    minWidth: 56,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chapterHeaderBadgeText: {
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: '800' as const,
   },
   progressContainer: {
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
+    gap: tokens.spacing.sm,
+    minWidth: 132,
+    width: 132,
+    flexShrink: 0,
+  },
+  progressTextRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: tokens.spacing.sm,
+    minHeight: 22,
   },
   progressText: {
-    fontSize: 14,
+    fontSize: tokens.typography.fontSize.sm,
     textAlign: 'right',
-    color: DesignTokens.colors.text.secondary,
-    marginBottom: 4,
+    color: tokens.colors.text.secondary,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
+    writingDirection: 'rtl',
+    fontWeight: tokens.typography.fontWeight.medium as any,
+  },
+  progressTextMuted: {
+    fontSize: tokens.typography.fontSize.sm,
+    textAlign: 'right',
+    color: tokens.colors.text.tertiary,
+    lineHeight: Math.round(tokens.typography.fontSize.sm * 1.4),
+    writingDirection: 'rtl',
   },
   progressBar: {
-    width: 120,
+    width: '100%',
     height: 6,
-    backgroundColor: DesignTokens.colors.background.tertiary,
+    backgroundColor: tokens.colors.background.tertiary,
     borderRadius: 3,
     overflow: 'hidden',
-    marginTop: 4,
+    marginTop: tokens.spacing.xs,
+    borderWidth: 1,
+    borderColor: `${tokens.colors.border.primary}99`,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: DesignTokens.colors.primary.main,
+    backgroundColor: tokens.colors.primary.main,
     borderRadius: 3,
   },
   
   // Lesson Cards
-  lessonCard: {
-    backgroundColor: DesignTokens.colors.background.secondary,
-    borderRadius: DesignTokens.borderRadius.lg,
-    marginBottom: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    ...DesignTokens.shadows.md,
-  },
   lessonTouchable: {
-    flex: 1,
+    width: '100%',
   },
   lessonThumbnail: {
     position: 'relative',
-    height: 120,
+    height: 132,
+    backgroundColor: tokens.colors.background.primary,
+    overflow: 'hidden',
   },
   thumbnailImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#1a1a1a', // צבע רקע אם התמונה לא נטענת
+    backgroundColor: tokens.colors.background.primary,
   },
   thumbnailGradient: {
     position: 'absolute',
@@ -2680,70 +3577,77 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: tokens.colors.backdrop,
+  },
+  /** מספר שיעור על הבאנר — למעלה שמאל (צד שני ל־badge הזמן למטה־ימין) */
+  lessonNumberOnThumb: {
+    position: 'absolute',
+    top: tokens.spacing.md,
+    left: tokens.spacing.md,
+    zIndex: 2,
+    minWidth: 30,
+    height: 28,
+    paddingHorizontal: tokens.spacing.sm,
+    borderRadius: 14,
+    backgroundColor: tokens.colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+    ...tokens.shadows.xs,
+  },
+  lessonNumberOnThumbText: {
+    color: tokens.colors.text.inverse,
+    fontWeight: '800' as any,
+    fontSize: 14,
+    lineHeight: 17,
   },
   durationBadge: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: DesignTokens.borderRadius.sm,
+    bottom: tokens.spacing.md,
+    right: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.sm,
+    paddingVertical: tokens.spacing.xs,
+    borderRadius: tokens.borderRadius.sm,
+    shadowColor: tokens.shadows.xs.shadowColor,
+    shadowOffset: tokens.shadows.xs.shadowOffset,
+    shadowOpacity: tokens.shadows.xs.shadowOpacity,
+    shadowRadius: tokens.shadows.xs.shadowRadius,
+    elevation: tokens.shadows.xs.elevation,
   },
   durationText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: tokens.typography.caption.size,
+    fontWeight: tokens.typography.caption.weight as any,
   },
   completedBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    borderRadius: 12,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    top: tokens.spacing.md,
+    right: tokens.spacing.md,
+    borderRadius: tokens.borderRadius.md,
+    padding: tokens.spacing.xs,
+    shadowColor: tokens.shadows.xs.shadowColor,
+    shadowOffset: tokens.shadows.xs.shadowOffset,
+    shadowOpacity: tokens.shadows.xs.shadowOpacity,
+    shadowRadius: tokens.shadows.xs.shadowRadius,
+    elevation: tokens.shadows.xs.elevation,
   },
   
   lessonContent: {
-    flex: 1,
-    padding: 16,
-  },
-  lessonCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  lessonNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#00D84A',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lessonNumberText: {
-    color: '#000000',
-    fontWeight: '600',
-    fontSize: 14,
+    paddingHorizontal: tokens.spacing.lg,
+    paddingTop: tokens.spacing.lg,
+    paddingBottom: tokens.spacing.lg,
+    width: '100%',
   },
   lessonInfo: {
     flex: 1,
   },
   lessonDescription: {
-    fontSize: 16,
-    color: '#6c757d',
-    lineHeight: 24,
+    marginTop: tokens.spacing.xs,
+    fontSize: tokens.typography.bodySmall.size,
+    color: tokens.colors.text.secondary,
+    lineHeight: Math.round(tokens.typography.bodySmall.size * 1.45),
     textAlign: 'right',
+    writingDirection: 'rtl',
   },
   lessonStatus: {
     marginTop: 2,
@@ -2752,7 +3656,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: DesignTokens.colors.success.main,
+    backgroundColor: tokens.colors.success.main,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2761,7 +3665,6 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: DesignTokens.colors.text.tertiary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2773,7 +3676,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: tokens.colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
@@ -2782,10 +3685,48 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   loadingText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.fontWeight.medium as any,
+  },
+  videoErrorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: tokens.colors.background.secondary,
+    minHeight: 200,
+    padding: 20,
+  },
+  videoErrorIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  videoErrorText: {
+    color: tokens.colors.text.secondary,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.fontWeight.medium as any,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  videoErrorSubtext: {
+    color: tokens.colors.text.tertiary,
+    fontSize: tokens.typography.bodySmall.size,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  youtubeButton: {
+    backgroundColor: tokens.colors.danger.main,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: tokens.borderRadius.sm,
+    marginTop: 16,
+  },
+  youtubeButtonText: {
+    color: tokens.colors.text.primary,
+    fontSize: tokens.typography.titleXs.size,
+    fontWeight: tokens.typography.titleXs.weight as any,
   },
 });
 
 export default LearningScreen;
+

@@ -1,6 +1,9 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { AuthService } from '../../services/authService';
+import { DesignTokens } from '../../components/ui/DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const TestRegistrationScreen = () => {
   const [loading, setLoading] = useState(false);
@@ -9,14 +12,14 @@ const TestRegistrationScreen = () => {
     setLoading(true);
     const { exists, error } = await AuthService.checkEmailExists('test@example.com');
     setLoading(false);
-    Alert.alert('בדיקת מייל', `קיים: ${exists}, שגיאה: ${error || 'אין'}`);
+    legacyAlert('בדיקת מייל', `קיים: ${exists}, שגיאה: ${error || 'אין'}`);
   };
 
   const testPhoneCheck = async () => {
     setLoading(true);
     const { exists, error } = await AuthService.checkPhoneExists('0501234567');
     setLoading(false);
-    Alert.alert('בדיקת טלפון', `קיים: ${exists}, שגיאה: ${error || 'אין'}`);
+    legacyAlert('בדיקת טלפון', `קיים: ${exists}, שגיאה: ${error || 'אין'}`);
   };
 
   const testCompleteRegistration = async () => {
@@ -40,7 +43,7 @@ const TestRegistrationScreen = () => {
       }
     });
     setLoading(false);
-    Alert.alert('השלמת הרשמה', `הצלחה: ${success}, שגיאה: ${error || 'אין'}`);
+    legacyAlert('השלמת הרשמה', `הצלחה: ${success}, שגיאה: ${error || 'אין'}`);
   };
 
   return (
@@ -50,8 +53,11 @@ const TestRegistrationScreen = () => {
       </Text>
 
       <TouchableOpacity
-        onPress={testEmailCheck}
-        style={{ backgroundColor: '#00E654', padding: 16, borderRadius: 12, marginBottom: 16 }}
+        onPress={() => {
+          void HapticFeedback.impactLight();
+          testEmailCheck();
+        }}
+        style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >
         {loading ? (
@@ -64,8 +70,11 @@ const TestRegistrationScreen = () => {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={testPhoneCheck}
-        style={{ backgroundColor: '#00E654', padding: 16, borderRadius: 12, marginBottom: 16 }}
+        onPress={() => {
+          void HapticFeedback.impactLight();
+          testPhoneCheck();
+        }}
+        style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >
         {loading ? (
@@ -78,8 +87,11 @@ const TestRegistrationScreen = () => {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={testCompleteRegistration}
-        style={{ backgroundColor: '#00E654', padding: 16, borderRadius: 12, marginBottom: 16 }}
+        onPress={() => {
+          void HapticFeedback.medium();
+          testCompleteRegistration();
+        }}
+        style={{ backgroundColor: DesignTokens.colors.primary.main, padding: 16, borderRadius: 12, marginBottom: 16 }}
         disabled={loading}
       >
         {loading ? (

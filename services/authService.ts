@@ -1,4 +1,53 @@
+import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { openAuthSessionAsync, WebBrowserAuthSessionResult } from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as Linking from 'expo-linking';
+import { logger } from '../utils/logger';
+import { SUPABASE_URL } from '../config/publicEnv';
+
+/** חייב להתאים לפורמת scheme://host של Supabase; ב-Android expo-web-browser משווה startsWith ל-returnUrl */
+const GOOGLE_OAUTH_REDIRECT_NATIVE = 'com.darkpool.app://oauth';
+
+/** מונע שני signInWithOAuth במקביל — מחליף code-verifier ב-AsyncStorage ושובר PKCE */
+let googleOAuthFlowLock = false;
+
+/** GoTrue מצפה ל-auth_code בלבד, לא ל-URL מלא (אחרת 422 / invalid flow state בפרודקשן) */
+function extractPkceCodeFromCallbackUrl(callbackUrl: string): string | null {
+  try {
+    const parsed = Linking.parse(callbackUrl);
+    const q = parsed.queryParams as Record<string, string | undefined> | null;
+    const fromExpo = q?.code;
+    if (typeof fromExpo === 'string' && fromExpo.length > 0) return fromExpo;
+    const u = new URL(callbackUrl);
+    return u.searchParams.get('code');
+  } catch {
+    return null;
+  }
+}
+
+/** כשהפרופיל מ־public.users לא זמין בזמן (רשת איטית וכו') — לא מנתקים סשן תקף */
+function authUserToAppUser(u: SupabaseAuthUser): AuthUser {
+  const meta = (u.user_metadata || {}) as Record<string, unknown>;
+  const email = u.email ?? '';
+  const name =
+    (typeof meta.full_name === 'string' && meta.full_name) ||
+    (typeof meta.display_name === 'string' && meta.display_name) ||
+    email.split('@')[0] ||
+    '';
+  return {
+    id: u.id,
+    email,
+    display_name: (typeof meta.display_name === 'string' && meta.display_name) || name || undefined,
+    full_name: (typeof meta.full_name === 'string' && meta.full_name) || name || undefined,
+    profile_picture:
+      typeof meta.avatar_url === 'string'
+        ? meta.avatar_url
+        : typeof meta.profile_picture === 'string'
+          ? meta.profile_picture
+          : undefined,
+  };
+}
 
 export interface AuthUser {
   id: string;
@@ -6,6 +55,7 @@ export interface AuthUser {
   display_name?: string;
   full_name?: string;
   phone?: string;
+  gender?: 'male' | 'female';
   profile_picture?: string;
   account_type?: string;
   track_id?: string;
@@ -52,14 +102,96 @@ export interface RegistrationData {
 export class AuthService {
   // Sign in with email and password
   static async signIn({ email, password }: LoginCredentials): Promise<{ user: AuthUser | null; error: string | null }> {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.user) return { user: null, error: error?.message || 'שגיאה בהתחברות' };
-      const user = await this.getUserProfile(data.user.id);
-      return { user, error: null };
-    } catch (error: any) {
-      return { user: null, error: error.message };
+    const maxRetries = 3;
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // בדיקה בסיסית של חיבור לאינטרנט לפני הבקשה
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 5000); // timeout של 5 שניות
+          
+          const testResponse = await fetch(SUPABASE_URL, { 
+            method: 'HEAD',
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+        } catch (networkError: any) {
+          if (attempt === maxRetries) {
+            return { 
+              user: null, 
+              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+            };
+          }
+          // נמתין קצת לפני ניסיון נוסף
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        
+        if (error) {
+          lastError = error;
+          
+          // טיפול מיוחד בשגיאות רשת
+          if (error.message?.includes('Network request failed') || 
+              error.message?.includes('fetch') || 
+              error.status === 0 ||
+              error.status === null) {
+            if (attempt < maxRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+              continue;
+            }
+            return { 
+              user: null, 
+              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+            };
+          }
+          
+          // שגיאות אחרות לא דורשות retry
+          return { user: null, error: error.message || 'שגיאה בהתחברות' };
+        }
+        
+        if (!data.user) {
+          return { user: null, error: 'שגיאה בהתחברות - אין נתוני משתמש' };
+        }
+        
+        const user = await this.getUserProfile(data.user.id);
+        if (!user) {
+          return { user: null, error: 'שגיאה בטעינת פרופיל המשתמש' };
+        }
+        
+        return { user, error: null };
+      } catch (error: any) {
+        lastError = error;
+        const errorMessage = error?.message || String(error);
+        
+        if ((errorMessage.includes('Network request failed') || 
+             errorMessage.includes('fetch') ||
+             errorMessage.includes('AbortError')) && 
+            attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+        
+        if (attempt === maxRetries) {
+          if (errorMessage.includes('Network request failed') || errorMessage.includes('fetch')) {
+            return { 
+              user: null, 
+              error: 'בעיית חיבור לאינטרנט. אנא בדוק:\n1. שהאמולטור/מכשיר מחובר לאינטרנט\n2. שהרשת מאפשרת גישה לאתרים חיצוניים\n3. נסה להפעיל מחדש את האפליקציה' 
+            };
+          }
+          return { user: null, error: errorMessage };
+        }
+      }
     }
+
+    // אם הגענו לכאן, כל הניסיונות נכשלו
+    return { 
+      user: null, 
+      error: lastError?.message || 'שגיאה בהתחברות לאחר מספר ניסיונות' 
+    };
   }
 
   // Sign up with email and password
@@ -74,22 +206,14 @@ export class AuthService {
     track_id,
     intro_data
   }: RegisterCredentials): Promise<{ user: AuthUser | null; error: string | null }> {
-    console.log('🔄 AuthService: signUp called with:', { email, display_name, account_type });
     try {
       // בדיקה אם המייל כבר קיים
-      console.log('🔄 AuthService: Checking if email exists...');
       const { exists, error: checkError } = await this.checkEmailExists(email);
-      if (checkError) {
-        console.error('❌ AuthService: Error checking email:', checkError);
-      } else {
-        console.log('🔄 AuthService: Email exists check result:', exists);
-        if (exists) {
-          return { user: null, error: 'כתובת המייל כבר קיימת במערכת' };
-        }
+      if (!checkError && exists) {
+        return { user: null, error: 'כתובת המייל כבר קיימת במערכת' };
       }
 
       // ניסיון ראשון: הרשמה רגילה
-      console.log('🔄 AuthService: Calling supabase.auth.signUp...');
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -103,15 +227,8 @@ export class AuthService {
         }
       });
       
-      console.log('🔄 AuthService: supabase.auth.signUp result:', { 
-        hasUser: !!data?.user, 
-        userId: data?.user?.id, 
-        error: error?.message 
-      });
-      
       // אם יש שגיאה ב-auth.signUp, ננסה ליצור משתמש ישירות
       if (error || !data.user) {
-        console.log('🔄 AuthService: auth.signUp failed, trying direct user creation...');
         
         // יצירת UUID עבור המשתמש
         const userId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -119,7 +236,6 @@ export class AuthService {
           const v = c == 'x' ? r : (r & 0x3 | 0x8);
           return v.toString(16);
         });
-        console.log('🔄 AuthService: Generated user ID:', userId);
         
         // ניסיון ליצור משתמש ישירות בטבלת users (בלי auth.users)
         const userData: any = {
@@ -142,16 +258,11 @@ export class AuthService {
           }
         }
 
-        console.log('🔄 AuthService: Attempting direct user creation:', userData);
-        
         const { data: insertData, error: insertError } = await supabase.from('users').insert(userData).select();
         
         if (insertError) {
-          console.error('❌ AuthService: Direct user creation failed:', insertError);
           return { user: null, error: `Database error: ${insertError.message}` };
         }
-        
-        console.log('✅ AuthService: User created directly:', insertData);
         
         // החזרת משתמש מותאם
         const createdUser = insertData?.[0];
@@ -196,24 +307,32 @@ export class AuthService {
         }
       }
 
-      console.log('🔄 AuthService: Attempting to insert user data:', userData);
-      
       const { data: insertData, error: insertError } = await supabase.from('users').insert(userData).select();
       
       if (insertError) {
-        console.error('❌ AuthService: Error creating user profile:', insertError);
-        console.error('❌ AuthService: Insert data:', userData);
-        console.error('❌ AuthService: Insert result:', insertData);
         return { user: null, error: `Database error: ${insertError.message}` };
       }
-      
-      console.log('✅ AuthService: User created successfully:', insertData);
       
       const finalUser = await this.getUserProfile(data.user.id);
       return { user: finalUser, error: null };
     } catch (error: any) {
-      console.error('❌ AuthService: Sign up exception:', error);
       return { user: null, error: error.message };
+    }
+  }
+
+  // Resend signup verification email
+  static async resendVerificationEmail(email: string): Promise<{ error: string | null }> {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+      });
+      if (error) {
+        return { error: error.message || 'שגיאה בשליחת מייל האימות' };
+      }
+      return { error: null };
+    } catch (error: any) {
+      return { error: error?.message || 'שגיאה בשליחת מייל האימות' };
     }
   }
 
@@ -266,7 +385,10 @@ export class AuthService {
   static async signOut(): Promise<{ error: string | null }> {
     try {
       const { error } = await supabase.auth.signOut();
-      return { error: error?.message || null };
+      if (error) {
+        return { error: error.message || null };
+      }
+      return { error: null };
     } catch (error: any) {
       return { error: error.message };
     }
@@ -278,7 +400,8 @@ export class AuthService {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) return { user: null, error: null };
       const user = await this.getUserProfile(data.user.id);
-      return { user, error: null };
+      if (user) return { user, error: null };
+      return { user: authUserToAppUser(data.user), error: null };
     } catch (error: any) {
       return { user: null, error: error.message };
     }
@@ -294,6 +417,7 @@ export class AuthService {
       display_name: data.display_name,
       full_name: data.full_name,
       phone: data.phone,
+      gender: data.gender,
       profile_picture: data.profile_picture,
       account_type: data.account_type,
       track_id: data.track_id,
@@ -302,23 +426,195 @@ export class AuthService {
     };
   }
 
-  // Update user profile
+  // Update user profile (לא שולחים `id` ל־UPDATE — רק .eq)
   static async updateProfile(updates: Partial<AuthUser>): Promise<{ user: AuthUser | null; error: string | null }> {
     try {
-      const { data, error } = await supabase.from('users').update(updates).eq('id', updates.id).select().single();
-      if (error || !data) return { user: null, error: error?.message || 'שגיאה בעדכון' };
-      return { user: data, error: null };
+      const id = updates.id;
+      if (!id) {
+        return { user: null, error: 'מזהה משתמש חסר' };
+      }
+
+      const payload: Record<string, unknown> = {};
+      if (updates.display_name !== undefined) payload.display_name = updates.display_name;
+      if (updates.full_name !== undefined) payload.full_name = updates.full_name;
+      if (updates.phone !== undefined) {
+        payload.phone = updates.phone === '' ? null : updates.phone;
+      }
+      if (updates.gender !== undefined) {
+        payload.gender = updates.gender;
+      }
+      if (updates.profile_picture !== undefined) {
+        payload.profile_picture = updates.profile_picture || null;
+      }
+      if (updates.account_type !== undefined) payload.account_type = updates.account_type;
+      if (updates.track_id !== undefined) payload.track_id = updates.track_id;
+      if (updates.intro_data !== undefined) payload.intro_data = updates.intro_data;
+      if (updates.registration_completed !== undefined) {
+        payload.registration_completed = updates.registration_completed;
+      }
+
+      const { error } = await supabase.from('users').update(payload).eq('id', id);
+      if (error) {
+        return { user: null, error: error.message || 'שגיאה בעדכון' };
+      }
+
+      const user = await this.getUserProfile(id);
+      if (!user) {
+        return { user: null, error: 'העדכון נרשם אבל לא נטען הפרופיל — נסה שוב' };
+      }
+      return { user, error: null };
     } catch (error: any) {
-      return { user: null, error: error.message };
+      return { user: null, error: error?.message || 'שגיאה בעדכון' };
+    }
+  }
+
+  // Sign in with Google OAuth
+  static async signInWithGoogle(): Promise<{ 
+    user: AuthUser | null; 
+    error: string | null;
+    isNewUser?: boolean;
+    googleUser?: { id: string; email: string; fullName: string; profileImage: string | null };
+  }> {
+    if (googleOAuthFlowLock) {
+      return { user: null, error: 'ההתחברות כבר מתבצעת — המתן לסיום' };
+    }
+    googleOAuthFlowLock = true;
+    try {
+      // makeRedirectUri + native: בבילד אמיתי מחזירים בדיוק com.darkpool.app://oauth (תיעוד Supabase).
+      // בלי native, createURL עלול להחזיר com.darkpool.app:/oauth — ואז ב-Android ה-deep link
+      // com.darkpool.app://oauth?code=... לא מתחיל ב-returnUrl והזרימה נכשלת.
+      const redirectUrl = makeRedirectUri({
+        scheme: 'com.darkpool.app',
+        path: 'oauth',
+        native: GOOGLE_OAUTH_REDIRECT_NATIVE,
+      });
+      if (__DEV__) {
+        logger.info('AuthService', `Google OAuth redirectTo: ${redirectUrl}`);
+      }
+
+      // Start OAuth flow
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) {
+        return { user: null, error: error.message || 'שגיאה בהתחברות עם Google' };
+      }
+
+      if (!data.url) {
+        return { user: null, error: 'שגיאה - לא התקבל URL לאימות' };
+      }
+
+      // Open browser for OAuth - Supabase will handle the callback via deep linking
+      const result = (await openAuthSessionAsync(data.url, redirectUrl, {
+        preferEphemeralSession: true,
+      })) as WebBrowserAuthSessionResult;
+
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        return { user: null, error: 'ההתחברות בוטלה' };
+      }
+
+      // PKCE: חובה להעביר ל-exchangeCodeForSession רק את ה-authorization code (לא את כל ה-URL)
+      if (result.type === 'success' && result.url) {
+        const parsed = Linking.parse(result.url);
+        const errParam =
+          typeof parsed.queryParams?.error_description === 'string'
+            ? parsed.queryParams.error_description
+            : typeof parsed.queryParams?.error === 'string'
+              ? parsed.queryParams.error
+              : null;
+        if (errParam) {
+          return { user: null, error: errParam };
+        }
+
+        const code = extractPkceCodeFromCallbackUrl(result.url);
+        if (!code) {
+          return { user: null, error: 'לא התקבל קוד אימות מהדפדפן — נסה שוב' };
+        }
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (sessionError || !sessionData.user) {
+          return { user: null, error: sessionError?.message || 'שגיאה בהגדרת הסשן' };
+        }
+
+        // Check if user exists in our database
+        const existingUser = await this.getUserProfile(sessionData.user.id);
+        const isNewUser = !existingUser;
+
+        if (isNewUser) {
+          await supabase.from('users').insert({
+            id: sessionData.user.id,
+            email: sessionData.user.email,
+            display_name: sessionData.user.user_metadata?.full_name || sessionData.user.email?.split('@')[0],
+            full_name: sessionData.user.user_metadata?.full_name || sessionData.user.email?.split('@')[0],
+            profile_picture: sessionData.user.user_metadata?.avatar_url || null,
+          });
+        }
+
+        const user = await this.getUserProfile(sessionData.user.id);
+        if (!user) {
+          return { user: null, error: 'שגיאה בטעינת פרופיל המשתמש' };
+        }
+
+        return {
+          user,
+          error: null,
+          isNewUser,
+          googleUser: {
+            id: user.id,
+            email: user.email,
+            fullName: user.full_name || user.display_name || '',
+            profileImage: user.profile_picture || null,
+          },
+        };
+      }
+
+      return { user: null, error: 'שגיאה בהתחברות עם Google' };
+    } catch (error: any) {
+      return { user: null, error: error.message || 'שגיאה בהתחברות עם Google' };
+    } finally {
+      googleOAuthFlowLock = false;
     }
   }
 
   // Listen to auth state changes
   static onAuthStateChange(callback: (user: AuthUser | null) => void) {
-    return supabase.auth.onAuthStateChange((event, session) => {
+    return supabase.auth.onAuthStateChange(async (event, session) => {
+      // אם זה SIGNED_OUT event, תמיד נקרא callback(null)
+      if (event === 'SIGNED_OUT') {
+        callback(null);
+        return;
+      }
+      
       if (session?.user) {
-        this.getUserProfile(session.user.id).then(callback);
+        try {
+          // הוספת timeout ל-getUserProfile כדי למנוע תקיעות
+          const getUserProfilePromise = this.getUserProfile(session.user.id);
+          const timeoutPromise = new Promise<null>((resolve) => {
+            setTimeout(() => {
+              resolve(null);
+            }, 5000); // 5 שניות timeout
+          });
+          
+          const user = await Promise.race([getUserProfilePromise, timeoutPromise]);
+
+          if (user) {
+            callback(user);
+          } else {
+            // סשן תקף אבל הפרופיל לא נטען בזמן (timeout / שורה חסרה / רשת) — לא מנתקים
+            callback(authUserToAppUser(session.user));
+          }
+        } catch {
+          callback(authUserToAppUser(session.user));
+        }
       } else {
+        // אם אין session או אין user, נקרא callback(null)
+        // גם ב-INITIAL_SESSION, כדי שהאפליקציה תוכל להמשיך
         callback(null);
       }
     });

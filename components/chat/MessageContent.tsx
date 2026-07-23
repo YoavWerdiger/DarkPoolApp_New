@@ -1,6 +1,7 @@
 import React from 'react';
-import { Text } from 'react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import { Text, I18nManager } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { extractTextSegments } from '../../utils/textRanges';
 
 interface MessageContentProps {
@@ -10,24 +11,31 @@ interface MessageContentProps {
   textDirection: 'rtl' | 'ltr';
 }
 
-export default function MessageContent({ 
-  content, 
-  mentions, 
-  isMe, 
-  textDirection 
+function MessageContent({
+  content,
+  mentions,
+  isMe,
+  textDirection
 }: MessageContentProps) {
-  
+  const DesignTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
+
+  const bubbleTextColor = isMe
+    ? isDarkMode
+      ? DesignTokens.colors.text.inverse
+      : DesignTokens.colors.text.primary
+    : DesignTokens.colors.text.primary;
+
   // Render text with mentions
   const renderTextWithMentions = (text: string, mentions?: any[]) => {
     if (!mentions || mentions.length === 0) {
       return (
-        <Text 
+        <Text
           className="text-base"
-          style={{ 
-            textAlign: textDirection === 'rtl' ? 'right' : 'left',
-            direction: textDirection, 
+          style={{
+            textAlign: isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right',
             width: '100%',
-            color: isMe ? '#000000' : '#FFFFFF',
+            color: bubbleTextColor,
             writingDirection: textDirection,
             flexWrap: 'wrap',
             flexShrink: 1
@@ -46,11 +54,10 @@ export default function MessageContent({
     })));
 
     return (
-      <Text 
+      <Text
         className="text-base"
-        style={{ 
-          textAlign: textDirection === 'rtl' ? 'right' : 'left',
-          direction: textDirection, 
+        style={{
+          textAlign: isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right',
           width: '100%',
           writingDirection: textDirection,
           flexWrap: 'wrap',
@@ -58,15 +65,19 @@ export default function MessageContent({
         }}
       >
         {segments.map((segment, index) => {
+          // יצירת key ייחודי על בסיס התוכן, המיקום, והאורך של הטקסט המלא
+          // זה מבטיח שגם אם יש שני segments עם אותו טקסט, ה-key יהיה ייחודי
+          const uniqueKey = `segment-${index}-${segment.text.substring(0, 10)}-${segment.range?.type || 'text'}-${text.length}-${segments.length}`;
+          
           if (segment.range && segment.range.type === 'mention') {
             const mention = segment.range.data;
-            
+
             return (
               <Text
-                key={index}
-                style={{ 
+                key={uniqueKey}
+                style={{
                   fontWeight: 'bold' as const,
-                  color: DesignTokens.colors.primary,
+                  color: DesignTokens.colors.primary.main,
                   fontSize: DesignTokens.typography.fontSize.base
                 }}
               >
@@ -74,12 +85,12 @@ export default function MessageContent({
               </Text>
             );
           }
-          
+
           return (
             <Text
-              key={index}
-              style={{ 
-                color: isMe ? '#000000' : '#FFFFFF',
+              key={uniqueKey}
+              style={{
+                color: bubbleTextColor,
                 fontSize: DesignTokens.typography.fontSize.base
               }}
             >

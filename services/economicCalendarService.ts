@@ -1,11 +1,11 @@
 // EconomicCalendarService.ts - גרסה נקייה ומהירה
 import { supabase } from '../lib/supabase';
 
-const FRED_API_KEY = 'f4d63bd9fddd00b175c1c99ca49b4247';
+const FRED_API_KEY = process.env.EXPO_PUBLIC_FRED_API_KEY ?? '';
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred';
 
 // EOD Historical Data API לאירועים עתידיים
-const EOD_API_KEY = '68c99499978585.44924748';
+const EOD_API_KEY = process.env.EXPO_PUBLIC_EODHD_API_KEY ?? '';
 const EOD_ECONOMIC_EVENTS_API = 'https://eodhd.com/api/economic-events';
 
 // Trading Economics API לנתונים כלכליים
@@ -50,7 +50,6 @@ export class EconomicCalendarService {
   // קבלת נתונים כלכליים אמיתיים מ-FRED API (Federal Reserve Economic Data)
   static async getFREDEconomicData(): Promise<EconomicEvent[]> {
     try {
-      console.log('🏛️ EconomicCalendarService: Fetching real economic data from FRED API');
       
       // מדדים ראשיים + משניים למילוי ימים ריקים - סה"כ ~50 מדדים
       const fredSeries = [
@@ -161,35 +160,25 @@ export class EconomicCalendarService {
       const endDateStr = endDate.toISOString().split('T')[0];
       const startDateStr = startDate.toISOString().split('T')[0];
       
-      console.log(`📅 FRED API date range: ${startDateStr} to ${endDateStr} (6 months before/after today)`);
 
       // שליפה מקבילה של כל הסדרות יחד - הרבה יותר מהיר!
-      console.log('⚡ Fetching all FRED series in parallel...');
       
       const promises = fredSeries.map(async (series) => {
         try {
-          console.log(`📡 FRED API request for ${series.name}: ${startDateStr} to ${endDateStr}`);
           
           const url = `${FRED_BASE_URL}/series/observations?series_id=${series.id}&api_key=${FRED_API_KEY}&file_type=json&observation_start=${startDateStr}&observation_end=${endDateStr}&sort_order=desc&limit=100`;
       
       const response = await fetch(url);
       
       if (!response.ok) {
-            console.log(`❌ FRED API error for ${series.name}: HTTP ${response.status}`);
             if (response.status === 400) {
               const errorData = await response.json();
-              console.log('❌ FRED error details:', errorData);
             }
             return [];
           }
           
           const data = await response.json();
           
-          console.log(`📊 FRED response for ${series.name}:`, {
-            totalObservations: data.observations?.length || 0,
-            firstObservation: data.observations?.[0],
-            lastObservation: data.observations?.[data.observations?.length - 1]
-          });
           
           const seriesEvents: EconomicEvent[] = [];
           
@@ -208,7 +197,6 @@ export class EconomicCalendarService {
               maxFutureDate.setMonth(maxFutureDate.getMonth() + 6); // מקסימום 6 חודשים קדימה
               
               if (currentDate > maxFutureDate) {
-                console.log(`🚫 Skipping too far future date: ${current.date} for ${series.name}`);
                 continue;
               }
               
@@ -242,7 +230,6 @@ export class EconomicCalendarService {
           return seriesEvents;
           
     } catch (error) {
-          console.log(`ERROR ❌ Failed to fetch FRED series ${series.id} (${series.name}): [${error}]`);
       return [];
     }
       });
@@ -255,50 +242,34 @@ export class EconomicCalendarService {
         events.push(...seriesEvents);
       });
       
-      console.log(`🚀 FRED parallel fetch completed: ${events.length} events from all series`);
 
       // הוספת אירועים עתידיים מ-Economic Calendar API
       try {
-        console.log('🔄 About to call getFutureEconomicEvents()...');
         const futureEvents = await this.getFutureEconomicEvents();
         events.push(...futureEvents);
-        console.log(`📅 Added ${futureEvents.length} future economic events from API`);
       } catch (error) {
-        console.error('❌ Failed to fetch future events:', error);
-        console.error('❌ Error details:', error);
       }
 
       // הוספת תאריכי פרסום אמיתיים מ-FRED Release Calendar
       try {
-        console.log('🔄 About to call getFREDReleaseDates()...');
         const releaseDates = await this.getFREDReleaseDates();
         events.push(...releaseDates);
-        console.log(`📅 Added ${releaseDates.length} FRED release dates`);
       } catch (error) {
-        console.error('❌ Failed to fetch FRED release dates:', error);
-        console.error('❌ Error details:', error);
       }
 
       // הוספת נתונים כלכליים מ-Trading Economics (רק אם מוגדר מפתח אמיתי)
       if (TRADING_ECONOMICS_API_KEY && TRADING_ECONOMICS_API_KEY.toLowerCase() !== 'demo') {
         try {
-          console.log('🔄 About to call getTradingEconomicsData()...');
           const tradingEconomicsData = await this.getTradingEconomicsData();
           events.push(...tradingEconomicsData);
-          console.log(`📅 Added ${tradingEconomicsData.length} Trading Economics events`);
         } catch (error) {
-          console.error('❌ Failed to fetch Trading Economics data:', error);
-          console.error('❌ Error details:', error);
         }
       } else {
-        console.log('ℹ️ Skipping Trading Economics (no valid API key)');
       }
 
-      console.log(`✅ Total: Successfully fetched ${events.length} economic events (historical + future)`);
       return events;
       
     } catch (error) {
-      console.error('❌ FRED API: General error:', error);
       return [];
     }
   }
@@ -306,7 +277,6 @@ export class EconomicCalendarService {
   // שליפת תאריכי פרסום אמיתיים מ-FRED Release Calendar API
   static async getFREDReleaseDates(): Promise<EconomicEvent[]> {
     try {
-      console.log('📅 Fetching FRED release dates from API...');
       
       const releaseEvents: EconomicEvent[] = [];
       
@@ -331,29 +301,19 @@ export class EconomicCalendarService {
 
       // שליפת כל תאריכי הפרסום העתידיים (לא לפי release מסוים)
       try {
-        console.log(`📡 Fetching ALL future release dates from FRED...`);
         
         const url = `${FRED_BASE_URL}/releases/dates?api_key=${FRED_API_KEY}&file_type=json&realtime_start=${todayStr}&realtime_end=${endDateStr}&limit=1000&sort_order=asc`;
         
-        console.log(`🔗 FRED API URL: ${url}`);
           
           const response = await fetch(url);
           
           if (!response.ok) {
-          console.log(`❌ FRED Releases API error: HTTP ${response.status}`);
           const errorText = await response.text();
-          console.log(`❌ Error details:`, errorText);
           return [];
           }
           
           const data = await response.json();
         
-        console.log(`📊 FRED Releases API response:`, {
-          totalDates: data.release_dates?.length || 0,
-          firstDate: data.release_dates?.[0]?.date,
-          lastDate: data.release_dates?.[data.release_dates?.length - 1]?.date,
-          sampleData: data.release_dates?.slice(0, 3)
-        });
         
         if (data && data.release_dates && data.release_dates.length > 0) {
           // מיפוי שמות פרסומים חשובים
@@ -396,14 +356,11 @@ export class EconomicCalendarService {
         }
         
       } catch (error) {
-        console.log(`ERROR ❌ Failed to fetch FRED releases: [${error}]`);
       }
 
-      console.log(`✅ FRED Release Calendar: Found ${releaseEvents.length} upcoming releases`);
       return releaseEvents;
       
     } catch (error) {
-      console.error('❌ FRED Release Calendar: General error:', error);
       return [];
     }
   }
@@ -468,7 +425,6 @@ export class EconomicCalendarService {
   // שליפת נתונים כלכליים מ-Trading Economics API
   static async getTradingEconomicsData(): Promise<EconomicEvent[]> {
     try {
-      console.log('📊 Fetching economic data from Trading Economics API...');
       
       const tradingEvents: EconomicEvent[] = [];
       
@@ -483,26 +439,18 @@ export class EconomicCalendarService {
       // שליפה מ-Trading Economics Calendar API
       const url = `${TRADING_ECONOMICS_API}?c=${TRADING_ECONOMICS_API_KEY}&d1=${todayStr}&d2=${futureDateStr}&importance=1,2,3&country=united states&format=json`;
       
-      console.log(`📡 Trading Economics API request: ${todayStr} to ${futureDateStr}`);
-      console.log(`📡 URL: ${url}`);
       
       const response = await fetch(url);
       
       if (!response.ok) {
-        console.log(`❌ Trading Economics API error: HTTP ${response.status}`);
         if (response.status === 400) {
           const errorData = await response.text();
-          console.log('❌ Trading Economics error details:', errorData);
         }
         return [];
       }
       
       const data = await response.json();
       
-      console.log(`📊 Trading Economics API response:`, {
-        totalEvents: Array.isArray(data) ? data.length : 'Not an array',
-        firstEvent: Array.isArray(data) && data.length > 0 ? data[0] : 'None'
-      });
       
       if (data && Array.isArray(data)) {
         data.forEach((event: any) => {
@@ -531,11 +479,9 @@ export class EconomicCalendarService {
         });
       }
       
-      console.log(`📊 Found ${tradingEvents.length} events from Trading Economics API`);
       return tradingEvents;
       
     } catch (error) {
-      console.log('❌ Trading Economics API failed:', error);
       return [];
     }
   }
@@ -797,7 +743,6 @@ export class EconomicCalendarService {
   // שליפת אירועים עתידיים מ-EOD Economic Events API
   static async getFutureEconomicEvents(): Promise<EconomicEvent[]> {
     try {
-      console.log('📅 Fetching future economic events from EOD Economic Events API...');
       
       // תאריכים עתידיים - 3 חודשים קדימה
     const today = new Date();
@@ -810,16 +755,12 @@ export class EconomicCalendarService {
       // שליפה מ-EOD Economic Events API - הendpoint הנכון!
       const economicEventsUrl = `${EOD_ECONOMIC_EVENTS_API}?api_token=${EOD_API_KEY}&from=${todayStr}&to=${futureDateStr}&country=US&fmt=json`;
       
-      console.log(`📡 EOD Economic Events API request: ${todayStr} to ${futureDateStr}`);
-      console.log(`📡 URL: ${economicEventsUrl}`);
       
       const response = await fetch(economicEventsUrl);
       
       if (!response.ok) {
-        console.log(`❌ EOD Economic Events API error: HTTP ${response.status}`);
         if (response.status === 400) {
           const errorData = await response.text();
-          console.log('❌ EOD error details:', errorData);
         }
         // אין נפילה ל-mock
         return [];
@@ -828,10 +769,6 @@ export class EconomicCalendarService {
       const data = await response.json();
       const futureEvents: EconomicEvent[] = [];
       
-      console.log(`📊 EOD Economic Events API response:`, {
-        totalEvents: Array.isArray(data) ? data.length : 'Not an array',
-        firstEvent: Array.isArray(data) && data.length > 0 ? data[0] : 'None'
-      });
       
       if (data && Array.isArray(data)) {
         data.forEach((event: any) => {
@@ -860,18 +797,15 @@ export class EconomicCalendarService {
         });
       }
       
-      console.log(`📊 Found ${futureEvents.length} future events from EOD Economic Events API`);
       
       // אם לא נמצאו אירועים עתידיים, לא נחזיר mock
       if (futureEvents.length === 0) {
-        console.log('📅 No future events from EOD Economic Events API');
         return [];
       }
       
       return futureEvents;
       
     } catch (error) {
-      console.log('❌ EOD Economic Events API failed:', error);
       // אין נפילה ל-mock
       return [];
     }
@@ -879,7 +813,6 @@ export class EconomicCalendarService {
 
   // אירועים עתידיים בסיסיים (גיבוי אם ה-API לא עובד)
   static getBasicFutureEvents(): EconomicEvent[] {
-    console.log('📅 No API data available - generating realistic future events');
     
     const today = new Date();
     const futureEvents: EconomicEvent[] = [];
@@ -985,7 +918,6 @@ export class EconomicCalendarService {
       }
     }
     
-    console.log(`📊 Generated ${futureEvents.length} realistic future events`);
     return futureEvents;
   }
 
@@ -1099,7 +1031,6 @@ export class EconomicCalendarService {
   // פונקציה ראשית לקבלת אירועים כלכליים - FRED + אירועים עתידיים
   static async getEconomicEvents(): Promise<EconomicEvent[]> {
     try {
-      console.log('🎯 EconomicCalendarService: Starting to fetch economic events (FRED + Future)');
       
       // שליפה מקבילה: נתונים היסטוריים מ-FRED + אירועים עתידיים
       const [fredData, futureData] = await Promise.allSettled([
@@ -1113,20 +1044,15 @@ export class EconomicCalendarService {
       // הוספת נתוני FRED
       if (fredData.status === 'fulfilled') {
         allEvents.push(...fredData.value);
-        console.log(`✅ FRED: ${fredData.value.length} historical events`);
       } else {
-        console.log(`❌ FRED failed: ${fredData.reason}`);
       }
       
       // הוספת אירועים עתידיים
       if (futureData.status === 'fulfilled') {
         allEvents.push(...futureData.value);
-        console.log(`✅ Future Events: ${futureData.value.length} upcoming events`);
       } else {
-        console.log(`❌ Future Events failed: ${futureData.reason}`);
       }
       
-      console.log(`📊 Total events found: ${allEvents.length} (Historical + Future)`);
       
       // סידור כרונולוגי לפי תאריך (הישנים ביותר ראשון - לניווט הגיוני)
       const sortedEvents = allEvents.sort((a, b) => {
@@ -1138,7 +1064,6 @@ export class EconomicCalendarService {
       return sortedEvents;
       
     } catch (error) {
-      console.error('❌ EconomicCalendarService: Error fetching economic events:', error);
       return [];
     }
   }
@@ -1156,13 +1081,11 @@ export class EconomicCalendarService {
         });
       
       if (error) {
-        console.error('❌ Error marking event as read:', error);
         return false;
       }
       
       return true;
     } catch (error) {
-      console.error('❌ Error in markEventAsRead:', error);
       return false;
     }
   }
@@ -1176,14 +1099,12 @@ export class EconomicCalendarService {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('❌ Error getting read events:', error);
         return events.length;
       }
 
       const readEventIds = readEvents?.map(item => item.event_id) || [];
       return events.filter(event => !readEventIds.includes(event.id)).length;
     } catch (error) {
-      console.error('❌ Error in getUnreadEventsCount:', error);
       return 0;
     }
   }
@@ -1196,13 +1117,11 @@ export class EconomicCalendarService {
         .eq('user_id', userId);
       
       if (error) {
-        console.error('❌ Error getting user read events:', error);
         return [];
       }
       
       return data?.map(item => item.event_id) || [];
     } catch (error) {
-      console.error('❌ Error in getUserReadEvents:', error);
       return [];
     }
   }

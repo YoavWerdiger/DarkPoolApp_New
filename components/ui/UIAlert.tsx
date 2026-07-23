@@ -1,16 +1,19 @@
 import React, { useEffect, useRef } from 'react';
-import { 
-  Modal, 
-  View, 
-  Text, 
-  Pressable, 
-  Animated, 
+import {
+  Modal,
+  View,
+  Text,
+  Pressable,
+  Animated,
+  StyleSheet,
   ViewStyle,
   TextStyle,
-  StatusBar 
+  StatusBar,
+  I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DesignTokens from './DesignTokens';
+import { useDesignTokens } from './DesignTokens';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 export type UIAlertType = 'info' | 'success' | 'warning' | 'error';
 
@@ -28,6 +31,8 @@ export interface UIAlertProps {
   buttons?: UIAlertButton[];
   onClose?: () => void;
   showIcon?: boolean;
+  /** ברירת מחדל false — דיאלוג גלובלי יכול להפעיל לסגירה מהירה */
+  closeOnBackdropPress?: boolean;
 }
 
 const UIAlert: React.FC<UIAlertProps> = ({
@@ -38,41 +43,22 @@ const UIAlert: React.FC<UIAlertProps> = ({
   buttons = [{ text: 'אישור', style: 'default' }],
   onClose,
   showIcon = true,
+  closeOnBackdropPress = false,
 }) => {
-  const { colors, typography, spacing, borderRadius, shadows } = DesignTokens;
+  const DesignTokens = useDesignTokens();
+  const { colors, typography, spacing, borderRadius } = DesignTokens;
   
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
+    if (!visible) return;
+    scaleAnim.setValue(0.92);
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
   }, [visible]);
 
   const getTypeConfig = () => {
@@ -80,26 +66,18 @@ const UIAlert: React.FC<UIAlertProps> = ({
       case 'success':
         return {
           icon: 'checkmark-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.success,
-          backgroundColor: colors.surface,
         };
       case 'warning':
         return {
           icon: 'warning' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.warning,
-          backgroundColor: colors.surface,
         };
       case 'error':
         return {
           icon: 'close-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.danger,
-          backgroundColor: colors.surface,
         };
       default: // info
         return {
           icon: 'information-circle' as keyof typeof Ionicons.glyphMap,
-          iconColor: colors.info,
-          backgroundColor: colors.surface,
         };
     }
   };
@@ -107,6 +85,13 @@ const UIAlert: React.FC<UIAlertProps> = ({
   const typeConfig = getTypeConfig();
 
   const handleButtonPress = (button: UIAlertButton) => {
+    if (button.style === 'destructive') {
+      void HapticFeedback.warning();
+    } else if (button.style === 'cancel') {
+      void HapticFeedback.selection();
+    } else {
+      void HapticFeedback.impactLight();
+    }
     if (button.onPress) {
       button.onPress();
     }
@@ -115,74 +100,81 @@ const UIAlert: React.FC<UIAlertProps> = ({
     }
   };
 
-  const backdropStyle: ViewStyle = {
-    flex: 1,
-    backgroundColor: colors.overlay,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing['2xl'],
-  };
+  const rtlCard: ViewStyle = I18nManager.isRTL ? { direction: 'rtl' } : {};
 
+  const glass = DesignTokens.getGlassCardStyle('medium');
   const containerStyle: ViewStyle = {
-    backgroundColor: typeConfig.backgroundColor,
-    borderRadius: borderRadius.xl,
-    padding: spacing['2xl'],
+    ...glass,
+    padding: spacing.xl,
     width: '100%',
-    maxWidth: 320,
-    ...shadows.lg,
-    borderWidth: 0.5,
-    borderColor: colors.border,
+    maxWidth: 340,
+    overflow: 'hidden',
+    backgroundColor: colors.bubbleOther,
+    borderWidth: 0,
+    ...rtlCard,
   };
 
   const titleStyle: TextStyle = {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textPrimary,
+    fontSize: typography.title2.size,
+    fontWeight: typography.title2.weight as TextStyle['fontWeight'],
+    letterSpacing: typography.title2.letterSpacing,
+    lineHeight: typography.title2.lineHeight,
+    color: colors.text.primary,
     textAlign: 'center',
-    marginBottom: message ? spacing.sm : 0,
+    writingDirection: 'rtl',
+    marginBottom: message ? spacing.md : 0,
   };
 
   const messageStyle: TextStyle = {
-    fontSize: typography.fontSize.base,
-    color: colors.textSecondary,
+    fontSize: typography.body.size,
+    fontWeight: typography.body.weight as TextStyle['fontWeight'],
+    color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: typography.lineHeight.normal,
+    writingDirection: 'rtl',
+    lineHeight: typography.body.lineHeight,
     marginBottom: spacing.lg,
   };
 
+  const twoCol = buttons.length === 2;
+  const isSingleButton = buttons.length === 1;
   const buttonContainerStyle: ViewStyle = {
-    flexDirection: buttons.length > 2 ? 'column' : 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.md,
+    flexDirection: buttons.length > 2 ? 'column' : twoCol && I18nManager.isRTL ? 'row-reverse' : 'row',
+    justifyContent: isSingleButton ? 'center' : 'space-between',
+    marginTop: spacing.xs,
+    gap: twoCol ? spacing.sm : 0,
   };
 
   const getButtonStyle = (button: UIAlertButton, index: number): ViewStyle => {
     const baseStyle: ViewStyle = {
-      flex: buttons.length > 2 ? 0 : 1,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      borderRadius: borderRadius.md,
-      marginHorizontal: buttons.length > 2 ? 0 : (index > 0 ? spacing.sm : 0),
+      flex: buttons.length > 2 || isSingleButton ? 0 : 1,
+      minHeight: 48,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.base,
+      borderRadius: borderRadius.full,
       marginBottom: buttons.length > 2 && index < buttons.length - 1 ? spacing.sm : 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: isSingleButton ? 'center' : undefined,
+      minWidth: isSingleButton ? 180 : undefined,
     };
 
     switch (button.style) {
       case 'destructive':
         return {
           ...baseStyle,
-          backgroundColor: colors.danger,
+          backgroundColor: colors.danger.main,
         };
       case 'cancel':
         return {
           ...baseStyle,
           backgroundColor: 'transparent',
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: colors.border.primary,
         };
       default:
         return {
           ...baseStyle,
-          backgroundColor: colors.primary,
+          backgroundColor: '#FFFFFF',
         };
     }
   };
@@ -191,21 +183,21 @@ const UIAlert: React.FC<UIAlertProps> = ({
     switch (button.style) {
       case 'destructive':
         return {
-          color: colors.textPrimary,
+          color: '#FFFFFF',
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
         };
       case 'cancel':
         return {
-          color: colors.textSecondary,
+          color: '#FFFFFF',
           fontWeight: typography.fontWeight.medium,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
         };
-      default:
+        default:
         return {
-          color: '#000000',
+          color: '#FFFFFF',
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
@@ -213,64 +205,73 @@ const UIAlert: React.FC<UIAlertProps> = ({
     }
   };
 
-  if (!visible) return null;
-
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="none"
+      animationType="fade"
       statusBarTranslucent={true}
       onRequestClose={onClose}
     >
       <StatusBar backgroundColor="rgba(0,0,0,0.6)" barStyle="light-content" />
-      
-      <Animated.View style={[backdropStyle, { opacity: fadeAnim }]}>
-        <Animated.View 
+
+      <View style={{ flex: 1 }}>
+        <Pressable
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.background.overlayHeavy }]}
+          onPress={closeOnBackdropPress ? onClose : undefined}
+        />
+        <View
           style={[
-            containerStyle,
-            {
-              transform: [{ scale: scaleAnim }],
-              opacity: fadeAnim,
-            }
+            StyleSheet.absoluteFillObject,
+            { justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
           ]}
+          pointerEvents="box-none"
         >
-          {/* Icon */}
-          {showIcon && (
-            <View style={{ alignItems: 'center', marginBottom: spacing.lg }}>
-              <Ionicons 
-                name={typeConfig.icon} 
-                size={48} 
-                color={typeConfig.iconColor} 
-              />
-            </View>
-          )}
+          <View>
+            <Animated.View
+              style={[containerStyle, { transform: [{ scale: scaleAnim }] }]}
+            >
+              {showIcon && (
+                <View
+                  style={{
+                    alignItems: 'center',
+                    marginBottom: spacing.lg,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 32,
+                      backgroundColor: 'rgba(255,255,255,0.08)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name={typeConfig.icon} size={32} color={colors.text.secondary} />
+                  </View>
+                </View>
+              )}
 
-          {/* Title */}
-          <Text style={titleStyle}>{title}</Text>
+              <Text style={titleStyle}>{title}</Text>
 
-          {/* Message */}
-          {message && <Text style={messageStyle}>{message}</Text>}
+              {message && <Text style={messageStyle}>{message}</Text>}
 
-          {/* Buttons */}
-          <View style={buttonContainerStyle}>
-            {buttons.map((button, index) => (
-              <Pressable
-                key={index}
-                style={({ pressed }) => [
-                  getButtonStyle(button, index),
-                  pressed && { opacity: 0.8 }
-                ]}
-                onPress={() => handleButtonPress(button)}
-              >
-                <Text style={getButtonTextStyle(button)}>
-                  {button.text}
-                </Text>
-              </Pressable>
-            ))}
+              <View style={buttonContainerStyle}>
+                {buttons.map((button, index) => (
+                  <Pressable
+                    key={index}
+                    style={({ pressed }) => [getButtonStyle(button, index), pressed && { opacity: 0.8 }]}
+                    onPress={() => handleButtonPress(button)}
+                  >
+                    <Text style={getButtonTextStyle(button)}>{button.text}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </Animated.View>
           </View>
-        </Animated.View>
-      </Animated.View>
+        </View>
+      </View>
     </Modal>
   );
 };

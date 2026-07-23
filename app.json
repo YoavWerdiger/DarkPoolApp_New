@@ -2,7 +2,8 @@
   "expo": {
     "name": "DarkPool",
     "slug": "DarkPool",
-    "version": "1.0.0",
+    "scheme": "com.darkpool.app",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -10,25 +11,65 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.darkpool.app"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
+        "monochromeImage": "./assets/icon.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
+      "package": "com.darkpool.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
-    "bundler": "metro"
+    "extra": {
+      "eas": {
+        "projectId": "c6140546-bf96-4ca0-85a5-26807f0742f6"
+      }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "mode": "production",
+          "icon": "./assets/noti.png",
+          "color": "#000000",
+          "sounds": []
+        }
+      ],
+      "expo-video",
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "נדרשת גישה למצלמה לצילום סטוריז",
+          "microphonePermission": "נדרשת גישה למיקרופון להקלטת וידאו"
+        }
+      ]
+    ],
+    "notification": {
+      "icon": "./assets/noti.png",
+      "color": "#000000",
+      "androidMode": "default",
+      "androidCollapsedTitle": "DarkPool",
+      "iosDisplayInForeground": true,
+      "androidDisplayInForeground": true
+    },
+    "bundler": "metro",
+    "owner": "darkpoolapp"
   },
   "locales": {
     "he": {

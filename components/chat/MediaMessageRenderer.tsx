@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Image, PanResponder, GestureResponderEvent, PanResponderGestureState } from 'react-native';
+import { View, Text, Pressable, Image, PanResponder, GestureResponderEvent, PanResponderGestureState, I18nManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ImageIcon, PlayCircle, Play, Pause, FileText } from 'lucide-react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 // import { MediaFile } from '../../services/mediaService';
 import { Audio } from 'expo-av';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { LinearGradient } from 'expo-linear-gradient';
+import { logger } from '../../utils/logger';
 
 interface MediaMessageRendererProps {
   message: {
@@ -15,6 +16,7 @@ interface MediaMessageRendererProps {
     file_url?: string;
     type: string;
     duration?: number;
+    metadata?: any;
     sender?: {
       full_name?: string;
     };
@@ -36,6 +38,7 @@ export default function MediaMessageRenderer({
   isGroupStart,
   isGroupEnd
 }: MediaMessageRendererProps) {
+  const DesignTokens = useDesignTokens();
   const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
   // ====== Audio state ======
   const soundRef = useRef<Audio.Sound | null>(null);
@@ -52,16 +55,14 @@ export default function MediaMessageRenderer({
     if (message.type === 'audio' && message.file_url) {
       const loadDuration = async () => {
         try {
-          console.log('🎵 Loading duration from file:', message.file_url);
           const { sound } = await Audio.Sound.createAsync({ uri: message.file_url! });
           const status = await sound.getStatusAsync();
           if (status.isLoaded && status.durationMillis && status.durationMillis > 0) {
             setDurationMs(status.durationMillis);
-            console.log('🎵 Duration loaded from file:', status.durationMillis);
           }
           await sound.unloadAsync();
         } catch (error) {
-          console.log('Error loading audio duration:', error);
+          logger.error('MediaMessageRenderer', 'Failed to load audio duration', error);
         }
       };
       loadDuration();
@@ -73,16 +74,33 @@ export default function MediaMessageRenderer({
     if (message.type === 'video' && message.file_url && !videoThumbnail) {
       const generateThumbnail = async () => {
         try {
-          const { uri } = await VideoThumbnails.getThumbnailAsync(
-            message.file_url!,
-            {
-              time: 1000, // 1 second into the video
-              quality: 0.7,
-            }
-          );
-          setVideoThumbnail(uri);
+          // בדיקה אם זה URL מקומי או רחוק
+          const isLocalFile = message.file_url?.startsWith('file://') || message.file_url?.startsWith('content://');
+          
+          // אם זה קובץ מקומי, נבדוק אם הוא קיים
+          if (isLocalFile) {
+            // ננסה ליצור thumbnail רק אם הקובץ קיים
+            const { uri } = await VideoThumbnails.getThumbnailAsync(
+              message.file_url!,
+              {
+                time: 1000, // 1 second into the video
+                quality: 0.7,
+              }
+            );
+            setVideoThumbnail(uri);
+          } else if (message.file_url?.startsWith('http')) {
+            // עבור קבצים מרחוק, ננסה ליצור thumbnail
+            const { uri } = await VideoThumbnails.getThumbnailAsync(
+              message.file_url!,
+              {
+                time: 1000,
+                quality: 0.7,
+              }
+            );
+            setVideoThumbnail(uri);
+          }
         } catch (error) {
-          console.log('Error generating video thumbnail:', error);
+          logger.error('MediaMessageRenderer', 'Failed to generate video thumbnail', error);
         }
       };
       generateThumbnail();
@@ -110,7 +128,9 @@ export default function MediaMessageRenderer({
           // סיים – איפוס להתחלה
           setIsPlaying(false);
           setPositionMs(0);
-          try { await soundRef.current?.setPositionAsync(0); } catch {}
+          try { await soundRef.current?.setPositionAsync(0); } catch (error) {
+          logger.error('MediaMessageRenderer', 'Failed to reset audio position', error);
+        }
         }
       }
     });
@@ -123,19 +143,22 @@ export default function MediaMessageRenderer({
   };
 
   const togglePlay = async () => {
-    const sound = await ensureSound();
-    const st = await sound.getStatusAsync();
-    if (st.isLoaded && st.isPlaying) {
-      await sound.pauseAsync();
-      setIsPlaying(false);
-    } else if (st.isLoaded) {
-      // אם אנחנו קרובים לסוף – התחל מהתחלה
-      if ((st.durationMillis ?? 0) > 0 && (st.durationMillis! - st.positionMillis!) < 500) {
-        await sound.setPositionAsync(0);
-        setPositionMs(0);
+    try {
+      const sound = await ensureSound();
+      const st = await sound.getStatusAsync();
+      if (st.isLoaded && st.isPlaying) {
+        await sound.pauseAsync();
+        setIsPlaying(false);
+      } else if (st.isLoaded) {
+        if ((st.durationMillis ?? 0) > 0 && (st.durationMillis! - st.positionMillis!) < 500) {
+          await sound.setPositionAsync(0);
+          setPositionMs(0);
+        }
+        await sound.playAsync();
+        setIsPlaying(true);
       }
-      await sound.playAsync();
-      setIsPlaying(true);
+    } catch (e) {
+      logger.error('MediaMessageRenderer', 'togglePlay failed', e);
     }
   };
 
@@ -175,8 +198,10 @@ export default function MediaMessageRenderer({
         soundRef.current.unloadAsync();
         soundRef.current = null;
       }
+      setIsPlaying(false);
+      setPositionMs(0);
     };
-  }, []);
+  }, [message.id]);
 
   // Polling עדין כדי לעדכן את המחוון בזמן ניגון
   useEffect(() => {
@@ -198,17 +223,10 @@ export default function MediaMessageRenderer({
   
   const renderImageMessage = () => (
     <View style={{
-      borderRadius: 16,
+      borderRadius: 18,
       overflow: 'hidden',
-      backgroundColor: isMe ? 'rgba(0,230,84,0.1)' : 'rgba(255,255,255,0.05)',
-      borderWidth: 1,
-      borderColor: isMe ? 'rgba(0,230,84,0.2)' : 'rgba(255,255,255,0.1)',
-      marginBottom: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 4
+      backgroundColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
+      marginBottom: 4
     }}>
       {/* שם השולח מעל התמונה (רק לאחרים ורק אם זה תחילת קבוצה) */}
       {!isMe && (!isGrouped || isGroupStart) && (
@@ -216,12 +234,12 @@ export default function MediaMessageRenderer({
           style={{ 
             textAlign: 'right',
             writingDirection: 'rtl',
-            color: '#00E654',
-            fontSize: 13,
-            fontWeight: 'bold',
-            marginBottom: 8,
+            color: DesignTokens.colors.success.main,
+            fontSize: 12,
+            fontWeight: '700',
+            marginBottom: 4,
             paddingHorizontal: 12,
-            paddingTop: 8
+            paddingTop: 10
           }}
         >
           {message.sender?.full_name || 'משתמש'}
@@ -241,37 +259,44 @@ export default function MediaMessageRenderer({
           <Image 
             source={{ uri: message.file_url }} 
             style={{ 
-              width: 220, 
-              height: 220, 
-              alignSelf: 'center'
+              width: 240, 
+              height: 240, 
+              alignSelf: 'center',
+              borderRadius: 12
             }} 
             resizeMode="cover"
             onError={(error) => {
-              console.error('Image load error in MediaMessageRenderer:', error);
+              // אם יש שגיאה, נציג fallback במקום לוג
+              // השגיאה כבר מטופלת על ידי React Native
+            }}
+            onLoadStart={() => {
+              // התמונה מתחילה להיטען
             }}
           />
         ) : (
           <View style={{ 
-            width: 220, 
-            height: 220, 
-            backgroundColor: '#2A2A2A',
+            width: 240, 
+            height: 240, 
+            backgroundColor: DesignTokens.colors.background.primary,
             justifyContent: 'center',
             alignItems: 'center',
-            alignSelf: 'center'
+            alignSelf: 'center',
+            borderRadius: 12
           }}>
-            <ImageIcon size={48} color="#666" strokeWidth={1.5} />
+            <ImageIcon size={48} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
           </View>
         )}
       </Pressable>
       {message.content && message.content !== '[image]' ? (
         <Text style={{ 
           color: isMe ? '#000000' : '#FFFFFF', 
-          textAlign: textDirection === 'rtl' ? 'right' : 'left',
+          textAlign: isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right',
           writingDirection: textDirection,
           fontSize: 13,
           fontWeight: '400',
           paddingHorizontal: 12,
-          paddingBottom: 8,
+          paddingBottom: 10,
+          paddingTop: 6,
           lineHeight: 18
         }}>
           {message.content}
@@ -282,18 +307,29 @@ export default function MediaMessageRenderer({
 
   const renderVideoMessage = () => (
     <View style={{
-      borderRadius: 16,
+      borderRadius: 18,
       overflow: 'hidden',
-      backgroundColor: isMe ? 'rgba(0,230,84,0.1)' : 'rgba(255,255,255,0.05)',
-      borderWidth: 1,
-      borderColor: isMe ? 'rgba(0,230,84,0.2)' : 'rgba(255,255,255,0.1)',
-      marginBottom: 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 4
+      backgroundColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
+      marginBottom: 4
     }}>
+      {/* שם השולח מעל הווידאו (רק לאחרים ורק אם זה תחילת קבוצה) */}
+      {!isMe && (!isGrouped || isGroupStart) && (
+        <Text 
+          style={{ 
+            textAlign: 'right',
+            writingDirection: 'rtl',
+            color: DesignTokens.colors.success.main,
+            fontSize: 12,
+            fontWeight: '700',
+            marginBottom: 4,
+            paddingHorizontal: 12,
+            paddingTop: 10
+          }}
+        >
+          {message.sender?.full_name || 'משתמש'}
+        </Text>
+      )}
+
       <Pressable onPress={() => {
         if (message.file_url) {
           onMediaPress({
@@ -305,13 +341,14 @@ export default function MediaMessageRenderer({
         }
       }}>
         <View style={{ 
-          width: 260, 
+          width: 240, 
           height: 160, 
-          backgroundColor: '#2A2A2A',
+          backgroundColor: DesignTokens.colors.background.primary,
           justifyContent: 'center',
           alignItems: 'center',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          borderRadius: 12
         }}>
           {videoThumbnail ? (
             <>
@@ -325,7 +362,7 @@ export default function MediaMessageRenderer({
               />
               {/* גרדיאנט שחור מעל התמונה */}
               <LinearGradient
-                colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.4)']}
+                colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.5)', 'rgba(0,0,0,0.3)']} // שמירה על שקיפות שחורה לתמונה
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
@@ -342,43 +379,40 @@ export default function MediaMessageRenderer({
             <View style={{ 
               width: '100%', 
               height: '100%', 
-              backgroundColor: isMe ? '#1F1F1F' : '#181818',
+              backgroundColor: DesignTokens.colors.background.primary,
               justifyContent: 'center',
               alignItems: 'center'
             }}>
-              <PlayCircle size={48} color={isMe ? "#00E654" : "#888888"} strokeWidth={1.5} />
+              <PlayCircle size={48} color={DesignTokens.colors.text.tertiary} strokeWidth={1.5} />
             </View>
           )}
+          {/* כפתור Play */}
           <View style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
-            transform: [{ translateX: -20 }, { translateY: -20 }],
-            width: 40,
-            height: 40,
-            backgroundColor: isMe ? '#00E654' : '#181818',
-            borderRadius: 20,
+            transform: [{ translateX: -24 }, { translateY: -24 }],
+            width: 48,
+            height: 48,
+            backgroundColor: DesignTokens.colors.success.main,
+            borderRadius: 24,
             justifyContent: 'center',
-            alignItems: 'center',
-            shadowColor: isMe ? '#00E654' : '#181818',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.4,
-            shadowRadius: 6,
-            elevation: 6
+            alignItems: 'center'
           }}>
-            <Play size={18} color={isMe ? "#181818" : "#00E654"} strokeWidth={3} />
+            <Play size={20} color={DesignTokens.colors.text.primary} strokeWidth={2.5} />
           </View>
         </View>
       </Pressable>
       {message.content && message.content !== '[video]' ? (
         <Text style={{ 
           color: isMe ? '#000000' : '#FFFFFF', 
-          textAlign: textDirection === 'rtl' ? 'right' : 'left',
+          textAlign: isMe ? (textDirection === 'rtl' ? 'right' : 'left') : 'right',
           writingDirection: textDirection,
           fontSize: 13,
           fontWeight: '400',
           paddingHorizontal: 12,
-          paddingBottom: 8,
+          paddingBottom: 10,
+          paddingTop: 6,
           lineHeight: 18
         }}>
           {message.content}
@@ -390,71 +424,117 @@ export default function MediaMessageRenderer({
   const renderAudioMessage = () => (
     <View
       style={{
-        width: 280,
-        borderRadius: 16,
+        width: 280, // הורחב מ-260 ל-280 כדי לתת יותר מקום ל-waveforms
+        borderRadius: 18,
         overflow: 'hidden',
-        marginBottom: 8,
-        backgroundColor: isMe ? 'rgba(0, 212, 77,0.6)' : 'rgba(255,255,255,0.08)',
-        borderWidth: 1,
-        borderColor: isMe ? 'rgba(0,230,84,0.6)' : 'rgba(255,255,255,0.1)',
-        borderLeftWidth: isMe ? 3 : 0,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 4,
+        marginBottom: -5,
+        backgroundColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
         alignSelf: 'center'
       }}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}>
+      {/* שם השולח (רק לאחרים ורק אם זה תחילת קבוצה) */}
+      {!isMe && (!isGrouped || isGroupStart) && (
+        <Text 
+          style={{ 
+            textAlign: 'right',
+            writingDirection: 'rtl',
+            color: DesignTokens.colors.success.main,
+            fontSize: 12,
+            fontWeight: '700',
+            marginBottom: 2,
+            paddingHorizontal: 12,
+            paddingTop: 10
+          }}
+        >
+          {message.sender?.full_name || 'משתמש'}
+        </Text>
+      )}
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 12 }}>
         {/* Play Button */}
         <Pressable
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: 22,
-            backgroundColor: isMe ? '#000' : '#00E654',
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: isMe ? '#000000' : DesignTokens.colors.success.main,
             justifyContent: 'center',
             alignItems: 'center',
-            marginRight: 16,
-            shadowColor: isMe ? '#000' : '#00E654',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.3,
-            shadowRadius: 4,
-            elevation: 3
+            marginRight: 10,
+            zIndex: 10 // ודא שהכפתור תמיד מעל ה-waveforms
           }}
           onPress={togglePlay}
         >
-          {isPlaying ? <Pause size={20} color={isMe ? "#00E654" : "#000"} strokeWidth={2} /> : <Play size={20} color={isMe ? "#00E654" : "#000"} strokeWidth={2} />}
+          {isPlaying ? (
+            <Ionicons name="pause" size={20} color={isMe ? DesignTokens.colors.success.main : "#000000"} />
+          ) : (
+            <Ionicons name="play" size={20} color={isMe ? DesignTokens.colors.success.main : "#000000"} style={{ marginLeft: 2 }} />
+          )}
         </Pressable>
 
-        {/* Timeline */}
-        <View style={{ flex: 1 }}>
-          {/* זמן נוכחי / סה"כ */}
-          <View style={{ flexDirection: 'row-reverse', marginBottom: 8 }}>
-            <Text style={{ color: isMe ? '#000' : '#fff', fontSize: 12, fontWeight: '500' }}>{formatMs(positionMs)} / {formatMs(durationMs)}</Text>
-          </View>
-          {/* פס התקדמות עם דוט */}
-          <View
-            {...panResponder.panHandlers}
-            style={{ height: 20, justifyContent: 'center' }}
-            onLayout={(e) => setBarWidthPx(e.nativeEvent.layout.width)}
-          >
-            <View style={{ height: 6, backgroundColor: isMe ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)', borderRadius: 3, width: '100%' }} />
-            <View style={{ position: 'absolute', height: 6, backgroundColor: isMe ? '#000' : '#00E654', borderRadius: 3, width: (progressPct / 100) * barWidthPx }} />
-            <View style={{ 
-              position: 'absolute', 
-              left: (progressPct / 100) * barWidthPx - 8, 
-              width: 16, 
-              height: 16, 
-              borderRadius: 8, 
-              backgroundColor: isMe ? '#000' : '#00E654',
-              shadowColor: isMe ? '#000' : '#00E654',
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.4,
-              shadowRadius: 2,
-              elevation: 2
-            }} />
+        {/* Waveforms - תמיד מציג waveforms */}
+        <View style={{ flex: 1, marginLeft: 4 }}> {/* הוספתי marginLeft כדי לתת יותר רווח מהכפתור */}
+          <View style={{ marginBottom: 4 }}>
+            <View
+              {...panResponder.panHandlers}
+              style={{
+                height: 24, // הוגדל מ-20 ל-24 כדי לתת יותר מקום ל-waveforms
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
+                minWidth: 180, // רוחב מינימלי כדי למנוע דחיסה
+                paddingRight: 4 // הוספתי padding כדי למנוע דחיסה מהכפתור
+              }}
+              onLayout={(e) => setBarWidthPx(e.nativeEvent.layout.width)}
+            >
+              {/* יצירת waveforms - אם יש waveformData, משתמשים בו, אחרת יוצרים אקראיים */}
+              {(() => {
+                const BARS_COUNT = 30;
+                const waveformData = message.metadata?.waveformData && Array.isArray(message.metadata.waveformData) 
+                  ? message.metadata.waveformData 
+                  : Array.from({ length: BARS_COUNT }, () => 0.3 + Math.random() * 0.7);
+                
+                return waveformData.map((value: number, index: number) => {
+                  // חישוב גובה ה-bar בהתאם למיקום הנוכחי
+                  const barPosition = (index / waveformData.length) * 100;
+                  const isPlayed = barPosition <= progressPct;
+                  const barHeight = Math.max(4, value * 16);
+                  
+                  return (
+                    <View
+                      key={index}
+                      style={{
+                        width: 3,
+                        height: barHeight,
+                        backgroundColor: isPlayed 
+                          ? (isMe ? '#000000' : DesignTokens.colors.success.main)
+                          : (isMe ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)'),
+                        borderRadius: 1.5,
+                        opacity: isPlayed ? 1 : 0.5
+                      }}
+                    />
+                  );
+                });
+              })()}
+            </View>
+            {/* זמן נוכחי / סה"כ */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+              <Text style={{ 
+                color: isMe ? '#000000' : DesignTokens.colors.text.tertiary, 
+                fontSize: 10, 
+                fontWeight: '500' 
+              }}>
+                {formatMs(durationMs)}
+              </Text>
+              <Text style={{ 
+                color: isMe ? '#000000' : '#FFFFFF', 
+                fontSize: 10, 
+                fontWeight: '600' 
+              }}>
+                {formatMs(positionMs)}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
@@ -464,19 +544,31 @@ export default function MediaMessageRenderer({
 
   const renderDocumentMessage = () => (
     <View style={{ 
-      borderRadius: 16, 
+      borderRadius: 18, 
       overflow: 'hidden', 
-      backgroundColor: isMe ? 'rgba(0, 230, 84, 0.5)' : 'rgba(255,255,255,0.08)', 
-      borderWidth: 1,
-      borderColor: isMe ? 'rgba(0, 230, 84, 0.6)' : 'rgba(255,255,255,0.1)',
-      marginBottom: 8, 
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 4,
-      alignSelf: 'center' 
+      backgroundColor: isMe ? DesignTokens.colors.bubbleMe : DesignTokens.colors.bubbleOther,
+      marginBottom: 4,
+      alignSelf: 'center',
+      width: 260
     }}>
+      {/* שם השולח (רק לאחרים ורק אם זה תחילת קבוצה) */}
+      {!isMe && (!isGrouped || isGroupStart) && (
+        <Text 
+          style={{ 
+            textAlign: 'right',
+            writingDirection: 'rtl',
+            color: DesignTokens.colors.success.main,
+            fontSize: 12,
+            fontWeight: '700',
+            marginBottom: 2,
+            paddingHorizontal: 12,
+            paddingTop: 10
+          }}
+        >
+          {message.sender?.full_name || 'משתמש'}
+        </Text>
+      )}
+
       <Pressable onPress={() => {
         if (message.file_url) {
           onMediaPress({
@@ -487,28 +579,34 @@ export default function MediaMessageRenderer({
           });
         }
       }}>
-        <View style={{ width: 280, minHeight: 80, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 16 }}>
-            <View style={{ 
-            width: 48, 
-            height: 48, 
-            borderRadius: 12, 
-            backgroundColor: isMe ? '#000' : '#00E654', 
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 }}>
+          <View style={{ 
+            width: 40, 
+            height: 40, 
+            borderRadius: 20, 
+            backgroundColor: isMe ? '#000000' : DesignTokens.colors.success.main, 
             justifyContent: 'center', 
             alignItems: 'center', 
-            marginRight: 16,
-            shadowColor: isMe ? '#000' : '#00E654',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.2,
-            shadowRadius: 4,
-            elevation: 2
+            marginRight: 10
           }}>
-            <FileText size={22} color={isMe ? '#00E654' : '#000'} strokeWidth={2} />
+            <FileText size={20} color={isMe ? DesignTokens.colors.success.main : '#000000'} strokeWidth={2} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: isMe ? '#000' : '#fff', fontWeight: '700', fontSize: 15, marginBottom: 4 }} numberOfLines={1} ellipsizeMode="tail">
+            <Text style={{ 
+              color: isMe ? '#000000' : '#FFFFFF', 
+              fontWeight: '700', 
+              fontSize: 13, 
+              marginBottom: 3,
+              textAlign: 'right'
+            }} numberOfLines={1} ellipsizeMode="tail">
               {(message.content && message.content !== '[document]') ? message.content : (message.file_url?.split('/').pop() || 'מסמך')}
             </Text>
-            <Text style={{ color: isMe ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '500' }} numberOfLines={1}>
+            <Text style={{ 
+              color: isMe ? 'rgba(0,0,0,0.6)' : DesignTokens.colors.text.tertiary, 
+              fontSize: 11, 
+              fontWeight: '500',
+              textAlign: 'right'
+            }} numberOfLines={1}>
               {message.file_url?.split('.').pop()?.toUpperCase() || 'FILE'}
             </Text>
           </View>

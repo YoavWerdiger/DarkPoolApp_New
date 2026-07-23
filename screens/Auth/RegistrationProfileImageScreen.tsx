@@ -1,342 +1,231 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ActivityIndicator, Alert, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground } from 'react-native';
+import { legacyAlert } from '../../utils/appDialog';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useRegistration } from '../../context/RegistrationContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { supabase } from '../../lib/supabase';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { DesignTokens } from '../../components/ui/DesignTokens';
+import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
+import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+
+const PREVIEW_SIZE = 280;
 
 const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
-  const [image, setImage] = useState(data.profileImage || null);
+  const [image, setImage] = useState<string | null>(data.profileImage || null);
   const [loading, setLoading] = useState(false);
 
-  // בחירת תמונה מהגלריה
-  const pickImageFromGallery = async () => {
+  useEffect(() => {
+    ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => {});
+    ImagePicker.requestCameraPermissionsAsync().catch(() => {});
+  }, []);
+
+  const processAndSetImage = async (uri: string) => {
     setLoading(true);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
+    try {
+      const resized = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: PREVIEW_SIZE, height: PREVIEW_SIZE } }],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      setImage(resized.uri);
+    } catch {
+      setImage(uri);
+    } finally {
       setLoading(false);
-      Alert.alert('אין הרשאה', 'יש לאפשר גישה לגלריה');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    setLoading(false);
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImage(result.assets[0].uri);
     }
   };
 
-  // צילום תמונה מהמצלמה
-  const takePhoto = async () => {
-    setLoading(true);
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setLoading(false);
-      Alert.alert('אין הרשאה', 'יש לאפשר גישה למצלמה');
-      return;
+  const pickImageFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') { legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      await processAndSetImage(result.assets[0].uri);
     }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') { legacyAlert('אין הרשאה', 'יש לאפשר גישה למצלמה'); return; }
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.7,
+      quality: 0.8,
     });
-    setLoading(false);
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setImage(result.assets[0].uri);
+    if (!result.canceled && result.assets?.[0]) {
+      await processAndSetImage(result.assets[0].uri);
     }
   };
 
-  // דילוג על בחירת תמונה
   const skipImage = () => {
     setData({ ...data, profileImage: null });
     navigation.navigate('RegistrationIntro');
   };
 
-  // המשך עם התמונה
   const continueWithImage = () => {
     setData({ ...data, profileImage: image });
     navigation.navigate('RegistrationIntro');
   };
 
-  const { width, height } = Dimensions.get('window');
-
-  // Create subtle background pattern
-  const createBackgroundPattern = () => {
-    const patterns = [];
-    for (let i = 0; i < 15; i++) {
-      patterns.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.05 + 0.02
-      });
-    }
-    return patterns;
-  };
-
-  const backgroundPattern = createBackgroundPattern();
-
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <LinearGradient
-          colors={['#000000', '#0d1b0d', '#1a2d1a', '#000000']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ flex: 1 }}
+    <OnboardingLayout
+      title="תמונת פרופיל"
+      subtitle="הוסף תמונה או דלג — ניתן לשנות בהמשך"
+      currentStep={2}
+      totalSteps={5}
+      showBack={true}
+      onBack={() => {
+        void HapticFeedback.impactLight();
+        navigation.goBack();
+      }}
+    >
+      {/* Avatar */}
+      <View style={{ alignItems: 'center', marginBottom: 44 }}>
+        <View
+          style={{
+            position: 'relative',
+            marginBottom: 28,
+          }}
         >
-          {/* Subtle Background Pattern */}
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-            {backgroundPattern.map((dot, index) => (
-              <View
-                key={index}
-                style={{
-                  position: 'absolute',
-                  left: dot.x,
-                  top: dot.y,
-                  width: dot.size,
-                  height: dot.size,
-                  backgroundColor: '#00E654',
-                  opacity: dot.opacity,
-                  borderRadius: dot.size / 2
-                }}
-              />
-            ))}
-          </View>
-
-          {/* Gradient Overlay */}
+          {/* Glow ring */}
           <LinearGradient
-            colors={['rgba(0, 230, 84, 0.03)', 'transparent', 'rgba(0, 230, 84, 0.02)']}
+            colors={['rgba(0,230,84,0.4)', 'rgba(0,230,84,0.1)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-
-          {/* Transparent Background Image - Center */}
-          <View style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            justifyContent: 'center',
-            alignItems: 'center',
-            opacity: 0.15
-          }}>
-            <ImageBackground
-              source={{ uri: 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/backgrounds/transback.png' }}
+            style={{
+              width: 140,
+              height: 140,
+              borderRadius: 70,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <View
               style={{
-                width: width,
-                height: height,
-                resizeMode: 'contain'
-              }}
-              imageStyle={{
-                opacity: 0.3
-              }}
-            />
-          </View>
-
-          <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
-            {/* Header Section */}
-            <View style={{ alignItems: 'center', marginBottom: 40 }}>
-              {/* Main Title */}
-              <Text style={{ 
-                fontSize: 32, 
-                fontWeight: '800', 
-                color: '#FFFFFF', 
-                marginBottom: 8,
-                letterSpacing: -0.8,
-                textAlign: 'center',
-                writingDirection: 'rtl'
-              }}>
-                תמונת פרופיל
-              </Text>
-              
-              {/* Subtitle */}
-              <Text style={{ 
-                fontSize: 16, 
-                color: '#B0B0B0', 
-                fontWeight: '400',
-                letterSpacing: 0.3,
-                textAlign: 'center',
-                lineHeight: 22,
-                writingDirection: 'rtl'
-              }}>
-                הוסף תמונת פרופיל או דלג על השלב
-              </Text>
-              
-              {/* Decorative Line */}
-              <View style={{
-                width: 60,
-                height: 2,
-                backgroundColor: '#00E654',
-                marginTop: 16,
-                borderRadius: 1
-              }} />
-            </View>
-
-            {/* Profile Image Section */}
-            <View style={{ alignItems: 'center', marginBottom: 40 }}>
-              {/* Profile Image Circle */}
-              <View style={{
-                width: 120,
-                height: 120,
-                borderRadius: 60,
-                backgroundColor: '#1a1a1a',
-                borderWidth: 3,
-                borderColor: '#00E654',
+                width: 130,
+                height: 130,
+                borderRadius: 65,
+                backgroundColor: '#141F14',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: 20,
-                shadowColor: '#00E654',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 8
-              }}>
-                {image ? (
-                  <Image
-                    source={{ uri: image }}
-                    style={{
-                      width: 114,
-                      height: 114,
-                      borderRadius: 57
-                    }}
-                  />
-                ) : (
-                  <Ionicons name="person" size={50} color="#666666" />
-                )}
-              </View>
-
-              {/* Image Selection Buttons */}
-              <View style={{ flexDirection: 'row', gap: 16 }}>
-                {/* Gallery Button */}
-                <TouchableOpacity
-                  onPress={pickImageFromGallery}
-                  disabled={loading}
-                  style={{
-                    backgroundColor: '#181818',
-                    borderRadius: 12,
-                    paddingHorizontal: 20,
-                    paddingVertical: 12,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.15)'
-                  }}
-                >
-                  <Ionicons name="images-outline" size={20} color="#00E654" style={{ marginLeft: 8 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
-                    גלריה
-                  </Text>
-                </TouchableOpacity>
-
-                {/* Camera Button */}
-                <TouchableOpacity
-                  onPress={takePhoto}
-                  disabled={loading}
-                  style={{
-                    backgroundColor: '#181818',
-                    borderRadius: 12,
-                    paddingHorizontal: 20,
-                    paddingVertical: 12,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255, 255, 255, 0.15)'
-                  }}
-                >
-                  <Ionicons name="camera-outline" size={20} color="#00E654" style={{ marginLeft: 8 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>
-                    מצלמה
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {loading && (
-                <View style={{ marginTop: 20 }}>
-                  <ActivityIndicator color="#00E654" size="small" />
-                  <Text style={{ color: '#B0B0B0', fontSize: 14, marginTop: 8 }}>
-                    טוען תמונה...
-                  </Text>
-                </View>
+                overflow: 'hidden',
+              }}
+            >
+              {image ? (
+                <Image
+                  source={{ uri: image }}
+                  style={{ width: 130, height: 130, borderRadius: 65 }}
+                  contentFit="cover"
+                  placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                  transition={150}
+                />
+              ) : loading ? (
+                <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
+              ) : (
+                <Ionicons name="person" size={54} color="rgba(255,255,255,0.2)" />
               )}
             </View>
+          </LinearGradient>
 
-            {/* Action Buttons */}
-            <View style={{ gap: 16 }}>
-              {/* Continue Button */}
-              <LinearGradient
-                colors={['#00E654', '#00B84A', '#008F3A']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  borderRadius: 14,
-                  shadowColor: '#00E654',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.4,
-                  shadowRadius: 12,
-                  elevation: 8
-                }}
-              >
-                <TouchableOpacity
-                  onPress={continueWithImage}
-                  style={{
-                    paddingVertical: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <Text style={{ 
-                    color: '#000000', 
-                    fontSize: 16, 
-                    fontWeight: '700',
-                    letterSpacing: 0.5,
-                    textTransform: 'uppercase',
-                    writingDirection: 'rtl'
-                  }}>
-                    המשך
-                  </Text>
-                </TouchableOpacity>
-              </LinearGradient>
+          {/* Camera badge */}
+          {!loading && (
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                pickImageFromGallery();
+              }}
+              activeOpacity={0.85}
+              style={{
+                position: 'absolute',
+                bottom: 2,
+                left: 2,
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: DesignTokens.colors.primary.main,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 2,
+                borderColor: '#060C06',
+              }}
+            >
+              <Ionicons name="camera" size={18} color="#000" />
+            </TouchableOpacity>
+          )}
+        </View>
 
-              {/* Skip Button */}
-              <TouchableOpacity
-                onPress={skipImage}
-                style={{
-                  backgroundColor: '#181818',
-                  borderRadius: 14,
-                  paddingVertical: 16,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.15)'
-                }}
-              >
-                <Text style={{ 
-                  color: '#B0B0B0', 
-                  fontSize: 16, 
-                  fontWeight: '600',
-                  letterSpacing: 0.3,
-                  writingDirection: 'rtl'
-                }}>
-                  דלג על השלב
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </LinearGradient>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+        {loading && (
+          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 12 }}>
+            מעבד תמונה...
+          </Text>
+        )}
+
+        {/* Source buttons */}
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              pickImageFromGallery();
+            }}
+            disabled={loading}
+            activeOpacity={0.75}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              borderRadius: 24,
+              paddingHorizontal: 20,
+              paddingVertical: 11,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.1)',
+              gap: 8,
+            }}
+          >
+            <Ionicons name="images-outline" size={18} color={DesignTokens.colors.primary.main} />
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>גלריה</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              void HapticFeedback.impactLight();
+              takePhoto();
+            }}
+            disabled={loading}
+            activeOpacity={0.75}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255,255,255,0.06)',
+              borderRadius: 24,
+              paddingHorizontal: 20,
+              paddingVertical: 11,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.1)',
+              gap: 8,
+            }}
+          >
+            <Ionicons name="camera-outline" size={18} color={DesignTokens.colors.primary.main} />
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>מצלמה</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Buttons */}
+      <View style={{ gap: 4 }}>
+        <OnboardingButton title="המשך" onPress={continueWithImage} />
+        <OnboardingButton title="דלג על השלב" onPress={skipImage} variant="secondary" />
+      </View>
+    </OnboardingLayout>
   );
 };
 

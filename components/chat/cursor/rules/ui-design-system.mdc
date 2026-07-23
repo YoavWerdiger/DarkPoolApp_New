@@ -1,0 +1,196 @@
+---
+description: DarkPool UI design system — green-black fintech aesthetic inspired by Robinhood, Bloomberg, Apple
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# DarkPool UI Design System
+
+Every screen must look like a shipped, polished fintech product. Use `useDesignTokens()` hook for all styling — never hardcode colors, spacing, or typography values.
+
+## Core Philosophy
+
+- **Dark-first, always**: Green-black backgrounds, NOT gray-black. Every surface has a subtle green undertone.
+- **Green = money = action**: `#00C805` is the brand color — used for CTAs, active states, gains, pill tabs.
+- **Glass & depth**: Layered surfaces with blur + semi-transparent backgrounds. Cards float above the background.
+- **Information hierarchy through opacity**: White text at 100% / 70% / 45% / 30%.
+- **RTL-native**: Hebrew text uses `writingDirection: 'rtl'`, `textAlign: 'right'`.
+- **Breathing room**: Generous spacing. Let elements breathe. Avoid cramming.
+
+## Color System
+
+### Backgrounds (green-black, NOT gray-black)
+
+- **Screen**: `colors.background.primary` (`#0A0E0A`) — deep dark with green-black undertone.
+- **Secondary surface**: `colors.background.secondary` (`#0F1A0F`).
+- **Tertiary**: `colors.background.tertiary` (`#142014`).
+- **Elevated**: `colors.background.elevated` (`#1A2B1A`).
+- **Card (glass)**: `colors.background.card` (`rgba(255,255,255,0.05)`).
+- **Card (solid)**: `colors.background.cardSolid` (`#141F14`).
+- **Input fields**: `colors.background.input` (`rgba(255,255,255,0.06)`).
+- **Header**: `colors.background.header` (`rgba(15,26,15,0.85)`) + blur 30.
+- **Tab bar**: `colors.background.tabBar` (`rgba(10,14,10,0.95)`) + blur 30.
+- **Bottom sheet**: `colors.background.sheet` (`#121E12`).
+- **Overlay**: `colors.background.overlay` (`rgba(0,0,0,0.60)`).
+
+### Text (opacity hierarchy)
+
+- **Primary**: `colors.text.primary` (`#FFFFFF`) — headings, body.
+- **Secondary**: `colors.text.secondary` (`rgba(255,255,255,0.70)`) — subtitles, metadata.
+- **Tertiary**: `colors.text.tertiary` (`rgba(255,255,255,0.45)`) — timestamps, inactive.
+- **Muted**: `colors.text.muted` (`rgba(255,255,255,0.30)`) — placeholders, disabled.
+- **Inverse**: `colors.text.inverse` (`#0A0E0A`) — text on green buttons.
+- **Accent**: `colors.text.accent` (`#00C805`).
+
+### Accent System
+
+- `colors.primary.main` (`#00C805`) — primary CTA, active states, gains.
+- `colors.primary.light` (`#33D43B`) — hover/highlight.
+- `colors.primary.dark` (`#00A004`) — pressed states.
+- `colors.primary.dim` (`rgba(0,200,5,0.12)`) — muted backgrounds.
+- `colors.primary.subtle` (`rgba(0,200,5,0.06)`) — barely visible accents.
+
+### Borders
+
+- **Default**: `colors.border.default` (`rgba(255,255,255,0.08)`) — barely visible.
+- **Subtle**: `colors.border.subtle` (`rgba(255,255,255,0.04)`).
+- **Strong**: `colors.border.strong` (`rgba(255,255,255,0.15)`).
+- **Accent**: `colors.border.accent` (`rgba(0,200,5,0.30)`).
+- **Divider**: `colors.border.divider` (`rgba(255,255,255,0.06)`).
+
+## Typography Hierarchy
+
+Use tokens from `typography` — never hardcode font sizes or weights.
+
+| Role | Token | Size | Weight |
+|------|-------|------|--------|
+| Display | `typography.display` | 40px | 900 (Black) |
+| Hero title | `typography.heroTitle` | 34px | 800 (ExtraBold) |
+| Title | `typography.title` | 28px | 700 (Bold) |
+| Title 2 | `typography.title2` | 22px | 700 |
+| Subtitle | `typography.subtitle` | 18px | 600 |
+| Body | `typography.body` | 16px | 400 |
+| Callout | `typography.callout` | 15px | 400 |
+| Subhead | `typography.subhead` | 14px | 500 |
+| Footnote | `typography.footnote` | 13px | 400 |
+| Caption | `typography.caption` | 12px | 500 |
+| Caption 2 | `typography.caption2` | 11px | 600 |
+| Button | `typography.button` | 17px | 700 |
+| Tab bar | `typography.tabBarLabel` | 10px | 500 |
+
+Weight contrast matters: headers 700-900, body 400, captions 500-600.
+
+## Spacing Scale
+
+Use `spacing` tokens:
+- `spacing['2xs']` (2px), `spacing.xs` (4px), `spacing.sm` (8px), `spacing.md` (12px)
+- `spacing.base` (16px), `spacing.lg` (20px), `spacing.xl` (24px)
+- `spacing['2xl']` (32px), `spacing['3xl']` (40px), `spacing['4xl']` (48px), `spacing['5xl']` (64px)
+
+## Border Radius
+
+- `borderRadius.xs` (4px) — small badges
+- `borderRadius.sm` (8px) — small buttons
+- `borderRadius.md` (12px) — buttons, inputs
+- `borderRadius.lg` (16px) — cards (standard)
+- `borderRadius.xl` (20px) — large cards
+- `borderRadius['2xl']` (24px) — modals
+- `borderRadius.full` (9999) — pills, avatars
+
+## Glass System
+
+- **Card**: bg `rgba(255,255,255,0.05)`, blur 20, border `rgba(255,255,255,0.08)`.
+- **Elevated card**: bg `rgba(255,255,255,0.08)`, blur 24, border `rgba(255,255,255,0.10)`.
+- **Header**: bg `rgba(15,26,15,0.85)`, blur 30.
+- **Tab bar**: bg `rgba(10,14,10,0.95)`, blur 30.
+- **Bottom sheet**: blur 40.
+
+Use `colors.glass.*` tokens for glass surfaces.
+
+## Cards & Surfaces
+
+- Default card: `borderRadius.lg` (16px), glass bg, border `colors.border.default`.
+- Solid card: `colors.background.cardSolid`, `borderRadius.lg`.
+- Elevated card: `colors.glass.cardElevated.bg`, blur 24, `colors.glass.cardElevated.border`.
+- Accent card: Green border `colors.border.accent`, green glow shadow.
+- Prefer borderless cards with background contrast over explicit borders.
+
+## Tabs / Segmented Controls (Content Tabs)
+
+- **Active tab pill**: `colors.background.tabActive` (`#00C805`) background, `colors.text.inverse` (`#0A0E0A`) text, weight 600.
+- **Inactive tab**: transparent, `colors.text.secondary` (`rgba(255,255,255,0.55)`) text.
+- Pill shape: `borderRadius.full`.
+- Container: horizontal row with `spacing.sm` gap.
+
+```tsx
+const activeTab = {
+  backgroundColor: tokens.colors.background.tabActive,
+  paddingHorizontal: tokens.spacing.base,
+  paddingVertical: tokens.spacing.sm,
+  borderRadius: tokens.borderRadius.full,
+};
+```
+
+## Bottom Tab Bar
+
+- Background: `#0A0E0A` (or glass with blur).
+- Border top: `colors.border.divider`, hairline width.
+- Active icon: `#00C805` with green pill highlight (`rgba(0,200,5,0.15)`).
+- Inactive icon: `rgba(255,255,255,0.40)`.
+- Label: 10px. Active = `#00C805`, inactive = `rgba(255,255,255,0.40)`.
+- **Keep the green pill** — this is a signature UI element.
+
+## Buttons
+
+Use `UIButton` component — never create custom pressables.
+
+- **Primary**: Green bg (`#00C805`), dark text (`#0A0E0A`), height 52px, `borderRadius.md` (12), green glow shadow.
+- **Secondary**: Glass bg, subtle border, white text, height 52px.
+- **Ghost**: No bg, green text.
+- **Outline**: Transparent, green border.
+- **Small**: Height 40px, `borderRadius.sm` (8).
+- Press: opacity 0.92, scale 0.985.
+
+## Inputs
+
+Use `UIInput` component.
+
+- Background: `colors.background.input` (`rgba(255,255,255,0.06)`).
+- Border: `colors.border.default`, focus = `colors.border.accent`.
+- Height: 48px, `borderRadius.md` (12).
+- Text: `colors.text.primary`, placeholder: `colors.text.muted`.
+
+## Layout
+
+- Screen padding: `layout.screenPadding` (20px).
+- Section gap: `layout.sectionGap` (24px).
+- Card padding: `layout.cardPadding` (16px).
+- List item height: `layout.listItemHeight` (60px).
+- Header height: `layout.headerHeight` (56px).
+- Tab bar height: `layout.tabBarHeight` (56px) + safe area.
+
+## Animations
+
+- Use `react-native-reanimated`.
+- Spring: `animation.springPresets.snappy` for UI, `.gentle` for sheets.
+- All interactions under 250ms. Sheets up to 400ms.
+- Staggered list items: fade-in + translateY, 30ms delay per item.
+
+## Screen Background
+
+Use `ScreenGradientBackground` from `components/VideoBackground.tsx`:
+- Gradient: `['#0A0E0A', '#0F1A0F', '#0A0E0A']` vertical.
+- Never duplicate gradient code in screens.
+
+## Anti-Patterns — NEVER Do These
+
+- NEVER hardcode colors — use `useDesignTokens()`.
+- NEVER create local `COLORS` constants.
+- NEVER use `DesignTokens` static import in components — use `useDesignTokens()` hook.
+- NEVER duplicate gradient backgrounds — use `ScreenGradientBackground`.
+- NEVER use gray-black backgrounds — always green-black undertone.
+- NEVER use pure black `#000000` — use `colors.background.primary`.
+- NEVER remove the green pill from bottom tabs.
+- NEVER use more than 2 accent colors per screen.
+- NEVER leave status bar unstyled — `light-content` on dark.
+- NEVER skip loading/empty states.

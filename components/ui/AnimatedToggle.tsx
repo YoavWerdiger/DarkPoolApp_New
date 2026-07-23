@@ -57,7 +57,7 @@ export default function AnimatedToggle({
                 borderRadius: 8,
                 backgroundColor: animatedValues[index].interpolate({
                   inputRange: [0, 1],
-                  outputRange: ['transparent', '#05d157'],
+                  outputRange: ['transparent', '#00C805'],
                 }),
                 alignItems: 'center',
                 transform: [{

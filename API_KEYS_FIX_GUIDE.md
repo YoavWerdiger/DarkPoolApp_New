@@ -30,12 +30,24 @@
    const FRED_API_KEY = 'YOUR_NEW_FRED_API_KEY';
    ```
 
-### פתרון 3: הגדרת משתני סביבה
+### פתרון 3: קבלת מפתח RapidAPI עבור Fear and Greed Index
+
+1. **הירשם/התחבר** ל-[RapidAPI](https://rapidapi.com)
+2. **חפש** "Fear and Greed Index" ב-RapidAPI
+3. **הירשם** ל-API (יש תוכנית חינמית)
+4. **קבל את המפתח** מה-Dashboard
+5. **החלף בקובץ** `services/fearAndGreedService.ts` או הוסף ל-`.env`:
+   ```typescript
+   this.apiKey = process.env.EXPO_PUBLIC_RAPIDAPI_KEY || 'YOUR_RAPIDAPI_KEY_HERE';
+   ```
+
+### פתרון 4: הגדרת משתני סביבה
 
 צור קובץ `.env` בשורש הפרויקט:
 ```bash
 EXPO_PUBLIC_EODHD_API_KEY=your_eodhd_api_key_here
 EXPO_PUBLIC_FRED_API_KEY=your_fred_api_key_here
+EXPO_PUBLIC_RAPIDAPI_KEY=your_rapidapi_key_here
 ```
 
 ## מצב זמני 🚧

@@ -1,30 +1,25 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Alert,
-  Dimensions,
-  Linking,
-  RefreshControl
-} from 'react-native';
-import { 
-  CreditCard, 
-  Shield, 
-  Check, 
-  ArrowLeft, 
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Linking, RefreshControl } from 'react-native';
+import {
+  CreditCard,
+  Shield,
+  Check,
   Crown,
   Star,
   Zap,
   Clock,
   Users,
   TrendingUp,
-  Lock
+  Lock,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { SafeAreaView as RNSafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
 const { width } = Dimensions.get('window');
 
@@ -39,6 +34,8 @@ interface CheckoutScreenProps {
 }
 
 export default function CheckoutScreen({ navigation, route }: CheckoutScreenProps) {
+  const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { planId, fromRegistration = false } = route.params;
   const [loading, setLoading] = useState(false);
@@ -55,12 +52,12 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
   const handlePayment = async () => {
     if (!user) {
-      Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
+      legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
       return;
     }
 
     if (!plan) {
-      Alert.alert('שגיאה', 'תוכנית מנוי לא נמצאה');
+      legacyAlert('שגיאה', 'תוכנית מנוי לא נמצאה');
       return;
     }
 
@@ -69,7 +66,8 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
     try {
       // אם התוכנית חינמית
       if (selectedPlan === 'free') {
-        Alert.alert(
+        void HapticFeedback.success();
+        legacyAlert(
           'הרשמה הושלמה!',
           'החשבון החינמי שלך נוצר בהצלחה.',
           [
@@ -99,8 +97,6 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         userName: user.display_name || user.email || 'משתמש'
       };
 
-      console.log('🔄 יצירת בקשת תשלום:', paymentRequest);
-
       const paymentResponse = await paymentService.createPaymentRequest(paymentRequest);
 
       if (paymentResponse.success && paymentResponse.paymentUrl) {
@@ -109,8 +105,8 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         
         if (supported) {
           await Linking.openURL(paymentResponse.paymentUrl);
-          
-          Alert.alert(
+          void HapticFeedback.impactLight();
+          legacyAlert(
             'העברה לדף התשלום',
             'אנא השלם את התשלום בדף שנפתח. לאחר השלמת התשלום, תועבר חזרה לאפליקציה.',
             [
@@ -134,8 +130,8 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       }
       
     } catch (error) {
-      console.error('❌ שגיאה בתשלום:', error);
-      Alert.alert(
+      void HapticFeedback.error();
+      legacyAlert(
         'שגיאה בתשלום', 
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
       );
@@ -146,8 +142,13 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // כאן ניתן להוסיף רענון נתונים
-    setTimeout(() => setRefreshing(false), 1000);
+    try {
+      // כאן ניתן להוסיף רענון נתונים
+      await new Promise<void>((r) => setTimeout(r, 1000));
+    } finally {
+      setRefreshing(false);
+      void HapticFeedback.impactLight();
+    }
   };
 
   const renderPlanIcon = (planId: string) => {
@@ -155,11 +156,11 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       case 'free':
         return <Users size={24} color="#B0B0B0" />;
       case 'premium':
-        return <Crown size={24} color="#00E654" />;
+        return <Crown size={24} color={DesignTokens.colors.primary.main} />;
       case 'pro':
         return <Star size={24} color="#FFD700" />;
       default:
-        return <CreditCard size={24} color="#00E654" />;
+        return <CreditCard size={24} color={DesignTokens.colors.primary.main} />;
     }
   };
 
@@ -167,22 +168,17 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
     if (!plan) return null;
 
     return (
-      <View style={{
-        backgroundColor: '#1C1C1E',
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
-        padding: 24,
-        marginBottom: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4
-      }}>
+      <UICard
+        variant="inputGlass"
+        padding="lg"
+        style={{
+          marginBottom: DesignTokens.spacing.lg,
+          borderRadius: DesignTokens.borderRadius.lg,
+        }}
+      >
         {/* Header */}
         <View style={{ 
-          flexDirection: 'row-reverse', 
+          flexDirection: 'row', 
           alignItems: 'center',
           marginBottom: 20
         }}>
@@ -190,7 +186,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             width: 50,
             height: 50,
             borderRadius: 15,
-            backgroundColor: selectedPlan === 'premium' ? '#00E654' : 'rgba(255, 255, 255, 0.05)',
+            backgroundColor: selectedPlan === 'premium' ? DesignTokens.colors.primary.main : 'rgba(255, 255, 255, 0.05)',
             alignItems: 'center',
             justifyContent: 'center',
             marginLeft: 16
@@ -200,7 +196,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           
           <View style={{ flex: 1 }}>
             <Text style={{ 
-              color: '#FFFFFF', 
+              color: DesignTokens.colors.text.primary, 
               fontSize: 24, 
               fontWeight: '700',
               writingDirection: 'rtl'
@@ -209,7 +205,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
               <Text style={{ 
-                color: '#00E654', 
+                color: DesignTokens.colors.primary.main, 
                 fontSize: 28, 
                 fontWeight: '800',
                 writingDirection: 'rtl'
@@ -217,7 +213,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
                 {plan.price === 0 ? 'חינם' : `₪${plan.price}`}
               </Text>
               <Text style={{ 
-                color: '#B0B0B0', 
+                color: DesignTokens.colors.text.secondary, 
                 fontSize: 16, 
                 marginLeft: 8,
                 writingDirection: 'rtl'
@@ -229,15 +225,15 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           
           {plan.popular && (
             <View style={{
-              backgroundColor: '#00E654',
+              backgroundColor: DesignTokens.colors.primary.main,
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 12
             }}>
-              <Text style={{ 
-                color: '#000000', 
-                fontSize: 12, 
-                fontWeight: '600' 
+              <Text style={{
+                color: DesignTokens.colors.text.inverse,
+                fontSize: 12,
+                fontWeight: '600',
               }}>
                 מומלץ
               </Text>
@@ -248,7 +244,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         {/* Features */}
         <View style={{ marginBottom: 20 }}>
           <Text style={{ 
-            color: '#FFFFFF', 
+            color: DesignTokens.colors.text.primary, 
             fontSize: 18, 
             fontWeight: '600', 
             marginBottom: 12,
@@ -259,13 +255,13 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           
           {plan.features.map((feature, index) => (
             <View key={index} style={{ 
-              flexDirection: 'row-reverse', 
+              flexDirection: 'row', 
               alignItems: 'center',
               marginBottom: 8
             }}>
-              <Check size={16} color="#00E654" style={{ marginLeft: 8 }} />
+              <Check size={16} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
               <Text style={{ 
-                color: '#FFFFFF', 
+                color: DesignTokens.colors.text.primary, 
                 fontSize: 14, 
                 fontWeight: '400',
                 writingDirection: 'rtl',
@@ -276,27 +272,27 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             </View>
           ))}
         </View>
-      </View>
+      </UICard>
     );
   };
 
   const renderSecurityFeatures = () => (
-    <View style={{
-      backgroundColor: '#1C1C1E',
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)',
-      padding: 20,
-      marginBottom: 24
-    }}>
+    <UICard
+      variant="inputGlass"
+      padding="lg"
+      style={{
+        marginBottom: DesignTokens.spacing.lg,
+        borderRadius: DesignTokens.borderRadius.lg,
+      }}
+    >
       <View style={{ 
-        flexDirection: 'row-reverse', 
+        flexDirection: 'row', 
         alignItems: 'center',
         marginBottom: 16
       }}>
-        <Shield size={20} color="#00E654" style={{ marginLeft: 8 }} />
+        <Shield size={20} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
         <Text style={{ 
-          color: '#FFFFFF', 
+          color: DesignTokens.colors.text.primary, 
           fontSize: 16, 
           fontWeight: '600',
           writingDirection: 'rtl'
@@ -306,10 +302,10 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       </View>
       
       <View style={{ gap: 8 }}>
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
-          <Lock size={14} color="#00E654" style={{ marginLeft: 8 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Lock size={14} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
           <Text style={{ 
-            color: '#B0B0B0', 
+            color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: 'rtl'
           }}>
@@ -317,10 +313,10 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           </Text>
         </View>
         
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
-          <Shield size={14} color="#00E654" style={{ marginLeft: 8 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Shield size={14} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
           <Text style={{ 
-            color: '#B0B0B0', 
+            color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: 'rtl'
           }}>
@@ -328,10 +324,10 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           </Text>
         </View>
         
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
-          <Check size={14} color="#00E654" style={{ marginLeft: 8 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Check size={14} color={DesignTokens.colors.primary.main} style={{ marginLeft: 8 }} />
           <Text style={{ 
-            color: '#B0B0B0', 
+            color: DesignTokens.colors.text.secondary, 
             fontSize: 12,
             writingDirection: 'rtl'
           }}>
@@ -339,20 +335,20 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           </Text>
         </View>
       </View>
-    </View>
+    </UICard>
   );
 
   const renderPaymentSummary = () => (
-    <View style={{
-      backgroundColor: '#1C1C1E',
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.1)',
-      padding: 20,
-      marginBottom: 24
-    }}>
+    <UICard
+      variant="inputGlass"
+      padding="lg"
+      style={{
+        marginBottom: DesignTokens.spacing.lg,
+        borderRadius: DesignTokens.borderRadius.lg,
+      }}
+    >
       <Text style={{ 
-        color: '#FFFFFF', 
+        color: DesignTokens.colors.text.primary, 
         fontSize: 18, 
         fontWeight: '600', 
         marginBottom: 16,
@@ -362,19 +358,19 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       </Text>
       
       <View style={{ 
-        flexDirection: 'row-reverse', 
+        flexDirection: 'row', 
         justifyContent: 'space-between',
         marginBottom: 8
       }}>
         <Text style={{ 
-          color: '#B0B0B0', 
+          color: DesignTokens.colors.text.secondary, 
           fontSize: 14,
           writingDirection: 'rtl'
         }}>
           {plan?.name}
         </Text>
         <Text style={{ 
-          color: '#FFFFFF', 
+          color: DesignTokens.colors.text.primary, 
           fontSize: 14,
           fontWeight: '600'
         }}>
@@ -383,19 +379,19 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       </View>
       
       <View style={{ 
-        flexDirection: 'row-reverse', 
+        flexDirection: 'row', 
         justifyContent: 'space-between',
         marginBottom: 8
       }}>
         <Text style={{ 
-          color: '#B0B0B0', 
+          color: DesignTokens.colors.text.secondary, 
           fontSize: 14,
           writingDirection: 'rtl'
         }}>
           מע"מ
         </Text>
         <Text style={{ 
-          color: '#FFFFFF', 
+          color: DesignTokens.colors.text.primary, 
           fontSize: 14,
           fontWeight: '600'
         }}>
@@ -405,16 +401,16 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
       
       <View style={{ 
         height: 1, 
-        backgroundColor: '#333333', 
+        backgroundColor: DesignTokens.colors.background.elevated, 
         marginVertical: 12 
       }} />
       
       <View style={{ 
-        flexDirection: 'row-reverse', 
+        flexDirection: 'row', 
         justifyContent: 'space-between'
       }}>
         <Text style={{ 
-          color: '#FFFFFF', 
+          color: DesignTokens.colors.text.primary, 
           fontSize: 18,
           fontWeight: '700',
           writingDirection: 'rtl'
@@ -422,74 +418,34 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           סה"כ
         </Text>
         <Text style={{ 
-          color: '#00E654', 
+          color: DesignTokens.colors.primary.main, 
           fontSize: 18,
           fontWeight: '700'
         }}>
           {plan?.price === 0 ? 'חינם' : `₪${Math.round((plan?.price || 0) * 1.17)}`}
         </Text>
       </View>
-    </View>
+    </UICard>
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0d0d0d' }}>
-      {/* Header */}
-      <View
-        style={{
-          paddingTop: 60,
-          paddingBottom: 20,
-          paddingHorizontal: 24,
-          backgroundColor: '#1C1C1E',
-          borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255,255,255,0.1)'
-        }}
-      >
-        <View style={{ 
-          flexDirection: 'row-reverse', 
-          alignItems: 'center',
-          marginBottom: 16
-        }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginLeft: 16
-            }}
-          >
-            <ArrowLeft size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          
-          <Text style={{ 
-            color: '#FFFFFF', 
-            fontSize: 24, 
-            fontWeight: '700',
-            writingDirection: 'rtl',
-            flex: 1
-          }}>
-            צ'קאאוט
-          </Text>
-        </View>
-      </View>
+    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+        <ChatSubScreenHeader title="צ'קאאוט" onBack={() => navigation.goBack()} />
 
-      <ScrollView 
+      <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#00E654"
+            tintColor="#00C805"
           />
         }
       >
-        <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
+        <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
           {/* Plan Card */}
           {renderPlanCard()}
 
@@ -504,11 +460,11 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             onPress={handlePayment}
             disabled={loading}
             style={{
-              backgroundColor: '#00E654',
-              borderRadius: 12,
+              backgroundColor: DesignTokens.colors.primary.main,
+              borderRadius: DesignTokens.borderRadius.lg,
               padding: 18,
               alignItems: 'center',
-              shadowColor: '#00E654',
+              shadowColor: DesignTokens.colors.primary.main,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 8,
@@ -517,15 +473,15 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
             }}
           >
             {loading ? (
-              <ActivityIndicator color="#000000" size="small" />
+              <ActivityIndicator color={DesignTokens.colors.text.inverse} size="small" />
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <CreditCard size={20} color="#000000" style={{ marginLeft: 8 }} />
-                <Text style={{ 
-                  color: '#000000', 
-                  fontSize: 18, 
+                <CreditCard size={20} color={DesignTokens.colors.text.inverse} style={{ marginLeft: 8 }} />
+                <Text style={{
+                  color: DesignTokens.colors.text.inverse,
+                  fontSize: 18,
                   fontWeight: '700',
-                  writingDirection: 'rtl'
+                  writingDirection: 'rtl',
                 }}>
                   {plan?.price === 0 ? 'המשך בחינם' : 'שלם עכשיו'}
                 </Text>
@@ -535,7 +491,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
 
           {/* Terms */}
           <Text style={{ 
-            color: '#666666', 
+            color: DesignTokens.colors.text.tertiary, 
             fontSize: 12, 
             textAlign: 'center',
             marginTop: 16,
@@ -546,6 +502,7 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
           </Text>
         </View>
       </ScrollView>
+      </RNSafeAreaView>
     </View>
   );
 }

@@ -1,70 +1,51 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 
 interface DayDividerProps {
   date: Date;
 }
 
 const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
+  const DesignTokens = useDesignTokens();
+  const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const getDayText = (date: Date): string => {
-    console.log('🔍 DayDivider: Processing date:', date);
-    console.log('🔍 DayDivider: Date type:', typeof date);
-    console.log('🔍 DayDivider: Date value:', date);
-    
     // קבלת התאריך הנוכחי
     const now = new Date();
-    
-    // השוואה פשוטה לפי יום, חודש ושנה (זמן מקומי)
-    const isToday = date.getFullYear() === now.getFullYear() &&
-                    date.getMonth() === now.getMonth() &&
-                    date.getDate() === now.getDate();
-    
+
+    // השוואה פשוטה לפי יום, חודש ושנה (UTC time to avoid timezone issues)
+    const isToday = date.getUTCFullYear() === now.getUTCFullYear() &&
+      date.getUTCMonth() === now.getUTCMonth() &&
+      date.getUTCDate() === now.getUTCDate();
+
     // חישוב אתמול
     const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const isYesterday = date.getFullYear() === yesterday.getFullYear() &&
-                        date.getMonth() === yesterday.getMonth() &&
-                        date.getDate() === yesterday.getDate();
-    
-    console.log('🔍 DayDivider: Date parts:', {
-      messageDate: `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`,
-      todayDate: `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`,
-      yesterdayDate: `${yesterday.getDate()}/${yesterday.getMonth() + 1}/${yesterday.getFullYear()}`,
-      isToday,
-      isYesterday
-    });
-    
-    // החזרת הטקסט המתאים
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+    const isYesterday = date.getUTCFullYear() === yesterday.getUTCFullYear() &&
+      date.getUTCMonth() === yesterday.getUTCMonth() &&
+      date.getUTCDate() === yesterday.getUTCDate();
+
     if (isToday) {
-      console.log('🔍 DayDivider: Returning היום');
       return 'היום';
     }
     if (isYesterday) {
-      console.log('🔍 DayDivider: Returning אתמול');
       return 'אתמול';
     }
-    
-    // אם זה השנה הנוכחית
-    if (date.getFullYear() === now.getFullYear()) {
+
+    if (date.getUTCFullYear() === now.getUTCFullYear()) {
       const months = [
         'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
         'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
       ];
-      const result = `${date.getDate()} ב${months[date.getMonth()]}`;
-      console.log('🔍 DayDivider: Returning same year:', result);
-      return result;
+      return `${date.getUTCDate()} ב${months[date.getUTCMonth()]}`;
     }
-    
-    // אם זה שנה אחרת
+
     const months = [
       'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
       'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
     ];
-    const result = `${date.getDate()} ב${months[date.getMonth()]} ${date.getFullYear()}`;
-    console.log('🔍 DayDivider: Returning different year:', result);
-    return result;
+    return `${date.getUTCDate()} ב${months[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
   };
 
   return (
@@ -76,31 +57,25 @@ const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (tokens: any) => StyleSheet.create({
   container: {
     alignItems: 'center',
-    marginVertical: DesignTokens.spacing.md,
-    paddingHorizontal: DesignTokens.spacing.lg,
+    marginVertical: tokens.spacing.lg,
+    paddingHorizontal: tokens.spacing.lg,
   },
   divider: {
-    paddingHorizontal: DesignTokens.spacing.lg,
-    paddingVertical: DesignTokens.spacing.sm,
-    borderRadius: DesignTokens.borderRadius['2xl'],
-    minWidth: 100,
+    paddingHorizontal: tokens.spacing.xl,
+    paddingVertical: tokens.spacing.sm + 2,
+    borderRadius: tokens.borderRadius.xl,
+    minWidth: 112,
     alignItems: 'center',
-    borderWidth: 1,
-    backgroundColor: '#181818', // אפור כהה
-    borderColor: '#374151', // אפור גבול
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    borderWidth: 0,
+    backgroundColor: tokens.colors.background.cardSolid,
   },
   text: {
-    color: '#E5E7EB',
-    fontSize: DesignTokens.typography.fontSize.sm,
-    fontWeight: DesignTokens.typography.fontWeight.medium,
+    color: tokens.colors.text.secondary,
+    fontSize: tokens.typography.fontSize.sm,
+    fontWeight: tokens.typography.fontWeight.medium as any,
     textAlign: 'center',
   },
 });

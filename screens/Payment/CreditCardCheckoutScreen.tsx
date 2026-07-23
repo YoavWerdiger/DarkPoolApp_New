@@ -1,31 +1,42 @@
+import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Alert,
-  Dimensions,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  Shield, 
-  ArrowLeft, 
-  Crown,
-  Star,
+import {
+  Shield,
   Users,
-  User
+  Zap,
+  TrendingUp,
+  Crown,
+  Lock,
+  User,
+  Mail,
+  Phone,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
 import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
+import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
+import { HapticFeedback } from '../../utils/hapticFeedback';
 
-const { width } = Dimensions.get('window');
+/** הופך hex ל-rgba עם אלפא — תואם ל-SubscriptionPlansScreen */
+const ra = (hex: string, a: number) => {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+};
+
+/** פלטה מותגית אחידה — תואמת ל-SubscriptionPlansScreen */
+const PLAN_THEME: Record<string, { color: string; icon: any }> = {
+  free: { color: '#8B98A5', icon: Users },
+  monthly: { color: '#00C805', icon: Zap },
+  quarterly: { color: '#2DD4BF', icon: TrendingUp },
+  yearly: { color: '#F5B400', icon: Crown },
+};
 
 interface CreditCardCheckoutScreenProps {
   navigation: any;
@@ -38,13 +49,17 @@ interface CreditCardCheckoutScreenProps {
 }
 
 export default function CreditCardCheckoutScreen({ navigation, route }: CreditCardCheckoutScreenProps) {
+  const tokens = useDesignTokens();
+  const { colors, spacing, borderRadius } = tokens;
   const { user } = useAuth();
   const { data: registrationData } = useRegistration();
   const { planId, fromRegistration = false } = route.params;
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(planId || 'monthly');
   const [showIframe, setShowIframe] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState('');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // User Details Form State (כבר לא צריך פרטי כרטיס - LowProfile iframe)
   const [cardholderName, setCardholderName] = useState('');
@@ -52,6 +67,9 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   const [phone, setPhone] = useState('');
 
   const plan = SUBSCRIPTION_PLANS[selectedPlan as keyof typeof SUBSCRIPTION_PLANS];
+  const planTheme = PLAN_THEME[selectedPlan] ?? { color: plan?.color || colors.primary.main, icon: Crown };
+  const planColor = planTheme.color;
+  const PlanIcon = planTheme.icon;
 
   useEffect(() => {
     if (planId) {
@@ -68,17 +86,68 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     }
   }, [planId, user, fromRegistration, registrationData]);
 
+  // אם זה רישום והפרטים קיימים - עובר ישירות ל-Cardcom
+  useEffect(() => {
+    if (fromRegistration && registrationData && plan && !showIframe && !loading) {
+      const hasAllData = registrationData.email &&
+                        registrationData.fullName &&
+                        registrationData.phone;
+
+      if (hasAllData) {
+        // עובר ישירות ל-Cardcom ללא הצגת טופס
+        handlePaymentDirect();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // רק פעם אחת כשהקומפוננטה נטענת
+
+  const handlePaymentDirect = async () => {
+    if (!plan || !registrationData) return;
+
+    setLoading(true);
+
+    try {
+      // יצירת בקשת תשלום ל-CardCom LowProfile
+      const paymentResponse = await paymentService.createPaymentRequest({
+        amount: plan.price,
+        currency: 'ILS',
+        description: `מנוי ${plan.name} - ${registrationData.fullName}`,
+        userId: null, // במהלך רישום עדיין אין userId
+        planId: selectedPlan,
+        userEmail: registrationData.email,
+        userName: registrationData.fullName,
+        userPhone: registrationData.phone
+      });
+
+      if (paymentResponse.success && paymentResponse.paymentUrl) {
+        setPaymentUrl(paymentResponse.paymentUrl);
+        setShowIframe(true);
+      } else {
+        throw new Error(paymentResponse.error || 'שגיאה ביצירת בקשת התשלום');
+      }
+
+    } catch (error) {
+      void HapticFeedback.error();
+      legacyAlert(
+        'שגיאה בתשלום',
+        error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const validateForm = () => {
     if (!cardholderName.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס שם מלא');
+      legacyAlert('שגיאה', 'אנא הכנס שם מלא');
       return false;
     }
     if (!email.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס כתובת אימייל');
+      legacyAlert('שגיאה', 'אנא הכנס כתובת אימייל');
       return false;
     }
     if (!phone.trim()) {
-      Alert.alert('שגיאה', 'אנא הכנס מספר טלפון');
+      legacyAlert('שגיאה', 'אנא הכנס מספר טלפון');
       return false;
     }
     return true;
@@ -88,10 +157,9 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
   const handleWebViewMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      console.log('🔄 הודעה מ-iframe:', data);
-      
       if (data.type === 'payment_success') {
-        Alert.alert(
+        void HapticFeedback.success();
+        legacyAlert(
           'תשלום הושלם בהצלחה!',
           'המנוי שלך הופעל בהצלחה. תוכל להתחיל להשתמש בכל התכונות.',
           [
@@ -109,7 +177,8 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
           ]
         );
       } else if (data.type === 'payment_failed') {
-        Alert.alert(
+        void HapticFeedback.error();
+        legacyAlert(
           'תשלום נכשל',
           data.message || 'התשלום נכשל. אנא נסה שוב.',
           [
@@ -123,19 +192,18 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
         setShowIframe(false);
       }
     } catch (error) {
-      console.error('❌ שגיאה בעיבוד הודעה מ-iframe:', error);
     }
   };
 
   const handlePayment = async () => {
     // אם זה במהלך הרישום, המשתמש עדיין לא מחובר
     if (!fromRegistration && !user) {
-      Alert.alert('שגיאה', 'נדרש להתחבר למערכת');
+      legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
       return;
     }
 
     if (!plan) {
-      Alert.alert('שגיאה', 'תוכנית מנוי לא נמצאה');
+      legacyAlert('שגיאה', 'תוכנית מנוי לא נמצאה');
       return;
     }
 
@@ -144,11 +212,9 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     }
 
     setLoading(true);
-    
+
     try {
       const userId = fromRegistration ? null : (user?.id || null);
-
-      console.log('🔄 יצירת בקשת תשלום עם LowProfile iframe');
 
       // יצירת בקשת תשלום ל-CardCom LowProfile - יעביר למילוי פרטי כרטיס ב-iframe
       const paymentResponse = await paymentService.createPaymentRequest({
@@ -163,18 +229,17 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
       });
 
       if (paymentResponse.success && paymentResponse.paymentUrl) {
-        console.log('✅ URL של iframe התשלום התקבל, פותח iframe...');
         // הצגת iframe תשלום של CardCom בתוך האפליקציה
         setPaymentUrl(paymentResponse.paymentUrl);
         setShowIframe(true);
       } else {
         throw new Error(paymentResponse.error || 'שגיאה ביצירת בקשת התשלום');
       }
-      
+
     } catch (error) {
-      console.error('❌ שגיאה בתשלום:', error);
-      Alert.alert(
-        'שגיאה בתשלום', 
+      void HapticFeedback.error();
+      legacyAlert(
+        'שגיאה בתשלום',
         error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
       );
     } finally {
@@ -182,85 +247,92 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     }
   };
 
-  const renderPlanIcon = (planId: string) => {
-    switch (planId) {
-      case 'free':
-        return <Users size={24} color="#B0B0B0" />;
-      case 'premium':
-      case 'monthly':
-        return <Crown size={24} color="#00E654" />;
-      case 'pro':
-      case 'yearly':
-        return <Star size={24} color="#FFD700" />;
-      case 'quarterly':
-        return <Shield size={24} color="#FFD700" />;
-      default:
-        return <Crown size={24} color="#00E654" />;
+  /** מחיר ראשי + תיאור תקופה לפי סוג המסלול */
+  const renderPlanPrice = () => {
+    if (!plan) return null;
+    if (plan.price === 0) {
+      return <Text style={{ fontSize: 26, fontWeight: '800', color: colors.text.primary, letterSpacing: -0.5 }}>חינם</Text>;
     }
+    if (plan.period === 'yearly') {
+      return (
+        <View style={{ alignItems: 'flex-start' }}>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 4 }}>
+            <Text style={{ fontSize: 26, fontWeight: '800', color: planColor, letterSpacing: -0.5 }}>₪117</Text>
+            <Text style={{ fontSize: 13, color: colors.text.secondary, marginBottom: 4, fontWeight: '500' }}>/חודש</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 2 }}>מחויב שנתי — ₪{plan.price.toLocaleString()}</Text>
+        </View>
+      );
+    }
+    const periodLabel =
+      plan.period === 'quarterly' ? 'ל-3 חודשים' :
+      plan.period === 'one_time' ? 'תשלום חד פעמי' :
+      '/חודש';
+    return (
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 4 }}>
+        <Text style={{ fontSize: 26, fontWeight: '800', color: planColor, letterSpacing: -0.5 }}>₪{plan.price.toLocaleString()}</Text>
+        <Text style={{ fontSize: 13, color: colors.text.secondary, marginBottom: 4, fontWeight: '500' }}>{periodLabel}</Text>
+      </View>
+    );
   };
 
   const renderPlanCard = () => {
     if (!plan) return null;
 
     return (
-      <View style={{
-        backgroundColor: '#1A1A1A',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 20,
-        shadowColor: selectedPlan === 'premium' ? '#00E654' : '#000000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4
-      }}>
-        <View style={{ 
-          flexDirection: 'row-reverse', 
-          alignItems: 'center',
-          marginBottom: 16
-        }}>
+      <UICard
+        variant="glass"
+        glassIntensity="medium"
+        padding="none"
+        style={{
+          marginBottom: spacing.lg,
+          borderRadius: borderRadius['2xl'],
+          borderWidth: 1,
+          borderColor: ra(planColor, 0.4),
+          overflow: 'hidden',
+          shadowColor: planColor,
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.18,
+          shadowRadius: 16,
+          elevation: 8,
+        }}
+      >
+        <LinearGradient
+          colors={[ra(planColor, 0.18), 'transparent']}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 90 }}
+        />
+        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', padding: spacing.lg }}>
           <View style={{
-            width: 50,
-            height: 50,
-            borderRadius: 15,
-            backgroundColor: selectedPlan === 'premium' ? '#00E654' : '#333333',
+            width: 54,
+            height: 54,
+            borderRadius: 27,
+            backgroundColor: ra(planColor, 0.15),
+            borderWidth: 1.5,
+            borderColor: ra(planColor, 0.35),
             alignItems: 'center',
             justifyContent: 'center',
-            marginLeft: 16
+            marginLeft: spacing.base,
           }}>
-            {renderPlanIcon(selectedPlan)}
+            <PlanIcon size={24} color={planColor} strokeWidth={2} />
           </View>
-          
+
           <View style={{ flex: 1 }}>
-            <Text style={{ 
-              color: '#FFFFFF', 
-              fontSize: 20, 
+            <Text style={{
+              color: colors.text.primary,
+              fontSize: 19,
               fontWeight: '700',
-              writingDirection: 'rtl'
+              textAlign: 'right',
+              letterSpacing: -0.3,
             }}>
               {plan.name}
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
-              <Text style={{ 
-                color: '#00E654', 
-                fontSize: 24, 
-                fontWeight: '800',
-                writingDirection: 'rtl'
-              }}>
-                {plan.price === 0 ? 'חינם' : `₪${plan.price}`}
-              </Text>
-              <Text style={{ 
-                color: '#B0B0B0', 
-                fontSize: 14, 
-                marginLeft: 8,
-                writingDirection: 'rtl'
-              }}>
-                לחודש
-              </Text>
-            </View>
+            <Text style={{ color: colors.text.tertiary, fontSize: 12, textAlign: 'right', marginTop: 2, marginBottom: 8 }}>
+              {plan.description}
+            </Text>
+            {renderPlanPrice()}
           </View>
         </View>
-      </View>
+      </UICard>
     );
   };
 
@@ -269,418 +341,290 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     value: string,
     onChangeText: (text: string) => void,
     placeholder: string,
+    fieldKey: string,
     keyboardType: any = 'default',
-    maxLength?: number,
     icon?: any,
-    secureTextEntry: boolean = false
-  ) => (
-    <View style={{ marginBottom: 16 }}>
-      <Text style={{ 
-        color: '#FFFFFF', 
-        fontSize: 14, 
-        fontWeight: '600', 
-        marginBottom: 8,
-        writingDirection: 'rtl'
-      }}>
-        {label}
-      </Text>
-      <View style={{
-        backgroundColor: '#121212',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#333333',
-        flexDirection: 'row-reverse',
-        alignItems: 'center',
-        paddingHorizontal: 16
-      }}>
-        {icon && (
-          <View style={{ marginLeft: 12 }}>
-            {icon}
-          </View>
-        )}
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor="#888888"
-          style={{
-            flex: 1,
-            color: '#FFFFFF',
-            fontSize: 16,
-            paddingVertical: 16,
-            fontWeight: '500',
-            textAlign: 'right'
-          }}
-          keyboardType={keyboardType}
-          maxLength={maxLength}
-          autoCorrect={false}
-          autoCapitalize="none"
-          secureTextEntry={secureTextEntry}
-        />
+  ) => {
+    const isFocused = focusedField === fieldKey;
+    return (
+      <View style={{ marginBottom: spacing.base }}>
+        <Text style={{
+          color: colors.text.secondary,
+          fontSize: 13,
+          fontWeight: '600',
+          marginBottom: 8,
+          textAlign: 'right',
+        }}>
+          {label}
+        </Text>
+        <View style={{
+          backgroundColor: colors.background.input,
+          borderRadius: borderRadius.md,
+          borderWidth: 1.5,
+          borderColor: isFocused ? ra(planColor, 0.55) : colors.border.default,
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          paddingHorizontal: 14,
+        }}>
+          {icon && (
+            <View style={{ marginLeft: 10 }}>
+              {icon}
+            </View>
+          )}
+          <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={() => setFocusedField(fieldKey)}
+            onBlur={() => setFocusedField(null)}
+            placeholder={placeholder}
+            placeholderTextColor={colors.text.muted}
+            style={{
+              flex: 1,
+              color: colors.text.primary,
+              fontSize: 16,
+              paddingVertical: 14,
+              fontWeight: '500',
+              textAlign: 'right',
+            }}
+            keyboardType={keyboardType}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+        </View>
       </View>
-    </View>
-  );
-
+    );
+  };
 
   // אם מציגים iframe תשלום
   if (showIframe) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#000000' }}>
-        {/* Header */}
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingHorizontal: 20,
-          paddingTop: 60,
-          paddingBottom: 20,
-          backgroundColor: '#000000'
-        }}>
-          <TouchableOpacity
-            onPress={() => setShowIframe(false)}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: '#1A1A1A',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 16
-            }}
-          >
-            <ArrowLeft size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={{
-            color: '#FFFFFF',
-            fontSize: 20,
-            fontWeight: '700',
-            flex: 1,
-            textAlign: 'center',
-            writingDirection: 'rtl'
-          }}>
-            השלמת תשלום
-          </Text>
-        </View>
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+          <ChatSubScreenHeader title="השלמת תשלום" onBack={() => setShowIframe(false)} />
 
-        {/* WebView */}
-        <WebView
-          source={{ uri: paymentUrl }}
-          style={{ flex: 1 }}
-          onMessage={handleWebViewMessage}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          startInLoadingState={true}
-          renderLoading={() => (
-            <View style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: '#000000',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <ActivityIndicator color="#00E654" size="large" />
-              <Text style={{
-                color: '#FFFFFF',
-                fontSize: 16,
-                marginTop: 16,
-                writingDirection: 'rtl'
+          <WebView
+            source={{ uri: paymentUrl }}
+            style={{ flex: 1, backgroundColor: 'transparent' }}
+            onMessage={handleWebViewMessage}
+            onNavigationStateChange={(navState) => {
+              const url = navState.url;
+              if (url.includes('smart-action') || url.includes('rapid-responder')) {
+                // Webhook יטפל בזה
+              }
+            }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            renderLoading={() => (
+              <View style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: ra(colors.background.primary, 0.92),
+                alignItems: 'center',
+                justifyContent: 'center'
               }}>
-                טוען דף תשלום...
-              </Text>
-            </View>
-          )}
-        />
+                <ActivityIndicator color={colors.primary.main} size="large" />
+                <Text style={{ color: colors.text.primary, fontSize: 16, marginTop: 16, writingDirection: 'rtl' }}>
+                  טוען דף תשלום...
+                </Text>
+              </View>
+            )}
+          />
+        </SafeAreaView>
       </View>
     );
   }
 
+  // אם זה רישום - מציג מסך טעינה לפני שמופיע ה-iframe
+  if (fromRegistration && (loading || showIframe)) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
+          <View style={{
+            width: 72, height: 72, borderRadius: 36,
+            backgroundColor: colors.primary.dim,
+            borderWidth: 1, borderColor: colors.primary.subtle,
+            alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+          }}>
+            <Lock size={28} color={colors.primary.main} />
+          </View>
+          <ActivityIndicator color={colors.primary.main} size="large" />
+          <Text style={{ color: colors.text.primary, fontSize: 18, fontWeight: '700', marginTop: 24, textAlign: 'center', writingDirection: 'rtl' }}>
+            מכין את דף התשלום המאובטח...
+          </Text>
+          <Text style={{ color: colors.text.secondary, fontSize: 14, marginTop: 10, textAlign: 'center', writingDirection: 'rtl', lineHeight: 20 }}>
+            תועבר לדף תשלום מאובטח של CardCom
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1, backgroundColor: '#121212' }}
-    >
-      {/* Header */}
-      <LinearGradient
-        colors={['#00E65420', '#00E65410', 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={{
-          paddingTop: 60,
-          paddingBottom: 20,
-          paddingHorizontal: 24,
-          borderBottomWidth: 1,
-          borderBottomColor: 'rgba(0, 230, 84, 0.2)'
-        }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
       >
-        <View style={{ 
-          flexDirection: 'row-reverse', 
-          alignItems: 'center',
-          marginBottom: 16
-        }}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginLeft: 16
-            }}
-          >
-            <ArrowLeft size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          
-          <Text style={{ 
-            color: '#FFFFFF', 
-            fontSize: 24, 
-            fontWeight: '700',
-            writingDirection: 'rtl',
-            flex: 1
-          }}>
-            פרטי התשלום
-          </Text>
-        </View>
-      </LinearGradient>
+        <ChatSubScreenHeader title="פרטי התשלום" onBack={() => navigation.goBack()} />
 
-      <ScrollView 
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
-          {/* Plan Card */}
-          {renderPlanCard()}
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.base }}>
+            {/* Plan Card */}
+            {renderPlanCard()}
 
-          {/* Personal Details Section */}
-          <View style={{
-            backgroundColor: '#1A1A1A',
-            borderRadius: 20,
-            padding: 20,
-            marginBottom: 20
-          }}>
-            <View style={{ 
-              flexDirection: 'row-reverse', 
-              alignItems: 'center',
-              marginBottom: 20
-            }}>
-              <User size={20} color="#00E654" style={{ marginLeft: 8 }} />
-              <Text style={{ 
-                color: '#FFFFFF', 
-                fontSize: 18, 
-                fontWeight: '600',
-                writingDirection: 'rtl'
-              }}>
-                פרטים אישיים
-              </Text>
-            </View>
-
-            {/* Cardholder Name */}
-            {renderInputField(
-              'שם מלא',
-              cardholderName,
-              setCardholderName,
-              'שם מלא',
-              'default',
-              undefined,
-              <User size={16} color="#666666" />
-            )}
-
-            {/* Email */}
-            {renderInputField(
-              'כתובת אימייל',
-              email,
-              setEmail,
-              'example@email.com',
-              'email-address'
-            )}
-
-            {/* Phone */}
-            {renderInputField(
-              'מספר טלפון',
-              phone,
-              setPhone,
-              '050-1234567',
-              'phone-pad'
-            )}
-          </View>
-
-          {/* Security Notice */}
-          <View style={{
-            backgroundColor: 'rgba(0, 230, 84, 0.1)',
-            borderRadius: 16,
-            padding: 16,
-            marginBottom: 20
-          }}>
-            <View style={{ 
-              flexDirection: 'row-reverse', 
-              alignItems: 'center',
-              marginBottom: 8
-            }}>
-              <Shield size={16} color="#00E654" style={{ marginLeft: 8 }} />
-              <Text style={{ 
-                color: '#00E654', 
-                fontSize: 14, 
-                fontWeight: '600',
-                writingDirection: 'rtl'
-              }}>
-                תשלום מאובטח עם CardCom
-              </Text>
-            </View>
-            <Text style={{ 
-              color: '#B0B0B0', 
-              fontSize: 12,
-              lineHeight: 18,
-              writingDirection: 'rtl'
-            }}>
-              תועבר לדף תשלום מאובטח של CardCom למילוי פרטי כרטיס האשראי. כל הפרטים מוצפנים עם SSL 256-bit והמערכת עומדת בתקן PCI DSS.
-            </Text>
-          </View>
-
-          {/* Payment Summary */}
-          <View style={{
-            backgroundColor: '#1A1A1A',
-            borderRadius: 16,
-            padding: 20,
-            marginBottom: 20
-          }}>
-            <Text style={{ 
-              color: '#FFFFFF', 
-              fontSize: 18, 
-              fontWeight: '600', 
-              marginBottom: 16,
-              writingDirection: 'rtl'
-            }}>
-              סיכום התשלום
-            </Text>
-            
-            <View style={{ 
-              flexDirection: 'row-reverse', 
-              justifyContent: 'space-between',
-              marginBottom: 8
-            }}>
-              <Text style={{ 
-                color: '#B0B0B0', 
-                fontSize: 14,
-                writingDirection: 'rtl'
-              }}>
-                {plan?.name}
-              </Text>
-              <Text style={{ 
-                color: '#FFFFFF', 
-                fontSize: 14,
-                fontWeight: '600'
-              }}>
-                {plan?.price === 0 ? 'חינם' : `₪${plan?.price}`}
-              </Text>
-            </View>
-            
-            <View style={{ 
-              flexDirection: 'row-reverse', 
-              justifyContent: 'space-between',
-              marginBottom: 8
-            }}>
-              <Text style={{ 
-                color: '#B0B0B0', 
-                fontSize: 14,
-                writingDirection: 'rtl'
-              }}>
-                מע"מ
-              </Text>
-              <Text style={{ 
-                color: '#FFFFFF', 
-                fontSize: 14,
-                fontWeight: '600'
-              }}>
-                {plan?.price === 0 ? '₪0' : `₪${Math.round((plan?.price || 0) * 0.17)}`}
-              </Text>
-            </View>
-            
-            <View style={{ 
-              height: 1, 
-              backgroundColor: '#333333', 
-              marginVertical: 12 
-            }} />
-            
-            <View style={{ 
-              flexDirection: 'row-reverse', 
-              justifyContent: 'space-between'
-            }}>
-              <Text style={{ 
-                color: '#FFFFFF', 
-                fontSize: 18,
-                fontWeight: '700',
-                writingDirection: 'rtl'
-              }}>
-                סה"כ
-              </Text>
-              <Text style={{ 
-                color: '#00E654', 
-                fontSize: 18,
-                fontWeight: '700'
-              }}>
-                {plan?.price === 0 ? 'חינם' : `₪${Math.round((plan?.price || 0) * 1.17)}`}
-              </Text>
-            </View>
-          </View>
-
-          {/* Payment Button */}
-          <TouchableOpacity
-            onPress={handlePayment}
-            disabled={loading}
-            style={{
-              opacity: loading ? 0.7 : 1
-            }}
-          >
-            <LinearGradient
-              colors={['#00E654', '#00B84A', '#008F3A']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={{
-                borderRadius: 16,
-                padding: 18,
-                alignItems: 'center',
-                shadowColor: '#00E654',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.4,
-                shadowRadius: 12,
-                elevation: 8
-              }}
+            {/* Personal Details Section */}
+            <UICard
+              variant="glass"
+              glassIntensity="light"
+              padding="lg"
+              style={{ marginBottom: spacing.lg, borderRadius: borderRadius.xl }}
             >
-              {loading ? (
-                <ActivityIndicator color="#000000" size="small" />
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Shield size={20} color="#000000" style={{ marginLeft: 8 }} />
-                  <Text style={{ 
-                    color: '#000000', 
-                    fontSize: 18, 
-                    fontWeight: '700',
-                    writingDirection: 'rtl'
-                  }}>
-                    המשך לתשלום מאובטח
-                  </Text>
-                </View>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: spacing.lg }}>
+                <User size={18} color={colors.primary.main} style={{ marginLeft: 8 }} />
+                <Text style={{ color: colors.text.primary, fontSize: 17, fontWeight: '700', writingDirection: 'rtl' }}>
+                  פרטים אישיים
+                </Text>
+              </View>
 
-          {/* Terms */}
-          <Text style={{ 
-            color: '#666666', 
-            fontSize: 12, 
-            textAlign: 'center',
-            marginTop: 16,
-            lineHeight: 18,
-            writingDirection: 'rtl'
-          }}>
-            בלחיצה על "המשך לתשלום מאובטח" אתה מסכים לתנאי השימוש ומדיניות הפרטיות שלנו
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              {renderInputField(
+                'שם מלא',
+                cardholderName,
+                setCardholderName,
+                'שם מלא',
+                'name',
+                'default',
+                <User size={16} color={colors.text.tertiary} />,
+              )}
+
+              {renderInputField(
+                'כתובת אימייל',
+                email,
+                setEmail,
+                'example@email.com',
+                'email',
+                'email-address',
+                <Mail size={16} color={colors.text.tertiary} />,
+              )}
+
+              {renderInputField(
+                'מספר טלפון',
+                phone,
+                setPhone,
+                '050-1234567',
+                'phone',
+                'phone-pad',
+                <Phone size={16} color={colors.text.tertiary} />,
+              )}
+            </UICard>
+
+            {/* Security Notice */}
+            <View style={{
+              flexDirection: 'row-reverse',
+              alignItems: 'flex-start',
+              backgroundColor: colors.primary.dim,
+              borderRadius: borderRadius.lg,
+              borderWidth: 1,
+              borderColor: colors.primary.subtle,
+              padding: spacing.base,
+              marginBottom: spacing.lg,
+            }}>
+              <Shield size={18} color={colors.primary.main} style={{ marginTop: 1, marginLeft: 10 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.primary.main, fontSize: 13, fontWeight: '700', textAlign: 'right', marginBottom: 4 }}>
+                  תשלום מאובטח עם CardCom
+                </Text>
+                <Text style={{ color: colors.text.secondary, fontSize: 12, lineHeight: 18, textAlign: 'right' }}>
+                  תועבר לדף תשלום מאובטח למילוי פרטי כרטיס האשראי. כל הפרטים מוצפנים ב-SSL 256-bit בתקן PCI DSS.
+                </Text>
+              </View>
+            </View>
+
+            {/* Payment Summary */}
+            <UICard
+              variant="glass"
+              glassIntensity="light"
+              padding="lg"
+              style={{ marginBottom: spacing.lg, borderRadius: borderRadius.xl }}
+            >
+              <Text style={{ color: colors.text.primary, fontSize: 17, fontWeight: '700', marginBottom: spacing.base, textAlign: 'right' }}>
+                סיכום התשלום
+              </Text>
+
+              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Text style={{ color: colors.text.secondary, fontSize: 14, textAlign: 'right' }}>
+                  {plan?.name}
+                </Text>
+                <Text style={{ color: colors.text.primary, fontSize: 14, fontWeight: '600' }}>
+                  {plan?.price === 0 ? 'חינם' : `₪${plan?.price.toLocaleString()}`}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: spacing.md }}>
+                <Text style={{ color: colors.text.tertiary, fontSize: 12, textAlign: 'right' }}>
+                  המחיר כולל מע"מ
+                </Text>
+                <Text style={{ color: colors.text.tertiary, fontSize: 12 }}>
+                  {plan?.period === 'one_time' ? 'תשלום חד פעמי' : plan?.period === 'yearly' ? 'חיוב שנתי' : plan?.period === 'quarterly' ? 'חיוב רבעוני' : 'חיוב חודשי'}
+                </Text>
+              </View>
+
+              <View style={{ height: 1, backgroundColor: colors.border.default, marginBottom: spacing.md }} />
+
+              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ color: colors.text.primary, fontSize: 18, fontWeight: '800', textAlign: 'right' }}>
+                  סה"כ לתשלום
+                </Text>
+                <Text style={{ color: planColor, fontSize: 22, fontWeight: '800' }}>
+                  {plan?.price === 0 ? 'חינם' : `₪${plan?.price.toLocaleString()}`}
+                </Text>
+              </View>
+            </UICard>
+
+            {/* Payment Button */}
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.medium();
+                handlePayment();
+              }}
+              disabled={loading}
+              activeOpacity={0.85}
+              style={{ borderRadius: borderRadius.lg, overflow: 'hidden', opacity: loading ? 0.7 : 1 }}
+            >
+              <LinearGradient
+                colors={[planColor, ra(planColor, 0.78)]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ paddingVertical: 17, alignItems: 'center', justifyContent: 'center' }}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
+                    <Lock size={18} color="#fff" style={{ marginLeft: 8 }} />
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', writingDirection: 'rtl', letterSpacing: 0.2 }}>
+                      המשך לתשלום מאובטח
+                    </Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Terms */}
+            <Text style={{ color: colors.text.tertiary, fontSize: 12, textAlign: 'center', marginTop: spacing.base, lineHeight: 18, writingDirection: 'rtl' }}>
+              בלחיצה על "המשך לתשלום מאובטח" אתה מסכים לתנאי השימוש ומדיניות הפרטיות שלנו
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

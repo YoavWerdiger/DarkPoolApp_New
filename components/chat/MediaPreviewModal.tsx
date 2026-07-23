@@ -1,24 +1,28 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  Modal, 
-  Pressable, 
-  TextInput, 
-  ScrollView, 
-  Dimensions,
-  Image,
-  Alert,
-  Animated
-} from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import { legacyAlert } from '../../utils/appDialog';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { View, Text, Modal, Pressable, Dimensions, StyleSheet, ActivityIndicator, Animated as RNAnimated,
+  Keyboard, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  AndroidSoftInputModes,
+  KeyboardController,
+  useGenericKeyboardHandler,
+} from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
-import { ImageIcon, Video as VideoIcon, FileText, File, X, Trash2, ArrowRight } from 'lucide-react-native';
+import { X, Trash2, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { Audio } from 'expo-av';
-import { MediaMetadata, MediaFile } from '../../services/mediaService';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { MediaFile } from '../../services/mediaService';
+import { logger } from '../../utils/logger';
+import { BlurView } from 'expo-blur';
+import { GestureHandlerRootView, Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 
 interface MediaPreviewModalProps {
   visible: boolean;
@@ -27,122 +31,407 @@ interface MediaPreviewModalProps {
   mediaFiles: MediaFile[];
 }
 
+import { chatPalette as COLORS } from './chatDesignTokens';
+import ChatComposerBar from './ChatComposerBar';
+import { useDesignTokens } from '../ui/DesignTokens';
+import { chatComposerSafeBottomInset } from './chatInputLayout';
+import * as VideoThumbnails from 'expo-video-thumbnails';
+import { useMediaZoomGestures } from './useMediaZoomGestures';
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-export default function MediaPreviewModal({ 
-  visible, 
-  onClose, 
-  onSend, 
-  mediaFiles 
+export default function MediaPreviewModal({
+  visible,
+  onClose,
+  onSend,
+  mediaFiles
 }: MediaPreviewModalProps) {
   const insets = useSafeAreaInsets();
+  const tokens = useDesignTokens();
+  const composerPaddingBottom = useMemo(
+    () => chatComposerSafeBottomInset(insets.bottom),
+    [insets.bottom],
+  );
+  const composerInsetSV = useSharedValue(composerPaddingBottom);
+  const keyboardHeightSV = useSharedValue(0);
+  const [videoPosterUri, setVideoPosterUri] = useState<string | null>(null);
+  
+  const [localFiles, setLocalFiles] = useState(mediaFiles);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [captions, setCaptions] = useState<Record<string, string>>({});
-  const [audioStatus, setAudioStatus] = useState<Record<string, boolean>>({});
   const [isPlaying, setIsPlaying] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(false); // ⚡ expo-image handles loading - no need to show spinner
   const audioRefs = useRef<Record<string, Audio.Sound>>({});
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const videoRef = useRef<any>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoPosition, setVideoPosition] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [timelineWidth, setTimelineWidth] = useState(0);
+  const [videoDragging, setVideoDragging] = useState(false);
+  const [videoDragPosition, setVideoDragPosition] = useState(0);
+  const videoDurationVal = useSharedValue(0);
+  const videoTimelineWidthVal = useSharedValue(0);
+  const videoStartPositionVal = useSharedValue(0);
+  const videoDraggingRef = useRef(false);
+  const videoLastSeekTargetRef = useRef<number | null>(null);
+  const videoPositionShared = useSharedValue(0);
+  const videoDisplayPosition = videoDragging ? videoDragPosition : videoPosition;
+  videoDraggingRef.current = videoDragging;
 
-  const currentMedia = mediaFiles[currentIndex];
-
-  // אנימציה כניסה
+  // Animation refs for modal open/close (using React Native Animated for modal)
+  const modalScaleAnim = useRef(new RNAnimated.Value(0.9)).current;
+  const modalOpacityAnim = useRef(new RNAnimated.Value(0)).current;
+  // Controls are always visible - no animation needed
+  
   useEffect(() => {
-    if (visible) {
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      fadeAnim.setValue(0);
-    }
+    composerInsetSV.value = composerPaddingBottom;
+  }, [composerPaddingBottom, composerInsetSV]);
+
+  useEffect(() => {
+    if (!visible || Platform.OS !== 'android') return;
+    KeyboardController.setInputMode(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
+    return () => {
+      KeyboardController.setDefaultMode();
+    };
   }, [visible]);
 
-  // פורמט גודל קובץ
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  useGenericKeyboardHandler(
+    {
+      onMove: (event) => {
+        'worklet';
+        keyboardHeightSV.value = Math.max(0, event.height);
+      },
+      onEnd: (event) => {
+        'worklet';
+        keyboardHeightSV.value = Math.max(0, event.height);
+      },
+    },
+    [],
+  );
 
-  // פורמט משך זמן
-  const formatDuration = (seconds: number) => {
+  /**
+   * ב-Modal, event.height של המקלדת לעיתים קצר ב־~safe-area לעומת הצ'אט הרגיל.
+   * לכן: כשפתוח — paddingBottom=0 ו-translate = -(h + inset) (לא רק -h / נוסחת ChatComposer),
+   * ובנוסף backdrop שחור מתחתית המסך שסוגר כל under-report שנשאר.
+   */
+  const animatedComposerDockStyle = useAnimatedStyle(() => {
+    const h = keyboardHeightSV.value;
+    const inset = composerInsetSV.value;
+    const open = h > 0;
+    return {
+      transform: [
+        {
+          // open: lift past under-reported keyboard; closed: sit on safe area
+          translateY: open ? -(h + inset) : 0,
+        },
+      ],
+      paddingBottom: open ? 0 : inset,
+      backgroundColor: '#000',
+    };
+  });
+
+  /** ממלא מתחתית המסך מעל/מאחורי המקלדת — אין "חלון" לתמונה גם אם ה-translate קצר */
+  const animatedKeyboardBackdropStyle = useAnimatedStyle(() => {
+    const h = keyboardHeightSV.value;
+    const inset = composerInsetSV.value;
+    const open = h > 0;
+    return {
+      height: open ? h + inset + 64 : 0,
+      opacity: open ? 1 : 0,
+    };
+  });
+
+  /** Blur רק כשהמקלדת סגורה; כשפתוחה — אטום מלא */
+  const animatedComposerSurfaceStyle = useAnimatedStyle(() => ({
+    backgroundColor: keyboardHeightSV.value > 0 ? '#000' : 'rgba(0, 0, 0, 0.45)',
+  }));
+
+  const animatedComposerBlurStyle = useAnimatedStyle(() => ({
+    opacity: keyboardHeightSV.value > 0 ? 0 : 1,
+  }));
+
+  const dismissKeyboard = useCallback(() => {
+    Keyboard.dismiss();
+  }, []);
+
+  const currentMedia = localFiles[currentIndex];
+
+  const { zoomGesture, animatedStyle: animatedImageStyle, resetZoomImmediate } =
+    useMediaZoomGestures({
+      resetKey: visible ? `${currentIndex}:${currentMedia?.id ?? ''}` : false,
+      width: screenWidth,
+      height: screenHeight,
+      onSingleTap: dismissKeyboard,
+    });
+
+  useEffect(() => {
+    if (currentMedia?.type !== 'video') return;
+    if (!videoDragging) {
+      videoPositionShared.value = withTiming(videoPosition, { duration: 120 });
+    }
+  }, [videoPosition, videoDragging, currentMedia?.type]);
+
+  useEffect(() => {
+    if (visible) {
+      // ⚡ לא מחכים ל-decode — מודאל נפתח מייד; thumb/full נטענים בשכבות
+      setIsLoading(false);
+      resetZoomImmediate();
+      RNAnimated.parallel([
+        RNAnimated.timing(modalScaleAnim, {
+          toValue: 1,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(modalOpacityAnim, {
+          toValue: 1,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {});
+    } else {
+      modalScaleAnim.setValue(0.9);
+      modalOpacityAnim.setValue(0);
+      resetZoomImmediate();
+      keyboardHeightSV.value = 0;
+    }
+  }, [visible, resetZoomImmediate]);
+
+  useEffect(() => {
+    setLocalFiles(mediaFiles);
+  }, [mediaFiles]);
+
+  // פריים ראשון לפריוויו וידאו (מקומי — אמין ב-iOS)
+  useEffect(() => {
+    if (!visible || currentMedia?.type !== 'video' || !currentMedia.uri) {
+      setVideoPosterUri(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      for (const time of [1000, 0, 100]) {
+        try {
+          const { uri } = await VideoThumbnails.getThumbnailAsync(currentMedia.uri, {
+            time,
+            quality: 0.7,
+          });
+          if (!cancelled && uri) {
+            setVideoPosterUri(uri);
+            setLocalFiles((prev) =>
+              prev.map((f, i) =>
+                i === currentIndex && f.type === 'video' && !f.thumbnail_url
+                  ? { ...f, thumbnail_url: uri }
+                  : f,
+              ),
+            );
+            return;
+          }
+        } catch {
+          /* ניסיון הבא */
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, currentIndex, currentMedia?.type, currentMedia?.uri]);
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return '0:00';
     const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // נגינת/עצירת אודיו
   const toggleAudio = async (fileId: string) => {
     try {
       if (isPlaying[fileId]) {
-        // עצור אודיו
         if (audioRefs.current[fileId]) {
           await audioRefs.current[fileId].stopAsync();
           await audioRefs.current[fileId].unloadAsync();
         }
         setIsPlaying(prev => ({ ...prev, [fileId]: false }));
       } else {
-        // התחל אודיו
-        const mediaFile = mediaFiles.find(f => f.id === fileId);
+        const mediaFile = localFiles.find(f => f.id === fileId);
         if (mediaFile && mediaFile.type === 'audio') {
           const { sound } = await Audio.Sound.createAsync({ uri: mediaFile.uri });
           audioRefs.current[fileId] = sound;
           await sound.playAsync();
           setIsPlaying(prev => ({ ...prev, [fileId]: true }));
-          
-          // עצור אוטומטית בסיום
+
           sound.setOnPlaybackStatusUpdate((status) => {
-            if (status.didJustFinish) {
+            if (status.isLoaded && status.didJustFinish) {
               setIsPlaying(prev => ({ ...prev, [fileId]: false }));
             }
           });
         }
       }
     } catch (error) {
-      console.error('Error toggling audio:', error);
+      logger.error('MediaPreviewModal', 'Audio toggle error', error);
     }
   };
 
-  // הסרת מדיה
   const removeMedia = (fileId: string) => {
-    if (mediaFiles.length === 1) {
+    if (localFiles.length === 1) {
       onClose();
       return;
     }
-    
-    const newMediaFiles = mediaFiles.filter(f => f.id !== fileId);
+
     const newCaptions = { ...captions };
     delete newCaptions[fileId];
-    
-    if (currentIndex >= newMediaFiles.length) {
-      setCurrentIndex(Math.max(0, newMediaFiles.length - 1));
+
+    if (currentIndex >= localFiles.length - 1) {
+      setCurrentIndex(Math.max(0, localFiles.length - 2));
     }
-    
-    // עדכן את המערך המקורי
-    mediaFiles.splice(mediaFiles.findIndex(f => f.id === fileId), 1);
+
+    setLocalFiles(prev => prev.filter(f => f.id !== fileId));
     setCaptions(newCaptions);
   };
 
-  // שליחה
   const handleSend = () => {
-    if (mediaFiles.length === 0) return;
-    
-    // בדוק שכל הקבצים עדיין קיימים
-    const validMediaFiles = mediaFiles.filter(f => f.uri);
-    
+    if (localFiles.length === 0) return;
+    const validMediaFiles = localFiles.filter(f => f.uri);
     if (validMediaFiles.length === 0) {
-      Alert.alert('שגיאה', 'אין קבצים לשליחה');
+      legacyAlert('שגיאה', 'אין קבצים לשליחה');
       return;
     }
-    
-    onSend(validMediaFiles, captions);
+    // Send with copies of data, then close
+    onSend([...validMediaFiles], { ...captions });
     onClose();
   };
 
-  // ניקוי אודיו בעת סגירה
+  const goToNext = () => {
+    if (currentIndex < localFiles.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setIsLoading(true);
+    }
+  };
+
+  const goToPrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setIsLoading(true);
+    }
+  };
+
+  const handleVideoSeek = useCallback((positionSeconds: number) => {
+    videoLastSeekTargetRef.current = positionSeconds;
+    const ms = Math.max(0, positionSeconds) * 1000;
+    videoRef.current?.setPositionAsync(ms).then(() => {
+      setVideoPosition(positionSeconds);
+      videoLastSeekTargetRef.current = null;
+    }).catch(() => {
+      videoLastSeekTargetRef.current = null;
+    });
+  }, []);
+
+  const handleVideoTimelinePress = useCallback((evt: { nativeEvent: { locationX: number } }) => {
+    if (timelineWidth <= 0 || videoDuration <= 0) return;
+    const ratio = Math.max(0, Math.min(1, evt.nativeEvent.locationX / timelineWidth));
+    handleVideoSeek(ratio * videoDuration);
+  }, [timelineWidth, videoDuration, handleVideoSeek]);
+
+  const toggleVideoPlayPause = useCallback(() => {
+    if (!videoRef.current) return;
+    const next = !videoPlaying;
+    setVideoPlaying(next);
+    if (next) videoRef.current.playAsync?.();
+    else videoRef.current.pauseAsync?.();
+  }, [videoPlaying]);
+
+  useEffect(() => {
+    if (currentMedia?.type === 'video') {
+      videoDurationVal.value = videoDuration;
+      videoTimelineWidthVal.value = timelineWidth;
+    }
+  }, [videoDuration, timelineWidth, currentMedia?.type]);
+
+  useEffect(() => {
+    if (currentMedia?.type !== 'video') {
+      setVideoPlaying(false);
+      setVideoPosition(0);
+      setVideoDuration(0);
+      setVideoDragging(false);
+    }
+  }, [currentIndex, currentMedia?.type]);
+
+  const recordVideoDragStart = useCallback(() => {
+    videoStartPositionVal.value = videoPosition;
+    videoPositionShared.value = videoPosition;
+    setVideoDragPosition(videoPosition);
+    setVideoDragging(true);
+    videoDraggingRef.current = true;
+  }, [videoPosition]);
+
+  const commitVideoSeek = useCallback((finalPositionSeconds: number) => {
+    videoPositionShared.value = finalPositionSeconds;
+    setVideoPosition(finalPositionSeconds);
+    setVideoDragging(false);
+    videoDraggingRef.current = false;
+    handleVideoSeek(finalPositionSeconds);
+  }, [handleVideoSeek]);
+
+  const handleVideoTimelineTap = useCallback((x: number) => {
+    if (timelineWidth <= 0 || videoDuration <= 0) return;
+    const ratio = Math.max(0, Math.min(1, x / timelineWidth));
+    const sec = ratio * videoDuration;
+    videoPositionShared.value = sec;
+    setVideoPosition(sec);
+    handleVideoSeek(sec);
+  }, [timelineWidth, videoDuration, handleVideoSeek]);
+
+  const videoTimelinePanGesture = Gesture.Pan()
+    .minDistance(6)
+    .onStart(() => {
+      'worklet';
+      runOnJS(recordVideoDragStart)();
+    })
+    .onUpdate((e) => {
+      'worklet';
+      const w = videoTimelineWidthVal.value;
+      const d = videoDurationVal.value;
+      if (w <= 0 || d <= 0) return;
+      const newSec = videoStartPositionVal.value + (e.translationX / w) * d;
+      const clamped = Math.max(0, Math.min(d, newSec));
+      videoPositionShared.value = clamped;
+      runOnJS(setVideoDragPosition)(clamped);
+    })
+    .onEnd((e) => {
+      'worklet';
+      const w = videoTimelineWidthVal.value;
+      const d = videoDurationVal.value;
+      if (w <= 0 || d <= 0) {
+        runOnJS(commitVideoSeek)(videoStartPositionVal.value);
+        return;
+      }
+      const newSec = videoStartPositionVal.value + (e.translationX / w) * d;
+      const clamped = Math.max(0, Math.min(d, newSec));
+      runOnJS(commitVideoSeek)(clamped);
+    });
+
+  const videoTimelineTapGesture = Gesture.Tap()
+    .onEnd((e) => {
+      'worklet';
+      runOnJS(handleVideoTimelineTap)(e.x);
+    });
+
+  const videoTimelineGesture = Gesture.Exclusive(videoTimelinePanGesture, videoTimelineTapGesture);
+
+  const videoAnimatedFillStyle = useAnimatedStyle(() => {
+    const d = videoDurationVal.value;
+    const p = videoPositionShared.value;
+    if (d <= 0) return { width: 0 };
+    const w = videoTimelineWidthVal.value;
+    return { width: w * (p / d) };
+  }, []);
+
+  const videoAnimatedThumbStyle = useAnimatedStyle(() => {
+    const d = videoDurationVal.value;
+    const p = videoPositionShared.value;
+    if (d <= 0) return { left: -7 };
+    const w = videoTimelineWidthVal.value;
+    return { left: w * (p / d) - 7 };
+  }, []);
+
   useEffect(() => {
     return () => {
       Object.values(audioRefs.current).forEach(sound => {
@@ -151,288 +440,742 @@ export default function MediaPreviewModal({
     };
   }, []);
 
-  if (!visible || !currentMedia) return null;
+  // Video playback status: set up via ref for explicit cleanup on unmount
+  useEffect(() => {
+    if (currentMedia?.type !== 'video' || !visible) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const callback = (status: { isLoaded?: boolean; durationMillis?: number; positionMillis?: number }) => {
+      if (status.isLoaded) {
+        if (status.durationMillis != null) {
+          const sec = status.durationMillis / 1000;
+          setVideoDuration(sec);
+          setLocalFiles((prev) =>
+            prev.map((f, i) =>
+              i === currentIndex && f.type === 'video' ? { ...f, duration: sec } : f,
+            ),
+          );
+        }
+        if (!videoDraggingRef.current) {
+          const reported = (status.positionMillis ?? 0) / 1000;
+          const target = videoLastSeekTargetRef.current;
+          if (target == null) {
+            setVideoPosition(reported);
+          } else if (Math.abs(reported - target) < 0.5) {
+            videoLastSeekTargetRef.current = null;
+            setVideoPosition(reported);
+          }
+        }
+      }
+    };
+
+    video.setOnPlaybackStatusUpdate(callback);
+
+    return () => {
+      videoRef.current?.setOnPlaybackStatusUpdate(null);
+    };
+  }, [currentMedia?.type, currentIndex, visible]);
+
+  if (!visible || !currentMedia) {
+    return null;
+  }
+
+  const GlassButton = ({ onPress, children, style, size = 48 }: any) => (
+    <Pressable onPress={onPress} style={[styles.glassButton, { width: size, height: size, borderRadius: size / 2 }, style]}>
+      <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+        <View style={styles.glassInner}>
+          {children}
+        </View>
+      </View>
+    </Pressable>
+  );
 
   const renderMediaContent = () => {
     switch (currentMedia.type) {
       case 'image':
         return (
-          <ScrollView 
-            contentContainerStyle={{ 
-              flexGrow: 1, 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              paddingTop: 80,
-              paddingBottom: 120
-            }}
-            maximumZoomScale={3}
-            minimumZoomScale={1}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          >
-            {currentMedia.uri && currentMedia.uri.trim() !== '' ? (
-              <Image
-                source={{ uri: currentMedia.uri }}
-                style={{
-                  width: screenWidth * 0.9,
-                  height: screenHeight * 0.6,
-                  alignSelf: 'center',
-                  borderRadius: 12,
-                }}
-                resizeMode="contain"
-                onError={(error) => {
-                  console.error('Image load error in MediaPreviewModal:', error);
-                }}
-              />
-            ) : (
-              <View style={{
-                width: screenWidth * 0.9,
-                height: screenHeight * 0.6,
-                alignSelf: 'center',
-                borderRadius: 12,
-                backgroundColor: '#2A2A2A',
-                justifyContent: 'center',
-                alignItems: 'center'
-              }}>
-                <ImageIcon size={64} color="#666" strokeWidth={1.5} />
-              </View>
-            )}
-          </ScrollView>
+          <GestureDetector gesture={zoomGesture}>
+            <Animated.View style={styles.fullMedia} collapsable={false}>
+              <Animated.View style={[StyleSheet.absoluteFillObject, animatedImageStyle]}>
+                {/* שכבת thumb מיידית (כמו poster של וידאו) — בלי לחכות ל-decode מלא */}
+                {currentMedia.thumbnail_url ? (
+                  <ExpoImage
+                    source={{ uri: currentMedia.thumbnail_url }}
+                    style={styles.fullMedia}
+                    contentFit="contain"
+                    cachePolicy="memory-disk"
+                    transition={0}
+                    recyclingKey={`${currentMedia.id}-thumb`}
+                  />
+                ) : null}
+                <ExpoImage
+                  source={{ uri: currentMedia.uri }}
+                  style={
+                    currentMedia.thumbnail_url
+                      ? [styles.fullMedia, styles.fullMediaOnTop]
+                      : styles.fullMedia
+                  }
+                  contentFit="contain"
+                  transition={0}
+                  priority="high"
+                  onLoadStart={() => setIsLoading(false)}
+                  onLoad={() => setIsLoading(false)}
+                  onError={() => setIsLoading(false)}
+                  cachePolicy="memory-disk"
+                  recyclingKey={currentMedia.id}
+                />
+              </Animated.View>
+            </Animated.View>
+          </GestureDetector>
         );
 
       case 'video':
         return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            paddingTop: 80,
-            paddingBottom: 120 
-          }}>
-            {currentMedia.uri && currentMedia.uri.trim() !== '' && (currentMedia.uri.startsWith('http') || currentMedia.uri.startsWith('file://') || currentMedia.uri.startsWith('content://')) ? (
-              <Video
-                source={{ uri: currentMedia.uri }}
-                style={{
-                  width: screenWidth * 0.9,
-                  height: screenHeight * 0.6,
-                borderRadius: 12,
-              }}
+          <View style={styles.fullMedia}>
+            {videoPosterUri && !videoPlaying ? (
+              <ExpoImage
+                source={{ uri: videoPosterUri }}
+                style={styles.fullMediaInner}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+              />
+            ) : null}
+            {isLoading && (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+              </View>
+            )}
+            <Video
+              ref={videoRef}
+              source={{ uri: currentMedia.uri }}
+              style={[
+                styles.fullMediaInner,
+                videoPosterUri && !videoPlaying ? styles.hiddenVideo : null,
+              ]}
               resizeMode={ResizeMode.CONTAIN}
-              useNativeControls
-              shouldPlay={false}
-              onLoadStart={() => {
-                console.log('Video loading started in MediaPreviewModal:', currentMedia.uri);
+              useNativeControls={false}
+              shouldPlay={videoPlaying}
+              onLoad={() => {
+                setIsLoading(false);
+                videoRef.current?.setStatusAsync?.({ progressUpdateIntervalMillis: 100 });
               }}
-              onLoad={(status) => {
-                console.log('Video loaded successfully in MediaPreviewModal:', status);
-              }}
-              onError={(error) => {
-                console.error('Video load error in MediaPreviewModal:', error);
-                console.error('Video URL:', currentMedia.uri);
-              }}
-              onPlaybackStatusUpdate={(status) => {
-                if ('error' in status && status.error) {
-                  console.error('Video playback error in MediaPreviewModal:', status.error);
-                }
-              }}
+              onError={() => setIsLoading(false)}
             />
-          ) : (
-            <View style={{
-              width: screenWidth * 0.9,
-              height: screenHeight * 0.6,
-              borderRadius: 12,
-              backgroundColor: '#2A2A2A',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <VideoIcon size={64} color="#666" strokeWidth={1.5} />
-            </View>
-          )}
           </View>
         );
 
       case 'audio':
         return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            paddingTop: 80,
-            paddingBottom: 120 
-          }}>
-            <View className="w-40 h-40 bg-gradient-to-br from-primary to-[#00ff88] rounded-full items-center justify-center mb-8 shadow-lg">
-              <Pressable
-                onPress={() => toggleAudio(currentMedia.id)}
-                className="w-24 h-24 bg-white rounded-full items-center justify-center shadow-lg"
-              >
-                <Ionicons
-                  name={isPlaying[currentMedia.id] ? 'pause' : 'play'}
-                  size={48}
-                  color="#000"
-                />
-              </Pressable>
-            </View>
-            <Text className="text-white text-xl mb-2 font-bold">
-              {currentMedia.name || 'הקלטת קול'}
-            </Text>
-            <Text className="text-gray-400 text-lg">
-              {currentMedia.duration ? formatDuration(currentMedia.duration) : '0:00'}
-            </Text>
-            {currentMedia.size && (
-              <Text className="text-gray-500 text-sm mt-2">
-                {formatFileSize(currentMedia.size)}
-              </Text>
+          <View style={styles.audioContent}>
+            <Pressable onPress={() => toggleAudio(currentMedia.id)} style={styles.audioPlayBtn}>
+              <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
+                <View style={styles.audioPlayInner}>
+                  {isPlaying[currentMedia.id] ? (
+                    <Pause size={48} color={COLORS.text} strokeWidth={1.5} />
+                  ) : (
+                    <Play size={48} color={COLORS.text} strokeWidth={1.5} fill={COLORS.text} />
+                  )}
+                </View>
+              </View>
+            </Pressable>
+            <Text style={styles.audioTime}>{formatDuration(currentMedia.duration)}</Text>
+            {currentMedia.name && (
+              <Text style={styles.audioName}>{currentMedia.name}</Text>
             )}
           </View>
         );
 
       case 'document':
         return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            paddingTop: 80,
-            paddingBottom: 120 
-          }}>
-            <View className="w-40 h-40 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full items-center justify-center mb-8 shadow-lg">
-              <FileText size={80} color="white" strokeWidth={1.5} />
+          <View style={styles.documentContent}>
+            <View style={styles.documentIcon}>
+              <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}>
+                <View style={styles.documentIconInner}>
+                  <Ionicons name="document-text" size={64} color={COLORS.text} />
+                </View>
+              </View>
             </View>
-            <Text className="text-white text-xl mb-2 font-bold text-center">
-              {currentMedia.name || 'מסמך'}
-            </Text>
-            {currentMedia.size && (
-              <Text className="text-gray-400 text-lg">
-                {formatFileSize(currentMedia.size)}
-              </Text>
+            {currentMedia.name && (
+              <Text style={styles.documentName}>{currentMedia.name}</Text>
             )}
-            <Text className="text-gray-500 text-sm mt-2 text-center">
-              {currentMedia.type === 'document' ? 'PDF או מסמך אחר' : currentMedia.type}
-            </Text>
           </View>
         );
 
       default:
-        return (
-          <View className="flex-1 justify-center items-center" style={{ 
-            paddingTop: 80,
-            paddingBottom: 120 
-          }}>
-            <View className="w-40 h-40 bg-gradient-to-br from-gray-500 to-gray-600 rounded-full items-center justify-center mb-8">
-              <File size={80} color="white" strokeWidth={1.5} />
-            </View>
-            <Text className="text-white text-xl">סוג מדיה לא נתמך</Text>
-          </View>
-        );
+        return null;
     }
   };
+
+  // RN Animated View for modal wrapper
+  const RNAnimatedView = RNAnimated.View;
 
   return (
     <Modal
       visible={visible}
       transparent={true}
-      animationType="fade"
+      animationType="none"
       presentationStyle="overFullScreen"
       onRequestClose={onClose}
     >
-      <Animated.View 
-        className="flex-1 bg-black"
-        style={{ opacity: fadeAnim }}
-      >
-          {/* Header */}
-          <View 
-            className="flex-row justify-between items-center px-4 py-4"
-            style={{
-              backgroundColor: '#181818',
-              borderBottomWidth: 1,
-              borderBottomColor: 'rgba(255,255,255,0.1)',
-              paddingTop: insets.top + 16
-            }}
-          >
-            <Pressable 
-              onPress={onClose} 
-              className="w-11 h-11 bg-white/15 border border-white/25 rounded-full items-center justify-center"
-              style={{ shadowColor: '#fff', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
-            >
-              <X size={22} color="white" strokeWidth={2} />
-            </Pressable>
-            
-            <View className="items-center">
-              <Text className="text-white text-lg font-bold mb-1">
-                {mediaFiles.length > 1 ? `${currentIndex + 1} מתוך ${mediaFiles.length}` : 'תצוגה מקדימה'}
-              </Text>
-              <Text className="text-gray-300 text-sm font-medium">
-                {currentMedia.type === 'image' ? 'תמונה' : 
-                 currentMedia.type === 'video' ? 'וידאו' : 
-                 currentMedia.type === 'audio' ? 'הקלטה' : 'מסמך'}
-              </Text>
-            </View>
-            
-            <Pressable 
-              onPress={handleSend} 
-              className="bg-primary px-6 py-3 rounded-full shadow-lg"
-              style={{ shadowColor: '#00E654', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } }}
-            >
-              <Text className="text-black font-bold text-base">שלח</Text>
-            </Pressable>
-          </View>
-
-          {/* Media Content */}
-          <View className="flex-1 justify-center items-center bg-black">
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <RNAnimatedView style={[styles.container, { opacity: modalOpacityAnim, transform: [{ scale: modalScaleAnim }] }]}>
+          {/* ── מדיה מלאה מאחורי הפסים (כמו MediaViewer) ── */}
+          <Pressable style={styles.mediaContainer} onPress={dismissKeyboard}>
             {renderMediaContent()}
-          </View>
 
-          {/* Caption Input - מעוצב כמו וואצפ */}
-          <View className="p-4 bg-gradient-to-t from-black/90 to-black/70">
-            <View className="bg-white/10 rounded-2xl p-3 border border-white/20">
-              <TextInput
-                placeholder="הוסף כיתוב (אופציונלי)..."
-                placeholderTextColor="#999"
-                value={captions[currentMedia.id] || ''}
-                onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
-                className="text-white text-right text-base"
-                multiline
-                maxLength={500}
-                style={{ minHeight: 40 }}
-              />
-              <Text className="text-gray-400 text-xs text-left mt-1">
-                {captions[currentMedia.id]?.length || 0}/500
-              </Text>
-            </View>
-          </View>
-
-          {/* Navigation Dots - מעוצב כמו וואצפ */}
-          {mediaFiles.length > 1 && (
-            <View className="flex-row justify-center items-center p-4 bg-black/80">
-              {mediaFiles.map((_, index) => (
-                <Pressable
-                  key={index}
-                  onPress={() => setCurrentIndex(index)}
-                  className={`w-2.5 h-2.5 rounded-full mx-1 transition-all duration-200 ${
-                    index === currentIndex ? 'bg-primary w-8' : 'bg-white/40'
-                  }`}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Action Buttons */}
-          <View className="flex-row justify-around p-4 bg-gradient-to-t from-black/95 via-black/80 to-black/60">
-            <Pressable
-              onPress={() => removeMedia(currentMedia.id)}
-              className="bg-red-500/20 border border-red-500/50 px-6 py-3 rounded-2xl items-center min-w-[80px]"
-              style={{ shadowColor: '#ef4444', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
-            >
-              <Trash2 size={20} color="#ef4444" strokeWidth={2} />
-              <Text className="text-red-400 text-sm font-semibold mt-1.5">הסר</Text>
-            </Pressable>
-
-            {mediaFiles.length > 1 && (
-              <Pressable
-                onPress={() => {
-                  const newIndex = (currentIndex + 1) % mediaFiles.length;
-                  setCurrentIndex(newIndex);
-                }}
-                className="bg-white/15 border border-white/25 px-6 py-3 rounded-2xl items-center min-w-[80px]"
-                style={{ shadowColor: '#fff', shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } }}
-              >
-                <ArrowRight size={20} color="white" strokeWidth={2} />
-                <Text className="text-white text-sm font-semibold mt-1.5">הבא</Text>
-              </Pressable>
+            {localFiles.length > 1 && (
+              <>
+                {currentIndex > 0 && (
+                  <Pressable onPress={goToPrev} style={[styles.navArrow, styles.navRight]}>
+                    <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}>
+                      <View style={styles.navArrowInner}>
+                        <ChevronRight size={28} color={COLORS.text} strokeWidth={2} />
+                      </View>
+                    </View>
+                  </Pressable>
+                )}
+                {currentIndex < localFiles.length - 1 && (
+                  <Pressable onPress={goToNext} style={[styles.navArrow, styles.navLeft]}>
+                    <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.4)' }]}>
+                      <View style={styles.navArrowInner}>
+                        <ChevronLeft size={28} color={COLORS.text} strokeWidth={2} />
+                      </View>
+                    </View>
+                  </Pressable>
+                )}
+              </>
             )}
+          </Pressable>
+
+          {/* ── פס עליון זכוכית (כמו MediaViewer) ── */}
+          <View style={styles.topGlassBar}>
+            <BlurView intensity={80} tint="dark" style={styles.glassBarBlur}>
+              <View style={[styles.topGlassContent, { paddingTop: insets.top + 8 }]}>
+                <GlassButton onPress={onClose}>
+                  <X size={24} color={COLORS.text} strokeWidth={2} />
+                </GlassButton>
+
+                {localFiles.length > 1 && (
+                  <View style={styles.counterBadge}>
+                    <View style={[styles.blurFill, { backgroundColor: 'rgba(0, 0, 0, 0.5)' }]}>
+                      <View style={styles.counterInner}>
+                        <Text style={styles.counterText}>{currentIndex + 1}/{localFiles.length}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                <GlassButton onPress={() => removeMedia(currentMedia.id)}>
+                  <Trash2 size={22} color={COLORS.danger} strokeWidth={2} />
+                </GlassButton>
+              </View>
+            </BlurView>
           </View>
-        </Animated.View>
-      </Modal>
+
+          {/* שכבה שחורה מתחתית המסך — סוגרת פער אם גובה המקלדת ב-Modal מדווח חסר */}
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.keyboardBackdrop, animatedKeyboardBackdropStyle]}
+          />
+
+          {/* ── פס תחתון: כמו ChatComposerDock — צמוד למקלדת עם רקע אטום ── */}
+          <Animated.View style={[styles.bottomGlassBar, animatedComposerDockStyle]}>
+            <View style={styles.composerDock}>
+              <Animated.View
+                style={[styles.composerDockBlur, animatedComposerBlurStyle]}
+                pointerEvents="none"
+              >
+                <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
+              </Animated.View>
+              <Animated.View style={[styles.composerDockContent, animatedComposerSurfaceStyle]}>
+                <ChatComposerBar
+                  value={captions[currentMedia.id] || ''}
+                  onChangeText={(text) => setCaptions(prev => ({ ...prev, [currentMedia.id]: text }))}
+                  placeholder="הוסף כיתוב..."
+                  maxLength={500}
+                  onSend={handleSend}
+                  trailing={
+                    <View
+                      style={[styles.sendBtnOuter, { backgroundColor: tokens.colors.primary.main }]}
+                      collapsable={false}
+                    >
+                      <Pressable
+                        onPress={handleSend}
+                        style={({ pressed }) => [
+                          styles.sendBtnTouchable,
+                          pressed ? { opacity: 0.82 } : null,
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="שליחה"
+                      >
+                        <Ionicons name="send" size={22} color={tokens.colors.text.inverse} />
+                      </Pressable>
+                    </View>
+                  }
+                />
+
+                {localFiles.length > 1 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.thumbnailStrip}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {localFiles.map((media, index) => (
+                      <Pressable
+                        key={media.id}
+                        onPress={() => {
+                          setCurrentIndex(index);
+                          setIsLoading(true);
+                        }}
+                        style={[
+                          styles.thumbnailContainer,
+                          index === currentIndex && styles.thumbnailActive,
+                        ]}
+                      >
+                        {media.type === 'image' ? (
+                          <ExpoImage
+                            source={{ uri: media.thumbnail_url || media.uri }}
+                            style={styles.thumbnail}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                            transition={0}
+                          />
+                        ) : media.type === 'video' ? (
+                          <View style={styles.thumbnailVideo}>
+                            <ExpoImage
+                              source={{ uri: media.uri }}
+                              style={styles.thumbnail}
+                              contentFit="cover"
+                              cachePolicy="memory-disk"
+                            />
+                            <View style={styles.thumbnailVideoOverlay}>
+                              <Play size={16} color="#fff" fill="#fff" />
+                            </View>
+                          </View>
+                        ) : (
+                          <View style={[styles.thumbnail, styles.thumbnailDocument]}>
+                            <Ionicons name="document-text" size={24} color={COLORS.text} />
+                          </View>
+                        )}
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            removeMedia(media.id);
+                          }}
+                          style={styles.thumbnailRemove}
+                        >
+                          <X size={12} color="#fff" strokeWidth={3} />
+                        </Pressable>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
+              </Animated.View>
+            </View>
+
+            {currentMedia?.type === 'video' && (
+              <View style={styles.videoControlsDock}>
+                <Animated.View
+                  style={[styles.composerDockBlur, animatedComposerBlurStyle]}
+                  pointerEvents="none"
+                >
+                  <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFillObject} />
+                </Animated.View>
+                <Animated.View style={[styles.videoControlsContent, animatedComposerSurfaceStyle]}>
+                  <View style={styles.videoControlsRow}>
+                    <TouchableOpacity style={styles.videoPlayBtn} onPress={toggleVideoPlayPause}>
+                      <Ionicons name={videoPlaying ? 'pause' : 'play'} size={24} color={COLORS.text} />
+                    </TouchableOpacity>
+                    <Text style={styles.videoTimeText}>{formatDuration(videoDisplayPosition)}</Text>
+                    <GestureDetector gesture={videoTimelineGesture}>
+                      <View
+                        style={styles.timelineTrack}
+                        onLayout={(e) => setTimelineWidth(e.nativeEvent.layout.width)}
+                      >
+                        <View style={styles.timelineTrackBg} />
+                        <Animated.View style={[styles.timelineFill, videoAnimatedFillStyle]} />
+                        <Animated.View style={[styles.timelineThumb, videoAnimatedThumbStyle]} />
+                      </View>
+                    </GestureDetector>
+                    <Text style={styles.videoTimeText}>{formatDuration(videoDuration)}</Text>
+                  </View>
+                </Animated.View>
+              </View>
+            )}
+          </Animated.View>
+        </RNAnimatedView>
+      </GestureHandlerRootView>
+    </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  /** מדיה מלאה מאחורי הפסים — contain + letterbox כמו MediaViewer */
+  mediaContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  fullMedia: {
+    width: screenWidth,
+    height: screenHeight,
+  },
+  fullMediaInner: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  /** שכבת full מעל thumb — אחרי שה-decode הסתיים מכסה את ה-poster */
+  fullMediaOnTop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  /** פס עליון — blur/glass כמו MediaViewer */
+  topGlassBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    overflow: 'hidden',
+  },
+  glassBarBlur: {
+    width: '100%',
+  },
+  topGlassContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  /** פס תחתון — עולה עם המקלדת; רקע שחור רציף כולל padding (בלי חלון לתמונה) */
+  bottomGlassBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
+    backgroundColor: '#000',
+  },
+  /** מכסה את אזור המקלדת + under-report מ-Modal */
+  keyboardBackdrop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+    backgroundColor: '#000',
+  },
+  glassButton: {
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+  },
+  blurFill: {
+    flex: 1,
+    overflow: 'hidden',
+    borderRadius: 100,
+  },
+  glassInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.glass,
+  },
+  counterBadge: {
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+  },
+  counterInner: {
+    flex: 1,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.glass,
+  },
+  counterText: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  navArrow: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    zIndex: 10,
+  },
+  navArrowInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.glass,
+  },
+  navLeft: {
+    left: 16,
+  },
+  navRight: {
+    right: 16,
+  },
+  hiddenVideo: {
+    opacity: 0,
+  },
+  loadingContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+    backgroundColor: 'transparent',
+  },
+  /** אזור כתיבה — מעל timeline בווידאo */
+  composerDock: {
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  composerDockBlur: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  composerDockContent: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  /** timeline בתחתית המסך — מתחת ל-composer */
+  videoControlsDock: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  videoControlsContent: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
+  },
+  sendBtnOuter: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    marginStart: 8,
+    alignSelf: 'flex-end',
+    marginBottom: 3,
+  },
+  sendBtnTouchable: {
+    width: 46,
+    height: 46,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  videoPlayBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoTimeText: {
+    color: COLORS.text,
+    fontSize: 12,
+    minWidth: 36,
+    textAlign: 'center',
+  },
+  timelineTrack: {
+    flex: 1,
+    height: 20,
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  timelineTrackBg: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 7,
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 3,
+  },
+  timelineFill: {
+    position: 'absolute',
+    left: 0,
+    top: 7,
+    height: 6,
+    backgroundColor: COLORS.primary,
+    borderRadius: 3,
+  },
+  timelineThumb: {
+    position: 'absolute',
+    top: 3,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: COLORS.text,
+    marginLeft: -7,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  captionRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  captionGlass: {
+    flex: 1,
+    minHeight: 48,
+    maxHeight: 100,
+    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'center',
+  },
+  captionInput: {
+    fontSize: 16,
+    maxHeight: 76,
+  },
+  sendBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  sendBtnInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbnailStrip: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    gap: 8,
+    flexDirection: 'row',
+  },
+  thumbnailContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative',
+  },
+  thumbnailActive: {
+    borderColor: COLORS.primary,
+  },
+  thumbnail: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 6,
+  },
+  thumbnailVideo: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  thumbnailVideoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 6,
+  },
+  thumbnailDocument: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbnailRemove: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  audioContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  audioPlayBtn: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    marginBottom: 24,
+  },
+  audioPlayInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.glass,
+  },
+  audioTime: {
+    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: '300',
+    letterSpacing: 2,
+  },
+  audioName: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    marginTop: 8,
+  },
+  documentContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  documentIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.glassBorder,
+    marginBottom: 24,
+  },
+  documentIconInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.glass,
+  },
+  documentName: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+});

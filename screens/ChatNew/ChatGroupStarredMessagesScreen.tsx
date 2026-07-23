@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
 import { ChatScreenShell, ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import ChatMessage from '../../components/chat/ChatMessage';
 import { useAuth } from '../../context/AuthContext';
@@ -35,11 +36,13 @@ function DateDivider({ label }: { label: string }) {
         wrap: { flexDirection: 'row', alignItems: 'center', marginVertical: 12, paddingHorizontal: 16 },
         line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)' },
         badge: {
+          borderRadius: 14,
+          marginHorizontal: 10,
+          overflow: 'hidden',
+        },
+        badgeInner: {
           paddingHorizontal: 14,
           paddingVertical: 5,
-          borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.08)',
-          marginHorizontal: 10,
         },
         text: { color: tokens.colors.text.secondary, fontSize: 12 },
       }),
@@ -49,9 +52,15 @@ function DateDivider({ label }: { label: string }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.line} />
-      <View style={styles.badge}>
+      <UICard
+        variant="glass"
+        glassIntensity="subtle"
+        padding="none"
+        style={styles.badge}
+        contentContainerStyle={styles.badgeInner}
+      >
         <Text style={styles.text}>{label}</Text>
-      </View>
+      </UICard>
       <View style={styles.line} />
     </View>
   );
@@ -279,14 +288,12 @@ const createStyles = (tokens: any) =>
       color: tokens.colors.text.primary,
       fontSize: 16,
       fontWeight: '600',
-      textAlign: 'center',
       ...chatRtlText,
     },
     emptySubtitle: {
       marginTop: 6,
       color: tokens.colors.text.secondary,
       fontSize: 13,
-      textAlign: 'center',
       ...chatRtlText,
     },
   });

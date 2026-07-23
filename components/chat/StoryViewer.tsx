@@ -1071,7 +1071,7 @@ export default function StoryViewer({
     if (ignorePagerSyncRef.current) return;
     const best = viewableItems
       .filter((v) => v.isViewable && typeof v.index === 'number')
-      .sort((a, b) => (b.percentVisible ?? 0) - (a.percentVisible ?? 0))[0];
+      .sort((a, b) => ((b as ViewToken<any> & { percentVisible?: number }).percentVisible ?? 0) - ((a as ViewToken<any> & { percentVisible?: number }).percentVisible ?? 0))[0];
     if (typeof best?.index === 'number') {
       syncPagerToIndexRef.current(best.index);
     }
@@ -1329,7 +1329,7 @@ export default function StoryViewer({
     if (!holdMedia || mediaReady) return null;
     if (holdMedia.media_type === 'image' && holdMedia.media_url) {
       return (
-        <Image source={{ uri: holdMedia.media_url }} style={styles.fullMedia} resizeMode="contain" pointerEvents="none" />
+        <View pointerEvents="none"><Image source={{ uri: holdMedia.media_url }} style={styles.fullMedia} resizeMode="contain" /></View>
       );
     }
     if (holdMedia.media_type === 'video' && holdMedia.media_url) {
@@ -1366,7 +1366,14 @@ export default function StoryViewer({
     const gateOpacity = isActive && !mediaReady && !mediaError && !!holdMedia;
 
     if (!story) {
-      return <View style={styles.pageFill} pointerEvents="none" />;
+      // CRITICAL: return null (not an opaque black `pageFill`) so that:
+      //  • On the ACTIVE page during a user-switch where the next user's stories
+      //    haven't loaded yet, holdMedia (previous frame) stays visible instead
+      //    of being covered by a black View — this was the "black screen on
+      //    second user" bug.
+      //  • On inactive pages, the parent `styles.page` already has a black
+      //    backgroundColor, so nothing visually regresses.
+      return null;
     }
 
     if (story.media_type === 'image') {
@@ -1378,20 +1385,21 @@ export default function StoryViewer({
         );
       }
       return (
-        <Image
-          key={story.id}
-          source={{ uri: story.media_url }}
-          style={[styles.fullMedia, gateOpacity && { opacity: 0 }]}
-          resizeMode="contain"
-          pointerEvents="none"
-          onLoad={() => { if (isActive) setMediaReady(true); }}
-          onError={() => {
-            if (isActive) {
-              setMediaError(true);
-              setMediaReady(true);
-            }
-          }}
-        />
+        <View pointerEvents="none">
+          <Image
+            key={story.id}
+            source={{ uri: story.media_url }}
+            style={[styles.fullMedia, gateOpacity && { opacity: 0 }]}
+            resizeMode="contain"
+            onLoad={() => { if (isActive) setMediaReady(true); }}
+            onError={() => {
+              if (isActive) {
+                setMediaError(true);
+                setMediaReady(true);
+              }
+            }}
+          />
+        </View>
       );
     }
 
@@ -1593,7 +1601,6 @@ export default function StoryViewer({
             onPress={onClose}
             style={styles.closeBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            pointerEvents="auto"
           >
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
@@ -1625,7 +1632,6 @@ export default function StoryViewer({
               style={styles.actionBtn}
               onPress={openViewersSheet}
               activeOpacity={0.75}
-              pointerEvents="auto"
             >
               <Ionicons name="eye-outline" size={20} color="#fff" />
               <Text style={styles.actionText}>צפיות</Text>
@@ -1635,7 +1641,6 @@ export default function StoryViewer({
               style={[styles.actionBtn, styles.actionBtnDanger]}
               onPress={openDeleteConfirm}
               activeOpacity={0.75}
-              pointerEvents="auto"
             >
               <Ionicons name="trash-outline" size={20} color="#FF6B6B" />
             </TouchableOpacity>

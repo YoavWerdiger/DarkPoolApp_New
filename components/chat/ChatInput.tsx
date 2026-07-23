@@ -36,9 +36,9 @@ import MentionPicker from './MentionPicker';
 import { logger } from '../../utils/logger';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
-  normalizeWaveformSamples,
-  WAVEFORM_DISPLAY_BARS,
+  resampleWaveformSamples,
   WAVEFORM_STORE_BARS,
+  WAVEFORM_SILENCE,
 } from '../../utils/waveformSamples';
 import { meteringDbToLevel, resolveMessageWaveform } from '../../utils/audioWaveformPeaks';
 import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
@@ -298,6 +298,47 @@ function ChatInputImpl({
       if (status !== 'granted') ImagePicker.requestCameraPermissionsAsync().catch((error) => { logger.error('ChatInput', 'Camera permission request error', error); });
     });
   }, []);
+
+  // ============================================
+  // Auto-focus composer on reply
+  // ============================================
+  // כשמסמנים הודעה כ־reply target (swipe ימין / לונג-פרס → השב) המקלדת חייבת
+  // לקפוץ מיד. בלי זה הבועה מסומנת אבל המשתמש צריך להקיש שוב על השדה.
+  // מפעילים .focus() רק במעבר ל־id חדש כדי לא לגנוב פוקוס בכל re-render.
+  const prevReplyIdRef = useRef<string | undefined>(replyTo?.id);
+  useEffect(() => {
+    const prevId = prevReplyIdRef.current;
+    const nextId = replyTo?.id;
+    prevReplyIdRef.current = nextId;
+
+    if (!nextId || prevId === nextId) return;
+
+    const focusInput = () => {
+      const input = textInputRef.current;
+      if (!input) return;
+      input.focus();
+      // הצבת סמן בסוף הטיוטה הקיימת כדי שהמשתמש ימשיך להקליד ברצף
+      const len = textRef.current?.length ?? 0;
+      if (len > 0) {
+        try {
+          input.setNativeProps({ selection: { start: len, end: len } });
+        } catch {
+          /* noop — setNativeProps עלול לזרוק בקונפיגורציות מסוימות באנדרואיד */
+        }
+      }
+    };
+
+    // דחיה קלה כדי לא להתנגש עם אנימציית סגירה של BottomSheet / ContextMenu
+    // (הן עלולות לחטוף focus חזרה, במיוחד באנדרואיד). rAF מטפל במקרה שהשיט
+    // כבר סגור; setTimeout מכסה את זמן האנימציה.
+    const raf = requestAnimationFrame(focusInput);
+    const timer = setTimeout(focusInput, Platform.OS === 'android' ? 150 : 80);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+  }, [replyTo?.id]);
 
   // ============================================
   // Handle Text Change
@@ -815,7 +856,7 @@ function ChatInputImpl({
       created_at: new Date().toISOString(),
       reactions_count: 0,
       read_by_count: 0,
-      metadata: { waveformData: waveform },
+      metadata: { waveformData: undefined },
       sender: {
         id: user.id,
         display_name: user.display_name || 'אני',
@@ -904,12 +945,13 @@ function ChatInputImpl({
     if (typeof metering !== 'number') return;
 
     const raw = meteringDbToLevel(metering);
-    waveformSamplesRef.current.push(raw);
-
     const prev = audioLevelRef.current;
-    // סף שקט נמוך יותר + מעקב מהיר יותר אחרי דיבור רך
-    const next = raw <= 0.012 ? prev * 0.48 : prev * 0.18 + raw * 0.82;
-    audioLevelRef.current = next < 0.012 ? 0 : Math.min(1, next);
+    // smoothing משותף ל־UI ולדגימות שנשמרות — כדי שהבועה תתאים לחי
+    const next =
+      raw <= WAVEFORM_SILENCE * 0.65 ? prev * 0.4 : prev * 0.25 + raw * 0.75;
+    const level = next < WAVEFORM_SILENCE * 0.55 ? 0 : Math.min(1, next);
+    audioLevelRef.current = level;
+    waveformSamplesRef.current.push(level);
   }, []);
 
   const clearWaveformPolling = useCallback(() => {
@@ -1056,11 +1098,8 @@ function ChatInputImpl({
       setIsPaused(true);
       setAudioLevel(0);
       audioLevelRef.current = 0;
-      const pausedPreview = normalizeWaveformSamples(
-        waveformSamplesRef.current,
-        WAVEFORM_DISPLAY_BARS,
-      );
-      setWaveformSamples(pausedPreview);
+      // raw — VoiceWaveformWithProgress מעצב עם shapeWaveformLevel
+      setWaveformSamples([...waveformSamplesRef.current]);
 
       pulseAnimationRef.current?.stop();
       pulseAnimationRef.current = null;
@@ -1160,10 +1199,10 @@ function ChatInputImpl({
       audioLevelRef.current = 0;
       recordingDotOpacity.setValue(1);
 
-      // peaks מהקובץ (WAV) או envelope מה-metering
+      // peaks מהקובץ (WAV) או envelope מה-metering — raw; עיצוב בתצוגה
       const finalWave = await resolveMessageWaveform(uri, liveSamples, WAVEFORM_STORE_BARS);
       waveformSamplesRef.current = finalWave;
-      setWaveformSamples(normalizeWaveformSamples(finalWave, WAVEFORM_DISPLAY_BARS));
+      setWaveformSamples(finalWave);
 
       if (uri) {
         setRecordedAudioUri(uri);
@@ -1398,9 +1437,10 @@ function ChatInputImpl({
     const audioUri = recordedAudioUri;
     const duration = recordingDuration;
     // אחרי stopRecording כבר יש peaks סופיים ב-ref; אם חסר — מחלצים שוב מהקובץ
+    // raw resampled — העיצוב לתצוגה ב־normalizeWaveformSamples / shapeWaveformLevel
     let waveform =
       waveformSamplesRef.current.length >= 2
-        ? normalizeWaveformSamples(waveformSamplesRef.current, WAVEFORM_STORE_BARS)
+        ? resampleWaveformSamples(waveformSamplesRef.current, WAVEFORM_STORE_BARS)
         : await resolveMessageWaveform(
             audioUri,
             waveformSamples.length >= 2 ? waveformSamples : [],
@@ -1944,6 +1984,7 @@ function ChatInputImpl({
         <ChatComposerBar
           value={text}
           onChangeText={handleTextChange}
+          onBlur={stopTyping}
           inputRef={textInputRef}
           nativeID={CHAT_COMPOSER_NATIVE_ID}
           placeholder={isUploading ? 'מעלה...' : 'הקלד הודעה...'}

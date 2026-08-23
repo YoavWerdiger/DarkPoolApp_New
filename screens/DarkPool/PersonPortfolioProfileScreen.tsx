@@ -282,11 +282,17 @@ export function PersonPortfolioProfileScreen({
         const holdingRows: HoldingRow[] = (p?.holdings ?? []).slice(0, 16).map((h) => {
           const firstAdded =
             h.first_added_date?.slice(0, 10) || filingDate || null;
+          // 13F מדווח מניות אמיתיות — מציגים כשיש מספר
+          const sharesLabel =
+            h.shares != null && Number.isFinite(h.shares) && h.shares > 0
+              ? `${Math.round(h.shares).toLocaleString('en-US')} מניות`
+              : null;
           return {
             ticker: h.ticker,
             title: h.ticker,
             meta: [
               h.issuer_name,
+              sharesLabel,
               h.value_usd != null ? formatUsdCompact(h.value_usd) : null,
               h.allocation_pct != null ? `${h.allocation_pct.toFixed(1)}%` : null,
             ]
@@ -335,6 +341,8 @@ export function PersonPortfolioProfileScreen({
           return {
             ticker: h.ticker,
             title: h.ticker,
+            // qty אמיתי רק כש־basis_reliable (Form 4 / מניות מדווחות).
+            // STOCK Act: טווח $ בלבד — לא ממציאים «X מניות» מ־Yahoo.
             meta: h.basis_reliable
               ? [
                   `${Math.round(h.qty).toLocaleString('en-US')} מניות`,

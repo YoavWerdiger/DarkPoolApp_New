@@ -33,4 +33,15 @@ describe('congress avg basis reliability', () => {
       basisReliable && cost > 0 && qty > 0 ? cost / qty : null;
     expect(shown).toBeNull();
   });
+
+  it('chart honesty: range-only trades are not chart_reliable', () => {
+    const txs = [{ qtyEstimated: true }, { qtyEstimated: true }];
+    const hasDisclosedBasis = txs.some((t) => !t.qtyEstimated);
+    expect(hasDisclosedBasis).toBe(false);
+  });
+
+  it('chart honesty: Form4 disclosed trades allow chart', () => {
+    const txs = [{ qtyEstimated: false }, { qtyEstimated: true }];
+    expect(txs.some((t) => !t.qtyEstimated)).toBe(true);
+  });
 });

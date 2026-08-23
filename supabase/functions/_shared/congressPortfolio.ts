@@ -187,7 +187,10 @@ function forwardFillDailyPrices(
   return out;
 }
 
-/** מוסיף מחירי עסקה כ-fallback כש-Yahoo ריק */
+/**
+ * מוסיף מחירי עסקה כ-fallback כש-Yahoo ריק.
+ * רק מחירים אמיתיים מדיווח (לא qty מוערך) — אחרת דורסים Yahoo ב־1 / mid מעוגל.
+ */
 function mergeTradePricesIntoMap(
   ticker: string,
   txs: NormalizedCongressTx[],
@@ -196,7 +199,10 @@ function mergeTradePricesIntoMap(
   const merged = new Map(priceMap);
   for (const t of txs) {
     if (t.ticker !== ticker || t.price <= 0) continue;
-    merged.set(t.date.slice(0, 10), t.price);
+    if (t.qtyEstimated) continue;
+    if (!priceMap.has(t.date.slice(0, 10))) {
+      merged.set(t.date.slice(0, 10), t.price);
+    }
   }
   return merged;
 }
@@ -263,10 +269,11 @@ export function normalizeCongressTrades(
       qty = disclosedShares;
       qtyEstimated = false;
     } else {
-      // STOCK Act / טווח $ — qty מוערך מ־mid÷מחיר; avg=cost/qty מעגלי (=מחיר Yahoo)
+      // STOCK Act / טווח $ — qty מוערך מ־mid÷מחיר שוק.
+      // לעולם לא px=1: זה יוצר qty=$ ואז כש־Yahoo מופיע → שווי מתפוצץ (qty*$price).
       if (!(amountUsd >= 100)) continue;
-      // בלי מחיר שוק: יחידות notional (price=1, qty=$) — שווי תיק משוער בלבד
-      px = marketPx && marketPx > 0 ? marketPx : 1;
+      if (!(marketPx && marketPx > 0)) continue;
+      px = marketPx;
       qty = amountUsd / px;
       qtyEstimated = true;
     }
@@ -742,7 +749,30 @@ export async function metricsFromCongressTrades(
 
   let metrics = buildCongressPortfolioMetrics(normalized, pricesByTicker, trades);
 
-  // אם אין סדרת מחירים (Yahoo ריק) — בונים גרף משוער מ-notional של העסקאות
+  /** יש מניות מדווחות (Form 4) — רק אז גרף שווי אמין יחסית; טווחי STOCK Act ≠ תיק אמיתי */
+  const hasDisclosedBasis = normalized.some((t) => !t.qtyEstimated);
+
+  if (!hasDisclosedBasis) {
+    // כנות: לא מציגים גרף / תשואות תקופה מטווחי $ — זה לא mark-to-market אמיתי
+    const emptyPeriods: Record<string, number | null> = {
+      '1D': null,
+      '1W': null,
+      '1M': null,
+      '3M': null,
+      YTD: null,
+      '1Y': null,
+      '5Y': null,
+      ALL: null,
+    };
+    return {
+      ...metrics,
+      series: [],
+      period_returns: emptyPeriods,
+      // holdings נשארים לרשימה עם basis_reliable=false (בלי avg/return ב־UI)
+    };
+  }
+
+  // Yahoo ריק אבל יש Form 4 — notional רק כנפילה אחרונה (עדיין עם qty מדווח)
   if (!metrics.series || metrics.series.length < 2) {
     const notional = buildNotionalSeries(normalized);
     if (notional.length >= 2) {
@@ -766,7 +796,6 @@ export async function metricsFromCongressTrades(
         },
       };
       if (!metrics.holdings.length) {
-        // holdings מ-notional לפי ticker
         const byTicker = new Map<string, number>();
         for (const t of normalized) {
           const cur = byTicker.get(t.ticker) ?? 0;

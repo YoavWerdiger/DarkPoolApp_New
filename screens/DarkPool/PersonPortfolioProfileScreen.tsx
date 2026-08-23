@@ -309,10 +309,15 @@ export function PersonPortfolioProfileScreen({
 
       const p = investor.profile;
       const m = p?.metrics ?? null;
-      const series = appendLivePortfolioPoint(
-        (m?.series ?? []).map((pt) => ({ date: pt.date, value: pt.value })),
-        m?.portfolio_value
-      );
+      const chartReliable =
+        p?.portfolio_source === 'form4_reconstructed' ||
+        (m?.holdings ?? []).some((h) => h.basis_reliable === true);
+      const series = chartReliable
+        ? appendLivePortfolioPoint(
+            (m?.series ?? []).map((pt) => ({ date: pt.date, value: pt.value })),
+            m?.portfolio_value
+          )
+        : [];
 
       const holdingsByTicker = new Map(
         (p?.holdings ?? []).map((h) => [h.ticker.toUpperCase(), h])
@@ -395,14 +400,19 @@ export function PersonPortfolioProfileScreen({
       }));
 
       return {
-        portfolioValue: m?.portfolio_value ?? p?.portfolio_snapshot?.estimated_value_usd ?? null,
+        // שווי «תיק» מטווחים — לא מציגים כמספר ראשי בגרף כשאין בסיס אמין
+        portfolioValue: chartReliable
+          ? m?.portfolio_value ?? p?.portfolio_snapshot?.estimated_value_usd ?? null
+          : null,
         fullChartSeries: series,
         holdings: holdingRows,
         trades: tradeRows,
         disclaimer:
           kind === 'politician'
-            ? 'הערכה מדיווחי קונגרס (טווחי $ ב־STOCK Act) + מחירי שוק — לא תיק רשמי; אין מחיר ממוצע מדויק למניה.'
-            : 'הערכה על בסיס דיווחים ציבוריים + מחירי שוק — לא תיק רשמי.',
+            ? 'דיווחי טווחי $ (לא מניות/מחיר מדויק) — אין גרף שווי אמיתי ואין מחיר ממוצע/תשואה לאחזקה. «כניסה» = תאריך קנייה ראשון בדיווחים.'
+            : chartReliable
+              ? 'שחזור מ־Form 4 (מניות/מחיר מדווחים) + מחירי שוק — לא תיק רשמי מלא.'
+              : 'הערכה מדיווחים ציבוריים — בלי מניות מדויקות אין גרף שווי אמין ואין מחיר ממוצע/תשואה.',
       };
     }, [kind, fund.profile, investor.profile]);
 
@@ -553,9 +563,11 @@ export function PersonPortfolioProfileScreen({
               <Text style={styles.muted}>
                 {kind === 'fund_manager'
                   ? 'עדיין אין מספיק דיווחים לבניית גרף שווי.'
-                  : portfolioValue == null && !error
-                    ? 'אין מספיק דיווחים לבניית שווי מוערך'
-                    : 'עדיין אין מספיק דיווחים לבניית גרף שווי מוערך.'}
+                  : kind === 'politician'
+                    ? 'אין גרף שווי אמין — הדיווחים הם טווחי $ בלבד (לא תיק mark-to-market).'
+                    : portfolioValue == null && !error
+                      ? 'אין מספיק דיווחים עם מניות/מחיר לבניית גרף שווי אמין.'
+                      : 'עדיין אין מספיק דיווחים לבניית גרף שווי.'}
               </Text>
             )}
           </UICard>

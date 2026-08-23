@@ -67,4 +67,8 @@ export interface ProfilePortfolioScore {
   };
 }
 
-export type PortfolioSource = 'reconstructed' | 'trades_only' | 'none';
+export type PortfolioSource =
+  | 'reconstructed'
+  | 'form4_reconstructed'
+  | 'trades_only'
+  | 'none';

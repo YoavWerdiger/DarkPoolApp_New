@@ -34,8 +34,8 @@ export function avgEntryPriceFromCost(
 }
 
 /**
- * מחיר דיווח מ־13F: value_usd / shares מהדוח הרבעוני.
- * זה mark בסוף התקופה בדיווח — לא מחיר כניסה / עלות קנייה.
+ * מחיר כניסה מוצר מ־13F: value_usd / shares מהדוח הרבעוני.
+ * mark בסוף התקופה בדיווח — משמש כמחיר כניסה לחישוב תשואה מול מחיר שוק.
  */
 export function impliedFilingPriceFrom13f(
   valueUsd: number | null | undefined,
@@ -44,6 +44,16 @@ export function impliedFilingPriceFrom13f(
   if (valueUsd == null || shares == null) return null;
   if (!(valueUsd > 0) || !(shares > 0)) return null;
   return valueUsd / shares;
+}
+
+/** תשואה באחוזים: (current - entry) / entry * 100 */
+export function returnPctFromEntry(
+  currentPrice: number | null | undefined,
+  entryPrice: number | null | undefined
+): number | null {
+  if (currentPrice == null || entryPrice == null) return null;
+  if (!(currentPrice > 0) || !(entryPrice > 0)) return null;
+  return ((currentPrice - entryPrice) / entryPrice) * 100;
 }
 
 export function formatPercent(v: number | null | undefined, digits = 1): string {

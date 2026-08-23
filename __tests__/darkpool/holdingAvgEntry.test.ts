@@ -2,6 +2,7 @@ import {
   avgEntryPriceFromCost,
   formatAvgEntryUsd,
   impliedFilingPriceFrom13f,
+  returnPctFromEntry,
 } from '../../screens/DarkPool/utils/darkPoolFormat';
 
 describe('avgEntryPriceFromCost', () => {
@@ -33,6 +34,19 @@ describe('impliedFilingPriceFrom13f', () => {
     expect(impliedFilingPriceFrom13f(1_000_000, 0)).toBeNull();
     expect(impliedFilingPriceFrom13f(0, 1000)).toBeNull();
     expect(impliedFilingPriceFrom13f(undefined, undefined)).toBeNull();
+  });
+});
+
+describe('returnPctFromEntry', () => {
+  it('computes (current - entry) / entry * 100', () => {
+    expect(returnPctFromEntry(110, 100)).toBeCloseTo(10);
+    expect(returnPctFromEntry(90, 100)).toBeCloseTo(-10);
+  });
+
+  it('returns null without valid prices', () => {
+    expect(returnPctFromEntry(null, 100)).toBeNull();
+    expect(returnPctFromEntry(110, 0)).toBeNull();
+    expect(returnPctFromEntry(undefined, undefined)).toBeNull();
   });
 });
 

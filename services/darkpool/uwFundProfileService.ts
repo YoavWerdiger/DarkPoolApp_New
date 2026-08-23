@@ -8,6 +8,11 @@ export interface FundHolding {
   allocation_pct: number | null;
   /** דיווח 13F ראשון שבו הטיקר מופיע אצלנו (לא בהכרח קנייה ראשונה) */
   first_added_date?: string | null;
+  /** מחיר כניסה מוצר: value_usd / shares מ־13F */
+  entry_price?: number | null;
+  current_price?: number | null;
+  /** תשואה מול מחיר שוק נוכחי */
+  return_pct?: number | null;
 }
 
 export interface FundValuePoint {

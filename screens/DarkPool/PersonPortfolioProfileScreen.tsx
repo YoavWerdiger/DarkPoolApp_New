@@ -77,10 +77,10 @@ type HoldingRow = {
   /** מחיר ממוצע לכניסה (cost_usd / qty) — רק כשיש בסיס עלות משחזור */
   avg_price?: number | null;
   /**
-   * מחיר דיווח מ־13F (value_usd / shares) — mark בדוח, לא מחיר כניסה.
+   * מחיר כניסה מ־13F (value_usd / shares) — החלטת מוצר לקרנות.
    * רק למנהלי קרן כשיש שני השדות מהדיווח.
    */
-  filing_price?: number | null;
+  entry_price?: number | null;
   /** תווית תאריך: «כניסה» (שחזור) / «דיווח» (13F) */
   dateLabel?: 'added' | 'reported' | null;
 };
@@ -301,6 +301,12 @@ export function PersonPortfolioProfileScreen({
             h.shares != null && Number.isFinite(h.shares) && h.shares > 0
               ? `${Math.round(h.shares).toLocaleString('en-US')} מניות`
               : null;
+          const entry =
+            h.entry_price != null && Number.isFinite(h.entry_price) && h.entry_price > 0
+              ? h.entry_price
+              : impliedFilingPriceFrom13f(h.value_usd, h.shares);
+          const returnPct =
+            h.return_pct != null && Number.isFinite(h.return_pct) ? h.return_pct : null;
           return {
             ticker: h.ticker,
             title: h.ticker,
@@ -313,8 +319,9 @@ export function PersonPortfolioProfileScreen({
               .join(' · '),
             allocation_pct: h.allocation_pct,
             value_usd: h.value_usd,
-            // value/shares מהדוח — מחיר דיווח, לא כניסה
-            filing_price: impliedFilingPriceFrom13f(h.value_usd, h.shares),
+            // value/shares מהדוח — מחיר כניסה מוצר לחישוב תשואה
+            entry_price: entry,
+            return_pct: returnPct,
             first_added_date: firstAdded,
             dateLabel: firstAdded ? 'reported' : null,
           };
@@ -325,7 +332,7 @@ export function PersonPortfolioProfileScreen({
           holdings: holdingRows,
           trades: [] as TradeRow[],
           disclaimer:
-            'מבוסס על דיווחי 13F ציבוריים — לא תיק בזמן אמת. «מחיר דיווח» = שווי/מניות מהדוח (mark), לא מחיר כניסה.',
+            'מבוסס על דיווחי 13F ציבוריים — לא תיק בזמן אמת. «מחיר כניסה» = שווי/מניות מהדוח; תשואה מול מחיר שוק נוכחי.',
         };
       }
 
@@ -613,13 +620,13 @@ export function PersonPortfolioProfileScreen({
                   const hasReturn =
                     h.return_pct != null && Number.isFinite(h.return_pct);
                   const avgStr = formatAvgEntryUsd(h.avg_price);
-                  const filingStr = formatAvgEntryUsd(h.filing_price);
+                  const entryStr = formatAvgEntryUsd(h.entry_price);
                   const retColor =
                     hasReturn && (h.return_pct as number) >= 0
                       ? tokens.colors.primary.main
                       : tokens.colors.text.danger;
                   const showRightMeta =
-                    hasReturn || !!avgStr || !!filingStr || !!dateStr;
+                    hasReturn || !!avgStr || !!entryStr || !!dateStr;
                   return (
                     <React.Fragment key={h.ticker}>
                       <Pressable
@@ -663,9 +670,9 @@ export function PersonPortfolioProfileScreen({
                                   מחיר ממוצע {avgStr}
                                 </Text>
                               ) : null}
-                              {filingStr ? (
+                              {entryStr ? (
                                 <Text style={styles.holdingAvg} numberOfLines={1}>
-                                  מחיר דיווח {filingStr}
+                                  מחיר כניסה {entryStr}
                                 </Text>
                               ) : null}
                               {dateStr ? (

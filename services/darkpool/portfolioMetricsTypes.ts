@@ -10,6 +10,11 @@ export interface PortfolioHoldingMetric {
   return_pct: number;
   /** תאריך קנייה ראשון בפוזיציה הפתוחה הנוכחית (YYYY-MM-DD) — משחזור עסקאות */
   first_added_date?: string | null;
+  /**
+   * true רק כש־qty/cost מבוססים על מניות מדווחות (Form 4), לא על טווחי STOCK Act.
+   * בלי זה אין להציג «מחיר ממוצע» מדויק.
+   */
+  basis_reliable?: boolean;
 }
 
 export interface PortfolioValuePoint {

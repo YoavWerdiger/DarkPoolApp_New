@@ -330,14 +330,27 @@ export function PersonPortfolioProfileScreen({
           return {
             ticker: h.ticker,
             title: h.ticker,
-            meta: [
-              `${Math.round(h.qty).toLocaleString('en-US')} מניות`,
-              formatUsdCompact(h.market_value),
-            ].join(' · '),
+            meta: h.basis_reliable
+              ? [
+                  `${Math.round(h.qty).toLocaleString('en-US')} מניות`,
+                  formatUsdCompact(h.market_value),
+                ].join(' · ')
+              : [
+                  // טווח STOCK Act — לא מציגים כמות מניות מומצאת
+                  formatUsdCompact(h.market_value),
+                  'הערכה',
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
             allocation_pct: h.allocation_pct,
             market_value: h.market_value,
-            return_pct: h.return_pct,
-            avg_price: avgEntryPriceFromCost(h.cost_usd, h.qty),
+            // תשואה מטווח $ מעגלית (≈ תנודת מחיר) — מסתירים יחד עם avg
+            return_pct: h.basis_reliable ? h.return_pct : null,
+            avg_price: avgEntryPriceFromCost(
+              h.cost_usd,
+              h.qty,
+              h.basis_reliable === true
+            ),
             first_added_date: firstAdded,
             dateLabel: firstAdded ? 'added' : null,
           };
@@ -386,7 +399,10 @@ export function PersonPortfolioProfileScreen({
         fullChartSeries: series,
         holdings: holdingRows,
         trades: tradeRows,
-        disclaimer: 'הערכה על בסיס דיווחים ציבוריים + מחירי שוק — לא תיק רשמי.',
+        disclaimer:
+          kind === 'politician'
+            ? 'הערכה מדיווחי קונגרס (טווחי $ ב־STOCK Act) + מחירי שוק — לא תיק רשמי; אין מחיר ממוצע מדויק למניה.'
+            : 'הערכה על בסיס דיווחים ציבוריים + מחירי שוק — לא תיק רשמי.',
       };
     }, [kind, fund.profile, investor.profile]);
 

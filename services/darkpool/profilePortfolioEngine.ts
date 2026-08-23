@@ -35,6 +35,8 @@ export interface ProfileTradeInput {
   amountUsd: number;
   price: number;
   qty: number;
+  /** true כש־qty הוערך מטווח $ (לא מניות מדווחות) */
+  qtyEstimated?: boolean;
 }
 
 export interface ProfilePortfolioBuildInput {
@@ -67,6 +69,8 @@ export type ProfilePositionState = {
   cost: number;
   /** תאריך פתיחת הפוזיציה הנוכחית (קנייה ראשונה אחרי אפס) */
   first_added_date: string | null;
+  /** false אם הכמות הפתוחה כוללת qty מוערך מטווח $ */
+  basisReliable: boolean;
 };
 
 /** שלב 2 — replay avg-cost positions */
@@ -77,10 +81,20 @@ export function replayProfilePositions(
   const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date));
 
   for (const t of sorted) {
-    const cur = pos.get(t.ticker) ?? { qty: 0, cost: 0, first_added_date: null };
+    const cur = pos.get(t.ticker) ?? {
+      qty: 0,
+      cost: 0,
+      first_added_date: null,
+      basisReliable: true,
+    };
     const day = t.date.slice(0, 10);
     if (t.side === 'buy') {
-      if (cur.qty <= 0) cur.first_added_date = day;
+      if (cur.qty <= 0) {
+        cur.first_added_date = day;
+        cur.basisReliable = !t.qtyEstimated;
+      } else if (t.qtyEstimated) {
+        cur.basisReliable = false;
+      }
       cur.qty += t.qty;
       cur.cost += t.amountUsd;
     } else if (cur.qty > 0) {
@@ -92,6 +106,7 @@ export function replayProfilePositions(
         cur.qty = 0;
         cur.cost = 0;
         cur.first_added_date = null;
+        cur.basisReliable = true;
       }
     }
     pos.set(t.ticker, cur);
@@ -251,6 +266,8 @@ export function buildProfileHoldings(
       'first_added_date' in p && typeof p.first_added_date === 'string'
         ? p.first_added_date.slice(0, 10)
         : null;
+    const basisReliable =
+      'basisReliable' in p ? p.basisReliable !== false : true;
     holdings.push({
       ticker,
       qty: p.qty,
@@ -260,6 +277,7 @@ export function buildProfileHoldings(
       allocation_pct: 0,
       return_pct: p.cost > 0 ? round2(((marketValue - p.cost) / p.cost) * 100) : 0,
       first_added_date: firstAdded,
+      basis_reliable: basisReliable,
     });
   }
 

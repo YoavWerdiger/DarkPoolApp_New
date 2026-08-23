@@ -12,6 +12,14 @@ export interface CongressTradeInput {
   amounts?: string;
   transaction_date?: string;
   filed_at_date?: string;
+  /**
+   * מניות מדיווח אמיתי (Form 4 / insider) — לא הערכה מטווח STOCK Act.
+   * רק עם shares_disclosed=true נחשבות אמינות ל־avg/return.
+   */
+  shares?: number | null;
+  disclosed_price?: number | null;
+  /** true רק כש־shares הגיעו מדיווח מדויק, לא מ־range/$ ÷ Yahoo */
+  shares_disclosed?: boolean;
 }
 
 export interface NormalizedCongressTx {
@@ -21,6 +29,8 @@ export interface NormalizedCongressTx {
   amountUsd: number;
   price: number;
   qty: number;
+  /** qty הומצא מטווח $ + מחיר שוק — avg=cost/qty מעגלי ולא אמין */
+  qtyEstimated: boolean;
 }
 
 export interface PortfolioHoldingMetric {
@@ -33,6 +43,11 @@ export interface PortfolioHoldingMetric {
   return_pct: number;
   /** תאריך קנייה ראשון בפוזיציה הפתוחה הנוכחית (YYYY-MM-DD) */
   first_added_date?: string | null;
+  /**
+   * true רק כשכל הכמות הפתוחה מבוססת על מניות מדווחות (לא טווחי קונגרס).
+   * בלי זה — אין להציג «מחיר ממוצע» מדויק.
+   */
+  basis_reliable?: boolean;
 }
 
 export interface ValuePoint {
@@ -213,22 +228,52 @@ export function normalizeCongressTrades(
     const ticker = String(t.ticker ?? t.symbol ?? '').toUpperCase().trim();
     const side = parseTxnSide(t.txn_type);
     const date = String(t.transaction_date ?? t.filed_at_date ?? '').slice(0, 10);
-    const amountUsd = parseCongressAmount(t.amounts);
-    if (!ticker || !side || !date || amountUsd < 100) continue;
+    if (!ticker || !side || !date) continue;
     if (ticker.length > 5 || ticker === '—') continue;
 
-    const priceMap = pricesByTicker.get(ticker) ?? new Map();
-    let px = priceOnOrBefore(priceMap, date);
-    if (!px && t.filed_at_date) {
-      px = priceOnOrBefore(priceMap, String(t.filed_at_date).slice(0, 10));
-    }
-    // בלי מחיר שוק: יחידות notional (price=1, qty=$) — עדיין בונה שווי תיק משוער
-    if (!px || px <= 0) px = 1;
+    const rangeAmountUsd = parseCongressAmount(t.amounts);
+    const disclosedShares =
+      t.shares_disclosed === true && Number(t.shares) > 0 ? Math.abs(Number(t.shares)) : 0;
+    const disclosedPx =
+      Number(t.disclosed_price) > 0 ? Number(t.disclosed_price) : 0;
 
-    const qty = amountUsd / px;
+    const priceMap = pricesByTicker.get(ticker) ?? new Map();
+    let marketPx = priceOnOrBefore(priceMap, date);
+    if (!marketPx && t.filed_at_date) {
+      marketPx = priceOnOrBefore(priceMap, String(t.filed_at_date).slice(0, 10));
+    }
+
+    let amountUsd = rangeAmountUsd;
+    let px: number;
+    let qty: number;
+    let qtyEstimated: boolean;
+
+    if (disclosedShares > 0) {
+      // Form 4 / insider — qty אמיתי; מחיר ממוצע = עלות/כמות אמין
+      px =
+        disclosedPx > 0
+          ? disclosedPx
+          : amountUsd > 0
+            ? amountUsd / disclosedShares
+            : marketPx && marketPx > 0
+              ? marketPx
+              : 0;
+      if (!(px > 0)) continue;
+      if (!(amountUsd >= 100)) amountUsd = disclosedShares * px;
+      qty = disclosedShares;
+      qtyEstimated = false;
+    } else {
+      // STOCK Act / טווח $ — qty מוערך מ־mid÷מחיר; avg=cost/qty מעגלי (=מחיר Yahoo)
+      if (!(amountUsd >= 100)) continue;
+      // בלי מחיר שוק: יחידות notional (price=1, qty=$) — שווי תיק משוער בלבד
+      px = marketPx && marketPx > 0 ? marketPx : 1;
+      qty = amountUsd / px;
+      qtyEstimated = true;
+    }
+
     if (!Number.isFinite(qty) || qty <= 0) continue;
 
-    out.push({ date, ticker, side, amountUsd, price: px, qty });
+    out.push({ date, ticker, side, amountUsd, price: px, qty, qtyEstimated });
   }
   return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
@@ -260,16 +305,32 @@ function buildNotionalSeries(txs: NormalizedCongressTx[]): ValuePoint[] {
   return series;
 }
 
-function replayPositions(
-  txs: NormalizedCongressTx[]
-): Map<string, { qty: number; cost: number; first_added_date: string | null }> {
-  const pos = new Map<string, { qty: number; cost: number; first_added_date: string | null }>();
+type ReplayPos = {
+  qty: number;
+  cost: number;
+  first_added_date: string | null;
+  /** false אם כל/חלק מהכמות הפתוחה הגיעה מ־qty מוערך */
+  basisReliable: boolean;
+};
+
+function replayPositions(txs: NormalizedCongressTx[]): Map<string, ReplayPos> {
+  const pos = new Map<string, ReplayPos>();
   const sorted = [...txs].sort((a, b) => a.date.localeCompare(b.date));
   for (const t of sorted) {
-    const cur = pos.get(t.ticker) ?? { qty: 0, cost: 0, first_added_date: null };
+    const cur = pos.get(t.ticker) ?? {
+      qty: 0,
+      cost: 0,
+      first_added_date: null,
+      basisReliable: true,
+    };
     const day = t.date.slice(0, 10);
     if (t.side === 'buy') {
-      if (cur.qty <= 0) cur.first_added_date = day;
+      if (cur.qty <= 0) {
+        cur.first_added_date = day;
+        cur.basisReliable = !t.qtyEstimated;
+      } else if (t.qtyEstimated) {
+        cur.basisReliable = false;
+      }
       cur.qty += t.qty;
       cur.cost += t.amountUsd;
     } else {
@@ -282,6 +343,7 @@ function replayPositions(
         cur.qty = 0;
         cur.cost = 0;
         cur.first_added_date = null;
+        cur.basisReliable = true;
       }
     }
     pos.set(t.ticker, cur);
@@ -552,6 +614,7 @@ export function buildCongressPortfolioMetrics(
       allocation_pct: 0,
       return_pct: p.cost > 0 ? ((marketValue - p.cost) / p.cost) * 100 : 0,
       first_added_date: p.first_added_date,
+      basis_reliable: p.basisReliable === true,
     });
   }
 
@@ -643,6 +706,10 @@ export function mapInsiderTradeToCongressInput(t: {
       0,
       10
     ),
+    // Form 4 / insider — מניות מדווחות; מאפשר מחיר ממוצע אמין
+    shares: shares > 0 ? shares : null,
+    disclosed_price: price > 0 ? price : null,
+    shares_disclosed: shares > 0,
   };
 }
 
@@ -726,6 +793,7 @@ export async function metricsFromCongressTrades(
                 total > 0 ? Math.round((market_value / total) * 1000) / 10 : 0,
               return_pct: 0,
               first_added_date: firstBuy?.date.slice(0, 10) ?? null,
+              basis_reliable: false,
             };
           });
       }

@@ -21,11 +21,13 @@ export function formatAvgEntryUsd(v: number | null | undefined): string | null {
   return `$${v.toFixed(4)}`;
 }
 
-/** avg = cost_usd / qty כששניהם זמינים משחזור תיק */
+/** avg = cost_usd / qty רק כשבסיס העלות אמין (מניות מדווחות) */
 export function avgEntryPriceFromCost(
   costUsd: number | null | undefined,
-  qty: number | null | undefined
+  qty: number | null | undefined,
+  basisReliable?: boolean | null
 ): number | null {
+  if (basisReliable === false) return null;
   if (costUsd == null || qty == null) return null;
   if (!(costUsd > 0) || !(qty > 0)) return null;
   return costUsd / qty;

@@ -340,13 +340,8 @@ export function PersonPortfolioProfileScreen({
                   `${Math.round(h.qty).toLocaleString('en-US')} מניות`,
                   formatUsdCompact(h.market_value),
                 ].join(' · ')
-              : [
-                  // טווח STOCK Act — לא מציגים כמות מניות מומצאת
-                  formatUsdCompact(h.market_value),
-                  'הערכה',
-                ]
-                  .filter(Boolean)
-                  .join(' · '),
+              : // טווח STOCK Act — לא מציגים כמות מניות מומצאת
+                formatUsdCompact(h.market_value),
             allocation_pct: h.allocation_pct,
             market_value: h.market_value,
             // תשואה מטווח $ מעגלית (≈ תנודת מחיר) — מסתירים יחד עם avg

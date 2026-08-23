@@ -16,13 +16,15 @@ export const KNOWN_INVESTOR_PORTRAIT_BY_ID: Record<string, string> = {
   C001114: 'https://unitedstates.github.io/images/congress/225x275/C001114.jpg',
   '888dc73f-f1eb-485a-a241-80657aaaaff9': `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
   '1067983': `${WIKI}/5/51/Warren_Buffett_KU_Visit.jpg`,
-  '1697748': `${WIKI}/7/7e/Cathie_Wood_%28cropped%29.jpg`,
+  '1697748': `${WIKI}/4/44/Cathie_Wood_ARK_Invest_Photo.jpg`,
   '1336528': `${WIKI}/4/4a/Bill_Ackman_2019.jpg`,
+  'AAPL:Cook': `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
 };
 
 export const KNOWN_INVESTOR_PORTRAIT_BY_NAME: Record<string, string> = {
   'elon musk': `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
-  'tim cook': `${WIKI}/2/23/Tim_Cook_2009_cropped.jpg`,
+  'tim cook': KNOWN_INVESTOR_PORTRAIT_BY_ID['AAPL:Cook'],
+  'cook tim': KNOWN_INVESTOR_PORTRAIT_BY_ID['AAPL:Cook'],
   'satya nadella': `${WIKI}/0/0c/Satya_Nadella.jpg`,
   'jensen huang': `${WIKI}/9/9e/Jensen_Huang_%28cropped%29.jpg`,
   'mark zuckerberg': `${WIKI}/1/18/Mark_Zuckerberg_F8_2019_Keynote_%2832830578717%29_%28cropped%29.jpg`,

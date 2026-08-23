@@ -8,13 +8,20 @@ const CONGRESS_PHOTO_BASE = 'https://unitedstates.github.io/images/congress/225x
 const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
 const CONGRESS_URL_RE = /\/225x275\/([A-Z]\d{6})\.jpg/i;
 
-/** SEC Form 4: "MUSK ELON" → "Elon Musk" */
+/** SEC Form 4 ALL CAPS: "MUSK ELON" → "Elon Musk". לא הופך שמות שכבר בפורמט First Last. */
 export function formatInsiderDisplayName(raw: string): string {
-  const parts = raw.trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return raw.trim();
+  const trimmed = raw.trim();
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return trimmed;
+  const secLike = parts.every((p) => p === p.toUpperCase() && /[A-Z]/.test(p));
+  if (!secLike) return trimmed;
   const last = parts[0];
-  const rest = parts.slice(1).join(' ');
-  return `${rest} ${last}`.trim();
+  const given = parts.slice(1);
+  const titleCase = (s: string) =>
+    s.length <= 1
+      ? s.toUpperCase()
+      : `${s.charAt(0).toUpperCase()}${s.slice(1).toLowerCase()}`;
+  return `${given.map(titleCase).join(' ')} ${titleCase(last)}`.trim();
 }
 
 export function congressPhotoUrl(bioguideId: string | null | undefined): string | null {

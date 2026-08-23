@@ -19,7 +19,7 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
   '1697748': {
     name: 'ARK Investment Management LLC',
     manager: 'Cathie Wood',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Cathie_Wood_%28cropped%29.jpg',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/4/44/Cathie_Wood_ARK_Invest_Photo.jpg',
   },
   '1336528': {
     name: 'Pershing Square Capital Management LP',

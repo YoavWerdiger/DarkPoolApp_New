@@ -43,13 +43,15 @@ const KNOWN_BY_ID: Record<string, string> = {
   P000197: `${CONGRESS_PHOTO}/P000197.jpg`,
   '888dc73f-f1eb-485a-a241-80657aaaaff9': `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
   '1067983': `${WIKI}/5/51/Warren_Buffett_KU_Visit.jpg`,
-  '1697748': `${WIKI}/7/7e/Cathie_Wood_%28cropped%29.jpg`,
+  '1697748': `${WIKI}/4/44/Cathie_Wood_ARK_Invest_Photo.jpg`,
   '1336528': `${WIKI}/4/4a/Bill_Ackman_2019.jpg`,
+  'AAPL:Cook': `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
 };
 
 const KNOWN_BY_NAME: Record<string, string> = {
   'elon musk': `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
-  'tim cook': `${WIKI}/2/23/Tim_Cook_2009_cropped.jpg`,
+  'tim cook': KNOWN_BY_ID['AAPL:Cook'],
+  'cook tim': KNOWN_BY_ID['AAPL:Cook'],
   'warren buffett': KNOWN_BY_ID['1067983'],
   'cathie wood': KNOWN_BY_ID['1697748'],
   'bill ackman': KNOWN_BY_ID['1336528'],
@@ -73,13 +75,20 @@ export function congressPhotoUrl(bioguideId: string | null | undefined): string 
   return `${CONGRESS_PHOTO}/${id}.jpg`;
 }
 
-/** SEC Form 4: "MUSK ELON" → "Elon Musk" */
+/** SEC Form 4 ALL CAPS: "MUSK ELON" → "Elon Musk". לא הופך שמות שכבר בפורמט First Last. */
 export function formatInsiderDisplayName(raw: string): string {
-  const parts = raw.trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return raw.trim();
+  const trimmed = raw.trim();
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return trimmed;
+  const secLike = parts.every((p) => p === p.toUpperCase() && /[A-Z]/.test(p));
+  if (!secLike) return trimmed;
   const last = parts[0];
-  const rest = parts.slice(1).join(' ');
-  return `${rest} ${last}`.trim();
+  const given = parts.slice(1);
+  const titleCase = (s: string) =>
+    s.length <= 1
+      ? s.toUpperCase()
+      : `${s.charAt(0).toUpperCase()}${s.slice(1).toLowerCase()}`;
+  return `${given.map(titleCase).join(' ')} ${titleCase(last)}`.trim();
 }
 
 export function insiderPersonId(ticker: string, insiderName: string): string {

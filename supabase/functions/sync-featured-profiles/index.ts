@@ -19,13 +19,15 @@ const KNOWN_BY_ID: Record<string, string> = {
   G000583: 'https://unitedstates.github.io/images/congress/225x275/G000583.jpg',
   P000197: 'https://unitedstates.github.io/images/congress/225x275/P000197.jpg',
   '1067983': `${WIKI}/5/51/Warren_Buffett_KU_Visit.jpg`,
-  '1697748': `${WIKI}/7/7e/Cathie_Wood_%28cropped%29.jpg`,
+  '1697748': `${WIKI}/4/44/Cathie_Wood_ARK_Invest_Photo.jpg`,
   '1336528': `${WIKI}/4/4a/Bill_Ackman_2019.jpg`,
+  'AAPL:Cook': `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
 };
 
 const KNOWN_BY_NAME: Record<string, string> = {
   'elon musk': `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
-  'tim cook': `${WIKI}/2/23/Tim_Cook_2009_cropped.jpg`,
+  'tim cook': KNOWN_BY_ID['AAPL:Cook'],
+  'cook tim': KNOWN_BY_ID['AAPL:Cook'],
   'warren buffett': KNOWN_BY_ID['1067983'],
   'cathie wood': KNOWN_BY_ID['1697748'],
   'bill ackman': KNOWN_BY_ID['1336528'],

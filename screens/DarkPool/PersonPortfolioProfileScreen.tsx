@@ -221,17 +221,19 @@ export function PersonPortfolioProfileScreen({
     return sanitizePublicSubtitle(raw, kind);
   }, [kind, fund.profile?.subtitle, investor.profile?.subtitle]);
 
-  const portraitUri = useMemo(() => {
-    return (
+  /** אותם מועמדים כמו ProfileHeroAvatar — גם למרכז עוגת האחזקות */
+  const portraitCandidates = useMemo(
+    () =>
       portraitPhotoCandidates({
         imageUrl,
         imageHint,
         kind,
         personId: id,
         name: displayName,
-      })[0] ?? null
-    );
-  }, [imageUrl, imageHint, kind, id, displayName]);
+      }),
+    [imageUrl, imageHint, kind, id, displayName]
+  );
+  const portraitUri = portraitCandidates[0] ?? null;
 
   const userInitial = useMemo(() => {
     const parts = displayName.trim().split(/\s+/).filter(Boolean);
@@ -589,6 +591,7 @@ export function PersonPortfolioProfileScreen({
               title="פילוח אחזקות"
               holdings={pieHoldings}
               avatarUrl={portraitUri}
+              avatarCandidates={portraitCandidates}
               userInitial={userInitial}
             />
           ) : null}

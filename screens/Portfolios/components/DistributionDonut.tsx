@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,9 @@ interface Props {
   strokeWidth?: number;
   centerLabel?: string;
   centerValue?: string;
+  /** URL בודד — או רשימת מועמדים עם fallback כמו ProfileHeroAvatar */
   avatarUrl?: string | null;
+  avatarCandidates?: string[] | null;
   userInitial?: string;
 }
 
@@ -27,6 +29,7 @@ export function DistributionDonut({
   centerLabel,
   centerValue,
   avatarUrl,
+  avatarCandidates,
   userInitial,
 }: Props) {
   const tokens = useDesignTokens();
@@ -42,7 +45,31 @@ export function DistributionDonut({
   let cumulative = 0;
   const total = slices.reduce((s, x) => s + x.percentage, 0);
 
-  const showAvatar = avatarUrl !== undefined;
+  const [failed, setFailed] = useState<Set<string>>(() => new Set());
+
+  const candidateList = useMemo(() => {
+    if (avatarCandidates && avatarCandidates.length > 0) {
+      return avatarCandidates.filter((u) => !!u?.trim());
+    }
+    const single = avatarUrl?.trim();
+    return single ? [single] : [];
+  }, [avatarCandidates, avatarUrl]);
+
+  const activeAvatarUri = useMemo(
+    () => candidateList.find((u) => !failed.has(u)) ?? null,
+    [candidateList, failed]
+  );
+
+  const onAvatarError = useCallback((uri: string) => {
+    setFailed((prev) => {
+      if (prev.has(uri)) return prev;
+      const next = new Set(prev);
+      next.add(uri);
+      return next;
+    });
+  }, []);
+
+  const showAvatar = avatarUrl !== undefined || avatarCandidates !== undefined;
 
   return (
     <View style={[styles.wrap, { width: size, height: size }]}>
@@ -80,7 +107,7 @@ export function DistributionDonut({
 
       <View style={[styles.center, { width: size, height: size }]}>
         {showAvatar ? (
-          avatarUrl ? (
+          activeAvatarUri ? (
             <View
               style={[
                 styles.avatarBorder,
@@ -94,7 +121,7 @@ export function DistributionDonut({
               ]}
             >
               <Image
-                source={{ uri: avatarUrl }}
+                source={{ uri: activeAvatarUri }}
                 style={[
                   styles.avatar,
                   {
@@ -104,6 +131,7 @@ export function DistributionDonut({
                   },
                 ]}
                 resizeMode="cover"
+                onError={() => onAvatarError(activeAvatarUri)}
               />
             </View>
           ) : (

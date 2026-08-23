@@ -37,6 +37,23 @@ export function extractBioguideFromCongressUrl(url: string | null | undefined): 
   return m?.[1]?.toUpperCase() ?? null;
 }
 
+/** URL של תמונת אדם — לא placeholder / לוגו חברה / אייקון UW */
+export function looksLikePersonPhoto(url: string): boolean {
+  const u = url.toLowerCase();
+  if (u.includes('transback.png')) return false;
+  if (u.includes('brandfetch') || u.includes('/logo') || u.includes('clearbit')) {
+    return false;
+  }
+  if (u.includes('uwassets') && (u.includes('/tickers') || u.includes('/logos'))) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * מועמדי תמונת פרופיל — אותו סדר לאווטאר גיבור ולמרכז עוגת האחזקות.
+ * דיוקנאות ידועים קודם (כמו בגילוי), אחר כך URL אמיתי מ-API/ניווט (לא לוגו).
+ */
 export function portraitPhotoCandidates(opts: {
   imageUrl?: string | null;
   imageHint?: string | null;
@@ -50,9 +67,11 @@ export function portraitPhotoCandidates(opts: {
     const t = url?.trim();
     if (t && !out.includes(t)) out.push(t);
   };
+  const addPersonPhoto = (url?: string | null) => {
+    const t = url?.trim();
+    if (t && looksLikePersonPhoto(t)) add(t);
+  };
 
-  add(opts.imageUrl);
-  add(opts.imageHint);
   add(knownPortraitForInvestor({ personId: opts.personId, name: opts.name }));
 
   if (opts.kind === 'politician') {
@@ -61,6 +80,9 @@ export function portraitPhotoCandidates(opts: {
     add(congressPhotoUrl(extractBioguideFromCongressUrl(opts.imageUrl)));
     add(congressPhotoUrl(extractBioguideFromCongressUrl(opts.imageHint)));
   }
+
+  addPersonPhoto(opts.imageUrl);
+  addPersonPhoto(opts.imageHint);
 
   return out;
 }

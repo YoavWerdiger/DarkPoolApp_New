@@ -15,6 +15,8 @@ interface Props {
   holdings: HoldingAllocationInput[];
   /** תמונת האדם במרכז העוגה (כמו בתיק אישי) */
   avatarUrl?: string | null;
+  /** מועמדים מאותו מקור כמו ProfileHeroAvatar — עם fallback בטעינה */
+  avatarCandidates?: string[] | null;
   userInitial?: string;
 }
 
@@ -25,6 +27,7 @@ export function HoldingsPieSection({
   title = 'פילוח אחזקות',
   holdings,
   avatarUrl,
+  avatarCandidates,
   userInitial,
 }: Props) {
   const tokens = useDesignTokens();
@@ -43,6 +46,7 @@ export function HoldingsPieSection({
           size={128}
           strokeWidth={18}
           avatarUrl={avatarUrl}
+          avatarCandidates={avatarCandidates}
           userInitial={userInitial}
         />
         <View style={styles.legend}>

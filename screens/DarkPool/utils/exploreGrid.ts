@@ -1,22 +1,8 @@
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
-import { congressPhotoUrl } from './investorPlaceholder';
+import { congressPhotoUrl, looksLikePersonPhoto } from './investorPlaceholder';
 import { knownPortraitForInvestor } from './knownInvestorPortraits';
 
 export type ExploreKindFilter = 'all' | 'politician' | 'insider';
-
-/** האם URL נראה כמו תמונת אדם (לא לוגו חברה / אייקון) */
-function looksLikePersonPhoto(url: string): boolean {
-  const u = url.toLowerCase();
-  if (u.includes('transback.png')) return false;
-  if (u.includes('brandfetch') || u.includes('/logo') || u.includes('clearbit')) {
-    return false;
-  }
-  // לוגו טיקר של UW — לא פנים
-  if (u.includes('uwassets') && (u.includes('/tickers') || u.includes('/logos'))) {
-    return false;
-  }
-  return true;
-}
 
 /** URL תמונה אמיתית של אדם — לא placeholder / לא לוגו חברה */
 export function resolveExplorePhotoUrl(person: ExplorePerson): string | null {

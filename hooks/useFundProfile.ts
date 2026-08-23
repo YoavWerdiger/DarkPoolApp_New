@@ -13,6 +13,7 @@ export function useFundProfile(cik: string) {
       return fetchFundProfile(cik, force);
     },
     enabled: !!cik,
+    staleTime: 20 * 60 * 1000,
   });
 
   const refetch = useCallback(async () => {

@@ -778,7 +778,11 @@ export function mapInsiderTradeToCongressInput(t: {
 
 export async function metricsFromCongressTrades(
   trades: CongressTradeInput[],
-  opts: { maxTickers?: number } = {}
+  opts: {
+    maxTickers?: number;
+    /** מחירים מוכנים (materialize batch) — מדלג על Yahoo לטיקרים שכבר קיימים */
+    pricesByTicker?: Map<string, Map<string, number>>;
+  } = {}
 ): Promise<CongressPortfolioMetrics | null> {
   const tickers = Array.from(
     new Set(
@@ -791,14 +795,23 @@ export async function metricsFromCongressTrades(
   if (!tickers.length) return null;
 
   // שליפה מקבילית — Yahoo לעיתים נחסם מ-Edge; לא חוסמים את כל החישוב
-  const pricesByTicker = new Map<string, Map<string, number>>();
-  const settled = await Promise.all(
-    tickers.map(async (sym) => {
-      const map = await fetchYahooDaily(sym, '5y');
-      return [sym, map] as const;
-    })
+  // אם הועבר pricesByTicker (materialize) — משלימים רק טיקרים חסרים
+  const pricesByTicker = new Map<string, Map<string, number>>(
+    opts.pricesByTicker ?? []
   );
-  for (const [sym, map] of settled) pricesByTicker.set(sym, map);
+  const missing = tickers.filter((sym) => {
+    const m = pricesByTicker.get(sym);
+    return !m || m.size === 0;
+  });
+  if (missing.length) {
+    const settled = await Promise.all(
+      missing.map(async (sym) => {
+        const map = await fetchYahooDaily(sym, '5y');
+        return [sym, map] as const;
+      })
+    );
+    for (const [sym, map] of settled) pricesByTicker.set(sym, map);
+  }
 
   const normalized = normalizeCongressTrades(trades, pricesByTicker);
   if (!normalized.length) return null;

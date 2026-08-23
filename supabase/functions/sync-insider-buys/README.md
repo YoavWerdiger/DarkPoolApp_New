@@ -12,84 +12,61 @@
 
 Client משותף: `_shared/form4api.ts` — transactions, insiders, companies, filings, signals (402 = graceful skip).
 
-## Secrets
+## Secrets (פרודקשן — תקציב Form4 << 500/יום)
 
 ```bash
-npx supabase secrets set INSIDER_SYNC_SOURCES=secapi,form4api,unusualwhales
+npx supabase secrets set INSIDER_SYNC_SOURCES=edgar,form4api
 
-npx supabase secrets set SEC_API_KEY=<מפתח>
 npx supabase secrets set FORM4_API_KEY=<מפתח>
 npx supabase secrets set FORM4_PROVIDER=form4api
-npx supabase secrets set FORM4_LOOKBACK_HOURS=336
-npx supabase secrets set FORM4_MAX_PAGES=12
+# שוטף: lookback קצר + מעט עמודות — ~8–15 req לריצה × 3–4 ריצות/יום
+npx supabase secrets set FORM4_LOOKBACK_HOURS=48
+npx supabase secrets set FORM4_MAX_PAGES=5
 npx supabase secrets set FORM4_EXCLUDE_10B5=true
-# אופציונלי — backfill חד־פעמי עמוק יותר (90–180 יום): FORM4_LOOKBACK_HOURS=2160 / 4320
-# פרופיל: PROFILE_RECENT_TRADES_LIMIT=50 (ברירת מחדל בקוד)
-# קונגרס cron: CONGRESS_SYNC_LIMIT=200 | 13F: FUND_13F_HISTORY_LIMIT=16
-
-npx supabase secrets set UNUSUAL_WHALES_API_KEY=<מפתח>
-npx supabase secrets set UW_CLIENT_API_ID=100001
+# Backfill עמוק — ידני/שבועי בלבד (לא ב-cron):
+# FORM4_LOOKBACK_HOURS=2160 FORM4_MAX_PAGES=12
+# פרופיל: PROFILE_RECENT_TRADES_LIMIT=50 | PORTFOLIO_SNAPSHOT_FRESH_HOURS=24
 ```
 
-## מיגרציה 046
+## Cron (אחרי מיגרציית snapshots)
 
-עמודות חדשות ב-`dark_pool_insider_buys`: `is_10b5_plan`, `shares_owned_after`, `return_1d`…`return_6m`  
-טבלה: `dark_pool_insider_signals` (cluster buy/sell מ-Form4API).
+| Job | Schedule (UTC) | הערה |
+|-----|----------------|------|
+| `sync-insider-buys-market-hours` | `0 13,17,21 * * 1-5` | 3× בשעות מסחר US |
+| `sync-insider-buys-weekend` | `0 16 * * 0,6` | catch-up סופ״ש |
+| `materialize-darkpool-portfolios-hot` | `15 14-21 * * 1-5` | Yahoo batch → snapshots |
+| `materialize-darkpool-portfolios-daily` | `30 2 * * *` | full curated |
+
+**לא** לרוץ שעתי עם lookback 14 יום — שורף את מכסת Form4.
 
 ## פריסה
 
 ```bash
 npx supabase functions deploy sync-insider-buys --no-verify-jwt
+npx supabase functions deploy materialize-darkpool-portfolios --no-verify-jwt
 npx supabase functions deploy uw-investor-profile --no-verify-jwt
-npx supabase functions deploy uw-investor-search --no-verify-jwt
-npx supabase functions deploy uw-ticker-insights --no-verify-jwt
+npx supabase functions deploy uw-fund-profile --no-verify-jwt
 ```
-
-## Cron מומלץ
-
-כל **שעה** בשעות מסחר: `0 * * * `*
 
 ## בדיקה ידנית
 
 ```bash
 curl -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/sync-insider-buys" \
   -H "Authorization: Bearer <SERVICE_ROLE_KEY>"
+
+curl -X POST "https://<PROJECT_REF>.supabase.co/functions/v1/materialize-darkpool-portfolios" \
+  -H "Authorization: Bearer <SERVICE_ROLE_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"full"}'
 ```
 
-תשובה:
+## ארכיטקטורת פרופיל
 
-```json
-{
-  "inserted": N,
-  "from_secapi": S,
-  "from_form4": F,
-  "from_uw": U,
-  "avatars_enriched": M,
-  "signals_synced": K,
-  "sources": ["secapi","form4api","unusualwhales"]
-}
-```
+- **Form4** רק ב-cron → `dark_pool_insider_buys`
+- **Yahoo + שחזור גרף/תשואות** ב-`materialize-darkpool-portfolios` → `dark_pool_person_portfolio_snapshots`
+- **פתיחת פרופיל** = קריאת snapshot (+ עסקאות אחרונות מ-DB). אין Form4 חי.
 
-דיבאג לטיקר: `{"debug":true,"ticker":"NVDA"}`
-
-## Form4API — שימוש מלא בפרויקט
-
-
-| Endpoint                                   | שימוש                                         |
-| ------------------------------------------ | --------------------------------------------- |
-| `GET /v1/transactions`                     | sync P+S, ticker insights                     |
-| `GET /v1/insiders?name=`                   | `uw-investor-search`                          |
-| `GET /v1/insiders/{cik}` + `/transactions` | `uw-investor-profile` — היסטוריה 5y + metrics |
-| `GET /v1/companies/{ticker}`               | sector enrichment + ticker screen             |
-| `GET /v1/companies/{ticker}/insiders`      | roster חברה                                   |
-| `GET /v1/signals`                          | cluster → `dark_pool_insider_signals`         |
-| `GET /v1/signals/sentiment/{ticker}`       | כרטיס סנטימנט במסך טיקר                       |
-| `GET /v1/filings/recent`                   | זמין ב-client (לא מחובר עדיין ל-UI)           |
-
-
-**Business plan בלבד (402):** form144, holdings — מדולגים ב-graceful.
-
-- תיעוד: [https://form4api.com/docs](https://form4api.com/docs)
-- אימות: כותרת `X-Api-Key`
-
-`sync-darkpool` **לא נדרש** (`DARK_POOL_FORM4_ONLY=false`).
+דיוק:
+- קונגרס: אין מניות מזויפות; entry = Yahoo@first_added
+- Form4: cost/qty כש-`basis_reliable`
+- 13F: Yahoo@first_added

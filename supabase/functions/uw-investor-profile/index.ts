@@ -2,13 +2,10 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import {
-  fetchUwInsiderTickerFlow,
   fetchUwInsiderTransactions,
   fetchUwInsidersForTicker,
-  fetchUwPoliticianTrades,
   fetchUwPoliticians,
   resolveUwLogoUrl,
-  uwCongressPersonName,
   type UwCongressTrade,
 } from '../_shared/unusualWhales.ts';
 import {
@@ -16,17 +13,9 @@ import {
   createServiceSupabase,
   loadCongressTradesForPoliticianFromDb,
   loadInsiderBuysFromDb,
-  upsertCongressTradesToDb,
   type InsiderBuyDbRow,
 } from '../_shared/uwDbCache.ts';
-import { buildCuratedCongressHistoryRows, buildCuratedExecutiveTradeRows } from '../_shared/congressFeedBuild.ts';
-import { resolveQuiverApiKey, CURATED_EXECUTIVE_UW_IDS } from '../_shared/quiverQuant.ts';
-import {
-  formatForm4InsiderName,
-  loadForm4InsiderHistory,
-  mapForm4Transaction,
-  resolveForm4ApiKey,
-} from '../_shared/form4api.ts';
+import { CURATED_EXECUTIVE_UW_IDS } from '../_shared/quiverQuant.ts';
 import {
   mapInsiderTradeToCongressInput,
   metricsFromCongressTrades,
@@ -39,6 +28,14 @@ import {
   knownPortraitUrl,
   loadPortraitFromDb,
 } from '../_shared/personPortraits.ts';
+import {
+  CURATED_ID_SET,
+  ensureYahooPriceMaps,
+  isSnapshotFresh,
+  loadPortfolioSnapshot,
+  metricsToSnapshotFields,
+  upsertPortfolioSnapshot,
+} from '../_shared/darkpoolPortfolioSnapshots.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -46,9 +43,6 @@ const cors = {
 };
 
 const CONGRESS_PHOTO = 'https://unitedstates.github.io/images/congress/225x275';
-const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
-/** מתחת לסף — מושכים היסטוריה עמוקה מ-Quiver לפרופיל */
-const THIN_HISTORY_THRESHOLD = 12;
 /** כמה עסקאות אחרונות להחזיר בפרופיל (UI / API) */
 const RECENT_TRADES_LIMIT = Math.min(
   100,
@@ -100,7 +94,13 @@ interface ProfilePayload {
   sparkline_values: number[];
   /** שחזור תיק מעסקאות + Yahoo — ללא UW Enterprise */
   metrics?: CongressPortfolioMetrics | null;
-  portfolio_source?: 'reconstructed' | 'trades_only' | 'none';
+  portfolio_source?:
+    | 'reconstructed'
+    | 'trades_only'
+    | 'none'
+    | 'form4_reconstructed'
+    | 'snapshot';
+  snapshot_computed_at?: string | null;
   fetched_at: string;
 }
 
@@ -148,126 +148,24 @@ async function buildPoliticianProfile(
   politicianId: string
 ): Promise<ProfilePayload> {
   const supabase = createServiceSupabase();
-  const politicians = apiKey
-    ? await fetchUwPoliticians(apiKey, 24).catch(() => [])
-    : [];
-  let dbRows = await loadCongressTradesForPoliticianFromDb(supabase, politicianId, 500).catch(
-    () => []
-  );
-
-  let mine: UwCongressTrade[] = dbRows.map(
+  // עסקאות רק מ-DB — Quiver/UW/Form4 לא בנתיב פתיחת פרופיל (cron בלבד)
+  const dbRows = await loadCongressTradesForPoliticianFromDb(
+    supabase,
+    politicianId,
+    500
+  ).catch(() => []);
+  const mine: UwCongressTrade[] = dbRows.map(
     (r) => congressDbRowToUwTrade(r) as UwCongressTrade
   );
 
-  const isExecutiveUwId =
-    !BIOGUIDE_RE.test(politicianId) &&
-    (/^[0-9a-f-]{36}$/i.test(politicianId) ||
-      CURATED_EXECUTIVE_UW_IDS.includes(politicianId));
+  const snap = await loadPortfolioSnapshot(supabase, politicianId, 'politician').catch(
+    () => null
+  );
+  const snapFresh = snap && isSnapshotFresh(snap.computed_at);
 
-  // היסטוריה דלילה ל־BioGuide (למשל פלוסי) — משיכה עמוקה מ-Quiver ושמירה ל-DB
-  if (BIOGUIDE_RE.test(politicianId) && mine.length < THIN_HISTORY_THRESHOLD) {
-    const quiverKey = resolveQuiverApiKey();
-    if (quiverKey) {
-      try {
-        const curated = await buildCuratedCongressHistoryRows(quiverKey, [politicianId]);
-        if (curated.length) {
-          await upsertCongressTradesToDb(supabase, curated).catch((e) =>
-            console.warn('persist curated congress', politicianId, e)
-          );
-          dbRows = await loadCongressTradesForPoliticianFromDb(
-            supabase,
-            politicianId,
-            500
-          ).catch(() => curated);
-          mine = dbRows.map((r) => congressDbRowToUwTrade(r) as UwCongressTrade);
-        }
-      } catch (e) {
-        console.warn('quiver deep history', politicianId, e);
-      }
-    }
-  }
-
-  // Executive (Trump וכו׳) — משיכה לפי UUID מ-UW + שמירה ל-DB
-  if (isExecutiveUwId && mine.length < THIN_HISTORY_THRESHOLD && apiKey) {
-    try {
-      const curated = await buildCuratedExecutiveTradeRows(apiKey, [politicianId]);
-      if (curated.length) {
-        await upsertCongressTradesToDb(supabase, curated).catch((e) =>
-          console.warn('persist executive congress', politicianId, e)
-        );
-        dbRows = await loadCongressTradesForPoliticianFromDb(
-          supabase,
-          politicianId,
-          500
-        ).catch(() => curated);
-        mine = dbRows.map((r) => congressDbRowToUwTrade(r) as UwCongressTrade);
-      }
-    } catch (e) {
-      console.warn('executive deep history', politicianId, e);
-    }
-  }
-
-  if (mine.length < 3 && apiKey) {
-    const uwTrades = await fetchUwPoliticianTrades(apiKey, politicianId, 500).catch(
-      (e) => {
-        console.warn('uw politician trades fallback', politicianId, e);
-        return [];
-      }
-    );
-    const byId = uwTrades.filter((t) => String(t.politician_id ?? '') === politicianId);
-    // BioGuide לרוב לא תואם UUID של UW — נסה גם לפי שם מ-DB/מטא
-    // לא דורסים היסטוריה שכבר נמשכה/נשמרה ל-DB (executive curated)
-    if (byId.length && mine.length === 0) {
-      mine = byId;
-      try {
-        const curated = await buildCuratedExecutiveTradeRows(apiKey, [politicianId]);
-        if (curated.length) {
-          await upsertCongressTradesToDb(supabase, curated).catch(() => undefined);
-        }
-      } catch {
-        /* ignore */
-      }
-    } else if (BIOGUIDE_RE.test(politicianId) && uwTrades.length && mine.length === 0) {
-      const nameHint = String(dbRows[0]?.politician_name ?? '').toLowerCase();
-      const last = nameHint.split(/\s+/).filter(Boolean).pop() ?? '';
-      if (last.length >= 4) {
-        const byName = uwTrades.filter((t) =>
-          uwCongressPersonName(t).toLowerCase().includes(last)
-        );
-        if (byName.length) mine = byName;
-      }
-    } else if (byId.length > mine.length) {
-      // יותר עסקאות ב-UW מאשר ב-DB — ממזגים ושומרים
-      mine = byId;
-      try {
-        const curated = await buildCuratedExecutiveTradeRows(apiKey, [politicianId]);
-        if (curated.length) {
-          await upsertCongressTradesToDb(supabase, curated).catch(() => undefined);
-          dbRows = await loadCongressTradesForPoliticianFromDb(
-            supabase,
-            politicianId,
-            500
-          ).catch(() => curated);
-          if (dbRows.length) {
-            mine = dbRows.map((r) => congressDbRowToUwTrade(r) as UwCongressTrade);
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-
-  let metrics: CongressPortfolioMetrics | null = null;
-  if (mine.length) {
-    try {
-      metrics = await metricsFromCongressTrades(mine, { maxTickers: 40 });
-    } catch (e) {
-      console.error('politician metrics failed', politicianId, e);
-      metrics = null;
-    }
-  }
-
+  const politicians = apiKey
+    ? await fetchUwPoliticians(apiKey, 24).catch(() => [])
+    : [];
   const meta = politicians.find(
     (p) => String(p.politician_id ?? p.id) === politicianId
   );
@@ -283,18 +181,81 @@ async function buildPoliticianProfile(
     knownPortraitUrl(politicianId, name) ??
     (bg ? `${CONGRESS_PHOTO}/${bg}.jpg` : null);
 
-  const holdings = aggregateCongressHoldings(mine);
-
   const recent = mine
     .slice(0, RECENT_TRADES_LIMIT)
     .map((t) => congressToRecent(t, politicianId))
     .filter(Boolean) as RecentTradeRow[];
+  const subtitle = formatPolSubtitle(meta);
 
+  let metrics: CongressPortfolioMetrics | null = null;
+  let portfolio_source: ProfilePayload['portfolio_source'] = 'none';
+  let snapshot_computed_at: string | null = snap?.computed_at ?? null;
+
+  if (snapFresh && snap?.metrics) {
+    metrics = snap.metrics as CongressPortfolioMetrics;
+    portfolio_source = 'snapshot';
+  } else if (
+    mine.length &&
+    (CURATED_ID_SET.has(politicianId) ||
+      CURATED_EXECUTIVE_UW_IDS.includes(politicianId) ||
+      !snap)
+  ) {
+    // Bootstrap: curated / אין snapshot — מחשבים פעם אחת וכותבים
+    // לא-curated עם snapshot ישן: trades_only עד שה-cron ירענן
+    const shouldBootstrap =
+      CURATED_ID_SET.has(politicianId) ||
+      CURATED_EXECUTIVE_UW_IDS.includes(politicianId) ||
+      !snap;
+    if (shouldBootstrap) {
+      try {
+        const tickers = Array.from(
+          new Set(
+            mine
+              .map((t) => String(t.ticker ?? '').toUpperCase())
+              .filter((t) => t && t.length <= 5)
+          )
+        ).slice(0, 40);
+        const prices = await ensureYahooPriceMaps(supabase, tickers);
+        metrics = await metricsFromCongressTrades(mine, {
+          maxTickers: 40,
+          pricesByTicker: prices,
+        });
+        if (metrics) {
+          const fields = metricsToSnapshotFields(metrics);
+          await upsertPortfolioSnapshot(supabase, {
+            person_id: politicianId,
+            kind: 'politician',
+            ...fields,
+            profile_meta: { name, bootstrap: true },
+            source_meta: { accuracy: 'congress_yahoo_first_added', path: 'profile_bootstrap' },
+          });
+          snapshot_computed_at = new Date().toISOString();
+          portfolio_source = 'reconstructed';
+        }
+      } catch (e) {
+        console.error('politician bootstrap failed', politicianId, e);
+        metrics = null;
+      }
+    } else if (snap?.metrics) {
+      metrics = snap.metrics as CongressPortfolioMetrics;
+      portfolio_source = 'snapshot';
+    }
+  } else if (snap?.metrics) {
+    metrics = snap.metrics as CongressPortfolioMetrics;
+    portfolio_source = 'snapshot';
+  }
+
+  const holdingsAgg = aggregateCongressHoldings(mine);
   const sparkline_values =
     metrics?.series && metrics.series.length >= 2
       ? metrics.series.map((p) => p.value)
-      : buildActivitySparkline(mine);
-  const subtitle = formatPolSubtitle(meta);
+      : Array.isArray(snap?.series) && (snap!.series as { value: number }[]).length >= 2
+        ? (snap!.series as { value: number }[]).map((p) => p.value)
+        : buildActivitySparkline(mine);
+
+  if (!metrics?.holdings?.length && mine.length && portfolio_source === 'none') {
+    portfolio_source = 'trades_only';
+  }
 
   return {
     id: politicianId,
@@ -304,22 +265,26 @@ async function buildPoliticianProfile(
     image_url,
     stats: {
       total_trades: mine.length,
-      unique_tickers: metrics?.holdings.length ?? holdings.length,
+      unique_tickers: metrics?.holdings?.length ?? holdingsAgg.length,
       last_active_days: minDaysSince(mine),
     },
-    holdings: metrics?.holdings.length
+    holdings: metrics?.holdings?.length
       ? metricsHoldingsToRows(metrics)
-      : holdings.slice(0, 24),
-    holdings_source: metrics?.holdings.length ? 'snapshot' : 'trades',
+      : holdingsAgg.slice(0, 24),
+    holdings_source: metrics?.holdings?.length ? 'snapshot' : 'trades',
     portfolio_snapshot: null,
     recent_trades: recent,
     sparkline_values,
     metrics,
-    portfolio_source: metrics?.holdings.length
-      ? 'reconstructed'
-      : mine.length
-        ? 'trades_only'
-        : 'none',
+    portfolio_source:
+      metrics?.holdings?.length
+        ? portfolio_source === 'snapshot'
+          ? 'snapshot'
+          : 'reconstructed'
+        : mine.length
+          ? 'trades_only'
+          : 'none',
+    snapshot_computed_at,
     fetched_at: new Date().toISOString(),
   };
 }
@@ -332,61 +297,36 @@ async function buildInsiderProfile(
   const parts = personKey.split(':');
   const ticker = (tickerHint || parts[0] || '').toUpperCase();
   const nameKey = parts.slice(1).join(':').trim();
-  const form4Key = resolveForm4ApiKey();
 
   const supabase = createServiceSupabase();
+  // Form4 רק ב-cron (sync-insider-buys) — פרופיל = DB בלבד
   const dbRows = await loadInsiderBuysFromDb(supabase, {
     ticker,
     insiderName: nameKey,
     limit: 200,
   }).catch(() => []);
 
-  const form4History =
-    form4Key && nameKey
-      ? await loadForm4InsiderHistory(form4Key, {
-          cik: dbRows[0]?.insider_cik,
-          nameHint: nameKey,
-          ticker: ticker || undefined,
-          years: 5,
-        }).catch(() => null)
-      : null;
-
-  const form4Txs = (form4History?.trades ?? [])
-    .map((t) => mapForm4Transaction(t))
-    .filter(Boolean)
-    .filter((t) => {
-      if (!nameKey) return true;
-      return namesLooseMatch(nameKey, t!.insider_name || '');
-    }) as NonNullable<ReturnType<typeof mapForm4Transaction>>[];
-
   const dbTxs = dbRows.map(insiderDbToUwTx);
-  const f4Mapped = form4Txs.map(form4TradeToUwTx);
+  let txs = dbTxs.length > 0 ? dbTxs : [];
 
-  let txs = f4Mapped.length >= dbTxs.length && f4Mapped.length > 0
-    ? f4Mapped
-    : dbTxs.length > 0
-      ? dbTxs
-      : [];
-
+  // UW fallback רק אם אין בכלל שורות ב-DB (נדיר) — לא Form4
   if (!txs.length && apiKey) {
     txs = await fetchUwInsiderTransactions(apiKey, {
       limit: 200,
       transactionCodes: ['P', 'S'],
       ticker_symbol: ticker || undefined,
       owner_name: nameKey || undefined,
-    });
+    }).catch(() => []);
   }
 
   const roster =
-    apiKey && ticker ? await fetchUwInsidersForTicker(apiKey, ticker) : [];
+    apiKey && ticker ? await fetchUwInsidersForTicker(apiKey, ticker).catch(() => []) : [];
 
   const match = roster.find((r) =>
     namesLooseMatch(nameKey, r.display_name || r.name || '')
   );
   const dbName = dbRows[0]?.insider_name?.trim();
-  const f4Profile = form4History?.profile;
   const name =
-    (f4Profile?.name ? formatForm4InsiderName(f4Profile.name) : null) ||
     dbName ||
     match?.display_name ||
     match?.name ||
@@ -409,94 +349,106 @@ async function buildInsiderProfile(
   const recent = mine.slice(0, RECENT_TRADES_LIMIT).map(insiderToRecent);
 
   const dedupedInputs = dedupeTradeInputs(
-    [
-      ...dbRows.map((r) =>
-        mapInsiderTradeToCongressInput({
-          ticker: r.ticker,
-          transaction_type: r.transaction_type,
-          shares: r.shares,
-          price: r.price,
-          value: r.value,
-          transaction_date: r.transaction_date,
-          filed_at: r.filed_at,
-        })
-      ),
-      ...(form4Txs.length >= dbRows.length ? form4Txs : []).map((t) =>
-        mapInsiderTradeToCongressInput({
-          ticker: t.ticker,
-          transaction_code: t.transaction_type,
-          shares: t.shares,
-          price: t.price,
-          value: t.value,
-          transaction_date: t.transaction_date,
-          filed_at: t.filed_at,
-        })
-      ),
-      ...(form4Txs.length >= dbRows.length ? [] : mine).map((t) =>
-        mapInsiderTradeToCongressInput({
-          ticker: t.ticker,
-          transaction_code: t.transaction_code,
-          shares: t.amount,
-          transaction_date: t.transaction_date,
-          filed_at: t.filed_at,
-        })
-      ),
-    ]
+    dbRows.map((r) =>
+      mapInsiderTradeToCongressInput({
+        ticker: r.ticker,
+        transaction_type: r.transaction_type,
+        shares: r.shares,
+        price: r.price,
+        value: r.value,
+        transaction_date: r.transaction_date,
+        filed_at: r.filed_at,
+      })
+    )
   );
 
+  const snap = await loadPortfolioSnapshot(supabase, personKey, 'insider').catch(
+    () => null
+  );
+  const snapFresh = snap && isSnapshotFresh(snap.computed_at);
+
   let metrics: CongressPortfolioMetrics | null = null;
-  if (dedupedInputs.length) {
+  let portfolio_source: ProfilePayload['portfolio_source'] = 'none';
+  let snapshot_computed_at: string | null = snap?.computed_at ?? null;
+
+  if (snapFresh && snap?.metrics) {
+    metrics = snap.metrics as CongressPortfolioMetrics;
+    portfolio_source = 'snapshot';
+  } else if (dedupedInputs.length && (CURATED_ID_SET.has(personKey) || !snap)) {
     try {
-      metrics = await metricsFromCongressTrades(dedupedInputs, { maxTickers: 20 });
+      const tickers = Array.from(
+        new Set(
+          dedupedInputs
+            .map((t) => String(t.ticker ?? '').toUpperCase())
+            .filter((t) => t && t.length <= 5)
+        )
+      ).slice(0, 20);
+      const prices = await ensureYahooPriceMaps(supabase, tickers);
+      metrics = await metricsFromCongressTrades(dedupedInputs, {
+        maxTickers: 20,
+        pricesByTicker: prices,
+      });
+      if (metrics) {
+        const fields = metricsToSnapshotFields(metrics);
+        await upsertPortfolioSnapshot(supabase, {
+          person_id: personKey,
+          kind: 'insider',
+          ...fields,
+          profile_meta: { name, bootstrap: true },
+          source_meta: {
+            accuracy: 'form4_db_disclosed_when_basis_reliable',
+            path: 'profile_bootstrap',
+            trade_source: 'dark_pool_insider_buys',
+          },
+        });
+        snapshot_computed_at = new Date().toISOString();
+        portfolio_source = 'reconstructed';
+      }
     } catch (e) {
-      console.error('insider metrics failed', personKey, e);
+      console.error('insider bootstrap failed', personKey, e);
       metrics = null;
     }
+  } else if (snap?.metrics) {
+    metrics = snap.metrics as CongressPortfolioMetrics;
+    portfolio_source = 'snapshot';
   }
 
   let sparkline_values =
     metrics?.series && metrics.series.length >= 2
       ? metrics.series.map((p) => p.value)
-      : buildInsiderSparkline(mine);
-
-  const roleFromForm4 =
-    f4Profile?.officerTitle?.trim() ||
-    [
-      f4Profile?.isOfficer ? 'Officer' : '',
-      f4Profile?.isDirector ? 'Director' : '',
-      f4Profile?.isTenPercentOwner ? '10% Owner' : '',
-    ]
-      .filter(Boolean)
-      .join(' · ');
+      : Array.isArray(snap?.series) && (snap!.series as { value: number }[]).length >= 2
+        ? (snap!.series as { value: number }[]).map((p) => p.value)
+        : buildInsiderSparkline(mine);
 
   return {
     id: personKey,
     kind: 'insider',
     name,
-    subtitle: [dbRows[0]?.insider_role || roleFromForm4 || match?.officer_title, ticker]
+    subtitle: [dbRows[0]?.insider_role || match?.officer_title, ticker]
       .filter(Boolean)
       .join(' · '),
     image_url,
     ticker: ticker || undefined,
     stats: {
       total_trades: dedupedInputs.length || mine.length,
-      unique_tickers: metrics?.holdings.length ?? holdings.length,
+      unique_tickers: metrics?.holdings?.length ?? holdings.length,
       last_active_days: minDaysSinceInsider(mine),
     },
-    holdings: metrics?.holdings.length
+    holdings: metrics?.holdings?.length
       ? metricsHoldingsToRows(metrics)
       : holdings.slice(0, 24),
-    holdings_source: metrics?.holdings.length ? 'snapshot' : 'trades',
+    holdings_source: metrics?.holdings?.length ? 'snapshot' : 'trades',
     recent_trades: recent,
     sparkline_values,
     metrics,
-    portfolio_source: metrics?.holdings.length
-      ? form4Txs.length >= 3
-        ? 'form4_reconstructed'
+    portfolio_source: metrics?.holdings?.length
+      ? portfolio_source === 'snapshot'
+        ? 'snapshot'
         : 'reconstructed'
       : mine.length
         ? 'trades_only'
         : 'none',
+    snapshot_computed_at,
     fetched_at: new Date().toISOString(),
   };
 }
@@ -565,24 +517,6 @@ function metricsHoldingsToRows(m: CongressPortfolioMetrics): HoldingRow[] {
       return_pct: hasReturn ? h.return_pct : null,
     };
   });
-}
-
-function form4TradeToUwTx(t: {
-  ticker: string;
-  insider_name: string | null;
-  shares: number;
-  transaction_type: string;
-  filed_at: string;
-  transaction_date: string;
-}) {
-  return {
-    ticker: t.ticker,
-    owner_name: t.insider_name,
-    amount: t.shares,
-    transaction_code: t.transaction_type,
-    filed_at: t.filed_at,
-    transaction_date: t.transaction_date,
-  };
 }
 
 function dedupeTradeInputs(inputs: CongressTradeInput[]): CongressTradeInput[] {

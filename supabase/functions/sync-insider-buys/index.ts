@@ -9,8 +9,9 @@
 // Secrets:
 //   INSIDER_SYNC_SOURCES=edgar,form4api
 //   SEC_API_KEY
-//   FORM4_API_KEY, FORM4_PROVIDER, FORM4_LOOKBACK_HOURS (default 336 = 14d)
-//   FORM4_MAX_PAGES (default 12)
+//   FORM4_API_KEY, FORM4_PROVIDER, FORM4_LOOKBACK_HOURS (default 48)
+//   FORM4_MAX_PAGES (default 5) — תקציב יומי << 500 עם cron 3–4×/יום
+//   Deep backfill: ידני בלבד עם FORM4_LOOKBACK_HOURS=2160/4320 + FORM4_MAX_PAGES גבוה
 //   UNUSUAL_WHALES_API_KEY, UW_CLIENT_API_ID=100001
 //   QUIVER_API_KEY (קונגרס — sync-congress-trades / uw-explore)
 //   CONGRESS_TRADES_PROVIDER=quiverquant|unusualwhales
@@ -100,8 +101,8 @@ serve(async (req) => {
   const secApiKey = Deno.env.get('SEC_API_KEY') || '';
   const apiKey = Deno.env.get('FORM4_API_KEY') || '';
   const provider = (Deno.env.get('FORM4_PROVIDER') || 'form4api').toLowerCase();
-  // ברירת מחדל 14 יום — מספיק לכיסוי פערים בין cron שעתי; ניתן להעלות ל-90–180 ימים ב-secret
-  const lookbackHrs = Number(Deno.env.get('FORM4_LOOKBACK_HOURS') || '336');
+  // ברירת מחדל 48 שעות — מספיק לכיסוי בין ריצות cron (3–4×/יום בשעות מסחר)
+  const lookbackHrs = Number(Deno.env.get('FORM4_LOOKBACK_HOURS') || '48');
   const uwKey = Deno.env.get('UNUSUAL_WHALES_API_KEY') || '';
 
   if (sources.has('secapi') && !secApiKey) {

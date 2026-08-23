@@ -39,7 +39,7 @@ export interface FundProfile {
 }
 
 let cache = new Map<string, { at: number; data: FundProfile }>();
-const CACHE_MS = 10 * 60 * 1000;
+const CACHE_MS = 20 * 60 * 1000;
 
 export async function fetchFundProfile(cik: string, force = false): Promise<FundProfile> {
   const id = cik.trim();

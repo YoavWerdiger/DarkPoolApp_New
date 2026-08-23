@@ -20,8 +20,8 @@ export function useDarkPoolInvestorProfile(
       return fetchInvestorProfile(id, kind, ticker, force);
     },
     enabled: !!id,
-    // בפתיחת פרופיל — רענון מחירים/תשואות אם הנתונים לא טריים (לא חיים תוך-יומיים)
-    staleTime: 2 * 60 * 1000,
+    // שרת ממומש (snapshot) — cache לקוח ארוך יותר
+    staleTime: 20 * 60 * 1000,
     refetchOnMount: true,
   });
 

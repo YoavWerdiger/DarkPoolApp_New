@@ -78,5 +78,6 @@ export interface ProfilePortfolioScore {
 export type PortfolioSource =
   | 'reconstructed'
   | 'form4_reconstructed'
+  | 'snapshot'
   | 'trades_only'
   | 'none';

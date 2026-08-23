@@ -205,7 +205,7 @@ export async function fetchForm4Transactions(
     perPage?: number;
   } = {}
 ): Promise<Form4Transaction[]> {
-  const maxPages = Math.min(20, Math.max(1, opts.maxPages ?? Number(Deno.env.get('FORM4_MAX_PAGES') || '12')));
+  const maxPages = Math.min(20, Math.max(1, opts.maxPages ?? Number(Deno.env.get('FORM4_MAX_PAGES') || '5')));
   const perPage = Math.min(100, Math.max(10, opts.perPage ?? 100));
   const out: Form4Transaction[] = [];
 
@@ -437,7 +437,7 @@ export async function fetchForm4InsiderTradesForSync(
   const from = sinceIso.slice(0, 10);
   const exclude10b5 = opts.exclude10b5 !== false;
   // 12 עמודים × 100 × (P+S) ≈ עד ~2.4k שורות לריצה — בטוח ל-lookback של ~14 יום
-  const maxPages = opts.maxPages ?? Number(Deno.env.get('FORM4_MAX_PAGES') || '12');
+  const maxPages = opts.maxPages ?? Number(Deno.env.get('FORM4_MAX_PAGES') || '5');
 
   const [purchases, sales] = await Promise.all([
     fetchForm4Transactions(apiKey, { code: 'P', from, exclude10b5, maxPages }),

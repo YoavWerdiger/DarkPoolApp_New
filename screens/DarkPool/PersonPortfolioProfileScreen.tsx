@@ -293,23 +293,17 @@ export function PersonPortfolioProfileScreen({
         const holdingRows: HoldingRow[] = (p?.holdings ?? []).slice(0, 16).map((h) => {
           const firstAdded =
             h.first_added_date?.slice(0, 10) || filingDate || null;
-          // 13F: שווי קודם + מניות קומפקטיות בסוגריים (לא מספר מלא שחותך את השורה)
+          // אותה שורת אחזקה כמו פוליטיקאים: שווי + מניות בסוגריים; % הקצאה רק בעוגה
           const entry =
             h.entry_price != null && Number.isFinite(h.entry_price) && h.entry_price > 0
               ? h.entry_price
               : null;
           const returnPct =
             h.return_pct != null && Number.isFinite(h.return_pct) ? h.return_pct : null;
-          const valueMeta = formatHoldingsValueMeta(h.value_usd, h.shares);
           return {
             ticker: h.ticker,
             title: h.ticker,
-            meta: [
-              valueMeta || null,
-              h.allocation_pct != null ? `${h.allocation_pct.toFixed(1)}%` : null,
-            ]
-              .filter(Boolean)
-              .join(' · '),
+            meta: formatHoldingsValueMeta(h.value_usd, h.shares),
             allocation_pct: h.allocation_pct,
             value_usd: h.value_usd,
             // Yahoo ב־first_added — כמו פוליטיקאים

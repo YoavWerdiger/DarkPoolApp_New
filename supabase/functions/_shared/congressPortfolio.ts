@@ -749,30 +749,8 @@ export async function metricsFromCongressTrades(
 
   let metrics = buildCongressPortfolioMetrics(normalized, pricesByTicker, trades);
 
-  /** יש מניות מדווחות (Form 4) — רק אז גרף שווי אמין יחסית; טווחי STOCK Act ≠ תיק אמיתי */
-  const hasDisclosedBasis = normalized.some((t) => !t.qtyEstimated);
-
-  if (!hasDisclosedBasis) {
-    // כנות: לא מציגים גרף / תשואות תקופה מטווחי $ — זה לא mark-to-market אמיתי
-    const emptyPeriods: Record<string, number | null> = {
-      '1D': null,
-      '1W': null,
-      '1M': null,
-      '3M': null,
-      YTD: null,
-      '1Y': null,
-      '5Y': null,
-      ALL: null,
-    };
-    return {
-      ...metrics,
-      series: [],
-      period_returns: emptyPeriods,
-      // holdings נשארים לרשימה עם basis_reliable=false (בלי avg/return ב־UI)
-    };
-  }
-
-  // Yahoo ריק אבל יש Form 4 — notional רק כנפילה אחרונה (עדיין עם qty מדווח)
+  // אם אין סדרת מחירים (Yahoo ריק) — בונים גרף משוער מ-notional של העסקאות.
+  // גם טווחי STOCK Act מקבלים סדרת שחזור (אלגוריתם) — לא 1:1 MTM; basis_reliable=false לאחזקות.
   if (!metrics.series || metrics.series.length < 2) {
     const notional = buildNotionalSeries(normalized);
     if (notional.length >= 2) {

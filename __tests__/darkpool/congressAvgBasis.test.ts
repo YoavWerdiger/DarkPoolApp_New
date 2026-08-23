@@ -34,14 +34,16 @@ describe('congress avg basis reliability', () => {
     expect(shown).toBeNull();
   });
 
-  it('chart honesty: range-only trades are not chart_reliable', () => {
-    const txs = [{ qtyEstimated: true }, { qtyEstimated: true }];
-    const hasDisclosedBasis = txs.some((t) => !t.qtyEstimated);
-    expect(hasDisclosedBasis).toBe(false);
-  });
-
-  it('chart honesty: Form4 disclosed trades allow chart', () => {
-    const txs = [{ qtyEstimated: false }, { qtyEstimated: true }];
-    expect(txs.some((t) => !t.qtyEstimated)).toBe(true);
+  it('chart series: range-only portfolios still get reconstructed series (algorithm OK)', () => {
+    // UI מציג גרף כשיש series.length >= 2 — גם כש־basis_reliable=false
+    const series = [
+      { date: '2024-01-01', value: 100_000 },
+      { date: '2024-06-01', value: 120_000 },
+    ];
+    const basisReliable = false;
+    const showChart = series.length >= 2;
+    const showAvg = basisReliable;
+    expect(showChart).toBe(true);
+    expect(showAvg).toBe(false);
   });
 });

@@ -4,6 +4,11 @@
  * פורמטרים משותפים לקומפוננטות ה-Dark Pool.
  */
 
+/** עטיפת LTR isolate — שומרת `$1.1K` אטומי ליד עברית (בידי RTL) */
+export function ltrEmbed(s: string): string {
+  return `\u2066${s}\u2069`;
+}
+
 export function formatUsdCompact(v: number | null | undefined): string {
   if (v == null || !Number.isFinite(v)) return '—';
   const abs = Math.abs(v);
@@ -33,12 +38,14 @@ export function formatHoldingsValueMeta(
 ): string {
   const valueLabel =
     valueUsd != null && Number.isFinite(valueUsd)
-      ? `שווי אחזקה ${formatUsdCompact(valueUsd)}`
+      ? `שווי אחזקה ${ltrEmbed(formatUsdCompact(valueUsd))}`
       : null;
   const sharesLabel = formatSharesCompact(shares);
-  if (valueLabel && sharesLabel) return `${valueLabel} (${sharesLabel} מניות)`;
+  if (valueLabel && sharesLabel) {
+    return `${valueLabel} (${ltrEmbed(sharesLabel)} מניות)`;
+  }
   if (valueLabel) return valueLabel;
-  if (sharesLabel) return `${sharesLabel} מניות`;
+  if (sharesLabel) return `${ltrEmbed(sharesLabel)} מניות`;
   return '';
 }
 

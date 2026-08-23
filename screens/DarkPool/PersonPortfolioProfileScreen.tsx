@@ -674,12 +674,14 @@ export function PersonPortfolioProfileScreen({
                               ) : null}
                               {avgStr ? (
                                 <Text style={styles.holdingAvg} numberOfLines={1}>
-                                  מחיר ממוצע {avgStr}
+                                  מחיר ממוצע{' '}
+                                  <Text style={styles.holdingAvgPrice}>{avgStr}</Text>
                                 </Text>
                               ) : null}
                               {entryStr ? (
                                 <Text style={styles.holdingAvg} numberOfLines={1}>
-                                  מחיר כניסה {entryStr}
+                                  מחיר כניסה{' '}
+                                  <Text style={styles.holdingAvgPrice}>{entryStr}</Text>
                                 </Text>
                               ) : null}
                               {dateStr ? (
@@ -992,6 +994,10 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
       fontWeight: '600',
       color: tokens.colors.text.secondary,
       textAlign: 'left',
+      writingDirection: 'ltr',
+    },
+    /** מחיר קומפקטי ($1.1K) כיחידת LTR — מונע מ־K/M/B להידבק לעברית */
+    holdingAvgPrice: {
       writingDirection: 'ltr',
     },
     holdingDate: {

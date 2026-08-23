@@ -501,6 +501,37 @@ async function buildInsiderProfile(
   };
 }
 
+/** שווי קומפקטי ל־amount_label — תואם formatUsdCompact בצד לקוח */
+function formatUsdCompactLabel(v: number): string {
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000_000) return `$${(v / 1_000_000_000).toFixed(2)}B`;
+  if (abs >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `$${(v / 1_000).toFixed(1)}K`;
+  return `$${Math.round(v).toLocaleString('en-US')}`;
+}
+
+/** מניות קומפקטיות — 2.6M / 12.5K */
+function formatSharesCompactLabel(v: number): string {
+  const n = Math.abs(Math.round(v));
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+/** שווי קודם + מניות בסוגריים — לא נחתך מול עמודת תשואה */
+function formatHoldingsAmountLabel(
+  marketValue: number,
+  qty: number | null,
+  showShares: boolean
+): string {
+  const valuePart = `שווי אחזקה ${formatUsdCompactLabel(marketValue)}`;
+  if (showShares && qty != null && Number.isFinite(qty) && qty > 0) {
+    return `${valuePart} (${formatSharesCompactLabel(qty)} מניות)`;
+  }
+  return valuePart;
+}
+
 function metricsHoldingsToRows(m: CongressPortfolioMetrics): HoldingRow[] {
   return m.holdings.map((h) => {
     const entry =
@@ -520,9 +551,11 @@ function metricsHoldingsToRows(m: CongressPortfolioMetrics): HoldingRow[] {
       txn_mix: 'פתוח',
       allocation_pct: h.allocation_pct,
       // qty רק כשמניות מדווחות — לא ממציאים מניות מטווח STOCK Act
-      amount_label: showShares
-        ? `${Math.round(h.qty).toLocaleString('en-US')} מניות · שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`
-        : `שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`,
+      amount_label: formatHoldingsAmountLabel(
+        h.market_value,
+        h.qty,
+        showShares
+      ),
       mid_usd_k: h.market_value / 1000,
       entry_price: entry,
       // תשואה מוצר: Form4 מ־cost; אחרת מ־מחיר שוק ב־first_added

@@ -13,6 +13,35 @@ export function formatUsdCompact(v: number | null | undefined): string {
   return `$${Math.round(v).toLocaleString('en-US')}`;
 }
 
+/** כמות מניות קומפקטית — 2.6M / 12.5K (בלי פסיקים ארוכים) */
+export function formatSharesCompact(v: number | null | undefined): string | null {
+  if (v == null || !Number.isFinite(v) || v <= 0) return null;
+  const n = Math.abs(Math.round(v));
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+/**
+ * Meta שורת אחזקה — שווי קודם (לא נחתך), מניות בסוגריים כשיש.
+ * דוגמה: `שווי אחזקה $9.00B (2.6M מניות)` / בלי מניות: `שווי אחזקה $1.2M`
+ */
+export function formatHoldingsValueMeta(
+  valueUsd: number | null | undefined,
+  shares?: number | null
+): string {
+  const valueLabel =
+    valueUsd != null && Number.isFinite(valueUsd)
+      ? `שווי אחזקה ${formatUsdCompact(valueUsd)}`
+      : null;
+  const sharesLabel = formatSharesCompact(shares);
+  if (valueLabel && sharesLabel) return `${valueLabel} (${sharesLabel} מניות)`;
+  if (valueLabel) return valueLabel;
+  if (sharesLabel) return `${sharesLabel} מניות`;
+  return '';
+}
+
 /** מחיר ממוצע לכניסה (cost/qty) — דיוק סביר למניות, בלי להמציא ערך */
 export function formatAvgEntryUsd(v: number | null | undefined): string | null {
   if (v == null || !Number.isFinite(v) || v <= 0) return null;

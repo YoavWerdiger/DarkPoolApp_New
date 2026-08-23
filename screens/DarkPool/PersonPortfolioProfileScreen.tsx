@@ -28,6 +28,7 @@ import type { PerformancePeriod } from '../Portfolios/portfolioTypes';
 import {
   avgEntryPriceFromCost,
   formatAvgEntryUsd,
+  formatHoldingsValueMeta,
   formatUsdCompact,
 } from './utils/darkPoolFormat';
 import {
@@ -113,12 +114,6 @@ function formatHoldingDateHe(iso: string | null | undefined): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
   const [y, m, day] = d.split('-');
   return `${day}/${m}/${y}`;
-}
-
-/** תווית שווי אחזקה ליד סכום $ — בלי «הערכה» */
-function formatHoldingValueLabel(v: number | null | undefined): string | null {
-  if (v == null || !Number.isFinite(v)) return null;
-  return `שווי אחזקה ${formatUsdCompact(v)}`;
 }
 
 /** אומדן תאריך הוספה מעסקאות אחרונות — עד שה־edge מחזיר first_added_date מלא */
@@ -298,23 +293,19 @@ export function PersonPortfolioProfileScreen({
         const holdingRows: HoldingRow[] = (p?.holdings ?? []).slice(0, 16).map((h) => {
           const firstAdded =
             h.first_added_date?.slice(0, 10) || filingDate || null;
-          // 13F מדווח מניות אמיתיות — מציגים כשיש מספר (לא Yahoo/mock)
-          const sharesLabel =
-            h.shares != null && Number.isFinite(h.shares) && h.shares > 0
-              ? `${Math.round(h.shares).toLocaleString('en-US')} מניות`
-              : null;
+          // 13F: שווי קודם + מניות קומפקטיות בסוגריים (לא מספר מלא שחותך את השורה)
           const entry =
             h.entry_price != null && Number.isFinite(h.entry_price) && h.entry_price > 0
               ? h.entry_price
               : null;
           const returnPct =
             h.return_pct != null && Number.isFinite(h.return_pct) ? h.return_pct : null;
+          const valueMeta = formatHoldingsValueMeta(h.value_usd, h.shares);
           return {
             ticker: h.ticker,
             title: h.ticker,
             meta: [
-              sharesLabel,
-              formatHoldingValueLabel(h.value_usd),
+              valueMeta || null,
               h.allocation_pct != null ? `${h.allocation_pct.toFixed(1)}%` : null,
             ]
               .filter(Boolean)
@@ -377,14 +368,11 @@ export function PersonPortfolioProfileScreen({
             title: h.ticker,
             // qty אמיתי כשמניות מדווחות (Form 4) — גם בלי מחיר Form4.
             // STOCK Act: טווח $ בלבד — לא ממציאים «X מניות» מ־Yahoo.
-            meta: qtyDisclosed
-              ? [
-                  `${Math.round(h.qty).toLocaleString('en-US')} מניות`,
-                  formatHoldingValueLabel(h.market_value),
-                ]
-                  .filter(Boolean)
-                  .join(' · ')
-              : formatHoldingValueLabel(h.market_value) ?? '',
+            // שווי קודם + מניות קומפקטיות בסוגריים כדי שלא ייחתך מול עמודת תשואה.
+            meta: formatHoldingsValueMeta(
+              h.market_value,
+              qtyDisclosed ? h.qty : null
+            ),
             allocation_pct: h.allocation_pct,
             market_value: h.market_value,
             return_pct: hasReturn ? h.return_pct : null,
@@ -668,7 +656,7 @@ export function PersonPortfolioProfileScreen({
                               />
                             </View>
                             {h.meta ? (
-                              <Text style={styles.rowMeta} numberOfLines={1}>
+                              <Text style={styles.rowMeta} numberOfLines={2}>
                                 {h.meta}
                               </Text>
                             ) : null}

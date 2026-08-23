@@ -30,7 +30,7 @@ export function formatSharesCompact(v: number | null | undefined): string | null
 
 /**
  * Meta שורת אחזקה — שווי קודם (לא נחתך), מניות בסוגריים כשיש.
- * דוגמה: `שווי אחזקה $9.00B (2.6M מניות)` / בלי מניות: `שווי אחזקה $1.2M`
+ * דוגמה: `שווי אחזקה: $9.00B (2.6M מניות)` / בלי מניות: `שווי אחזקה: $1.2M`
  */
 export function formatHoldingsValueMeta(
   valueUsd: number | null | undefined,
@@ -38,7 +38,7 @@ export function formatHoldingsValueMeta(
 ): string {
   const valueLabel =
     valueUsd != null && Number.isFinite(valueUsd)
-      ? `שווי אחזקה ${ltrEmbed(formatUsdCompact(valueUsd))}`
+      ? `שווי אחזקה: ${ltrEmbed(formatUsdCompact(valueUsd))}`
       : null;
   const sharesLabel = formatSharesCompact(shares);
   if (valueLabel && sharesLabel) {

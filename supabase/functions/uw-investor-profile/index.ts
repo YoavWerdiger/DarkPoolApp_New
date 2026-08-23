@@ -527,7 +527,7 @@ function formatHoldingsAmountLabel(
 ): string {
   // LTR isolate — מונע מ־K/M/B של שווי/מניות להידבק לעברית בבידי RTL
   const usd = `\u2066${formatUsdCompactLabel(marketValue)}\u2069`;
-  const valuePart = `שווי אחזקה ${usd}`;
+  const valuePart = `שווי אחזקה: ${usd}`;
   if (showShares && qty != null && Number.isFinite(qty) && qty > 0) {
     const sh = `\u2066${formatSharesCompactLabel(qty)}\u2069`;
     return `${valuePart} (${sh} מניות)`;

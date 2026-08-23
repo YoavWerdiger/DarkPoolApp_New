@@ -9,7 +9,8 @@
 // Secrets:
 //   INSIDER_SYNC_SOURCES=edgar,form4api
 //   SEC_API_KEY
-//   FORM4_API_KEY, FORM4_PROVIDER, FORM4_LOOKBACK_HOURS
+//   FORM4_API_KEY, FORM4_PROVIDER, FORM4_LOOKBACK_HOURS (default 336 = 14d)
+//   FORM4_MAX_PAGES (default 12)
 //   UNUSUAL_WHALES_API_KEY, UW_CLIENT_API_ID=100001
 //   QUIVER_API_KEY (קונגרס — sync-congress-trades / uw-explore)
 //   CONGRESS_TRADES_PROVIDER=quiverquant|unusualwhales
@@ -99,7 +100,8 @@ serve(async (req) => {
   const secApiKey = Deno.env.get('SEC_API_KEY') || '';
   const apiKey = Deno.env.get('FORM4_API_KEY') || '';
   const provider = (Deno.env.get('FORM4_PROVIDER') || 'form4api').toLowerCase();
-  const lookbackHrs = Number(Deno.env.get('FORM4_LOOKBACK_HOURS') || '72');
+  // ברירת מחדל 14 יום — מספיק לכיסוי פערים בין cron שעתי; ניתן להעלות ל-90–180 ימים ב-secret
+  const lookbackHrs = Number(Deno.env.get('FORM4_LOOKBACK_HOURS') || '336');
   const uwKey = Deno.env.get('UNUSUAL_WHALES_API_KEY') || '';
 
   if (sources.has('secapi') && !secApiKey) {
@@ -203,7 +205,7 @@ serve(async (req) => {
           : fetchInsiderBuys(provider, apiKey, since)
         : Promise.resolve([] as NormalizedInsiderBuy[]),
       sources.has('edgar')
-        ? fetchEdgarForm4InsiderTrades(since, { maxFilings: 80 })
+        ? fetchEdgarForm4InsiderTrades(since, { maxFilings: 120 })
             .then((rows) => rows.map(mapEdgarToNormalized))
             .catch((e) => {
               console.warn('sync-insider-buys edgar skipped', e);

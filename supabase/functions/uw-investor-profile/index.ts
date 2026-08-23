@@ -49,6 +49,11 @@ const CONGRESS_PHOTO = 'https://unitedstates.github.io/images/congress/225x275';
 const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
 /** מתחת לסף — מושכים היסטוריה עמוקה מ-Quiver לפרופיל */
 const THIN_HISTORY_THRESHOLD = 12;
+/** כמה עסקאות אחרונות להחזיר בפרופיל (UI / API) */
+const RECENT_TRADES_LIMIT = Math.min(
+  100,
+  Math.max(20, Number(Deno.env.get('PROFILE_RECENT_TRADES_LIMIT') || '50'))
+);
 
 interface HoldingRow {
   ticker: string;
@@ -279,7 +284,7 @@ async function buildPoliticianProfile(
   const holdings = aggregateCongressHoldings(mine);
 
   const recent = mine
-    .slice(0, 30)
+    .slice(0, RECENT_TRADES_LIMIT)
     .map((t) => congressToRecent(t, politicianId))
     .filter(Boolean) as RecentTradeRow[];
 
@@ -331,7 +336,7 @@ async function buildInsiderProfile(
   const dbRows = await loadInsiderBuysFromDb(supabase, {
     ticker,
     insiderName: nameKey,
-    limit: 120,
+    limit: 200,
   }).catch(() => []);
 
   const form4History =
@@ -363,7 +368,7 @@ async function buildInsiderProfile(
 
   if (!txs.length && apiKey) {
     txs = await fetchUwInsiderTransactions(apiKey, {
-      limit: 80,
+      limit: 200,
       transactionCodes: ['P', 'S'],
       ticker_symbol: ticker || undefined,
       owner_name: nameKey || undefined,
@@ -399,7 +404,7 @@ async function buildInsiderProfile(
   });
 
   const holdings = aggregateInsiderHoldings(mine);
-  const recent = mine.slice(0, 20).map(insiderToRecent);
+  const recent = mine.slice(0, RECENT_TRADES_LIMIT).map(insiderToRecent);
 
   const dedupedInputs = dedupeTradeInputs(
     [

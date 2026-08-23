@@ -58,14 +58,16 @@ serve(async (req) => {
   );
 
   let cikFilter: string[] | null = null;
-  let historyLimit = 12;
+  // 16 רבעונים ≈ 4 שנים; מקסימום 24 (~6 שנים) — SEC/UW כבר במנוי
+  let historyLimit = Number(Deno.env.get('FUND_13F_HISTORY_LIMIT') || '16');
+  historyLimit = Math.min(24, Math.max(1, Number.isFinite(historyLimit) ? historyLimit : 16));
   try {
     const body = await req.json();
     if (Array.isArray(body?.ciks)) {
       cikFilter = body.ciks.map((c: unknown) => String(c).trim()).filter(Boolean);
     }
     if (body?.history_limit != null) {
-      historyLimit = Math.min(24, Math.max(1, Number(body.history_limit) || 12));
+      historyLimit = Math.min(24, Math.max(1, Number(body.history_limit) || 16));
     }
   } catch {
     /* empty */

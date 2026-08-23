@@ -41,12 +41,14 @@ serve(async (req) => {
     );
   }
 
-  let limit = 200;
+  // ברירת מחדל 200; cron מעביר limit=200. max 500 — Quiver live = קריאה אחת.
+  let limit = Number(Deno.env.get('CONGRESS_SYNC_LIMIT') || '200');
+  limit = Math.min(500, Math.max(10, Number.isFinite(limit) ? limit : 200));
   let deep = true;
   let bioguides = CURATED_CONGRESS_BIOGUIDES;
   try {
     const body = await req.json();
-    if (body?.limit) limit = Math.min(400, Math.max(10, Number(body.limit)));
+    if (body?.limit) limit = Math.min(500, Math.max(10, Number(body.limit)));
     if (body?.deep === false) deep = false;
     if (Array.isArray(body?.bioguides) && body.bioguides.length) {
       bioguides = body.bioguides.map((b: unknown) => String(b).trim().toUpperCase()).filter(Boolean);

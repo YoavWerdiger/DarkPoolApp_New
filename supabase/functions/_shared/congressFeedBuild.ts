@@ -252,10 +252,11 @@ function quiverToCongressRow(
 }
 
 async function buildFromUw(apiKey: string, limit: number): Promise<CongressTradeRow[]> {
+  const fetchCap = Math.min(300, Math.max(limit * 2, limit));
   const [politicians, recent, unusual] = await Promise.all([
     fetchUwPoliticians(apiKey, 36).catch(() => []),
-    fetchUwCongressRecent(apiKey, 120).catch(() => [] as UwCongressTrade[]),
-    fetchUwCongressUnusualTrades(apiKey, { limit: 80 }).catch(() => []),
+    fetchUwCongressRecent(apiKey, fetchCap).catch(() => [] as UwCongressTrade[]),
+    fetchUwCongressUnusualTrades(apiKey, { limit: Math.min(120, fetchCap) }).catch(() => []),
   ]);
 
   const bioMap = new Map<string, string>();
@@ -281,11 +282,11 @@ async function buildFromUw(apiKey: string, limit: number): Promise<CongressTrade
       const db = String(b.filed_at_date ?? b.transaction_date ?? '');
       return db.localeCompare(da);
     })
-    .slice(0, Math.min(80, limit * 2));
+    .slice(0, Math.min(400, Math.max(limit * 2, limit)));
 
   const tickers = Array.from(
     new Set(sorted.map((t) => String(t.ticker ?? t.symbol ?? '').toUpperCase()))
-  ).slice(0, 12);
+  ).slice(0, 20);
 
   const pricesByTicker = new Map<string, Map<string, number>>();
   for (const sym of tickers) {

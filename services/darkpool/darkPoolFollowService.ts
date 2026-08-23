@@ -13,7 +13,7 @@ export interface FollowedInvestor {
   ticker?: string;
 }
 
-type FollowListener = () => void;
+type FollowListener = (list?: FollowedInvestor[]) => void;
 const listeners = new Set<FollowListener>();
 
 export function subscribeFollowChanges(fn: FollowListener): () => void {
@@ -21,8 +21,8 @@ export function subscribeFollowChanges(fn: FollowListener): () => void {
   return () => listeners.delete(fn);
 }
 
-function notifyFollowChanged() {
-  for (const fn of listeners) fn();
+function notifyFollowChanged(list?: FollowedInvestor[]) {
+  for (const fn of listeners) fn(list);
 }
 
 async function readLocal(): Promise<FollowedInvestor[]> {
@@ -132,7 +132,7 @@ export async function toggleFollowInvestor(person: FollowedInvestor): Promise<bo
   void persistCloud(person, following).catch((e) =>
     console.warn('persistCloud follow', (e as Error).message)
   );
-  notifyFollowChanged();
+  notifyFollowChanged(list);
   return following;
 }
 
@@ -141,11 +141,11 @@ export async function unfollowInvestor(person: FollowedInvestor): Promise<void> 
   const next = list.filter((x) => !(x.id === person.id && x.kind === person.kind));
   await writeLocal(next);
   void persistCloud(person, false).catch(() => {});
-  notifyFollowChanged();
+  notifyFollowChanged(next);
 }
 
 export async function syncFollowedFromCloud(): Promise<FollowedInvestor[]> {
   const merged = await mergeLocalAndCloud();
-  notifyFollowChanged();
+  notifyFollowChanged(merged);
   return merged;
 }

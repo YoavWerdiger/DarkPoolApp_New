@@ -135,6 +135,16 @@ export async function fetchYahooDaily(
       const d = new Date(result.timestamp[i] * 1000).toISOString().slice(0, 10);
       out.set(d, c);
     }
+    // מחיר שוק אחרון מ-meta (לא רק סגירה יומית אחרונה) — לסימון אחזקות עדכני יותר
+    const live = Number(result.meta?.regularMarketPrice);
+    if (Number.isFinite(live) && live > 0) {
+      const asOfSec = Number(result.meta?.regularMarketTime);
+      const asOf =
+        Number.isFinite(asOfSec) && asOfSec > 0
+          ? new Date(asOfSec * 1000).toISOString().slice(0, 10)
+          : new Date().toISOString().slice(0, 10);
+      out.set(asOf, live);
+    }
   } catch {
     /* Yahoo לעיתים חסום מ-Edge — ממשיכים עם notional */
   } finally {

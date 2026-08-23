@@ -20,6 +20,9 @@ export function useDarkPoolInvestorProfile(
       return fetchInvestorProfile(id, kind, ticker, force);
     },
     enabled: !!id,
+    // בפתיחת פרופיל — רענון מחירים/תשואות אם הנתונים לא טריים (לא חיים תוך-יומיים)
+    staleTime: 2 * 60 * 1000,
+    refetchOnMount: true,
   });
 
   const refetch = useCallback(async () => {

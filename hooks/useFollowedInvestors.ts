@@ -26,8 +26,19 @@ export function useFollowedInvestors() {
   });
 
   useEffect(() => {
-    const unsub = subscribeFollowChanges(() => {
-      void queryClient.invalidateQueries({ queryKey: appQueryKeys.followedInvestors });
+    // Prefer setQueryData over invalidate — list is already written; avoid refetch lag
+    const unsub = subscribeFollowChanges((list) => {
+      if (list) {
+        queryClient.setQueryData(appQueryKeys.followedInvestors, list);
+        return;
+      }
+      void listFollowedInvestors(false)
+        .then((fresh) => {
+          queryClient.setQueryData(appQueryKeys.followedInvestors, fresh);
+        })
+        .catch(() => {
+          void queryClient.invalidateQueries({ queryKey: appQueryKeys.followedInvestors });
+        });
     });
     return unsub;
   }, []);

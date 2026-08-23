@@ -82,7 +82,7 @@ export async function fetchPoliticianMetricsFromDb(
 
 export async function triggerCongressSync(): Promise<void> {
   const { error } = await supabase.functions.invoke('sync-congress-trades', {
-    body: { limit: 60 },
+    body: { limit: 200, deep: true },
   });
   if (error) throw error;
 }

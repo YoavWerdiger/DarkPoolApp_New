@@ -373,7 +373,7 @@ export function PersonPortfolioProfileScreen({
         });
       }
 
-      const tradeRows: TradeRow[] = (p?.recent_trades ?? []).slice(0, 12).map((t, i) => ({
+      const tradeRows: TradeRow[] = (p?.recent_trades ?? []).slice(0, 50).map((t, i) => ({
         key: `${t.id}-${i}`,
         ticker: t.ticker,
         label: t.txn_label,

@@ -20,9 +20,12 @@ npx supabase secrets set INSIDER_SYNC_SOURCES=secapi,form4api,unusualwhales
 npx supabase secrets set SEC_API_KEY=<מפתח>
 npx supabase secrets set FORM4_API_KEY=<מפתח>
 npx supabase secrets set FORM4_PROVIDER=form4api
-npx supabase secrets set FORM4_LOOKBACK_HOURS=168
-npx supabase secrets set FORM4_MAX_PAGES=10
+npx supabase secrets set FORM4_LOOKBACK_HOURS=336
+npx supabase secrets set FORM4_MAX_PAGES=12
 npx supabase secrets set FORM4_EXCLUDE_10B5=true
+# אופציונלי — backfill חד־פעמי עמוק יותר (90–180 יום): FORM4_LOOKBACK_HOURS=2160 / 4320
+# פרופיל: PROFILE_RECENT_TRADES_LIMIT=50 (ברירת מחדל בקוד)
+# קונגרס cron: CONGRESS_SYNC_LIMIT=200 | 13F: FUND_13F_HISTORY_LIMIT=16
 
 npx supabase secrets set UNUSUAL_WHALES_API_KEY=<מפתח>
 npx supabase secrets set UW_CLIENT_API_ID=100001

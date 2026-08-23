@@ -61,7 +61,8 @@ export interface InvestorProfile {
 }
 
 let cache = new Map<string, { at: number; data: InvestorProfile }>();
-const CACHE_MS = 8 * 60 * 1000;
+/** מיושר ל-staleTime של useDarkPoolInvestorProfile — לא לחסום רענון Yahoo בפתיחת פרופיל */
+const CACHE_MS = 2 * 60 * 1000;
 
 function cacheKey(id: string, kind: string, ticker?: string) {
   return `${kind}:${id}:${ticker ?? ''}`;

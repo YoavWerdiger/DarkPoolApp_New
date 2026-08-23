@@ -46,12 +46,15 @@ const KNOWN_BY_ID: Record<string, string> = {
   '1697748': `${WIKI}/4/44/Cathie_Wood_ARK_Invest_Photo.jpg`,
   '1336528': `${WIKI}/4/4a/Bill_Ackman_2019.jpg`,
   'AAPL:Cook': `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
+  'NVDA:Huang': `${WIKI}/5/59/Jensen_Huang_%28cropped%29_%282024%29.jpg`,
 };
 
 const KNOWN_BY_NAME: Record<string, string> = {
   'elon musk': `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
   'tim cook': KNOWN_BY_ID['AAPL:Cook'],
   'cook tim': KNOWN_BY_ID['AAPL:Cook'],
+  'jensen huang': KNOWN_BY_ID['NVDA:Huang'],
+  'huang jensen': KNOWN_BY_ID['NVDA:Huang'],
   'warren buffett': KNOWN_BY_ID['1067983'],
   'cathie wood': KNOWN_BY_ID['1697748'],
   'bill ackman': KNOWN_BY_ID['1336528'],
@@ -118,6 +121,13 @@ export function knownPortraitUrl(
     }
     if (id.toUpperCase().includes('COOK') || nameKey.includes('tim cook')) {
       return KNOWN_BY_NAME['tim cook'];
+    }
+    if (
+      nameKey.includes('jensen huang') ||
+      nameKey.includes('huang jensen') ||
+      (id.toUpperCase().includes('NVDA') && id.toUpperCase().includes('HUANG'))
+    ) {
+      return KNOWN_BY_NAME['jensen huang'];
     }
   }
 

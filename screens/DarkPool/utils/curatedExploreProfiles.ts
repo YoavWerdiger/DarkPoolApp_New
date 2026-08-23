@@ -116,7 +116,7 @@ export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
     id: 'NVDA:Huang',
     name: 'Jensen Huang',
     subtitle: 'CEO · NVIDIA',
-    image_url: `${WIKI}/9/9e/Jensen_Huang_%28cropped%29.jpg`,
+    image_url: `${WIKI}/5/59/Jensen_Huang_%28cropped%29_%282024%29.jpg`,
     kind: 'insider',
     ticker: 'NVDA',
     activity_score: 97,

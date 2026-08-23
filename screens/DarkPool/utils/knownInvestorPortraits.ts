@@ -19,6 +19,7 @@ export const KNOWN_INVESTOR_PORTRAIT_BY_ID: Record<string, string> = {
   '1697748': `${WIKI}/4/44/Cathie_Wood_ARK_Invest_Photo.jpg`,
   '1336528': `${WIKI}/4/4a/Bill_Ackman_2019.jpg`,
   'AAPL:Cook': `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
+  'NVDA:Huang': `${WIKI}/5/59/Jensen_Huang_%28cropped%29_%282024%29.jpg`,
 };
 
 export const KNOWN_INVESTOR_PORTRAIT_BY_NAME: Record<string, string> = {
@@ -26,7 +27,8 @@ export const KNOWN_INVESTOR_PORTRAIT_BY_NAME: Record<string, string> = {
   'tim cook': KNOWN_INVESTOR_PORTRAIT_BY_ID['AAPL:Cook'],
   'cook tim': KNOWN_INVESTOR_PORTRAIT_BY_ID['AAPL:Cook'],
   'satya nadella': `${WIKI}/0/0c/Satya_Nadella.jpg`,
-  'jensen huang': `${WIKI}/9/9e/Jensen_Huang_%28cropped%29.jpg`,
+  'jensen huang': KNOWN_INVESTOR_PORTRAIT_BY_ID['NVDA:Huang'],
+  'huang jensen': KNOWN_INVESTOR_PORTRAIT_BY_ID['NVDA:Huang'],
   'mark zuckerberg': `${WIKI}/1/18/Mark_Zuckerberg_F8_2019_Keynote_%2832830578717%29_%28cropped%29.jpg`,
   'larry ellison': `${WIKI}/0/00/Larry_Ellison_on_stage.jpg`,
   'warren buffett': KNOWN_INVESTOR_PORTRAIT_BY_ID['1067983'],
@@ -61,6 +63,13 @@ export function knownPortraitForInvestor(opts: {
     }
     if (idUpper.includes('COOK') || nameKey.includes('cook')) {
       return KNOWN_INVESTOR_PORTRAIT_BY_NAME['tim cook'];
+    }
+    if (
+      nameKey.includes('jensen huang') ||
+      nameKey.includes('huang jensen') ||
+      (idUpper.includes('NVDA') && idUpper.includes('HUANG'))
+    ) {
+      return KNOWN_INVESTOR_PORTRAIT_BY_NAME['jensen huang'];
     }
   }
 

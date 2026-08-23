@@ -33,6 +33,19 @@ export function avgEntryPriceFromCost(
   return costUsd / qty;
 }
 
+/**
+ * מחיר דיווח מ־13F: value_usd / shares מהדוח הרבעוני.
+ * זה mark בסוף התקופה בדיווח — לא מחיר כניסה / עלות קנייה.
+ */
+export function impliedFilingPriceFrom13f(
+  valueUsd: number | null | undefined,
+  shares: number | null | undefined
+): number | null {
+  if (valueUsd == null || shares == null) return null;
+  if (!(valueUsd > 0) || !(shares > 0)) return null;
+  return valueUsd / shares;
+}
+
 export function formatPercent(v: number | null | undefined, digits = 1): string {
   if (v == null || !Number.isFinite(v)) return '—';
   return `${(v * 100).toFixed(digits)}%`;

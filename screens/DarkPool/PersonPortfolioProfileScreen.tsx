@@ -29,6 +29,7 @@ import {
   avgEntryPriceFromCost,
   formatAvgEntryUsd,
   formatUsdCompact,
+  impliedFilingPriceFrom13f,
 } from './utils/darkPoolFormat';
 import {
   appendLivePortfolioPoint,
@@ -75,6 +76,11 @@ type HoldingRow = {
   first_added_date?: string | null;
   /** מחיר ממוצע לכניסה (cost_usd / qty) — רק כשיש בסיס עלות משחזור */
   avg_price?: number | null;
+  /**
+   * מחיר דיווח מ־13F (value_usd / shares) — mark בדוח, לא מחיר כניסה.
+   * רק למנהלי קרן כשיש שני השדות מהדיווח.
+   */
+  filing_price?: number | null;
   /** תווית תאריך: «כניסה» (שחזור) / «דיווח» (13F) */
   dateLabel?: 'added' | 'reported' | null;
 };
@@ -305,6 +311,8 @@ export function PersonPortfolioProfileScreen({
               .join(' · '),
             allocation_pct: h.allocation_pct,
             value_usd: h.value_usd,
+            // value/shares מהדוח — מחיר דיווח, לא כניסה
+            filing_price: impliedFilingPriceFrom13f(h.value_usd, h.shares),
             first_added_date: firstAdded,
             dateLabel: firstAdded ? 'reported' : null,
           };
@@ -314,7 +322,8 @@ export function PersonPortfolioProfileScreen({
           fullChartSeries: series,
           holdings: holdingRows,
           trades: [] as TradeRow[],
-          disclaimer: 'מבוסס על דיווחים ציבוריים — לא תיק מלא בזמן אמת.',
+          disclaimer:
+            'מבוסס על דיווחי 13F ציבוריים — לא תיק בזמן אמת. «מחיר דיווח» = שווי/מניות מהדוח (mark), לא מחיר כניסה.',
         };
       }
 
@@ -601,11 +610,13 @@ export function PersonPortfolioProfileScreen({
                   const hasReturn =
                     h.return_pct != null && Number.isFinite(h.return_pct);
                   const avgStr = formatAvgEntryUsd(h.avg_price);
+                  const filingStr = formatAvgEntryUsd(h.filing_price);
                   const retColor =
                     hasReturn && (h.return_pct as number) >= 0
                       ? tokens.colors.primary.main
                       : tokens.colors.text.danger;
-                  const showRightMeta = hasReturn || !!avgStr || !!dateStr;
+                  const showRightMeta =
+                    hasReturn || !!avgStr || !!filingStr || !!dateStr;
                   return (
                     <React.Fragment key={h.ticker}>
                       <Pressable
@@ -647,6 +658,11 @@ export function PersonPortfolioProfileScreen({
                               {avgStr ? (
                                 <Text style={styles.holdingAvg} numberOfLines={1}>
                                   מחיר ממוצע {avgStr}
+                                </Text>
+                              ) : null}
+                              {filingStr ? (
+                                <Text style={styles.holdingAvg} numberOfLines={1}>
+                                  מחיר דיווח {filingStr}
                                 </Text>
                               ) : null}
                               {dateStr ? (

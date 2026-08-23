@@ -297,7 +297,6 @@ export function PersonPortfolioProfileScreen({
             ticker: h.ticker,
             title: h.ticker,
             meta: [
-              h.issuer_name,
               sharesLabel,
               formatHoldingValueLabel(h.value_usd),
               h.allocation_pct != null ? `${h.allocation_pct.toFixed(1)}%` : null,

@@ -510,8 +510,8 @@ function metricsHoldingsToRows(m: CongressPortfolioMetrics): HoldingRow[] {
     txn_mix: 'פתוח',
     allocation_pct: h.allocation_pct,
     amount_label: h.basis_reliable
-      ? `${Math.round(h.qty).toLocaleString('en-US')} מניות · $${Math.round(h.market_value).toLocaleString('en-US')}`
-      : `≈ $${Math.round(h.market_value).toLocaleString('en-US')} (הערכה מטווח דיווח)`,
+      ? `${Math.round(h.qty).toLocaleString('en-US')} מניות · שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`
+      : `שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`,
     mid_usd_k: h.market_value / 1000,
     return_pct: h.basis_reliable ? h.return_pct : null,
   }));

@@ -107,6 +107,12 @@ function formatHoldingDateHe(iso: string | null | undefined): string | null {
   return `${day}/${m}/${y}`;
 }
 
+/** תווית שווי אחזקה ליד סכום $ — בלי «הערכה» */
+function formatHoldingValueLabel(v: number | null | undefined): string | null {
+  if (v == null || !Number.isFinite(v)) return null;
+  return `שווי אחזקה ${formatUsdCompact(v)}`;
+}
+
 /** אומדן תאריך הוספה מעסקאות אחרונות — עד שה־edge מחזיר first_added_date מלא */
 function earliestBuyDateFromRecent(
   ticker: string,
@@ -282,7 +288,7 @@ export function PersonPortfolioProfileScreen({
         const holdingRows: HoldingRow[] = (p?.holdings ?? []).slice(0, 16).map((h) => {
           const firstAdded =
             h.first_added_date?.slice(0, 10) || filingDate || null;
-          // 13F מדווח מניות אמיתיות — מציגים כשיש מספר
+          // 13F מדווח מניות אמיתיות — מציגים כשיש מספר (לא Yahoo/mock)
           const sharesLabel =
             h.shares != null && Number.isFinite(h.shares) && h.shares > 0
               ? `${Math.round(h.shares).toLocaleString('en-US')} מניות`
@@ -293,7 +299,7 @@ export function PersonPortfolioProfileScreen({
             meta: [
               h.issuer_name,
               sharesLabel,
-              h.value_usd != null ? formatUsdCompact(h.value_usd) : null,
+              formatHoldingValueLabel(h.value_usd),
               h.allocation_pct != null ? `${h.allocation_pct.toFixed(1)}%` : null,
             ]
               .filter(Boolean)
@@ -343,10 +349,12 @@ export function PersonPortfolioProfileScreen({
             meta: h.basis_reliable
               ? [
                   `${Math.round(h.qty).toLocaleString('en-US')} מניות`,
-                  formatUsdCompact(h.market_value),
-                ].join(' · ')
+                  formatHoldingValueLabel(h.market_value),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : // טווח STOCK Act — לא מציגים כמות מניות מומצאת
-                formatUsdCompact(h.market_value),
+                formatHoldingValueLabel(h.market_value) ?? '',
             allocation_pct: h.allocation_pct,
             market_value: h.market_value,
             // תשואה מטווח $ מעגלית (≈ תנודת מחיר) — מסתירים יחד עם avg

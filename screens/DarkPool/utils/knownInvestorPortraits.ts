@@ -17,20 +17,24 @@ export const KNOWN_INVESTOR_PORTRAIT_BY_ID: Record<string, string> = {
   '888dc73f-f1eb-485a-a241-80657aaaaff9': `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
   '1067983': `${WIKI}/5/51/Warren_Buffett_KU_Visit.jpg`,
   '1697748': `${WIKI}/4/44/Cathie_Wood_ARK_Invest_Photo.jpg`,
-  '1336528': `${WIKI}/4/4a/Bill_Ackman_2019.jpg`,
+  '1336528': `${WIKI}/d/d8/Bill_Ackman_%2826410186110%29_%28cropped%29.jpg`,
+  'TSLA:Musk': `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
   'AAPL:Cook': `${WIKI}/f/f7/Tim_Cook_March_2026_%28cropped_2%29.jpg`,
-  'NVDA:Huang': `${WIKI}/5/59/Jensen_Huang_%28cropped%29_%282024%29.jpg`,
+  'MSFT:Nadella': `${WIKI}/4/4a/Satya_Nadella_%28cropped%29.jpg`,
+  'NVDA:Huang': `${WIKI}/c/c4/Jensen_Huang_%28cropped%29.jpg`,
+  'META:Zuckerberg': `${WIKI}/1/18/Mark_Zuckerberg_F8_2019_Keynote_%2832830578717%29_%28cropped%29.jpg`,
+  'ORCL:Ellison': `${WIKI}/0/0e/Larry_Ellison_picture_%28cropped%29.png`,
 };
 
 export const KNOWN_INVESTOR_PORTRAIT_BY_NAME: Record<string, string> = {
-  'elon musk': `${WIKI}/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg`,
+  'elon musk': KNOWN_INVESTOR_PORTRAIT_BY_ID['TSLA:Musk'],
   'tim cook': KNOWN_INVESTOR_PORTRAIT_BY_ID['AAPL:Cook'],
   'cook tim': KNOWN_INVESTOR_PORTRAIT_BY_ID['AAPL:Cook'],
-  'satya nadella': `${WIKI}/0/0c/Satya_Nadella.jpg`,
+  'satya nadella': KNOWN_INVESTOR_PORTRAIT_BY_ID['MSFT:Nadella'],
   'jensen huang': KNOWN_INVESTOR_PORTRAIT_BY_ID['NVDA:Huang'],
   'huang jensen': KNOWN_INVESTOR_PORTRAIT_BY_ID['NVDA:Huang'],
-  'mark zuckerberg': `${WIKI}/1/18/Mark_Zuckerberg_F8_2019_Keynote_%2832830578717%29_%28cropped%29.jpg`,
-  'larry ellison': `${WIKI}/0/00/Larry_Ellison_on_stage.jpg`,
+  'mark zuckerberg': KNOWN_INVESTOR_PORTRAIT_BY_ID['META:Zuckerberg'],
+  'larry ellison': KNOWN_INVESTOR_PORTRAIT_BY_ID['ORCL:Ellison'],
   'warren buffett': KNOWN_INVESTOR_PORTRAIT_BY_ID['1067983'],
   'cathie wood': KNOWN_INVESTOR_PORTRAIT_BY_ID['1697748'],
   'bill ackman': KNOWN_INVESTOR_PORTRAIT_BY_ID['1336528'],
@@ -70,6 +74,15 @@ export function knownPortraitForInvestor(opts: {
       (idUpper.includes('NVDA') && idUpper.includes('HUANG'))
     ) {
       return KNOWN_INVESTOR_PORTRAIT_BY_NAME['jensen huang'];
+    }
+    if (nameKey.includes('nadella') || (idUpper.includes('MSFT') && idUpper.includes('NADELLA'))) {
+      return KNOWN_INVESTOR_PORTRAIT_BY_NAME['satya nadella'];
+    }
+    if (nameKey.includes('ellison') || (idUpper.includes('ORCL') && idUpper.includes('ELLISON'))) {
+      return KNOWN_INVESTOR_PORTRAIT_BY_NAME['larry ellison'];
+    }
+    if (nameKey.includes('ackman') || id === '1336528') {
+      return KNOWN_INVESTOR_PORTRAIT_BY_NAME['bill ackman'];
     }
   }
 

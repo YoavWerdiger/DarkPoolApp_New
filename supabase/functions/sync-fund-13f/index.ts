@@ -24,7 +24,8 @@ const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: strin
   '1336528': {
     name: 'Pershing Square Capital Management LP',
     manager: 'Bill Ackman',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Bill_Ackman_2019.jpg',
+    image:
+      'https://upload.wikimedia.org/wikipedia/commons/d/d8/Bill_Ackman_%2826410186110%29_%28cropped%29.jpg',
   },
 };
 

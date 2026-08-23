@@ -37,6 +37,8 @@ export interface ProfileTradeInput {
   qty: number;
   /** true כש־qty הוערך מטווח $ (לא מניות מדווחות) */
   qtyEstimated?: boolean;
+  /** false כשאין מחיר/שווי מדווח (Form4 בלי מחיר → Yahoo@first_added) */
+  priceDisclosed?: boolean;
 }
 
 export interface ProfilePortfolioBuildInput {
@@ -69,8 +71,10 @@ export type ProfilePositionState = {
   cost: number;
   /** תאריך פתיחת הפוזיציה הנוכחית (קנייה ראשונה אחרי אפס) */
   first_added_date: string | null;
-  /** false אם הכמות הפתוחה כוללת qty מוערך מטווח $ */
+  /** false אם אין מחיר מדווח (טווח $ / Form4 בלי מחיר) */
   basisReliable: boolean;
+  /** false אם qty מטווח $ מוערך */
+  qtyDisclosed: boolean;
 };
 
 /** שלב 2 — replay avg-cost positions */
@@ -86,14 +90,18 @@ export function replayProfilePositions(
       cost: 0,
       first_added_date: null,
       basisReliable: true,
+      qtyDisclosed: true,
     };
     const day = t.date.slice(0, 10);
+    const priceDisclosed = t.priceDisclosed !== false && !t.qtyEstimated;
     if (t.side === 'buy') {
       if (cur.qty <= 0) {
         cur.first_added_date = day;
-        cur.basisReliable = !t.qtyEstimated;
-      } else if (t.qtyEstimated) {
-        cur.basisReliable = false;
+        cur.basisReliable = !t.qtyEstimated && priceDisclosed;
+        cur.qtyDisclosed = !t.qtyEstimated;
+      } else {
+        if (t.qtyEstimated || !priceDisclosed) cur.basisReliable = false;
+        if (t.qtyEstimated) cur.qtyDisclosed = false;
       }
       cur.qty += t.qty;
       cur.cost += t.amountUsd;
@@ -107,6 +115,7 @@ export function replayProfilePositions(
         cur.cost = 0;
         cur.first_added_date = null;
         cur.basisReliable = true;
+        cur.qtyDisclosed = true;
       }
     }
     pos.set(t.ticker, cur);
@@ -268,6 +277,8 @@ export function buildProfileHoldings(
         : null;
     const basisReliable =
       'basisReliable' in p ? p.basisReliable !== false : true;
+    const qtyDisclosed =
+      'qtyDisclosed' in p ? p.qtyDisclosed !== false : basisReliable;
     let entryPrice: number | null = null;
     let returnPct = 0;
 
@@ -292,6 +303,7 @@ export function buildProfileHoldings(
       return_pct: returnPct,
       first_added_date: firstAdded,
       basis_reliable: basisReliable,
+      qty_disclosed: qtyDisclosed,
       entry_price: entryPrice != null ? round2(entryPrice) : null,
     });
   }

@@ -8,7 +8,7 @@ export interface FundHolding {
   allocation_pct: number | null;
   /** דיווח 13F ראשון שבו הטיקר מופיע אצלנו (לא בהכרח קנייה ראשונה) */
   first_added_date?: string | null;
-  /** מחיר כניסה מוצר: value_usd / shares מ־13F */
+  /** מחיר כניסה מוצר: Yahoo ב־first_added_date (כמו פוליטיקאים) */
   entry_price?: number | null;
   current_price?: number | null;
   /** תשואה מול מחיר שוק נוכחי */

@@ -509,6 +509,7 @@ function metricsHoldingsToRows(m: CongressPortfolioMetrics): HoldingRow[] {
       entry != null && Number.isFinite(h.return_pct)
         ? true
         : h.basis_reliable === true && Number.isFinite(h.return_pct);
+    const showShares = h.basis_reliable === true || h.qty_disclosed === true;
     return {
       ticker: h.ticker,
       issuer: null,
@@ -518,13 +519,13 @@ function metricsHoldingsToRows(m: CongressPortfolioMetrics): HoldingRow[] {
       first_added_date: h.first_added_date ?? null,
       txn_mix: 'פתוח',
       allocation_pct: h.allocation_pct,
-      // qty רק כש־basis_reliable — לא ממציאים מניות מטווח STOCK Act
-      amount_label: h.basis_reliable
+      // qty רק כשמניות מדווחות — לא ממציאים מניות מטווח STOCK Act
+      amount_label: showShares
         ? `${Math.round(h.qty).toLocaleString('en-US')} מניות · שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`
         : `שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`,
       mid_usd_k: h.market_value / 1000,
       entry_price: entry,
-      // תשואה מוצר: Form4 מ־cost; טווחי קונגרס מ־מחיר שוק ב־first_added
+      // תשואה מוצר: Form4 מ־cost; אחרת מ־מחיר שוק ב־first_added
       return_pct: hasReturn ? h.return_pct : null,
     };
   });

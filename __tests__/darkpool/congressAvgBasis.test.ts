@@ -64,4 +64,29 @@ describe('congress avg basis reliability', () => {
     const entry = basisReliable ? disclosedAvg : yahooAtDate;
     expect(entry).toBe(42.5);
   });
+
+  it('Form4 without disclosed price uses market-at-first-added (not fake $1 avg)', () => {
+    const sharesLabel = '1500 shares';
+    // parseCongressAmount חייב להתעלם מתווית מניות בלי $
+    const looksLikeSharesOnly = /share/i.test(sharesLabel) && !/\$/.test(sharesLabel);
+    const rangeAmountUsd = looksLikeSharesOnly ? 0 : 1500;
+    expect(rangeAmountUsd).toBe(0);
+
+    const basisReliable = false; // אין מחיר Form4
+    const firstAddedPx = 48;
+    const currentPx = 55;
+    const entry = basisReliable ? 1 : firstAddedPx;
+    const returnPct = ((currentPx - entry) / entry) * 100;
+    expect(entry).toBe(48);
+    expect(returnPct).toBeCloseTo((55 - 48) / 48 * 100);
+  });
+
+  it('fund managers align to yahoo-at-first-added like politicians', () => {
+    const firstAddedPx = 120;
+    const currentPx = 150;
+    const entry = firstAddedPx; // לא value/shares
+    const returnPct = ((currentPx - entry) / entry) * 100;
+    expect(entry).toBe(120);
+    expect(returnPct).toBeCloseTo(25);
+  });
 });

@@ -34,8 +34,8 @@ export function avgEntryPriceFromCost(
 }
 
 /**
- * מחיר כניסה מוצר מ־13F: value_usd / shares מהדוח הרבעוני.
- * mark בסוף התקופה בדיווח — משמש כמחיר כניסה לחישוב תשואה מול מחיר שוק.
+ * מחיר כניסה מוצר מ־13F (fallback לקוח בלבד): value_usd / shares.
+ * השרת מעדיף Yahoo ב־first_added_date — כמו פוליטיקאים.
  */
 export function impliedFilingPriceFrom13f(
   valueUsd: number | null | undefined,

@@ -11,10 +11,12 @@ export interface PortfolioHoldingMetric {
   /** תאריך קנייה ראשון בפוזיציה הפתוחה הנוכחית (YYYY-MM-DD) — משחזור עסקאות */
   first_added_date?: string | null;
   /**
-   * true רק כש־qty/cost מבוססים על מניות מדווחות (Form 4), לא על טווחי STOCK Act.
-   * בלי זה אין להציג «מחיר ממוצע» מדויק מ־cost/qty.
+   * true רק כש־qty/cost מבוססים על מניות מדווחות + מחיר Form4.
+   * בלי זה — «מחיר כניסה» = Yahoo ב־first_added_date.
    */
   basis_reliable?: boolean;
+  /** true כש־qty ממניות מדווחות (גם בלי מחיר Form4) */
+  qty_disclosed?: boolean;
   /**
    * מחיר כניסה מוצר:
    * - basis_reliable: cost/qty

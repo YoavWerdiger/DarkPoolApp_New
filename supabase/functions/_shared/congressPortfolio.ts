@@ -31,6 +31,8 @@ export interface NormalizedCongressTx {
   qty: number;
   /** qty הומצא מטווח $ + מחיר שוק — avg=cost/qty מעגלי ולא אמין */
   qtyEstimated: boolean;
+  /** מחיר/שווי מדיווח (Form4) — לא מילוי Yahoo; נדרש ל־basis_reliable */
+  priceDisclosed: boolean;
 }
 
 export interface PortfolioHoldingMetric {
@@ -44,10 +46,12 @@ export interface PortfolioHoldingMetric {
   /** תאריך קנייה ראשון בפוזיציה הפתוחה הנוכחית (YYYY-MM-DD) */
   first_added_date?: string | null;
   /**
-   * true רק כשכל הכמות הפתוחה מבוססת על מניות מדווחות (לא טווחי קונגרס).
-   * בלי זה — אין להציג «מחיר ממוצע» מ־cost/qty (מעגלי).
+   * true רק כשכל הכמות הפתוחה מבוססת על מניות מדווחות + מחיר/שווי מדווח.
+   * בלי זה — «מחיר כניסה» = Yahoo ב־first_added_date (לא cost/qty מעגלי).
    */
   basis_reliable?: boolean;
+  /** true כשה־qty ממניות מדווחות (Form4) — גם בלי מחיר Form4 */
+  qty_disclosed?: boolean;
   /**
    * מחיר כניסה מוצר:
    * - basis_reliable: cost/qty (מניות מדווחות)
@@ -98,6 +102,8 @@ export interface CongressPortfolioMetrics {
 
 export function parseCongressAmount(raw?: string | null): number {
   if (!raw) return 0;
+  // «1500 shares» בלי $ — לא טווח STOCK Act; אל תפרש כ־USD
+  if (/share/i.test(raw) && !/\$|usd|dollar/i.test(raw)) return 0;
   const nums =
     raw.match(/[\d,]+/g)?.map((s) => parseInt(s.replace(/,/g, ''), 10)).filter((n) => n > 0) ??
     [];
@@ -259,19 +265,26 @@ export function normalizeCongressTrades(
     let px: number;
     let qty: number;
     let qtyEstimated: boolean;
+    let priceDisclosed: boolean;
 
     if (disclosedShares > 0) {
-      // Form 4 / insider — qty אמיתי; מחיר ממוצע = עלות/כמות אמין
-      px =
-        disclosedPx > 0
-          ? disclosedPx
-          : amountUsd > 0
-            ? amountUsd / disclosedShares
-            : marketPx && marketPx > 0
-              ? marketPx
-              : 0;
+      // Form 4 / insider — qty אמיתי. מחיר ממוצע אמין רק עם מחיר/שווי מדווח.
+      if (disclosedPx > 0) {
+        px = disclosedPx;
+        if (!(amountUsd >= 100)) amountUsd = disclosedShares * px;
+        priceDisclosed = true;
+      } else if (amountUsd >= 100) {
+        px = amountUsd / disclosedShares;
+        priceDisclosed = true;
+      } else if (marketPx && marketPx > 0) {
+        // יש מניות, אין מחיר Form4 — MTM עם Yahoo; כניסה מוצר = Yahoo@first_added
+        px = marketPx;
+        amountUsd = disclosedShares * px;
+        priceDisclosed = false;
+      } else {
+        continue;
+      }
       if (!(px > 0)) continue;
-      if (!(amountUsd >= 100)) amountUsd = disclosedShares * px;
       qty = disclosedShares;
       qtyEstimated = false;
     } else {
@@ -282,11 +295,21 @@ export function normalizeCongressTrades(
       px = marketPx;
       qty = amountUsd / px;
       qtyEstimated = true;
+      priceDisclosed = false;
     }
 
     if (!Number.isFinite(qty) || qty <= 0) continue;
 
-    out.push({ date, ticker, side, amountUsd, price: px, qty, qtyEstimated });
+    out.push({
+      date,
+      ticker,
+      side,
+      amountUsd,
+      price: px,
+      qty,
+      qtyEstimated,
+      priceDisclosed,
+    });
   }
   return out.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
@@ -322,8 +345,10 @@ type ReplayPos = {
   qty: number;
   cost: number;
   first_added_date: string | null;
-  /** false אם כל/חלק מהכמות הפתוחה הגיעה מ־qty מוערך */
+  /** false אם אין מחיר/שווי מדווח לכל הכמות (טווח $ או Form4 בלי מחיר) */
   basisReliable: boolean;
+  /** false אם חלק מהכמות מטווח $ מוערך */
+  qtyDisclosed: boolean;
 };
 
 function replayPositions(txs: NormalizedCongressTx[]): Map<string, ReplayPos> {
@@ -335,14 +360,17 @@ function replayPositions(txs: NormalizedCongressTx[]): Map<string, ReplayPos> {
       cost: 0,
       first_added_date: null,
       basisReliable: true,
+      qtyDisclosed: true,
     };
     const day = t.date.slice(0, 10);
     if (t.side === 'buy') {
       if (cur.qty <= 0) {
         cur.first_added_date = day;
-        cur.basisReliable = !t.qtyEstimated;
-      } else if (t.qtyEstimated) {
-        cur.basisReliable = false;
+        cur.basisReliable = !t.qtyEstimated && t.priceDisclosed;
+        cur.qtyDisclosed = !t.qtyEstimated;
+      } else {
+        if (t.qtyEstimated || !t.priceDisclosed) cur.basisReliable = false;
+        if (t.qtyEstimated) cur.qtyDisclosed = false;
       }
       cur.qty += t.qty;
       cur.cost += t.amountUsd;
@@ -357,6 +385,7 @@ function replayPositions(txs: NormalizedCongressTx[]): Map<string, ReplayPos> {
         cur.cost = 0;
         cur.first_added_date = null;
         cur.basisReliable = true;
+        cur.qtyDisclosed = true;
       }
     }
     pos.set(t.ticker, cur);
@@ -621,7 +650,7 @@ export function buildCongressPortfolioMetrics(
 
     const basisReliable = p.basisReliable === true;
     let entryPrice: number | null = null;
-    let returnPct = 0;
+    let returnPct: number | null = null;
 
     if (basisReliable && p.qty > 0 && p.cost > 0) {
       // Form 4 / מניות מדווחות — מחיר מדווח עדיף על Yahoo-at-date
@@ -644,9 +673,10 @@ export function buildCongressPortfolioMetrics(
       current_price: currentPrice,
       market_value: marketValue,
       allocation_pct: 0,
-      return_pct: returnPct,
+      return_pct: returnPct ?? 0,
       first_added_date: p.first_added_date,
       basis_reliable: basisReliable,
+      qty_disclosed: p.qtyDisclosed === true,
       entry_price: entryPrice != null ? Math.round(entryPrice * 10000) / 10000 : null,
     });
   }
@@ -739,7 +769,7 @@ export function mapInsiderTradeToCongressInput(t: {
       0,
       10
     ),
-    // Form 4 / insider — מניות מדווחות; מאפשר מחיר ממוצע אמין
+    // Form 4 / insider — מניות מדווחות; מחיר ממוצע אמין רק עם מחיר מדווח
     shares: shares > 0 ? shares : null,
     disclosed_price: price > 0 ? price : null,
     shares_disclosed: shares > 0,
@@ -847,6 +877,7 @@ export async function metricsFromCongressTrades(
               return_pct,
               first_added_date: firstAdded,
               basis_reliable: false,
+              qty_disclosed: false,
               entry_price,
             };
           });

@@ -29,7 +29,6 @@ import {
   avgEntryPriceFromCost,
   formatAvgEntryUsd,
   formatUsdCompact,
-  impliedFilingPriceFrom13f,
 } from './utils/darkPoolFormat';
 import {
   appendLivePortfolioPoint,
@@ -78,11 +77,13 @@ type HoldingRow = {
   avg_price?: number | null;
   /**
    * מחיר כניסה מוצר:
-   * - 13F: value/shares מהדוח
-   * - קונגרס/טווח: מחיר שוק ב־first_added_date
+   * - Form4 עם מחיר מדווח: מחיר ממוצע (cost/qty)
+   * - אחרת (קונגרס / Form4 בלי מחיר / 13F): מחיר שוק ב־first_added_date
    */
   entry_price?: number | null;
-  /** תווית תאריך: «כניסה» (שחזור) / «דיווח» (13F) */
+  /** true כשיש מניות מדווחות להצגה (Form4) גם בלי מחיר אמין */
+  qty_disclosed?: boolean;
+  /** תווית תאריך: «כניסה» (שחזור/שוק) / «דיווח» (נדיר) */
   dateLabel?: 'added' | 'reported' | null;
 };
 
@@ -305,7 +306,7 @@ export function PersonPortfolioProfileScreen({
           const entry =
             h.entry_price != null && Number.isFinite(h.entry_price) && h.entry_price > 0
               ? h.entry_price
-              : impliedFilingPriceFrom13f(h.value_usd, h.shares);
+              : null;
           const returnPct =
             h.return_pct != null && Number.isFinite(h.return_pct) ? h.return_pct : null;
           return {
@@ -320,11 +321,11 @@ export function PersonPortfolioProfileScreen({
               .join(' · '),
             allocation_pct: h.allocation_pct,
             value_usd: h.value_usd,
-            // value/shares מהדוח — מחיר כניסה מוצר לחישוב תשואה
+            // Yahoo ב־first_added — כמו פוליטיקאים
             entry_price: entry,
             return_pct: returnPct,
             first_added_date: firstAdded,
-            dateLabel: firstAdded ? 'reported' : null,
+            dateLabel: firstAdded ? 'added' : null,
           };
         });
         return {
@@ -333,14 +334,13 @@ export function PersonPortfolioProfileScreen({
           holdings: holdingRows,
           trades: [] as TradeRow[],
           disclaimer:
-            'מבוסס על דיווחי 13F ציבוריים — לא תיק בזמן אמת. «מחיר כניסה» = שווי/מניות מהדוח; תשואה מול מחיר שוק נוכחי.',
+            'מבוסס על דיווחי 13F ציבוריים — לא תיק בזמן אמת. «מחיר כניסה» = מחיר שוק בתאריך הופעה ראשונה בדוח; תשואה מול מחיר שוק נוכחי.',
         };
       }
 
       const p = investor.profile;
       const m = p?.metrics ?? null;
-      // גרף = אלגוריתם שחזור שלנו (גם מטווחי $) — לא 1:1 MTM; תמיד מציגים כשיש סדרה.
-      // מחיר ממוצע (Form4) / מחיר כניסה (Yahoo@first_added לטווחים) + תשואה כשיש מחירים.
+      // מחיר ממוצע (Form4 עם מחיר) / מחיר כניסה (Yahoo@first_added) + תשואה.
       const series = appendLivePortfolioPoint(
         (m?.series ?? []).map((pt) => ({ date: pt.date, value: pt.value })),
         m?.portfolio_value
@@ -360,6 +360,7 @@ export function PersonPortfolioProfileScreen({
             earliestBuyDateFromRecent(h.ticker, p?.recent_trades ?? []) ||
             null;
           const reliable = h.basis_reliable === true;
+          const qtyDisclosed = h.qty_disclosed === true || reliable;
           const entryFromMarket =
             !reliable &&
             h.entry_price != null &&
@@ -374,17 +375,16 @@ export function PersonPortfolioProfileScreen({
           return {
             ticker: h.ticker,
             title: h.ticker,
-            // qty אמיתי רק כש־basis_reliable (Form 4 / מניות מדווחות).
+            // qty אמיתי כשמניות מדווחות (Form 4) — גם בלי מחיר Form4.
             // STOCK Act: טווח $ בלבד — לא ממציאים «X מניות» מ־Yahoo.
-            meta: reliable
+            meta: qtyDisclosed
               ? [
                   `${Math.round(h.qty).toLocaleString('en-US')} מניות`,
                   formatHoldingValueLabel(h.market_value),
                 ]
                   .filter(Boolean)
                   .join(' · ')
-              : // טווח STOCK Act — לא מציגים כמות מניות מומצאת
-                formatHoldingValueLabel(h.market_value) ?? '',
+              : formatHoldingValueLabel(h.market_value) ?? '',
             allocation_pct: h.allocation_pct,
             market_value: h.market_value,
             return_pct: hasReturn ? h.return_pct : null,
@@ -451,7 +451,7 @@ export function PersonPortfolioProfileScreen({
         disclaimer:
           kind === 'politician'
             ? 'גרף שווי = אלגוריתם שחזור מטווחי $ (STOCK Act) + מחירי שוק. «מחיר כניסה» = מחיר שוק בתאריך הדיווח/קנייה הראשון; תשואה מול מחיר נוכחי. כמות מניות רק כשמדווחת.'
-            : 'הערכה על בסיס דיווחים ציבוריים + מחירי שוק — לא תיק רשמי. מחיר ממוצע מ־Form 4; אחרת מחיר כניסה לפי מחיר שוק בתאריך הראשון.',
+            : 'הערכה על בסיס דיווחים ציבוריים + מחירי שוק — לא תיק רשמי. מחיר ממוצע מ־Form 4 כשיש מחיר מדווח; אחרת מחיר כניסה לפי מחיר שוק בתאריך הראשון.',
       };
     }, [kind, fund.profile, investor.profile]);
 

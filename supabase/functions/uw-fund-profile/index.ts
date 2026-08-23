@@ -1,8 +1,11 @@
-// uw-fund-profile — תיק 13F מ-DB + גרף היסטורי + תשואה ממחיר דיווח מול שוק
+// uw-fund-profile — תיק 13F מ-DB + גרף היסטורי + מחיר כניסה Yahoo@first_added
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import { fetchYahooDaily } from '../_shared/congressPortfolio.ts';
+import {
+  fetchYahooDaily,
+  priceOnOrBefore,
+} from '../_shared/congressPortfolio.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -18,8 +21,8 @@ interface FundHolding {
   /** דיווח 13F ראשון שבו הטיקר מופיע ב-DB שלנו */
   first_added_date?: string | null;
   /**
-   * מחיר כניסה מוצר: value_usd / shares מהדוח 13F (mark בדיווח).
-   * לא עלות קנייה מדויקת — החלטת מוצר לחישוב תשואה מול מחיר שוק.
+   * מחיר כניסה מוצר = מחיר שוק (Yahoo) ב־first_added_date —
+   * כמו פוליטיקאים. לא value/shares מהדוח.
    */
   entry_price?: number | null;
   current_price?: number | null;
@@ -112,13 +115,6 @@ serve(async (req) => {
       const ticker = String(r.ticker);
       const shares = r.shares != null ? Number(r.shares) : null;
       const value_usd = r.value_usd != null ? Number(r.value_usd) : null;
-      const entry_price =
-        shares != null &&
-        value_usd != null &&
-        shares > 0 &&
-        value_usd > 0
-          ? value_usd / shares
-          : null;
       return {
         ticker,
         issuer_name: r.issuer_name ? String(r.issuer_name) : null,
@@ -128,39 +124,50 @@ serve(async (req) => {
         first_added_date:
           firstSeenByTicker.get(ticker.toUpperCase()) ??
           (filingDate ? String(filingDate).slice(0, 10) : null),
-        entry_price,
+        entry_price: null,
         current_price: null,
         return_pct: null,
       };
     });
 
-    // מחיר שוק נוכחי (Yahoo) — לתשואה מול מחיר הכניסה מהדיווח. עד 20 טיקרים מובילים.
-    const priceTargets = holdings
-      .filter((h) => h.entry_price != null && h.entry_price > 0)
-      .slice(0, 20);
+    // Yahoo היסטורי: מחיר כניסה ב־first_added + מחיר נוכחי → תשואה. עד 20 מובילים.
+    const priceTargets = holdings.slice(0, 20);
     if (priceTargets.length) {
       const settled = await Promise.all(
         priceTargets.map(async (h) => {
           const sym = h.ticker.toUpperCase().trim();
-          const map = await fetchYahooDaily(sym, '5d');
+          const firstAdded = (h.first_added_date ?? '').slice(0, 10);
+          const map = await fetchYahooDaily(sym, '5y');
           let bestDate = '';
-          let last: number | null = null;
+          let current: number | null = null;
           for (const [d, p] of map.entries()) {
             if (!Number.isFinite(p) || !(p > 0)) continue;
             if (d >= bestDate) {
               bestDate = d;
-              last = p;
+              current = p;
             }
           }
-          return [sym, last] as const;
+          const entry =
+            firstAdded && map.size
+              ? priceOnOrBefore(map, firstAdded)
+              : null;
+          return [sym, { entry, current }] as const;
         })
       );
       const priceByTicker = new Map(settled);
       holdings = holdings.map((h) => {
-        const entry = h.entry_price;
-        if (entry == null || !(entry > 0)) return h;
-        const current = priceByTicker.get(h.ticker.toUpperCase().trim()) ?? null;
-        if (current == null || !(current > 0)) return h;
+        const row = priceByTicker.get(h.ticker.toUpperCase().trim());
+        if (!row) return h;
+        const entry = row.entry != null && row.entry > 0 ? row.entry : null;
+        const current = row.current != null && row.current > 0 ? row.current : null;
+        if (entry == null || current == null) {
+          return {
+            ...h,
+            entry_price: entry != null ? Math.round(entry * 10000) / 10000 : null,
+            current_price: current != null ? Math.round(current * 10000) / 10000 : null,
+            return_pct: null,
+          };
+        }
         const return_pct =
           Math.round(((current - entry) / entry) * 10000) / 100;
         return {

@@ -69,7 +69,7 @@ export default function PortfolioDetailScreen() {
   const [activeTab, setActiveTab] = useState<PortfolioDetailTab>('overview');
   const [portfolioActionsOpen, setPortfolioActionsOpen] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
-  /** מפתח שמשתנה בכל פעם שנסגרת פוזיציה — מאלץ את OverviewTab לרענן את הגרף */
+  /** מפתח שמשתנה בכל פעם שנסגרת פוזיציה — מאלץ את OverviewTab לרענן מדדים/סדרת שווי */
   const [chartRefreshKey, setChartRefreshKey] = useState(0);
   /** מפתח שמשתנה בכל טעינה של נתוני התיק — מאלץ טאבים לרענן את הנתונים שלהם */
   const [dataVersion, setDataVersion] = useState(0);

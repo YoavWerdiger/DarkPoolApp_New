@@ -19,8 +19,8 @@ import {
   upsertCongressTradesToDb,
   type InsiderBuyDbRow,
 } from '../_shared/uwDbCache.ts';
-import { buildCuratedCongressHistoryRows } from '../_shared/congressFeedBuild.ts';
-import { resolveQuiverApiKey } from '../_shared/quiverQuant.ts';
+import { buildCuratedCongressHistoryRows, buildCuratedExecutiveTradeRows } from '../_shared/congressFeedBuild.ts';
+import { resolveQuiverApiKey, CURATED_EXECUTIVE_UW_IDS } from '../_shared/quiverQuant.ts';
 import {
   formatForm4InsiderName,
   loadForm4InsiderHistory,
@@ -152,6 +152,11 @@ async function buildPoliticianProfile(
     (r) => congressDbRowToUwTrade(r) as UwCongressTrade
   );
 
+  const isExecutiveUwId =
+    !BIOGUIDE_RE.test(politicianId) &&
+    (/^[0-9a-f-]{36}$/i.test(politicianId) ||
+      CURATED_EXECUTIVE_UW_IDS.includes(politicianId));
+
   // היסטוריה דלילה ל־BioGuide (למשל פלוסי) — משיכה עמוקה מ-Quiver ושמירה ל-DB
   if (BIOGUIDE_RE.test(politicianId) && mine.length < THIN_HISTORY_THRESHOLD) {
     const quiverKey = resolveQuiverApiKey();
@@ -175,6 +180,26 @@ async function buildPoliticianProfile(
     }
   }
 
+  // Executive (Trump וכו׳) — משיכה לפי UUID מ-UW + שמירה ל-DB
+  if (isExecutiveUwId && mine.length < THIN_HISTORY_THRESHOLD && apiKey) {
+    try {
+      const curated = await buildCuratedExecutiveTradeRows(apiKey, [politicianId]);
+      if (curated.length) {
+        await upsertCongressTradesToDb(supabase, curated).catch((e) =>
+          console.warn('persist executive congress', politicianId, e)
+        );
+        dbRows = await loadCongressTradesForPoliticianFromDb(
+          supabase,
+          politicianId,
+          500
+        ).catch(() => curated);
+        mine = dbRows.map((r) => congressDbRowToUwTrade(r) as UwCongressTrade);
+      }
+    } catch (e) {
+      console.warn('executive deep history', politicianId, e);
+    }
+  }
+
   if (mine.length < 3 && apiKey) {
     const uwTrades = await fetchUwPoliticianTrades(apiKey, politicianId, 500).catch(
       (e) => {
@@ -184,9 +209,18 @@ async function buildPoliticianProfile(
     );
     const byId = uwTrades.filter((t) => String(t.politician_id ?? '') === politicianId);
     // BioGuide לרוב לא תואם UUID של UW — נסה גם לפי שם מ-DB/מטא
-    if (byId.length) {
+    // לא דורסים היסטוריה שכבר נמשכה/נשמרה ל-DB (executive curated)
+    if (byId.length && mine.length === 0) {
       mine = byId;
-    } else if (BIOGUIDE_RE.test(politicianId) && uwTrades.length) {
+      try {
+        const curated = await buildCuratedExecutiveTradeRows(apiKey, [politicianId]);
+        if (curated.length) {
+          await upsertCongressTradesToDb(supabase, curated).catch(() => undefined);
+        }
+      } catch {
+        /* ignore */
+      }
+    } else if (BIOGUIDE_RE.test(politicianId) && uwTrades.length && mine.length === 0) {
       const nameHint = String(dbRows[0]?.politician_name ?? '').toLowerCase();
       const last = nameHint.split(/\s+/).filter(Boolean).pop() ?? '';
       if (last.length >= 4) {
@@ -194,6 +228,25 @@ async function buildPoliticianProfile(
           uwCongressPersonName(t).toLowerCase().includes(last)
         );
         if (byName.length) mine = byName;
+      }
+    } else if (byId.length > mine.length) {
+      // יותר עסקאות ב-UW מאשר ב-DB — ממזגים ושומרים
+      mine = byId;
+      try {
+        const curated = await buildCuratedExecutiveTradeRows(apiKey, [politicianId]);
+        if (curated.length) {
+          await upsertCongressTradesToDb(supabase, curated).catch(() => undefined);
+          dbRows = await loadCongressTradesForPoliticianFromDb(
+            supabase,
+            politicianId,
+            500
+          ).catch(() => curated);
+          if (dbRows.length) {
+            mine = dbRows.map((r) => congressDbRowToUwTrade(r) as UwCongressTrade);
+          }
+        }
+      } catch {
+        /* ignore */
       }
     }
   }
@@ -511,9 +564,11 @@ function aggregateCongressHoldings(trades: UwCongressTrade[]): HoldingRow[] {
     const ownerRaw = String(t.reporter ?? t.issuer ?? '').trim();
     const ownerLabel = congressOwnerLabel(ownerRaw);
     const company = congressCompanyName(t);
-    const isBuy = String(t.txn_type ?? '').toLowerCase().includes('purchase')
-      || String(t.txn_type ?? '').toLowerCase() === 'buy'
-      || String(t.txn_type ?? '').toLowerCase().includes('buy');
+    const txnLower = String(t.txn_type ?? '').toLowerCase();
+    const isBuy =
+      txnLower.includes('purchase') ||
+      txnLower === 'buy' ||
+      txnLower.includes('buy');
     if (cur) {
       cur.trade_count += 1;
       if (date && (!cur.last_trade_date || date > cur.last_trade_date)) {
@@ -533,7 +588,8 @@ function aggregateCongressHoldings(trades: UwCongressTrade[]): HoldingRow[] {
         owner_label: ownerLabel,
         trade_count: 1,
         last_trade_date: date || null,
-        first_added_date: date || null,
+        // כניסה רק מקנייה — מכירה בודדת לא ממציאה תאריך כניסה
+        first_added_date: isBuy && date ? date : null,
         txn_mix: formatTxn(t.txn_type),
         allocation_pct: 0,
         amount_label: amt,

@@ -13,6 +13,7 @@ import {
   fetchUwCongressRecent,
   fetchUwCongressUnusualTrades,
   fetchUwPoliticians,
+  fetchUwPoliticianTrades,
   fetchUwTradesForBioguides,
   mapUnusualTradeToCongress,
   uwCongressPersonName,
@@ -26,6 +27,7 @@ import {
   parseQuiverTxnSide,
   resolveCongressApiKey,
   CURATED_CONGRESS_BIOGUIDES,
+  CURATED_EXECUTIVE_UW_IDS,
   type CongressTradesProvider,
   type QuiverCongressTrade,
 } from './quiverQuant.ts';
@@ -95,6 +97,61 @@ export async function buildCuratedCongressHistoryRows(
   const seen = new Set<string>();
   for (const t of trades) {
     const row = uwToCongressRow(t, bioMap, pricesByTicker);
+    if (!row || seen.has(row.external_id)) continue;
+    seen.add(row.external_id);
+    out.push(row);
+  }
+  return out;
+}
+
+/**
+ * היסטוריה לפרופילים מאוצרים לפי UUID של UW (executive — Trump וכו׳).
+ * לא BioGuide; Quiver לא מכסה אותם.
+ */
+export async function buildCuratedExecutiveTradeRows(
+  apiKey?: string,
+  uwIds: string[] = CURATED_EXECUTIVE_UW_IDS
+): Promise<CongressTradeRow[]> {
+  const uwKey =
+    apiKey?.trim() || Deno.env.get('UNUSUAL_WHALES_API_KEY')?.trim() || '';
+  if (!uwKey || !uwIds.length) return [];
+
+  const trades: UwCongressTrade[] = [];
+  for (const id of uwIds) {
+    const pid = String(id ?? '').trim();
+    if (!pid || BIOGUIDE_RE.test(pid)) continue;
+    try {
+      const rows = await fetchUwPoliticianTrades(uwKey, pid, 500);
+      for (const t of rows) {
+        trades.push({
+          ...t,
+          politician_id: String(t.politician_id ?? pid).trim() || pid,
+        });
+      }
+    } catch (e) {
+      console.warn(`curated executive trades ${pid}:`, (e as Error).message);
+    }
+  }
+  if (!trades.length) return [];
+
+  const tickers = Array.from(
+    new Set(
+      trades
+        .map((t) => String(t.ticker ?? t.symbol ?? '').toUpperCase().trim())
+        .filter((t) => t && t.length <= 5)
+    )
+  ).slice(0, 40);
+  const pricesByTicker = new Map<string, Map<string, number>>();
+  for (const sym of tickers) {
+    pricesByTicker.set(sym, await fetchYahooDaily(sym, '5y'));
+    await delay(40);
+  }
+
+  const emptyBio = new Map<string, string>();
+  const out: CongressTradeRow[] = [];
+  const seen = new Set<string>();
+  for (const t of trades) {
+    const row = uwToCongressRow(t, emptyBio, pricesByTicker);
     if (!row || seen.has(row.external_id)) continue;
     seen.add(row.external_id);
     out.push(row);

@@ -5,6 +5,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import {
   buildCongressTradeRows,
   buildCuratedCongressHistoryRows,
+  buildCuratedExecutiveTradeRows,
   getCongressTradesProvider,
   resolveCongressApiKey,
 } from '../_shared/congressFeedBuild.ts';
@@ -14,6 +15,7 @@ import {
 } from '../_shared/uwDbCache.ts';
 import {
   CURATED_CONGRESS_BIOGUIDES,
+  CURATED_EXECUTIVE_UW_IDS,
   resolveQuiverApiKey,
 } from '../_shared/quiverQuant.ts';
 
@@ -78,6 +80,7 @@ serve(async (req) => {
 
     let curatedFetched = 0;
     let curatedUpserted = 0;
+    let executiveFetched = 0;
     if (deep) {
       try {
         // Quiver אם יש; אחרת UW בתוך buildCuratedCongressHistoryRows
@@ -94,6 +97,21 @@ serve(async (req) => {
       } catch (e) {
         console.warn('sync-congress-trades curated deep', e);
       }
+
+      // Trump וכו׳ — UUID executive, לא BioGuide
+      try {
+        const uwKey = Deno.env.get('UNUSUAL_WHALES_API_KEY')?.trim() || '';
+        const executives = await buildCuratedExecutiveTradeRows(
+          uwKey || undefined,
+          CURATED_EXECUTIVE_UW_IDS
+        );
+        executiveFetched = executives.length;
+        if (executives.length) {
+          rows = dedupeByExternalId([...rows, ...executives]);
+        }
+      } catch (e) {
+        console.warn('sync-congress-trades curated executives', e);
+      }
     }
 
     const supabase = createServiceSupabase();
@@ -106,6 +124,7 @@ serve(async (req) => {
           synced_at: new Date().toISOString(),
           count: rows.length,
           curated_fetched: curatedFetched,
+          executive_fetched: executiveFetched,
           provider: usedProvider,
           deep,
         },
@@ -119,6 +138,7 @@ serve(async (req) => {
         provider: usedProvider,
         fetched: rows.length,
         curated_fetched: curatedFetched,
+        executive_fetched: executiveFetched,
         upserted,
         curated_upserted: curatedUpserted,
         deep,

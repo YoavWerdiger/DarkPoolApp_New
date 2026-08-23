@@ -3,7 +3,7 @@
  * politician / insider / fund_manager → אותו מבנה מסך.
  */
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -173,12 +173,24 @@ export function PersonPortfolioProfileScreen({
   const { list: followedList } = useFollowedInvestors();
   const { showDialog } = useAppDialog();
   const [followBusy, setFollowBusy] = useState(false);
+  /** Immediate icon flip before AsyncStorage / permissions settle */
+  const [optimisticFollowing, setOptimisticFollowing] = useState<boolean | null>(null);
+  const togglingRef = useRef(false);
   const [period, setPeriod] = useState<PerformancePeriod>('3M');
 
-  const isFollowing = useMemo(
+  const listFollowing = useMemo(
     () => followedList.some((x) => x.id === id && x.kind === kind),
     [followedList, id, kind]
   );
+  const isFollowing = optimisticFollowing ?? listFollowing;
+
+  // Drop optimistic override once the followed list catches up
+  useEffect(() => {
+    if (optimisticFollowing == null) return;
+    if (listFollowing === optimisticFollowing) {
+      setOptimisticFollowing(null);
+    }
+  }, [listFollowing, optimisticFollowing]);
 
   const displayName =
     (kind === 'fund_manager' ? fund.profile?.name : investor.profile?.name) ??
@@ -217,8 +229,15 @@ export function PersonPortfolioProfileScreen({
   }, [displayName]);
 
   const onToggleAlerts = useCallback(async () => {
-    if (followBusy) return;
-    setFollowBusy(true);
+    if (togglingRef.current) return;
+    togglingRef.current = true;
+
+    const prev = isFollowing;
+    setOptimisticFollowing(!prev);
+
+    // Spinner only if local write takes >150ms — never wait on push registration
+    const spinnerTimer = setTimeout(() => setFollowBusy(true), 150);
+
     try {
       const next = await toggleFollowInvestor({
         id,
@@ -227,21 +246,29 @@ export function PersonPortfolioProfileScreen({
         image_url: imageUrl,
         ticker,
       });
+      setOptimisticFollowing(next);
+
       if (next) {
-        const ok = await NotificationService.registerDeviceToken();
-        if (!ok) {
-          await showDialog({
-            title: 'התראות',
-            message:
-              'הוספנו למעקב, אבל צריך לאשר הרשאת התראות במכשיר כדי לקבל עדכון על עסקאות ודיווחים חדשים.',
-            type: 'info',
-          });
-        }
+        // Permissions + Expo token + Supabase RPC — fire-and-forget after local persist
+        void NotificationService.registerDeviceToken().then((ok) => {
+          if (!ok) {
+            void showDialog({
+              title: 'התראות',
+              message:
+                'הוספנו למעקב, אבל צריך לאשר הרשאת התראות במכשיר כדי לקבל עדכון על עסקאות ודיווחים חדשים.',
+              type: 'info',
+            });
+          }
+        });
       }
+    } catch {
+      setOptimisticFollowing(prev);
     } finally {
+      clearTimeout(spinnerTimer);
       setFollowBusy(false);
+      togglingRef.current = false;
     }
-  }, [followBusy, id, kind, displayName, imageUrl, ticker, showDialog]);
+  }, [isFollowing, id, kind, displayName, imageUrl, ticker, showDialog]);
 
   const { portfolioValue, fullChartSeries, holdings, trades, disclaimer } =
     useMemo(() => {
@@ -321,7 +348,13 @@ export function PersonPortfolioProfileScreen({
             h.first_added_date?.slice(0, 10) ||
             earliestBuyDateFromRecent(h.ticker, p?.recent_trades ?? []) ||
             null;
+          const reported =
+            !firstAdded
+              ? h.last_trade_date?.slice(0, 10) || null
+              : null;
+          const dateShown = firstAdded || reported;
           // txn_mix (קנייה/מכירה) שייך לעסקאות בלבד — לא לשורת אחזקה.
+          // avg/return רק משחזור עם cost/qty — לא ממציאים ממכירה/טווח disclosure.
           return {
             ticker: h.ticker,
             title: h.ticker,
@@ -334,8 +367,8 @@ export function PersonPortfolioProfileScreen({
             trade_count: h.trade_count,
             return_pct: h.return_pct ?? null,
             avg_price: null,
-            first_added_date: firstAdded,
-            dateLabel: firstAdded ? 'added' : null,
+            first_added_date: dateShown,
+            dateLabel: firstAdded ? 'added' : reported ? 'reported' : null,
           };
         });
       }

@@ -355,9 +355,9 @@ export default function OverviewTab({
     portfolio.available_cash,
   ]);
 
-  // אחיד לכל סוגי התיקים: overlay של נקודת היום + fallback ל-2 נקודות
+  // אחיד לכל סוגי התיקים: overlay של נקודת היום + fallback ל-2 נקודות (למדדים)
   const filteredSeries = useMemo(() => {
-    let base = chartSeries;
+    let base = valueSeries;
     if (base.length === 0 && livePortfolioValue != null && livePortfolioValue > 0) {
       const todayStr = toLocalDateKey(new Date());
       base = [{ date: todayStr, value: livePortfolioValue, external_flow: 0 }];
@@ -375,7 +375,7 @@ export default function OverviewTab({
         ];
       }
     }
-    // גרף דורש ≥2 נקודות — שכפל ליום קודם אם יש רק אחת (זהה לכל המקורות)
+    // מדדים דורשים ≥2 נקודות — שכפל ליום קודם אם יש רק אחת
     if (base.length === 1) {
       const only = base[0];
       const d = new Date(`${only.date}T12:00:00`);
@@ -387,18 +387,19 @@ export default function OverviewTab({
       ];
     }
     return base;
-  }, [chartSeries, livePortfolioValue]);
+  }, [valueSeries, livePortfolioValue]);
 
-  // מדדים על אותה סדרה מסוננת כמו הגרף — עקביות TWR / vol / DD
   const analytics = useMemo((): PortfolioAnalyticsResult | null => {
-    const periodSeries = filterChartSeriesByPeriod(filteredSeries, period);
-    if (periodSeries.length < 2) return null;
-    return computePortfolioAnalytics(periodSeries);
-  }, [filteredSeries, period]);
+    if (filteredSeries.length < 2) return null;
+    return computePortfolioAnalytics(filteredSeries);
+  }, [filteredSeries]);
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
+        root: {
+          direction: 'rtl',
+        },
         section: {
           marginBottom: 16,
           overflow: 'hidden',
@@ -407,11 +408,12 @@ export default function OverviewTab({
           fontSize: 15,
           fontWeight: '700',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
           marginBottom: 12,
         },
         tipsBanner: {
-          flexDirection: 'row-reverse',
+          // עץ RTL — row (לא row-reverse)
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 10,
           padding: 12,
@@ -426,11 +428,10 @@ export default function OverviewTab({
           fontSize: 13,
           color: tokens.colors.text.warning,
           lineHeight: 18,
-          textAlign: 'right',
-          writingDirection: 'rtl',
+          ...darkPoolTextRtl,
         },
         groupChips: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           flexWrap: 'wrap',
           gap: 6,
           marginBottom: 14,
@@ -457,7 +458,7 @@ export default function OverviewTab({
           fontWeight: '700',
         },
         donutWrap: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 16,
         },
@@ -466,7 +467,7 @@ export default function OverviewTab({
           gap: 8,
         },
         legendRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           gap: 8,
         },
@@ -479,7 +480,7 @@ export default function OverviewTab({
           flex: 1,
           fontSize: 12,
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
           fontWeight: '600',
         },
         legendPct: {
@@ -488,7 +489,7 @@ export default function OverviewTab({
           color: tokens.colors.text.secondary,
         },
         totalRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           justifyContent: 'space-between',
           marginTop: 12,
           paddingHorizontal: 4,
@@ -496,6 +497,7 @@ export default function OverviewTab({
         totalLabel: {
           fontSize: 13,
           color: tokens.colors.text.tertiary,
+          ...darkPoolTextRtl,
         },
         totalValue: {
           fontSize: 15,
@@ -511,11 +513,11 @@ export default function OverviewTab({
         moverGroupHeaderText: {
           fontSize: 12,
           fontWeight: '700',
-          textAlign: 'right',
+          ...darkPoolTextRtl,
           marginBottom: 8,
         },
         moverRow: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           alignItems: 'center',
           paddingVertical: 9,
           paddingHorizontal: 10,
@@ -531,7 +533,7 @@ export default function OverviewTab({
           fontSize: 13,
           fontWeight: '700',
           color: tokens.colors.text.primary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
         },
         moverValues: {
           alignItems: 'flex-start',
@@ -569,7 +571,7 @@ export default function OverviewTab({
           paddingVertical: 10,
         },
         cashGrid: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           flexWrap: 'wrap',
           gap: 10,
         },
@@ -587,16 +589,16 @@ export default function OverviewTab({
           fontSize: 11,
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
         },
         cashCellValue: {
           fontSize: 15,
           fontWeight: '700',
-          textAlign: 'right',
+          ...darkPoolTextRtl,
           writingDirection: 'ltr',
         },
         analyticsGrid: {
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           flexWrap: 'wrap',
           gap: 10,
         },
@@ -614,12 +616,12 @@ export default function OverviewTab({
           fontSize: 10,
           fontWeight: '600',
           color: tokens.colors.text.tertiary,
-          textAlign: 'right',
+          ...darkPoolTextRtl,
         },
         analyticsCellValue: {
           fontSize: 16,
           fontWeight: '800',
-          textAlign: 'right',
+          ...darkPoolTextRtl,
           writingDirection: 'ltr',
         },
       }),
@@ -629,7 +631,7 @@ export default function OverviewTab({
   const showTip = (summary?.holdings_count ?? 0) === 0;
 
   return (
-    <View>
+    <View style={styles.root}>
       {showTip && !isColmex ? (
         <View style={styles.tipsBanner}>
           <Ionicons name="bulb" size={20} color={tokens.colors.text.warning} />
@@ -639,27 +641,6 @@ export default function OverviewTab({
         </View>
       ) : null}
 
-      {/* Performance chart */}
-      <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
-        <Text style={styles.sectionTitle}>שווי תיק לאורך זמן</Text>
-        {chartLoading ? (
-          <Text style={styles.emptyText}>טוען נתונים…</Text>
-        ) : filteredSeries.length === 0 ? (
-          <Text style={styles.emptyText}>
-            {isColmex
-              ? 'אין נקודת שווי עדיין — משוך לסנכרון מהברוקר'
-              : 'אין נתונים היסטוריים עדיין — סגור פוזיציה ראשונה או הוסף הפקדה'}
-          </Text>
-        ) : (
-          <PortfolioValueChart
-            series={filteredSeries}
-            currency={portfolio.currency}
-            selectedPeriod={period}
-            onPeriodChange={setPeriod}
-          />
-        )}
-      </UICard>
-
       {/* Analytics metrics */}
       {(analytics != null || tradeStats.count > 0) && (
         <UICard variant="glass" glassIntensity="light" padding="md" style={styles.section}>
@@ -667,7 +648,7 @@ export default function OverviewTab({
           <View style={styles.analyticsGrid}>
             {/* TWR — תשואה מנורמלת שמבודדת הפקדות/משיכות */}
             <AnalyticsCell
-              label="TWR (תשואה נטו)"
+              label="תשואה נטו (TWR)"
               value={
                 analytics?.twrReturn != null
                   ? formatPercent(analytics.twrReturn * 100)
@@ -1085,7 +1066,7 @@ function AnalyticsCell({ label, value, valueColor, hint, styles }: AnalyticsCell
         <Text
           style={[
             styles.analyticsCellHint ?? {},
-            { fontSize: 9, color: '#666', textAlign: 'right', marginTop: 2 },
+            { fontSize: 9, color: '#666', ...darkPoolTextRtl, marginTop: 2 },
           ]}
           numberOfLines={1}
         >

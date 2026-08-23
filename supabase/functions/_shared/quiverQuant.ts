@@ -214,6 +214,14 @@ export const CURATED_CONGRESS_BIOGUIDES = [
   'C001114', // Dan Crenshaw
 ];
 
+/**
+ * UUID של Unusual Whales לפרופילים מאוצרים שאינם BioGuide (executive / נשיא).
+ * Trump — לא STOCK Act קונגרס; עסקאות מגיעות מ־UW politician-portfolios.
+ */
+export const CURATED_EXECUTIVE_UW_IDS = [
+  '888dc73f-f1eb-485a-a241-80657aaaaff9', // Donald Trump
+];
+
 /** רשימת פוליטיקאים — GET /beta/bulk/congress/politicians (paginated) */
 export async function fetchQuiverCongressPoliticians(
   apiKey: string,

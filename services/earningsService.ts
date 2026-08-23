@@ -3,7 +3,8 @@
 
 import { supabase } from '../lib/supabase';
 import { getSymbolsByCategory } from './marketCapFilters';
-import { filterMajorIndexStocks, isMajorIndexStock } from './majorIndices';
+// majorIndices / filterMajorIndexStocks אינם בשימוש בנתיב לוח הדוחות (getDateWindow).
+// getByCategory למטה עדיין מסנן לפי רשימות marketCapFilters — לא נקרא ממסך הלוח.
 
 // רשימת השדות שבאמת מוצגים ב-UI (UI + Bottom Sheet + TradingView chart).
 // עדיף על-פני `*` כי חוסך ~40% מגודל ה-payload.
@@ -52,8 +53,12 @@ const inflightFetches = new Map<string, Promise<EarningsReport[]>>();
 const legacyCache = new Map<string, { data: EarningsReport[]; fetchedAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 דקות
 
+/** YYYY-MM-DD לפי יום מקומי במכשיר — לא UTC (מונע קפיצה ליום הקודם אחרי חצות בישראל). */
 function toDateStr(d: Date): string {
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 function addDaysStr(dateStr: string, days: number): string {
   const d = new Date(dateStr + 'T12:00:00Z');
@@ -559,6 +564,25 @@ export class EarningsService {
   }
 
   /**
+   * טעינת דיווח בודד לפי id (לפתיחה מהתראת Push)
+   */
+  static async getById(id: string): Promise<EarningsReport | null> {
+    if (!id?.trim()) return null;
+    try {
+      const { data, error } = await supabase
+        .from('earnings_calendar')
+        .select(EARNINGS_SELECT_COLUMNS)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as EarningsReport) || null;
+    } catch (error) {
+      console.error('[earningsService.getById] failed:', error instanceof Error ? error.message : String(error));
+      return null;
+    }
+  }
+
+  /**
    * טעינת דיווחי תוצאות לפי סימבול
    */
   static async getBySymbol(code: string): Promise<EarningsReport[]> {
@@ -573,6 +597,70 @@ export class EarningsService {
       return data || [];
     } catch (error) {
       console.error('[earningsService.getBySymbol] failed:', error instanceof Error ? error.message : String(error));
+      return [];
+    }
+  }
+
+  /**
+   * חיפוש דיווחים לפי טיקר / קוד / שם חברה (אנגלית/עברית).
+   * טווח ברירת מחדל: ~שבועיים אחורה עד ~6 חודשים קדימה; ממוין לפי report_date.
+   */
+  static async searchReports(
+    query: string,
+    options: { limit?: number; fromDate?: string; toDate?: string } = {},
+  ): Promise<EarningsReport[]> {
+    const raw = query.trim();
+    if (!raw) return [];
+
+    // מנקים סיומת .US ותווים שמפרקים PostgREST or()/ILIKE
+    const cleaned = raw
+      .replace(/\.US$/i, '')
+      .replace(/[%_,]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!cleaned) return [];
+
+    const limit = Math.min(Math.max(options.limit ?? 25, 1), 50);
+    const today = toDateStr(new Date());
+    const fromDate = options.fromDate ?? addDaysStr(today, -14);
+    const toDate = options.toDate ?? addDaysStr(today, 180);
+    const pattern = `%${cleaned}%`;
+    const upper = cleaned.toUpperCase();
+
+    try {
+      const { data, error } = await supabase
+        .from('earnings_calendar')
+        .select(EARNINGS_SELECT_COLUMNS)
+        .or(
+          [
+            `code.ilike.${pattern}`,
+            `ticker.ilike.${pattern}`,
+            `company_name.ilike.${pattern}`,
+            `asset_name.ilike.${pattern}`,
+            `ticker.eq.${upper}`,
+          ].join(','),
+        )
+        .gte('report_date', fromDate)
+        .lte('report_date', toDate)
+        .order('report_date', { ascending: true })
+        .limit(limit * 2); // עודף קטן לדדופ לפני limit
+
+      if (error) throw error;
+
+      const rows = (data || []) as unknown as EarningsReport[];
+      // דדופ לפי code+report_date — חברה יכולה להופיע כמה פעמים באותו יום ממקורות שונים
+      const seen = new Set<string>();
+      const unique: EarningsReport[] = [];
+      for (const r of rows) {
+        const key = `${(r.code || r.ticker || '').toUpperCase()}|${r.report_date}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        unique.push(r);
+        if (unique.length >= limit) break;
+      }
+      return unique;
+    } catch (error) {
+      console.error('[earningsService.searchReports] failed:', error instanceof Error ? error.message : String(error));
       return [];
     }
   }

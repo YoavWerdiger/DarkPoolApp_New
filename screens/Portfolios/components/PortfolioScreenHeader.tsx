@@ -1,9 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../../components/ui/DayNavBlurButton';
+import {
+  MAIN_SCREEN_HEADER_HP,
+  MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
+  MAIN_SCREEN_HEADER_TITLE_SIZE,
+  MAIN_SCREEN_HEADER_TITLE_WEIGHT,
+} from '../../../components/ui/MainDrawerScreenHeader';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 interface Props {
@@ -18,7 +23,7 @@ interface Props {
   rightAction?: React.ReactNode;
 }
 
-/** Header אחיד לכל מסכי Portfolios – RTL, primary בלחיצת חזרה */
+/** Header אחיד למסכי Portfolios — אותם מרווחי קצה כמו ChatSubScreenHeader / MainDrawer */
 export function PortfolioScreenHeader({
   title,
   subtitle,
@@ -28,31 +33,29 @@ export function PortfolioScreenHeader({
   rightAction,
 }: Props) {
   const tokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
-  const padH = Math.max(16, insets.left, insets.right);
   const edgeAction = moreAction ?? rightAction;
   return (
-    <View
-      style={[styles.row, { paddingLeft: padH, paddingRight: padH }]}
-    >
-      <View style={styles.sideEdge}>
+    <View style={styles.row}>
+      <View style={styles.sideBack}>
         {onBack ? (
           <DayNavBlurButton
             onPress={() => {
               void HapticFeedback.impactLight();
               onBack();
             }}
-            size={HEADER_BACK_BTN_SIZE}
+            size={DRAWER_MENU_BUTTON_SIZE}
             glassIntensity="subtle"
             accessibilityLabel="חזרה"
           >
             <Ionicons
               name="chevron-forward"
-              size={22}
+              size={24}
               color={tokens.colors.text.primary}
             />
           </DayNavBlurButton>
-        ) : null}
+        ) : (
+          <View style={styles.sideSpacer} />
+        )}
       </View>
       <View style={styles.center} pointerEvents="box-none">
         <Text
@@ -71,7 +74,7 @@ export function PortfolioScreenHeader({
         ) : null}
       </View>
       {extraAction ? <View style={styles.extraSlot}>{extraAction}</View> : null}
-      <View style={styles.sideEdge}>{edgeAction}</View>
+      <View style={styles.sideEnd}>{edgeAction ?? <View style={styles.sideSpacer} />}</View>
     </View>
   );
 }
@@ -81,12 +84,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingVertical: 14,
+    gap: 8,
   },
-  sideEdge: {
-    width: HEADER_BACK_BTN_SIZE,
-    flexShrink: 0,
+  sideBack: {
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: MAIN_SCREEN_HEADER_HP,
+  },
+  sideEnd: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: MAIN_SCREEN_HEADER_HP,
+  },
+  sideSpacer: {
+    width: DRAWER_MENU_BUTTON_SIZE,
+    height: DRAWER_MENU_BUTTON_SIZE,
   },
   extraSlot: {
     flexShrink: 0,
@@ -99,17 +111,21 @@ const styles = StyleSheet.create({
     minWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    minHeight: 48,
+    paddingHorizontal: 4,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '700',
-    letterSpacing: -0.3,
+    fontSize: MAIN_SCREEN_HEADER_TITLE_SIZE,
+    fontWeight: MAIN_SCREEN_HEADER_TITLE_WEIGHT,
+    letterSpacing: -0.35,
+    lineHeight: MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 3,
     textAlign: 'center',
+    lineHeight: 17,
   },
 });

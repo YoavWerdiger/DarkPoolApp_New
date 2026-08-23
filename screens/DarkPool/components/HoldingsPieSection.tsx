@@ -13,8 +13,9 @@ import {
 interface Props {
   title?: string;
   holdings: HoldingAllocationInput[];
-  /** מספר טיקרים ייחודיים במרכז העוגה */
-  centerTickerCount?: number;
+  /** תמונת האדם במרכז העוגה (כמו בתיק אישי) */
+  avatarUrl?: string | null;
+  userInitial?: string;
 }
 
 /**
@@ -23,7 +24,8 @@ interface Props {
 export function HoldingsPieSection({
   title = 'פילוח אחזקות',
   holdings,
-  centerTickerCount,
+  avatarUrl,
+  userInitial,
 }: Props) {
   const tokens = useDesignTokens();
   const slices = useMemo(() => holdingsToDistributionSlices(holdings), [holdings]);
@@ -31,10 +33,6 @@ export function HoldingsPieSection({
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   if (slices.length === 0) return null;
-
-  const tickerCount =
-    centerTickerCount ??
-    holdings.filter((h) => (h.allocation_pct ?? 0) > 0 || h.ticker).length;
 
   return (
     <UICard variant="glass" padding="md" style={styles.card}>
@@ -44,8 +42,8 @@ export function HoldingsPieSection({
           slices={slices}
           size={128}
           strokeWidth={18}
-          centerLabel="טיקרים"
-          centerValue={String(Math.min(tickerCount, slices.length))}
+          avatarUrl={avatarUrl}
+          userInitial={userInitial}
         />
         <View style={styles.legend}>
           {slices.map((s) => (
@@ -80,7 +78,7 @@ export function HoldingTickerDot({
         height: 8,
         borderRadius: 4,
         backgroundColor: color,
-        marginLeft: 6,
+        flexShrink: 0,
       }}
     />
   );
@@ -97,7 +95,8 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
       marginBottom: 12,
-      borderRadius: tokens.borderRadius.lg,
+      borderRadius: tokens.borderRadius['3xl'],
+      overflow: 'hidden',
     },
     title: {
       fontSize: 15,

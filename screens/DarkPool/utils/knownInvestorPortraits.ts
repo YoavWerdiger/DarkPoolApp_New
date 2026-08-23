@@ -14,6 +14,7 @@ export const KNOWN_INVESTOR_PORTRAIT_BY_ID: Record<string, string> = {
   O000172: 'https://unitedstates.github.io/images/congress/225x275/O000172.jpg',
   P000603: 'https://unitedstates.github.io/images/congress/225x275/P000603.jpg',
   C001114: 'https://unitedstates.github.io/images/congress/225x275/C001114.jpg',
+  '888dc73f-f1eb-485a-a241-80657aaaaff9': `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
   '1067983': `${WIKI}/5/51/Warren_Buffett_KU_Visit.jpg`,
   '1697748': `${WIKI}/7/7e/Cathie_Wood_%28cropped%29.jpg`,
   '1336528': `${WIKI}/4/4a/Bill_Ackman_2019.jpg`,
@@ -32,6 +33,8 @@ export const KNOWN_INVESTOR_PORTRAIT_BY_NAME: Record<string, string> = {
   'nancy pelosi': KNOWN_INVESTOR_PORTRAIT_BY_ID.P000197,
   'chuck schumer': KNOWN_INVESTOR_PORTRAIT_BY_ID.S000148,
   'mitch mcconnell': KNOWN_INVESTOR_PORTRAIT_BY_ID.M000355,
+  'donald trump': KNOWN_INVESTOR_PORTRAIT_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
+  'donald j trump': KNOWN_INVESTOR_PORTRAIT_BY_ID['888dc73f-f1eb-485a-a241-80657aaaaff9'],
 };
 
 /** person_id → URL (כולל insider keys מ-UW) */

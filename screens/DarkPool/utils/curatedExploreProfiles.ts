@@ -12,6 +12,15 @@ const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 export const CURATED_EXPLORE_PROFILES: ExplorePerson[] = [
   // פוליטיקאים — תמונות רשמיות מ-congress.gov
   {
+    // UW UUID — נשיא (executive), לא BioGuide של קונגרס; עסקאות ב־dark_pool_congress_trades
+    id: '888dc73f-f1eb-485a-a241-80657aaaaff9',
+    name: 'Donald Trump',
+    subtitle: 'נשיא · רפובליקני',
+    image_url: `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
+    kind: 'politician',
+    activity_score: 101,
+  },
+  {
     id: 'P000197',
     name: 'Nancy Pelosi',
     subtitle: 'בית הנציגים · דמוקרטית',

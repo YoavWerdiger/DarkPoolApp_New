@@ -23,6 +23,25 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
+/**
+ * supabase-js מעדכן Realtime רק ב-SIGNED_IN / TOKEN_REFRESHED — לא ב-INITIAL_SESSION.
+ * מחברים INITIAL_SESSION פעם אחת; לא לקרוא setAuth שוב עם אותו JWT (סוגר socket).
+ */
+let appliedInitialRealtimeToken: string | null = null;
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event !== 'INITIAL_SESSION') return;
+  const token = session?.access_token;
+  if (!token || token === appliedInitialRealtimeToken) return;
+  const clientToken =
+    (supabase.realtime as { accessTokenValue?: string | null }).accessTokenValue ?? null;
+  if (token === clientToken) {
+    appliedInitialRealtimeToken = token;
+    return;
+  }
+  appliedInitialRealtimeToken = token;
+  void supabase.realtime.setAuth(token);
+});
+
 // Database types
 export interface Message {
   id: string;

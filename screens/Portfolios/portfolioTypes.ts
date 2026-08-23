@@ -3,7 +3,7 @@
  * משקפים את הסכמה ב-supabase/migrations/013_portfolios.sql.
  */
 
-export type AssetType = 'stock' | 'etf' | 'fund' | 'forex' | 'crypto';
+export type AssetType = 'stock' | 'etf' | 'fund' | 'forex' | 'crypto' | 'futures';
 
 export type TransactionType =
   | 'buy'
@@ -42,6 +42,12 @@ export interface Portfolio {
   source?: PortfolioSource;
   broker_account_id?: string | null;
   read_only?: boolean;
+  /**
+   * יתרת מזומן זמינה — מתעדכנת ע"י טריגרים:
+   * הפקדה/משיכה מ-portfolio_transactions + פתיחה/סגירת trades.
+   * null = עמודה לא קיימת בגרסאות ישנות.
+   */
+  available_cash?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -54,6 +60,8 @@ export interface PortfolioInsert {
   auto_adjust_splits?: boolean;
   description?: string | null;
   is_public?: boolean;
+  /** יתרת פתיחה — מוגדרת בעת יצירת התיק */
+  available_cash?: number;
 }
 
 /** רשומה בטבלת portfolio_transactions */
@@ -123,6 +131,14 @@ export interface PriceQuote {
   symbol: string;
   price: number;
   previous_close: number | null;
+  /** פתיחה יומית — אם זמין מספק ה־quote */
+  open?: number | null;
+  /** גבוה יומי */
+  day_high?: number | null;
+  /** נמוך יומי */
+  day_low?: number | null;
+  /** ווליום יומי (מניות) — אם זמין */
+  volume?: number | null;
   currency: string;
   as_of: string;
   source: string;
@@ -139,6 +155,10 @@ export interface PortfolioHolding {
   symbol: string;
   asset_type: AssetType | null;
   exchange: string | null;
+  /** המטבע הראשי שבו נסחר הנכס (נגזר מהטרנזקציות) */
+  currency: string;
+  /** סקטור שוק (נגזר מסוג הנכס + symbol lookup) */
+  sector: string | null;
   quantity: number;
   avg_price: number;
   invested: number;
@@ -311,3 +331,111 @@ export type HoldingsSummaryMode = 'min' | 'max' | 'avg' | 'median';
 
 /** סוגי תקופות לטאב Performance */
 export type PerformancePeriod = '1W' | '1M' | '3M' | 'YTD' | '1Y' | '5Y' | 'All';
+
+/* ============================================================================
+ * Trade model (migration 20260723) — trades עם OPEN/CLOSED
+ * ========================================================================= */
+
+/** סטטוס פוזיציה */
+export type TradeStatus = 'OPEN' | 'CLOSED';
+
+/**
+ * רשומה בטבלת trades (DB entity).
+ * פוזיציה בודדת עם כניסה/יציאה, leverage, ו-profit_loss אוטומטי.
+ */
+export interface Trade {
+  id: string;
+  portfolio_id: string;
+  user_id: string;
+  symbol: string;
+  asset_type: AssetType;
+  exchange: string | null;
+  currency: string;
+  direction: TradeDirection;
+  status: TradeStatus;
+  entry_date: string;
+  entry_price: number;
+  quantity: number;
+  leverage: number;
+  exit_date: string | null;
+  exit_price: number | null;
+  /** P&L ממומש — מחושב אוטומטית ע"י PG trigger בסגירה. null כל עוד OPEN. */
+  profit_loss: number | null;
+  /** ערך לנקודה עבור פיוצ'רס (לדוגמה $50 ל-ES). null לנכסים רגילים. */
+  point_value: number | null;
+  commission: number;
+  notes: string | null;
+  stop_loss: number | null;
+  target_price: number | null;
+  strategy_name: string | null;
+  journal_details: Record<string, unknown> | null;
+  /** מזהה פוזיציה ב-Colmex — ל-upsert idempotent בסנכרון ברוקר */
+  colmex_position_id?: string | null;
+  /** מקור הטרייד: manual | colmex_pro | import */
+  source?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Insert payload ל-trades (user_id ממולא ע"י השירות) */
+export interface TradeInsert {
+  portfolio_id: string;
+  symbol: string;
+  asset_type: AssetType;
+  exchange?: string | null;
+  currency?: string;
+  direction?: TradeDirection;
+  entry_date: string;
+  entry_price: number;
+  quantity: number;
+  leverage?: number;
+  point_value?: number | null;
+  commission?: number;
+  notes?: string | null;
+  stop_loss?: number | null;
+  target_price?: number | null;
+  strategy_name?: string | null;
+  journal_details?: Record<string, unknown> | null;
+}
+
+/** Snapshot יומי מטבלת daily_portfolio_snapshots */
+export interface DailyPortfolioSnapshot {
+  portfolio_id: string;
+  snapshot_date: string;
+  portfolio_value: number;
+  realized_pnl: number;
+  cash: number;
+  trade_count: number;
+  /** הפקדות שנכנסו ביום זה (הון חיצוני — משמש לחישוב TWR) */
+  deposits_today: number;
+  /** משיכות שיצאו ביום זה (הון חיצוני — משמש לחישוב TWR) */
+  withdrawals_today: number;
+  /** דיבידנדים שהתקבלו ביום זה (תשואה, לא הון חיצוני) */
+  dividends_today: number;
+  /** עמלות/דמי-ניהול שנגבו ביום זה (הוצאה, לא הון חיצוני) */
+  fees_today: number;
+}
+
+/** סטטיסטיקות תיק מטבלת portfolio_stats */
+export interface PortfolioStats {
+  portfolio_id: string;
+  total_trades: number;
+  open_trades: number;
+  closed_trades: number;
+  win_trades: number;
+  loss_trades: number;
+  total_pnl: number;
+  win_rate: number | null;
+  avg_pnl: number | null;
+  /** ממוצע P&L של trades רווחיים בלבד */
+  avg_win: number | null;
+  /** ממוצע P&L של trades הפסדיים בלבד */
+  avg_loss: number | null;
+  /** סך דיבידנדים מ-portfolio_transactions */
+  total_dividends: number;
+  /** סך עמלות/דמי-ניהול מ-portfolio_transactions */
+  total_fees: number;
+  /** הפקדות פחות משיכות — הון חיצוני נטו */
+  net_deposits: number;
+  updated_at: string;
+}

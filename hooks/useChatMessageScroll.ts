@@ -117,23 +117,10 @@ export function useChatMessageScroll({
         `SCROLL_CMD ${label} offset=${offset.toFixed(0)} animated=${animated} distBefore=${before.toFixed(0)}`,
       );
 
-      if (!animated) {
-        try {
-          list.scrollToOffset({ offset, animated: false });
-        } catch (e) {
-          logger.debug('useChatMessageScroll', `SCROLL_CMD threw: ${String(e)}`);
-        }
-        requestAnimationFrame(() => {
-          const after = distFromBottomRef.current;
-          logger.debug(
-            'useChatMessageScroll',
-            `SCROLL_RESULT ${label} distAfter=${after.toFixed(0)}`,
-          );
-          onDone?.();
-        });
-        return;
-      }
-
+      // חשוב: גם ב-animated=false עוברים דרך scrollChatListToOffset (במקום
+      // list.scrollToOffset ישיר), כדי שיוגדל scrollGeneration ויתבטלו retries
+      // רצים של scrollChatListToBottom. אחרת גלילה למפריד יכולה להיות מוחזרת
+      // מיד לתחתית ע"י ניסיונות pin שרצים במקביל.
       scrollChatListToOffset(
         {
           listRef,
@@ -142,7 +129,7 @@ export function useChatMessageScroll({
           getDistFromBottom: () => distFromBottomRef.current,
         },
         offset,
-        true,
+        animated,
         () => {
           const after = distFromBottomRef.current;
           logger.debug(

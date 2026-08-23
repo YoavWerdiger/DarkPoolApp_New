@@ -4,12 +4,19 @@ import {
   buildEarningsMetricLine,
   earningsResultsTitle,
 } from '../_shared/notificationBidi.ts'
-import { fetchEarningsNotificationUsers } from '../_shared/earnings-utils.ts'
+import {
+  claimEarningsNotificationSlot,
+  fetchEarningsNotificationUsers,
+  normalizeEarningsTicker,
+} from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+/** מגביל הצפה כשסנכרון ממלא עשרות/מאות actuals בבת אחת (sweep בלבד) */
+const MAX_REPORTS_PER_SWEEP = 30
 
 async function flushPendingNotifications(supabaseUrl: string, serviceKey: string): Promise<void> {
   try {
@@ -55,7 +62,8 @@ serve(async (req) => {
         console.log(`📨 Received trigger data for ${report.ticker || report.code || report.id}`)
         
         // בדיקה שהרשומה עומדת בתנאים
-        if (!report.actual || report.actual === 0) {
+        // actual=0 הוא תוצאה לגיטימית (EPS אפסי) — מדלגים רק כשאין ערך בכלל
+        if (report.actual == null) {
           return new Response(
             JSON.stringify({
               success: true,
@@ -73,20 +81,40 @@ serve(async (req) => {
 
     // אם יש נתונים מה-trigger, נשתמש בהם
     const publishedReports: any[] = report ? [report] : []
+    const isSweep = publishedReports.length === 0
     
-    // אם אין נתונים מה-trigger, נחפש ידנית (רק למקרה של קריאה ידנית לבדיקה)
-    if (publishedReports.length === 0) {
-      console.log('🔍 Searching for recently published reports manually...')
+    // Sweep / קריאה ידנית: תופס actuals שפוספסו (טריגר/pg_net) — יום מסחר ET היום+אתמול
+    // רק שורות שעדיין לא סומנו כ-results_push_sent_at (זיכרון ברמת דיווח)
+    if (isSweep) {
+      console.log('🔍 Searching for recently published reports (ET window sweep)...')
+      const etToday = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date())
+      const etYesterdayDate = new Date(
+        new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }),
+      )
+      etYesterdayDate.setDate(etYesterdayDate.getDate() - 1)
+      const etYesterday = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(etYesterdayDate)
+
       const { data: manualReports, error: reportsError } = await supabase
         .from('earnings_calendar')
-        .select('id, code, ticker, company_name, report_date, actual, estimate, percent, revenue_actual, revenue_estimate_avg, revenue_surprise_percent, before_after_market, updated_at')
-        .eq('report_date', new Date().toISOString().split('T')[0])
+        .select('id, code, ticker, company_name, report_date, actual, estimate, percent, revenue_actual, revenue_estimate_avg, revenue_surprise_percent, before_after_market, updated_at, results_push_sent_at')
+        .in('report_date', [etToday, etYesterday])
         .not('actual', 'is', null)
+        .is('results_push_sent_at', null)
         .or('importance.gte.3,importance.is.null')
         .like('code', '%.US')
-        .gte('updated_at', new Date(Date.now() - 10 * 60 * 1000).toISOString())
+        .gte('updated_at', new Date(Date.now() - 45 * 60 * 1000).toISOString())
         .order('updated_at', { ascending: false })
-        .limit(50)
+        .limit(MAX_REPORTS_PER_SWEEP)
 
       if (reportsError) {
         throw new Error(`Failed to fetch published reports: ${reportsError.message}`)
@@ -126,6 +154,8 @@ serve(async (req) => {
     }
 
     let notificationsCreated = 0
+    let skippedAlreadySent = 0
+    const reportsMarked: string[] = []
 
     // ─── עזר: פורמט מספר גדול כ-$XB / $XM / $XK
     const formatRevenue = (val: number | null | undefined): string => {
@@ -146,8 +176,14 @@ serve(async (req) => {
 
     // יצירת התראות לכל דיווח שפורסם
     for (const report of publishedReports) {
-      const ticker = report.ticker || report.code.replace('.US', '')
+      const ticker = normalizeEarningsTicker(report.ticker, report.code)
       const companyName = report.company_name || ticker
+      const reportDate = String(report.report_date ?? '').slice(0, 10)
+
+      if (!ticker || !reportDate) {
+        console.warn('⚠️ Skipping report without ticker/report_date', report.id)
+        continue
+      }
 
       const epsLine = buildEarningsMetricLine(
         'רווחיות',
@@ -177,18 +213,21 @@ serve(async (req) => {
       const notificationTitle = earningsResultsTitle(companyName)
       const notificationBody = lines.join('\n')
 
+      let processedUsers = 0
+
       // יצירת התראה לכל משתמש
       for (const user of usersWithNotifications) {
-        // אותו מזהה דיווח, גם אם is_sent (שאחרי שליחה) — אחרת טריגר/סנכרון חוזרים יוצרים עוד push
-        const { data: existingAny } = await supabase
-          .from('pending_notifications')
-          .select('id')
-          .eq('user_id', user.user_id)
-          .eq('notification_type', 'earnings')
-          .contains('data', { type: 'earnings_results', earnings_report_id: report.id })
-          .limit(1)
-
-        if (existingAny && existingAny.length > 0) {
+        // זיכרון עמיד: (user, ticker, date, results_available) — גם אם report.id התחלף
+        const claimed = await claimEarningsNotificationSlot(supabase, {
+          userId: user.user_id,
+          ticker,
+          reportDate,
+          notificationType: 'results_available',
+          earningsReportId: report.id ?? null,
+        })
+        if (!claimed) {
+          skippedAlreadySent++
+          processedUsers++
           continue
         }
 
@@ -202,11 +241,12 @@ serve(async (req) => {
             body: notificationBody,
             data: {
               type: 'earnings_results',
+              durable_type: 'results_available',
               earnings_report_id: report.id,
               ticker: ticker,
               company_name: companyName,
               code: report.code,
-              report_date: report.report_date,
+              report_date: reportDate,
               actual: report.actual,
               estimate: report.estimate,
               percent: report.percent,
@@ -229,10 +269,30 @@ serve(async (req) => {
           notificationsCreated++
           console.log(`✅ Created results notification for ${ticker} (${companyName})`)
         }
+        processedUsers++
+      }
+
+      // סמן ברמת הדיווח כדי ש-sweep לא יחזור על אותו טיקר+תאריך
+      if (processedUsers >= usersWithNotifications.length && report.id) {
+        const { error: markError } = await supabase
+          .from('earnings_calendar')
+          .update({ results_push_sent_at: new Date().toISOString() })
+          .eq('id', report.id)
+        if (markError) {
+          // fallback לפי ticker+date אם id לא קיים בטריגר ישן
+          await supabase
+            .from('earnings_calendar')
+            .update({ results_push_sent_at: new Date().toISOString() })
+            .eq('report_date', reportDate)
+            .or(`ticker.eq.${ticker},code.eq.${ticker}.US`)
+        }
+        reportsMarked.push(ticker)
       }
     }
 
-    console.log(`✅ Created ${notificationsCreated} result notifications`)
+    console.log(
+      `✅ Created ${notificationsCreated} result notifications (skipped_already_sent=${skippedAlreadySent}, marked=${reportsMarked.length})`,
+    )
 
     if (notificationsCreated > 0) {
       await flushPendingNotifications(supabaseUrl, supabaseServiceKey)
@@ -244,7 +304,10 @@ serve(async (req) => {
         message: 'Earnings results notifications check completed',
         published_reports: publishedReports.length,
         users_with_notifications: usersWithNotifications.length,
-        notifications_created: notificationsCreated
+        notifications_created: notificationsCreated,
+        skipped_already_sent: skippedAlreadySent,
+        reports_marked: reportsMarked.length,
+        is_sweep: isSweep,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -264,8 +327,3 @@ serve(async (req) => {
     )
   }
 })
-
-
-
-
-

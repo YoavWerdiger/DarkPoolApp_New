@@ -16,3 +16,5 @@ export * from './darkPoolSignalEngine';
 export * from './darkPoolService';
 export * from './darkPoolAiInsights';
 export * from './uwTickerInsightsService';
+export * from './profilePortfolioEngine';
+export * from './portfolioMetricsTypes';

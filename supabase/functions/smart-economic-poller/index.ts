@@ -29,7 +29,7 @@ serve(async (req) => {
     const { data: upcomingEvents, error } = await supabase
       .from('economic_events')
       .select('*')
-      .in('importance', ['high'])
+      .in('importance', ['high', 'medium']) // אדום + כתום
       .gte('date', tomorrowStr)
       .lte('date', dayAfterStr)
       .order('date', { ascending: true })

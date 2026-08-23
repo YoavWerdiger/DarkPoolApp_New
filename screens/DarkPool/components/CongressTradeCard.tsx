@@ -1,9 +1,9 @@
 /**
- * כרטיס פיד קונגרס — לוגו מניה + פעולה ברורה.
+ * כרטיס פיד קונגרס — אווטאר + לוגו מניה + פעולה ברורה.
  */
 
-import React from 'react';
-import { formatFeedTradeDetail } from '../utils/feedTradeDisplay';
+import React, { memo } from 'react';
+import { getFeedTradeDetailParts } from '../utils/feedTradeDisplay';
 import { type CongressTradeFeedItem } from '../utils/congressFeedCalc';
 import { DarkPoolTradeFeedCard } from './DarkPoolTradeFeedCard';
 
@@ -12,9 +12,12 @@ interface Props {
   onPersonPress?: (politicianId: string) => void;
 }
 
-export function CongressTradeCard({ item, onPersonPress }: Props) {
+export const CongressTradeCard = memo(function CongressTradeCard({
+  item,
+  onPersonPress,
+}: Props) {
   const { trade, sinceTradePct } = item;
-  const detail = formatFeedTradeDetail({
+  const { sharesLabel, amountLabel } = getFeedTradeDetailParts({
     shares: trade.shares,
     amountLabel: trade.amount_label,
   });
@@ -24,7 +27,8 @@ export function CongressTradeCard({ item, onPersonPress }: Props) {
       ticker={trade.ticker}
       personName={trade.politician_name}
       transactionType={trade.transaction_type}
-      detail={detail}
+      sharesLabel={sharesLabel}
+      amountLabel={amountLabel}
       filedAt={trade.filed_at}
       sinceTradePct={sinceTradePct}
       personImageUrl={trade.politician_image_url}
@@ -37,4 +41,4 @@ export function CongressTradeCard({ item, onPersonPress }: Props) {
       }
     />
   );
-}
+});

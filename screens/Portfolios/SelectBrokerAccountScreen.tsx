@@ -65,7 +65,12 @@ export default function SelectBrokerAccountScreen() {
           brokerAccountId: acc.id,
           triggerSync: true,
         });
-        // נווט לתיק שנוצר
+        if (res.syncOk === false) {
+          Alert.alert(
+            'התיק נוצר',
+            'הסנכרון המלא מול Colmex לא הושלם. פתח את התיק ומשוך לרענון, או חבר מחדש אם הנתונים חסרים.'
+          );
+        }
         navigation.replace('PortfolioDetail', { portfolioId: res.portfolioId });
       } catch (e) {
         Alert.alert('שגיאה', (e as Error).message ?? 'לא הצלחנו ליצור את התיק');

@@ -5,9 +5,10 @@ import {
   Switch,
   TouchableOpacity,
   StyleSheet,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
-import { ChevronLeft, type LucideIcon } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { useTheme } from '../../context/ThemeContext';
 import UICard from '../ui/UICard';
@@ -38,10 +39,31 @@ export function ProfileScreenBody({
   );
 }
 
-export function SettingsSectionTitle({ title }: { title: string }) {
+/** Section label — matches OverviewTab section titles (e.g. "שווי תיק…") */
+export function SettingsSectionTitle({
+  title,
+  style,
+}: {
+  title: string;
+  style?: TextStyle;
+}) {
   const tokens = useDesignTokens();
   return (
-    <Text style={styles(tokens).sectionTitle}>{title}</Text>
+    <Text
+      style={[
+        {
+          fontSize: 15,
+          fontWeight: '700',
+          color: tokens.colors.text.primary,
+          marginBottom: tokens.spacing.sm,
+          textAlign: 'right',
+          writingDirection: 'rtl',
+        },
+        style,
+      ]}
+    >
+      {title}
+    </Text>
   );
 }
 
@@ -68,7 +90,6 @@ export function SettingsGlassCard({
 type SettingsSwitchRowProps = {
   title: string;
   subtitle: string;
-  icon: LucideIcon;
   value: boolean;
   onValueChange: (value: boolean) => void;
   showDivider?: boolean;
@@ -78,7 +99,6 @@ type SettingsSwitchRowProps = {
 export function SettingsSwitchRow({
   title,
   subtitle,
-  icon: Icon,
   value,
   onValueChange,
   showDivider = true,
@@ -103,13 +123,6 @@ export function SettingsSwitchRow({
           <Text style={[s.title, danger && { color: tokens.colors.danger.main }]}>{title}</Text>
           <Text style={s.subtitle}>{subtitle}</Text>
         </View>
-        <View style={[s.iconWrap, danger && { backgroundColor: `${tokens.colors.danger.main}1A` }]}>
-          <Icon
-            size={20}
-            color={danger ? tokens.colors.danger.main : tokens.colors.primary.main}
-            strokeWidth={2}
-          />
-        </View>
       </View>
       {showDivider ? <View style={s.divider} /> : null}
     </View>
@@ -119,7 +132,6 @@ export function SettingsSwitchRow({
 type SettingsActionRowProps = {
   title: string;
   subtitle: string;
-  icon: LucideIcon;
   onPress: () => void;
   showDivider?: boolean;
   danger?: boolean;
@@ -129,7 +141,6 @@ type SettingsActionRowProps = {
 export function SettingsActionRow({
   title,
   subtitle,
-  icon: Icon,
   onPress,
   showDivider = true,
   danger,
@@ -148,13 +159,6 @@ export function SettingsActionRow({
           <Text style={[s.title, danger && { color: tokens.colors.danger.main }]}>{title}</Text>
           <Text style={s.subtitle}>{subtitle}</Text>
         </View>
-        <View style={[s.iconWrap, danger && { backgroundColor: `${tokens.colors.danger.main}1A` }]}>
-          <Icon
-            size={20}
-            color={danger ? tokens.colors.danger.main : tokens.colors.primary.main}
-            strokeWidth={2}
-          />
-        </View>
       </TouchableOpacity>
       {showDivider ? <View style={s.divider} /> : null}
     </View>
@@ -164,7 +168,6 @@ export function SettingsActionRow({
 type ProfileMenuRowProps = {
   title: string;
   subtitle?: string;
-  icon: LucideIcon;
   onPress: () => void;
   showDivider?: boolean;
 };
@@ -172,7 +175,6 @@ type ProfileMenuRowProps = {
 export function ProfileMenuRow({
   title,
   subtitle,
-  icon: Icon,
   onPress,
   showDivider = true,
 }: ProfileMenuRowProps) {
@@ -186,9 +188,6 @@ export function ProfileMenuRow({
         <View style={s.menuTextCol}>
           <Text style={s.title}>{title}</Text>
           {subtitle ? <Text style={s.subtitle}>{subtitle}</Text> : null}
-        </View>
-        <View style={s.menuIconWrap}>
-          <Icon size={20} color={tokens.colors.primary.main} strokeWidth={2.5} />
         </View>
       </TouchableOpacity>
       {showDivider ? <View style={s.menuDivider} /> : null}
@@ -207,15 +206,7 @@ export function SettingsVersionFooter() {
 
 function styles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
-    sectionTitle: {
-      fontSize: tokens.typography.caption.size,
-      fontWeight: tokens.typography.fontWeight.bold as '700',
-      color: tokens.colors.text.tertiary,
-      marginBottom: tokens.spacing.sm,
-      textAlign: 'right',
-      textTransform: 'uppercase',
-      letterSpacing: tokens.typography.letterSpacing.wide,
-    },
+    // App.tsx: direction LTR — chevron/switch ראשונים בעץ → שמאל ויזואלי
     row: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -230,11 +221,11 @@ function styles(tokens: ReturnType<typeof useDesignTokens>) {
     },
     textCol: {
       flex: 1,
-      marginHorizontal: tokens.spacing.md,
+      marginLeft: tokens.spacing.md,
     },
     menuTextCol: {
       flex: 1,
-      marginHorizontal: tokens.spacing.sm,
+      marginLeft: tokens.spacing.sm,
       gap: tokens.spacing.micro,
     },
     title: {
@@ -243,31 +234,15 @@ function styles(tokens: ReturnType<typeof useDesignTokens>) {
       lineHeight: tokens.typography.body.lineHeight,
       color: tokens.colors.text.primary,
       textAlign: 'right',
+      writingDirection: 'rtl',
     },
     subtitle: {
       fontSize: tokens.typography.bodySmall.size,
       lineHeight: tokens.typography.bodySmall.lineHeight,
       color: tokens.colors.text.tertiary,
       textAlign: 'right',
+      writingDirection: 'rtl',
       marginTop: 2,
-    },
-    iconWrap: {
-      width: 36,
-      height: 36,
-      borderRadius: tokens.borderRadius.sm,
-      backgroundColor: `${tokens.colors.primary.main}1A`,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    menuIconWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: tokens.borderRadius.md,
-      backgroundColor: `${tokens.colors.primary.main}20`,
-      borderWidth: tokens.layout.borderWidth.normal,
-      borderColor: tokens.colors.border.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     divider: {
       height: StyleSheet.hairlineWidth,

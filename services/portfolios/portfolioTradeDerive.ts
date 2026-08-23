@@ -21,7 +21,12 @@ import type {
   DerivedTrade,
   TradeDirection,
   AssetType,
+  Trade,
+  TradeInsert,
+  TradeStatus,
 } from '../../screens/Portfolios/portfolioTypes';
+import { clearHistoricalSeriesCache } from './portfolioService';
+import { toLocalDateKey, todayLocalKey } from '../../utils/dateKeys';
 
 interface OpenLot {
   symbol: string;
@@ -267,6 +272,192 @@ export async function deleteTradeMeta(id: string): Promise<void> {
     .delete()
     .eq('id', id);
   if (error) throw error;
+}
+
+/* ============================================================================
+ * New Trade model — CRUD ל-trades table (migration 20260723)
+ * ========================================================================= */
+
+/**
+ * טוען פוזיציות מטבלת trades.
+ * @param portfolioId מזהה התיק
+ * @param status 'OPEN' | 'CLOSED' | undefined (כל הסטטוסים)
+ */
+export async function loadTrades(
+  portfolioId: string,
+  status?: TradeStatus
+): Promise<Trade[]> {
+  let query = supabase
+    .from('trades')
+    .select('*')
+    .eq('portfolio_id', portfolioId)
+    .order('entry_date', { ascending: false });
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as Trade[];
+}
+
+/**
+ * פותח פוזיציה חדשה (INSERT ל-trades עם status='OPEN').
+ * הטריגר ב-PG מנכה את available_cash אוטומטית.
+ */
+export async function insertOpenTrade(input: TradeInsert): Promise<Trade> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth?.user) throw new Error('not_authenticated');
+
+  const payload: Record<string, unknown> = {
+    portfolio_id: input.portfolio_id,
+    user_id: auth.user.id,
+    symbol: input.symbol.toUpperCase(),
+    asset_type: input.asset_type,
+    exchange: input.exchange ?? null,
+    currency: input.currency ?? 'USD',
+    direction: input.direction ?? 'long',
+    status: 'OPEN' as TradeStatus,
+    entry_date: input.entry_date,
+    entry_price: input.entry_price,
+    quantity: input.quantity,
+    leverage: input.leverage ?? 1.0,
+    point_value: input.point_value ?? null,
+    commission: input.commission ?? 0,
+    notes: input.notes ?? null,
+    stop_loss: input.stop_loss ?? null,
+    target_price: input.target_price ?? null,
+    strategy_name: input.strategy_name ?? null,
+  };
+  // שלח journal_details רק אם סופק ערך — מניח את ברירת המחדל '{}'::jsonb של ה-DB
+  if (input.journal_details != null) {
+    payload.journal_details = input.journal_details;
+  }
+
+  const { data, error } = await supabase
+    .from('trades')
+    .insert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Trade;
+}
+
+/**
+ * מחזיר trade בודד לפי id.
+ */
+export async function getTrade(id: string): Promise<Trade | null> {
+  const { data, error } = await supabase
+    .from('trades')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Trade) ?? null;
+}
+
+/**
+ * עדכון trade קיים (עריכת פרטי הכניסה בלבד — status/exit_price/profit_loss לא משתנים כאן).
+ */
+export async function updateTrade(
+  id: string,
+  patch: Partial<TradeInsert>
+): Promise<Trade> {
+  const { data, error } = await supabase
+    .from('trades')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Trade;
+}
+
+/**
+ * מוחק trade פתוח. הטריגר ב-PG מחזיר את available_cash אוטומטית.
+ */
+export async function deleteTrade(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('trades')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
+/**
+ * סוגר פוזיציה פתוחה — UPDATE ל-status='CLOSED' + exit_price + exit_date.
+ * הטריגר ב-PG מחשב profit_loss, מחזיר cash, ומעדכן stats+snapshots.
+ */
+export async function closeTrade(
+  tradeId: string,
+  exitPrice: number,
+  exitDate?: string,
+  notes?: string
+): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth?.user) throw new Error('not_authenticated');
+
+  const { data: existing, error: fetchErr } = await supabase
+    .from('trades')
+    .select('id, status, portfolio_id')
+    .eq('id', tradeId)
+    .maybeSingle();
+  if (fetchErr) throw fetchErr;
+  if (!existing) throw new Error('trade_not_found');
+  if (existing.status !== 'OPEN') throw new Error('trade_not_open');
+
+  const resolvedExitDate = exitDate ?? new Date().toISOString();
+
+  const { data: updated, error } = await supabase
+    .from('trades')
+    .update({
+      status: 'CLOSED',
+      exit_price: exitPrice,
+      exit_date: resolvedExitDate,
+      ...(notes != null ? { notes } : {}),
+    })
+    .eq('id', tradeId)
+    .select('id')
+    .single();
+  if (error) throw error;
+  if (!updated) throw new Error('trade_update_failed');
+
+  // Fallback: range_recalc מהלקוח להבטיח snapshots מעודכנים
+  // (הטריגר עושה את זה ב-DB, אבל קריאה מהקוד מבטיחה שהגרף יתרענן מיד)
+  try {
+    const exitDateKey = toLocalDateKey(new Date(resolvedExitDate));
+    const todayKey = todayLocalKey();
+    await supabase.rpc('range_recalc_snapshots', {
+      p_portfolio_id: existing.portfolio_id,
+      p_from: exitDateKey,
+      p_to: todayKey,
+    });
+  } catch {
+    // שגיאה ב-range_recalc אינה קריטית — הטריגר כבר ביצע את החישוב
+  }
+
+  // נקה cache כדי שהגרף ייבנה מחדש
+  clearHistoricalSeriesCache(existing.portfolio_id);
+}
+
+/* ============================================================================
+ * איפוס תיק — RPC אטומי (trades / snapshots / transactions / history /
+ * broker_positions ל-Colmex) + available_cash=0 + recalc stats.
+ * ========================================================================= */
+
+/**
+ * מוחק את כל הנתונים ההיסטוריים של התיק ומאפס אותו למצב ראשוני.
+ * משתמש ב-RPC `reset_portfolio` (SECURITY DEFINER) כי ל-snapshots /
+ * broker_positions אין/לא היו מדיניות DELETE ב-RLS — מחיקה ישירה
+ * החזירה הצלחה שקטה עם 0 שורות.
+ */
+export async function resetPortfolio(portfolioId: string): Promise<void> {
+  const { error } = await supabase.rpc('reset_portfolio', {
+    p_portfolio_id: portfolioId,
+  });
+  if (error) throw error;
+  clearHistoricalSeriesCache(portfolioId);
 }
 
 /* ============================================================================

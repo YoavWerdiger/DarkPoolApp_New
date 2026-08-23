@@ -51,7 +51,7 @@ export interface UseDarkPoolInsiderFeedOptions {
 
 const QUOTE_ENRICH_TIMEOUT_MS = 6_000;
 
-async function loadInsider(
+export async function loadInsider(
   tab: DarkPoolFeedTab,
   limit: number | undefined,
   isPremium: boolean,
@@ -111,6 +111,7 @@ export function useDarkPoolInsiderFeed({
       return loadInsider(tab, limit, isPremium, refresh);
     },
     enabled,
+    staleTime: 2 * 60 * 1000,
   });
 
   const refetch = useCallback(async () => {

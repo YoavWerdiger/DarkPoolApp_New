@@ -1,5 +1,5 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { View, Text, FlatList, RefreshControl, ActivityIndicator, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -14,6 +14,35 @@ import { translateEconomicEventNameSmart } from '../../utils/economicEventTransl
 import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { formatEconomicDisplayValue, parseEconomicNumber } from '../../utils/economicNumberFormat';
+import {
+  isTaxonomyFlaggedEvent,
+  matchEconomicFlagTier,
+  resolveEconomicEventImportance,
+  type EconomicImportance,
+} from '../../utils/economicEventImportance';
+
+function displayImportance(event: EconEvent): EconomicImportance {
+  const fallback = (event.importance as EconomicImportance) || 'low';
+  return resolveEconomicEventImportance(
+    event.title || '',
+    fallback,
+    event.description || '',
+    event.category || '',
+  );
+}
+
+/** פס צד: רק טקסונומיית אדום/כתום — לא importance גולמי של הספק. */
+function stripFlagImportance(event: EconEvent): EconomicImportance {
+  // תיאורי Benzinga ארוכים יוצרים התאמות שווא; משתמשים בתיאור רק אם קצר (סוג EODHD)
+  const shortDesc =
+    (event.description || '').length > 0 && (event.description || '').length < 80
+      ? event.description
+      : undefined;
+  const tier = matchEconomicFlagTier(event.title, event.category, shortDesc);
+  if (tier === 'red') return 'high';
+  if (tier === 'orange') return 'medium';
+  return 'low';
+}
 
 const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent) => void }> = ({ 
   event, 
@@ -24,13 +53,12 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
   const getImportanceColor = (importance: string) => {
     switch (importance) {
       case 'high':
-        return DesignTokens.colors.danger.main;
+        return DesignTokens.colors.danger.main; // 🔴 אדום
       case 'medium':
-        return DesignTokens.colors.warning.main;
+        return DesignTokens.colors.warning.main; // 🟠 כתום
       case 'low':
-        return DesignTokens.colors.success.main;
       default:
-        return DesignTokens.colors.border.primary;
+        return DesignTokens.colors.border.primary; // נייטרלי — לא דגל
     }
   };
 
@@ -41,7 +69,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
       .trim();
   };
 
-  const importanceColor = getImportanceColor(event.importance);
+  const importanceColor = getImportanceColor(stripFlagImportance(event));
   // תרגום שם האירוע לעברית
   const translatedTitle = translateEconomicEventNameSmart(event.title || '');
   const cleanTitle = stripEmojis(translatedTitle);
@@ -58,8 +86,8 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
 
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   return (
-    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
-      <UICard variant="blur" padding="lg" style={{ flexDirection: 'row', alignItems: 'flex-start', overflow: 'hidden' }}>
+    <Pressable onPress={() => onPress(event)} style={{ marginHorizontal: screenPad, marginBottom: 10 }}>
+      <UICard variant="blur" padding="sm" style={{ flexDirection: 'row', alignItems: 'flex-start', overflow: 'hidden', paddingVertical: 12, paddingHorizontal: 14 }}>
       {/* פס חשיבות דק מיושר לימין, מעוגל בפינות - מתאים לגובה הכרטיסיה */}
       <View
         style={{
@@ -67,7 +95,7 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
           right: 0,
           top: 0,
           bottom: 0,
-          width: 4,
+          width: 3,
           backgroundColor: importanceColor,
           borderTopRightRadius: 12,
           borderBottomRightRadius: 12,
@@ -75,18 +103,19 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
       />
 
       {/* תוכן מימין */}
-      <View style={{ flex: 1, alignItems: 'flex-end', marginRight: 12 }}>
+      <View style={{ flex: 1, alignItems: 'flex-end', marginRight: 10 }}>
         {/* שורה עליונה - זמן וכותרת (RTL: זמן משמאל, כותרת מימין) */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
-          <Text 
-            style={{ 
-              fontSize: 18, 
-              fontWeight: '700', 
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <Text
+            style={{
+              fontSize: 15,
+              fontWeight: '700',
               color: DesignTokens.colors.text.primary,
               textAlign: 'right',
-              lineHeight: 24,
+              writingDirection: 'rtl',
+              lineHeight: 21,
               flex: 1,
-              marginRight: 8
+              marginRight: 10,
             }}
             numberOfLines={2}
           >
@@ -95,50 +124,53 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
           <View style={{
             backgroundColor: (DesignTokens.colors.primary as any).dim || 'rgba(0, 210, 106, 0.12)',
             paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 20
+            paddingVertical: 4,
+            borderRadius: 12,
+            flexShrink: 0,
           }}>
-            <Text style={{ 
-              fontSize: 16, 
+            <Text style={{
+              fontSize: 13,
+              lineHeight: 16,
               color: DesignTokens.colors.primary.main,
               fontWeight: '600',
-              textAlign: 'center'
+              textAlign: 'center',
+              fontVariant: ['tabular-nums'],
             }}>
               {event.time}
             </Text>
           </View>
         </View>
 
-      {/* בלוק ערכים ויזואلي – ללא מסגרות, עם פסי הפרדה */}
+      {/* בלוק ערכים ויזואלי – ללא מסגרות, עם פסי הפרדה */}
       {/* מציגים רק אם יש תוצאה/תחזית/קודם - אחרת רק שעה ושם האירוע */}
       {(event.actual || event.forecast || event.previous) && (
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: 10 }}>
           {/* פס הפרדה אופקי עליון */}
-          <View style={{ height: 1, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginBottom: 12 }} />
-          
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginBottom: 10 }} />
+
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', width: '100%' }}>
             {event.actual && (
               <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>תוצאה</Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: getActualColor(), textAlign: 'center' }}>{formatEconomicDisplayValue(event.actual)}</Text>
+                <Text style={{ fontSize: 11, lineHeight: 14, color: DesignTokens.colors.text.tertiary, marginBottom: 3, fontWeight: '500', textAlign: 'center' }}>תוצאה</Text>
+                <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: '700', color: getActualColor(), textAlign: 'center', fontVariant: ['tabular-nums'] }}>{formatEconomicDisplayValue(event.actual)}</Text>
               </View>
             )}
               {event.actual && (event.forecast || event.previous) && (
-              <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
+              <View style={{ width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 8, alignSelf: 'flex-start', marginTop: 0 }} />
             )}
             {event.forecast && (
               <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>תחזית</Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center' }}>{formatEconomicDisplayValue(event.forecast)}</Text>
+                <Text style={{ fontSize: 11, lineHeight: 14, color: DesignTokens.colors.text.tertiary, marginBottom: 3, fontWeight: '500', textAlign: 'center' }}>תחזית</Text>
+                <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: '700', color: DesignTokens.colors.text.primary, textAlign: 'center', fontVariant: ['tabular-nums'] }}>{formatEconomicDisplayValue(event.forecast)}</Text>
               </View>
             )}
             {event.forecast && event.previous && (
-              <View style={{ width: 1, height: 40, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 16, alignSelf: 'flex-start', marginTop: 0 }} />
+              <View style={{ width: StyleSheet.hairlineWidth, height: 34, backgroundColor: 'rgba(255, 255, 255, 0.12)', marginHorizontal: 8, alignSelf: 'flex-start', marginTop: 0 }} />
             )}
             {event.previous && (
               <View style={{ flex: 1, alignItems: 'center' }}>
-                <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 6, fontWeight: '500', textAlign: 'center' }}>קודם</Text>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'center' }}>{formatEconomicDisplayValue(event.previous)}</Text>
+                <Text style={{ fontSize: 11, lineHeight: 14, color: DesignTokens.colors.text.tertiary, marginBottom: 3, fontWeight: '500', textAlign: 'center' }}>קודם</Text>
+                <Text style={{ fontSize: 15, lineHeight: 20, fontWeight: '700', color: DesignTokens.colors.text.secondary, textAlign: 'center', fontVariant: ['tabular-nums'] }}>{formatEconomicDisplayValue(event.previous)}</Text>
               </View>
             )}
           </View>
@@ -149,55 +181,6 @@ const EconomicEventCard: React.FC<{ event: EconEvent; onPress: (event: EconEvent
     </Pressable>
   );
 };
-
-// רשימת אירועים חשובים ביותר לסוחרים
-const CRITICAL_EVENTS = [
-  // מדיניות מוניטרית - הכי חשוב!
-  'FED', 'FOMC', 'ריבית', 'פד', 'ישיבת הפד', 'החלטת ריבית', 'Federal Reserve',
-  'Interest Rate', 'Rate Decision', 'Beige Book', 'Fed Chair', 'Powell',
-  'Balance Sheet', 'Monetary Policy',
-  
-  // אינפלציה - קריטי לשווקים
-  'CPI', 'PPI', 'PCE', 'Core CPI', 'Core PCE', 'אינפלציה', 'Inflation',
-  'Consumer Price', 'Producer Price', 'Personal Consumption',
-  'Import Price', 'Export Price',
-  
-  // שוק עבודה - מניע מרכזי
-  'NFP', 'Non-Farm', 'Payrolls', 'אבטלה', 'Unemployment', 'Jobless Claims', 
-  'תביעות אבטלה', 'ADP', 'Employment', 'שכר ממוצע', 'Hourly Earnings',
-  'Wages', 'Labor Force', 'תעסוקה',
-  
-  // צמיחה - מדדים מרכזיים
-  'GDP', 'מכירות קמעונאיות', 'Retail Sales', 'ייצור תעשייתי', 
-  'Industrial Production', 'Capacity Utilization', 'Business Inventories',
-  'Manufacturing', 'Factory Orders',
-  
-  // סנטימנט - מנבא מגמות
-  'ISM', 'PMI', 'אמון צרכן', 'Consumer Confidence', 'Michigan Sentiment',
-  'S&P Global', 'Services PMI', 'Manufacturing PMI', 'Composite PMI',
-  
-  // נדל"ן - מחוון כלכלי
-  'Housing Starts', 'Building Permits', 'Home Sales', 'התחלות בנייה', 
-  'היתרי בנייה', 'Existing Home', 'New Home', 'NAHB', 'Case-Shiller',
-  
-  // סחר - גלובלי
-  'Trade Balance', 'מאזן סחר', 'Current Account', 'Exports', 'Imports',
-  
-  // שווקים - תנודתיות
-  'VIX', 'Treasury', 'תשואות', 'Yields', '10-Year', '2-Year', 'Yield Curve',
-  
-  // בנקים מרכזיים אחרים
-  'ECB', 'BOE', 'BOJ', 'Bank of England', 'European Central Bank',
-  
-  // אנרגיה - משפיע על אינפלציה
-  'Oil', 'Crude', 'WTI', 'Brent', 'Energy', 'נפט',
-  
-  // מטבעות - חשוב לפורקס
-  'Dollar Index', 'DXY', 'EUR/USD', 'Currency',
-  
-  // דוחות רווחים חשובים
-  'Earnings', 'רווחים', 'תוצאות', 'דוח רבעוני'
-];
 
 export default function EconomicCalendarTab() {
   const DesignTokens = useDesignTokens();
@@ -220,24 +203,8 @@ export default function EconomicCalendarTab() {
   
   // Ref לגלילה לאירוע הקרוב ביותר
   const dailyEventsListRef = useRef<FlatList>(null);
-
-  // דיבאג - בדיקה מתי הref מוכן (useLayoutEffect רץ סינכרוני אחרי DOM update)
-  useLayoutEffect(() => {
-    if (!loading) {
-    }
-  }, [loading]);
-  
-  // בדיקה נוספת אחרי טיימר
-  useEffect(() => {
-    if (!loading) {
-      const timer = setTimeout(() => {
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [loading]);
-
-  // פילטרים מתקדמים
-  // פישוט: אין פילטרים מתקדמים, אין טעינת היסטוריה ידנית
+  // מונע גלילה כפולה לאותו תוכן; מתאפס כשעוזבים את היום
+  const autoScrolledForKeyRef = useRef<string | null>(null);
 
   // פונקציות ניווט יומי
   const goToPreviousDay = () => {
@@ -256,8 +223,8 @@ export default function EconomicCalendarTab() {
 
   const goToToday = useCallback(() => {
     void HapticFeedback.medium();
+    autoScrolledForKeyRef.current = null;
     setSelectedDate(new Date());
-    dailyEventsListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
 
   const isSelectedToday = selectedDate.toDateString() === new Date().toDateString();
@@ -296,17 +263,11 @@ export default function EconomicCalendarTab() {
     [DesignTokens, fabBottomInset],
   );
 
-  // בדיקה אם אירוע הוא "מוכר" — נכלל ברשימת ה-CRITICAL_EVENTS או מסומן כ-high
-  // importance ב-DB. מספיק שאחד מהשניים יתקיים כדי שהאירוע ייחשב חשוב.
+  // אדום/כתום לפי טקסונומיה, או high/medium שכבר ב-DB
   const isCriticalEvent = useCallback((event: EconEvent): boolean => {
-    if (event.importance === 'high') return true;
-    const titleLower = (event.title || '').toLowerCase();
-    const descLower = (event.description || '').toLowerCase();
-    const categoryLower = (event.category || '').toLowerCase();
-    return CRITICAL_EVENTS.some(keyword => {
-      const k = keyword.toLowerCase();
-      return titleLower.includes(k) || descLower.includes(k) || categoryLower.includes(k);
-    });
+    const importance = displayImportance(event);
+    if (importance === 'high' || importance === 'medium') return true;
+    return isTaxonomyFlaggedEvent(event.title, event.description, event.category);
   }, []);
 
   // פילטור אירועים לפי יום נבחר עם תיקון שעה
@@ -378,26 +339,20 @@ export default function EconomicCalendarTab() {
     filterEventsByDate();
   }, [filterEventsByDate]);
 
-  // חישוב אינדקס האירוע הקרוב ביותר לשעה הנוכחית מתוך dailyEvents
-  const findClosestEventIndex = useCallback((events: EconEvent[]): number => {
-    if (events.length === 0) return -1;
+  // אינדקס האירוע העתידי הקרוב ביותר (כמו TradingView). אם כולם עברו — האחרון ברשימה.
+  const findNearestUpcomingEventIndex = useCallback((list: EconEvent[]): number => {
+    if (list.length === 0) return -1;
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    let closestIndex = 0;
-    let smallestDiff = Infinity;
-    events.forEach((event, index) => {
-      const [hours, minutes] = (event.time || '00:00').split(':').map(Number);
-      const eventMinutes = hours * 60 + minutes;
-      const diff = Math.abs(eventMinutes - currentMinutes);
-      if (diff < smallestDiff) {
-        smallestDiff = diff;
-        closestIndex = index;
-      }
-    });
-    return closestIndex;
+    for (let i = 0; i < list.length; i++) {
+      const [hours, minutes] = (list[i].time || '00:00').split(':').map(Number);
+      const eventMinutes = (hours || 0) * 60 + (minutes || 0);
+      if (eventMinutes >= currentMinutes) return i;
+    }
+    return list.length - 1;
   }, []);
 
-  // גלילה אקטיבית לאינדקס מסוים עם fallback אם scrollToIndex נכשל
+  // גלילה לאינדקס — ליד החלק העליון של הרשימה (TradingView-like)
   const scrollToEventIndex = useCallback((index: number, animated: boolean = true) => {
     const list = dailyEventsListRef.current;
     if (!list || index < 0) return;
@@ -405,56 +360,43 @@ export default function EconomicCalendarTab() {
       list.scrollToIndex({
         index,
         animated,
-        viewPosition: 0.2,
+        viewPosition: 0.15,
       });
     } catch {
-      // ה-onScrollToIndexFailed יתפוס – בנוסף ננסה fallback ידני
-      const estimatedItemHeight = 100;
+      const estimatedItemHeight = 112;
       list.scrollToOffset({
-        offset: Math.max(0, index * estimatedItemHeight - 80),
+        offset: Math.max(0, index * estimatedItemHeight),
         animated,
       });
     }
   }, []);
 
-  // כפתור "כעת" – גלילה ידנית לאירוע הקרוב לשעה הנוכחית
-  const scrollToClosestEvent = useCallback(() => {
-    if (dailyEvents.length === 0) return;
-    const isToday = selectedDate.toDateString() === new Date().toDateString();
-    if (!isToday) {
-      setSelectedDate(new Date());
-      return;
-    }
-    const closestIndex = findClosestEventIndex(dailyEvents);
-    if (closestIndex >= 0) {
-      void HapticFeedback.selection();
-      scrollToEventIndex(closestIndex, true);
-    }
-  }, [dailyEvents, selectedDate, findClosestEventIndex, scrollToEventIndex]);
-
-  // גלילה אוטומטית לאירוע הקרוב ביותר ברגע שהנתונים נטענים והתאריך הוא היום
-  const autoScrolledForKeyRef = useRef<string | null>(null);
+  // גלילה אוטומטית לאירוע הקרוב כשהרשימה נטענת / חוזרים להיום
   useEffect(() => {
     if (loading) return;
-    if (dailyEvents.length === 0) return;
+
     const isToday = selectedDate.toDateString() === new Date().toDateString();
-    if (!isToday) return;
+    if (!isToday) {
+      autoScrolledForKeyRef.current = null;
+      return;
+    }
+    if (dailyEvents.length === 0) return;
 
-    const todayKey = selectedDate.toDateString();
-    if (autoScrolledForKeyRef.current === todayKey) return;
-    autoScrolledForKeyRef.current = todayKey;
+    const contentKey = dailyEvents.map((e) => `${e.id}:${e.time}`).join('|');
+    if (autoScrolledForKeyRef.current === contentKey) return;
+    autoScrolledForKeyRef.current = contentKey;
 
-    const closestIndex = findClosestEventIndex(dailyEvents);
-    if (closestIndex < 0) return;
+    const targetIndex = findNearestUpcomingEventIndex(dailyEvents);
+    if (targetIndex < 0) return;
 
-    // המתנה לרינדור הראשוני של ה-FlatList לפני קריאה ל-scrollToIndex
-    const t1 = setTimeout(() => scrollToEventIndex(closestIndex, false), 250);
-    const t2 = setTimeout(() => scrollToEventIndex(closestIndex, true), 600);
+    // המתנה קצרה לרינדור ה-FlatList לפני scrollToIndex
+    const t1 = setTimeout(() => scrollToEventIndex(targetIndex, false), 200);
+    const t2 = setTimeout(() => scrollToEventIndex(targetIndex, false), 500);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [loading, dailyEvents, selectedDate, findClosestEventIndex, scrollToEventIndex]);
+  }, [loading, dailyEvents, selectedDate, findNearestUpcomingEventIndex, scrollToEventIndex]);
 
   // טעינת אירועים מ-Supabase Database – קודם טווח קצר (היום והלאה), אחר כך עבר
   const loadFromDatabase = async (): Promise<EconEvent[]> => {
@@ -504,14 +446,21 @@ export default function EconomicCalendarTab() {
         return [];
       }
       
-      // המרה לפורמט של האפליקציה
+      // המרה לפורמט של האפליקציה + טקסונומיית אדום/כתום לתצוגה
       return data.map(event => {
+        const dbImportance = (event.importance as EconomicImportance) || 'low';
+        const importance = resolveEconomicEventImportance(
+          event.title || '',
+          dbImportance,
+          event.description || '',
+          event.category || '',
+        );
         const convertedEvent = {
           id: event.id,
           title: event.title,
           country: event.country,
           currency: event.currency || '',
-          importance: event.importance as 'high' | 'medium' | 'low',
+          importance,
           date: typeof event.date === 'string' ? event.date : new Date(event.date).toISOString().split('T')[0],
           time: event.time || '',
           actual: event.actual || '',
@@ -519,7 +468,7 @@ export default function EconomicCalendarTab() {
           previous: event.previous || '',
           description: event.description || '',
           category: event.category || '',
-          impact: event.impact || '',
+          impact: event.impact || importance,
           source: event.source || 'Database',
           createdAt: event.created_at
         };
@@ -839,17 +788,23 @@ export default function EconomicCalendarTab() {
         }
         ListEmptyComponent={renderEmptyState}
         onScrollToIndexFailed={(info) => {
-          const estimatedItemHeight = info.averageItemLength || 100;
-          const targetOffset = Math.max(0, info.index * estimatedItemHeight - 100);
+          const estimatedItemHeight = info.averageItemLength || 112;
+          const targetOffset = Math.max(0, info.index * estimatedItemHeight);
+          dailyEventsListRef.current?.scrollToOffset({
+            offset: targetOffset,
+            animated: false,
+          });
           setTimeout(() => {
             try {
-              dailyEventsListRef.current?.scrollToOffset({
-                offset: targetOffset,
-                animated: true,
+              dailyEventsListRef.current?.scrollToIndex({
+                index: info.index,
+                animated: false,
+                viewPosition: 0.15,
               });
-            } catch (e) {
+            } catch {
+              // offset כבר הוחל
             }
-          }, 100);
+          }, 120);
         }}
         />
       </View>

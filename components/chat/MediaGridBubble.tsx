@@ -40,7 +40,7 @@ function MediaGridBubble({
   mediaItems,
   localMediaItems,
   isUploading = false,
-  maxWidth = 260,
+  maxWidth = 220,
 }: MediaGridBubbleProps) {
   const [galleryVisible, setGalleryVisible] = useState(false);
   const [initialIndex, setInitialIndex] = useState(0);
@@ -137,7 +137,8 @@ function MediaGridBubble({
 
   const { columns } = getGridLayout();
   const itemWidth = (maxWidth - GRID_GAP * (columns - 1)) / columns;
-  const itemHeight = visibleItems.length === 1 ? maxWidth * 0.75 : itemWidth;
+  // Single item: mild portrait (between square and 3:4), multi: square cells
+  const itemHeight = visibleItems.length === 1 ? maxWidth * 1.25 : itemWidth;
 
   const renderMediaItem = (item: (typeof items)[0], index: number, isLast: boolean) => {
     const showOverlay = isLast && remainingCount > 0;

@@ -29,17 +29,11 @@ const TestRegistrationScreen = () => {
       phone: '0501234567',
       track_id: '1',
       intro_data: {
-        markets: ['forex'],
-        experience: 'beginner',
-        styles: ['scalping'],
-        brokers: ['meta4'],
-        level: 'beginner',
-        goal: 'income',
-        communityGoals: ['learning'],
-        hours: '2',
-        socials: ['telegram'],
-        heardFrom: 'חבר',
-        wish: 'יותר חומרים'
+        age_range: '25_34',
+        experience_level: 'beginner',
+        trading_focus: 'swing',
+        trading_platform: ['colmex'],
+        portfolio_size: 'under_10k',
       }
     });
     setLoading(false);

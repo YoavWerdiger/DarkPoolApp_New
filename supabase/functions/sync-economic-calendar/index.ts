@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { resolveEconomicEventImportance } from '../_shared/economicEventImportance.ts'
 
 const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
 
@@ -259,14 +260,8 @@ serve(async (req) => {
         
         console.log(`🔄 "${originalType}" → "${translatedTitle}" - Date: ${e.date} → ${adjustedDate} ${parsedTime}`)
         
-        // קביעת חשיבות
         const type = originalType.toLowerCase()
-        let importance = 'medium'
-        if (type.includes('cpi') || type.includes('nfp') || type.includes('employment') || 
-            type.includes('gdp') || type.includes('fomc') || type.includes('pce') || 
-            type.includes('ppi') || type.includes('retail sales') || type.includes('unemployment')) {
-          importance = 'high'
-        }
+        const importance = resolveEconomicEventImportance(originalType, 'low', translatedTitle)
         
         // קטגוריה
         let category = 'כלכלה'

@@ -85,7 +85,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
       width: 200,
-      borderRadius: tokens.borderRadius.xl,
+      borderRadius: tokens.borderRadius['2xl'],
       borderWidth: 1,
       borderColor: tokens.colors.border.subtle,
       backgroundColor: 'rgba(255,255,255,0.04)',

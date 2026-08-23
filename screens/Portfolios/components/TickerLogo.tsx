@@ -11,7 +11,7 @@ interface Props {
 
 /**
  * לוגו טיקר דרך Brandfetch CDN.
- * נופל אחורה לראשי תיבות עם רקע צבעוני אם הלוגו לא נטען / סימבול לא מוכר.
+ * ממלא את העיגול במלואו (cover + overflow hidden).
  */
 export function TickerLogo({ symbol, size = 36, borderRadius }: Props) {
   const tokens = useDesignTokens();
@@ -82,7 +82,7 @@ export function TickerLogo({ symbol, size = 36, borderRadius }: Props) {
         source={{ uri }}
         onError={() => setErrored(true)}
         style={{ width: size, height: size }}
-        resizeMode="contain"
+        resizeMode="cover"
       />
     </View>
   );

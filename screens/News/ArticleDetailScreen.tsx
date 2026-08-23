@@ -79,7 +79,7 @@ export default function ArticleDetailScreen() {
       className="flex-1"
       style={{ backgroundColor: DesignTokens.colors.background.primary }}
     >
-      <StatusBar style="light" backgroundColor={DesignTokens.colors.background.primary} />
+      <StatusBar style="light" />
       
       <SafeAreaView className="flex-1">
         {/* Header עם כפתורים */}

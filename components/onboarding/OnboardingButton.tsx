@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import {
   Text,
+  View,
   TouchableOpacity,
   ActivityIndicator,
   ViewStyle,
@@ -18,6 +19,7 @@ interface OnboardingButtonProps {
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
   style?: ViewStyle;
+  icon?: React.ReactNode;
 }
 
 const OnboardingButton: React.FC<OnboardingButtonProps> = ({
@@ -27,6 +29,7 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
   disabled = false,
   variant = 'primary',
   style,
+  icon,
 }) => {
   const scale = useRef(new Animated.Value(1)).current;
   const isDisabled = loading || disabled;
@@ -39,8 +42,8 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
 
   const pressIn = () => {
     Animated.timing(scale, {
-      toValue: 0.97,
-      duration: 100,
+      toValue: 0.98,
+      duration: 90,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
@@ -49,7 +52,7 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
   const pressOut = () => {
     Animated.timing(scale, {
       toValue: 1,
-      duration: 150,
+      duration: 140,
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
@@ -63,12 +66,13 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={{
-            borderRadius: 30,
+            borderRadius: DesignTokens.borderRadius.full,
+            overflow: 'hidden',
             shadowColor: isDisabled ? 'transparent' : DesignTokens.colors.primary.main,
             shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: isDisabled ? 0 : 0.45,
-            shadowRadius: 14,
-            elevation: isDisabled ? 0 : 8,
+            shadowOpacity: isDisabled ? 0 : 0.28,
+            shadowRadius: 12,
+            elevation: isDisabled ? 0 : 6,
           }}
         >
           <TouchableOpacity
@@ -78,25 +82,28 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
             disabled={isDisabled}
             activeOpacity={1}
             style={{
-              paddingVertical: 17,
+              paddingVertical: 16,
               alignItems: 'center',
               justifyContent: 'center',
-              opacity: isDisabled ? 0.5 : 1,
+              opacity: isDisabled ? 0.55 : 1,
             }}
           >
             {loading ? (
               <ActivityIndicator color="#000" size="small" />
             ) : (
-              <Text
-                style={{
-                  color: isDisabled ? 'rgba(255,255,255,0.3)' : '#000',
-                  fontSize: 16,
-                  fontWeight: '700',
-                  letterSpacing: 0.3,
-                }}
-              >
-                {title}
-              </Text>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+                {icon}
+                <Text
+                  style={{
+                    color: isDisabled ? 'rgba(255,255,255,0.3)' : '#000',
+                    fontSize: 16,
+                    fontWeight: '700',
+                    letterSpacing: 0.2,
+                  }}
+                >
+                  {title}
+                </Text>
+              </View>
             )}
           </TouchableOpacity>
         </LinearGradient>
@@ -104,7 +111,6 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
     );
   }
 
-  // Secondary — ghost
   return (
     <Animated.View style={[{ transform: [{ scale }] }, style]}>
       <TouchableOpacity
@@ -114,25 +120,31 @@ const OnboardingButton: React.FC<OnboardingButtonProps> = ({
         disabled={isDisabled}
         activeOpacity={1}
         style={{
-          borderRadius: 30,
-          paddingVertical: 17,
+          borderRadius: DesignTokens.borderRadius.full,
+          paddingVertical: 15,
           alignItems: 'center',
           justifyContent: 'center',
           opacity: isDisabled ? 0.4 : 1,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.1)',
+          backgroundColor: 'rgba(255,255,255,0.04)',
         }}
       >
         {loading ? (
           <ActivityIndicator color={DesignTokens.colors.text.secondary} size="small" />
         ) : (
-          <Text
-            style={{
-              color: 'rgba(255,255,255,0.45)',
-              fontSize: 16,
-              fontWeight: '500',
-            }}
-          >
-            {title}
-          </Text>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+            {icon}
+            <Text
+              style={{
+                color: 'rgba(255,255,255,0.55)',
+                fontSize: 15,
+                fontWeight: '600',
+              }}
+            >
+              {title}
+            </Text>
+          </View>
         )}
       </TouchableOpacity>
     </Animated.View>

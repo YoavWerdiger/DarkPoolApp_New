@@ -15,6 +15,7 @@ import {
 } from '../../types/chat.types';
 import { logger } from '../../utils/logger';
 import { chatMediaStoragePathFromRef, getChatMediaDisplayUri } from './chatSignedMediaUrl';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from '../../config/publicEnv';
 
 // ============================================
 // קונפיגורציה
@@ -309,6 +310,18 @@ export async function uploadImage(
 // העלאת סרטון
 // ============================================
 
+/**
+ * העלאת סרטון ל-chat-media bucket.
+ *
+ * חשוב: לא ממירים את הקובץ ל-base64 (כמו ב-image/audio). וידאו לעיתים
+ * קרובות שוקל 20–100MB, וקריאה של קובץ כזה ל-base64 (`readAsStringAsync`
+ * ואז `decode` ל-ArrayBuffer) מנפחת את הזיכרון פי ~2.5 ומפילה את ה-JS
+ * heap (bridge OOM שקט) — זו הסיבה שהעלאת סרטונים לא הצליחה בפועל.
+ *
+ * במקום זאת מעלים ישירות binary דרך `FileSystem.createUploadTask` שמזרים
+ * את הקובץ ב-native side ל-Supabase Storage REST API. אין ניפוח זיכרון,
+ * ובנוסף מקבלים progress אמיתי מ-native.
+ */
 export async function uploadVideo(
   uri: string,
   groupId: string,
@@ -322,85 +335,204 @@ export async function uploadVideo(
   size: number;
   error: ChatError | null;
 }> {
+  const failResult = (error: ChatError) => ({
+    url: null,
+    thumbnail_url: null,
+    duration: 0,
+    width: 0,
+    height: 0,
+    size: 0,
+    error,
+  });
+
   try {
     if (!validateGroupPath(groupId)) {
-      return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'INVALID_GROUP', message: 'Invalid group ID' } };
+      return failResult({ code: 'INVALID_GROUP', message: 'Invalid group ID' });
     }
 
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) {
-      return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' } };
+      logger.warn('ChatMedia', `uploadVideo: file not found uri=${uri.slice(0, 80)}`);
+      return failResult({ code: 'FILE_NOT_FOUND', message: 'הקובץ לא נמצא' });
     }
 
-    if (fileInfo.size && fileInfo.size > MAX_VIDEO_SIZE) {
-      return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'FILE_TOO_LARGE', message: 'הסרטון גדול מדי (מקסימום 100MB)' } };
-    }
-
-    if (onProgress) {
-      onProgress({ file_name: '', progress: 10, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
+    const fileSize = typeof fileInfo.size === 'number' ? fileInfo.size : 0;
+    if (fileSize > MAX_VIDEO_SIZE) {
+      logger.warn('ChatMedia', `uploadVideo: file too large size=${fileSize}`);
+      return failResult({ code: 'FILE_TOO_LARGE', message: 'הסרטון גדול מדי (מקסימום 100MB)' });
     }
 
     const timestamp = Date.now();
     const randomId = generateSecureId();
     const rawExt = uri.split('.').pop() || 'mp4';
-    const extension = rawExt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
+    const extension = (rawExt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 10) || 'mp4').toLowerCase();
     const fileName = `${groupId}/${timestamp}-${randomId}.${extension}`;
 
-    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+    const videoMimeTypes: Record<string, string> = {
+      mp4: 'video/mp4',
+      m4v: 'video/x-m4v',
+      mov: 'video/quicktime',
+      qt: 'video/quicktime',
+      avi: 'video/x-msvideo',
+      mkv: 'video/x-matroska',
+      webm: 'video/webm',
+      '3gp': 'video/3gpp',
+    };
+    const mimeType = videoMimeTypes[extension] || 'video/mp4';
+
+    logger.info(
+      'ChatMedia',
+      `uploadVideo:start uri=${uri.slice(0, 80)} size=${fileSize} mime=${mimeType} path=${fileName}`,
+    );
 
     if (onProgress) {
-      onProgress({ file_name: fileName, progress: 50, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
+      onProgress({ file_name: fileName, progress: 5, uploaded_bytes: 0, total_bytes: fileSize });
     }
 
-    const mimeType = extension === 'mov' ? 'video/quicktime' : `video/${extension}`;
-    let videoUploadError: any = null;
+    // ה-token של המשתמש נדרש עבור Storage RLS. אם אין session פעיל —
+    // אין טעם לנסות (יתקבל 401 מ-storage).
+    let accessToken: string | undefined;
+    try {
+      const { data } = await supabase.auth.getSession();
+      accessToken = data.session?.access_token;
+    } catch (sessionError) {
+      logger.warn('ChatMedia', 'uploadVideo: getSession failed', sessionError);
+    }
+    if (!accessToken) {
+      logger.error('ChatMedia', 'uploadVideo: no auth session, aborting');
+      return failResult({ code: 'AUTH_REQUIRED', message: 'נדרשת התחברות מחדש' });
+    }
+
+    // Storage REST endpoint (POST על אובייקט חדש = insert). ה-path מכיל
+    // רק [uuid]/[timestamp-hex].ext ולכן encodeURI מספיק (אין תווים מיוחדים).
+    const uploadUrl = `${SUPABASE_URL}/storage/v1/object/${CHAT_MEDIA_BUCKET}/${encodeURI(fileName)}`;
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: SUPABASE_ANON_KEY,
+      'Content-Type': mimeType,
+      'x-upsert': 'false',
+      'cache-control': 'max-age=3600',
+    };
+
+    let lastError: { status?: number; body?: string; message?: string } | null = null;
+    let uploadedOk = false;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      const result = await supabase.storage
-        .from(CHAT_MEDIA_BUCKET)
-        .upload(fileName, decode(base64), { contentType: mimeType, upsert: false });
-      videoUploadError = result.error;
-      if (!videoUploadError) break;
-      if (attempt < 3) await new Promise(res => setTimeout(res, 600 * attempt));
+      try {
+        const task = FileSystem.createUploadTask(
+          uploadUrl,
+          uri,
+          {
+            httpMethod: 'POST',
+            uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+            headers,
+          },
+          (progress) => {
+            if (!onProgress) return;
+            const expected = progress.totalBytesExpectedToSend || fileSize || 0;
+            const sent = progress.totalBytesSent || 0;
+            const pct = expected > 0
+              ? Math.max(5, Math.min(95, Math.round((sent / expected) * 90) + 5))
+              : 50;
+            onProgress({
+              file_name: fileName,
+              progress: pct,
+              uploaded_bytes: sent,
+              total_bytes: expected,
+            });
+          },
+        );
+        const response = await task.uploadAsync();
+        if (!response) {
+          lastError = { message: 'upload cancelled' };
+        } else if (response.status >= 200 && response.status < 300) {
+          logger.info(
+            'ChatMedia',
+            `uploadVideo:success attempt=${attempt} status=${response.status} path=${fileName}`,
+          );
+          uploadedOk = true;
+          lastError = null;
+          break;
+        } else {
+          lastError = {
+            status: response.status,
+            body: response.body,
+            message: response.body || `HTTP ${response.status}`,
+          };
+          logger.warn(
+            'ChatMedia',
+            `uploadVideo:attempt=${attempt} failed status=${response.status} body=${(response.body || '').slice(0, 200)}`,
+          );
+        }
+      } catch (netError: any) {
+        lastError = { message: netError?.message || String(netError) };
+        logger.warn('ChatMedia', `uploadVideo:attempt=${attempt} network error`, netError?.message);
+      }
+      if (attempt < 3) {
+        await new Promise((res) => setTimeout(res, 600 * attempt));
+      }
     }
 
-    if (videoUploadError) {
-      logger.error('ChatMedia', 'Video upload failed after retries', videoUploadError);
-      return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'UPLOAD_ERROR', message: 'שגיאה בהעלאת סרטון' } };
+    if (!uploadedOk) {
+      logger.error('ChatMedia', 'uploadVideo: failed after retries', lastError);
+      const status = lastError?.status;
+      const bodyStr = String(lastError?.body || lastError?.message || '').toLowerCase();
+      const isTooLarge =
+        Number(status) === 413 ||
+        bodyStr.includes('payload too large') ||
+        bodyStr.includes('exceeded') ||
+        bodyStr.includes('maximum allowed size');
+      const isAuth = Number(status) === 401 || Number(status) === 403;
+      return failResult({
+        code: isTooLarge ? 'FILE_TOO_LARGE' : isAuth ? 'AUTH_REQUIRED' : 'UPLOAD_ERROR',
+        message: isTooLarge
+          ? 'הסרטון גדול מדי (מקסימום 100MB)'
+          : isAuth
+            ? 'אין הרשאה להעלות לקבוצה זו'
+            : 'שגיאה בהעלאת סרטון',
+      });
     }
 
     if (onProgress) {
-      onProgress({ file_name: fileName, progress: 70, uploaded_bytes: 0, total_bytes: fileInfo.size || 0 });
+      onProgress({ file_name: fileName, progress: 95, uploaded_bytes: fileSize, total_bytes: fileSize });
     }
 
+    // Thumbnail — best-effort. הת'אמב עצמו הוא JPEG של ~50KB, אז base64 בסדר.
     let thumbnailUrl: string | null = null;
     try {
       const { uri: thumbnailUri } = await VideoThumbnails.getThumbnailAsync(uri, {
         time: 1000,
         quality: 0.7,
       });
-      
+
       if (thumbnailUri) {
         const thumbnailBase64 = await FileSystem.readAsStringAsync(thumbnailUri, { encoding: 'base64' });
         const thumbnailFileName = `${groupId}/${timestamp}-${randomId}-thumb.jpg`;
-        
+
         const { error: thumbError } = await supabase.storage
           .from(CHAT_MEDIA_BUCKET)
           .upload(thumbnailFileName, decode(thumbnailBase64), {
             contentType: 'image/jpeg',
             upsert: false,
           });
-        
+
         if (!thumbError) {
           thumbnailUrl = thumbnailFileName;
+        } else {
+          logger.warn('ChatMedia', 'uploadVideo: thumbnail upload failed', thumbError);
         }
       }
     } catch (thumbError) {
-      logger.warn('ChatMedia', 'Could not generate video thumbnail');
+      logger.warn('ChatMedia', 'uploadVideo: could not generate video thumbnail', thumbError);
     }
 
     if (onProgress) {
-      onProgress({ file_name: fileName, progress: 100, uploaded_bytes: fileInfo.size || 0, total_bytes: fileInfo.size || 0, url: fileName });
+      onProgress({ file_name: fileName, progress: 100, uploaded_bytes: fileSize, total_bytes: fileSize, url: fileName });
     }
+
+    logger.info(
+      'ChatMedia',
+      `uploadVideo:done path=${fileName} size=${fileSize} thumb=${thumbnailUrl ?? 'none'}`,
+    );
 
     return {
       url: fileName,
@@ -408,12 +540,12 @@ export async function uploadVideo(
       duration: 0,
       width: 0,
       height: 0,
-      size: fileInfo.size || 0,
+      size: fileSize,
       error: null,
     };
   } catch (error: any) {
     logger.error('ChatMedia', 'Unexpected video upload error', error);
-    return { url: null, thumbnail_url: null, duration: 0, width: 0, height: 0, size: 0, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
+    return failResult({ code: 'UNEXPECTED_ERROR', message: error?.message ?? 'שגיאה לא צפויה' });
   }
 }
 

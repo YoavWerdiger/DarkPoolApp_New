@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect } from 'react';
-import { Platform, type ViewProps } from 'react-native';
+import React, { useCallback, useEffect, useMemo } from 'react';
+import { Platform, View, type ViewProps } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -8,9 +8,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import {
   AndroidSoftInputModes,
   KeyboardController,
+  KeyboardStickyView,
   useGenericKeyboardHandler,
 } from 'react-native-keyboard-controller';
-import { CHAT_COMPOSER_KEYBOARD_GAP } from './chatInputLayout';
+import {
+  CHAT_COMPOSER_KEYBOARD_GAP,
+  CHAT_KEYBOARD_LTR_STYLE,
+  chatComposerKeyboardTranslate,
+  chatComposerStickyOffset,
+} from './chatInputLayout';
 
 type ChatComposerDockProps = ViewProps & {
   children: React.ReactNode;
@@ -19,13 +25,84 @@ type ChatComposerDockProps = ViewProps & {
   keyboardGap?: number;
 };
 
+type ChatKeyboardFollowProps = {
+  children: React.ReactNode;
+  bottomInset: number;
+  keyboardGap?: number;
+  style?: ViewProps['style'];
+};
+
 /**
- * מצמיד את הקומפוזר למקלדת באנימציה native (Reanimated worklet).
- * גובה המקלדת מגיע מה-OS (שונה לכל מכשיר) — בלי hardcode.
- * משתמשים ב-shared values ל-inset/gap כדי שה-handler יישאר יציב (בלי deps שמשתנים),
- * מה שמונע אזהרות "modify key current" של worklets.
+ * iOS: KeyboardStickyView הרשמי (RN Animated, לא Reanimated worklet).
+ * זה הנתיב ש-Expo Go מריץ חלק — בפרודקשן Fabric+forceRTL ה-translateY של Reanimated
+ * לא דוחף. המעטפת תמיד direction:'ltr' (לא isRTL).
+ *
+ * לא משתמשים בזה באנדרואיד: KeyboardStickyView קורא ל-useResizeMode ושובר ADJUST_NOTHING.
  */
-export function ChatComposerDock({
+export function ChatKeyboardFollow({
+  children,
+  bottomInset,
+  keyboardGap = CHAT_COMPOSER_KEYBOARD_GAP,
+  style,
+}: ChatKeyboardFollowProps) {
+  const offset = useMemo(
+    () => chatComposerStickyOffset(bottomInset, keyboardGap),
+    [bottomInset, keyboardGap],
+  );
+
+  if (Platform.OS === 'ios') {
+    return (
+      <KeyboardStickyView
+        collapsable={false}
+        offset={offset}
+        style={[CHAT_KEYBOARD_LTR_STYLE, style]}
+      >
+        {children}
+      </KeyboardStickyView>
+    );
+  }
+
+  return <View style={style}>{children}</View>;
+}
+
+/**
+ * מצמיד את הקומפוזר למקלדת.
+ * iOS: KeyboardStickyView (כמו Expo Go) + LTR קשיח.
+ * Android: Reanimated + SOFT_INPUT_ADJUST_NOTHING בזמן פוקוס בצ׳אט
+ * (adjustResize מה-Manifest לא יילחם ב-translate).
+ */
+export function ChatComposerDock(props: ChatComposerDockProps) {
+  if (Platform.OS === 'ios') {
+    return <IosComposerDock {...props} />;
+  }
+  return <AndroidComposerDock {...props} />;
+}
+
+function IosComposerDock({
+  children,
+  style,
+  bottomInset,
+  keyboardGap = CHAT_COMPOSER_KEYBOARD_GAP,
+  ...rest
+}: ChatComposerDockProps) {
+  const offset = useMemo(
+    () => chatComposerStickyOffset(bottomInset, keyboardGap),
+    [bottomInset, keyboardGap],
+  );
+
+  return (
+    <KeyboardStickyView
+      collapsable={false}
+      offset={offset}
+      style={[CHAT_KEYBOARD_LTR_STYLE, style]}
+      {...rest}
+    >
+      {children}
+    </KeyboardStickyView>
+  );
+}
+
+function AndroidComposerDock({
   children,
   style,
   bottomInset,
@@ -46,7 +123,6 @@ export function ChatComposerDock({
 
   useFocusEffect(
     useCallback(() => {
-      if (Platform.OS !== 'android') return undefined;
       KeyboardController.setInputMode(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
       return () => {
         KeyboardController.setDefaultMode();
@@ -58,17 +134,19 @@ export function ChatComposerDock({
     {
       onMove: (event) => {
         'worklet';
-        translateY.value =
-          event.height <= 0
-            ? 0
-            : -Math.max(0, event.height - bottomInsetSV.value + keyboardGapSV.value);
+        translateY.value = chatComposerKeyboardTranslate(
+          event.height,
+          bottomInsetSV.value,
+          keyboardGapSV.value,
+        );
       },
       onEnd: (event) => {
         'worklet';
-        translateY.value =
-          event.height <= 0
-            ? 0
-            : -Math.max(0, event.height - bottomInsetSV.value + keyboardGapSV.value);
+        translateY.value = chatComposerKeyboardTranslate(
+          event.height,
+          bottomInsetSV.value,
+          keyboardGapSV.value,
+        );
       },
     },
     [],
@@ -82,7 +160,7 @@ export function ChatComposerDock({
   });
 
   return (
-    <Animated.View style={[animatedStyle, style]} {...rest}>
+    <Animated.View style={[CHAT_KEYBOARD_LTR_STYLE, animatedStyle, style]} {...rest}>
       {children}
     </Animated.View>
   );

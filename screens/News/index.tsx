@@ -56,6 +56,8 @@ export default function NewsScreen({ route }: { route?: any }) {
   const [isReady, setIsReady] = useState(false);
   const [createSheetVisible, setCreateSheetVisible] = useState(false);
   const { isAdmin } = useIsAdmin();
+  const openArticleId =
+    typeof route?.params?.articleId === 'string' ? route.params.articleId : null;
 
   /** תאימות לאחור: params.tab מנווט למסכי המגירה */
   useEffect(() => {
@@ -71,6 +73,10 @@ export default function NewsScreen({ route }: { route?: any }) {
     const t = setTimeout(() => setIsReady(true), 80);
     return () => clearTimeout(t);
   }, []);
+
+  const handleOpenArticleConsumed = useCallback(() => {
+    (navigation as any).setParams?.({ articleId: undefined });
+  }, [navigation]);
 
   const handleOpenCreateSheet = useCallback(() => {
     void HapticFeedback.impactLight();
@@ -104,7 +110,10 @@ export default function NewsScreen({ route }: { route?: any }) {
           </View>
         ) : (
           <ErrorBoundary errorStyles={styles.errorBoundary}>
-            <BreakingNewsTab />
+            <BreakingNewsTab
+              openArticleId={openArticleId}
+              onOpenArticleConsumed={handleOpenArticleConsumed}
+            />
           </ErrorBoundary>
         )}
       </NewsScreenShell>

@@ -120,7 +120,7 @@ export default function DarkPoolFeedScreen() {
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <MainDrawerScreenHeader
             inRtlTree
-            title="פיד"
+            title="Dark Pool"
             subtitle={subtitle}
             onMenuPress={openDrawer}
           />
@@ -139,7 +139,7 @@ export default function DarkPoolFeedScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <MainDrawerScreenHeader
           inRtlTree
-          title="פיד"
+          title="Dark Pool"
           subtitle={subtitle}
           onMenuPress={openDrawer}
         />
@@ -176,7 +176,7 @@ export default function DarkPoolFeedScreen() {
                   עדיין לא הגיעו דיווחי STOCK Act. משוך למטה לרענון — הנתונים מגיעים מדיווחים ציבוריים בלבד.
                 </Text>
                 <Text style={styles.emptyLink} onPress={goToExplore}>
-                  גלו פוליטיקאים ←
+                  חפש אנשים ←
                 </Text>
               </UICard>
             ) : (

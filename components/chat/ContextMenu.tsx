@@ -1,13 +1,12 @@
 // ============================================
 // Context Menu — Telegram-style action grid
-// תוכן על ChatBottomSheet — בלי כרטיס זכוכית מקונן (כמו MediaPicker)
+// שיט Action (LongPressOverlay): כרטיסים שטוחים, בלי BlurView מקונן
 // ============================================
 import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { chatPalette } from './chatDesignTokens';
 
 type OptionDef = { key: string; label: string; icon: string; danger: boolean };
 
@@ -16,6 +15,24 @@ interface ContextMenuProps {
   isAdmin?: boolean;
   isMe?: boolean;
   canEdit?: boolean;
+}
+
+function ActionCard({
+  children,
+  danger,
+}: {
+  children: React.ReactNode;
+  danger?: boolean;
+}) {
+  // מעטפת clip נפרדת: borderWidth על אותו View עם overflow עלול
+  // להשאיר מילוי מרובע ב-Android — הרדיוס + overflow על המעטפת חותכים בבירור.
+  return (
+    <View style={styles.gridCardClip} collapsable={false}>
+      <View style={[styles.gridCard, danger ? styles.dangerCard : null]}>
+        {children}
+      </View>
+    </View>
+  );
 }
 
 export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, canEdit = true }: ContextMenuProps) {
@@ -45,45 +62,49 @@ export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, c
   return (
     <View style={styles.root}>
       {mainOptions.length > 0 && (
-        <View style={styles.grid}>
-          {mainOptions.map((opt) => (
-            <TouchableOpacity
-              key={opt.key}
-              onPress={() => handlePress(opt.key)}
-              activeOpacity={0.65}
-              style={styles.tile}
-              accessibilityLabel={opt.label}
-            >
-              <View style={styles.tileIcon}>
-                <Ionicons name={opt.icon as any} size={22} color={tokens.colors.text.primary} />
-              </View>
-              <Text style={[styles.tileLabel, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ActionCard>
+          <View style={styles.grid}>
+            {mainOptions.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                onPress={() => handlePress(opt.key)}
+                activeOpacity={0.65}
+                style={styles.tile}
+                accessibilityLabel={opt.label}
+              >
+                <View style={styles.tileIcon}>
+                  <Ionicons name={opt.icon as any} size={20} color={tokens.colors.text.primary} />
+                </View>
+                <Text style={[styles.tileLabel, { color: tokens.colors.text.secondary }]} numberOfLines={1}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ActionCard>
       )}
 
       {dangerOptions.length > 0 && (
-        <View style={[styles.grid, styles.dangerRow]}>
-          {dangerOptions.map((opt) => (
-            <TouchableOpacity
-              key={opt.key}
-              onPress={() => handlePress(opt.key)}
-              activeOpacity={0.65}
-              style={styles.tile}
-              accessibilityLabel={opt.label}
-            >
-              <View style={[styles.tileIcon, styles.dangerTileIcon]}>
-                <Ionicons name={opt.icon as any} size={22} color={tokens.colors.text.danger} />
-              </View>
-              <Text style={[styles.tileLabel, { color: tokens.colors.text.danger }]} numberOfLines={1}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ActionCard danger>
+          <View style={styles.grid}>
+            {dangerOptions.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                onPress={() => handlePress(opt.key)}
+                activeOpacity={0.65}
+                style={styles.tile}
+                accessibilityLabel={opt.label}
+              >
+                <View style={[styles.tileIcon, styles.dangerTileIcon]}>
+                  <Ionicons name={opt.icon as any} size={20} color={tokens.colors.text.danger} />
+                </View>
+                <Text style={[styles.tileLabel, { color: tokens.colors.text.danger }]} numberOfLines={1}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ActionCard>
       )}
     </View>
   );
@@ -91,39 +112,49 @@ export default function ContextMenu({ onSelect, isAdmin = false, isMe = false, c
 
 const styles = StyleSheet.create({
   root: {
-    gap: 8,
-    paddingBottom: 4,
+    paddingHorizontal: 4,
+    gap: 10,
+    paddingBottom: 6,
+  },
+  gridCardClip: {
+    borderRadius: 28,
+    overflow: 'hidden',
+  },
+  gridCard: {
+    borderRadius: 28,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  dangerCard: {
+    backgroundColor: 'rgba(255,60,60,0.08)',
+    borderColor: 'rgba(255,60,60,0.18)',
   },
   grid: {
     flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     justifyContent: 'space-evenly',
     alignItems: 'center',
-    paddingVertical: 4,
-  },
-  dangerRow: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: chatPalette.glassBorder,
-    paddingTop: 10,
-    marginTop: 2,
   },
   tile: {
     alignItems: 'center',
     paddingVertical: 6,
-    paddingHorizontal: 4,
-    gap: 5,
-    minWidth: 62,
+    paddingHorizontal: 6,
+    gap: 6,
+    minWidth: 60,
   },
   tileIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
   },
   dangerTileIcon: {
-    backgroundColor: 'rgba(255,60,60,0.18)',
+    backgroundColor: 'rgba(255,60,60,0.14)',
   },
   tileLabel: {
     fontSize: 11,

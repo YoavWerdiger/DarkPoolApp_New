@@ -111,7 +111,12 @@ export interface ChatGroup {
   mentioned_count?: number;
   is_muted?: boolean;
   my_role?: ChatMemberRole;
-  last_read_message_id?: string;
+  /** מגיע מ-chat_group_members.last_read_message_id (nullable ב-DB) */
+  last_read_message_id?: string | null;
+  /** שם שולח ההודעה האחרונה — לפרביו ברשימת קבוצות (client-only) */
+  last_message_sender_name?: string;
+  /** סוג ההודעה האחרונה — לאייקון/פריוויו ברשימה (client-only) */
+  last_message_type?: string;
 }
 
 export interface ChatGroupMember {
@@ -525,6 +530,11 @@ export interface ChatPaginationParams {
   offset?: number;
   before?: string; // created_at cursor (ISO timestamp) for loading older messages
   after?: string;  // created_at cursor (ISO timestamp) for loading newer messages
+  /**
+   * כש-true עם `after`: מביא בסדר עולה (הישנות ביותר אחרי הקורסור) —
+   * חובה ל-catch-up בטוח בלי פערים. התשובה עדיין מוחזרת newest-first.
+   */
+  ascending?: boolean;
 }
 
 export interface ChatMessageFilters {

@@ -1,5 +1,6 @@
 // EconomicCalendarService.ts - גרסה נקייה ומהירה
 import { supabase } from '../lib/supabase';
+import { resolveEconomicEventImportance } from '../utils/economicEventImportance';
 
 const FRED_API_KEY = process.env.EXPO_PUBLIC_FRED_API_KEY ?? '';
 const FRED_BASE_URL = 'https://api.stlouisfed.org/fred';
@@ -979,33 +980,17 @@ export class EconomicCalendarService {
     return 'כללי';
   }
 
-  // מיפוי חשיבות לפי סוג אירוע EOD Economic Events
+  // מיפוי חשיבות לפי סוג אירוע EOD Economic Events (טקסונומיית אדום/כתום)
   static mapEODEventImportance(eventType: string): 'high' | 'medium' | 'low' {
     if (!eventType) return 'medium';
-    
+    // fallback ישן לרשימה הרחבה — רק כשאין התאמת טקסונומיה
     const type = eventType.toLowerCase();
-    
-    // אירועים בחשיבות גבוהה
-    if (type.includes('cpi') || type.includes('consumer price index')) return 'high';
-    if (type.includes('nfp') || type.includes('nonfarm payroll') || type.includes('employment')) return 'high';
-    if (type.includes('gdp') || type.includes('gross domestic product')) return 'high';
-    if (type.includes('fomc') || type.includes('federal funds rate') || type.includes('interest rate')) return 'high';
-    if (type.includes('ppi') || type.includes('producer price index')) return 'high';
-    if (type.includes('unemployment rate')) return 'high';
-    if (type.includes('jolts') || type.includes('job openings')) return 'high';
-    if (type.includes('initial jobless claims') || type.includes('jobless claims')) return 'high';
-    if (type.includes('retail sales')) return 'high';
-    if (type.includes('case-shiller') || type.includes('home price index')) return 'high';
-    
-    // אירועים בחשיבות בינונית
-    if (type.includes('industrial production')) return 'medium';
-    if (type.includes('housing') || type.includes('building permits') || type.includes('housing starts')) return 'medium';
-    if (type.includes('consumer confidence') || type.includes('consumer sentiment')) return 'medium';
-    if (type.includes('durable goods') || type.includes('manufacturing')) return 'medium';
-    if (type.includes('trade balance') || type.includes('imports') || type.includes('exports')) return 'medium';
-    if (type.includes('pmi') || type.includes('ism')) return 'medium';
-    
-    return 'low';
+    let legacy: 'high' | 'medium' | 'low' = 'low';
+    if (type.includes('case-shiller') || type.includes('home price index')) legacy = 'high';
+    else if (type.includes('industrial production')) legacy = 'medium';
+    else if (type.includes('housing') || type.includes('building permits') || type.includes('housing starts')) legacy = 'medium';
+    else if (type.includes('trade balance') || type.includes('imports') || type.includes('exports')) legacy = 'medium';
+    return resolveEconomicEventImportance(eventType, legacy);
   }
 
   // מיפוי קטגוריה לפי סוג אירוע EOD Economic Events

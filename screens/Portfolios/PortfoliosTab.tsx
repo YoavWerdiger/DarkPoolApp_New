@@ -21,7 +21,7 @@ import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import {
   listPortfolios,
-  loadPortfolioSummary,
+  loadPortfolioDisplaySummary,
   deletePortfolio,
 } from '../../services/portfolios';
 import type { Portfolio, PortfolioSummary } from './portfolioTypes';
@@ -127,7 +127,7 @@ export default function PortfoliosTab() {
       const enriched = await Promise.all(
         portfolios.map(async (p) => {
           try {
-            const summary = await loadPortfolioSummary(p.id, p.currency);
+            const summary = await loadPortfolioDisplaySummary(p);
             return { portfolio: p, summary };
           } catch {
             return { portfolio: p, summary: null };
@@ -496,6 +496,9 @@ export default function PortfoliosTab() {
           setSortSheetHeight(0);
         }}
         snapPoints={sortSnapPoints}
+        useGlassBackground
+        showBrandBackground={false}
+        showHandle
       >
         <View style={styles.sortSheet} onLayout={handleSortSheetLayout}>
           <Text style={styles.sortSheetTitle}>מיון תיקים</Text>

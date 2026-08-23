@@ -21,6 +21,7 @@ import {
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
+import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { ScreenGradientBackground } from '../../components/VideoBackground';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
@@ -38,6 +39,7 @@ import { Search } from 'lucide-react-native';
 import JoinGroupBottomSheet from '../../components/chat/JoinGroupBottomSheet';
 import CreateGroupSheet from '../../components/chat/CreateGroupSheet';
 import { ChatBottomSheet, ChatSheetEmptyState, ChatSheetLoading } from '../../components/chat/ChatBottomSheet';
+import { chatPalette } from '../../components/chat/chatDesignTokens';
 import { ChatSearchResult } from '../../types/chat.types';
 import StoryViewer from '../../components/chat/StoryViewer';
 import AddStoryFullScreen from '../../components/chat/AddStoryFullScreen';
@@ -45,6 +47,7 @@ import StoryAvatarRing from '../../components/chat/StoryAvatarRing';
 import { getUsersWithStories, StoryWithUser } from '../../services/storiesService';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
+import { schedulePrefetchChatMessages, warmChatGroupOnPress } from '../../services/appPrefetch';
 import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { isAnnouncementGroup } from '../../utils/isAnnouncementGroup';
@@ -65,9 +68,9 @@ const SkeletonGroupRow = React.memo(({ delay }: { delay: number }) => {
     return () => { clearTimeout(t); anim.stop(); };
   }, []);
   return (
-    <Animated.View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, opacity }}>
-      <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.12)', marginRight: 12 }} />
-      <View style={{ flex: 1, gap: 8 }}>
+    <Animated.View style={{ flexDirection: 'row-reverse', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, opacity }}>
+      <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.12)', marginLeft: 12 }} />
+      <View style={{ flex: 1, gap: 8, alignItems: 'flex-end' }}>
         <View style={{ height: 13, width: '60%', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 6 }} />
         <View style={{ height: 11, width: '80%', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 6 }} />
       </View>
@@ -93,58 +96,61 @@ interface GroupWithMembership extends Omit<ChatGroup, 'my_role'> {
   } | null;
 }
 
-// מיפוי תמונות לקבוצות (שמות רשמיים + וריאציות ישנות)
-const ANNOUNCEMENTS_GROUP_IMAGE =
-  Image.resolveAssetSource(require('../../assets/group-announcements.png')).uri;
-const ISRAELI_EXCHANGE_GROUP_IMAGE =
-  Image.resolveAssetSource(require('../../assets/group-israeli-exchange.png')).uri;
-const LIVE_QUESTIONS_GROUP_IMAGE =
-  Image.resolveAssetSource(require('../../assets/group-live-questions.png')).uri;
-const PENNY_DISCUSSIONS_GROUP_IMAGE =
-  Image.resolveAssetSource(require('../../assets/group-penny-discussions.png')).uri;
-const SWINGS_INVESTMENTS_GROUP_IMAGE =
-  Image.resolveAssetSource(require('../../assets/group-swings-investments.png')).uri;
-const ANALYSES_IDEAS_GROUP_IMAGE =
-  Image.resolveAssetSource(require('../../assets/group-analyses-ideas.png')).uri;
+// מיפוי fallback לתמונות קבוצות — מסונכרן עם chat_groups.avatar_url
+// הכרזות: אייקון nav ירוק (פעמון) — לא תמונת מגפון עם רקע לבן
+const NAV_ICON = (name: string) =>
+  `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/app-media/icons/nav/${name}.png`;
+
+const ICON_ANNOUNCEMENTS = NAV_ICON('notifications');
+const ICON_COMMUNITY = NAV_ICON('community');
+const ICON_LEARNING = NAV_ICON('learning');
+const ICON_DARKPOOL = NAV_ICON('darkpool');
+const ICON_CHAT = NAV_ICON('chat');
+const ICON_PORTFOLIOS = NAV_ICON('portfolios');
+const ICON_SEARCH = NAV_ICON('search');
+const ICON_ALERTS = NAV_ICON('alerts');
+const ICON_NEWS = NAV_ICON('news');
+const ICON_VIDEO = NAV_ICON('video');
+const ICON_ISRAEL = NAV_ICON('israel');
 
 const GROUP_IMAGES: { [key: string]: string } = {
-  'הכרזות': ANNOUNCEMENTS_GROUP_IMAGE,
-  '🔔 הכרזות': ANNOUNCEMENTS_GROUP_IMAGE,
-  'דיונים - כללי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.PNG`,
-  'דיונים - כללי 🗣️': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.PNG`,
-  '💬 דיונים - כללי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/777.PNG`,
-  'שאלות תשובות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
-  'שאלות תשובות ⁉️🗣️': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
-  'שאלות ותשובות בשוק': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
-  '❓ שאלות ותשובות בשוק': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/888.PNG`,
-  'דיוני פניסטוק': PENNY_DISCUSSIONS_GROUP_IMAGE,
-  'דיוני - פניסטוקס': PENNY_DISCUSSIONS_GROUP_IMAGE,
-  'דיוני - פניסטוקס 🚨🗣️': PENNY_DISCUSSIONS_GROUP_IMAGE,
-  '💰 דיוני - פניסטוקס': PENNY_DISCUSSIONS_GROUP_IMAGE,
-  'סווינגים והשקעות': SWINGS_INVESTMENTS_GROUP_IMAGE,
-  'סווינגים והשקעות 🌟🔇': SWINGS_INVESTMENTS_GROUP_IMAGE,
-  'סווינגים וסטאפים': SWINGS_INVESTMENTS_GROUP_IMAGE,
-  '🔄 סווינגים וסטאפים': SWINGS_INVESTMENTS_GROUP_IMAGE,
-  'ניתוחים ורעיונות': ANALYSES_IDEAS_GROUP_IMAGE,
-  'ניתוחים ורעיונות שלכם': ANALYSES_IDEAS_GROUP_IMAGE,
-  'ניתוחים ורעיונות שלכם 🗣️': ANALYSES_IDEAS_GROUP_IMAGE,
-  'נטו ניתוחים!': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/666.PNG`,
-  '📊 נטו ניתוחים!': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/666.PNG`,
-  'רווחים והצלחות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
-  'רווחים והצלחות 💰': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
-  '🎯 רווחים והצלחות': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/333.PNG`,
-  'שאלות בלייבים': LIVE_QUESTIONS_GROUP_IMAGE,
-  'שאלות בלייבים 🎥🗣️': LIVE_QUESTIONS_GROUP_IMAGE,
-  'מסחר יומי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
-  'מסחר יומי 🌟🔇': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
-  'עסקאות מסחר יומי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
-  '📈 עסקאות מסחר יומי': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/111%20(1).PNG`,
-  'בורסה ישראלית': ISRAELI_EXCHANGE_GROUP_IMAGE,
-  'בורסה ישראלית 🇮🇱🗣️': ISRAELI_EXCHANGE_GROUP_IMAGE,
-  'פניסטוקס (סיכון גבוה)': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
-  'פניסטוקס (סיכון גבוה)🌟🔇': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
-  'מסחר פניסטוקס - סיכון גבוה': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
-  '⚠️ מסחר פניסטוקס - סיכון גבוה': `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/groups/222.PNG`,
+  'הכרזות': ICON_ANNOUNCEMENTS,
+  '🔔 הכרזות': ICON_ANNOUNCEMENTS,
+  'דיונים - כללי': ICON_COMMUNITY,
+  'דיונים - כללי 🗣️': ICON_COMMUNITY,
+  '💬 דיונים - כללי': ICON_COMMUNITY,
+  'שאלות תשובות': ICON_CHAT,
+  'שאלות תשובות ⁉️🗣️': ICON_CHAT,
+  'שאלות ותשובות בשוק': ICON_CHAT,
+  '❓ שאלות ותשובות בשוק': ICON_CHAT,
+  'דיוני פניסטוק': ICON_DARKPOOL,
+  'דיוני - פניסטוקס': ICON_DARKPOOL,
+  'דיוני - פניסטוקס 🚨🗣️': ICON_DARKPOOL,
+  '💰 דיוני - פניסטוקס': ICON_DARKPOOL,
+  'סווינגים והשקעות': ICON_SEARCH,
+  'סווינגים והשקעות 🌟🔇': ICON_SEARCH,
+  'סווינגים וסטאפים': ICON_SEARCH,
+  '🔄 סווינגים וסטאפים': ICON_SEARCH,
+  'ניתוחים ורעיונות': ICON_LEARNING,
+  'ניתוחים ורעיונות שלכם': ICON_LEARNING,
+  'ניתוחים ורעיונות שלכם 🗣️': ICON_LEARNING,
+  'נטו ניתוחים!': ICON_LEARNING,
+  '📊 נטו ניתוחים!': ICON_LEARNING,
+  'רווחים והצלחות': ICON_NEWS,
+  'רווחים והצלחות 💰': ICON_NEWS,
+  '🎯 רווחים והצלחות': ICON_NEWS,
+  'שאלות בלייבים': ICON_VIDEO,
+  'שאלות בלייבים 🎥🗣️': ICON_VIDEO,
+  'מסחר יומי': ICON_PORTFOLIOS,
+  'מסחר יומי 🌟🔇': ICON_PORTFOLIOS,
+  'עסקאות מסחר יומי': ICON_PORTFOLIOS,
+  '📈 עסקאות מסחר יומי': ICON_PORTFOLIOS,
+  'בורסה ישראלית': ICON_ISRAEL,
+  'בורסה ישראלית 🇮🇱🗣️': ICON_ISRAEL,
+  'פניסטוקס (סיכון גבוה)': ICON_ALERTS,
+  'פניסטוקס (סיכון גבוה)🌟🔇': ICON_ALERTS,
+  'מסחר פניסטוקס - סיכון גבוה': ICON_ALERTS,
+  '⚠️ מסחר פניסטוקס - סיכון גבוה': ICON_ALERTS,
 };
 
 const getImageByGroupName = (groupName: string): string | null => {
@@ -217,7 +223,7 @@ export default function ChatGroupsListScreen() {
   const tokens = useDesignTokens();
   const navigation = useNavigation();
   const { user } = useAuth();
-  const { groups: contextGroups, realtimeConnectionState, loadGroups: syncContextGroups } = useChat();
+  const { groups: contextGroups } = useChat();
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
   const openMainDrawer = useCallback(() => {
@@ -361,16 +367,39 @@ export default function ChatGroupsListScreen() {
       const getMessagePreview = (msg: any): string =>
         getChatMessagePreview(msg.message_type, msg.content);
 
+      // RPC מחזיר sender_id בלי join ל-users — שולפים שמות ב-batch (SECURITY DEFINER)
+      const senderIds = [
+        ...new Set(
+          [...lastMessageMap.values()]
+            .map((m: { sender_id?: string }) => m.sender_id)
+            .filter((id): id is string => Boolean(id))
+        ),
+      ];
+      const senderNameById: Record<string, string> = {};
+      if (senderIds.length > 0) {
+        const { data: nameRows } = await supabase.rpc('get_user_display_names', {
+          user_ids: senderIds,
+        });
+        for (const row of (nameRows || []) as Array<{ id: string; display_name: string }>) {
+          if (row?.id) senderNameById[row.id] = row.display_name || 'משתמש';
+        }
+      }
+
+      const resolveSenderName = (lastMessage: any): string => {
+        const users = lastMessage?.users ?? lastMessage?.sender;
+        if (users) {
+          const userData = Array.isArray(users) ? users[0] : users;
+          const fromJoin = userData?.display_name || userData?.full_name;
+          if (fromJoin) return fromJoin;
+        }
+        if (lastMessage?.sender_id && senderNameById[lastMessage.sender_id]) {
+          return senderNameById[lastMessage.sender_id];
+        }
+        return 'משתמש';
+      };
+
       const groupsWithLastMessage = realGroups.map((g) => {
         const lastMessage = lastMessageMap.get(g.id);
-        let senderName = 'משתמש';
-        if (lastMessage) {
-          const users = (lastMessage as any).users;
-          if (users) {
-            const userData = Array.isArray(users) ? users[0] : users;
-            senderName = userData?.display_name || userData?.full_name || 'משתמש';
-          }
-        }
 
         return {
           ...g,
@@ -382,7 +411,7 @@ export default function ChatGroupsListScreen() {
           last_message: lastMessage
             ? {
                 content: getMessagePreview(lastMessage),
-                sender_name: senderName,
+                sender_name: resolveSenderName(lastMessage),
                 created_at: lastMessage.created_at,
                 message_type: lastMessage.message_type,
               }
@@ -391,6 +420,18 @@ export default function ChatGroupsListScreen() {
       });
 
       setAllGroups(groupsWithLastMessage);
+      if (user?.id) {
+        queryClient.setQueryData(appQueryKeys.chatGroups(user.id), groupsWithLastMessage);
+        // חימום הודעות (עדיפות ל-unread) — כניסה מיידית כמו WhatsApp
+        const unreadIds = groupsWithLastMessage
+          .filter((g) => (g.unread_count || 0) > 0)
+          .map((g) => g.id);
+        if (unreadIds.length > 0) {
+          schedulePrefetchChatMessages(user.id, { groupIds: unreadIds });
+        } else {
+          schedulePrefetchChatMessages(user.id);
+        }
+      }
     } catch (error) {
       logger.error('ChatGroupsListScreen', 'loadGroups failed', error);
       legacyAlert('שגיאה', 'לא ניתן לטעון את הקבוצות');
@@ -412,15 +453,26 @@ export default function ChatGroupsListScreen() {
   }, [user?.id]);
 
   useEffect(() => {
-    loadGroups();
-    void syncContextGroups();
-  }, [user]);
+    if (!user?.id) return;
+    // רק טעינת הרשימה המקומית — ChatContext כבר טוען groups ב-mount לפי user.id
+    // (syncContextGroups כפול היה מייצר שני fetch-ים מקבילים ומכביד על הכניסה).
+    void loadGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- remount/reload רק כשמשתנה זהות המשתמש
+  }, [user?.id]);
 
   useEffect(() => {
     loadStories();
   }, [loadStories]);
 
   useFocusEffect(useCallback(() => { loadStories(); }, [loadStories]));
+
+  // חימום אגרסיבי כשהרשימה גלויה — קבוצות עם unread + האחרונות
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      schedulePrefetchChatMessages(user.id, { limit: 12 });
+    }, [user?.id]),
+  );
 
   // M8: removed useFocusEffect – realtime updates from contextGroups replace manual re-fetch on focus
 
@@ -434,30 +486,42 @@ export default function ChatGroupsListScreen() {
         const cg = contextGroups.find(c => c.id === group.id);
         if (!cg) return group;
 
+        const nextSenderName =
+          cg.last_message_sender_name || group.last_message?.sender_name || 'משתמש';
+        const nextType = cg.last_message_type ?? group.last_message?.message_type;
         const hasChange =
           group.unread_count !== (cg.unread_count || 0) ||
           group.mentioned_count !== (cg.mentioned_count || 0) ||
           group.last_message_at !== cg.last_message_at ||
           group.last_message_preview !== cg.last_message_preview ||
+          group.last_message?.sender_name !== nextSenderName ||
+          group.last_message?.message_type !== nextType ||
           (group as any).is_muted !== (cg as any).is_muted;
 
         if (!hasChange) return group;
         changed = true;
+        const hasPreview =
+          cg.last_message_preview != null && String(cg.last_message_preview).length > 0;
+        const hasActivity = Boolean(cg.last_message_at);
         return {
           ...group,
           unread_count: cg.unread_count || 0,
           mentioned_count: cg.mentioned_count || 0,
           last_message_at: cg.last_message_at,
           last_message_preview: cg.last_message_preview,
+          last_message_sender_name: cg.last_message_sender_name ?? group.last_message_sender_name,
           is_muted: (cg as any).is_muted,
-          last_message: cg.last_message_preview
-            ? {
-                content: cg.last_message_preview,
-                sender_name: group.last_message?.sender_name ?? '',
-                created_at: cg.last_message_at ?? group.last_message?.created_at ?? '',
-                message_type: group.last_message?.message_type,
-              }
-            : group.last_message,
+          last_message:
+            hasPreview || hasActivity
+              ? {
+                  content: hasPreview
+                    ? String(cg.last_message_preview)
+                    : group.last_message?.content || '',
+                  sender_name: nextSenderName,
+                  created_at: cg.last_message_at ?? group.last_message?.created_at ?? '',
+                  message_type: nextType,
+                }
+              : group.last_message,
         };
       });
       return changed ? next : prev; // avoid re-render if nothing changed
@@ -473,68 +537,146 @@ export default function ChatGroupsListScreen() {
       case 'document': return 'document-text-outline';
     }
     const trimmed = (content ?? '').trim();
-    if (trimmed.startsWith('{') && trimmed.includes('waveformData')) {
+    if (
+      trimmed.startsWith('{') &&
+      (trimmed.includes('waveformData') || trimmed.includes('"waveform"'))
+    ) {
       return 'mic-outline';
     }
     return null;
   };
 
-  // Filter groups - הכרזות למעלה עם רווח אחריהן
-  const filteredGroups = useMemo(() => {
-    let filtered = allGroups;
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(group =>
-        (group.name || '').toLowerCase().includes(query) ||
-        group.description?.toLowerCase().includes(query)
+  // Filter groups - פיצול ל-2 sections: הקבוצות שלי + קבוצות זמינות להצטרפות
+  const { myFilteredGroups, joinableFilteredGroups, myAnnouncementCount } = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const matchesQuery = (g: GroupWithMembership) => {
+      if (!q) return true;
+      return (
+        (g.name || '').toLowerCase().includes(q) ||
+        (g.description || '').toLowerCase().includes(q)
       );
-    }
+    };
 
+    // is_public מוגדר ב-settings JSONB. ברירת מחדל: קבוצה גלויה = ניתנת להצטרפות.
+    // רק אם מפורש `is_public === false` נסתיר אותה מהסקשן של joinable.
+    const isJoinablePublic = (g: GroupWithMembership) => {
+      const s = (g as any).settings as { is_public?: boolean } | undefined;
+      return s?.is_public !== false;
+    };
+
+    const my = allGroups.filter(g => g.is_member && matchesQuery(g));
+    const joinable = allGroups.filter(
+      g => !g.is_member && isJoinablePublic(g) && matchesQuery(g)
+    );
+
+    let myFiltered = my;
     switch (activeTab) {
       case 'unread':
-        filtered = filtered.filter(g => g.is_member && (g.unread_count || 0) > 0);
+        myFiltered = my.filter(g => (g.unread_count || 0) > 0);
         break;
       case 'mentions':
-        filtered = filtered.filter(g => g.is_member && (g.mentioned_count || 0) > 0);
+        myFiltered = my.filter(g => (g.mentioned_count || 0) > 0);
         break;
       case 'all':
       default:
-        // ממיין: חברים קודם
-        filtered = [...filtered].sort((a, b) => {
-          if (a.is_member && !b.is_member) return -1;
-          if (!a.is_member && b.is_member) return 1;
-          return 0;
-        });
         break;
     }
 
-    // מיון: הכרזות למעלה
-    const announcements = filtered.filter(g => isAnnouncementGroup(g.name, g.id));
-    const regular = filtered.filter(g => !isAnnouncementGroup(g.name, g.id));
-
-    // 🔥 מיון לפי last_message_at - קבוצות עם הודעות חדשות למעלה (כמו וואטסאפ)
-    const sortByLastMessage = (groups: typeof filtered) => {
-      return [...groups].sort((a, b) => {
-        // קודם כל לפי membership
-        if (a.is_member && !b.is_member) return -1;
-        if (!a.is_member && b.is_member) return 1;
-        
-        // אחר כך לפי הודעה אחרונה (חדש קודם)
+    // מיון "הקבוצות שלי": הכרזות למעלה, ואחר כך לפי last_message_at (חדש קודם)
+    const sortByLastMessage = (groups: GroupWithMembership[]) =>
+      [...groups].sort((a, b) => {
         const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
         const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return timeB - timeA;
       });
-    };
 
-    return [...sortByLastMessage(announcements), ...sortByLastMessage(regular)];
+    const announcements = sortByLastMessage(
+      myFiltered.filter(g => isAnnouncementGroup(g.name, g.id))
+    );
+    const regular = sortByLastMessage(
+      myFiltered.filter(g => !isAnnouncementGroup(g.name, g.id))
+    );
+    const mySorted = [...announcements, ...regular];
+
+    // Joinable מוצגות רק בטאב 'all' — 'unread'/'mentions' לא רלוונטיות
+    const joinableSorted =
+      activeTab === 'all'
+        ? [...joinable].sort((a, b) =>
+            (a.name || '').localeCompare(b.name || '', 'he')
+          )
+        : [];
+
+    return {
+      myFilteredGroups: mySorted,
+      joinableFilteredGroups: joinableSorted,
+      myAnnouncementCount: announcements.length,
+    };
   }, [allGroups, searchQuery, activeTab]);
 
-  // מספר קבוצות ההכרזות (לחישוב הרווח)
-  const announcementCount = useMemo(() => 
-    filteredGroups.filter(g => isAnnouncementGroup(g.name, g.id)).length,
-    [filteredGroups]
+  // רשימה מאוחדת לצורכי חיפוש-שיט וספירות empty-state
+  const filteredGroups = useMemo(
+    () => [...myFilteredGroups, ...joinableFilteredGroups],
+    [myFilteredGroups, joinableFilteredGroups]
   );
+
+  // מבנה נתונים לרשימה עצמה (עם section headers)
+  type ListRow =
+    | { type: 'section-header'; id: string; title: string; count: number }
+    | {
+        type: 'my-group';
+        id: string;
+        group: GroupWithMembership;
+        isLastAnnouncement: boolean;
+        isLastInSection: boolean;
+      }
+    | {
+        type: 'joinable-group';
+        id: string;
+        group: GroupWithMembership;
+        isLastInSection: boolean;
+      };
+
+  const listData = useMemo<ListRow[]>(() => {
+    const rows: ListRow[] = [];
+
+    if (myFilteredGroups.length > 0) {
+      rows.push({
+        type: 'section-header',
+        id: 'hdr-my',
+        title: 'הקבוצות שלי',
+        count: myFilteredGroups.length,
+      });
+      myFilteredGroups.forEach((g, i) => {
+        rows.push({
+          type: 'my-group',
+          id: `my-${g.id}`,
+          group: g,
+          isLastAnnouncement:
+            myAnnouncementCount > 0 && i === myAnnouncementCount - 1,
+          isLastInSection: i === myFilteredGroups.length - 1,
+        });
+      });
+    }
+
+    if (joinableFilteredGroups.length > 0) {
+      rows.push({
+        type: 'section-header',
+        id: 'hdr-joinable',
+        title: 'קבוצות זמינות להצטרפות',
+        count: joinableFilteredGroups.length,
+      });
+      joinableFilteredGroups.forEach((g, i) => {
+        rows.push({
+          type: 'joinable-group',
+          id: `join-${g.id}`,
+          group: g,
+          isLastInSection: i === joinableFilteredGroups.length - 1,
+        });
+      });
+    }
+
+    return rows;
+  }, [myFilteredGroups, joinableFilteredGroups, myAnnouncementCount]);
 
   const unreadCount = useMemo(() => 
     allGroups.filter(g => g.is_member && (g.unread_count || 0) > 0).length, 
@@ -588,8 +730,17 @@ export default function ChatGroupsListScreen() {
     }
     Keyboard.dismiss();
     void HapticFeedback.impactLight();
+    // חימום מיידי בלחיצה — לפני/במהלך transition של הניווט
+    if (user?.id) {
+      warmChatGroupOnPress(user.id, group.id);
+    }
     (navigation as any).navigate('ChatGroup', { groupId: group.id });
-  }, [navigation]);
+  }, [navigation, user?.id]);
+
+  const openJoinSheet = useCallback((group: GroupWithMembership) => {
+    void HapticFeedback.selection();
+    setJoinGroupSheet({ visible: true, group });
+  }, []);
 
   const closeSearchSheet = useCallback(() => {
     setSearchSheetVisible(false);
@@ -800,105 +951,201 @@ export default function ChatGroupsListScreen() {
     );
   }, [handleGroupPress, handleMessageResultPress, tokens, styles]);
 
-  const renderGroup = useCallback(({ item, index }: { item: GroupWithMembership; index: number }) => {
-    const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
-    const hasUnread = (item.unread_count || 0) > 0;
-    const hasMentions = (item.mentioned_count || 0) > 0;
-    const isAnnouncement = isAnnouncementGroup(item.name, item.id);
-    const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
-    const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
-    const isLastAnnouncement = isAnnouncement && index === announcementCount - 1 && announcementCount > 0;
-    const isLastItem = index === filteredGroups.length - 1;
+  const renderMyGroup = useCallback(
+    (item: GroupWithMembership, isLastAnnouncement: boolean, isLastInSection: boolean) => {
+      const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
+      const hasUnread = (item.unread_count || 0) > 0;
+      const hasMentions = (item.mentioned_count || 0) > 0;
+      const isAnnouncement = isAnnouncementGroup(item.name, item.id);
+      const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
+      const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
 
-    const lastMsgPreview = item.is_member && item.last_message
-      ? `${item.last_message.sender_name}: ${getChatMessagePreview(item.last_message.message_type, item.last_message.content)}`
-      : item.is_member
-        ? 'אין הודעות עדיין'
-        : `${item.members_count || 0} חברים`;
+      const lastMsgPreview = item.last_message
+        ? `${item.last_message.sender_name}: ${
+            // content כבר preview מהמיזוג עם context; message_type לרענון אייקון בלבד
+            item.last_message_preview ||
+            getChatMessagePreview(item.last_message.message_type, item.last_message.content)
+          }`
+        : 'אין הודעות עדיין';
 
-    const timeLabel = item.last_message
-      ? formatRelativeTime(item.last_message.created_at)
-      : '';
+      const timeLabel = item.last_message_at
+        ? formatRelativeTime(item.last_message_at)
+        : item.last_message
+          ? formatRelativeTime(item.last_message.created_at)
+          : '';
 
-    return (
-      <View key={`group-wrapper-${item.id}`}>
-        <TouchableOpacity
-          style={styles.chatRow}
-          onPress={() => handleGroupPress(item)}
-          activeOpacity={0.6}
-        >
-          {/* Avatar */}
-          <View style={styles.avatarWrap}>
-            {imageUrl && !hasImageError ? (
-              <Image
-                source={{ uri: imageUrl }}
-                style={styles.avatar}
-                resizeMode="cover"
-                onError={() => {
-                  if (!imageErrorsRef.current.has(imageUrl)) {
-                    imageErrorsRef.current.add(imageUrl);
-                    setImageErrorCount(c => c + 1);
-                  }
-                }}
-              />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Ionicons name={iconName} size={22} color={tokens.colors.text.secondary} />
-              </View>
-            )}
-          </View>
-
-          {/* Text content */}
-          <View style={styles.chatBody}>
-            <View style={styles.chatRow1}>
-              <Text style={[styles.chatName, (isAnnouncement || hasUnread) && styles.chatNameBold]} numberOfLines={1}>
-                {item.name}
-              </Text>
-              {!!timeLabel && (
-                <Text style={[styles.chatTime, hasUnread && styles.chatTimeUnread]}>
-                  {timeLabel}
-                </Text>
+      return (
+        <View key={`group-wrapper-${item.id}`}>
+          <TouchableOpacity
+            style={styles.chatRow}
+            onPress={() => handleGroupPress(item)}
+            activeOpacity={0.6}
+          >
+            <View style={styles.avatarWrap}>
+              {imageUrl && !hasImageError ? (
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={styles.avatar}
+                  resizeMode="cover"
+                  onError={() => {
+                    if (!imageErrorsRef.current.has(imageUrl)) {
+                      imageErrorsRef.current.add(imageUrl);
+                      setImageErrorCount(c => c + 1);
+                    }
+                  }}
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Ionicons name={iconName} size={22} color={tokens.colors.text.secondary} />
+                </View>
               )}
             </View>
-            <View style={styles.chatRow2}>
-              <Text
-                style={[styles.chatPreview, hasUnread && styles.chatPreviewUnread]}
-                numberOfLines={1}
-              >
-                {item.last_message && getMessageTypeIcon(item.last_message.message_type, item.last_message.content) ? (
-                  <>
-                    <Ionicons
-                      name={getMessageTypeIcon(item.last_message.message_type, item.last_message.content) as any}
-                      size={13}
-                      color={hasUnread ? tokens.colors.text.primary : tokens.colors.text.tertiary}
-                    />{' '}
-                  </>
-                ) : null}
-                {lastMsgPreview}
-              </Text>
-              {hasUnread ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {item.unread_count! > 99 ? '99+' : item.unread_count}
-                  </Text>
-                </View>
-              ) : hasMentions ? (
-                <View style={styles.mentionBadge}>
-                  <Text style={styles.mentionBadgeText}>@</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-        </TouchableOpacity>
 
-        {isLastAnnouncement ? (
-          <View style={styles.sectionDivider} />
-        ) : !isLastItem ? (
-          <View style={styles.rowSeparator} />
-        ) : null}
+            <View style={styles.chatBody}>
+              <View style={styles.chatRow1}>
+                <Text
+                  style={[styles.chatName, (isAnnouncement || hasUnread) && styles.chatNameBold]}
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
+                {!!timeLabel && (
+                  <Text style={[styles.chatTime, hasUnread && styles.chatTimeUnread]}>
+                    {timeLabel}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.chatRow2}>
+                <Text
+                  style={[styles.chatPreview, hasUnread && styles.chatPreviewUnread]}
+                  numberOfLines={1}
+                >
+                  {item.last_message && getMessageTypeIcon(item.last_message.message_type, item.last_message.content) ? (
+                    <>
+                      <Ionicons
+                        name={getMessageTypeIcon(item.last_message.message_type, item.last_message.content) as any}
+                        size={13}
+                        color={hasUnread ? tokens.colors.text.primary : tokens.colors.text.tertiary}
+                      />{' '}
+                    </>
+                  ) : null}
+                  {lastMsgPreview}
+                </Text>
+                {hasUnread ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                      {item.unread_count! > 99 ? '99+' : item.unread_count}
+                    </Text>
+                  </View>
+                ) : hasMentions ? (
+                  <View style={styles.mentionBadge}>
+                    <Text style={styles.mentionBadgeText}>@</Text>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {isLastAnnouncement ? (
+            <View style={styles.sectionDivider} />
+          ) : !isLastInSection ? (
+            <View style={styles.rowSeparator} />
+          ) : null}
+        </View>
+      );
+    },
+    [styles, tokens, handleGroupPress, imageErrorCount]
+  );
+
+  const renderJoinableGroup = useCallback(
+    (item: GroupWithMembership, isLastInSection: boolean) => {
+      const iconName = GROUP_ICONS[item.name] || 'chatbubbles';
+      const imageUrl = item.avatar_url || getImageByGroupName(item.name) || null;
+      const hasImageError = imageUrl ? imageErrorsRef.current.has(imageUrl) : false;
+
+      return (
+        <View key={`joinable-wrapper-${item.id}`}>
+          <TouchableOpacity
+            style={[styles.chatRow, styles.joinableRow]}
+            onPress={() => handleGroupPress(item)}
+            activeOpacity={0.6}
+            accessibilityLabel={`פרטי קבוצה ${item.name}`}
+          >
+            <View style={styles.avatarWrap}>
+              {imageUrl && !hasImageError ? (
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={[styles.avatar, styles.joinableAvatar]}
+                  resizeMode="cover"
+                  onError={() => {
+                    if (!imageErrorsRef.current.has(imageUrl)) {
+                      imageErrorsRef.current.add(imageUrl);
+                      setImageErrorCount(c => c + 1);
+                    }
+                  }}
+                />
+              ) : (
+                <View style={[styles.avatarFallback, styles.joinableAvatar]}>
+                  <Ionicons name={iconName} size={22} color={tokens.colors.text.secondary} />
+                </View>
+              )}
+            </View>
+
+            <View style={styles.chatBody}>
+              <View style={styles.chatRow1}>
+                <Text style={styles.chatName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+              </View>
+              <Text style={styles.joinableSubtitle} numberOfLines={1}>
+                לחץ להצטרפות
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.joinablePill}
+              onPress={() => openJoinSheet(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={`הצטרף לקבוצה ${item.name}`}
+            >
+              <Text style={styles.joinablePillText}>הצטרפות</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+
+          {!isLastInSection ? <View style={styles.rowSeparator} /> : null}
+        </View>
+      );
+    },
+    [styles, tokens, handleGroupPress, openJoinSheet, imageErrorCount]
+  );
+
+  const renderSectionHeader = useCallback(
+    (title: string, count: number) => (
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionHeaderText}>
+          {title}
+          <Text style={styles.sectionHeaderDot}>{' · '}</Text>
+          {count}
+        </Text>
       </View>
-    );
-  }, [imageErrorCount, announcementCount, filteredGroups.length, styles, tokens, handleGroupPress]);
+    ),
+    [styles]
+  );
+
+  const renderRow = useCallback(
+    ({ item }: { item: ListRow }) => {
+      if (item.type === 'section-header') {
+        return renderSectionHeader(item.title, item.count);
+      }
+      if (item.type === 'my-group') {
+        return renderMyGroup(item.group, item.isLastAnnouncement, item.isLastInSection);
+      }
+      return renderJoinableGroup(item.group, item.isLastInSection);
+    },
+    [renderMyGroup, renderJoinableGroup, renderSectionHeader]
+  );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -936,49 +1183,49 @@ export default function ChatGroupsListScreen() {
   return (
     <View style={{ flex: 1 }}>
       <MainDrawerRegistration />
-      <ScreenGradientBackground style={StyleSheet.absoluteFill} />
+      <ScreenGradientBackground style={StyleSheet.absoluteFillObject} />
       <RNSafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.container}>
-          {/* Header */}
-          <View style={styles.appHeader}>
-            <View style={styles.appHeaderActions}>
-              <DayNavBlurButton
-                onPress={openMainDrawer}
-                glassIntensity="subtle"
-                size={DRAWER_MENU_BUTTON_SIZE}
-                accessibilityLabel="תפריט ראשי"
-              >
-                <Ionicons name="menu" size={24} color={tokens.colors.text.primary} />
-              </DayNavBlurButton>
-            </View>
-            <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]}>קהילת DarkPool</Text>
-            <View style={[styles.appHeaderActions, { justifyContent: 'flex-end' }]}>
-              {isGlobalAdmin && (
-                <TouchableOpacity
-                  style={styles.headerActionBtn}
-                  onPress={() => setCreateGroupSheetVisible(true)}
-                  accessibilityLabel="צור קבוצה חדשה"
+          <MainDrawerScreenHeader
+            title="קהילה"
+            onMenuPress={openMainDrawer}
+            centerAccessory={
+              <Image
+                source={require('../../assets/darkpool-community-logo.png')}
+                style={styles.appHeaderLogo}
+                resizeMode="contain"
+                accessibilityLabel="קהילת DarkPool"
+              />
+            }
+            rightAccessory={
+              <View style={styles.headerEndActions}>
+                {isGlobalAdmin ? (
+                  <TouchableOpacity
+                    style={styles.headerActionBtn}
+                    onPress={() => setCreateGroupSheetVisible(true)}
+                    accessibilityLabel="צור קבוצה חדשה"
+                  >
+                    <Ionicons name="create-outline" size={22} color={tokens.colors.text.primary} />
+                  </TouchableOpacity>
+                ) : null}
+                <DayNavBlurButton
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    setSearchSheetVisible(true);
+                  }}
+                  glassIntensity="subtle"
+                  size={DRAWER_MENU_BUTTON_SIZE}
+                  accessibilityLabel="חיפוש"
                 >
-                  <Ionicons name="create-outline" size={22} color={tokens.colors.text.primary} />
-                </TouchableOpacity>
-              )}
-              <DayNavBlurButton
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  setSearchSheetVisible(true);
-                }}
-                glassIntensity="subtle"
-                size={DRAWER_MENU_BUTTON_SIZE}
-                accessibilityLabel="חיפוש"
-              >
-                <Search
-                  size={20}
-                  strokeWidth={2}
-                  color={searchSheetVisible ? tokens.colors.primary.main : tokens.colors.text.primary}
-                />
-              </DayNavBlurButton>
-            </View>
-          </View>
+                  <Search
+                    size={20}
+                    strokeWidth={2}
+                    color={searchSheetVisible ? tokens.colors.primary.main : tokens.colors.text.primary}
+                  />
+                </DayNavBlurButton>
+              </View>
+            }
+          />
 
           {/* שורת סטטוסים */}
           <View style={styles.statusRow}>
@@ -1088,25 +1335,13 @@ export default function ChatGroupsListScreen() {
             </View>
           </View>
 
-          {/* חיבור Realtime — לא מציגים בזמן "connecting" ראשוני כדי לא להלחיץ */}
-          {(realtimeConnectionState === 'reconnecting' || realtimeConnectionState === 'offline') && (
-            <View style={styles.offlineBanner}>
-              {realtimeConnectionState === 'reconnecting' ? (
-                <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} />
-              ) : null}
-              <Text style={styles.offlineBannerText}>
-                {realtimeConnectionState === 'reconnecting'
-                  ? 'מתחבר מחדש לצ׳אט...'
-                  : 'אין חיבור בזמן אמת. הרשימה תתעדכן כשיחזור החיבור.'}
-              </Text>
-            </View>
-          )}
+          {/* Offline banner hidden globally per product decision */}
 
           {/* Chat List */}
           <View style={{ flex: 1, minHeight: 0 }}>
             <FlatList
-              data={filteredGroups}
-              renderItem={renderGroup}
+              data={listData}
+              renderItem={renderRow}
               keyExtractor={(item) => item.id}
               ListHeaderComponent={null}
               ListEmptyComponent={renderEmpty}
@@ -1125,13 +1360,13 @@ export default function ChatGroupsListScreen() {
               }
               showsVerticalScrollIndicator={false}
               contentContainerStyle={
-                filteredGroups.length === 0
+                listData.length === 0
                   ? styles.emptyListContainer
                   : { paddingTop: 4, paddingBottom: 20 }
               }
               keyboardShouldPersistTaps="handled"
-              initialNumToRender={10}
-              maxToRenderPerBatch={8}
+              initialNumToRender={12}
+              maxToRenderPerBatch={10}
               windowSize={7}
               removeClippedSubviews={true}
             />
@@ -1205,20 +1440,24 @@ export default function ChatGroupsListScreen() {
       </ChatBottomSheet>
 
       {/* Add Story – מסך מלא בסגנון Instagram/WhatsApp */}
-      <AddStoryFullScreen
-        visible={addStorySheetVisible}
-        onClose={() => setAddStorySheetVisible(false)}
-        onAdded={() => loadStories()}
-      />
+      {addStorySheetVisible && (
+        <AddStoryFullScreen
+          visible={addStorySheetVisible}
+          onClose={() => setAddStorySheetVisible(false)}
+          onAdded={() => loadStories()}
+        />
+      )}
 
       {/* Story Viewer */}
-      <StoryViewer
-        visible={storyViewerVisible}
-        onClose={() => { setStoryViewerVisible(false); loadStories(); }}
-        storiesByUser={usersWithStories}
-        initialUserIndex={storyViewerInitialIndex}
-        onStoriesChanged={loadStories}
-      />
+      {storyViewerVisible && (
+        <StoryViewer
+          visible={storyViewerVisible}
+          onClose={() => { setStoryViewerVisible(false); loadStories(); }}
+          storiesByUser={usersWithStories}
+          initialUserIndex={storyViewerInitialIndex}
+          onStoriesChanged={loadStories}
+        />
+      )}
     </View>
   );
 }
@@ -1233,27 +1472,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   safeArea: { flex: 1, backgroundColor: 'transparent' },
   container: { flex: 1, backgroundColor: 'transparent' },
 
-  /* ── Header ── */
-  appHeader: {
+  /* ── Header (לוגו בתוך MainDrawerScreenHeader) ── */
+  appHeaderLogo: {
+    height: 32,
+    width: '100%',
+  },
+  headerEndActions: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingHorizontal: HP,
-    paddingVertical: 14,
-  },
-  appHeaderTitleCenter: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  appHeaderActions: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    minWidth: 72,
-  },
-  appHeaderTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: tokens.colors.text.primary,
-    letterSpacing: -0.3,
+    gap: 4,
   },
   headerActionBtn: {
     width: 34,
@@ -1337,7 +1564,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
   },
   statusCircleImage: { width: '100%', height: '100%' },
   storiesDivider: {
-    height: StyleSheet.hairlineWidth,
+    height: 1,
     backgroundColor: tokens.colors.border.divider,
     marginHorizontal: HP,
     marginTop: 2,
@@ -1371,7 +1598,9 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     flexDirection: 'row-reverse',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: tokens.colors.border.primary,
+    backgroundColor: chatPalette.glass,
+    borderWidth: 1,
+    borderColor: chatPalette.glassBorder,
     borderRadius: 999,
     paddingHorizontal: 18,
     height: 46,
@@ -1410,6 +1639,8 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     width: 48,
     height: 48,
     borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: tokens.colors.background.tertiary,
   },
   searchRowAvatarPlaceholder: {
     backgroundColor: tokens.colors.background.tertiary,
@@ -1491,7 +1722,15 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     marginHorizontal: 8,
     borderRadius: 16,
   },
-  avatarWrap: { position: 'relative', marginLeft: 14 },
+  avatarWrap: {
+    position: 'relative',
+    marginLeft: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: tokens.colors.background.tertiary,
+  },
   avatar: { width: 56, height: 56, borderRadius: 28 },
   avatarFallback: {
     width: 56,
@@ -1563,16 +1802,66 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     color: tokens.colors.text.primary,
   },
   rowSeparator: {
-    height: StyleSheet.hairlineWidth,
+    height: 1,
     backgroundColor: tokens.colors.border.divider,
     marginHorizontal: HP,
   },
   sectionDivider: {
-    height: 1,
+    height: 2,
     backgroundColor: tokens.colors.border.primary,
     marginHorizontal: HP,
     marginTop: 6,
     marginBottom: 2,
+  },
+
+  /* ── Section headers — טקסט פשוט (בלי glass pill) ── */
+  sectionHeaderRow: {
+    paddingHorizontal: HP,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  sectionHeaderText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.84)',
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  sectionHeaderDot: {
+    color: 'rgba(255, 255, 255, 0.84)',
+    fontWeight: '600',
+  },
+
+  /* ── Joinable group row ── */
+  joinableRow: {
+    opacity: 0.9,
+  },
+  joinableAvatar: {
+    opacity: 0.85,
+  },
+  joinableSubtitle: {
+    fontSize: 13,
+    color: tokens.colors.text.tertiary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  joinablePill: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 200, 5, 0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minHeight: 28,
+    marginRight: 4,
+    alignSelf: 'center',
+  },
+  joinablePillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: tokens.colors.primary.main,
   },
 
   /* ── Empty state ── */

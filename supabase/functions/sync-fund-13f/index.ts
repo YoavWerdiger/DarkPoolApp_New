@@ -1,19 +1,56 @@
-// sync-fund-13f — sec-api 13F → dark_pool_fund_managers + dark_pool_fund_holdings
+// sync-fund-13f — sec-api / Unusual Whales 13F → dark_pool_fund_managers + holdings
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { fetch13fHistoryForCik } from '../_shared/secApi13f.ts';
+import { fetchUw13fHistoryForCik } from '../_shared/unusualWhales.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const KNOWN_FUNDS: Record<string, { name: string; manager: string; image?: string }> = {
+  '1067983': {
+    name: 'Berkshire Hathaway Inc',
+    manager: 'Warren Buffett',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/5/51/Warren_Buffett_KU_Visit.jpg',
+  },
+  '1697748': {
+    name: 'ARK Investment Management LLC',
+    manager: 'Cathie Wood',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Cathie_Wood_%28cropped%29.jpg',
+  },
+  '1336528': {
+    name: 'Pershing Square Capital Management LP',
+    manager: 'Bill Ackman',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/4/4a/Bill_Ackman_2019.jpg',
+  },
+};
+
+type FilingLike = {
+  cik: string;
+  filing_date: string;
+  report_date: string | null;
+  manager_name: string | null;
+  holdings: Array<{
+    ticker: string;
+    issuer_name: string | null;
+    cusip: string | null;
+    shares: number;
+    value_usd: number;
+  }>;
+  total_value_usd: number;
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
-  const apiKey = Deno.env.get('SEC_API_KEY')?.trim();
-  if (!apiKey) return json({ error: 'SEC_API_KEY missing' }, 400);
+  const secApiKey = Deno.env.get('SEC_API_KEY')?.trim();
+  const uwApiKey = Deno.env.get('UNUSUAL_WHALES_API_KEY')?.trim();
+  if (!secApiKey && !uwApiKey) {
+    return json({ error: 'SEC_API_KEY or UNUSUAL_WHALES_API_KEY required' }, 400);
+  }
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') || '',
@@ -34,6 +71,28 @@ serve(async (req) => {
     /* empty */
   }
 
+  // אם ביקשו CIKים ספציפיים — וודא שיש שורות מנהל לפני הסנכרון
+  if (cikFilter?.length) {
+    const seeds = cikFilter.map((cik) => ({
+      cik,
+      name: KNOWN_FUNDS[cik]?.name ?? `Fund ${cik}`,
+      manager_name: KNOWN_FUNDS[cik]?.manager ?? null,
+      image_url: KNOWN_FUNDS[cik]?.image ?? null,
+      source: 'seed',
+    }));
+    await supabase.from('dark_pool_fund_managers').upsert(seeds, { onConflict: 'cik' });
+  } else {
+    // ברירת מחדל: ודא ששלושת הקרנות המרכזיות קיימות
+    const seeds = Object.entries(KNOWN_FUNDS).map(([cik, meta]) => ({
+      cik,
+      name: meta.name,
+      manager_name: meta.manager,
+      image_url: meta.image ?? null,
+      source: 'seed',
+    }));
+    await supabase.from('dark_pool_fund_managers').upsert(seeds, { onConflict: 'cik' });
+  }
+
   const { data: funds, error: loadErr } = await supabase
     .from('dark_pool_fund_managers')
     .select('cik, name')
@@ -48,6 +107,7 @@ serve(async (req) => {
   const results: Array<{
     cik: string;
     ok: boolean;
+    source?: string;
     filings?: number;
     holdings?: number;
     error?: string;
@@ -56,7 +116,7 @@ serve(async (req) => {
   for (const fund of targets) {
     const cik = String(fund.cik);
     try {
-      const filings = await fetch13fHistoryForCik(apiKey, cik, historyLimit);
+      const { filings, source } = await loadFilings(cik, historyLimit, secApiKey, uwApiKey);
       if (!filings.length) {
         results.push({ cik, ok: false, error: 'no filings' });
         continue;
@@ -112,12 +172,14 @@ serve(async (req) => {
       await supabase.from('dark_pool_fund_managers').upsert(
         {
           cik,
-          name: latestFiling.manager_name || fund.name,
+          name: latestFiling.manager_name || fund.name || KNOWN_FUNDS[cik]?.name,
+          manager_name: KNOWN_FUNDS[cik]?.manager ?? latestFiling.manager_name,
+          image_url: KNOWN_FUNDS[cik]?.image ?? null,
           last_filing_date: latestFiling.filing_date,
           last_value_usd: latestFiling.total_value_usd,
           holdings_count: latestFiling.holdings.length,
           synced_at: new Date().toISOString(),
-          source: 'secapi',
+          source,
         },
         { onConflict: 'cik' }
       );
@@ -125,10 +187,11 @@ serve(async (req) => {
       results.push({
         cik,
         ok: true,
+        source,
         filings: filings.length,
         holdings: totalHoldingsUpserted,
       });
-      await delay(500);
+      await delay(400);
     } catch (e) {
       results.push({ cik, ok: false, error: (e as Error).message });
     }
@@ -141,6 +204,31 @@ serve(async (req) => {
     synced_at: new Date().toISOString(),
   });
 });
+
+async function loadFilings(
+  cik: string,
+  historyLimit: number,
+  secApiKey: string | undefined,
+  uwApiKey: string | undefined
+): Promise<{ filings: FilingLike[]; source: string }> {
+  let secError: string | null = null;
+  if (secApiKey) {
+    try {
+      const filings = await fetch13fHistoryForCik(secApiKey, cik, historyLimit);
+      if (filings.length) return { filings, source: 'secapi' };
+      secError = 'no filings';
+    } catch (e) {
+      secError = (e as Error).message;
+    }
+  }
+
+  if (uwApiKey) {
+    const filings = await fetchUw13fHistoryForCik(uwApiKey, cik, historyLimit);
+    if (filings.length) return { filings, source: 'unusualwhales' };
+  }
+
+  throw new Error(secError || 'no 13F source available');
+}
 
 function delay(ms: number) {
   return new Promise((r) => setTimeout(r, ms));

@@ -14,7 +14,28 @@ const appEnvironment = isExpoGo ? 'expo-go' : 'production';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 Notifications.setNotificationHandler({
-  handleNotification: async (_notification) => {
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data as {
+      type?: string;
+      sender_id?: string;
+    } | undefined;
+
+    // אל תציג Push על הודעה שהמשתמש עצמו שלח (foreground)
+    if (data?.type === 'chat_message' && data?.sender_id) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id && user.id === data.sender_id) {
+          return {
+            shouldShowAlert: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+            shouldShowBanner: false,
+            shouldShowList: false,
+          };
+        }
+      } catch {}
+    }
+
     let shouldPlaySound = true;
     try {
       const saved = await AsyncStorage.getItem('notificationSettings');
@@ -241,100 +262,21 @@ export class NotificationService {
         logger.warn('Notification', 'Running in Expo Go - token will be for Expo Go, not production app');
       }
 
-      // 🚨 אם אנחנו בפרודקשן, נבטל את כל הטוקנים הישנים של המשתמש הזה
-      // כי ייתכן שיש טוקנים ישנים מ-Expo Go
-      if (!isExpoGo) {
-        const { error: deactivateError } = await supabase
-          .from('device_tokens')
-          .update({ is_active: false })
-          .eq('user_id', user.id)
-          .neq('expo_push_token', token); // לא לבטל את הטוקן הנוכחי
+      // SECURITY DEFINER RPC: מבטל את אותו Expo token אצל משתמשים אחרים (RLS חוסם UPDATE ישיר)
+      // ומשאיר טוקן פעיל אחד למשתמש המחובר.
+      const { data: claimed, error: claimError } = await supabase.rpc('claim_device_push_token', {
+        p_expo_push_token: token,
+        p_device_id: deviceId,
+        p_platform: platform,
+        p_app_version: appVersion,
+      });
 
-        if (deactivateError) {
-          logger.warn('Notification', 'Error deactivating old tokens');
-        }
+      if (claimError) {
+        logger.error('Notification', 'Error claiming device push token', claimError);
+        return false;
       }
 
-      const { data: existingToken, error: selectError } = await supabase
-        .from('device_tokens')
-        .select('id, is_active')
-        .eq('user_id', user.id)
-        .eq('expo_push_token', token)
-        .maybeSingle();
-
-      if (selectError) {
-        logger.error('Notification', 'Error checking existing token', selectError);
-      }
-
-      if (existingToken) {
-        const { error } = await supabase
-          .from('device_tokens')
-          .update({
-            is_active: true,
-            device_id: deviceId,
-            platform,
-            app_version: appVersion,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existingToken.id);
-
-        if (error) {
-          logger.error('Notification', 'Error updating device token', error);
-          return false;
-        }
-
-        return true;
-      } else {
-        const { error, data } = await supabase
-          .from('device_tokens')
-          .insert({
-            user_id: user.id,
-            expo_push_token: token,
-            device_id: deviceId,
-            platform,
-            app_version: appVersion,
-            is_active: true,
-          })
-          .select();
-
-        if (error) {
-          // אם זו שגיאת UNIQUE constraint, ננסה לעדכן את הטוקן הקיים
-          if (error.code === '23505') {
-            // ננסה למצוא את הטוקן הקיים ולעדכן אותו
-            const { data: existingToken, error: selectError } = await supabase
-              .from('device_tokens')
-              .select('id')
-              .eq('user_id', user.id)
-              .eq('expo_push_token', token)
-              .maybeSingle();
-            
-            if (existingToken && !selectError) {
-              const { error: updateError } = await supabase
-                .from('device_tokens')
-                .update({
-                  is_active: true,
-                  device_id: deviceId,
-                  platform,
-                  app_version: appVersion,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', existingToken.id);
-              
-              if (updateError) {
-                logger.error('Notification', 'Error updating existing token after duplicate key', updateError);
-                return false;
-              }
-
-              return true;
-            }
-          }
-
-          logger.error('Notification', 'Error inserting device token', error);
-          return false;
-        }
-
-        return true;
-      }
+      return claimed === true;
     } catch (error) {
       logger.error('Notification', 'Exception in registerDeviceToken', error);
       return false;
@@ -410,6 +352,16 @@ export class NotificationService {
   // Handle notification response (when user taps notification)
   static addNotificationResponseReceivedListener(callback: (response: Notifications.NotificationResponse) => void) {
     return Notifications.addNotificationResponseReceivedListener(callback);
+  }
+
+  /** Cold start / background: ההתראה האחרונה שעליה לחצו לפני שה-listener היה רשום */
+  static async getLastNotificationResponse() {
+    return Notifications.getLastNotificationResponseAsync();
+  }
+
+  /** אחרי ניתוב — מונע ניווט חוזר לאותה התראה */
+  static clearLastNotificationResponse() {
+    Notifications.clearLastNotificationResponse();
   }
 
   // Send push notification via Supabase Edge Function

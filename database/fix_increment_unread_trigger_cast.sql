@@ -1,4 +1,5 @@
 -- מונע שגיאת 42725 אם חזרה גרסה כפולה של increment_unread_count
+-- וגם מעביר mentioned_users מהשורה (בלי RPC כפול מה-edge function)
 CREATE OR REPLACE FUNCTION public.trigger_increment_unread_on_new_message()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -12,7 +13,7 @@ BEGIN
     PERFORM public.increment_unread_count(
       NEW.group_id,
       NEW.sender_id,
-      '{}'::uuid[]
+      COALESCE(NEW.mentioned_users, '{}'::uuid[])
     );
   END IF;
   RETURN NEW;

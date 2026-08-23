@@ -39,12 +39,12 @@ export async function buildExploreFromDb(
       .from('dark_pool_congress_trades')
       .select('politician_id, politician_name, politician_image_url, filed_at')
       .order('filed_at', { ascending: false })
-      .limit(400),
+      .limit(1200),
     supabase
       .from('dark_pool_insider_buys')
       .select('insider_name, insider_logo_url, ticker, filed_at, company_name')
       .order('filed_at', { ascending: false })
-      .limit(400),
+      .limit(1200),
     supabase
       .from('dark_pool_featured_profiles')
       .select('name, subtitle, image_url, person_id, kind, ticker')
@@ -80,7 +80,7 @@ export async function buildExploreFromDb(
   }
 
   const polRanked = Array.from(polMap.values()).sort((a, b) => b.count - a.count);
-  const politicians: DbExplorePerson[] = polRanked.slice(0, 24).map((p) => ({
+  const politicians: DbExplorePerson[] = polRanked.slice(0, 80).map((p) => ({
     id: p.id,
     name: p.name,
     subtitle: 'קונגרס · STIR',
@@ -125,7 +125,7 @@ export async function buildExploreFromDb(
 
   const insiders: DbExplorePerson[] = Array.from(insMap.values())
     .sort((a, b) => b.count - a.count)
-    .slice(0, 24)
+    .slice(0, 80)
     .map((p) => ({
       id: p.id,
       name: p.name,
@@ -154,14 +154,16 @@ export async function buildExploreFromDb(
     warnings.push('אין עדיין עסקאות ב-DB — הרץ sync-insider-buys ו-sync-congress-trades');
   }
 
-  const topActive = [...politicians].slice(0, 10);
+  const topActive = [...politicians].slice(0, 40);
   const recentlyActive = [...politicians]
     .sort((a, b) => (b.activity_score ?? 0) - (a.activity_score ?? 0))
-    .slice(0, 10);
+    .slice(0, 40);
 
   const payload: DbExplorePayload = {
-    most_followed: featured.length ? featured : topActive.slice(0, 8),
-    executives: insiders.slice(0, 12),
+    most_followed: featured.length
+      ? [...featured, ...topActive].slice(0, 48)
+      : topActive.slice(0, 36),
+    executives: insiders.slice(0, 40),
     top_active: topActive,
     recently_active: recentlyActive,
     insiders_with_photo: insiders,
@@ -184,7 +186,7 @@ async function enrichExplorePayloadWithPortraits(
     ...payload.executives,
     ...payload.insiders_with_photo,
   ];
-  const ids = [...new Set(people.map((p) => p.id))].slice(0, 80);
+  const ids = [...new Set(people.map((p) => p.id))].slice(0, 200);
   if (!ids.length) return payload;
 
   const { data } = await supabase

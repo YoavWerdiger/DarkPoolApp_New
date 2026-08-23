@@ -1,7 +1,7 @@
 // ============================================
 // Add Member Sheet
 // ============================================
-// חיפוש ובחירת משתמשים להוספה לקבוצה
+// חיפוש ובחירת משתמשים להוספה לקבוצה — ChatBottomSheet + glass כמו Action sheet
 // ============================================
 
 import React, { useState, useCallback, useRef } from 'react';
@@ -14,17 +14,14 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useDesignTokens, DesignTokens } from '../ui/DesignTokens';
+import { useDesignTokens } from '../ui/DesignTokens';
 import { searchUsers } from '../../services/chat/chatSearchService';
-import { BlurView } from 'expo-blur';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { isUserPresenceOnline } from '../../utils/userPresence';
+import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
+import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
 
 interface User {
   id: string;
@@ -48,38 +45,40 @@ export default function AddMemberSheet({
   onAdd,
   existingMemberIds = [],
 }: AddMemberSheetProps) {
-  const DesignTokens = useDesignTokens();
-  const insets = useSafeAreaInsets();
+  const tokens = useDesignTokens();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
 
-  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleQueryChange = useCallback((text: string) => {
-    setQuery(text);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (!text.trim()) {
-      setResults([]);
-      return;
-    }
-    searchTimeout.current = setTimeout(async () => {
-      setIsSearching(true);
-      const { data } = await searchUsers(text.trim(), existingMemberIds, 20);
-      setResults(data || []);
-      setIsSearching(false);
-    }, 350);
-  }, [existingMemberIds]);
+  const handleQueryChange = useCallback(
+    (text: string) => {
+      setQuery(text);
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+      if (!text.trim()) {
+        setResults([]);
+        return;
+      }
+      searchTimeout.current = setTimeout(async () => {
+        setIsSearching(true);
+        const { data } = await searchUsers(text.trim(), existingMemberIds, 20);
+        setResults(data || []);
+        setIsSearching(false);
+      }, 350);
+    },
+    [existingMemberIds],
+  );
 
   const handleAdd = async (user: User) => {
     void HapticFeedback.impactLight();
     setAddingId(user.id);
-    const name = user.display_name || user.full_name || 'משתמש';
+    const name = user?.display_name || user?.full_name || 'משתמש';
     await onAdd(user.id, name);
     setAddingId(null);
-    setResults(prev => prev.filter(u => u.id !== user.id));
+    setResults((prev) => prev.filter((u) => u.id !== user.id));
   };
 
   const handleClose = () => {
@@ -93,28 +92,36 @@ export default function AddMemberSheet({
     const name = item.display_name || item.full_name || 'משתמש';
     const isAdding = addingId === item.id;
     return (
-      <View style={[styles.userRow, { borderBottomColor: DesignTokens.colors.border.subtle ?? DesignTokens.colors.border.primary }]}>
+      <View style={[styles.userRow, { borderBottomColor: tokens.colors.border.subtle ?? tokens.colors.border.primary }]}>
         <View style={styles.userLeft}>
           {item.profile_picture ? (
             <Image source={{ uri: item.profile_picture }} style={styles.avatar} />
           ) : (
-            <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: DesignTokens.colors.background.tertiary }]}>
-              <Text style={[styles.avatarInitial, { color: DesignTokens.colors.text.secondary }]}>
+            <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: tokens.colors.background.tertiary }]}>
+              <Text style={[styles.avatarInitial, { color: tokens.colors.text.secondary }]}>
                 {name.charAt(0).toUpperCase()}
               </Text>
             </View>
           )}
           {isUserPresenceOnline(item.is_online, item.last_active) && (
-            <View style={[styles.onlineDot, { backgroundColor: DesignTokens.colors.text.success ?? '#4CAF50', borderColor: DesignTokens.colors.background.secondary }]} />
+            <View
+              style={[
+                styles.onlineDot,
+                {
+                  backgroundColor: tokens.colors.text.success ?? '#4CAF50',
+                  borderColor: tokens.colors.bubbleOther,
+                },
+              ]}
+            />
           )}
         </View>
-        <Text style={[styles.userName, { color: DesignTokens.colors.text.primary }]} numberOfLines={1}>
+        <Text style={[styles.userName, { color: tokens.colors.text.primary }]} numberOfLines={1}>
           {name}
         </Text>
         <TouchableOpacity
           onPress={() => handleAdd(item)}
           disabled={isAdding}
-          style={[styles.addBtn, { backgroundColor: DesignTokens.colors.primary.main }]}
+          style={[styles.addBtn, { backgroundColor: tokens.colors.primary.main }]}
           activeOpacity={0.75}
         >
           {isAdding ? (
@@ -128,157 +135,110 @@ export default function AddMemberSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}
-      >
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+    <ChatBottomSheet
+      visible={visible}
+      onClose={handleClose}
+      snapPoints={[0.72]}
+      showBrandWatermark={false}
+      avoidKeyboard
+    >
+      <ChatSheetContent style={{ backgroundColor: 'transparent', flex: 1, minHeight: 320 }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="close" size={22} color={tokens.colors.text.secondary} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>הוסף חברים</Text>
+          <View style={{ width: 22 }} />
+        </View>
 
-        <View
-          style={[
-            styles.sheet,
-            {
-              backgroundColor: DesignTokens.colors.background.secondary,
-              borderColor: DesignTokens.colors.border.primary,
-              paddingBottom: insets.bottom + 12,
-            },
-          ]}
-        >
-          {/* Handle bar */}
-          <View style={[styles.handle, { backgroundColor: DesignTokens.colors.border.primary }]} />
-
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={handleClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="close" size={22} color={DesignTokens.colors.text.secondary} />
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={16} color={tokens.colors.text.tertiary} />
+          <TextInput
+            value={query}
+            onChangeText={handleQueryChange}
+            placeholder="חפש לפי שם..."
+            placeholderTextColor={tokens.colors.text.tertiary}
+            style={[styles.searchInput, { color: tokens.colors.text.primary }]}
+            autoFocus
+            textAlign="right"
+            returnKeyType="search"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.selection();
+                handleQueryChange('');
+              }}
+            >
+              <Ionicons name="close-circle" size={16} color={tokens.colors.text.tertiary} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: DesignTokens.colors.text.primary }]}>
-              הוסף חברים
-            </Text>
-            <View style={{ width: 22 }} />
-          </View>
-
-          {/* Search input */}
-          <View style={[styles.searchContainer, { backgroundColor: DesignTokens.colors.background.tertiary, borderColor: DesignTokens.colors.border.primary }]}>
-            <Ionicons name="search" size={16} color={DesignTokens.colors.text.tertiary} style={styles.searchIcon} />
-            <TextInput
-              value={query}
-              onChangeText={handleQueryChange}
-              placeholder="חפש לפי שם..."
-              placeholderTextColor={DesignTokens.colors.text.tertiary}
-              style={[styles.searchInput, { color: DesignTokens.colors.text.primary }]}
-              autoFocus
-              textAlign="right"
-              returnKeyType="search"
-            />
-            {query.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  handleQueryChange('');
-                }}
-              >
-                <Ionicons name="close-circle" size={16} color={DesignTokens.colors.text.tertiary} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Results */}
-          {isSearching ? (
-            <ActivityIndicator
-              size="large"
-              color={DesignTokens.colors.primary.main}
-              style={{ marginTop: 32 }}
-            />
-          ) : results.length === 0 && query.trim().length > 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="person-outline" size={40} color={DesignTokens.colors.text.tertiary} />
-              <Text style={[styles.emptyText, { color: DesignTokens.colors.text.tertiary }]}>
-                לא נמצאו משתמשים
-              </Text>
-            </View>
-          ) : results.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="search-outline" size={40} color={DesignTokens.colors.text.tertiary} />
-              <Text style={[styles.emptyText, { color: DesignTokens.colors.text.tertiary }]}>
-                הקלד שם לחיפוש
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={results}
-              renderItem={renderUser}
-              keyExtractor={(item) => item.id}
-              keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{ paddingTop: 8 }}
-              showsVerticalScrollIndicator={false}
-            />
           )}
         </View>
-      </KeyboardAvoidingView>
-    </Modal>
+
+        {isSearching ? (
+          <ActivityIndicator size="large" color={tokens.colors.primary.main} style={{ marginTop: 32 }} />
+        ) : results.length === 0 && query.trim().length > 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="person-outline" size={40} color={tokens.colors.text.tertiary} />
+            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>לא נמצאו משתמשים</Text>
+          </View>
+        ) : results.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="search-outline" size={40} color={tokens.colors.text.tertiary} />
+            <Text style={[styles.emptyText, { color: tokens.colors.text.tertiary }]}>הקלד שם לחיפוש</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={results}
+            renderItem={renderUser}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingTop: 8 }}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </ChatSheetContent>
+    </ChatBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: DesignTokens.colors.backdrop,
-  },
-  sheet: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    minHeight: 380,
-    maxHeight: '80%',
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 4,
-  },
   header: {
-    flexDirection: 'row-reverse',
+    ...chatRtlRow,
+    direction: 'rtl',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingVertical: 12,
   },
   headerTitle: {
+    ...chatRtlText,
     fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
   },
   searchContainer: {
-    flexDirection: 'row-reverse',
+    ...chatRtlRow,
+    direction: 'rtl',
     alignItems: 'center',
-    marginHorizontal: 16,
     marginBottom: 8,
     paddingHorizontal: 12,
     paddingVertical: 9,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
+    borderColor: chatPalette.glassBorder,
+    backgroundColor: chatPalette.glass,
     gap: 8,
   },
-  searchIcon: {},
   searchInput: {
     flex: 1,
     fontSize: 15,
-    textAlign: 'right',
+    ...chatRtlText,
     padding: 0,
   },
   userRow: {
-    flexDirection: 'row-reverse',
+    ...chatRtlRow,
+    direction: 'rtl',
     alignItems: 'center',
-    paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 10,
@@ -313,7 +273,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '500',
-    textAlign: 'right',
+    ...chatRtlText,
   },
   addBtn: {
     width: 32,

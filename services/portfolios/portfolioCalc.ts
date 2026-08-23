@@ -412,6 +412,160 @@ export function buildPortfolioCashFlows(
   return flows;
 }
 
+// ----------------------------------------------------------------------------
+// Portfolio analytics from a value series
+// ----------------------------------------------------------------------------
+
+export interface PortfolioAnalyticsResult {
+  /** Annualized volatility from daily returns (e.g. 0.18 = 18%) */
+  volatility: number | null;
+  /** Annualized Sharpe ratio with the given risk-free rate */
+  sharpe: number | null;
+  /** Maximum peak-to-trough drawdown (e.g. 0.25 = 25%) */
+  maxDrawdown: number | null;
+  /**
+   * Simple total return over the period (e.g. 0.35 = 35%).
+   * מושפע מהפקדות/משיכות — לא מייצג תשואת השקעה אמיתית.
+   * השתמש ב-twrReturn לתשואה מנורמלת.
+   */
+  totalReturn: number | null;
+  /**
+   * Time-Weighted Return (TWR) — תשואה שמבודדת הפקדות/משיכות.
+   * מחושב מהסדרה עם external_flow_today; null אם הנתון לא זמין.
+   */
+  twrReturn: number | null;
+  /** Number of calendar days in the series */
+  periodDays: number;
+}
+
+/**
+ * Yahoo (וגם מקורות אחרים) לעיתים מחזירים close על סקאלה שונה ממחיר הברוקר
+ * אחרי reverse-split (למשל UVIX: Yahoo ~600 מול Colmex ~29).
+ * כשיש אי-התאמה >2× ביום הכניסה — מיישרים את מחיר השוק לסקאלת הברוקר.
+ * מחזיר null אם אי אפשר לחשב מחיר אמין.
+ */
+export const BROKER_PRICE_SCALE_MISMATCH_RATIO = 2;
+
+export function brokerAlignedMarketPrice(
+  marketPrice: number,
+  entryPrice: number,
+  yahooAtEntry: number | null | undefined
+): number | null {
+  if (!(marketPrice > 0) || !(entryPrice > 0)) return null;
+
+  if (yahooAtEntry != null && yahooAtEntry > 0) {
+    const entryRatio = yahooAtEntry / entryPrice;
+    if (
+      entryRatio >= BROKER_PRICE_SCALE_MISMATCH_RATIO ||
+      entryRatio <= 1 / BROKER_PRICE_SCALE_MISMATCH_RATIO
+    ) {
+      return marketPrice * (entryPrice / yahooAtEntry);
+    }
+    return marketPrice;
+  }
+
+  // בלי עוגן כניסה — דחה מחיר שוק קיצוני ביחס ל-entry (הגנה מפני ספייק)
+  const ratio = marketPrice / entryPrice;
+  const hard = BROKER_PRICE_SCALE_MISMATCH_RATIO * 5;
+  if (ratio >= hard || ratio <= 1 / hard) return null;
+  return marketPrice;
+}
+
+/**
+ * Computes key risk/performance analytics from a portfolio value time series.
+ * @param series        Array of { date, value, external_flow? } sorted ascending.
+ *                      external_flow = deposits - withdrawals for that day (positive = net inflow).
+ *                      When provided, computes Time-Weighted Return (twrReturn).
+ * @param riskFreeRate  Annual risk-free rate (default 4% = 0.04)
+ */
+export function computePortfolioAnalytics(
+  series: { date: string; value: number; external_flow?: number }[],
+  riskFreeRate = 0.04
+): PortfolioAnalyticsResult {
+  const empty: PortfolioAnalyticsResult = {
+    volatility: null, sharpe: null, maxDrawdown: null,
+    totalReturn: null, twrReturn: null, periodDays: 0,
+  };
+  if (series.length < 2) return empty;
+
+  const sorted = [...series].sort((a, b) => a.date.localeCompare(b.date));
+  const hasExternalFlow = sorted.some((p) => p.external_flow != null);
+
+  // תשואות יומיות מותאמות לתזרים (HPR) — בלי זה משיכה נראית כקריסת תיק ב-vol/sharpe
+  const returns: number[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1].value;
+    const curr = sorted[i].value;
+    const flow = sorted[i].external_flow ?? 0;
+    const denominator = prev + flow;
+    if (denominator > 1e-9 && curr >= 0) {
+      returns.push(curr / denominator - 1);
+    } else if (prev > 0) {
+      returns.push((curr - prev) / prev);
+    }
+  }
+
+  const vol = returns.length >= 2 ? annualizedVolatility(returns) : null;
+  const sharpe = returns.length >= 2 ? sharpeRatio(returns, riskFreeRate) : null;
+
+  // Max drawdown על ערכי תיק מותאמי-תזרים (מונע DD מזויף ממשיכות)
+  let maxDrawdown: number | null = null;
+  {
+    let peak = 1;
+    let dd = 0;
+    let indexLevel = 1;
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1].value;
+      const curr = sorted[i].value;
+      const flow = sorted[i].external_flow ?? 0;
+      const denominator = prev + flow;
+      if (denominator > 1e-9 && curr >= 0) {
+        indexLevel *= curr / denominator;
+      }
+      if (indexLevel > peak) peak = indexLevel;
+      if (peak > 0) {
+        const cur = (peak - indexLevel) / peak;
+        if (cur > dd) dd = cur;
+      }
+    }
+    maxDrawdown = sorted.length >= 2 ? dd : null;
+  }
+
+  const firstVal = sorted[0].value;
+  const lastVal = sorted[sorted.length - 1].value;
+  const totalReturn = firstVal > 0 ? (lastVal - firstVal) / firstVal : null;
+
+  // Time-Weighted Return (TWR)
+  // HPR_i = V[i] / (V[i-1] + external_flow[i])
+  // TWR = product(HPR_i) - 1
+  let twrReturn: number | null = null;
+  if (hasExternalFlow) {
+    let cumulativeTwr = 1.0;
+    for (let i = 1; i < sorted.length; i++) {
+      const prevVal = sorted[i - 1].value;
+      const currVal = sorted[i].value;
+      // external_flow: deposits - withdrawals (positive = inflow)
+      const flow = sorted[i].external_flow ?? 0;
+      const denominator = prevVal + flow;
+      if (denominator > 1e-9 && currVal >= 0) {
+        cumulativeTwr *= currVal / denominator;
+      }
+    }
+    twrReturn = cumulativeTwr - 1;
+  }
+
+  const periodDays = Math.max(
+    0,
+    Math.round(
+      (new Date(sorted[sorted.length - 1].date).getTime() -
+        new Date(sorted[0].date).getTime()) /
+        (1000 * 60 * 60 * 24)
+    )
+  );
+
+  return { volatility: vol, sharpe, maxDrawdown, totalReturn, twrReturn, periodDays };
+}
+
 /** שדות מינימליים לחישוב אחוז הצלחה בתיק */
 export interface WinRateHoldingInput {
   is_closed: boolean;

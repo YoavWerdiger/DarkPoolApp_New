@@ -1,13 +1,7 @@
 /**
- * טאבים תחתונים — גילוי | מעקב | פיד (כמו Insider Wave)
+ * @deprecated — הטאבים הוסרו. הבית הוא DarkPoolHomeScreen ב-DarkPoolStack.
+ * נשאר רק כדי שלא יישברו ייבואים ישנים.
  */
-
-import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import DarkPoolFeedScreen from '../screens/DarkPool/DarkPoolFeedScreen';
-import DarkPoolExploreScreen from '../screens/DarkPool/DarkPoolExploreScreen';
-import DarkPoolFollowingScreen from '../screens/DarkPool/DarkPoolFollowingScreen';
-import { DarkPoolBottomTabBar } from '../screens/DarkPool/components/DarkPoolBottomTabBar';
 
 export type DarkPoolTabParamList = {
   DarkPoolExplore: undefined;
@@ -15,21 +9,4 @@ export type DarkPoolTabParamList = {
   DarkPoolFeed: undefined;
 };
 
-const Tab = createBottomTabNavigator<DarkPoolTabParamList>();
-
-export default function DarkPoolTabs() {
-  return (
-    <Tab.Navigator
-      initialRouteName="DarkPoolExplore"
-      tabBar={(props) => <DarkPoolBottomTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        lazy: true,
-      }}
-    >
-      <Tab.Screen name="DarkPoolFeed" component={DarkPoolFeedScreen} />
-      <Tab.Screen name="DarkPoolExplore" component={DarkPoolExploreScreen} />
-      <Tab.Screen name="DarkPoolFollowing" component={DarkPoolFollowingScreen} />
-    </Tab.Navigator>
-  );
-}
+export { default } from '../screens/DarkPool/DarkPoolHomeScreen';

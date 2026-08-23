@@ -11,6 +11,12 @@ export const CHAT_COMPOSER_KEYBOARD_GAP = 3;
  */
 export const CHAT_COMPOSER_ANDROID_MIN_BOTTOM = 16;
 
+/**
+ * Yoga בפרודקשן הוא LTR (App.tsx) גם כש-I18nManager.forceRTL(true).
+ * אסור להסתמך על isRTL ל-transform של מקלדת — Expo Go לפעמים עדיין RTL.
+ */
+export const CHAT_KEYBOARD_LTR_STYLE = { direction: 'ltr' as const };
+
 /** inset תחתון קבוע לקומפוזר — לא משתנה עם המקלדת (מונע קפיצות) */
 export function chatComposerSafeBottomInset(safeAreaBottom: number): number {
   const minBottom = Platform.OS === 'android' ? CHAT_COMPOSER_ANDROID_MIN_BOTTOM : 0;
@@ -22,7 +28,23 @@ export function chatInputBottomPadding(minMargin = 6): number {
   return minMargin;
 }
 
-/** translateY לקומפוזר: מפצה על inset קבוע + רווח מעל המקלדת */
+/**
+ * KeyboardStickyView: translateY = -keyboardHeight + offset.
+ * closed חייב 0 (חיובי דוחף למטה). opened מפצה על inset הקבוע + gap —
+ * אותו חישוב כמו chatComposerKeyboardTranslate.
+ */
+export function chatComposerStickyOffset(
+  safeAreaBottom: number,
+  gap = CHAT_COMPOSER_KEYBOARD_GAP,
+): { closed: number; opened: number } {
+  const safeBottom = chatComposerSafeBottomInset(safeAreaBottom);
+  return {
+    closed: 0,
+    opened: Math.max(safeBottom - gap, 0),
+  };
+}
+
+/** translateY לקומפוזר (Android Reanimated): מפצה על inset קבוע + רווח מעל המקלדת */
 export function chatComposerKeyboardTranslate(
   keyboardHeight: number,
   bottomInset: number,

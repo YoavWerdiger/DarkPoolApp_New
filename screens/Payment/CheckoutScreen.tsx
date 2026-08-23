@@ -93,8 +93,8 @@ export default function CheckoutScreen({ navigation, route }: CheckoutScreenProp
         description: `מנוי ${plan.name} - ${user.email}`,
         userId: user.id,
         planId: selectedPlan,
-        userEmail: user.email || '',
-        userName: user.display_name || user.email || 'משתמש'
+        userEmail: user?.email || '',
+        userName: user?.display_name || user?.email || 'משתמש'
       };
 
       const paymentResponse = await paymentService.createPaymentRequest(paymentRequest);

@@ -3,6 +3,8 @@ import {
   xirr,
   FifoTransaction,
   CashFlowEntry,
+  brokerAlignedMarketPrice,
+  computePortfolioAnalytics,
 } from '../../services/portfolios/portfolioCalc';
 
 describe('calculateFifoPosition (FIFO P&L)', () => {
@@ -122,5 +124,58 @@ describe('xirr (Annualized IRR)', () => {
     expect(r).not.toBeNull();
     expect(r ?? 0).toBeGreaterThan(0.1);
     expect(r ?? 0).toBeLessThan(0.25);
+  });
+});
+
+describe('brokerAlignedMarketPrice (split / scale mismatch)', () => {
+  it('passes through when Yahoo@entry matches broker entry', () => {
+    expect(brokerAlignedMarketPrice(23.1, 61.2, 60.84)).toBeCloseTo(23.1, 6);
+  });
+
+  it('scales UVIX-like Yahoo series down to broker entry scale', () => {
+    // Colmex entry 28.91, Yahoo same day ~633 → scale ≈ 0.0457
+    const aligned = brokerAlignedMarketPrice(633.2, 28.91, 633.2);
+    expect(aligned).not.toBeNull();
+    expect(aligned!).toBeCloseTo(28.91, 4);
+
+    const later = brokerAlignedMarketPrice(520, 28.91, 633.2);
+    expect(later).not.toBeNull();
+    expect(later!).toBeCloseTo(28.91 * (520 / 633.2), 4);
+    // must not leave a ~20× phantom mark
+    expect(later!).toBeLessThan(40);
+  });
+
+  it('rejects absurd market vs entry when no entry anchor exists', () => {
+    expect(brokerAlignedMarketPrice(600, 30, null)).toBeNull();
+    expect(brokerAlignedMarketPrice(30, 30, null)).toBe(30);
+  });
+});
+
+describe('computePortfolioAnalytics ignores artificial spike series', () => {
+  it('shows extreme vol/DD on spiked series and sane metrics after scale fix', () => {
+    const spiked = [
+      { date: '2025-05-19', value: 1013, external_flow: 1005 },
+      { date: '2025-05-21', value: 17500, external_flow: 0 },
+      { date: '2025-05-23', value: 1040, external_flow: 0 },
+      { date: '2025-06-17', value: 17000, external_flow: 0 },
+      { date: '2025-07-28', value: 750, external_flow: 0 },
+      { date: '2026-08-10', value: 263, external_flow: 0 },
+    ];
+    const fixed = [
+      { date: '2025-05-19', value: 1013, external_flow: 1005 },
+      { date: '2025-05-21', value: 1080, external_flow: 0 },
+      { date: '2025-05-23', value: 1040, external_flow: 0 },
+      { date: '2025-06-17', value: 980, external_flow: 0 },
+      { date: '2025-07-28', value: 750, external_flow: 0 },
+      { date: '2026-08-10', value: 263, external_flow: 0 },
+    ];
+    const bad = computePortfolioAnalytics(spiked);
+    const good = computePortfolioAnalytics(fixed);
+    expect(bad.volatility).not.toBeNull();
+    expect(good.volatility).not.toBeNull();
+    expect(bad.volatility!).toBeGreaterThan(5); // >> 500%
+    expect(good.volatility!).toBeLessThan(bad.volatility! * 0.5);
+    expect(bad.maxDrawdown!).toBeGreaterThan(0.9);
+    expect(good.maxDrawdown!).toBeLessThan(bad.maxDrawdown!);
   });
 });

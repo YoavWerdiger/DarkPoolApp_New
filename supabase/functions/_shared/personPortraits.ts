@@ -41,6 +41,7 @@ const WIKI = 'https://upload.wikimedia.org/wikipedia/commons';
 const KNOWN_BY_ID: Record<string, string> = {
   G000583: `${CONGRESS_PHOTO}/G000583.jpg`,
   P000197: `${CONGRESS_PHOTO}/P000197.jpg`,
+  '888dc73f-f1eb-485a-a241-80657aaaaff9': `${WIKI}/5/56/Donald_Trump_official_portrait.jpg`,
   '1067983': `${WIKI}/5/51/Warren_Buffett_KU_Visit.jpg`,
   '1697748': `${WIKI}/7/7e/Cathie_Wood_%28cropped%29.jpg`,
   '1336528': `${WIKI}/4/4a/Bill_Ackman_2019.jpg`,

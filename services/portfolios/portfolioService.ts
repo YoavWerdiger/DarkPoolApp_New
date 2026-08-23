@@ -6,6 +6,9 @@
  */
 
 import { supabase } from '../../lib/supabase';
+import { getHistoricalPrices } from './portfolioPriceFeed';
+import { brokerAlignedMarketPrice } from './portfolioCalc';
+import { toLocalDateKey, todayLocalKey, daysAgoLocalKey } from '../../utils/dateKeys';
 import type {
   Portfolio,
   PortfolioInsert,
@@ -88,7 +91,7 @@ export async function createPortfolio(
 ): Promise<Portfolio> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth?.user) throw new Error('not_authenticated');
-  const payload = {
+  const payload: Record<string, unknown> = {
     user_id: auth.user.id,
     name: input.name,
     currency: input.currency,
@@ -98,6 +101,9 @@ export async function createPortfolio(
     description: input.description ?? null,
     is_public: input.is_public ?? false,
   };
+  if (input.available_cash != null && input.available_cash > 0) {
+    payload.available_cash = input.available_cash;
+  }
   const { data, error } = await supabase
     .from('portfolios')
     .insert(payload)
@@ -337,9 +343,7 @@ export async function getValueHistory(
   portfolioId: string,
   days = 365
 ): Promise<PortfolioValuePoint[]> {
-  const since = new Date();
-  since.setDate(since.getDate() - days);
-  const sinceIso = since.toISOString().slice(0, 10);
+  const sinceIso = daysAgoLocalKey(days);
   const { data, error } = await supabase
     .from('portfolio_value_history')
     .select('date, total_value, cash, invested, unrealized, realized')
@@ -365,61 +369,229 @@ export async function getValueHistory(
   }));
 }
 
+// ---------------------------------------------------------------------------
+// Historical portfolio value reconstruction
+// ---------------------------------------------------------------------------
+
+/** In-memory cache: portfolioId:rangeDays → series */
+const _historicalSeriesCache = new Map<
+  string,
+  { ts: number; data: { date: string; value: number; external_flow: number }[] }
+>();
+const _SERIES_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
- * גרף שווי מבוסס טרנזקציות — {date, value}[] עם תאריכים אמיתיים.
- * מחשב הון מצטבר נטו לפי כל טרנזקציה בסדר כרונולוגי.
- * תאריכים מגיעים ישירות מ-portfolio_transactions.
+ * מנקה את ה-cache של גרף שווי התיק עבור portfolioId נתון.
+ * קרא אחרי סגירת פוזיציה / הוספת טרנזקציה כדי שהגרף ייבנה מחדש.
+ * מנקה גם entries של buildHistoricalPortfolioSeriesFromSnapshots (prefix 'snap:').
  */
-export async function getTransactionChartSeries(
-  portfolioId: string
-): Promise<{ date: string; value: number }[]> {
+export function clearHistoricalSeriesCache(portfolioId: string): void {
+  for (const key of _historicalSeriesCache.keys()) {
+    if (key.startsWith(`${portfolioId}:`) || key.startsWith(`snap:${portfolioId}:`)) {
+      _historicalSeriesCache.delete(key);
+    }
+  }
+}
+
+function _downsampleSeries(
+  data: { date: string; value: number; external_flow: number }[],
+  maxPoints: number
+): { date: string; value: number; external_flow: number }[] {
+  if (data.length <= maxPoints) return data;
+  const out: { date: string; value: number; external_flow: number }[] = [];
+  const step = (data.length - 1) / (maxPoints - 1);
+  for (let i = 0; i < maxPoints; i++) out.push(data[Math.round(i * step)]);
+  return out;
+}
+
+/**
+ * Reconstructs historical portfolio total value by replaying all transactions
+ * and looking up daily market prices for each held symbol.
+ *
+ * Returns up to 200 { date, value, external_flow } points sorted ascending.
+ * external_flow = net deposits − withdrawals for that day (positive = inflow).
+ * This field is used by computePortfolioAnalytics to calculate TWR.
+ *
+ * Results are cached in-memory for 5 minutes.
+ */
+export async function buildHistoricalPortfolioSeries(
+  portfolioId: string,
+  rangeDays: number = 365
+): Promise<{ date: string; value: number; external_flow: number }[]> {
+  const cacheKey = `${portfolioId}:${rangeDays}`;
+  const now = Date.now();
+  const cached = _historicalSeriesCache.get(cacheKey);
+  if (cached && now - cached.ts < _SERIES_CACHE_TTL_MS) return cached.data;
+
+  // Load all transactions sorted ascending
   const { data, error } = await supabase
     .from('portfolio_transactions')
-    .select('date, type, quantity, price, amount, commission')
+    .select('date, type, symbol, quantity, price, amount, commission')
     .eq('portfolio_id', portfolioId)
     .order('date', { ascending: true });
+
   if (error || !data || data.length === 0) return [];
+
   type TxRow = {
     date: string;
     type: string;
+    symbol: string | null;
     quantity: number | null;
     price: number | null;
     amount: number | null;
     commission: number | null;
   };
-  const rows = data as TxRow[];
-  let net = 0;
-  const raw: { date: string; value: number }[] = [];
-  for (const tx of rows) {
-    switch (tx.type) {
-      case 'buy':
-        net += (tx.quantity ?? 0) * (tx.price ?? 0) + (tx.commission ?? 0);
-        break;
-      case 'sell':
-        net = Math.max(0, net - ((tx.quantity ?? 0) * (tx.price ?? 0) - (tx.commission ?? 0)));
-        break;
-      case 'deposit':
-        net += tx.amount ?? 0;
-        break;
-      case 'withdrawal':
-      case 'fee':
-        net = Math.max(0, net - (tx.amount ?? 0));
-        break;
-      case 'dividend':
-        net += tx.amount ?? 0;
-        break;
+  const transactions = data as TxRow[];
+
+  // Unique symbols traded
+  const symbols = [
+    ...new Set(
+      transactions
+        .filter((t) => t.type === 'buy' || t.type === 'sell')
+        .map((t) => t.symbol?.toUpperCase())
+        .filter((s): s is string => Boolean(s))
+    ),
+  ];
+
+  // Resolve price range for the Yahoo fetch
+  const priceRange: '1mo' | '3mo' | '6mo' | '1y' | '5y' | 'max' =
+    rangeDays <= 30 ? '1mo'
+    : rangeDays <= 90 ? '3mo'
+    : rangeDays <= 180 ? '6mo'
+    : rangeDays <= 365 ? '1y'
+    : '5y';
+
+  // Fetch all price histories in parallel
+  const priceSeriesMap = new Map<string, { date: string; close: number }[]>();
+  if (symbols.length > 0) {
+    const fetched = await Promise.all(
+      symbols.map(async (sym) => ({
+        symbol: sym,
+        prices: (await getHistoricalPrices(sym, priceRange))
+          .slice()
+          .sort((a, b) => a.date.localeCompare(b.date)),
+      }))
+    );
+    for (const { symbol, prices } of fetched) priceSeriesMap.set(symbol, prices);
+  }
+
+  // Build date range: first transaction → today
+  const firstTxDate = transactions[0].date.slice(0, 10);
+  const today = todayLocalKey();
+  const allDates: string[] = [];
+  const cursor = new Date(firstTxDate + 'T00:00:00');
+  const endDate = new Date(today + 'T00:00:00');
+  while (cursor <= endDate) {
+    allDates.push(toLocalDateKey(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  // Simulation state
+  let cashBalance = 0;
+  const holdingsQty: Record<string, number> = {};
+  const lastKnownPrice: Record<string, number> = {};
+  // Per-symbol pointer into sorted price series (avoids re-scanning from 0)
+  const pricePointers: Record<string, number> = {};
+  for (const sym of symbols) pricePointers[sym] = 0;
+
+  let txIdx = 0;
+  const result: { date: string; value: number; external_flow: number }[] = [];
+  let hasAnyTx = false;
+
+  for (const dateStr of allDates) {
+    // external_flow for this date: deposits − withdrawals (הון חיצוני נטו, לחישוב TWR)
+    // dividends + fees are NOT external capital flows — they're portfolio income/expense
+    let externalFlowToday = 0;
+
+    // Apply all transactions with date ≤ dateStr
+    while (txIdx < transactions.length && transactions[txIdx].date.slice(0, 10) <= dateStr) {
+      const tx = transactions[txIdx];
+      hasAnyTx = true;
+      switch (tx.type) {
+        case 'buy': {
+          cashBalance -= (tx.quantity ?? 0) * (tx.price ?? 0) + (tx.commission ?? 0);
+          const sym = tx.symbol?.toUpperCase();
+          if (sym) holdingsQty[sym] = (holdingsQty[sym] ?? 0) + (tx.quantity ?? 0);
+          break;
+        }
+        case 'sell': {
+          cashBalance += (tx.quantity ?? 0) * (tx.price ?? 0) - (tx.commission ?? 0);
+          const sym = tx.symbol?.toUpperCase();
+          if (sym) holdingsQty[sym] = Math.max(0, (holdingsQty[sym] ?? 0) - (tx.quantity ?? 0));
+          break;
+        }
+        case 'deposit':
+          cashBalance += tx.amount ?? 0;
+          // הפקדה = הון חיצוני שנכנס → TWR denominator
+          if (tx.date.slice(0, 10) === dateStr) externalFlowToday += tx.amount ?? 0;
+          break;
+        case 'withdrawal':
+          cashBalance -= tx.amount ?? 0;
+          // משיכה = הון חיצוני שיצא → TWR denominator (negative)
+          if (tx.date.slice(0, 10) === dateStr) externalFlowToday -= tx.amount ?? 0;
+          break;
+        case 'fee':
+          // עמלה = הוצאה פנימית — לא הון חיצוני, לא משנה TWR denominator
+          cashBalance -= tx.amount ?? 0;
+          break;
+        case 'dividend':
+          // דיבידנד = הכנסה פנימית — לא הון חיצוני, לא משנה TWR denominator
+          cashBalance += tx.amount ?? 0;
+          break;
+      }
+      txIdx++;
     }
-    raw.push({ date: tx.date, value: net });
+
+    if (!hasAnyTx) continue;
+
+    // Advance price pointers for each symbol (keep last known price current)
+    for (const sym of symbols) {
+      const series = priceSeriesMap.get(sym);
+      if (!series) continue;
+      let ptr = pricePointers[sym];
+      while (ptr < series.length && series[ptr].date <= dateStr) {
+        lastKnownPrice[sym] = series[ptr].close;
+        ptr++;
+      }
+      pricePointers[sym] = ptr;
+    }
+
+    // Compute holdings market value
+    let holdingsValue = 0;
+    for (const [sym, qty] of Object.entries(holdingsQty)) {
+      if (qty <= 1e-9) continue;
+      const price = lastKnownPrice[sym];
+      if (price != null && price > 0) holdingsValue += qty * price;
+    }
+
+    result.push({
+      date: dateStr,
+      value: Math.max(0, holdingsValue + cashBalance),
+      external_flow: externalFlowToday,
+    });
   }
-  if (raw.length === 0) return [];
-  // קבץ לפי יום – שמור רק את הנקודה האחרונה של כל יום
-  const byDay = new Map<string, number>();
-  for (const p of raw) {
-    byDay.set(p.date, p.value);
+
+  // Filter to requested range, then downsample
+  let finalData = result;
+  if (rangeDays > 0 && result.length > 0) {
+    const cutoffStr = daysAgoLocalKey(rangeDays);
+    const filtered = result.filter((p) => p.date >= cutoffStr);
+    finalData = filtered.length >= 2 ? filtered : result;
   }
-  return Array.from(byDay.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, value]) => ({ date, value }));
+  finalData = _downsampleSeries(finalData, 200);
+
+  _historicalSeriesCache.set(cacheKey, { ts: now, data: finalData });
+  return finalData;
+}
+
+/**
+ * גרף שווי מבוסס טרנזקציות — delegating to buildHistoricalPortfolioSeries.
+ * שומר על ממשק ישן לתאימות לאחור.
+ */
+export async function getTransactionChartSeries(
+  portfolioId: string
+): Promise<{ date: string; value: number; external_flow: number }[]> {
+  return buildHistoricalPortfolioSeries(portfolioId);
 }
 
 /**
@@ -434,5 +606,191 @@ export async function getTransactionSparkline(portfolioId: string): Promise<numb
   const result: number[] = [];
   const step = (values.length - 1) / 39;
   for (let i = 0; i < 40; i++) result.push(values[Math.round(i * step)]);
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Historical series from daily_portfolio_snapshots (מודל trades)
+// ---------------------------------------------------------------------------
+
+type TradeRow = {
+  symbol: string;
+  direction: string;
+  status: string;
+  entry_date: string;
+  exit_date: string | null;
+  entry_price: number;
+  quantity: number;
+  leverage: number | null;
+};
+
+/**
+ * מחפש מחיר היסטורי ≤ date בתוך סדרה ממוינת.
+ * מחזיר null אם אין נתון.
+ */
+function _findPriceAtOrBefore(
+  prices: { date: string; close: number }[],
+  date: string
+): number | null {
+  let result: number | null = null;
+  for (const p of prices) {
+    if (p.date <= date) result = p.close;
+    else break;
+  }
+  return result;
+}
+
+/**
+ * בונה סדרת שווי היסטורי מ-daily_portfolio_snapshots (מודל trades).
+ *
+ * portfolio_value בכל snapshot = net_deposits_up_to_date + realized_pnl_cumulative.
+ * מוסיף unrealized P&L היסטורי לפוזיציות שהיו פתוחות בכל יום —
+ * כך הגרף מציג גם את שווי הפוזיציות הפתוחות בין תאריכי הסגירה (פתרון בעיה 2).
+ *
+ * external_flow = deposits_today - withdrawals_today לחישוב TWR.
+ *
+ * Cache: 5 דקות, מפתח 'snap:{portfolioId}:{rangeDays}'.
+ */
+export async function buildHistoricalPortfolioSeriesFromSnapshots(
+  portfolioId: string,
+  rangeDays: number = 365
+): Promise<{ date: string; value: number; external_flow: number }[]> {
+  const cacheKey = `snap:${portfolioId}:${rangeDays}`;
+  const now = Date.now();
+  const cached = _historicalSeriesCache.get(cacheKey);
+  if (cached && now - cached.ts < _SERIES_CACHE_TTL_MS) return cached.data;
+
+  const sinceDate = daysAgoLocalKey(rangeDays);
+
+  // 1. שלוף snapshots מה-DB
+  const { data: snapData, error: snapErr } = await supabase
+    .from('daily_portfolio_snapshots')
+    .select('snapshot_date, portfolio_value, deposits_today, withdrawals_today')
+    .eq('portfolio_id', portfolioId)
+    .gte('snapshot_date', sinceDate)
+    .order('snapshot_date', { ascending: true });
+
+  if (snapErr) throw snapErr;
+
+  const rows = (snapData ?? []) as Array<{
+    snapshot_date: string;
+    portfolio_value: number | string;
+    deposits_today: number | string | null;
+    withdrawals_today: number | string | null;
+  }>;
+
+  if (rows.length === 0) {
+    _historicalSeriesCache.set(cacheKey, { ts: now, data: [] });
+    return [];
+  }
+
+  // 2. שלוף trades לחישוב unrealized P&L היסטורי
+  const { data: tradeData, error: tradeErr } = await supabase
+    .from('trades')
+    .select('symbol, direction, status, entry_date, exit_date, entry_price, quantity, leverage')
+    .eq('portfolio_id', portfolioId)
+    .order('entry_date', { ascending: true });
+
+  const trades = (tradeData ?? []) as TradeRow[];
+
+  // 3. מציאת סימבולים עם תקופות פתוחות שחופפות לטווח ה-snapshots
+  const firstSnapDate = rows[0].snapshot_date;
+  const lastSnapDate = rows[rows.length - 1].snapshot_date;
+
+  const relevantSymbols = [...new Set(
+    trades
+      .filter((t) => {
+        const entryDate = t.entry_date.slice(0, 10);
+        const exitDate = t.exit_date ? t.exit_date.slice(0, 10) : null;
+        return entryDate <= lastSnapDate && (!exitDate || exitDate >= firstSnapDate);
+      })
+      .map((t) => t.symbol.toUpperCase())
+  )];
+
+  // 4. שליפת מחירים היסטוריים לסימבולים הרלוונטיים
+  const yahooRange: '1mo' | '3mo' | '6mo' | '1y' | '5y' | 'max' =
+    rangeDays <= 30 ? '1mo'
+    : rangeDays <= 90 ? '3mo'
+    : rangeDays <= 180 ? '6mo'
+    : rangeDays <= 365 ? '1y'
+    : '5y';
+
+  const priceHistory = new Map<string, { date: string; close: number }[]>();
+  if (relevantSymbols.length > 0) {
+    await Promise.all(
+      relevantSymbols.map(async (sym) => {
+        try {
+          const prices = await getHistoricalPrices(sym, yahooRange);
+          priceHistory.set(sym, prices.slice().sort((a, b) => a.date.localeCompare(b.date)));
+        } catch {
+          // אם שליפת מחירים נכשלת — ממשיכים ללא unrealized עבור סימבול זה
+        }
+      })
+    );
+  }
+
+  // 5. עוגן סקאלה לכל טרייד: Yahoo@entry מול entry_price הברוקר (UVIX reverse-split וכו')
+  const tradeMeta = trades.map((t) => {
+    const entryDate = t.entry_date.slice(0, 10);
+    const exitDate = t.exit_date ? t.exit_date.slice(0, 10) : null;
+    const sym = t.symbol.toUpperCase();
+    const prices = priceHistory.get(sym);
+    const yahooAtEntry = prices ? _findPriceAtOrBefore(prices, entryDate) : null;
+    return {
+      ...t,
+      entryDate,
+      exitDate,
+      sym,
+      entryPrice: Number(t.entry_price),
+      qty: Number(t.quantity),
+      lev: t.leverage ?? 1,
+      yahooAtEntry,
+    };
+  });
+
+  // 6. חישוב unrealized P&L והוספה לכל snapshot (מחיר שוק מיושר לסקאלת הברוקר)
+  const enhanced = rows.map((r) => {
+    const date = r.snapshot_date;
+    let unrealizedPnl = 0;
+
+    for (const t of tradeMeta) {
+      // הפוזיציה הייתה פתוחה בתאריך זה (נפתחה לפניו/עליו, נסגרה אחריו או עדיין פתוחה)
+      if (t.entryDate > date) continue;
+      if (t.exitDate && t.exitDate <= date) continue;
+
+      const prices = priceHistory.get(t.sym);
+      if (!prices) continue;
+
+      const rawMarket = _findPriceAtOrBefore(prices, date);
+      if (rawMarket == null) continue;
+
+      const marketPrice = brokerAlignedMarketPrice(
+        rawMarket,
+        t.entryPrice,
+        t.yahooAtEntry
+      );
+      if (marketPrice == null) continue;
+
+      const pnl =
+        t.direction === 'long'
+          ? (marketPrice - t.entryPrice) * t.qty * t.lev
+          : (t.entryPrice - marketPrice) * t.qty * t.lev;
+
+      unrealizedPnl += pnl;
+    }
+
+    return {
+      date,
+      value: Math.max(0, Number(r.portfolio_value) + unrealizedPnl),
+      external_flow:
+        Number(r.deposits_today ?? 0) - Number(r.withdrawals_today ?? 0),
+    };
+  });
+
+  // 7. גזור רצף אפסים מתחילת הסדרה (תקופה לפני כל פעילות)
+  const firstNonZeroIdx = enhanced.findIndex((p) => p.value > 0);
+  const result = firstNonZeroIdx === -1 ? [] : enhanced.slice(firstNonZeroIdx);
+
+  _historicalSeriesCache.set(cacheKey, { ts: now, data: result });
   return result;
 }

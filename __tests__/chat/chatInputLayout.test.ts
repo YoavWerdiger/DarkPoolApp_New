@@ -1,9 +1,11 @@
 import {
   chatComposerKeyboardTranslate,
   chatComposerSafeBottomInset,
+  chatComposerStickyOffset,
   chatInputBottomPadding,
   CHAT_COMPOSER_ANDROID_MIN_BOTTOM,
   CHAT_COMPOSER_KEYBOARD_GAP,
+  CHAT_KEYBOARD_LTR_STYLE,
 } from '../../components/chat/chatInputLayout';
 import { Platform } from 'react-native';
 
@@ -52,8 +54,29 @@ describe('chatInputBottomPadding', () => {
   });
 });
 
-describe('CHAT_COMPOSER_KEYBOARD_GAP', () => {
-  it('is 3px', () => {
-    expect(CHAT_COMPOSER_KEYBOARD_GAP).toBe(3);
+describe('chatComposerStickyOffset', () => {
+  const originalOS = Platform.OS;
+
+  afterEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: originalOS });
+  });
+
+  it('keeps closed at 0 so the dock is not pushed down', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'ios' });
+    expect(chatComposerStickyOffset(34, 3)).toEqual({ closed: 0, opened: 31 });
+  });
+
+  it('matches android translate compensation when inset is the fallback', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'android' });
+    expect(chatComposerStickyOffset(0, 3)).toEqual({
+      closed: 0,
+      opened: CHAT_COMPOSER_ANDROID_MIN_BOTTOM - 3,
+    });
+  });
+});
+
+describe('CHAT_KEYBOARD_LTR_STYLE', () => {
+  it('is an explicit ltr direction (never isRTL)', () => {
+    expect(CHAT_KEYBOARD_LTR_STYLE).toEqual({ direction: 'ltr' });
   });
 });

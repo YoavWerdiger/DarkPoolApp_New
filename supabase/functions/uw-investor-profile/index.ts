@@ -16,8 +16,11 @@ import {
   createServiceSupabase,
   loadCongressTradesForPoliticianFromDb,
   loadInsiderBuysFromDb,
+  upsertCongressTradesToDb,
   type InsiderBuyDbRow,
 } from '../_shared/uwDbCache.ts';
+import { buildCuratedCongressHistoryRows } from '../_shared/congressFeedBuild.ts';
+import { resolveQuiverApiKey } from '../_shared/quiverQuant.ts';
 import {
   formatForm4InsiderName,
   loadForm4InsiderHistory,
@@ -43,6 +46,9 @@ const cors = {
 };
 
 const CONGRESS_PHOTO = 'https://unitedstates.github.io/images/congress/225x275';
+const BIOGUIDE_RE = /^[A-Z]\d{6}$/;
+/** מתחת לסף — מושכים היסטוריה עמוקה מ-Quiver לפרופיל */
+const THIN_HISTORY_THRESHOLD = 12;
 
 interface HoldingRow {
   ticker: string;
@@ -50,11 +56,13 @@ interface HoldingRow {
   owner_label: string | null;
   trade_count: number;
   last_trade_date: string | null;
+  first_added_date?: string | null;
   txn_mix: string;
   allocation_pct: number;
   amount_label: string | null;
   /** אמצע טווח disclosure ב-$1000 (מ-UW snapshot) */
   mid_usd_k?: number;
+  return_pct?: number | null;
 }
 
 interface PortfolioSnapshot {
@@ -133,14 +141,40 @@ async function buildPoliticianProfile(
   politicianId: string
 ): Promise<ProfilePayload> {
   const supabase = createServiceSupabase();
-  const [politicians, dbRows] = await Promise.all([
-    apiKey ? fetchUwPoliticians(apiKey, 24).catch(() => []) : Promise.resolve([]),
-    loadCongressTradesForPoliticianFromDb(supabase, politicianId, 500).catch(() => []),
-  ]);
+  const politicians = apiKey
+    ? await fetchUwPoliticians(apiKey, 24).catch(() => [])
+    : [];
+  let dbRows = await loadCongressTradesForPoliticianFromDb(supabase, politicianId, 500).catch(
+    () => []
+  );
 
   let mine: UwCongressTrade[] = dbRows.map(
     (r) => congressDbRowToUwTrade(r) as UwCongressTrade
   );
+
+  // היסטוריה דלילה ל־BioGuide (למשל פלוסי) — משיכה עמוקה מ-Quiver ושמירה ל-DB
+  if (BIOGUIDE_RE.test(politicianId) && mine.length < THIN_HISTORY_THRESHOLD) {
+    const quiverKey = resolveQuiverApiKey();
+    if (quiverKey) {
+      try {
+        const curated = await buildCuratedCongressHistoryRows(quiverKey, [politicianId]);
+        if (curated.length) {
+          await upsertCongressTradesToDb(supabase, curated).catch((e) =>
+            console.warn('persist curated congress', politicianId, e)
+          );
+          dbRows = await loadCongressTradesForPoliticianFromDb(
+            supabase,
+            politicianId,
+            500
+          ).catch(() => curated);
+          mine = dbRows.map((r) => congressDbRowToUwTrade(r) as UwCongressTrade);
+        }
+      } catch (e) {
+        console.warn('quiver deep history', politicianId, e);
+      }
+    }
+  }
+
   if (mine.length < 3 && apiKey) {
     const uwTrades = await fetchUwPoliticianTrades(apiKey, politicianId, 500).catch(
       (e) => {
@@ -148,12 +182,31 @@ async function buildPoliticianProfile(
         return [];
       }
     );
-    mine = uwTrades.filter((t) => String(t.politician_id ?? '') === politicianId);
+    const byId = uwTrades.filter((t) => String(t.politician_id ?? '') === politicianId);
+    // BioGuide לרוב לא תואם UUID של UW — נסה גם לפי שם מ-DB/מטא
+    if (byId.length) {
+      mine = byId;
+    } else if (BIOGUIDE_RE.test(politicianId) && uwTrades.length) {
+      const nameHint = String(dbRows[0]?.politician_name ?? '').toLowerCase();
+      const last = nameHint.split(/\s+/).filter(Boolean).pop() ?? '';
+      if (last.length >= 4) {
+        const byName = uwTrades.filter((t) =>
+          uwCongressPersonName(t).toLowerCase().includes(last)
+        );
+        if (byName.length) mine = byName;
+      }
+    }
   }
 
-  const metrics = mine.length
-    ? await metricsFromCongressTrades(mine, { maxTickers: 40 }).catch(() => null)
-    : null;
+  let metrics: CongressPortfolioMetrics | null = null;
+  if (mine.length) {
+    try {
+      metrics = await metricsFromCongressTrades(mine, { maxTickers: 40 });
+    } catch (e) {
+      console.error('politician metrics failed', politicianId, e);
+      metrics = null;
+    }
+  }
 
   const meta = politicians.find(
     (p) => String(p.politician_id ?? p.id) === politicianId
@@ -331,31 +384,20 @@ async function buildInsiderProfile(
     ]
   );
 
-  const metrics = dedupedInputs.length
-    ? await metricsFromCongressTrades(dedupedInputs, { maxTickers: 25 }).catch(() => null)
-    : null;
+  let metrics: CongressPortfolioMetrics | null = null;
+  if (dedupedInputs.length) {
+    try {
+      metrics = await metricsFromCongressTrades(dedupedInputs, { maxTickers: 20 });
+    } catch (e) {
+      console.error('insider metrics failed', personKey, e);
+      metrics = null;
+    }
+  }
 
   let sparkline_values =
     metrics?.series && metrics.series.length >= 2
       ? metrics.series.map((p) => p.value)
       : buildInsiderSparkline(mine);
-  if (ticker && apiKey) {
-    try {
-      const flow = await fetchUwInsiderTickerFlow(apiKey, ticker, 24);
-      const prem = flow
-        .map((p) => Number(p.premium) || 0)
-        .filter((n) => n > 0);
-      if (prem.length >= 2) {
-        let sum = 0;
-        sparkline_values = prem.map((v) => {
-          sum += v;
-          return sum;
-        });
-      }
-    } catch {
-      /* optional */
-    }
-  }
 
   const roleFromForm4 =
     f4Profile?.officerTitle?.trim() ||
@@ -406,10 +448,12 @@ function metricsHoldingsToRows(m: CongressPortfolioMetrics): HoldingRow[] {
     owner_label: null,
     trade_count: 0,
     last_trade_date: null,
+    first_added_date: h.first_added_date ?? null,
     txn_mix: 'פתוח',
     allocation_pct: h.allocation_pct,
     amount_label: `${Math.round(h.qty).toLocaleString('en-US')} מניות · $${Math.round(h.market_value).toLocaleString('en-US')}`,
     mid_usd_k: h.market_value / 1000,
+    return_pct: h.return_pct,
   }));
 }
 
@@ -467,11 +511,17 @@ function aggregateCongressHoldings(trades: UwCongressTrade[]): HoldingRow[] {
     const ownerRaw = String(t.reporter ?? t.issuer ?? '').trim();
     const ownerLabel = congressOwnerLabel(ownerRaw);
     const company = congressCompanyName(t);
+    const isBuy = String(t.txn_type ?? '').toLowerCase().includes('purchase')
+      || String(t.txn_type ?? '').toLowerCase() === 'buy'
+      || String(t.txn_type ?? '').toLowerCase().includes('buy');
     if (cur) {
       cur.trade_count += 1;
       if (date && (!cur.last_trade_date || date > cur.last_trade_date)) {
         cur.last_trade_date = date;
         if (amt) cur.amount_label = amt;
+      }
+      if (date && isBuy && (!cur.first_added_date || date < cur.first_added_date)) {
+        cur.first_added_date = date;
       }
       if (t.txn_type) cur.txn_mix = mergeTxn(cur.txn_mix, t.txn_type);
       if (ownerLabel) cur.owners.add(ownerLabel);
@@ -483,6 +533,7 @@ function aggregateCongressHoldings(trades: UwCongressTrade[]): HoldingRow[] {
         owner_label: ownerLabel,
         trade_count: 1,
         last_trade_date: date || null,
+        first_added_date: date || null,
         txn_mix: formatTxn(t.txn_type),
         allocation_pct: 0,
         amount_label: amt,
@@ -542,7 +593,13 @@ function formatPortfolioUsd(usd: number): string {
 }
 
 function aggregateInsiderHoldings(
-  txs: Array<{ ticker?: string; amount?: number | string; transaction_code?: string }>
+  txs: Array<{
+    ticker?: string;
+    amount?: number | string;
+    transaction_code?: string;
+    transaction_date?: string;
+    filed_at?: string;
+  }>
 ): HoldingRow[] {
   const map = new Map<string, HoldingRow>();
   for (const t of txs) {
@@ -550,16 +607,26 @@ function aggregateInsiderHoldings(
     if (!ticker) continue;
     let row = map.get(ticker);
     const shares = Math.abs(Number(t.amount) || 0);
+    const date = String(t.transaction_date ?? t.filed_at ?? '').slice(0, 10);
+    const code = String(t.transaction_code || 'P').toUpperCase();
+    const isBuy = code === 'P' || code.startsWith('P');
     if (row) {
       row.trade_count += 1;
       row.txn_mix = mergeTxn(row.txn_mix, t.transaction_code || 'P');
+      if (date && (!row.last_trade_date || date > row.last_trade_date)) {
+        row.last_trade_date = date;
+      }
+      if (date && isBuy && (!row.first_added_date || date < row.first_added_date)) {
+        row.first_added_date = date;
+      }
     } else {
       row = {
         ticker,
         issuer: null,
         owner_label: null,
         trade_count: 1,
-        last_trade_date: null,
+        last_trade_date: date || null,
+        first_added_date: date || null,
         txn_mix: t.transaction_code === 'S' ? 'מכירות' : 'רכישות',
         allocation_pct: 0,
         amount_label: shares > 0 ? `${shares} מניות` : null,

@@ -5,37 +5,43 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
-import { normalizeWaveformSamples, WAVEFORM_STORE_BARS } from './waveformSamples';
+import {
+  resampleWaveformSamples,
+  WAVEFORM_STORE_BARS,
+} from './waveformSamples';
 import { logger } from './logger';
 
-/** dBFS → 0–1 לרמות דיבור (לא למוזיקה). */
+/** dBFS → 0–1 גולמי. העיצוב לתצוגה רק ב־shapeWaveformLevel. */
 export function meteringDbToLevel(db: number): number {
   if (!Number.isFinite(db) || db <= -80) return 0;
-  // רצפת שקט נמוכה יותר — דיבור רך עדיין נכנס לטווח
-  const MIN_DB = -60;
-  const MAX_DB = -6;
+  const MIN_DB = -48;
+  const MAX_DB = -3;
   const clamped = Math.max(MIN_DB, Math.min(MAX_DB, db));
-  const linear = (clamped - MIN_DB) / (MAX_DB - MIN_DB);
-  // gamma נמוך מגביר mid-low — מילים שקטות מקבלות גובה בר ברור
-  return Math.pow(linear, 0.52);
+  return (clamped - MIN_DB) / (MAX_DB - MIN_DB);
 }
 
 /**
- * בונה ויבפורם סופי לשמירה בהודעה.
- * מעדיף peaks מהקובץ (WAV/PCM); אחרת envelope מ־metering חי.
+ * בונה דגימות גולמיות לשמירה בהודעה (בלי shape — התצוגה מעצבת).
+ * מעדיף את אותו envelope מההקלטה החיה כדי שיתאים לפריוויו;
+ * WAV רק כשאין מספיק דגימות חיות.
  */
 export async function resolveMessageWaveform(
   uri: string | null | undefined,
   liveSamples: number[],
   barCount: number = WAVEFORM_STORE_BARS,
 ): Promise<number[]> {
+  if (liveSamples.length >= 8) {
+    return resampleWaveformSamples(liveSamples, barCount);
+  }
+
   if (uri) {
     const fromFile = await extractPeaksFromWavFile(uri, barCount);
     if (fromFile && fromFile.length >= 2) {
       return fromFile;
     }
   }
-  return normalizeWaveformSamples(liveSamples, barCount);
+
+  return resampleWaveformSamples(liveSamples, barCount);
 }
 
 export async function extractPeaksFromWavFile(
@@ -135,15 +141,8 @@ function peaksFromWavArrayBuffer(ab: ArrayBuffer, barCount: number): number[] | 
     if (framePeak > peaks[bar]) peaks[bar] = framePeak;
   }
 
-  // רצפת רעש נמוכה יחסית לפיק + gamma שמגביר mid-low
-  const peakMax = Math.max(...peaks, 1e-6);
-  const noiseFloor = peakMax * 0.015;
-  const span = Math.max(1e-6, peakMax - noiseFloor);
-  const shaped = peaks.map((p) => {
-    const above = Math.max(0, Math.min(peakMax, p) - noiseFloor);
-    return Math.pow(above / span, 0.42);
-  });
-  return normalizeWaveformSamples(shaped, barCount);
+  // raw 0–1 — shape רק בתצוגה (normalizeWaveformSamples)
+  return peaks;
 }
 
 function readFourCC(view: DataView, offset: number): string {

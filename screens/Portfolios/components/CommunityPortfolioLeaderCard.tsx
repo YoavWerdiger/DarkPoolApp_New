@@ -147,7 +147,7 @@ export function CommunityPortfolioLeaderCard({
         </View>
         {sparklineSource === 'transactions' && (
           <Text style={[styles.chartLabel, { color: tokens.colors.text.tertiary }]}>
-            גרף לפי הון מושקע · ללא שינויי מחיר
+            גרף מחושב ממסחר · כולל מחירי שוק
           </Text>
         )}
 

@@ -150,9 +150,10 @@ export default function ExportTradeImage({ trade, visible, onClose }: ExportTrad
       isOpen={visible}
       onClose={onClose}
       snapPoints={[0.9]}
-      enablePanDownToClose={true}
-      backdropOpacity={0.5}
-      showHandle={true}
+      enablePanDownToClose
+      showHandle
+      useGlassBackground
+      showBrandBackground={false}
     >
       <View style={styles.container}>
         <View style={styles.header}>

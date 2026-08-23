@@ -11,7 +11,7 @@ import Animated, {
   useAnimatedStyle,
   withTiming,
   interpolate,
-  Extrapolate,
+  Extrapolation,
   runOnJS,
 } from "react-native-reanimated";
 import {
@@ -126,13 +126,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       translateY.value,
       [0, SCREEN_HEIGHT],
       [24, 0],
-      Extrapolate.CLAMP
+      Extrapolation.CLAMP
     ),
     borderTopRightRadius: interpolate(
       translateY.value,
       [0, SCREEN_HEIGHT],
       [24, 0],
-      Extrapolate.CLAMP
+      Extrapolation.CLAMP
     ),
   }));
 
@@ -142,7 +142,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       translateY.value,
       [0, SCREEN_HEIGHT],
       [backdropOpacity, 0],
-      Extrapolate.CLAMP
+      Extrapolation.CLAMP
     ),
   }));
 

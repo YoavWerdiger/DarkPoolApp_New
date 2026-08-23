@@ -5,8 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
-import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
+import { ScreenChrome } from '../../components/ui/ScreenChrome';
+import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import PortfoliosTab from './PortfoliosTab';
 import CommunityPortfoliosTab from './CommunityPortfoliosTab';
@@ -44,26 +44,7 @@ export default function PortfoliosHubScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        screenRoot: { flex: 1, backgroundColor: '#0A0E0A' },
         safeArea: { flex: 1, backgroundColor: 'transparent' },
-        appHeader: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          paddingHorizontal: tokens.layout.screenPadding,
-          paddingVertical: 14,
-        },
-        appHeaderActions: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          minWidth: 72,
-        },
-        appHeaderTitle: {
-          fontSize: 22,
-          fontWeight: '700',
-          color: tokens.colors.text.primary,
-          letterSpacing: -0.3,
-        },
-        appHeaderTitleCenter: { flex: 1, textAlign: 'center' },
         tabBarWrap: {
           paddingHorizontal: tokens.layout.screenPadding,
         },
@@ -97,26 +78,10 @@ export default function PortfoliosHubScreen() {
   );
 
   return (
-    <View style={styles.screenRoot}>
-      <ChatSessionBackdrop />
+    <ScreenChrome withBrandWatermark>
       <StatusBar style="light" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.appHeader}>
-          <View style={styles.appHeaderActions}>
-            <DayNavBlurButton
-              onPress={openMainDrawer}
-              glassIntensity="subtle"
-              size={DRAWER_MENU_BUTTON_SIZE}
-              accessibilityLabel="תפריט ראשי"
-            >
-              <Ionicons name="menu" size={24} color={tokens.colors.text.primary} />
-            </DayNavBlurButton>
-          </View>
-          <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]} numberOfLines={1}>
-            יומן מסחר
-          </Text>
-          <View style={styles.appHeaderActions} />
-        </View>
+        <MainDrawerScreenHeader title="יומן מסחר" onMenuPress={openMainDrawer} />
 
         <View style={styles.tabBarWrap}>
           <MarketsEmbedSwitcher
@@ -149,6 +114,6 @@ export default function PortfoliosHubScreen() {
           </View>
         ) : null}
       </SafeAreaView>
-    </View>
+    </ScreenChrome>
   );
 }

@@ -14,6 +14,8 @@ interface FundHolding {
   shares: number | null;
   value_usd: number | null;
   allocation_pct: number | null;
+  /** דיווח 13F ראשון שבו הטיקר מופיע ב-DB שלנו */
+  first_added_date?: string | null;
 }
 
 interface ValuePoint {
@@ -68,6 +70,26 @@ serve(async (req) => {
   const filingDate = fund.last_filing_date;
   let holdings: FundHolding[] = [];
 
+  const { data: historyRows } = await supabase
+    .from('dark_pool_fund_holdings')
+    .select('filing_date, ticker, value_usd')
+    .eq('fund_cik', cik);
+
+  const totalsByDate = new Map<string, number>();
+  const firstSeenByTicker = new Map<string, string>();
+  for (const row of historyRows ?? []) {
+    const d = String(row.filing_date ?? '').slice(0, 10);
+    const ticker = String(row.ticker ?? '').toUpperCase();
+    const v = Number(row.value_usd) || 0;
+    if (d && v > 0) {
+      totalsByDate.set(d, (totalsByDate.get(d) ?? 0) + v);
+    }
+    if (d && ticker) {
+      const prev = firstSeenByTicker.get(ticker);
+      if (!prev || d < prev) firstSeenByTicker.set(ticker, d);
+    }
+  }
+
   if (filingDate) {
     const { data: rows } = await supabase
       .from('dark_pool_fund_holdings')
@@ -77,26 +99,19 @@ serve(async (req) => {
       .order('value_usd', { ascending: false })
       .limit(40);
 
-    holdings = (rows ?? []).map((r) => ({
-      ticker: String(r.ticker),
-      issuer_name: r.issuer_name ? String(r.issuer_name) : null,
-      shares: r.shares != null ? Number(r.shares) : null,
-      value_usd: r.value_usd != null ? Number(r.value_usd) : null,
-      allocation_pct: r.allocation_pct != null ? Number(r.allocation_pct) : null,
-    }));
-  }
-
-  const { data: historyRows } = await supabase
-    .from('dark_pool_fund_holdings')
-    .select('filing_date, value_usd')
-    .eq('fund_cik', cik);
-
-  const totalsByDate = new Map<string, number>();
-  for (const row of historyRows ?? []) {
-    const d = String(row.filing_date ?? '').slice(0, 10);
-    const v = Number(row.value_usd) || 0;
-    if (!d || v <= 0) continue;
-    totalsByDate.set(d, (totalsByDate.get(d) ?? 0) + v);
+    holdings = (rows ?? []).map((r) => {
+      const ticker = String(r.ticker);
+      return {
+        ticker,
+        issuer_name: r.issuer_name ? String(r.issuer_name) : null,
+        shares: r.shares != null ? Number(r.shares) : null,
+        value_usd: r.value_usd != null ? Number(r.value_usd) : null,
+        allocation_pct: r.allocation_pct != null ? Number(r.allocation_pct) : null,
+        first_added_date:
+          firstSeenByTicker.get(ticker.toUpperCase()) ??
+          (filingDate ? String(filingDate).slice(0, 10) : null),
+      };
+    });
   }
 
   const value_series: ValuePoint[] = Array.from(totalsByDate.entries())

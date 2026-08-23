@@ -137,7 +137,8 @@ export interface CourseProgress {
   total_lessons: number;
   completed_lessons: number;
   progress_percentage: number;
-  last_lesson_id?: string;
+  /** null כשאין שיעור פתוח להמשך (כל השיעורים הושלמו / אין התקדמות) */
+  last_lesson_id?: string | null;
   last_position_seconds?: number;
 }
 

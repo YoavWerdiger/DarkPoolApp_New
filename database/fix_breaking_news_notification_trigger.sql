@@ -1,49 +1,55 @@
 -- ============================================================
 -- טריגר התראות Push לחדשות (app_news_clean)
 -- ============================================================
--- מה ב-Push:
---   ✅ כותרת = NEW.title (כותרת הכתבה)
---   ✅ גוף   = NEW.content (תוכן הכתבה, מקוצץ ל-200 תווים)
---   ✅ תמונה = NEW.image_url (מועבר ב-data.imageUrl ל-Edge Function)
---   ✅ data: type, articleId, source, imageUrl
+-- מבנה ה-Push:
+--   title    = label
+--   subtitle = source   (נקבע ב-Edge Function)
+--   body     = text
+--   image    = img
 -- ============================================================
 
-DROP FUNCTION IF EXISTS send_news_notification_immediately() CASCADE;
-
-CREATE OR REPLACE FUNCTION send_news_notification_immediately()
-RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION public.send_news_notification_immediately()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'extensions', 'vault'
+AS $function$
 DECLARE
   notification_title  TEXT;
   notification_body   TEXT;
-  supabase_url        TEXT := 'https://wpmrtczbfcijoocguime.supabase.co';
-  supabase_service_key TEXT := 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndwbXJ0Y3piZmNpam9vY2d1aW1lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MTIwNzM1MSwiZXhwIjoyMDY2NzgzMzUxfQ.waqI1C-t6gthSCf8jP1v_gFRRVhhvaIcQG0effqsA1A';
+  notification_source TEXT;
+  notification_label  TEXT;
+  v_url               TEXT;
+  v_key               TEXT;
   http_response_id    BIGINT;
 BEGIN
-  -- כותרת: title (modern) או label (legacy)
+  -- title = label, subtitle = source, body = text, image = img
+  notification_label := NULLIF(TRIM(NEW.label), '');
+  notification_source := COALESCE(NULLIF(TRIM(NEW.source), ''), 'DarkPool');
+
   notification_title := COALESCE(
-    NULLIF(TRIM(NEW.title), ''),
-    NULLIF(TRIM(NEW.label), ''),
-    'DarkPool'
+    notification_label,
+    NULLIF(LEFT(TRIM(COALESCE(NEW.text, '')), 80), ''),
+    'חדשה'
   );
 
   IF LENGTH(notification_title) > 100 THEN
     notification_title := LEFT(notification_title, 97) || '...';
   END IF;
 
-  -- גוף: content / text / text_content (legacy)
-  notification_body := COALESCE(
-    NULLIF(TRIM(NEW.content), ''),
-    NULLIF(TRIM(NEW.text), ''),
-    NULLIF(TRIM(NEW.text_content), ''),
-    NULLIF(TRIM(NEW.label), ''),
-    ''
-  );
+  notification_body := COALESCE(NULLIF(TRIM(NEW.text), ''), '');
 
   IF LENGTH(notification_body) > 200 THEN
     notification_body := LEFT(notification_body, 197) || '...';
   END IF;
 
-  -- הכנסה ל-pending_notifications רק למשתמשים שהסכימו לחדשות
+  notification_title := public.push_notification_rtl(notification_title);
+  notification_body := public.push_notification_rtl(notification_body);
+  notification_source := public.push_notification_ltr(notification_source);
+  IF notification_label IS NOT NULL THEN
+    notification_label := public.push_notification_rtl(notification_label);
+  END IF;
+
   INSERT INTO public.pending_notifications (
     user_id, title, body, data, notification_type, article_id
   )
@@ -54,8 +60,9 @@ BEGIN
     jsonb_build_object(
       'type',      'news',
       'articleId', NEW.id::TEXT,
-      'source',    COALESCE(NEW.source, ''),
-      'imageUrl',  COALESCE(NEW.image_url, NEW.img, '')
+      'source',    notification_source,
+      'label',     COALESCE(notification_label, ''),
+      'imageUrl',  COALESCE(NEW.img, NEW.image_url, '')
     ),
     'news',
     NEW.id::TEXT
@@ -63,60 +70,38 @@ BEGIN
   LEFT JOIN public.user_notification_settings uns ON dt.user_id = uns.user_id
   WHERE dt.is_active = true
     AND dt.user_id IS NOT NULL
-    AND (uns.news_notifications = true OR uns.news_notifications IS NULL)
-    AND (uns.notifications_enabled = true OR uns.notifications_enabled IS NULL);
+    AND COALESCE(uns.notifications_enabled, true)
+    AND COALESCE(uns.news_notifications, true);
 
-  -- קריאה מיידית ל-process-pending-notifications דרך pg_net
-  SELECT net.http_post(
-    url     := supabase_url || '/functions/v1/process-pending-notifications',
-    headers := jsonb_build_object(
-      'Content-Type',  'application/json',
-      'Authorization', 'Bearer ' || supabase_service_key
-    ),
-    body    := '{}'::jsonb
-  ) INTO http_response_id;
+  SELECT decrypted_secret INTO v_url
+  FROM vault.decrypted_secrets WHERE name = 'SUPABASE_URL' LIMIT 1;
+  SELECT decrypted_secret INTO v_key
+  FROM vault.decrypted_secrets WHERE name = 'SUPABASE_SERVICE_ROLE_KEY' LIMIT 1;
+
+  IF v_url IS NOT NULL AND v_key IS NOT NULL THEN
+    SELECT net.http_post(
+      url     := rtrim(v_url, '/') || '/functions/v1/process-pending-notifications',
+      headers := jsonb_build_object(
+        'Content-Type',  'application/json',
+        'Authorization', 'Bearer ' || v_key
+      ),
+      body    := '{}'::jsonb
+    ) INTO http_response_id;
+  ELSE
+    RAISE WARNING 'news push: missing vault secrets — queued in pending_notifications only';
+  END IF;
 
   RETURN NEW;
 EXCEPTION
   WHEN OTHERS THEN
-    -- גיבוי: הכנסה גם אחרי שגיאה
-    INSERT INTO public.pending_notifications (
-      user_id, title, body, data, notification_type, article_id
-    )
-    SELECT DISTINCT
-      dt.user_id,
-      notification_title,
-      notification_body,
-      jsonb_build_object(
-        'type',      'news',
-        'articleId', NEW.id::TEXT,
-        'source',    COALESCE(NEW.source, ''),
-        'imageUrl',  COALESCE(NEW.image_url, NEW.img, '')
-      ),
-      'news',
-      NEW.id::TEXT
-    FROM public.device_tokens dt
-    LEFT JOIN public.user_notification_settings uns ON dt.user_id = uns.user_id
-    WHERE dt.is_active = true
-      AND dt.user_id IS NOT NULL
-      AND (uns.news_notifications = true OR uns.news_notifications IS NULL)
-      AND (uns.notifications_enabled = true OR uns.notifications_enabled IS NULL);
-
+    RAISE WARNING 'send_news_notification_immediately failed: %', SQLERRM;
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$function$;
 
--- מחיקת הטריגר הישן וחידושו
 DROP TRIGGER IF EXISTS on_new_news_article ON public.app_news_clean;
 
 CREATE TRIGGER on_new_news_article
   AFTER INSERT ON public.app_news_clean
   FOR EACH ROW
   EXECUTE FUNCTION send_news_notification_immediately();
-
--- ============================================================
--- דוגמת פלט:
---   כותרת: "Apple reports record Q1 earnings"  (= NEW.title)
---   גוף:   "Apple Inc. announced today that..." (= NEW.content)
---   data:  { type: 'news', articleId: 'xxx', source: 'Benzinga', imageUrl: 'https://...' }
--- ============================================================

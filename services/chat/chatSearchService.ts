@@ -212,7 +212,7 @@ export async function searchUsers(
     if (!safe) return { data: [], error: null };
 
     let query = supabase
-      .from('users')
+      .from('v_public_profiles')
       .select('id, display_name, full_name, profile_picture, is_online, last_active')
       .or(`display_name.ilike.%${safe}%,full_name.ilike.%${safe}%`)
       .order('display_name')
@@ -264,7 +264,9 @@ export async function searchGroupMembers(
         )
       `)
       .eq('group_id', groupId)
-      .or(`user.display_name.ilike.%${safe}%,user.full_name.ilike.%${safe}%`)
+      // הפילטר חייב `referencedTable` עם שם ה-embed: בלעדיו PostgREST מפרש
+      // `user.display_name` כעמודה בשם הזה על chat_group_members ומחזיר PGRST100.
+      .or(`display_name.ilike.%${safe}%,full_name.ilike.%${safe}%`, { referencedTable: 'user' })
       .limit(clampLimit(limit));
 
     if (error) {

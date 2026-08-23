@@ -3,15 +3,18 @@
 // ============================================
 
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
-import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager } from 'react-native';
-import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP } from '../../components/chat/chatInputLayout';
-import { ChatComposerDock } from '../../components/chat/ChatComposerDock';
+import React, { useMemo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
+import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, TouchableOpacity, Pressable, ActivityIndicator, Image, Modal, TextInput, Animated as RNAnimated, Easing, Platform, LayoutChangeEvent, InteractionManager } from 'react-native';
+import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet';
+import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP, CHAT_KEYBOARD_LTR_STYLE } from '../../components/chat/chatInputLayout';
+import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
 import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
 
+import { BlurView } from 'expo-blur';
+import { chatPalette } from '../../components/chat/chatDesignTokens';
 import { ChatScreenShell } from '../../components/chat/ChatScreenShell';
 import UICard from '../../components/ui/UICard';
 import { MAIN_SCREEN_HEADER_HP } from '../../components/ui/MainDrawerScreenHeader';
@@ -19,7 +22,10 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 
 import { useChat, useChatActions } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
+import { readGroupMessagesCache } from '../../lib/chatMessageCache';
+import { CommonActions, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import ChatInput from '../../components/chat/ChatInput';
 
@@ -37,6 +43,8 @@ import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { he } from 'date-fns/locale';
 import { logger } from '../../utils/logger';
 import { isAnnouncementGroup as checkIsAnnouncementGroup } from '../../utils/isAnnouncementGroup';
+import { canSendInAdminOnlyChat } from '../../utils/canSendInAdminOnlyChat';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useChatMessageScroll } from '../../hooks/useChatMessageScroll';
 import {
@@ -73,13 +81,17 @@ export default function ChatGroupScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
+  const { isAdmin: isAppAdmin } = useIsAdmin();
   const insets = useSafeAreaInsets();
   const [composerHeight, setComposerHeight] = useState(72);
-  // דחיית רינדור רשימת ההודעות הכבדה עד אחרי אנימציית הניווט (כמו WhatsApp):
-  // המסך (כותרת+קומפוזר+סקלטון) נכנס מיד וחלק, וההודעות מרונדרות רגע אחרי.
+  // דחיית רינדור רשימה כבדה רק בנתיב קר (אין cache).
+  // Warm/WhatsApp: הודעות מה-cache מרונדרות מיד — בלי InteractionManager, בלי opacity:0.
+  //
+  // Expected TTI (cache hit):
+  //   navigate → first RN frame paints messages from queryClient (opacity 1) → done
+  //   scroll-to-unread / network delta run AFTER first paint
+  // Cold (no cache): brief skeleton OK until disk/network seed.
   const [messagesListReady, setMessagesListReady] = useState(false);
-  // הרשימה מרונדרת שקופה (opacity:0) מעל הסקלטון, ונחשפת רק אחרי שהיא כבר
-  // ממוקמת בתחתית — כך אין "קפיצת התמקמות" גלויה בכניסה (ההתמקמות קורית מאחורי הסקלטון).
   const [messagesRevealed, setMessagesRevealed] = useState(false);
   const messagesRevealedRef = useRef(false);
   const listOpacity = useRef(new RNAnimated.Value(0)).current;
@@ -109,6 +121,10 @@ export default function ChatGroupScreen() {
   /** חוסם גלילה אוטומטית ל-lastRead אחרי FAB / גלילה ידנית לתחתית */
   const blockUnreadAutoScrollUntilRef = useRef(0);
   const unreadAutoScrollAppliedForGroupRef = useRef<string | null>(null);
+  /** רק כשהגלילה בפועל למפריד קרתה — מבחין בין החלטה סופית לגלילה זמנית ל-bottom */
+  const unreadDividerScrollDoneForGroupRef = useRef<string | null>(null);
+  /** טיימרים של refinement פאסים + reveal מאוחר — מתנקים כשמחליפים קבוצה. */
+  const unreadRefineTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const initialScrollInFlightRef = useRef(false);
   const loadingLastReadForInitialRef = useRef(false);
   /** גלילה לתחתית אחרי שליחה — גם כשאורך הרשימה לא משתנה (עדכון אופטימיסטי) */
@@ -122,7 +138,7 @@ export default function ChatGroupScreen() {
 
   const { groupId = '', scrollToMessageId } = (route.params || {}) as { groupId: string; scrollToMessageId?: string };
 
-  const { selectGroup, refreshCurrentGroupDetails, confirmChatReadAtBottom } = useChatActions();
+  const { selectGroup, refreshCurrentGroupDetails, confirmChatReadAtBottom, leaveChatScreen } = useChatActions();
 
   const {
     currentGroup,
@@ -145,13 +161,77 @@ export default function ChatGroupScreen() {
     retrySendMessage,
   } = useChat();
 
+  /**
+   * זריעה סינכרונית מ-queryClient לפני ש-selectGroup מעדכן state.
+   * בלי זה: frame ראשון עם groupId חדש רואה messages של הקבוצה הקודמת / ריק
+   * → skeleton + opacity:0 (רגרסיית iOS אחרי שערי reveal).
+   */
+  const cachedSeedMessages = useMemo(() => {
+    if (!groupId) return [] as ChatMessageType[];
+    return readGroupMessagesCache(groupId);
+    // נקרא מחדש כש-context messages משתנים (אחרי merge רשת/realtime)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- groupId + messages length/id tip
+  }, [groupId, messages.length, messages[0]?.id, messages[messages.length - 1]?.id]);
+
+  const contextMessagesForGroup = useMemo(() => {
+    if (!messages.length) return null;
+    if (currentGroup?.id === groupId) return messages;
+    if (messages.some((m) => m.group_id === groupId)) return messages;
+    return null;
+  }, [messages, currentGroup?.id, groupId]);
+
+  /** יש data מקומי לקבוצה הזו — כניסה בסגנון WhatsApp בלי סקלטון.
+   * לא תלוי ב-isLoadingMessages: רענון רשת ברקע לא צריך להסתיר הודעות cache. */
+  const displayMessages = contextMessagesForGroup ?? cachedSeedMessages;
+  const hasLocalMessagesForGroup = displayMessages.length > 0;
+
+  /** כותרת מיידית מ־cache הרשימה גם לפני ש־selectGroup מעדכן currentGroup */
+  const shellGroup = useMemo(() => {
+    if (currentGroup?.id === groupId) return currentGroup;
+    if (!user?.id) return currentGroup;
+    const cachedGroups = queryClient.getQueryData<{ id: string }[]>(
+      appQueryKeys.chatGroups(user.id),
+    );
+    const hit = cachedGroups?.find((g) => g.id === groupId);
+    return (hit as typeof currentGroup) ?? currentGroup;
+  }, [currentGroup, groupId, user?.id]);
+
   const initialUnreadInfoRef = useRef(initialUnreadInfo);
+  /** Snapshot so divider can fade after initialUnreadInfo is cleared */
+  const unreadDividerSnapshotRef = useRef<{
+    count: number;
+    lastReadMessageId: string;
+  } | null>(null);
+  const [unreadDividerPhase, setUnreadDividerPhase] = useState<
+    'hidden' | 'visible' | 'fading'
+  >('hidden');
+  const unreadDividerPhaseRef = useRef(unreadDividerPhase);
+  unreadDividerPhaseRef.current = unreadDividerPhase;
+  const unreadDividerDismissedRef = useRef(false);
 
   // בדיקה אם זו קבוצת הכרזות (id מדויק / שם מדויק — לא includes)
   const isAnnouncementGroup = useMemo(
-    () => checkIsAnnouncementGroup(currentGroup?.name, currentGroup?.id),
-    [currentGroup?.name, currentGroup?.id],
+    () => checkIsAnnouncementGroup(shellGroup?.name, shellGroup?.id),
+    [shellGroup?.name, shellGroup?.id],
   );
+
+  /** הכרזות: מנהל קבוצה או מנהל אפליקציה (subscription_role) יכולים לכתוב */
+  const canSendInAnnouncements = useMemo(() => {
+    if (!isAnnouncementGroup) return true;
+    const myRole =
+      currentGroup?.my_role ?? (shellGroup as { my_role?: string } | null)?.my_role;
+    return canSendInAdminOnlyChat({
+      isGroupAdmin: !!currentGroup?.is_admin,
+      isAppAdmin,
+      myRole,
+    });
+  }, [
+    isAnnouncementGroup,
+    currentGroup?.is_admin,
+    currentGroup?.my_role,
+    shellGroup,
+    isAppAdmin,
+  ]);
 
   // Context + FlatList inverted: messages[0]=חדש בתחתית המסך
   const hasInitiallyRenderedRef = useRef(false);
@@ -169,7 +249,34 @@ export default function ChatGroupScreen() {
   const LOAD_MORE_TOP_OFFSET_PX = 180;
 
   /** כמו ב-Context: [0]=חדש; inverted מציג ישן למעלה, חדש למטה */
-  const displayMessages = messages;
+  // displayMessages מוגדר למעלה (context || cache seed)
+
+  /**
+   * FlatList initialNumToRender: warm path = viewport קטן בלבד (טיפ),
+   * כדי ש-first paint לא ירנדר 40–60 בועות כבדות מאחורי opacity:0.
+   * גלילה למפריד unread אחרי paint — מותר שיטען עוד תאים.
+   */
+  const initialListRender = useMemo(() => {
+    if (hasLocalMessagesForGroup) {
+      return Platform.OS === 'android' ? 14 : 16;
+    }
+    const unread = initialUnreadInfo?.count ?? 0;
+    const cap = Platform.OS === 'android' ? 28 : 36;
+    return Math.max(12, Math.min(cap, unread > 0 ? Math.min(unread + 6, cap) : 16));
+  }, [hasLocalMessagesForGroup, initialUnreadInfo?.count]);
+
+  const listWindowSize = Platform.OS === 'android' ? 9 : 15;
+  const listMaxBatch = Platform.OS === 'android' ? 6 : 10;
+  /** refinement בלבד אחרי paint — לא חוסם חשיפה */
+  const unreadRevealDelayMs = 0;
+
+  /**
+   * אנימציית כניסה רק להודעות חדשות באמת:
+   * - baseline נזרע פעם אחת עם כל ההודעות שכבר קיימות בטעינה הראשונה (לא מונפשות).
+   * - כל id שכבר הונפש נשמר, כדי שמחזור (recycle) של FlatList לא ינפיש שוב.
+   */
+  const animatedMsgIdsRef = useRef<Set<string>>(new Set());
+  const animBaselineSeededRef = useRef(false);
 
   const listScrollRefs = useMemo(
     () => ({
@@ -241,19 +348,35 @@ export default function ChatGroupScreen() {
       programmaticScrollRef.current = false;
       userScrolledUpRef.current = false;
       hasInitiallyRenderedRef.current = true;
-      if (!initialScrollDoneRef.current) {
+      // אל תסמן initialScrollDone בגלל offset≈0 בזמן פתיחה עם unread —
+      // ב-Android FlatList inverted יורה onScroll לתחתית לפני שהגלילה למפריד רצה,
+      // ואז applyInitialOpenScroll היה מדלג (already-done) והמפריד/badge נשברו.
+      const pendingUnreadOpen =
+        !!initialUnreadInfoRef.current?.count &&
+        !!initialUnreadInfoRef.current?.lastReadMessageId &&
+        unreadDividerScrollDoneForGroupRef.current !== groupId;
+      if (!initialScrollDoneRef.current && !pendingUnreadOpen) {
         initialScrollDoneRef.current = true;
       }
       if (pendingScrollAfterSendRef.current) {
         pendingScrollAfterSendRef.current = false;
       }
-      if (initialUnreadInfoRef.current?.count && !readConfirmTimerRef.current) {
+      // Confirm-read רק אחרי שהמשתמש באמת בתחתית (לא בזמן מיקום מפריד / גלילה פרוגרמטית)
+      const canConfirmRead =
+        !pendingUnreadOpen &&
+        initialScrollDoneRef.current &&
+        Date.now() >= blockUnreadAutoScrollUntilRef.current;
+      if (
+        canConfirmRead &&
+        initialUnreadInfoRef.current?.count &&
+        !readConfirmTimerRef.current
+      ) {
         readConfirmTimerRef.current = setTimeout(() => {
           readConfirmTimerRef.current = null;
           if (isAtBottomRef.current) {
             void confirmReadRef.current();
           }
-        }, 700);
+        }, Platform.OS === 'android' ? 350 : 700);
       }
     } else if (
       initialScrollDoneRef.current &&
@@ -264,10 +387,14 @@ export default function ChatGroupScreen() {
       if (!programmaticScrollRef.current) {
         pinScrollToBottomRef.current = false;
       }
+      if (readConfirmTimerRef.current) {
+        clearTimeout(readConfirmTimerRef.current);
+        readConfirmTimerRef.current = null;
+      }
     }
 
     return { distFromBottom, atBottom, offsetY };
-  }, []);
+  }, [groupId]);
 
   const syncScrollFab = useCallback((event?: {
     nativeEvent?: {
@@ -279,8 +406,9 @@ export default function ChatGroupScreen() {
     const { distFromBottom, atBottom, offsetY } = applyScrollMetrics(event);
     const shouldShow = distFromBottom > SCROLL_SHOW_FAB_PX;
 
+    // Hot path — avoid console spam on Android (scroll fires ~60fps)
     const now = Date.now();
-    if (now - lastScrollLogRef.current > 800) {
+    if (now < verboseScrollLogUntilRef.current && now - lastScrollLogRef.current > 1200) {
       lastScrollLogRef.current = now;
       logger.debug(
         'ChatGroupScreen',
@@ -294,10 +422,6 @@ export default function ChatGroupScreen() {
     if (shouldShow !== showScrollBtnRef.current) {
       showScrollBtnRef.current = shouldShow;
       setShowScrollToBottomButton(shouldShow);
-      logger.info(
-        'ChatGroupScreen',
-        `scrollFab ${shouldShow ? 'show' : 'hide'} dist=${distFromBottom.toFixed(0)}`,
-      );
     }
   }, [applyScrollMetrics]);
 
@@ -306,11 +430,9 @@ export default function ChatGroupScreen() {
 
     const shouldShow = metrics.distFromBottom > SCROLL_SHOW_FAB_PX;
     const now = Date.now();
-    const forceLog = now < verboseScrollLogUntilRef.current;
-    if (forceLog || now - lastScrollLogRef.current > 800) {
+    if (now < verboseScrollLogUntilRef.current && now - lastScrollLogRef.current > 1200) {
       lastScrollLogRef.current = now;
-      const logFn = forceLog ? logger.info.bind(logger) : logger.debug.bind(logger);
-      logFn(
+      logger.debug(
         'ChatGroupScreen',
         `onScroll offsetY=${metrics.offsetY.toFixed(0)} distBottom=${metrics.distFromBottom.toFixed(0)} atBottom=${metrics.atBottom}`,
       );
@@ -321,12 +443,8 @@ export default function ChatGroupScreen() {
     if (shouldShow !== showScrollBtnRef.current) {
       showScrollBtnRef.current = shouldShow;
       setShowScrollToBottomButton(shouldShow);
-      logger.info(
-        'ChatGroupScreen',
-        `scrollFab ${shouldShow ? 'show' : 'hide'} dist=${metrics.distFromBottom.toFixed(0)}`,
-      );
     }
-  }, [applyScrollMetrics, listScrollRefs]);
+  }, [applyScrollMetrics]);
 
   const handleScrollEnd = useCallback((event: any) => {
     syncScrollFab(event);
@@ -339,6 +457,7 @@ export default function ChatGroupScreen() {
     id: string;
     senderName: string;
     content: string;
+    messageType?: string;
   } | undefined>();
 
   const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
@@ -361,10 +480,52 @@ export default function ChatGroupScreen() {
 
   useEffect(() => {
     initialUnreadInfoRef.current = initialUnreadInfo;
+    logger.debug(
+      'ChatGroupScreen',
+      `initialUnreadInfo received groupId=${groupId} value=${
+        initialUnreadInfo
+          ? `{count=${initialUnreadInfo.count}, lastReadId=${initialUnreadInfo.lastReadMessageId ?? 'null'}}`
+          : 'null'
+      } msgs=${displayMessages.length} listReady=${messagesListReady}`,
+    );
+  }, [initialUnreadInfo, groupId, displayMessages.length, messagesListReady]);
+
+  // Keep divider mounted through fade-out when read is confirmed (no abrupt pop).
+  useEffect(() => {
+    if (
+      initialUnreadInfo &&
+      initialUnreadInfo.count > 0 &&
+      initialUnreadInfo.lastReadMessageId
+    ) {
+      const next = {
+        count: initialUnreadInfo.count,
+        lastReadMessageId: initialUnreadInfo.lastReadMessageId,
+      };
+      const prev = unreadDividerSnapshotRef.current;
+      if (prev?.lastReadMessageId !== next.lastReadMessageId) {
+        unreadDividerDismissedRef.current = false;
+      }
+      unreadDividerSnapshotRef.current = next;
+      if (!unreadDividerDismissedRef.current) {
+        setUnreadDividerPhase('visible');
+      }
+      return;
+    }
+    if (unreadDividerPhaseRef.current === 'visible' && unreadDividerSnapshotRef.current) {
+      setUnreadDividerPhase('fading');
+    }
   }, [initialUnreadInfo]);
+
+  const handleUnreadDividerDismissed = useCallback(() => {
+    unreadDividerDismissedRef.current = true;
+    unreadDividerSnapshotRef.current = null;
+    setUnreadDividerPhase('hidden');
+  }, []);
 
   const confirmReadRef = useRef(confirmChatReadAtBottom);
   confirmReadRef.current = confirmChatReadAtBottom;
+  const leaveChatScreenRef = useRef(leaveChatScreen);
+  leaveChatScreenRef.current = leaveChatScreen;
   const [longPressMessage, setLongPressMessage] = useState<MessageSnapshot | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
   const [seenByMessage, setSeenByMessage] = useState<ChatMessageType | null>(null);
@@ -464,7 +625,6 @@ export default function ChatGroupScreen() {
           if (reachedBottom || distFromBottomRef.current <= SCROLL_AT_BOTTOM_PX) {
             hideScrollFab();
           }
-          // הרשימה כבר נחתה בתחתית — אפשר לחשוף אותה בלי קפיצה גלויה
           requestRevealMessagesRef.current();
         },
       },
@@ -494,10 +654,8 @@ export default function ChatGroupScreen() {
     [insets.bottom],
   );
 
-  // מעקב רציף של הרשימה אחרי המקלדת ב-UI thread: אותו translate בדיוק כמו הקומפוזר
-  // (chatComposerKeyboardTranslate עם אותו inset/gap), כך שתחתית הרשימה ההפוכה נשארת
-  // צמודה לראש הקומפוזר בפתיחה ובסגירה — בלי ה-lag של אינסט מבוסס-state.
-  // handler נפרד (keyboard-controller תומך בכמה) — לא נוגע בקומפוזר ולא ב-resize mode.
+  // Android בלבד: מעקב Reanimated של הרשימה אחרי המקלדת (אותו translate כמו הקומפוזר).
+  // iOS משתמש ב-KeyboardStickyView (ChatKeyboardFollow) — לא ב-handler הזה.
   const composerInsetSV = useSharedValue(composerPaddingBottom);
   useEffect(() => {
     composerInsetSV.value = composerPaddingBottom;
@@ -531,6 +689,8 @@ export default function ChatGroupScreen() {
       transform: [{ translateY: listFollowY.value }],
     };
   });
+  // iOS: הרשימה נדחפת ע"י KeyboardStickyView (ChatKeyboardFollow) — לא Reanimated.
+  // Android: אותו translate ידני כמו הקומפוזר + ADJUST_NOTHING.
 
   /** תמיד גולל לתחתית כששולחים — גם אחרי פתיחה עם unread (לא בתחתית) */
   const scrollToBottomOnSend = useCallback(() => {
@@ -545,65 +705,171 @@ export default function ChatGroupScreen() {
 
   /**
    * פתיחת צ'אט (WhatsApp-style):
-   * – יש unread + last_read → גלילה להודעה האחרונה שנקראה במרכז + מפריד
+   * – יש unread + last_read → גלילה להודעה הראשונה שלא נקראה כך שהמפריד קרוב לראש המסך
    * – אחרת → תחתית (הודעות אחרונות)
+   *
+   * הערה על ה-viewPosition:
+   * ה-FlatList הפוך. הפורמולה המקומית ב-`targetOffsetForIndex` מחשבת offset עם
+   * viewPosition בסמנטיקה של רשימה רגילה (0=top, 1=bottom), אבל ה-scaleY(-1)
+   * של ה-inverted ScrollView הופך את הכיוון בפועל, ולכן במסך:
+   *   vp=0.0 → פריט קרוב לתחתית המסך
+   *   vp=0.5 → מרכז
+   *   vp=1.0 → פריט קרוב לראש המסך
+   * לכן כדי למקם מפריד ~10% מלמעלה בתוך רשימה הפוכה, משתמשים ב-vp≈0.88.
    */
   const applyInitialOpenScroll = useCallback(async () => {
-    if (
-      !groupId ||
-      initialScrollDoneRef.current ||
-      initialScrollInFlightRef.current ||
-      !listLayoutReadyRef.current ||
-      displayMessages.length === 0 ||
-      scrollToMessageId
-    ) {
+    const unreadCount = initialUnreadInfo?.count ?? 0;
+    const lastReadId = initialUnreadInfo?.lastReadMessageId ?? null;
+    const dividerIdx =
+      lastReadId != null
+        ? displayMessages.findIndex((m) => m.id === lastReadId)
+        : -1;
+
+    logger.debug(
+      'ChatGroupScreen',
+      `applyInitialOpenScroll:enter groupId=${groupId} unread=${unreadCount} lastReadId=${lastReadId ?? 'null'} ` +
+        `msgs=${displayMessages.length} listReady=${messagesListReady} layoutReady=${listLayoutReadyRef.current} ` +
+        `initialDone=${initialScrollDoneRef.current} inFlight=${initialScrollInFlightRef.current} ` +
+        `pinBottom=${pinScrollToBottomRef.current} ` +
+        `autoApplied=${unreadAutoScrollAppliedForGroupRef.current === groupId ? 'yes' : 'no'} ` +
+        `dividerDone=${unreadDividerScrollDoneForGroupRef.current === groupId ? 'yes' : 'no'} ` +
+        `lastReadIdxInList=${dividerIdx}`,
+    );
+
+    if (!groupId) {
+      logger.debug('ChatGroupScreen', 'applyInitialOpenScroll:skip route=no-groupId');
       return;
     }
-    if (Date.now() < blockUnreadAutoScrollUntilRef.current) return;
-    if (unreadAutoScrollAppliedForGroupRef.current === groupId) return;
-
-    const unreadCount = initialUnreadInfo?.count ?? 0;
-    const lastReadId = initialUnreadInfo?.lastReadMessageId;
+    if (initialScrollDoneRef.current) {
+      logger.debug('ChatGroupScreen', 'applyInitialOpenScroll:skip route=already-done');
+      return;
+    }
+    if (initialScrollInFlightRef.current) {
+      logger.debug('ChatGroupScreen', 'applyInitialOpenScroll:skip route=in-flight');
+      return;
+    }
+    if (!listLayoutReadyRef.current) {
+      logger.debug('ChatGroupScreen', 'applyInitialOpenScroll:skip route=layout-not-ready');
+      return;
+    }
+    if (displayMessages.length === 0) {
+      logger.debug('ChatGroupScreen', 'applyInitialOpenScroll:skip route=empty-messages');
+      return;
+    }
+    if (scrollToMessageId) {
+      logger.debug('ChatGroupScreen', 'applyInitialOpenScroll:skip route=jump-to-message');
+      return;
+    }
+    if (Date.now() < blockUnreadAutoScrollUntilRef.current) {
+      logger.debug('ChatGroupScreen', 'applyInitialOpenScroll:skip route=blocked-window');
+      return;
+    }
+    // חשוב: לא לבלוק כאן אם עוד לא ביצענו בפועל את הגלילה למפריד — כדי
+    // לאפשר לגלילה למפריד לרוץ גם אם initialUnreadInfo הגיע אחרי paint ראשון.
+    if (
+      unreadAutoScrollAppliedForGroupRef.current === groupId &&
+      unreadDividerScrollDoneForGroupRef.current === groupId
+    ) {
+      logger.debug('ChatGroupScreen', 'applyInitialOpenScroll:skip route=divider-already-applied');
+      return;
+    }
 
     if (unreadCount > 0 && lastReadId) {
       initialScrollInFlightRef.current = true;
-      let index = displayMessages.findIndex((m) => m.id === lastReadId);
+      let lastReadIndex = dividerIdx;
 
-      if (index === -1 && !loadingLastReadForInitialRef.current) {
+      if (lastReadIndex === -1 && !loadingLastReadForInitialRef.current) {
         loadingLastReadForInitialRef.current = true;
+        logger.debug(
+          'ChatGroupScreen',
+          `applyInitialOpenScroll:load-around lastReadId=${lastReadId}`,
+        );
         const result = await loadMessagesAround(lastReadId);
         loadingLastReadForInitialRef.current = false;
         initialScrollInFlightRef.current = false;
         if (!result.success) {
           unreadAutoScrollAppliedForGroupRef.current = groupId;
+          unreadDividerScrollDoneForGroupRef.current = groupId;
           applyScrollToBottom(false);
-          logger.debug('ChatGroupScreen', 'initial scroll to bottom (last read not found)');
+          logger.debug(
+            'ChatGroupScreen',
+            'applyInitialOpenScroll:route=bottom (last read not found)',
+          );
+        } else {
+          logger.debug(
+            'ChatGroupScreen',
+            'applyInitialOpenScroll:load-around ok, waiting for re-trigger',
+          );
         }
         return;
       }
 
-      if (index === -1) {
+      if (lastReadIndex === -1) {
         initialScrollInFlightRef.current = false;
+        logger.debug(
+          'ChatGroupScreen',
+          'applyInitialOpenScroll:skip route=last-read-missing-loading',
+        );
         return;
       }
 
+      // אם החלון הראשוני קטן מה-unread — עדיין מגללים למפריד (lastRead קיים).
+      // המתנה להשלמת כל ה-unread חסמה iOS מאחורי opacity:0 (רגרסיה).
+      if (lastReadIndex < unreadCount) {
+        logger.debug(
+          'ChatGroupScreen',
+          `applyInitialOpenScroll:partial-unread loaded=${lastReadIndex} required=${unreadCount} msgs=${displayMessages.length} — scrolling anyway`,
+        );
+      }
+
+      // first unread is newer than lastRead → one index closer to bottom (0)
+      const firstUnreadIndex = lastReadIndex > 0 ? lastReadIndex - 1 : lastReadIndex;
+      const targetId =
+        displayMessages[firstUnreadIndex]?.id ?? lastReadId;
+
+      // חשוב: לבטל retries של scrollChatListToBottom שרצים במקביל.
+      // pinScrollToBottomRef עלול להיות true אם המסלול הזמני "pending" נכנס לפני
+      // ש-initialUnreadInfo הגיע — מנקים כדי שהגלילה למפריד לא תוחזר לתחתית.
       unreadAutoScrollAppliedForGroupRef.current = groupId;
+      unreadDividerScrollDoneForGroupRef.current = groupId;
       pinScrollToBottomRef.current = false;
+      pendingScrollAfterSendRef.current = false;
       programmaticScrollRef.current = true;
       ignoreFabUntilRef.current = Date.now() + 800;
 
-      scrollToMessageInView(lastReadId, {
-        viewPosition: 0.5,
+      // מפריד "הודעות חדשות" ~10% מראש ה-viewport (סגנון WhatsApp).
+      // ראה הערה בראש הפונקציה: ברשימה הפוכה vp≈0.88 = ~12% מלמעלה.
+      const DIVIDER_VIEW_POSITION = 0.88;
+      scrollToMessageInView(targetId, {
+        viewPosition: DIVIDER_VIEW_POSITION,
         animated: false,
         highlight: false,
       });
 
+      // ריפיין אחרי שגובה שורות נמדדו (retry עם offset מדויק יותר).
       requestAnimationFrame(() => {
-        queueScrollToMessage(lastReadId, false, {
-          viewPosition: 0.5,
+        queueScrollToMessage(targetId, false, {
+          viewPosition: DIVIDER_VIEW_POSITION,
           highlight: false,
         });
       });
+      const refineTimer1 = setTimeout(() => {
+        queueScrollToMessage(targetId, false, {
+          viewPosition: DIVIDER_VIEW_POSITION,
+          highlight: false,
+        });
+      }, Platform.OS === 'android' ? 80 : 120);
+      // ב-Android פחות refinement passes — כל אחד חוסם את ה-JS thread
+      if (Platform.OS !== 'android') {
+        const refineTimer2 = setTimeout(() => {
+          queueScrollToMessage(targetId, false, {
+            viewPosition: DIVIDER_VIEW_POSITION,
+            highlight: false,
+          });
+        }, 260);
+        unreadRefineTimersRef.current.push(refineTimer2);
+      }
+      unreadRefineTimersRef.current.push(refineTimer1);
 
       initialScrollDoneRef.current = true;
       userScrolledUpRef.current = true;
@@ -614,29 +880,152 @@ export default function ChatGroupScreen() {
       setShowScrollToBottomButton(true);
       logger.debug(
         'ChatGroupScreen',
-        `initial scroll to last read index=${index} unread=${unreadCount}`,
+        `initial scroll to unread divider index=${firstUnreadIndex} unread=${unreadCount} targetId=${targetId} vp=${DIVIDER_VIEW_POSITION} loadedMsgs=${displayMessages.length}`,
       );
-      requestRevealMessages();
+      // חשיפה כבר קרתה ב-cache hit; כאן רק safety אם נתיב קר חיכה למפריד
+      if (!messagesRevealedRef.current) {
+        if (unreadRevealDelayMs <= 0) {
+          requestRevealMessages();
+        } else {
+          const revealTimer = setTimeout(() => {
+            requestRevealMessages();
+          }, unreadRevealDelayMs);
+          unreadRefineTimersRef.current.push(revealTimer);
+        }
+      }
       return;
     }
 
+    // null = unread עדיין לא ידוע (אין cache קבוצות). רשימה הפוכה כבר ב-offset=0.
+    // לא מפעילים scrollChatListToBottom עם retries שיילחמו כש-unreadEffect
+    // יגלול למפריד. מסמנים autoApplied כדי לא להיתקע בלולאת onContentSizeChange,
+    // בלי dividerDone — כך unreadEffect יכול עדיין להפעיל גלילה למפריד.
+    if (initialUnreadInfo == null) {
+      pinScrollToBottomRef.current = true;
+      isAtBottomRef.current = true;
+      userScrolledUpRef.current = false;
+      unreadAutoScrollAppliedForGroupRef.current = groupId;
+      requestRevealMessagesRef.current();
+      logger.debug(
+        'ChatGroupScreen',
+        'applyInitialOpenScroll:route=bottom-lite (unread info pending)',
+      );
+      return;
+    }
+
+    // count=0 (או בלי lastRead) — סיום מפורש לתחתית (לא lite תקוע).
     unreadAutoScrollAppliedForGroupRef.current = groupId;
+    unreadDividerScrollDoneForGroupRef.current = groupId;
     applyScrollToBottom(false, true);
-    logger.debug('ChatGroupScreen', 'initial scroll to bottom');
+    logger.debug(
+      'ChatGroupScreen',
+      `initial scroll to bottom unread=${unreadCount} lastReadId=${lastReadId ?? 'null'}`,
+    );
   }, [
     groupId,
     displayMessages,
     initialUnreadInfo,
+    messagesListReady,
     scrollToMessageId,
     loadMessagesAround,
     applyScrollToBottom,
     scrollToMessageInView,
     queueScrollToMessage,
     requestRevealMessages,
+    unreadRevealDelayMs,
   ]);
 
   const applyInitialOpenScrollRef = useRef(applyInitialOpenScroll);
   applyInitialOpenScrollRef.current = applyInitialOpenScroll;
+
+  /**
+   * Race guard: initialUnreadInfo יכול להגיע אחרי שה-FlatList כבר עשה paint
+   * ראשון וגלילה זמנית לתחתית. במקרה כזה אנו מנקים את הדגל שגורם ל-early-return
+   * ב-applyInitialOpenScroll ומריצים אותו שוב, כך שהמסך יזוז למפריד "הודעות
+   * שלא נקראו" ברגע שהמידע זמין (בלי לחטוף גלילה של המשתמש).
+   */
+  useEffect(() => {
+    const unreadCount = initialUnreadInfo?.count ?? 0;
+    const lastReadId = initialUnreadInfo?.lastReadMessageId ?? null;
+    const conds = {
+      groupId,
+      unreadCount,
+      lastReadId,
+      messagesListReady,
+      msgs: displayMessages.length,
+      layoutReady: listLayoutReadyRef.current,
+      userScrolledUp: userScrolledUpRef.current,
+      dividerDone: unreadDividerScrollDoneForGroupRef.current === groupId,
+      autoApplied: unreadAutoScrollAppliedForGroupRef.current === groupId,
+      pinBottom: pinScrollToBottomRef.current,
+      initialDone: initialScrollDoneRef.current,
+    };
+
+    if (!groupId) {
+      logger.debug('ChatGroupScreen', 'unreadEffect:skip no-groupId', conds);
+      return;
+    }
+    if (unreadCount <= 0 || !lastReadId) {
+      // אחרי bottom-lite (pending→count=0): לסיים גלילה לתחתית במקום להישאר תקועים.
+      if (
+        initialUnreadInfo != null &&
+        unreadCount <= 0 &&
+        messagesListReady &&
+        displayMessages.length > 0 &&
+        listLayoutReadyRef.current &&
+        unreadDividerScrollDoneForGroupRef.current !== groupId &&
+        !initialScrollDoneRef.current
+      ) {
+        logger.debug('ChatGroupScreen', 'unreadEffect:finish-bottom count=0', conds);
+        unreadAutoScrollAppliedForGroupRef.current = null;
+        initialScrollInFlightRef.current = false;
+        void applyInitialOpenScrollRef.current();
+        return;
+      }
+      logger.debug('ChatGroupScreen', 'unreadEffect:skip no-unread-info', conds);
+      return;
+    }
+    if (!messagesListReady) {
+      logger.debug('ChatGroupScreen', 'unreadEffect:skip messages-not-ready', conds);
+      return;
+    }
+    if (displayMessages.length === 0) {
+      logger.debug('ChatGroupScreen', 'unreadEffect:skip empty-messages', conds);
+      return;
+    }
+    if (unreadDividerScrollDoneForGroupRef.current === groupId) {
+      logger.debug('ChatGroupScreen', 'unreadEffect:skip divider-already-done', conds);
+      return;
+    }
+    if (userScrolledUpRef.current) {
+      logger.debug('ChatGroupScreen', 'unreadEffect:skip user-scrolled', conds);
+      return;
+    }
+    if (!listLayoutReadyRef.current) {
+      logger.debug('ChatGroupScreen', 'unreadEffect:skip layout-not-ready', conds);
+      return;
+    }
+
+    // חשוב לפני קריאה חוזרת: לנקות pin/scroll שאולי הוגדרו במסלול "pending"
+    // כדי שהגלילה למפריד לא תיחסם/תוחזר מיד לתחתית.
+    pinScrollToBottomRef.current = false;
+    pendingScrollAfterSendRef.current = false;
+    unreadAutoScrollAppliedForGroupRef.current = null;
+    initialScrollDoneRef.current = false;
+    initialScrollInFlightRef.current = false;
+
+    logger.debug(
+      'ChatGroupScreen',
+      `unreadEffect:re-trigger applyInitialOpenScroll unread=${unreadCount} lastReadId=${lastReadId}`,
+    );
+    void applyInitialOpenScrollRef.current();
+  }, [
+    groupId,
+    initialUnreadInfo?.count,
+    initialUnreadInfo?.lastReadMessageId,
+    messagesListReady,
+    displayMessages.length,
+  ]);
 
   const scrollToBottom = useCallback((animated: boolean = true) => {
     const count = displayMessages.length;
@@ -720,6 +1109,13 @@ export default function ChatGroupScreen() {
   // סנכרון בזמן render (לא ב-useEffect) — renderItem קורא ל-neighbors לפני ה-effect
   messagesRef.current = displayMessages;
 
+  // זריעת baseline של אנימציית הכניסה: כל ההודעות שקיימות בעת חשיפת הרשימה
+  // מסומנות כ"נראו כבר" ולכן לא מונפשות — רק הודעות שיגיעו אח"כ ינפישו.
+  if (!animBaselineSeededRef.current && messagesListReady) {
+    for (const m of displayMessages) animatedMsgIdsRef.current.add(m.id);
+    animBaselineSeededRef.current = true;
+  }
+
   // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
@@ -745,26 +1141,50 @@ export default function ChatGroupScreen() {
         cancelAnimationFrame(autoScrollRafRef.current);
         autoScrollRafRef.current = null;
       }
+      if (unreadRefineTimersRef.current.length > 0) {
+        unreadRefineTimersRef.current.forEach((t) => clearTimeout(t));
+        unreadRefineTimersRef.current = [];
+      }
     };
   }, []);
 
-  useEffect(() => {
+  // זריעת cache לפני paint — כמו WhatsApp: A→back→A בלי סקלטון
+  // חשוב: deps רק groupId — selectGroup יציב מ-useChatActions, אבל לא לשים אותו
+  // ב-deps כדי למנוע selectGroup:fetch בלולאה אם הזהות משתנה.
+  useLayoutEffect(() => {
     if (!groupId) return;
 
     const isNewGroup = prevGroupIdRef.current !== groupId;
     prevGroupIdRef.current = groupId;
 
+    // Instant paint: seed opacity BEFORE selectGroup state lands.
+    // Cache hit TTI = this layout pass (1 frame). Unread scroll deferred.
+    const warmHit = readGroupMessagesCache(groupId).length > 0;
+    if (isNewGroup) {
+      if (warmHit) {
+        messagesRevealedRef.current = true;
+        setMessagesRevealed(true);
+        setMessagesListReady(true);
+        listOpacity.setValue(1);
+      } else {
+        messagesRevealedRef.current = false;
+        setMessagesRevealed(false);
+        setMessagesListReady(false);
+        listOpacity.setValue(0);
+      }
+    }
+
     void selectGroup(groupId);
 
     if (!isNewGroup) return;
 
-      hasInitiallyRenderedRef.current = false;
+    hasInitiallyRenderedRef.current = false;
     initialScrollDoneRef.current = false;
     endReachedReadyRef.current = false;
     userScrolledUpRef.current = false;
     endReachedMomentumRef.current = true;
     programmaticScrollRef.current = false;
-      prevMessagesLengthRef.current = 0;
+    prevMessagesLengthRef.current = 0;
     scrollYRef.current = 0;
     distFromBottomRef.current = 0;
     maxScrollOffsetRef.current = 0;
@@ -774,19 +1194,49 @@ export default function ChatGroupScreen() {
     setShowScrollToBottomButton(false);
     blockUnreadAutoScrollUntilRef.current = 0;
     unreadAutoScrollAppliedForGroupRef.current = null;
+    unreadDividerScrollDoneForGroupRef.current = null;
+    animBaselineSeededRef.current = false;
+    animatedMsgIdsRef.current.clear();
+    // ניקוי טיימרים של refinement/reveal מהקבוצה הקודמת
+    if (unreadRefineTimersRef.current.length > 0) {
+      unreadRefineTimersRef.current.forEach((t) => clearTimeout(t));
+      unreadRefineTimersRef.current = [];
+    }
     initialScrollInFlightRef.current = false;
     loadingLastReadForInitialRef.current = false;
     pendingScrollAfterSendRef.current = false;
     pinScrollToBottomRef.current = false;
+    unreadDividerSnapshotRef.current = null;
+    unreadDividerDismissedRef.current = false;
+    setUnreadDividerPhase('hidden');
 
     const t = setTimeout(() => {
       endReachedReadyRef.current = true;
     }, 800);
     return () => clearTimeout(t);
-  }, [groupId, selectGroup]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selectGroup יציב; thrash guard ב-ChatContext
+  }, [groupId, listOpacity]);
 
-  // דחיית רינדור ההודעות עד שאנימציית הניווט מסתיימת — מונע jank בכניסה.
-  useEffect(() => {
+  // Cache hit (כולל unread) → opacity 1 מיד. גלילה למפריד אחרי first paint.
+  // Cold בלבד: skeleton + InteractionManager קצר.
+  useLayoutEffect(() => {
+    if (hasLocalMessagesForGroup) {
+      setMessagesListReady(true);
+      if (!messagesRevealedRef.current) {
+        messagesRevealedRef.current = true;
+        setMessagesRevealed(true);
+        listOpacity.setValue(1);
+      } else {
+        listOpacity.setValue(1);
+      }
+      return;
+    }
+
+    // כבר נחשף לקבוצה הזו בלי הודעות? לא להחזיר skeleton בטעות באמצע שליחה
+    if (messagesRevealedRef.current && currentGroup?.id === groupId) {
+      return;
+    }
+
     setMessagesListReady(false);
     setMessagesRevealed(false);
     messagesRevealedRef.current = false;
@@ -794,25 +1244,42 @@ export default function ChatGroupScreen() {
     const handle = InteractionManager.runAfterInteractions(() => {
       setMessagesListReady(true);
     });
-    // fallback — מבטיח שההודעות יופיעו גם אם ה-interactions מתעכבים (לא נתקע על סקלטון)
-    const fallback = setTimeout(() => setMessagesListReady(true), 400);
+    const fallback = setTimeout(() => setMessagesListReady(true), 48);
     return () => {
       handle.cancel();
       clearTimeout(fallback);
     };
-  }, [groupId, listOpacity]);
+  }, [
+    groupId,
+    listOpacity,
+    hasLocalMessagesForGroup,
+    currentGroup?.id,
+  ]);
 
-  // גיבוי לחשיפת הרשימה — אם ה-callback של הגלילה לא נורה (רשימה ריקה / נתיב pin).
-  // מונע מצב של "סקלטון תקוע" כשהרשימה כבר ממוקמת אך לא נחשפה.
+  // חשיפת רשימה בנתיב קר כשיש הודעות / ריק מאושר.
+  // Warm path כבר נחשף ב-layout — כאן רק fallback.
   useEffect(() => {
-    if (!messagesListReady || messagesRevealedRef.current) return;
+    if (messagesRevealedRef.current) return;
+    if (!messagesListReady) return;
     if (displayMessages.length === 0) {
-      if (!isLoadingMessages) revealMessages();
+      if (!isLoadingMessages && currentGroup?.id === groupId) revealMessages();
       return;
     }
-    const t = setTimeout(() => revealMessages(), 500);
-    return () => clearTimeout(t);
-  }, [messagesListReady, displayMessages.length, isLoadingMessages, revealMessages]);
+    if (currentGroup?.id !== groupId && !hasLocalMessagesForGroup) return;
+
+    // Unread: לא חוסמים חשיפה — גלילה למפריד רצה ברקע אחרי paint
+    const t = requestAnimationFrame(() => requestRevealMessages());
+    return () => cancelAnimationFrame(t);
+  }, [
+    messagesListReady,
+    displayMessages.length,
+    isLoadingMessages,
+    currentGroup?.id,
+    groupId,
+    hasLocalMessagesForGroup,
+    revealMessages,
+    requestRevealMessages,
+  ]);
 
   // Auto-navigate to groups list when removed from group by an admin.
   // ChatContext clears currentGroup when membership DELETE event fires.
@@ -831,12 +1298,19 @@ export default function ChatGroupScreen() {
   useEffect(() => {
     if (!groupId) return;
     if (everHadGroupRef.current && currentGroup === null && !isLoadingMessages) {
-      // Group was cleared after being loaded — we were removed → go back to groups list
-      (navigation as any).navigate('ChatGroupsList');
+      // Cleared after load — removed/left → reset to list (no nested chat screens)
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'ChatGroupsList' }],
+        })
+      );
     }
-  }, [currentGroup, isLoadingMessages, groupId]);
+  }, [currentGroup, isLoadingMessages, groupId, navigation]);
 
-  // רענון הודעות רק כשחוזרים למסך (לא בהתמקדות הראשונה)
+  // רענון הודעות רק כשחוזרים למסך (לא בהתמקדות הראשונה).
+  // ביציאה מהצ'אט — מסמנים כנקרא (badge ברשימה + last_read), גם אם המשתמש
+  // היה על מפריד ה-unread ולא הגיע לתחתית (WhatsApp-like clear-on-leave).
   const isFirstFocusRef = useRef(true);
   useEffect(() => {
     isFirstFocusRef.current = true;
@@ -844,24 +1318,31 @@ export default function ChatGroupScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!groupId || !user) return;
+      const focusedGroupId = groupId;
       if (isFirstFocusRef.current) {
         isFirstFocusRef.current = false;
-        return;
-      }
-      if (messagesRef.current.length > 0) {
+        // useLayoutEffect כבר קרא ל-selectGroup בכניסה הראשונה
+      } else if (messagesRef.current.length > 0) {
         void refreshCurrentGroupDetails();
       } else {
         void selectGroup(groupId);
       }
-    }, [groupId, user, selectGroup, refreshCurrentGroupDetails]),
+      return () => {
+        // חשוב: groupId מה-closure — לא currentGroupId (שכבר יכול להיות קבוצה אחרת)
+        void confirmReadRef.current(focusedGroupId);
+        // מפסיק chat_active_viewers — אחרת השרת מדלג על unread אחרי חזרה לרשימה
+        leaveChatScreenRef.current(focusedGroupId);
+      };
+      // selectGroup/refresh יציבים מ-useChatActions — לא להכניס ל-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [groupId, user?.id]),
   );
 
   useEffect(() => {
-    if (scrollToMessageId && messages.length > 0) {
-      const timer = setTimeout(() => handleJumpToMessage(scrollToMessageId), 400);
-      return () => clearTimeout(timer);
-    }
-  }, [scrollToMessageId, handleJumpToMessage]);
+    if (!scrollToMessageId) return;
+    const timer = setTimeout(() => handleJumpToMessage(scrollToMessageId), 400);
+    return () => clearTimeout(timer);
+  }, [scrollToMessageId, handleJumpToMessage, groupId]);
 
   // ============================================
   // Handlers
@@ -946,8 +1427,17 @@ export default function ChatGroupScreen() {
 
     if (!currentMessageId) return;
 
-    const message = messages.find(m => m.id === currentMessageId);
+    // displayMessages (messagesRef) — לא context `messages` בלבד:
+    // בכניסה חמה הרשימה מגיעה מ-cache לפני ש-selectGroup ממלא את ה-context;
+    // חיפוש ב-messages בלבד מחזיר undefined והריאקציה נבלעת בשקט.
+    const message =
+      messagesRef.current.find((m) => m.id === currentMessageId) ||
+      messages.find((m) => m.id === currentMessageId);
     if (!message) return;
+
+    // מחכים לסגירת Modal השיט לפני פתיחת ReactionPicker — אחרת שני שיטים נלחמים.
+    const actionDelayMs =
+      action === 'openReactionPicker' ? SHEET_CLOSE_MS + 80 : 300;
 
     setTimeout(() => {
       switch (action) {
@@ -955,6 +1445,9 @@ export default function ChatGroupScreen() {
           if (payload?.emoji) {
             handleReactionPress(message, payload.emoji);
           }
+          break;
+        case 'openReactionPicker':
+          handleOpenReactionPicker(message);
           break;
         case 'reply':
           handleReply(message);
@@ -984,26 +1477,29 @@ export default function ChatGroupScreen() {
           void retrySendMessage(message.id);
           break;
       }
-    }, 300);
+    }, actionDelayMs);
   };
 
   const handleOpenReactionPicker = (message: ChatMessageType) => {
+    // "+" → שיט אימוג'ים (חיפוש + קטגוריות) כמו וואטסאפ — לא מקלדת מערכת.
     setSelectedMessageForReaction(message);
     setReactionPickerVisible(true);
   };
 
   const handleReactionSelected = async (emoji: string) => {
-    if (selectedMessageForReaction) {
-      await handleReactionPress(selectedMessageForReaction, emoji);
-      setSelectedMessageForReaction(null);
-    }
+    const target = selectedMessageForReaction;
+    if (!target) return;
+    setSelectedMessageForReaction(null);
+    setReactionPickerVisible(false);
+    await handleReactionPress(target, emoji);
   };
 
   const handleReply = useCallback((message: ChatMessageType) => {
     setReplyTo({
       id: message.id,
       senderName: message.sender?.display_name || 'משתמש',
-      content: message.content || 'מדיה',
+      content: message.content || '',
+      messageType: message.message_type,
     });
   }, []);
 
@@ -1179,7 +1675,8 @@ export default function ChatGroupScreen() {
   // ============================================
 
   const renderHeader = () => {
-    if (!currentGroup) return null;
+    const headerGroup = currentGroup?.id === groupId ? currentGroup : shellGroup;
+    if (!headerGroup) return null;
 
     const headerSideButton = (opts: {
       icon: keyof typeof Ionicons.glyphMap;
@@ -1202,16 +1699,23 @@ export default function ChatGroupScreen() {
       </UICard>
     );
 
+    const typingNames = typingUsers.map(
+      (t) => t.user?.display_name || (t as any).userName || 'מישהו',
+    );
     const typingLabel =
-      typingUsers.length > 0
-        ? `${typingUsers[0]?.user?.display_name || 'מישהו'} מקליד...`
-        : null;
+      typingNames.length === 0
+        ? null
+        : typingNames.length === 1
+        ? `${typingNames[0]} מקליד...`
+        : typingNames.length === 2
+        ? `${typingNames[0]} ו${typingNames[1]} מקלידים...`
+        : `${typingNames[0]} ועוד ${typingNames.length - 1} מקלידים...`;
 
     const center = (
       <TouchableOpacity style={styles.headerContent} onPress={handleGroupInfoPress} activeOpacity={0.7}>
         <View style={styles.headerTextWrap}>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {currentGroup.name}
+            {headerGroup.name}
           </Text>
           {typingLabel ? (
           <Text style={styles.headerSubtitle} numberOfLines={1}>
@@ -1269,15 +1773,16 @@ export default function ChatGroupScreen() {
   }, []);
 
   const shouldShowUnreadDivider = useCallback((messageId: string, index: number): boolean => {
-    if (!initialUnreadInfo || initialUnreadInfo.count === 0) return false;
-    if (!initialUnreadInfo.lastReadMessageId) return false;
+    if (unreadDividerPhase === 'hidden') return false;
+    const info = unreadDividerSnapshotRef.current;
+    if (!info || info.count <= 0 || !info.lastReadMessageId) return false;
     const lastReadIdx = messagesRef.current.findIndex(
-      (m) => m.id === initialUnreadInfo.lastReadMessageId,
+      (m) => m.id === info.lastReadMessageId,
     );
     if (lastReadIdx <= 0) return false;
     const firstUnreadIdx = lastReadIdx - 1;
     return index === firstUnreadIdx && messagesRef.current[firstUnreadIdx]?.id === messageId;
-  }, [initialUnreadInfo]);
+  }, [unreadDividerPhase]);
 
   const renderMessage = useCallback(
     ({ item, index }: { item: ChatMessageType; index: number }) => {
@@ -1296,10 +1801,20 @@ export default function ChatGroupScreen() {
       const isAfterSenderChange =
         !!olderMessage && olderMessage.sender_id !== item.sender_id;
       const showDivider = shouldShowDateDivider(item, olderMessage);
+      const dividerInfo = unreadDividerSnapshotRef.current;
+
+      // מנפישים רק את ההודעה החדשה ביותר (index 0) אם לא נראתה עדיין —
+      // לא היסטוריה בטעינה ולא פריטים שממוחזרים בגלילה.
+      let animateEntrance = false;
+      if (animBaselineSeededRef.current && index === 0 && !animatedMsgIdsRef.current.has(item.id)) {
+        animateEntrance = true;
+      }
+      if (index === 0) animatedMsgIdsRef.current.add(item.id);
 
       return (
         <ChatListRow
             message={item}
+            animateEntrance={animateEntrance}
             isMe={isMe}
             showAvatar={showAvatar}
             showSenderName={showSenderName}
@@ -1307,7 +1822,9 @@ export default function ChatGroupScreen() {
           showDateDivider={showDivider}
           dateDividerLabel={showDivider ? formatDateDivider(new Date(item.created_at)) : ''}
           showUnreadDivider={shouldShowUnreadDivider(item.id, index)}
-          unreadCount={initialUnreadInfo?.count || 0}
+          unreadCount={dividerInfo?.count || 0}
+          unreadDividerDismissing={unreadDividerPhase === 'fading'}
+          onUnreadDividerDismissed={handleUnreadDividerDismissed}
           isHighlighted={item.id === highlightedMessageId}
           boldText={isAnnouncementGroup}
           onLayout={(h) => onMessageCellLayout(item.id, h)}
@@ -1336,13 +1853,14 @@ export default function ChatGroupScreen() {
     [
       user?.id,
       highlightedMessageId,
-      initialUnreadInfo?.count,
+      unreadDividerPhase,
       isAnnouncementGroup,
       handleMessageLongPress,
       handleReply,
       handleReactionPress,
       handleReactionDetailsPress,
       handleJumpToMessage,
+      handleUnreadDividerDismissed,
       shouldShowDateDivider,
       shouldShowUnreadDivider,
       formatDateDivider,
@@ -1367,86 +1885,69 @@ export default function ChatGroupScreen() {
 
   // Placeholder מרונדר כ-overlay מעל הרשימה (לא בתוך ה-FlatList ההפוך),
   // כדי שלא יושפע מטרנספורם ה-inverted (שהפך אותו אופקית).
-  // הסקלטון נשאר עד שהרשימה נחשפת (messagesRevealed) — לא ברגע שהיא נטענת —
-  // כך ההתמקמות לתחתית קורית מאחורי הסקלטון ולא כקפיצה גלויה.
-  const isEmptyConfirmed = messagesListReady && !isLoadingMessages && displayMessages.length === 0;
-  const showMessagesPlaceholder = !messagesRevealed || isEmptyConfirmed;
-  const showMessagesSkeleton = !isEmptyConfirmed;
+  // Warm cache: אין skeleton. רק cold path (אין הודעות מקומיות) מציג placeholder.
+  const awaitingLocalThread =
+    !hasLocalMessagesForGroup &&
+    (displayMessages.length === 0 ||
+      (currentGroup != null && currentGroup.id !== groupId && !cachedSeedMessages.length));
+  const isEmptyConfirmed =
+    messagesListReady &&
+    messagesRevealed &&
+    !isLoadingMessages &&
+    !awaitingLocalThread &&
+    displayMessages.length === 0;
+  const showMessagesSkeleton = !messagesRevealed && !isEmptyConfirmed && !hasLocalMessagesForGroup;
+  const showMessagesPlaceholder = showMessagesSkeleton || isEmptyConfirmed;
   const renderMessagesPlaceholder = () => {
+    if (isEmptyConfirmed) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.tertiary} />
+          <Text style={styles.emptyText}>אין הודעות עדיין</Text>
+          <Text style={styles.emptySubtext}>תתחיל שיחה!</Text>
+        </View>
+      );
+    }
     if (showMessagesSkeleton) {
       return (
-        <View style={{ paddingHorizontal: 12, paddingTop: 8 }}>
+        <View style={styles.messagesSkeleton}>
           {[
             { isMe: false, w: '60%' }, { isMe: true, w: '45%' },
             { isMe: false, w: '75%' }, { isMe: false, w: '50%' },
             { isMe: true, w: '55%' }, { isMe: true, w: '35%' },
             { isMe: false, w: '65%' }, { isMe: false, w: '40%' },
+            { isMe: true, w: '70%' }, { isMe: false, w: '55%' },
+            { isMe: false, w: '45%' }, { isMe: true, w: '60%' },
+            { isMe: false, w: '70%' }, { isMe: true, w: '40%' },
+            { isMe: false, w: '50%' }, { isMe: true, w: '65%' },
           ].map((s, i) => (
             <SkeletonBubble key={i} isMe={s.isMe} width={s.w as any} delay={i * 60} />
           ))}
         </View>
       );
     }
-
-    return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="chatbubbles-outline" size={64} color={DesignTokens.colors.text.tertiary} />
-        <Text style={styles.emptyText}>אין הודעות עדיין</Text>
-        <Text style={styles.emptySubtext}>תתחיל שיחה!</Text>
-      </View>
-    );
+    return null;
   };
 
-  // Typing Indicator with bouncing dots and user avatar
-  const renderTypingIndicator = () => {
-    if (typingUsers.length === 0) return null;
-
-    // Get the first typing user
-    const typingUser = typingUsers[0];
-
-    // Try to get user profile picture from multiple sources
-    let userAvatar: string | null = null;
-
-    // First try from typingUser.user (if available)
-    if ((typingUser.user as any)?.profile_picture) {
-      userAvatar = (typingUser.user as any).profile_picture;
-    }
-    // Then try from members list
-    else if (currentGroup?.members) {
-      const member = currentGroup.members.find(m => m.user_id === typingUser.user_id);
-      userAvatar = member?.user?.profile_picture || null;
-    }
-
-    return (
-      <View style={styles.typingIndicatorContainer}>
-        {/* User Avatar - w-8 h-8 rounded-full */}
-        {userAvatar ? (
-          <Image
-            source={{ uri: userAvatar }}
-            style={styles.typingAvatar}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.typingAvatarPlaceholder}>
-            <Ionicons name="person" size={14} color={DesignTokens.colors.text.secondary} />
-          </View>
-        )}
-
-        {/* Typing Bubble - bg-[#1a1a1a] px-4 py-3 rounded-2xl rounded-bl-md */}
-        <View style={styles.typingBubble}>
-          <View style={styles.typingDots}>
-            <FadingDot delay={0} dotStyle={styles.typingDot} />
-            <FadingDot delay={200} dotStyle={styles.typingDot} />
-            <FadingDot delay={400} dotStyle={styles.typingDot} />
-          </View>
-        </View>
-      </View>
-    );
-  };
+  // Up to 3 concurrent typers with their avatars (each cleared independently by
+  // ChatContext's per-user staleness logic). Memoised so the bubble only
+  // re-renders when the set of typers actually changes.
+  const typingTypers = useMemo(() => {
+    return typingUsers.slice(0, 3).map((tu) => {
+      let avatar: string | null = null;
+      if ((tu.user as any)?.profile_picture) {
+        avatar = (tu.user as any).profile_picture;
+      } else if (currentGroup?.members) {
+        const member = currentGroup.members.find((m) => m.user_id === tu.user_id);
+        avatar = member?.user?.profile_picture || null;
+      }
+      return { id: tu.user_id, avatar };
+    });
+  }, [typingUsers, currentGroup]);
 
   if (!groupId) return null;
 
-  if (!currentGroup) {
+  if (!shellGroup) {
     return (
       <ChatScreenShell>
         <View style={{ flex: 1, paddingHorizontal: 12, paddingTop: 16 }}>
@@ -1470,8 +1971,13 @@ export default function ChatGroupScreen() {
       ]}
       onLayout={onComposerLayout}
     >
-      {typingUsers.length > 0 && renderTypingIndicator()}
-      {isAnnouncementGroup && !currentGroup?.is_admin ? (
+      <TypingIndicatorBubble
+        visible={typingUsers.length > 0}
+        typers={typingTypers}
+        styles={styles}
+        iconColor={DesignTokens.colors.text.secondary}
+      />
+      {isAnnouncementGroup && !canSendInAnnouncements ? (
         <View style={styles.announcementOnlyView}>
           <Ionicons name="megaphone-outline" size={18} color={DesignTokens.colors.text.tertiary} />
           <Text style={styles.announcementOnlyText}>
@@ -1497,26 +2003,22 @@ export default function ChatGroupScreen() {
         {renderHeader()}
       </View>
 
-      {(realtimeConnectionState === 'reconnecting' || realtimeConnectionState === 'offline') && (
-        <View style={styles.connectionBanner}>
-          {realtimeConnectionState === 'reconnecting' ? (
-            <ActivityIndicator size="small" color="#fff" style={{ marginRight: 6 }} />
-          ) : null}
-          <Text style={styles.connectionBannerText}>
-            {realtimeConnectionState === 'reconnecting'
-              ? 'מתחבר מחדש לצ׳אט...'
-              : 'אין חיבור בזמן אמת. הודעות חדשות יופיעו כשיחזור החיבור.'}
-          </Text>
-        </View>
-      )}
+      {/* Offline banner hidden globally per product decision */}
 
       <View style={styles.messagesSection}>
         <View style={styles.messagesAreaFlex}>
           <RNAnimated.View style={[styles.flatListTransparent, { opacity: listOpacity }]}>
-          <Reanimated.View style={[styles.flatListTransparent, listFollowStyle]}>
+          <ChatKeyboardFollow bottomInset={composerPaddingBottom} style={styles.flatListTransparent}>
+          <Reanimated.View
+            style={[
+              styles.flatListTransparent,
+              CHAT_KEYBOARD_LTR_STYLE,
+              Platform.OS === 'android' ? listFollowStyle : null,
+            ]}
+          >
           <FlatList
             ref={listRef}
-            data={messagesListReady ? displayMessages : []}
+            data={messagesListReady || hasLocalMessagesForGroup ? displayMessages : []}
           inverted
           // NativeWind 4.1.x שבר scrollTo* ב-RN 0.81; cssInterop=false = FlatList מקורי
           {...({ cssInterop: false } as object)}
@@ -1528,10 +2030,11 @@ export default function ChatGroupScreen() {
             bounces
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
-          initialNumToRender={10}
-            maxToRenderPerBatch={8}
-          windowSize={21}
-          updateCellsBatchingPeriod={50}
+          initialNumToRender={initialListRender}
+            maxToRenderPerBatch={listMaxBatch}
+          windowSize={listWindowSize}
+          updateCellsBatchingPeriod={Platform.OS === 'android' ? 50 : 30}
+            // inverted + clipping עלול לחתוך תאים; iOS נהנה מ-false יציב יותר עם window קטן
             removeClippedSubviews={false}
             onEndReached={() => {
               if (canLoadOlderMessages()) {
@@ -1624,6 +2127,7 @@ export default function ChatGroupScreen() {
             onScrollToIndexFailed={handleScrollToIndexFailedWithPin}
           />
           </Reanimated.View>
+          </ChatKeyboardFollow>
           </RNAnimated.View>
           {showMessagesPlaceholder && (
             <View style={styles.messagesPlaceholderOverlay} pointerEvents="none">
@@ -1637,29 +2141,31 @@ export default function ChatGroupScreen() {
         {chatComposer}
       </ChatComposerDock>
 
-      {/* FAB מעל הקומפוזר — cssInterop=false כדי שלא ייעטף ב-NativeWind */}
+      {/* FAB מעל הקומפוזר — אותו UICard glass/light כמו ChatInput + clip עיגול */}
       {showScrollToBottomButton && !keyboardShown && (
-        <TouchableOpacity
-          {...({ cssInterop: false } as object)}
-          activeOpacity={0.75}
-          onPress={() => {
-            void HapticFeedback.impactLight();
-            scrollToBottom(true);
-          }}
-          hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-          accessibilityRole="button"
-          accessibilityLabel="גלול להודעות האחרונות"
+        <View
+          pointerEvents="box-none"
           style={[
             styles.scrollFabAbsolute,
             { bottom: Math.max(composerHeight + 8, 80) },
           ]}
         >
-          <View style={styles.scrollFabCircle}>
-            <Ionicons
-              name="chevron-down"
-              size={20}
-              color={DesignTokens.colors.text.primary}
-            />
+          <View style={styles.scrollFabClip}>
+            <UICard
+              variant="glass"
+              glassIntensity="light"
+              padding="none"
+              onPress={() => scrollToBottom(true)}
+              accessibilityLabel="גלול להודעות האחרונות"
+              style={styles.scrollFabCircle}
+              contentContainerStyle={styles.scrollFabInner}
+            >
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                color={DesignTokens.colors.text.primary}
+              />
+            </UICard>
           </View>
           {(initialUnreadInfo?.count ?? 0) > 0 && (
             <View style={styles.scrollBadge} pointerEvents="none">
@@ -1668,7 +2174,7 @@ export default function ChatGroupScreen() {
               </Text>
             </View>
           )}
-        </TouchableOpacity>
+        </View>
       )}
 
     </View>
@@ -1865,6 +2371,101 @@ const FadingDot = React.memo(({ delay, dotStyle }: { delay: number; dotStyle: Vi
 });
 
 // ============================================
+// Typing Indicator Bubble — smooth enter/exit (fade + slight scale/slide).
+// Stays mounted through the exit animation, then unmounts. The bouncing dots
+// (FadingDot) are intentionally left untouched.
+// ============================================
+
+const TypingIndicatorBubble = React.memo(({
+  visible,
+  typers,
+  styles,
+  iconColor,
+}: {
+  visible: boolean;
+  typers: { id: string; avatar: string | null }[];
+  styles: any;
+  iconColor: string;
+}) => {
+  const anim = useRef(new RNAnimated.Value(0)).current;
+  const [mounted, setMounted] = useState(visible);
+  // Freeze the last known typers so avatars don't disappear/flip mid-exit.
+  const lastTypersRef = useRef(typers);
+  if (visible && typers.length > 0) lastTypersRef.current = typers;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      RNAnimated.timing(anim, {
+        toValue: 1,
+        duration: 360,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      RNAnimated.timing(anim, {
+        toValue: 0,
+        duration: 240,
+        easing: Easing.in(Easing.cubic),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setMounted(false);
+      });
+    }
+  }, [visible, anim]);
+
+  if (!mounted) return null;
+
+  const shownTypers = lastTypersRef.current;
+  const multiple = shownTypers.length > 1;
+
+  return (
+    <RNAnimated.View
+      style={[
+        styles.typingIndicatorContainer,
+        {
+          opacity: anim,
+          transform: [
+            { translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) },
+          ],
+        },
+      ]}
+    >
+      <View style={styles.typingAvatarStack}>
+        {shownTypers.map((t, idx) => {
+          const ring = multiple ? styles.typingAvatarRing : null;
+          const overlap = idx > 0 ? styles.typingAvatarStacked : null;
+          return t.avatar ? (
+            <Image
+              key={t.id}
+              source={{ uri: t.avatar }}
+              style={[styles.typingAvatar, ring, overlap]}
+              resizeMode="cover"
+            />
+          ) : (
+            <View key={t.id} style={[styles.typingAvatarPlaceholder, ring, overlap]}>
+              <Ionicons name="person" size={13} color={iconColor} />
+            </View>
+          );
+        })}
+      </View>
+      <BlurView
+        intensity={Platform.OS === 'ios' ? 50 : 25}
+        tint="dark"
+        style={styles.typingBubble}
+      >
+        <View style={[StyleSheet.absoluteFill, styles.typingBubbleOverlay]} />
+        <View style={styles.typingDots}>
+          <FadingDot delay={0} dotStyle={styles.typingDot} />
+          <FadingDot delay={200} dotStyle={styles.typingDot} />
+          <FadingDot delay={400} dotStyle={styles.typingDot} />
+        </View>
+      </BlurView>
+    </RNAnimated.View>
+  );
+});
+
+// ============================================
 // Styles - Exact Design from Reference
 // ============================================
 
@@ -2054,41 +2655,73 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     color: tokens.colors.text.secondary,
   },
 
-  /* ── Typing indicator ── */
+  /* ── Typing indicator (mid size between original and shrunk) ── */
   typingIndicatorContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingVertical: 6,
-    gap: 8,
+    paddingTop: 5,
+    // Lift the bubble clearly higher, away from the composer.
+    marginBottom: 17,
+    gap: 7,
+  },
+  typingAvatarStack: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
   },
   typingAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   typingAvatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: tokens.colors.background.tertiary,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  // Overlap subsequent avatars when several people type at once.
+  typingAvatarStacked: {
+    marginStart: -12,
+  },
+  // Ring around stacked avatars so overlapping ones stay visually separated.
+  typingAvatarRing: {
+    borderWidth: 1.75,
+    borderColor: tokens.colors.background.primary,
+  },
+  // Glass bubble (same recipe as ReactionBar / chat glass cards): BlurView +
+  // translucent overlay + hairline border. Shape matches an incoming
+  // ("theirBubble") bubble: notch at the bottom-leading corner.
   typingBubble: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 18,
-    borderBottomRightRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    minHeight: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    borderBottomLeftRadius: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: chatPalette.glassBorderStrong,
+    overflow: 'hidden',
+  },
+  typingBubbleOverlay: {
+    backgroundColor: chatPalette.glass,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+    borderBottomLeftRadius: 2,
   },
   typingDots: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 3.5,
   },
   typingDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: tokens.colors.text.tertiary,
   },
 
@@ -2111,40 +2744,60 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 12,
   },
+  messagesSkeleton: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    justifyContent: 'flex-end',
+  },
   scrollFabAbsolute: {
     position: 'absolute',
-    left: 14,
+    right: 12,
     zIndex: 9999,
     elevation: 30,
+    width: 32,
+    height: 32,
   },
+  // Clip קשיח כמו DayNavBlurButton — BlurView נשאר עיגול מלא.
+  scrollFabClip: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  // UICard glass/light — אותו מתכון כמו ChatInput / כפתורי הכותרת.
   scrollFabCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(28, 32, 28, 0.92)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.14)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  scrollFabInner: {
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scrollBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    top: -5,
+    right: -5,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 8.5,
     backgroundColor: tokens.colors.primary.main,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: tokens.colors.background.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
-    zIndex: 1,
+    paddingHorizontal: 3,
+    zIndex: 2,
+    elevation: 4,
   },
   scrollBadgeText: {
     color: tokens.colors.text.inverse,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     textAlign: 'center',
   },

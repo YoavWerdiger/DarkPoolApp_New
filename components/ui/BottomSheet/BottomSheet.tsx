@@ -1,44 +1,55 @@
-import React, { useEffect, useCallback, useMemo, useRef, Fragment, createContext, useContext } from 'react';
-import { View, Pressable, Dimensions, Modal, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useCallback, useMemo, useRef, useState, Fragment, createContext, useContext } from 'react';
+import { View, Pressable, Dimensions, Modal, StyleSheet, Platform, Keyboard } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
   withSpring,
   interpolate,
-  Extrapolate,
+  Extrapolation,
   runOnJS,
   runOnUI,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
+import {
+  AndroidSoftInputModes,
+  KeyboardController,
+} from 'react-native-keyboard-controller';
 import { useDesignTokens } from '../DesignTokens';
 import { BrandTransbackWatermark } from '../BrandTransbackWatermark';
 import { ScreenGradientBackground } from '../../VideoBackground';
 import { BottomSheetProps } from './BottomSheet.types';
 import { createStyles } from './BottomSheet.styles';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
-import * as NavigationBar from 'expo-navigation-bar';
+import { applyAppSystemUI } from '../../../lib/androidSystemUI';
 import {
   SHEET_OPEN_TIMING,
   SHEET_CLOSE_TIMING,
   FIT_CONTENT_OPEN_TIMING,
   FIT_CONTENT_HEIGHT_TIMING,
   SHEET_SNAP_SPRING,
+  SHEET_CLOSE_MS,
 } from './sheetMotion';
+import {
+  SHEET_BACKDROP_OPACITY,
+  SHEET_GLASS_FLOOR,
+  SHEET_GLASS_INTENSITY,
+  SHEET_GLASS_OVERLAY,
+  sheetContentBottomPadding,
+  sheetSystemBarFillHeight,
+} from './sheetGlass';
+import { SheetGlassBackground } from './SheetGlassBackground';
 
-const SHEET_SURFACE_COLOR = '#0A0E0A';
-const NAV_BAR_TRANSPARENT = '#00000000';
-
+const SHEET_SURFACE_COLOR = SHEET_GLASS_FLOOR;
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DEFAULT_SNAP_POINTS = [0.5];
 const CLOSE_THRESHOLD = 88;
 const VELOCITY_THRESHOLD = 650;
 /** התעלמות משינויי גובה זעירים אחרי מדידה (מונע "קפיצה" בסוף פתיחה) */
 const FIT_CONTENT_HEIGHT_EPS = 2;
-/** handle + padding ב-edgeToEdge (paddingTop 14 + margins + handle 4 + paddingBottom 4) */
-export const BOTTOM_SHEET_EDGE_HANDLE_HEIGHT = 42;
+/** handle + padding ב-edgeToEdge (paddingTop 10 + handle margins + handle 4 + paddingBottom 4) + buffer */
+export const BOTTOM_SHEET_EDGE_HANDLE_HEIGHT = 36;
 
 const BottomSheetCloseContext = createContext<(() => void) | null>(null);
 
@@ -46,48 +57,49 @@ export function useBottomSheetClose() {
   return useContext(BottomSheetCloseContext);
 }
 
-const BottomSheet: React.FC<BottomSheetProps> = ({
+const BottomSheetImpl: React.FC<BottomSheetProps> = ({
   isOpen,
   onClose,
   snapPoints = DEFAULT_SNAP_POINTS,
   children,
   showHandle = true,
+  handleColor,
   enablePanDownToClose = true,
-  backdropOpacity = 0.4,
+  backdropOpacity = SHEET_BACKDROP_OPACITY,
   onSnapPointChange,
   useModal = true,
   edgeToEdge = false,
   dragAreaHeight,
-  showBrandBackground = true,
+  showBrandBackground = false,
   showBrandWatermark,
   brandWatermarkScale = 1,
   topCornerRadius,
   fitContent = false,
   contentPaddingBottom: contentPaddingBottomOverride,
-  useGlassBackground = false,
-  glassIntensity = 95,
-  glassOverlayColor = 'rgba(10,14,10,0.82)',
+  useGlassBackground = true,
+  glassIntensity = SHEET_GLASS_INTENSITY,
+  glassOverlayColor = SHEET_GLASS_OVERLAY,
+  avoidKeyboard = false,
 }) => {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const showWatermark = showBrandWatermark ?? showBrandBackground;
-  const dragStripPaddingV = showHandle ? 22 : 8;
-  const dragStripMinHeight = showHandle ? 88 : 36;
+  const dragStripPaddingV = showHandle ? 12 : 8;
+  const dragStripMinHeight = showHandle ? 44 : 28;
   /** באנדרואיד לפעמים insets.bottom=0 למרות סרגל ניווט/מחוות — מגנים על ריפוד תחתון */
   const contentPaddingBottom = useMemo(() => {
     if (contentPaddingBottomOverride != null) {
       return contentPaddingBottomOverride;
     }
-    const minBottom = Platform.OS === 'android' ? 24 : 20;
-    const safeBottom = Math.max(insets.bottom, minBottom);
-    const extra = Platform.OS === 'android' ? 12 : 20;
-    return safeBottom + extra;
+    return sheetContentBottomPadding(insets.bottom);
   }, [insets.bottom, contentPaddingBottomOverride]);
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const fitContentHeight = useSharedValue(0);
   const startY = useSharedValue(0);
   const currentSnapIndex = useSharedValue(0);
   const isClosing = useSharedValue(0);
+  /** הזזת השיט מעלה כשהמקלדת עולה (בפיקסלים). 0 כברירת מחדל. */
+  const keyboardShift = useSharedValue(0);
   
   const insetsRef = useRef(insets);
   useEffect(() => {
@@ -107,6 +119,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   const isClosingRef = useRef(false);
   const fitContentOpenDoneRef = useRef(true);
   const closedTranslateYRef = useRef(SCREEN_HEIGHT);
+  /** BlurView רק אחרי Modal.onShow / frame — אחרת פתיחה ראשונה שקופה */
+  const [glassSurfaceActive, setGlassSurfaceActive] = useState(false);
 
   const resetClosingState = useCallback(() => {
     isClosingRef.current = false;
@@ -124,7 +138,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
   const visibleHeightPx = useMemo(() => {
     if (!snapPoints?.length) return Math.round(SCREEN_HEIGHT * 0.5);
-    const clamped = Math.max(0.1, Math.min(0.9, snapPoints[0]));
+    const clamped = Math.max(0.1, Math.min(0.94, snapPoints[0]));
     return Math.ceil(SCREEN_HEIGHT * clamped);
   }, [snapPoints]);
 
@@ -189,7 +203,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       return [SCREEN_HEIGHT * 0.5];
     }
     return snapPoints.map(point => {
-      const clampedPoint = Math.max(0.1, Math.min(0.9, point));
+      const clampedPoint = Math.max(0.1, Math.min(0.94, point));
       const calculatedY = SCREEN_HEIGHT * (1 - clampedPoint);
       return Math.max(minAllowedY, Math.min(SCREEN_HEIGHT, calculatedY));
     }).sort((a, b) => a - b);
@@ -230,12 +244,55 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       isClosing.value = 0;
       fitContentOpenDoneRef.current = true;
       translateY.value = closedTranslateY;
+      keyboardShift.value = 0;
       if (fitContent) {
         fitContentHeight.value = visibleHeightPx;
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, snapValues, closedTranslateY, fitContent, visibleHeightPx, onFitContentOpenComplete]);
+
+  // כשהמקלדת עולה/יורדת — מזזים את השיט מעלה/מטה בהתאם.
+  // באנדרואיד: ADJUST_NOTHING בזמן שהשיט פתוח — אחרת adjustResize מה-Manifest
+  // נלחם בהזזה הידנית (שדה נעלם / קופץ כפול). כמו ChatComposerDock.
+  useEffect(() => {
+    if (!avoidKeyboard || !isOpen) return;
+
+    if (Platform.OS === 'android') {
+      try {
+        KeyboardController.setInputMode(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
+      } catch {
+        // non-critical — fallback to listeners only
+      }
+    }
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const show = Keyboard.addListener(showEvent, (e) => {
+      const kh = e.endCoordinates.height;
+      const dur = e.duration > 0 ? e.duration : 260;
+      keyboardShift.value = withTiming(kh, { duration: dur });
+    });
+    const hide = Keyboard.addListener(hideEvent, (e) => {
+      const dur = e.duration > 0 ? e.duration : 260;
+      keyboardShift.value = withTiming(0, { duration: dur });
+    });
+
+    return () => {
+      show.remove();
+      hide.remove();
+      keyboardShift.value = 0;
+      if (Platform.OS === 'android') {
+        try {
+          KeyboardController.setDefaultMode();
+        } catch {
+          // non-critical
+        }
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avoidKeyboard, isOpen]);
 
   // fitContent: בזמן פתיחה מעדכנים גובה מיד (בלי אנימציה כפולה);
   // אחרי פתיחה — התאמה קצרה ושקטה רק אם המדידה השתנתה משמעותית
@@ -356,9 +413,15 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       });
   }, [snapValues, minAllowedY, enablePanDownToClose, onSnapPointChange, finishClose, resetClosingState, markClosing, findNearestSnapPoint, translateY, startY, currentSnapIndex, isClosing, fitContent, visibleHeightPx]);
 
+  /** חייב להתאים ל-sheetSafeBottomInset — אחרת מאחורי כפתורי Galaxy נשאר פס Modal לבן */
+  const systemBarFillHeight = useMemo(
+    () => sheetSystemBarFillHeight(insets.bottom),
+    [insets.bottom],
+  );
+
   const fitContentSizeStyle = useAnimatedStyle(() => {
     if (!fitContent) return {};
-    return { height: fitContentHeight.value };
+    return { height: fitContentHeight.value + keyboardShift.value };
   }, [fitContent]);
 
   const backdropStyle = useAnimatedStyle(() => {
@@ -373,7 +436,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       translateY.value,
       [closedY, openY],
       [0, backdropOpacity],
-      Extrapolate.CLAMP
+      Extrapolation.CLAMP
     );
     return { opacity };
   }, [snapValues, backdropOpacity, fitContent, visibleHeightPx]);
@@ -392,41 +455,68 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     };
   }, [snapValues, minAllowedY, fitContent, visibleHeightPx]);
 
-  const systemBarFillHeight = useMemo(() => {
-    const minBottom = Platform.OS === 'android' ? 28 : 12;
-    return Math.max(insets.bottom, minBottom);
-  }, [insets.bottom]);
+  const contentPaddingBottomSV = useSharedValue(contentPaddingBottom);
+  useEffect(() => {
+    contentPaddingBottomSV.value = contentPaddingBottom;
+  }, [contentPaddingBottom, contentPaddingBottomSV]);
+
+  const contentAnimatedStyle = useAnimatedStyle(() => {
+    // כשהמקלדת עולה, מחליפים את ה-safe-area padding ב-4px בלבד
+    // (המקלדת עצמה מחליפה את safe area — אין צורך בריפוד כפול)
+    const base = interpolate(
+      keyboardShift.value,
+      [0, 50],
+      [contentPaddingBottomSV.value, 4],
+      Extrapolation.CLAMP,
+    );
+    return { paddingBottom: base + keyboardShift.value };
+  });
 
   // Solid black — opacity alone is controlled by `backdropOpacity`
-  // (ChatBottomSheet uses CHAT_SHEET_BACKDROP_OPACITY = 0.4 ≡ DesignTokens.colors.backdrop).
+  // (`SHEET_BACKDROP_OPACITY` ≡ DesignTokens.colors.backdrop).
   // Do not use colors.overlay (already rgba alpha) or the values compound.
   const styles = createStyles('#000');
 
-  // Modal שקוף + nav bar שקוף ב-Android → רקע חלון Modal לבן מתחת לכפתורי המערכת
+  // Modal שקוף באנדרואיד — ב־edge-to-edge צבעי NavigationBar נדחים; משחזרים theme אחיד בסגירה
   useEffect(() => {
     if (!useModal || Platform.OS !== 'android') return;
-
-    const syncNavigationBar = async () => {
-      try {
-        if (isOpen) {
-          await NavigationBar.setBackgroundColorAsync(SHEET_SURFACE_COLOR);
-          await NavigationBar.setButtonStyleAsync('light');
-        } else {
-          await NavigationBar.setBackgroundColorAsync(NAV_BAR_TRANSPARENT);
-          await NavigationBar.setButtonStyleAsync('light');
-        }
-      } catch {
-        // non-critical
-      }
-    };
-
-    void syncNavigationBar();
+    if (!isOpen) {
+      void applyAppSystemUI();
+    }
   }, [isOpen, useModal]);
 
+  // הפעלת שכבת הזכוכית רק כשהמשטח באמת גלוי (מונע BlurView שקוף בפתיחה ראשונה)
+  useEffect(() => {
+    if (!isOpen) {
+      setGlassSurfaceActive(false);
+      return;
+    }
+    if (useModal) {
+      // Modal: onShow יפעיל; fallback אם onShow לא נורה (פלטפורמות מסוימות)
+      const t = setTimeout(() => setGlassSurfaceActive(true), 64);
+      return () => clearTimeout(t);
+    }
+    let cancelled = false;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (!cancelled) setGlassSurfaceActive(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [isOpen, useModal]);
+
+  const activateGlassSurface = useCallback(() => {
+    setGlassSurfaceActive(true);
+  }, []);
+
   /**
-   * רקע השיט כמו מסכי האפליקציה (TradingScreen וכו'):
-   * #0A0E0A → ScreenGradientBackground → BrandTransbackWatermark — בלי שכבה כהה
-   * שמכסה את הגרדיאנט והשור־דוב.
+   * רקע השיט: זכוכית כמו UICard (SHEET_GLASS_*) → ScreenGradientBackground /
+   * BrandTransbackWatermark כשמותג פעיל — בלי מילוי בועת other כהה.
    */
   const content = (
     <BottomSheetCloseContext.Provider value={handleCloseWithAnimation}>
@@ -451,6 +541,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           fitContent ? styles.fitContentContainer : styles.container,
           fitContent ? fitContentSizeStyle : null,
           sheetStyle,
+          // שקוף כשיש זכוכית — הרצפה/Blur ב-SheetGlassBackground; צבע אטום על ה-container הורג frosted
+          useGlassBackground ? { backgroundColor: 'transparent' } : null,
           topCornerRadius != null && topCornerRadius > 0
             ? {
                 borderTopLeftRadius: topCornerRadius,
@@ -461,16 +553,11 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
         collapsable={false}
       >
         {useGlassBackground ? (
-          /* Frosted-glass: BlurView + opaque-enough dark tint (chat should not bleed through). */
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 0 }]}>
-            <BlurView intensity={glassIntensity} tint="dark" style={StyleSheet.absoluteFill} />
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: glassOverlayColor },
-              ]}
-            />
-          </View>
+          <SheetGlassBackground
+            active={glassSurfaceActive}
+            intensity={glassIntensity}
+            overlayColor={glassOverlayColor}
+          />
         ) : showBrandBackground ? (
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { zIndex: 0 }]}>
             <View
@@ -503,36 +590,45 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
 
           {/* כל ה-sheet ניתן לגרירה — GestureDetector עוטף את כל התוכן */}
           <GestureDetector gesture={panGesture}>
-            <View 
+            <Animated.View
               style={[
                 fitContent ? styles.contentCompact : styles.content,
-                {
-                  paddingBottom: contentPaddingBottom,
-                  zIndex: 2,
-                },
+                { zIndex: 2 },
+                contentAnimatedStyle,
               ]}
             >
               {edgeToEdge ? (
                 <>
                   {showHandle && (
-                    <View style={{ width: '100%', alignItems: 'center', paddingTop: 14, paddingBottom: 4 }}>
-                      <View style={[styles.handle, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
+                    <View style={{ width: '100%', alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+                      <View
+                        style={[
+                          styles.handle,
+                          handleColor ? { backgroundColor: handleColor } : null,
+                        ]}
+                      />
                     </View>
                   )}
-                  {fitContent ? children : <View style={{ flex: 1 }}>{children}</View>}
+                  {/* flex:1 גם ב-fitContent — אחרת ScrollView/footer בשיט גבוה קורסים לגובה 0 */}
+                  <View style={{ flex: 1, minHeight: 0 }}>{children}</View>
                 </>
               ) : (
                 <>
                   {/* Handle indicator */}
                   <View style={{ width: '100%', alignItems: 'center', paddingVertical: dragStripPaddingV, minHeight: dragStripMinHeight }}>
                     {showHandle && (
-                      <View style={[styles.handle, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
+                      <View
+                        style={[
+                          styles.handle,
+                          handleColor ? { backgroundColor: handleColor } : null,
+                        ]}
+                      />
                     )}
                   </View>
                   {children}
                 </>
               )}
-            </View>
+            </Animated.View>
           </GestureDetector>
         </Animated.View>
       </Fragment>
@@ -565,6 +661,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
       statusBarTranslucent
       navigationBarTranslucent={Platform.OS === 'android'}
       presentationStyle="overFullScreen"
+      onShow={activateGlassSurface}
       onRequestClose={handleCloseWithAnimation}
     >
       <GestureHandlerRootView style={styles.modalRoot}>
@@ -574,7 +671,53 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   );
 };
 
+/**
+ * לא מרנדרים worklets כשהשיט סגור — mount רק בזמן פתיחה.
+ * מונע SIGABRT ב-Expo Go מ-SerializableWorklet בהפעלת מסכי צ'אט.
+ */
+const BottomSheet: React.FC<BottomSheetProps> = (props) => {
+  const [mounted, setMounted] = React.useState(props.isOpen);
+
+  React.useEffect(() => {
+    if (props.isOpen) {
+      setMounted(true);
+      return;
+    }
+    if (!mounted) return;
+    const t = setTimeout(() => setMounted(false), SHEET_CLOSE_MS + 40);
+    return () => clearTimeout(t);
+  }, [props.isOpen, mounted]);
+
+  if (!mounted) return null;
+
+  return (
+    <BottomSheetImpl
+      {...props}
+      onClose={() => {
+        setMounted(false);
+        props.onClose?.();
+      }}
+    />
+  );
+};
+
 export default BottomSheet;
+export {
+  SHEET_BACKDROP_OPACITY,
+  SHEET_GLASS_FLOOR,
+  SHEET_GLASS_INTENSITY,
+  SHEET_GLASS_OVERLAY,
+  SHEET_ANDROID_MIN_BOTTOM_INSET,
+  SHEET_ANDROID_BOTTOM_EXTRA,
+  SHEET_IOS_BOTTOM_EXTRA,
+  sheetSafeBottomInset,
+  sheetContentBottomPadding,
+  sheetSystemBarFillHeight,
+  sheetActionColors,
+} from './sheetGlass';
+export type { SheetActionVariant } from './sheetGlass';
+export { SheetActionButton } from './SheetActionButton';
+export type { SheetActionButtonProps } from './SheetActionButton';
 export {
   FIT_CONTENT_CLOSE_TIMING,
   FIT_CONTENT_OPEN_TIMING,

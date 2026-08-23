@@ -19,6 +19,8 @@ const MAX_ENTRY_BYTES = 512 * 1024;
 const PERSIST_PREFIXES: readonly (readonly unknown[])[] = [
   ['market', 'fearGreed'],
   ['learning', 'courses'],
+  ['learning', 'course'],
+  ['learning', 'enrollments'],
   ['chat', 'groups'],
   ['uw', 'explore'],
   ['uw', 'signals'],
@@ -33,6 +35,10 @@ const PERSIST_PREFIXES: readonly (readonly unknown[])[] = [
   ['portfolios', 'list'],
   ['economic', 'events'],
   ['trades', 'list'],
+  // מבנה watchlist בלבד — לא quotes/range (polling חי)
+  ['watchlist', 'lists'],
+  ['watchlist', 'items'],
+  ['watchlist', 'insights'],
 ];
 
 type PersistedEntry = {
@@ -72,6 +78,17 @@ export async function hydrateQueryCache(): Promise<void> {
           continue;
         }
         const queryKey = JSON.parse(storageKey.slice(KEY_PREFIX.length)) as readonly unknown[];
+        // לא לדרוס נתון רשת טרי יותר שכבר הגיע בזמן ה-hydrate
+        const existing = queryClient.getQueryState(queryKey);
+        if (
+          existing?.data != null &&
+          (existing.dataUpdatedAt ?? 0) >= entry.updatedAt
+        ) {
+          continue;
+        }
+        // בלי updatedAt ישן — הנתונים נחשבים "טריים עכשיו" ל-staleTime, כך שמסכים
+        // עולים מיד מה-cache בלי סערת refetch ב-cold start. Fear & Greed מרענן
+        // בנפרד עם refetchOnMount: 'always' ב-useFearAndGreed.
         queryClient.setQueryData(queryKey, entry.data);
       } catch {
         expired.push(storageKey);
@@ -98,6 +115,8 @@ export async function persistQueryCache(_userId?: string): Promise<void> {
       const data = query.state.data;
       if (data == null) continue;
 
+      // חותמת "עכשיו" ל-MAX_AGE בלבד — ב-hydrate הנתונים מסומנים כטריים
+      // כדי ש-warm-start לא יגרור refetch לכל המסכים.
       const serialized = JSON.stringify({ data, updatedAt: now } satisfies PersistedEntry);
       if (serialized.length > MAX_ENTRY_BYTES) continue;
       toSet.push([storageKeyFor(queryKey), serialized]);

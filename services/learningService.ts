@@ -85,47 +85,80 @@ export class LearningService {
 
     if (user) {
       const courseIds = data?.map(c => c.id) || [];
-      
-      // Get enrollments (using user_course_progress as enrollment indicator)
-      const { data: enrollmentRows } = await supabase
-        .from('user_course_progress')
-        .select('course_id')
-        .eq('user_id', user.id)
-        .in('course_id', courseIds);
-      const enrolledCourseIds = new Set((enrollmentRows ?? []).map((r) => r.course_id));
 
-      // Get lessons for each course
-      const lessonsPromises = courseIds.map(async (courseId) => {
-        const { data: lessons } = await supabase
-          .from('lessons')
-          .select('id, title, duration_minutes, order_index')
-          .eq('course_id', courseId)
-          .eq('is_active', true)
-          .order('order_index');
+      // Batch: enrollments + all lessons + all progress — במקום N+1 לכל קורס
+      const [enrollmentResult, lessonsResult, progressResult] = await Promise.all([
+        courseIds.length === 0
+          ? Promise.resolve({ data: [] as { course_id: string }[] })
+          : supabase
+              .from('user_course_progress')
+              .select('course_id')
+              .eq('user_id', user.id)
+              .in('course_id', courseIds),
+        courseIds.length === 0
+          ? Promise.resolve({
+              data: [] as {
+                id: string;
+                course_id: string;
+                title: string;
+                duration_minutes: number | null;
+                order_index: number;
+              }[],
+            })
+          : supabase
+              .from('lessons')
+              .select('id, course_id, title, duration_minutes, order_index')
+              .in('course_id', courseIds)
+              .eq('is_active', true)
+              .order('order_index'),
+        courseIds.length === 0
+          ? Promise.resolve({
+              data: [] as {
+                course_id: string;
+                lesson_id: string;
+                is_completed?: boolean;
+                current_time_seconds?: number;
+              }[],
+            })
+          : supabase
+              .from('user_course_progress')
+              .select('course_id, lesson_id, is_completed, current_time_seconds')
+              .eq('user_id', user.id)
+              .in('course_id', courseIds),
+      ]);
 
-        return { courseId, lessons: lessons || [] };
-      });
+      const enrolledCourseIds = new Set(
+        (enrollmentResult.data ?? []).map((r) => r.course_id)
+      );
 
-      const lessonsResults = await Promise.all(lessonsPromises);
-      const lessonsMap = new Map(lessonsResults.map(r => [r.courseId, r.lessons]));
+      const lessonsMap = new Map<
+        string,
+        { id: string; title: string; duration_minutes: number | null; order_index: number }[]
+      >();
+      for (const lesson of lessonsResult.data ?? []) {
+        const list = lessonsMap.get(lesson.course_id) ?? [];
+        list.push({
+          id: lesson.id,
+          title: lesson.title,
+          duration_minutes: lesson.duration_minutes,
+          order_index: lesson.order_index,
+        });
+        lessonsMap.set(lesson.course_id, list);
+      }
 
-      // Get progress for each course
-      const progressPromises = courseIds.map(async (courseId) => {
-        const lessonIds = lessonsMap.get(courseId)?.map(l => l.id) || [];
-        if (lessonIds.length === 0) return { courseId, progress: [] };
-        
-        const { data: progress } = await supabase
-          .from('user_course_progress')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('course_id', courseId)
-          .in('lesson_id', lessonIds);
-
-        return { courseId, progress: progress || [] };
-      });
-
-      const progressResults = await Promise.all(progressPromises);
-      const progressMap = new Map(progressResults.map(r => [r.courseId, r.progress]));
+      const progressMap = new Map<
+        string,
+        { lesson_id: string; is_completed?: boolean; current_time_seconds?: number }[]
+      >();
+      for (const row of progressResult.data ?? []) {
+        const list = progressMap.get(row.course_id) ?? [];
+        list.push({
+          lesson_id: row.lesson_id,
+          is_completed: row.is_completed,
+          current_time_seconds: row.current_time_seconds,
+        });
+        progressMap.set(row.course_id, list);
+      }
 
       coursesWithProgress = (data || []).map(course => {
         const enrollment = enrolledCourseIds.has(course.id)

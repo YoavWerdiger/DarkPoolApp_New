@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -24,13 +24,13 @@ import PortfolioActionsBottomSheet from './components/PortfolioActionsBottomShee
 import { PortfolioSummaryHeader } from './components/PortfolioSummaryHeader';
 import {
   PORTFOLIO_DETAIL_TABS,
-  PORTFOLIO_BROKER_TAB,
+  portfolioDetailTabLabelStyle,
   type PortfolioDetailTab,
 } from './portfolioConstants';
 import {
   getPortfolio,
   loadPortfolioHoldings,
-  loadPortfolioSummary,
+  loadPortfolioDisplaySummary,
   updatePortfolio,
 } from '../../services/portfolios';
 import type {
@@ -40,13 +40,14 @@ import type {
 } from './portfolioTypes';
 import OverviewTab from './tabs/OverviewTab';
 import TransactionsTab from './tabs/TransactionsTab';
-import BrokerOrdersTab from './tabs/BrokerOrdersTab';
 import OpenTradesTab from './tabs/OpenTradesTab';
 import HistoryTab from './tabs/HistoryTab';
 import CalendarTab from './tabs/CalendarTab';
 import { useRealtimeHoldings } from './hooks/useRealtimeHoldings';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
+import { useAuth } from '../../context/AuthContext';
+import { useColmexSync } from '../../hooks/useColmexSync';
 import { DayNavBlurButton, HEADER_BACK_BTN_SIZE } from '../../components/ui/DayNavBlurButton';
 import UICard from '../../components/ui/UICard';
 
@@ -58,6 +59,7 @@ export default function PortfolioDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { portfolioId } = route.params;
+  const { user: authUser } = useAuth();
 
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
@@ -67,7 +69,14 @@ export default function PortfolioDetailScreen() {
   const [activeTab, setActiveTab] = useState<PortfolioDetailTab>('overview');
   const [portfolioActionsOpen, setPortfolioActionsOpen] = useState(false);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
+  /** מפתח שמשתנה בכל פעם שנסגרת פוזיציה — מאלץ את OverviewTab לרענן את הגרף */
+  const [chartRefreshKey, setChartRefreshKey] = useState(0);
+  /** מפתח שמשתנה בכל טעינה של נתוני התיק — מאלץ טאבים לרענן את הנתונים שלהם */
+  const [dataVersion, setDataVersion] = useState(0);
   const tabsScrollRef = useRef<ScrollView | null>(null);
+
+  const viewerAvatarUrl = authUser?.profile_picture ?? null;
+  const viewerInitial = (authUser?.display_name ?? authUser?.full_name ?? authUser?.email ?? '').charAt(0).toUpperCase();
 
   const mainTabsHeight = useMainTabsHeight();
 
@@ -79,11 +88,29 @@ export default function PortfolioDetailScreen() {
   const isBrokerSynced = portfolio?.source === 'colmex_pro';
   const canAddTransaction = isOwner && !isBrokerSynced;
 
+  const { lastSync, syncNow, isSyncing } = useColmexSync(portfolioId, isBrokerSynced);
+
   const { holdings: liveHoldings, summary: liveSummary } = useRealtimeHoldings({
     baseHoldings: holdings,
     baseSummary: summary,
-    enabled: !loading && holdings.length > 0,
+    // תיקי Colmex + מודל trades: אל תדרוס עם מחירים חיים מ-holdings ישנים.
+    enabled:
+      !loading &&
+      !isBrokerSynced &&
+      holdings.length > 0 &&
+      portfolio?.available_cash == null,
   });
+
+  const displaySummary = isBrokerSynced ? summary : (liveSummary ?? summary);
+  const displayHoldings = isBrokerSynced
+    ? []
+    : liveHoldings.length
+      ? liveHoldings
+      : holdings;
+
+  const handleLiveSummaryUpdate = useCallback((patch: Partial<PortfolioSummary>) => {
+    setSummary((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
 
   const load = useCallback(async () => {
     let isMounted = true;
@@ -100,13 +127,19 @@ export default function PortfolioDetailScreen() {
         return;
       }
       setPortfolio(p);
-      const [s, h] = await Promise.all([
-        loadPortfolioSummary(portfolioId, p.currency),
-        loadPortfolioHoldings(portfolioId),
-      ]);
+
+      // Colmex: equity/trades בלבד. ידני: holdings + transactions.
+      const display = await loadPortfolioDisplaySummary(p);
       if (!isMounted) return;
-      setSummary(s);
-      setHoldings(h);
+      setSummary(display);
+      if (p.source === 'colmex_pro') {
+        setHoldings([]);
+      } else {
+        const h = await loadPortfolioHoldings(portfolioId).catch(() => []);
+        if (!isMounted) return;
+        setHoldings(h);
+      }
+      setDataVersion((v) => v + 1);
     } catch (err) {
       console.error('load portfolio error:', err);
     } finally {
@@ -124,10 +157,23 @@ export default function PortfolioDetailScreen() {
     }, [load])
   );
 
+  // אחרי sync מוצלח של Colmex — רענון נתוני התיק + גרף + טאבים
+  useEffect(() => {
+    if (!isBrokerSynced || !lastSync) return;
+    setChartRefreshKey((k) => k + 1);
+    void load();
+  }, [isBrokerSynced, lastSync, load]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    if (isBrokerSynced) {
+      void syncNow().finally(() => {
+        void load();
+      });
+      return;
+    }
     void load();
-  }, [load]);
+  }, [load, isBrokerSynced, syncNow]);
 
   const handleAddTransaction = useCallback(() => {
     navigation.navigate('AddTransaction', { portfolioId, initialMode: 'asset' });
@@ -218,11 +264,7 @@ export default function PortfolioDetailScreen() {
           borderWidth: 1,
           borderColor: `${tokens.colors.primary.main}55`,
         },
-        tabText: {
-          fontSize: 13,
-          fontWeight: '600',
-          color: tokens.colors.text.secondary,
-        },
+        tabText: portfolioDetailTabLabelStyle(tokens.colors.text.secondary),
         tabTextActive: {
           color: tokens.colors.primary.main,
           fontWeight: '700',
@@ -315,7 +357,7 @@ export default function PortfolioDetailScreen() {
           showsVerticalScrollIndicator={false}
         >
           <PortfolioSummaryHeader
-            summary={liveSummary ?? summary}
+            summary={displaySummary}
             portfolio={portfolio}
           />
 
@@ -329,10 +371,7 @@ export default function PortfolioDetailScreen() {
               tabsScrollRef.current?.scrollTo({ x: 0, animated: false })
             }
           >
-            {(portfolio?.source === 'colmex_pro'
-              ? [...PORTFOLIO_DETAIL_TABS, PORTFOLIO_BROKER_TAB]
-              : PORTFOLIO_DETAIL_TABS
-            ).map((tab) => {
+            {PORTFOLIO_DETAIL_TABS.map((tab) => {
               const active = tab.id === activeTab;
               return (
                 <UICard
@@ -366,22 +405,31 @@ export default function PortfolioDetailScreen() {
             {activeTab === 'overview' && portfolio && (
               <OverviewTab
                 portfolio={portfolio}
-                summary={liveSummary ?? summary}
-                holdings={liveHoldings.length ? liveHoldings : holdings}
+                summary={displaySummary}
+                holdings={displayHoldings}
+                avatarUrl={viewerAvatarUrl}
+                userInitial={viewerInitial}
+                chartRefreshKey={chartRefreshKey}
+                onLiveSummaryUpdate={handleLiveSummaryUpdate}
               />
             )}
             {activeTab === 'open_trades' && portfolio && (
               <OpenTradesTab
                 portfolioId={portfolio.id}
-                holdings={liveHoldings.length ? liveHoldings : holdings}
-                onChanged={() => void load()}
+                holdings={displayHoldings}
+                onChanged={() => {
+                  void load();
+                  setChartRefreshKey((k) => k + 1);
+                }}
                 readOnly={!canAddTransaction}
+                refreshKey={dataVersion}
               />
             )}
             {activeTab === 'calendar' && portfolio && (
               <CalendarTab
                 portfolioId={portfolio.id}
                 currency={portfolio.currency}
+                refreshKey={dataVersion}
               />
             )}
             {activeTab === 'transactions' && portfolio && (
@@ -389,7 +437,8 @@ export default function PortfolioDetailScreen() {
                 {/* עסקאות מסחר סגורות — עם רווח/הפסד ממומש */}
                 <HistoryTab
                   portfolioId={portfolio.id}
-                  holdings={liveHoldings.length ? liveHoldings : holdings}
+                  holdings={displayHoldings}
+                  refreshKey={dataVersion}
                 />
                 {/* הפקדות, משיכות, דיבידנדים, עמלות */}
                 <TransactionsTab
@@ -398,11 +447,9 @@ export default function PortfolioDetailScreen() {
                   readOnly={!canAddTransaction}
                   typeFilter={['deposit', 'withdrawal', 'dividend', 'fee']}
                   sectionTitle="הפקדות, דיבידנדים ופעולות"
+                  refreshKey={dataVersion}
                 />
               </View>
-            )}
-            {activeTab === 'broker' && portfolio && portfolio.source === 'colmex_pro' && (
-              <BrokerOrdersTab portfolioId={portfolio.id} currency={portfolio.currency} />
             )}
           </View>
         </ScrollView>
@@ -435,8 +482,20 @@ export default function PortfolioDetailScreen() {
           portfolio={portfolio}
           navigation={navigation}
           onPortfolioUpdated={() => {
+            setChartRefreshKey((k) => k + 1);
             void load();
           }}
+          onSyncBroker={
+            isBrokerSynced
+              ? async () => {
+                  await syncNow({ full: true });
+                  setChartRefreshKey((k) => k + 1);
+                  void load();
+                }
+              : undefined
+          }
+          lastSyncAt={lastSync}
+          isSyncing={isSyncing}
         />
       ) : null}
     </View>

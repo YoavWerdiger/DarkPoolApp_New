@@ -207,8 +207,9 @@ const ShareModal: React.FC<ShareModalProps> = ({ article, onClose, visible }) =>
       onClose={onClose}
       snapPoints={[0.5, 0.9]}
       enablePanDownToClose={true}
-      backdropOpacity={0.5}
-      showHandle={true}
+      showHandle
+      useGlassBackground
+      showBrandBackground={false}
     >
       <View style={{ paddingHorizontal: sheetPad, paddingTop: 8, paddingBottom: 40 }}>
           <ScrollView contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
@@ -833,9 +834,10 @@ const NewsDetailModal: React.FC<NewsDetailModalProps> = ({
       snapPoints={dynamicSnapPoints}
       fitContent
       enablePanDownToClose
-      backdropOpacity={0.5}
       showHandle={!article.image_url}
       edgeToEdge
+      useGlassBackground
+      showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
     >
@@ -1129,7 +1131,13 @@ const BreakingNewsCard: React.FC<NewsCardProps> = ({ article, onPress, onLike, o
   );
 };
 
-export default function BreakingNewsTab() {
+export default function BreakingNewsTab({
+  openArticleId = null,
+  onOpenArticleConsumed,
+}: {
+  openArticleId?: string | null;
+  onOpenArticleConsumed?: () => void;
+} = {}) {
   const DesignTokens = useDesignTokens();
   const listBottomInset = useMainTabsHeight(16);
   // זריעה אופטימית מה-cache (נטען מהדיסק בהפעלה קרה) — רינדור מיידי ללא ספינר
@@ -1498,6 +1506,82 @@ export default function BreakingNewsTab() {
     setSelectedArticleIndex(index >= 0 ? index : 0);
     setDetailModalVisible(true);
   }, [filteredArticles]);
+
+  const openedArticleFromPushRef = useRef<string | null>(null);
+
+  // פתיחה מהתראת Push (articleId ב-route)
+  useEffect(() => {
+    if (!openArticleId) {
+      openedArticleFromPushRef.current = null;
+      return;
+    }
+    if (openedArticleFromPushRef.current === openArticleId) return;
+    let cancelled = false;
+
+    const openFromId = async () => {
+      const inList = articles.find((a) => a.id === openArticleId);
+      if (inList) {
+        if (cancelled) return;
+        openedArticleFromPushRef.current = openArticleId;
+        handleArticlePress(inList);
+        onOpenArticleConsumed?.();
+        return;
+      }
+
+      // עדיין טוענים / לא ברשימה — שליפה ישירה
+      if (loading && articles.length === 0) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('app_news_clean')
+          .select('*')
+          .eq('id', openArticleId)
+          .maybeSingle();
+        if (cancelled || error || !data) {
+          openedArticleFromPushRef.current = openArticleId;
+          onOpenArticleConsumed?.();
+          return;
+        }
+        const row: any = data;
+        const title =
+          row.text_content || row.title || row.label || row.text || openArticleId;
+        const content = row.text_content || row.content || row.text || title;
+        const article: NewsArticle = {
+          id: String(row.id),
+          label: row.label || '',
+          title,
+          content,
+          summary: row.summary || content.substring(0, 150),
+          source: row.source || 'מקור לא ידוע',
+          source_url: row.source_url || row.url || '',
+          author: row.author || '',
+          image_url: row.img || row.image_url || null,
+          published_at: row.time || row.published_at || row.created_at || new Date().toISOString(),
+          created_at: row.time || row.created_at || new Date().toISOString(),
+          category: row.category || 'כללי',
+          tags: row.tags || [],
+        };
+        if (cancelled) return;
+        openedArticleFromPushRef.current = openArticleId;
+        handleArticlePress(article);
+        onOpenArticleConsumed?.();
+      } catch {
+        openedArticleFromPushRef.current = openArticleId;
+        onOpenArticleConsumed?.();
+      }
+    };
+
+    void openFromId();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    openArticleId,
+    articles,
+    loading,
+    handleArticlePress,
+    onOpenArticleConsumed,
+  ]);
 
   // ניווט לחדשה הבאה
   const handleNextArticle = useCallback(() => {

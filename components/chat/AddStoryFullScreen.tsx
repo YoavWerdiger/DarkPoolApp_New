@@ -925,6 +925,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const capturingRef = useRef(false);
+  /** 0–1, controlled pinch zoom (CameraView has no built-in pinch) */
+  const [cameraZoom, setCameraZoom] = useState(0);
   /** iOS: שם עדשה מקומי (לא deviceType) — בוחרים wide 1x ולא ultrawide 0.5x */
   const [selectedLens, setSelectedLens] = useState<string | undefined>(undefined);
   const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
@@ -972,12 +976,22 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     }
   }, []);
 
+  const logPanEvent = useCallback((name: string, phase: 'begin' | 'end') => {
+    logger.debug('AddStoryFullScreen', `pan ${name} ${phase} (platform=${Platform.OS})`);
+  }, []);
+
+  /*
+   * Mode-switch swipe — horizontal only.
+   * activeOffsetX / failOffsetY keep taps from being swallowed on Android.
+   * Attached ONLY to the camera/text background strip; chrome controls are siblings.
+   */
   const swipeGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
-    .failOffsetY([-10, 10])
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-12, 12])
     .onStart(() => {
       'worklet';
       dragStartIndex.value = modeIndex.value;
+      runOnJS(logPanEvent)('swipe', 'begin');
     })
     .onUpdate((e) => {
       'worklet';
@@ -1000,6 +1014,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
 
       modeIndex.value = withSpring(targetIdx, SPRING_CONFIG);
       runOnJS(setMode)(MODES[targetIdx]);
+      runOnJS(logPanEvent)('swipe', 'end');
     });
 
   const stripAnimStyle = useAnimatedStyle(() => ({
@@ -1023,18 +1038,28 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     onClose();
   }, [onClose]);
 
-  // Disable dismiss while: uploading, drawing, recording video, or interactive modals are open
+  // Disable dismiss while: uploading, drawing, recording, capturing, dragging overlays, or modals
   const dismissDisabled =
     phase === 'uploading' ||
     drawMode ||
     isRecording ||
+    isCapturing ||
+    !!draggingOverlayId ||
     showTextEditor ||
     showEmojiPicker;
 
+  /*
+   * Swipe-down dismiss — vertical only, fails on horizontal drag.
+   * Must NOT wrap shutter / gallery / mode pills (Android Pan steals their touches).
+   */
   const dismissGesture = Gesture.Pan()
-    .activeOffsetY([25, 9999])
-    .failOffsetX([-30, 30])
+    .activeOffsetY([28, 9999])
+    .failOffsetX([-24, 24])
     .enabled(!dismissDisabled)
+    .onStart(() => {
+      'worklet';
+      runOnJS(logPanEvent)('dismiss', 'begin');
+    })
     .onUpdate((e) => {
       'worklet';
       dismissY.value = e.translationY > 0
@@ -1050,7 +1075,47 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       } else {
         dismissY.value = withSpring(0, { damping: 22, stiffness: 220, mass: 0.6 });
       }
+      runOnJS(logPanEvent)('dismiss', 'end');
     });
+
+  /* Pinch-to-zoom on camera preview only (Simultaneous with offset-gated Pans). */
+  const zoomSV = useSharedValue(0);
+  const pinchStartZoom = useSharedValue(0);
+  useEffect(() => {
+    zoomSV.value = cameraZoom;
+  }, [cameraZoom]);
+
+  const applyCameraZoom = useCallback((z: number) => {
+    setCameraZoom(z);
+  }, []);
+
+  const pinchGesture = Gesture.Pinch()
+    .enabled(mode === 'camera' && phase === 'capture' && !dismissDisabled)
+    .onBegin(() => {
+      'worklet';
+      pinchStartZoom.value = zoomSV.value;
+      runOnJS(logPanEvent)('pinch', 'begin');
+    })
+    .onUpdate((e) => {
+      'worklet';
+      const next = Math.min(1, Math.max(0, pinchStartZoom.value + (e.scale - 1) * 0.55));
+      zoomSV.value = next;
+      runOnJS(applyCameraZoom)(next);
+    })
+    .onEnd(() => {
+      'worklet';
+      runOnJS(logPanEvent)('pinch', 'end');
+    });
+
+  /** Background-only composition: never wraps interactive chrome. */
+  const captureBackgroundGestures = Gesture.Simultaneous(
+    dismissGesture,
+    swipeGesture,
+    pinchGesture,
+  );
+
+  /** Preview-phase dismiss only (no mode swipe / pinch). */
+  const previewDismissGesture = dismissGesture;
 
   const dismissAnimStyle = useAnimatedStyle(() => {
     'worklet';
@@ -1088,6 +1153,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       setShowTextEditor(false);
       setEditingOverlayId(null);
       setIsRecording(false);
+      capturingRef.current = false;
+      setIsCapturing(false);
+      setCameraZoom(0);
+      zoomSV.value = 0;
       setGalleryExpanded(false);
       setShowEmojiPicker(false);
       setDrawPaths([]);
@@ -1100,6 +1169,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     } else {
       cancelAnimation(dismissY);
       dismissY.value = 0;
+      capturingRef.current = false;
+      setIsCapturing(false);
+      setCameraZoom(0);
+      zoomSV.value = 0;
       loadRecentPhotos();
       if (!permission?.granted) {
         requestPermission();
@@ -1174,26 +1247,64 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     }
   }, []);
 
-  const takePicture = async () => {
-    if (!cameraRef.current) return;
+  const takePicture = useCallback(async () => {
+    logger.debug(
+      'AddStoryFullScreen',
+      `takePicture invoked (platform=${Platform.OS}, hasRef=${!!cameraRef.current}, isRecording=${isRecording}, isCapturing=${capturingRef.current})`,
+    );
+    if (capturingRef.current || isRecording) {
+      logger.warn('AddStoryFullScreen', 'takePicture bailed: busy');
+      return;
+    }
+    if (!cameraRef.current) {
+      // On Android the ref can briefly be null between mode switches / permission
+      // grants; log so we can see this in production instead of silently no-op-ing.
+      logger.warn('AddStoryFullScreen', 'takePicture bailed: cameraRef.current is null');
+      return;
+    }
+    capturingRef.current = true;
+    setIsCapturing(true);
     try {
+      logger.debug('AddStoryFullScreen', 'takePictureAsync start');
+      // `shutterSound` is iOS-only in expo-camera; passing it on Android does
+      // nothing but keeping it iOS-scoped avoids any device-specific rejection.
       const photo = await cameraRef.current.takePictureAsync({
         quality: 1,
-        shutterSound: true,
+        ...(Platform.OS === 'ios' ? { shutterSound: true } : {}),
       });
+      logger.debug('AddStoryFullScreen', `takePictureAsync end: uri=${photo?.uri ?? 'null'}`);
       if (photo?.uri) {
         setMediaUri(photo.uri);
         setMediaType('image');
         setOverlays([]);
         setPhase('preview');
+      } else {
+        legacyAlert('שגיאה', 'לא הצלחנו לצלם את התמונה. נסה שוב.');
       }
-    } catch (err) {
+    } catch (err: any) {
       logger.error('AddStoryFullScreen', 'Take picture failed', err);
+      legacyAlert('שגיאה', err?.message || 'לא הצלחנו לצלם את התמונה.');
+    } finally {
+      capturingRef.current = false;
+      setIsCapturing(false);
+      logger.debug('AddStoryFullScreen', 'takePicture finally — isCapturing reset');
     }
-  };
+  }, [isRecording]);
 
-  const startRecording = async () => {
-    if (!cameraRef.current) return;
+  const stopRecording = useCallback(() => {
+    if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
+    cameraRef.current?.stopRecording?.();
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    logger.debug(
+      'AddStoryFullScreen',
+      `startRecording invoked (platform=${Platform.OS}, hasRef=${!!cameraRef.current})`,
+    );
+    if (!cameraRef.current) {
+      logger.warn('AddStoryFullScreen', 'startRecording bailed: cameraRef.current is null');
+      return;
+    }
     try {
       setIsRecording(true);
       recordTimerRef.current = setTimeout(() => {
@@ -1206,42 +1317,83 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         setOverlays([]);
         setPhase('preview');
       }
-    } catch (err) {
+    } catch (err: any) {
       logger.error('AddStoryFullScreen', 'Recording failed', err);
+      legacyAlert('שגיאה', err?.message || 'לא הצלחנו להקליט וידאו.');
     } finally {
       setIsRecording(false);
       if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
     }
-  };
+  }, [stopRecording]);
 
-  const stopRecording = () => {
-    if (recordTimerRef.current) clearTimeout(recordTimerRef.current);
-    cameraRef.current?.stopRecording?.();
-  };
-
-  const openGallery = async () => {
-    if (!user?.id) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
+  const openGallery = useCallback(async () => {
+    logger.debug('AddStoryFullScreen', `openGallery start (platform=${Platform.OS}, user=${!!user?.id})`);
+    if (!user?.id) {
+      logger.warn('AddStoryFullScreen', 'openGallery bailed: no user');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images', 'videos'],
-      allowsEditing: true,
-      aspect: [9, 16],
-      quality: 1,
-      videoMaxDuration: 30,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    const isVideo = asset.type === 'video' || ('duration' in asset && (asset as any).duration > 0);
-    setMediaUri(asset.uri);
-    setMediaType(isVideo ? 'video' : 'image');
-    setOverlays([]);
-    setGalleryExpanded(false);
-    setPhase('preview');
-  };
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      logger.debug('AddStoryFullScreen', `openGallery permission=${status}`);
+      if (status !== 'granted') {
+        legacyAlert('אישור נדרש', 'אנא אשר גישה לגלריה');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images', 'videos'],
+        allowsEditing: true,
+        aspect: [9, 16],
+        quality: 1,
+        videoMaxDuration: 30,
+      });
+      logger.debug(
+        'AddStoryFullScreen',
+        `openGallery picker done canceled=${result.canceled} assets=${result.assets?.length ?? 0}`,
+      );
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const isVideo = asset.type === 'video' || ('duration' in asset && (asset as any).duration > 0);
+      setMediaUri(asset.uri);
+      setMediaType(isVideo ? 'video' : 'image');
+      setOverlays([]);
+      setGalleryExpanded(false);
+      setPhase('preview');
+    } catch (err) {
+      logger.error('AddStoryFullScreen', 'openGallery failed', err);
+      legacyAlert('שגיאה', 'לא הצלחנו לפתוח את הגלריה.');
+    }
+  }, [user?.id]);
+
+  const handleGalleryPress = useCallback(() => {
+    logger.debug(
+      'AddStoryFullScreen',
+      `gallery press (platform=${Platform.OS}, expanded=${galleryExpanded}, recent=${recentPhotos.length})`,
+    );
+    if (galleryExpanded) {
+      setGalleryExpanded(false);
+    } else if (recentPhotos.length > 0) {
+      setGalleryExpanded(true);
+    } else {
+      openGallery();
+    }
+  }, [galleryExpanded, recentPhotos.length, openGallery]);
+
+  const handleCapturePress = useCallback(() => {
+    logger.debug('AddStoryFullScreen', `capture press / shutter tap (platform=${Platform.OS})`);
+    takePicture();
+  }, [takePicture]);
+
+  const handleCaptureLongPress = useCallback(() => {
+    logger.debug('AddStoryFullScreen', `capture long-press → record (platform=${Platform.OS})`);
+    startRecording();
+  }, [startRecording]);
+
+  const handleCapturePressOut = useCallback(() => {
+    if (isRecording) {
+      logger.debug('AddStoryFullScreen', 'capture pressOut → stopRecording');
+      stopRecording();
+    }
+  }, [isRecording, stopRecording]);
 
   const openTextEditor = useCallback((overlayId?: string) => {
     setEditingOverlayId(overlayId || null);
@@ -1427,67 +1579,151 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   /* ═══════════════════════════════════════════════ */
   /* ═══════ CAMERA / CAPTURE PHASE ═══════════════ */
   /* ═══════════════════════════════════════════════ */
+  /*
+   * Capture phase layout (Android-critical):
+   * 1) Simultaneous(dismiss, swipe, pinch) only on the camera preview panel.
+   * 2) Camera / text chrome as ABSOLUTE SIBLINGS outside Pan so
+   *    TouchableOpacity / Pressable receive taps (nested Pan was freezing UI).
+   */
   const renderCapturePhase = () => (
-    <GestureDetector gesture={swipeGesture}>
+    <View style={s.fullFlex}>
+      {/*
+        Strip is animated, but Pan/Pinch attach ONLY to the camera panel.
+        Text panel stays free so TextInput / color chips aren't under a greedy Pan.
+      */}
       <Reanimated.View style={[s.modeStrip, stripAnimStyle]}>
-        {/* ── Panel 0: Camera ── */}
-        <View style={s.modePanel}>
-          {/* Live camera feed */}
-          {permission?.granted ? (
-            <CameraView
-              ref={cameraRef}
-              style={StyleSheet.absoluteFillObject}
-              facing={facing}
-              mode={isRecording ? 'video' : 'picture'}
-              flash={flash ? 'on' : 'off'}
-              zoom={0}
-              videoQuality="1080p"
-              {...(pictureSize ? { pictureSize } : {})}
-              {...(selectedLens ? { selectedLens } : {})}
-              onCameraReady={configureCamera}
-              onAvailableLensesChanged={({ lenses }) => {
-                const wide = pickWideAngleLens(lenses);
-                if (wide && wide !== selectedLens) setSelectedLens(wide);
-              }}
-            />
-          ) : (
-            <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
-              <Ionicons name="camera-outline" size={64} color="rgba(255,255,255,0.2)" />
-              <TouchableOpacity style={s.permissionBtn} onPress={requestPermission}>
-                <Text style={s.permissionBtnText}>אפשר גישה למצלמה</Text>
-              </TouchableOpacity>
+        {/* ── Panel 0: Camera preview + background gestures ── */}
+        <View style={s.modePanel} collapsable={false}>
+          <GestureDetector gesture={captureBackgroundGestures}>
+            <View style={StyleSheet.absoluteFillObject} collapsable={false}>
+              {permission?.granted ? (
+                <CameraView
+                  ref={cameraRef}
+                  style={StyleSheet.absoluteFillObject}
+                  facing={facing}
+                  mode={isRecording ? 'video' : 'picture'}
+                  flash={flash ? 'on' : 'off'}
+                  zoom={cameraZoom}
+                  videoQuality="1080p"
+                  {...(pictureSize ? { pictureSize } : {})}
+                  {...(selectedLens ? { selectedLens } : {})}
+                  onCameraReady={configureCamera}
+                  onAvailableLensesChanged={({ lenses }) => {
+                    const wide = pickWideAngleLens(lenses);
+                    if (wide && wide !== selectedLens) setSelectedLens(wide);
+                  }}
+                />
+              ) : (
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+                  <Ionicons name="camera-outline" size={64} color="rgba(255,255,255,0.2)" />
+                </View>
+              )}
+
+              <LinearGradient
+                colors={['rgba(0,0,0,0.55)', 'transparent']}
+                style={s.vignetteTop}
+                pointerEvents="none"
+              />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.65)']}
+                style={s.vignetteBottom}
+                pointerEvents="none"
+              />
             </View>
-          )}
+          </GestureDetector>
+        </View>
 
-          {/* Dark vignette overlays */}
-          <LinearGradient
-            colors={['rgba(0,0,0,0.55)', 'transparent']}
-            style={s.vignetteTop}
-            pointerEvents="none"
-          />
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.65)']}
-            style={s.vignetteBottom}
-            pointerEvents="none"
-          />
+        {/* ── Panel 1: Text content (no Pan wrapper) ── */}
+        <View style={s.modePanel}>
+          <KeyboardAvoidingView
+            style={s.fullFlex}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <LinearGradient
+              colors={GRADIENT_BACKGROUNDS[textBgIndex]}
+              style={s.fullFlex}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={{ height: insets.top + 60 }} pointerEvents="none" />
 
-          {/* Top controls */}
-          <View style={[s.cameraTopBar, { paddingTop: insets.top + 8 }]}>
-            <TouchableOpacity style={s.topIconBtn} onPress={onClose}>
+              <View style={s.textInputArea}>
+                <TextInput
+                  ref={textInputRef}
+                  style={s.textBigInput}
+                  placeholder="מה על הלב?..."
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  value={textContent}
+                  onChangeText={setTextContent}
+                  multiline
+                  maxLength={250}
+                  textAlign="center"
+                />
+                <Text style={s.textCounter}>{textContent.length}/250</Text>
+              </View>
+
+              <View style={[s.textBgPicker, { paddingBottom: insets.bottom + 52 }]}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.textBgScroll}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {GRADIENT_BACKGROUNDS.map((bg, idx) => (
+                    <TouchableOpacity key={idx} onPress={() => setTextBgIndex(idx)} activeOpacity={0.7}>
+                      <LinearGradient
+                        colors={bg}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={[
+                          s.bgDot,
+                          textBgIndex === idx && s.bgDotActive,
+                        ]}
+                      />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </LinearGradient>
+          </KeyboardAvoidingView>
+        </View>
+      </Reanimated.View>
+
+      {/* ══ Camera chrome — OUTSIDE Pan (siblings, higher zIndex/elevation) ══ */}
+      {mode === 'camera' && (
+        <>
+          <View
+            style={[s.cameraTopBar, s.chromeLayer, { paddingTop: insets.top + 8 }]}
+            pointerEvents="box-none"
+          >
+            <TouchableOpacity
+              style={s.topIconBtn}
+              onPress={() => {
+                logger.debug('AddStoryFullScreen', 'close press (camera chrome)');
+                onClose();
+              }}
+            >
               <Ionicons name="close" size={28} color="#fff" />
             </TouchableOpacity>
             <View style={{ flex: 1 }} />
-            <TouchableOpacity
-              style={s.topIconBtn}
-              onPress={() => setFlash(!flash)}
-            >
-              <Ionicons name={flash ? 'flash' : 'flash-off'} size={22} color="#fff" />
-            </TouchableOpacity>
+            {!permission?.granted ? (
+              <TouchableOpacity style={s.permissionBtnCompact} onPress={requestPermission}>
+                <Text style={s.permissionBtnText}>אפשר מצלמה</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={s.topIconBtn}
+                onPress={() => setFlash(!flash)}
+              >
+                <Ionicons name={flash ? 'flash' : 'flash-off'} size={22} color="#fff" />
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Bottom controls */}
-          <View style={[s.cameraBottom, { paddingBottom: insets.bottom + 52 }]}>
-            {/* Gallery strip (expandable) */}
+          <View
+            style={[s.cameraBottom, s.chromeLayer, { paddingBottom: insets.bottom + 52 }]}
+            pointerEvents="box-none"
+          >
             <Animated.View style={[s.galleryExpanded, { height: galleryHeight, overflow: 'hidden' }]}>
               {galleryExpanded && (
                 <FlatList
@@ -1496,6 +1732,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={s.galleryGrid}
                   keyExtractor={(item) => item.id}
+                  keyboardShouldPersistTaps="handled"
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={s.galleryGridItem}
@@ -1517,20 +1754,13 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
               )}
             </Animated.View>
 
-            {/* Capture row */}
-            <View style={s.captureRow}>
+            <View style={s.captureRow} pointerEvents="box-none">
               <TouchableOpacity
                 style={s.galleryBtn}
-                onPress={() => {
-                  if (galleryExpanded) {
-                    setGalleryExpanded(false);
-                  } else if (recentPhotos.length > 0) {
-                    setGalleryExpanded(true);
-                  } else {
-                    openGallery();
-                  }
-                }}
+                onPress={handleGalleryPress}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="גלריה"
               >
                 {recentPhotos.length > 0 ? (
                   <ExpoImage source={{ uri: recentPhotos[0].uri }} style={s.galleryBtnImg} />
@@ -1539,25 +1769,37 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                 )}
               </TouchableOpacity>
 
-              <TouchableOpacity
+              {/*
+                Pressable (not nested under Pan). Tap = photo, long-press = video.
+                Outside Pan detectors so Android responder isn't stolen.
+              */}
+              <Pressable
                 style={s.captureOuter}
-                onPress={takePicture}
-                onLongPress={startRecording}
-                onPressOut={() => { if (isRecording) stopRecording(); }}
-                activeOpacity={0.7}
-                delayLongPress={300}
+                onPress={handleCapturePress}
+                onLongPress={handleCaptureLongPress}
+                onPressOut={handleCapturePressOut}
+                delayLongPress={320}
+                disabled={isCapturing}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="צילום סטטוס"
               >
                 <View style={[
                   s.captureInner,
                   isRecording && s.captureRecording,
+                  isCapturing && { opacity: 0.7 },
                 ]} />
-              </TouchableOpacity>
+              </Pressable>
 
               <TouchableOpacity
                 style={s.flipBtn}
                 onPress={() => {
+                  logger.debug('AddStoryFullScreen', 'flip camera press');
                   setSelectedLens(undefined);
                   setPictureSize(undefined);
+                  setCameraZoom(0);
+                  zoomSV.value = 0;
                   setFacing((f) => (f === 'back' ? 'front' : 'back'));
                 }}
                 activeOpacity={0.7}
@@ -1565,82 +1807,37 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
                 <Ionicons name="camera-reverse-outline" size={26} color="#fff" />
               </TouchableOpacity>
             </View>
-
           </View>
-        </View>
+        </>
+      )}
 
-        {/* ── Panel 1: Text ── */}
-        <View style={s.modePanel}>
-          <KeyboardAvoidingView
-            style={s.fullFlex}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      {/* ══ Text chrome — OUTSIDE Pan ══ */}
+      {mode === 'text' && (
+        <View
+          style={[s.cameraTopBar, s.chromeLayer, { paddingTop: insets.top + 8 }]}
+          pointerEvents="box-none"
+        >
+          <TouchableOpacity
+            style={s.topIconBtn}
+            onPress={() => {
+              logger.debug('AddStoryFullScreen', 'close press (text chrome)');
+              onClose();
+            }}
           >
-            <LinearGradient
-              colors={GRADIENT_BACKGROUNDS[textBgIndex]}
-              style={s.fullFlex}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              {/* Top bar */}
-              <View style={[s.cameraTopBar, { paddingTop: insets.top + 8 }]}>
-                <TouchableOpacity style={s.topIconBtn} onPress={onClose}>
-                  <Ionicons name="close" size={28} color="#fff" />
-                </TouchableOpacity>
-                <View style={{ flex: 1 }} />
-                <TouchableOpacity
-                  style={[s.textDoneBtn, !textContent.trim() && { opacity: 0.4 }]}
-                  onPress={handleShareText}
-                  disabled={!textContent.trim() || isUploading}
-                >
-                  <Ionicons name="paper-plane" size={16} color="#fff" style={{ marginRight: 4 }} />
-                  <Text style={s.textDoneBtnLabel}>שתף</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Text input */}
-              <View style={s.textInputArea}>
-                <TextInput
-                  ref={textInputRef}
-                  style={s.textBigInput}
-                  placeholder="מה על הלב?..."
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  value={textContent}
-                  onChangeText={setTextContent}
-                  multiline
-                  maxLength={250}
-                  textAlign="center"
-                />
-                <Text style={s.textCounter}>{textContent.length}/250</Text>
-              </View>
-
-              {/* Background picker */}
-              <View style={[s.textBgPicker, { paddingBottom: insets.bottom + 52 }]}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={s.textBgScroll}
-                >
-                  {GRADIENT_BACKGROUNDS.map((bg, idx) => (
-                    <TouchableOpacity key={idx} onPress={() => setTextBgIndex(idx)} activeOpacity={0.7}>
-                      <LinearGradient
-                        colors={bg}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={[
-                          s.bgDot,
-                          textBgIndex === idx && s.bgDotActive,
-                        ]}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-
-              </View>
-            </LinearGradient>
-          </KeyboardAvoidingView>
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity
+            style={[s.textDoneBtn, !textContent.trim() && { opacity: 0.4 }]}
+            onPress={handleShareText}
+            disabled={!textContent.trim() || isUploading}
+          >
+            <Ionicons name="paper-plane" size={16} color="#fff" style={{ marginRight: 4 }} />
+            <Text style={s.textDoneBtnLabel}>שתף</Text>
+          </TouchableOpacity>
         </View>
-      </Reanimated.View>
-    </GestureDetector>
+      )}
+    </View>
   );
 
   /* ═══════════════════════════════════════════════ */
@@ -1648,52 +1845,57 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
   /* ═══════════════════════════════════════════════ */
   const renderPreview = () => (
     <View style={s.fullFlex}>
-      <View
-        ref={captureAreaRef}
-        style={StyleSheet.absoluteFillObject}
-        collapsable={false}
-      >
-        <View style={StyleSheet.absoluteFillObject}>
-          {mediaType === 'image' ? (
-            <Image source={{ uri: mediaUri! }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-          ) : (
-            <Video
-              source={{ uri: mediaUri! }}
-              style={StyleSheet.absoluteFillObject}
-              useNativeControls={false}
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay
-              isLooping
-            />
-          )}
-        </View>
+      {/*
+        Dismiss Pan wraps ONLY the media stack. Toolbars / share FAB are siblings
+        so Android taps aren't stolen by the outer dismiss gesture.
+      */}
+      <GestureDetector gesture={previewDismissGesture}>
+        <View
+          ref={captureAreaRef}
+          style={StyleSheet.absoluteFillObject}
+          collapsable={false}
+        >
+          <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+            {mediaType === 'image' ? (
+              <Image source={{ uri: mediaUri! }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            ) : (
+              <Video
+                source={{ uri: mediaUri! }}
+                style={StyleSheet.absoluteFillObject}
+                useNativeControls={false}
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay
+                isLooping
+              />
+            )}
+          </View>
 
-        {/* Drawing layer (always rendered; captures input only when drawMode is on) */}
-        <DrawingCanvas
-          paths={drawPaths}
-          color={drawColor}
-          strokeWidth={drawStrokeWidth}
-          onPathComplete={(p) => setDrawPaths(prev => [...prev, p])}
-          enabled={drawMode}
-        />
-
-        {overlays.map((item) => (
-          <DraggableText
-            key={item.id}
-            item={item}
-            onDoubleTap={openTextEditor}
-            onDragStateChange={(dragging, absY, hovering) => handleOverlayDragChange(item.id, dragging, absY, hovering)}
-            onRequestDelete={handleOverlayDelete}
-            onCommitPosition={handleOverlayCommitPosition}
+          <DrawingCanvas
+            paths={drawPaths}
+            color={drawColor}
+            strokeWidth={drawStrokeWidth}
+            onPathComplete={(p) => setDrawPaths(prev => [...prev, p])}
+            enabled={drawMode}
           />
-        ))}
-      </View>
 
-      {/* Top bar – hidden while drawing */}
+          {overlays.map((item) => (
+            <DraggableText
+              key={item.id}
+              item={item}
+              onDoubleTap={openTextEditor}
+              onDragStateChange={(dragging, absY, hovering) => handleOverlayDragChange(item.id, dragging, absY, hovering)}
+              onRequestDelete={handleOverlayDelete}
+              onCommitPosition={handleOverlayCommitPosition}
+            />
+          ))}
+        </View>
+      </GestureDetector>
+
+      {/* Top bar – hidden while drawing (OUTSIDE dismiss Pan) */}
       {!drawMode && (
         <LinearGradient
           colors={['rgba(0,0,0,0.55)', 'transparent']}
-          style={[s.previewTopGrad, { paddingTop: insets.top + 12 }]}
+          style={[s.previewTopGrad, s.chromeLayer, { paddingTop: insets.top + 12 }]}
           pointerEvents="box-none"
         >
           {/* direction:ltr — כמו StoryViewer: Modal לא תמיד מכבד forceRTL */}
@@ -1731,10 +1933,10 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
         </LinearGradient>
       )}
 
-      {/* Drawing toolbar */}
+      {/* Drawing toolbar — outside dismiss Pan */}
       {drawMode && (
         <>
-          <View style={[s.drawTopBar, { paddingTop: insets.top + 12 }]}>
+          <View style={[s.drawTopBar, s.chromeLayer, { paddingTop: insets.top + 12 }]}>
             <TouchableOpacity
               style={s.drawIconBtn}
               onPress={() => setDrawMode(false)}
@@ -1764,7 +1966,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
             </TouchableOpacity>
           </View>
 
-          <View style={[s.drawBottomBar, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={[s.drawBottomBar, s.chromeLayer, { paddingBottom: insets.bottom + 20 }]}>
             <View style={s.drawStrokeRow}>
               {DRAW_STROKE_WIDTHS.map((w) => (
                 <TouchableOpacity
@@ -1790,6 +1992,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={s.drawColorScroll}
+              keyboardShouldPersistTaps="handled"
             >
               {DRAW_COLORS.map((c) => (
                 <TouchableOpacity
@@ -1811,7 +2014,7 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
       {!drawMode && (
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.65)']}
-          style={[s.previewBottomGrad, { paddingBottom: insets.bottom + 16 }]}
+          style={[s.previewBottomGrad, s.chromeLayer, { paddingBottom: insets.bottom + 16 }]}
           pointerEvents="box-none"
         >
           <TouchableOpacity
@@ -1862,38 +2065,57 @@ export default function AddStoryFullScreen({ visible, onClose, onAdded }: AddSto
     >
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <GestureHandlerRootView style={s.fullFlex}>
-        <GestureDetector gesture={dismissGesture}>
-          <Reanimated.View style={[s.root, dismissAnimStyle]}>
-            {phase === 'capture' && renderCapturePhase()}
-            {phase === 'preview' && mediaUri && renderPreview()}
+        {/*
+          dismissY animates this root, but dismiss Pan is NOT wrapped around chrome.
+          Capture: pans/pinch live only on the camera preview panel.
+          Preview: dismiss wraps the media stack inside renderPreview; toolbars are siblings.
+        */}
+        <Reanimated.View style={[s.root, dismissAnimStyle]}>
+          {phase === 'capture' && renderCapturePhase()}
+          {phase === 'preview' && mediaUri && renderPreview()}
 
-            {/* Animated mode switcher – floats above everything in capture phase */}
-            {phase === 'capture' && (
-              <View style={[s.modeSwitcherOverlay, { bottom: insets.bottom + 14 }]}>
-                <View style={s.modeSwitcherTrack}>
-                  {/* Animated highlight pill */}
-                  <Reanimated.View style={[s.modeSwitcherHighlight, indicatorAnimStyle]} />
-                  <TouchableOpacity style={s.modePill} onPress={() => switchMode('camera')} activeOpacity={0.7}>
-                    <Reanimated.Text style={[s.modePillText, cameraPillOpacity]}>מצלמה</Reanimated.Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={s.modePill} onPress={() => switchMode('text')} activeOpacity={0.7}>
-                    <Reanimated.Text style={[s.modePillText, textPillOpacity]}>טקסט</Reanimated.Text>
-                  </TouchableOpacity>
-                </View>
+          {/* Mode switcher — sibling outside all Pans */}
+          {phase === 'capture' && (
+            <View
+              style={[s.modeSwitcherOverlay, s.chromeLayer, { bottom: insets.bottom + 14 }]}
+              pointerEvents="box-none"
+            >
+              <View style={s.modeSwitcherTrack}>
+                <Reanimated.View style={[s.modeSwitcherHighlight, indicatorAnimStyle]} />
+                <TouchableOpacity
+                  style={s.modePill}
+                  onPress={() => {
+                    logger.debug('AddStoryFullScreen', 'mode switch → camera');
+                    switchMode('camera');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Reanimated.Text style={[s.modePillText, cameraPillOpacity]}>מצלמה</Reanimated.Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={s.modePill}
+                  onPress={() => {
+                    logger.debug('AddStoryFullScreen', 'mode switch → text');
+                    switchMode('text');
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Reanimated.Text style={[s.modePillText, textPillOpacity]}>טקסט</Reanimated.Text>
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
+          )}
 
-            {phase === 'uploading' && (
-              <View style={s.uploadOverlay}>
-                <View style={s.uploadCard}>
-                  <ActivityIndicator size="large" color={chatPalette.primary} />
-                  <Text style={s.uploadTitle}>מעלה סטטוס...</Text>
-                  <Text style={s.uploadSub}>רק רגע</Text>
-                </View>
+          {phase === 'uploading' && (
+            <View style={s.uploadOverlay}>
+              <View style={s.uploadCard}>
+                <ActivityIndicator size="large" color={chatPalette.primary} />
+                <Text style={s.uploadTitle}>מעלה סטטוס...</Text>
+                <Text style={s.uploadSub}>רק רגע</Text>
               </View>
-            )}
-          </Reanimated.View>
-        </GestureDetector>
+            </View>
+          )}
+        </Reanimated.View>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -1921,6 +2143,12 @@ const s = StyleSheet.create({
     height: '100%',
   },
 
+  /* Chrome overlays sit above background Pans (Android touch isolation). */
+  chromeLayer: {
+    zIndex: 40,
+    elevation: 12,
+  },
+
   /* ---- Camera top ---- */
   cameraTopBar: {
     position: 'absolute',
@@ -1930,7 +2158,8 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    zIndex: 20,
+    zIndex: 40,
+    elevation: 12,
   },
   topIconBtn: {
     width: 44,
@@ -1939,6 +2168,12 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  permissionBtnCompact: {
+    backgroundColor: chatPalette.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
 
   vignetteTop: {
@@ -1964,7 +2199,8 @@ const s = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 20,
+    zIndex: 40,
+    elevation: 12,
   },
 
   galleryExpanded: {
@@ -2038,6 +2274,8 @@ const s = StyleSheet.create({
     borderColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 41,
+    elevation: 16,
   },
   captureInner: {
     width: CAPTURE_SIZE,
@@ -2067,7 +2305,8 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    zIndex: 25,
+    zIndex: 45,
+    elevation: 14,
     pointerEvents: 'box-none',
   },
   modeSwitcherTrack: {

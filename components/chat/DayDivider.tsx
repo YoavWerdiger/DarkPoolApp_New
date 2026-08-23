@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useDesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
 
 interface DayDividerProps {
   date: Date;
@@ -50,9 +51,15 @@ const DayDivider: React.FC<DayDividerProps> = memo(({ date }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.divider}>
+      <UICard
+        variant="glass"
+        glassIntensity="subtle"
+        padding="none"
+        style={styles.divider}
+        contentContainerStyle={styles.dividerInner}
+      >
         <Text style={styles.text}>{getDayText(date)}</Text>
-      </View>
+      </UICard>
     </View>
   );
 });
@@ -64,13 +71,14 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingHorizontal: tokens.spacing.lg,
   },
   divider: {
-    paddingHorizontal: tokens.spacing.xl,
-    paddingVertical: tokens.spacing.sm + 2,
     borderRadius: tokens.borderRadius.xl,
     minWidth: 112,
+    overflow: 'hidden',
+  },
+  dividerInner: {
+    paddingHorizontal: tokens.spacing.xl,
+    paddingVertical: tokens.spacing.sm + 2,
     alignItems: 'center',
-    borderWidth: 0,
-    backgroundColor: tokens.colors.background.cardSolid,
   },
   text: {
     color: tokens.colors.text.secondary,

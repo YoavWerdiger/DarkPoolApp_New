@@ -15,6 +15,8 @@ export interface Poll {
   question: string;
   options: PollOption[];
   multiple_choice: boolean;
+  /** When true, voters may change their vote after casting it. Default false. */
+  allow_vote_change: boolean;
   is_locked: boolean;
   created_at: string;
 }
@@ -85,7 +87,8 @@ export class PollService {
     question: string,
     options: string[],
     userId: string,
-    multipleChoice: boolean = false
+    multipleChoice: boolean = false,
+    allowVoteChange: boolean = false
   ): Promise<Poll | null> {
     try {
       // בדיקה שה-groupId קיים ב-chat_groups
@@ -113,7 +116,8 @@ export class PollService {
           creator_id: userId,
           question,
           options: pollOptions,
-          multiple_choice: multipleChoice
+          multiple_choice: multipleChoice,
+          allow_vote_change: allowVoteChange,
         })
         .select()
         .single();
@@ -136,6 +140,7 @@ export class PollService {
               question,
               options: pollOptions,
               multiple_choice: multipleChoice,
+              allow_vote_change: allowVoteChange,
             })
             .select()
             .single();
@@ -147,7 +152,15 @@ export class PollService {
             );
           }
 
-          await this.createPollMessage(retryData.id, groupId, userId, retryData.question, pollOptions, multipleChoice);
+          await this.createPollMessage(
+            retryData.id,
+            groupId,
+            userId,
+            retryData.question,
+            pollOptions,
+            multipleChoice,
+            allowVoteChange
+          );
           return retryData;
         }
 
@@ -155,7 +168,15 @@ export class PollService {
       }
 
       // צור הודעה בצ'אט עבור הסקר (במערכת החדשה)
-      await this.createPollMessage(data.id, groupId, userId, data.question, pollOptions, multipleChoice);
+      await this.createPollMessage(
+        data.id,
+        groupId,
+        userId,
+        data.question,
+        pollOptions,
+        multipleChoice,
+        allowVoteChange
+      );
       
       return data;
     } catch (error) {
@@ -175,7 +196,7 @@ export class PollService {
       // בדוק אם הסקר נעול
       const { data: poll, error: pollError } = await supabase
         .from('polls')
-        .select('is_locked, multiple_choice')
+        .select('is_locked, multiple_choice, allow_vote_change')
         .eq('id', pollId)
         .single();
 
@@ -189,6 +210,20 @@ export class PollService {
 
       if (!poll.multiple_choice && optionIds.length > 1) {
         throw new Error('סקר זה מאפשר רק תשובה אחת');
+      }
+
+      const { data: existingVotes, error: existingError } = await supabase
+        .from('poll_votes')
+        .select('option_id')
+        .eq('poll_id', pollId)
+        .eq('user_id', userId);
+
+      if (existingError) {
+        throw existingError;
+      }
+
+      if ((existingVotes?.length ?? 0) > 0 && !poll.allow_vote_change) {
+        throw new Error('לא ניתן לשנות את ההצבעה בסקר זה');
       }
 
       const { data: fullPoll } = await supabase
@@ -480,7 +515,7 @@ export class PollService {
 
       // קבלת פרטי המשתמשים
       const { data: users, error: usersError } = await supabase
-        .from('users')
+        .from('v_public_profiles')
         .select('id, display_name, profile_picture')
         .in('id', userIds);
 
@@ -528,7 +563,8 @@ export class PollService {
     userId: string,
     question: string,
     options: PollOption[],
-    multipleChoice: boolean
+    multipleChoice: boolean,
+    allowVoteChange: boolean = false
   ): Promise<void> {
     try {
       const { error } = await supabase
@@ -543,6 +579,7 @@ export class PollService {
           system_message_data: {
             poll_id: pollId,
             multiple_choice: multipleChoice,
+            allow_vote_change: allowVoteChange,
             options: options.map(o => ({ id: o.id, text: o.text })),
           },
         });

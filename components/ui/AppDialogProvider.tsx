@@ -42,11 +42,18 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
       const wrapped: UIAlertButton[] = raw.map((b, index) => ({
         ...b,
         onPress: () => {
-          try {
-            b.onPress?.();
-          } finally {
-            resolveRef.current?.(index);
-            resolveRef.current = null;
+          // Close + resolve FIRST, then run the action on the next tick.
+          // Nested legacyAlert()/showAppDialog() from onPress otherwise gets
+          // immediately killed by UIAlert's subsequent onClose→setVisible(false).
+          const resolveNow = resolveRef.current;
+          resolveRef.current = null;
+          setVisible(false);
+          resolveNow?.(index);
+          const action = b.onPress;
+          if (action) {
+            setTimeout(() => {
+              action();
+            }, 0);
           }
         },
       }));

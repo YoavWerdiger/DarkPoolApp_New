@@ -7,11 +7,21 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0E0A",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
+    },
+    "androidStatusBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#00000000",
+      "translucent": true
+    },
+    "androidNavigationBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#00000000"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -58,7 +68,8 @@
           "cameraPermission": "נדרשת גישה למצלמה לצילום סטוריז",
           "microphonePermission": "נדרשת גישה למיקרופון להקלטת וידאו"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "notification": {
       "icon": "./assets/noti.png",

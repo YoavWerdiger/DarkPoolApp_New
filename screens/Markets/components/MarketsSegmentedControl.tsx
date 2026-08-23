@@ -110,12 +110,17 @@ export function MarketsSegmentedControl<T extends string>({
               </View>
             ) : (
               <Text
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
                 style={{
                   zIndex: 1,
                   fontSize: tokens.typography.bodySmall.size,
                   fontWeight,
                   color,
                   textAlign: 'center',
+                  writingDirection: 'rtl',
+                  paddingHorizontal: 2,
                 }}
               >
                 {opt.label}

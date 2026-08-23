@@ -2,7 +2,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { DarkPoolStackParamList } from '../../../navigation/DarkPoolStack';
 
-const STACK_ROUTE_NAMES = new Set(['DarkPoolHome', 'DarkPoolTicker', 'DarkPoolInvestor']);
+const STACK_ROUTE_NAMES = new Set([
+  'DarkPoolHome',
+  'DarkPoolPeople',
+  'DarkPoolTicker',
+  'DarkPoolInvestor',
+]);
 
 type NavLike = {
   getState?: () => { routeNames?: string[] } | undefined;

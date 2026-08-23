@@ -1,63 +1,77 @@
--- ============================================
--- הגדרת מערכת התראות צ'אט (pg_net → Edge Function)
--- ============================================
--- ⚠️ אל תשמור Service Role Key בריפו.
--- לפני שהטריגר שולח Push, הגדר במסד (פעם אחת, ב-Supabase SQL Editor בלבד):
---
---   ALTER DATABASE postgres SET app.chat_notify_url
---     TO 'https://<PROJECT_REF>.supabase.co/functions/v1/send-chat-notification';
---   ALTER DATABASE postgres SET app.chat_notify_service_jwt TO '<Service Role מ-Settings → API>';
---
--- אם הפרמטרים לא מוגדרים — ההודעה נשמרת בצ'אט אך Push ידולג (WARNING בלוג).
--- מומלץ גם לסובב (rotate) כל מפתח service_role שהודבק בעבר בריפו.
--- ============================================
+-- הגדרת מערכת התראות צ׳אט (pg_net → Edge Function)
+-- מקור אמת: supabase/migrations/*_chat_prod_perf_unread_rls_push.sql
+-- Secrets: vault SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (לא להטמיע JWT בפונקציה)
 
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'chat_group_members' AND column_name = 'muted'
-  ) THEN
-    ALTER TABLE public.chat_group_members ADD COLUMN muted BOOLEAN DEFAULT FALSE;
-  END IF;
+CREATE TABLE IF NOT EXISTS public.chat_push_throttle (
+  group_id uuid PRIMARY KEY REFERENCES public.chat_groups(id) ON DELETE CASCADE,
+  last_enqueued_at timestamptz NOT NULL DEFAULT timezone('utc', now()),
+  last_message_id uuid
+);
 
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'chat_group_members' AND column_name = 'notifications_enabled'
-  ) THEN
-    ALTER TABLE public.chat_group_members ADD COLUMN notifications_enabled BOOLEAN DEFAULT TRUE;
-  END IF;
-END $$;
+ALTER TABLE public.chat_push_throttle ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.chat_push_throttle FROM PUBLIC;
+GRANT ALL ON public.chat_push_throttle TO service_role;
 
 CREATE OR REPLACE FUNCTION public.notify_chat_message()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions, vault
 AS $$
 DECLARE
-  fn_url text;
-  fn_jwt text;
+  v_url text;
+  v_key text;
+  v_claimed uuid;
 BEGIN
-  IF COALESCE(NEW.is_silent, FALSE) OR COALESCE(NEW.is_system_message, FALSE) THEN
+  IF COALESCE(NEW.is_silent, FALSE)
+     OR COALESCE(NEW.is_system_message, FALSE)
+     OR COALESCE(NEW.is_deleted, FALSE)
+     OR NEW.sender_id IS NULL
+     OR NEW.message_type = 'system'
+  THEN
     RETURN NEW;
   END IF;
 
-  fn_url := NULLIF(trim(current_setting('app.chat_notify_url', true)), '');
-  fn_jwt := NULLIF(trim(current_setting('app.chat_notify_service_jwt', true)), '');
+  INSERT INTO public.chat_push_throttle AS t (group_id, last_enqueued_at, last_message_id)
+  VALUES (NEW.group_id, timezone('utc', now()), NEW.id)
+  ON CONFLICT (group_id) DO UPDATE
+    SET last_enqueued_at = EXCLUDED.last_enqueued_at,
+        last_message_id = EXCLUDED.last_message_id
+    WHERE t.last_enqueued_at < (timezone('utc', now()) - interval '12 seconds')
+  RETURNING group_id INTO v_claimed;
 
-  IF fn_url IS NULL OR fn_jwt IS NULL THEN
-    RAISE WARNING 'Chat push skipped: set database parameters app.chat_notify_url and app.chat_notify_service_jwt (see header in setup_chat_notifications.sql)';
+  IF v_claimed IS NULL THEN
     RETURN NEW;
+  END IF;
+
+  SELECT decrypted_secret INTO v_url
+    FROM vault.decrypted_secrets WHERE name = 'SUPABASE_URL' LIMIT 1;
+  SELECT decrypted_secret INTO v_key
+    FROM vault.decrypted_secrets WHERE name = 'SUPABASE_SERVICE_ROLE_KEY' LIMIT 1;
+
+  IF v_url IS NULL OR v_key IS NULL THEN
+    v_url := COALESCE(v_url, NULLIF(trim(current_setting('app.chat_notify_url', true)), ''));
+    v_key := COALESCE(v_key, NULLIF(trim(current_setting('app.chat_notify_service_jwt', true)), ''));
+  ELSE
+    v_url := rtrim(v_url, '/') || '/functions/v1/send-chat-notification';
+  END IF;
+
+  IF v_url IS NULL OR v_key IS NULL THEN
+    RAISE WARNING 'notify_chat_message: missing vault secrets';
+    RETURN NEW;
+  END IF;
+
+  IF position('/functions/v1/send-chat-notification' in v_url) = 0 THEN
+    v_url := rtrim(v_url, '/') || '/functions/v1/send-chat-notification';
   END IF;
 
   PERFORM net.http_post(
-    url := fn_url,
+    url := v_url,
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || fn_jwt
+      'Authorization', 'Bearer ' || v_key
     ),
     body := jsonb_build_object(
       'message_id', NEW.id::text,
@@ -66,7 +80,8 @@ BEGIN
       'content', COALESCE(NEW.content, ''),
       'message_type', COALESCE(NEW.message_type, 'text'),
       'media_url', NEW.media_url
-    )
+    ),
+    timeout_milliseconds := 8000
   );
 
   RETURN NEW;
@@ -78,33 +93,7 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS trigger_chat_message_notification ON public.chat_messages;
-
 CREATE TRIGGER trigger_chat_message_notification
   AFTER INSERT ON public.chat_messages
   FOR EACH ROW
   EXECUTE FUNCTION public.notify_chat_message();
-
-CREATE OR REPLACE FUNCTION public.toggle_group_mute(
-  p_group_id UUID,
-  p_user_id UUID,
-  p_muted BOOLEAN
-)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  UPDATE public.chat_group_members
-  SET muted = p_muted,
-      notifications_enabled = NOT p_muted
-  WHERE group_id = p_group_id AND user_id = p_user_id;
-
-  RETURN FOUND;
-END;
-$$;
-
-SELECT trigger_name, event_manipulation, event_object_table
-FROM information_schema.triggers
-WHERE event_object_table = 'chat_messages'
-  AND trigger_name = 'trigger_chat_message_notification';

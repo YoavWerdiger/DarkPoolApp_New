@@ -124,8 +124,9 @@ export default function ShareTradeModal({ trade, visible, onClose }: ShareTradeM
       onClose={onClose}
       snapPoints={[0.6, 0.9]}
       enablePanDownToClose={true}
-      backdropOpacity={0.5}
       showHandle={true}
+      showBrandBackground={false}
+      useGlassBackground
     >
       <View style={styles.container}>
         <View style={styles.header}>

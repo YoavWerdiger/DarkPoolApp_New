@@ -193,6 +193,23 @@ export interface ConnectBrokerRequest {
   environment?: BrokerEnvironment;
 }
 
+/**
+ * סיווג כשל האימות שמגיע מ-broker-colmex-connect (ראה classifyAuthFailure
+ * ב-supabase/functions/_shared/colmex.ts). מראה את אותו contract בדיוק.
+ */
+export type BrokerAuthFailureReason =
+  | 'auth_rejected'
+  | 'account_locked'
+  | 'rate_limited'
+  | 'broker_unavailable';
+
+export interface BrokerAuthFailure {
+  reason: BrokerAuthFailureReason;
+  /** מונה הכשלונות של הברוקר — קיים רק כשהלוגין זוהה כמשתמש קיים. */
+  attempt: { current: number; max: number } | null;
+  loginRecognised: boolean;
+}
+
 export interface ConnectBrokerResponse {
   connectionId: string;
   environment: BrokerEnvironment;
@@ -220,6 +237,8 @@ export interface LinkBrokerAccountResponse {
   brokerExternalId: string;
   name: string;
   alreadyLinked?: boolean;
+  syncOk?: boolean;
+  syncError?: string | null;
 }
 
 export interface SyncBrokerRequest {

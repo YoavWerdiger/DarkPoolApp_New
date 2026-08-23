@@ -5,6 +5,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 import { Plus, Copy, Share, Star, Flag, Trash2, Edit, Reply, Forward, Info, Pin } from 'lucide-react-native';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -14,6 +15,10 @@ import {
   ChatSheetContent,
   useChatFitContentSnap,
 } from './ChatBottomSheet';
+import {
+  SHEET_GLASS_INTENSITY,
+  SHEET_GLASS_OVERLAY,
+} from '../ui/BottomSheet/sheetGlass';
 
 type ActionItem = {
   key: string;
@@ -100,6 +105,8 @@ export default function ActionMenu({
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
+      useGlassBackground
+      showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
     >
@@ -118,38 +125,56 @@ export default function ActionMenu({
         ) : null}
 
         <View style={styles.reactionRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.reactionScroll}
+          <BlurView
+            intensity={SHEET_GLASS_INTENSITY}
+            tint="dark"
+            style={styles.reactionPill}
           >
-            {QUICK_REACTIONS.map((emoji) => (
-              <Pressable
-                key={emoji}
-                onPress={() => handleReactionPress(emoji)}
-                style={({ pressed }) => [
-                  styles.emojiBtn,
-                  (pressed || selectedReaction === emoji) && styles.emojiBtnActive,
-                ]}
-              >
-                <Text style={styles.emoji}>{emoji}</Text>
-              </Pressable>
-            ))}
-            {onOpenPicker ? (
-              <Pressable
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  onOpenPicker();
-                }}
-                style={({ pressed }) => [styles.emojiBtn, pressed && styles.emojiBtnActive]}
-              >
-                <Plus size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
-              </Pressable>
-            ) : null}
-          </ScrollView>
+            <View
+              pointerEvents="none"
+              style={[StyleSheet.absoluteFill, styles.reactionPillOverlay]}
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.reactionScroll}
+            >
+              {QUICK_REACTIONS.map((emoji) => (
+                <Pressable
+                  key={emoji}
+                  onPress={() => handleReactionPress(emoji)}
+                  style={({ pressed }) => [
+                    styles.emojiBtn,
+                    (pressed || selectedReaction === emoji) && styles.emojiBtnActive,
+                  ]}
+                >
+                  <Text style={styles.emoji}>{emoji}</Text>
+                </Pressable>
+              ))}
+              {onOpenPicker ? (
+                <Pressable
+                  onPress={() => {
+                    void HapticFeedback.selection();
+                    onOpenPicker();
+                  }}
+                  style={({ pressed }) => [styles.emojiBtn, pressed && styles.emojiBtnActive]}
+                >
+                  <Plus size={22} color={DesignTokens.colors.text.primary} strokeWidth={2} />
+                </Pressable>
+              ) : null}
+            </ScrollView>
+          </BlurView>
         </View>
 
-        <View style={styles.actionsList}>
+        <BlurView
+          intensity={SHEET_GLASS_INTENSITY}
+          tint="dark"
+          style={styles.actionsList}
+        >
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, styles.actionsListOverlay]}
+          />
           {items.map((item, i) => (
             <Pressable
               key={item.key}
@@ -181,7 +206,7 @@ export default function ActionMenu({
               </Text>
             </Pressable>
           ))}
-        </View>
+        </BlurView>
       </ChatSheetContent>
     </ChatBottomSheet>
   );
@@ -200,9 +225,23 @@ const styles = StyleSheet.create({
   },
   reactionRow: {
     marginBottom: 12,
+    alignItems: 'center',
+  },
+  reactionPill: {
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+    borderTopColor: 'rgba(255,255,255,0.22)',
+    overflow: 'hidden',
+    maxWidth: '100%',
+  },
+  reactionPillOverlay: {
+    backgroundColor: SHEET_GLASS_OVERLAY,
+    borderRadius: 999,
   },
   reactionScroll: {
     alignItems: 'center',
+    paddingHorizontal: 8,
     paddingVertical: 4,
     gap: 4,
   },
@@ -214,21 +253,27 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   emojiBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: chatPalette.glassStrong,
     transform: [{ scale: 0.92 }],
   },
   emoji: {
     fontSize: 24,
   },
   actionsList: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: chatPalette.glassBorder,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+    borderTopColor: 'rgba(255,255,255,0.22)',
+    overflow: 'hidden',
     paddingTop: 4,
+  },
+  actionsListOverlay: {
+    backgroundColor: SHEET_GLASS_OVERLAY,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     minHeight: 44,
   },
@@ -237,7 +282,7 @@ const styles = StyleSheet.create({
     borderBottomColor: chatPalette.glassBorder,
   },
   actionRowPressed: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: chatPalette.glassStrong,
   },
   actionIcon: {
     marginRight: 10,

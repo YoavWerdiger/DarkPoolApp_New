@@ -5,14 +5,17 @@
 // קלט:
 //   {
 //     brokerAccountId: string,         // ה-UUID של broker_accounts (לא ה-id החיצוני!)
-//     name?: string,                   // שם תיק (default: account_name של ה-broker)
+//     name?: string,                   // שם תיק (default: שם ניטרלי "תיק Colmex Pro")
 //     currency?: string,
 //     description?: string,
 //     triggerSync?: boolean            // אם true – יחל סנכרון מלא מיד
 //   }
 //
 // פלט:
-//   { portfolioId, brokerAccountId, brokerExternalId, name }
+//   { portfolioId, brokerAccountId, brokerExternalId, name, alreadyLinked?, syncOk?, syncError? }
+//
+// אחרי יצירת/קישור תיק מריצים תמיד sync מלא (אלא אם triggerSync=false),
+// כולל גשר positions→trades — כדי שלא יישאר תיק עם מזומן בלבד.
 // ----------------------------------------------------------------------------
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -37,6 +40,31 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+const BASE_PORTFOLIO_NAME = 'תיק Colmex Pro';
+
+/**
+ * שם ניטרלי לתיק ברוקר — בלי שם משתמש / מספר חשבון של הברוקר.
+ * אם למשתמש כבר יש "תיק Colmex Pro", מוסיפים סיפרה עולה.
+ */
+async function nextNeutralPortfolioName(
+  sb: SupabaseClient,
+  userId: string
+): Promise<string> {
+  const { data } = await sb
+    .from('portfolios')
+    .select('name')
+    .eq('user_id', userId)
+    .like('name', `${BASE_PORTFOLIO_NAME}%`);
+
+  const taken = new Set((data ?? []).map((r: { name: string }) => r.name));
+  if (!taken.has(BASE_PORTFOLIO_NAME)) return BASE_PORTFOLIO_NAME;
+  for (let i = 2; i < 100; i++) {
+    const candidate = `${BASE_PORTFOLIO_NAME} ${i}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return BASE_PORTFOLIO_NAME;
 }
 
 serve(async (req) => {
@@ -68,74 +96,117 @@ serve(async (req) => {
 
   const { data: acc, error: accErr } = await sb
     .from('broker_accounts')
-    .select('id,user_id,connection_id,broker_account_id,account_name,currency,portfolio_id')
+    .select('id,user_id,connection_id,broker_account_id,currency,portfolio_id')
     .eq('id', body.brokerAccountId)
     .eq('user_id', userId)
     .maybeSingle();
   if (accErr || !acc) return jsonResponse({ error: 'broker_account_not_found' }, 404);
 
+  // שם התיק לעולם לא נגזר מ-account_name / login של הברוקר (מידע רגיש שעלול
+  // להיחשף בתיק ציבורי). ברירת המחדל ניטרלית, וממוספרת אם למשתמש כבר יש תיק כזה.
+  let portfolioId: string = acc.portfolio_id;
+  let portfolioName = (body.name || (await nextNeutralPortfolioName(sb, userId))).slice(0, 128);
+  let alreadyLinked = false;
+
   if (acc.portfolio_id) {
-    return jsonResponse({
-      portfolioId: acc.portfolio_id,
-      brokerAccountId: acc.id,
-      brokerExternalId: acc.broker_account_id,
-      name: body.name ?? acc.account_name,
-      alreadyLinked: true,
-    });
+    alreadyLinked = true;
+    const { data: existingPf } = await sb
+      .from('portfolios')
+      .select('id,name,source')
+      .eq('id', acc.portfolio_id)
+      .maybeSingle();
+    if (existingPf?.name) portfolioName = existingPf.name;
+    // אם התיק הישן נותק ל-manual — מחזירים אותו ל-colmex_pro לפני sync
+    if (existingPf && existingPf.source !== 'colmex_pro') {
+      await sb
+        .from('portfolios')
+        .update({
+          source: 'colmex_pro',
+          broker_account_id: acc.id,
+          read_only: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', acc.portfolio_id);
+    }
+  } else {
+    const currency = body.currency || acc.currency || 'USD';
+
+    const { data: portfolio, error: pErr } = await sb
+      .from('portfolios')
+      .insert({
+        user_id: userId,
+        name: portfolioName,
+        currency,
+        risk_free_rate: 4.0,
+        benchmark_symbol: 'SPY',
+        auto_adjust_splits: true,
+        description: body.description ?? 'מסונכרן אוטומטית מחשבון Colmex Pro',
+        is_public: false,
+        is_archived: false,
+        source: 'colmex_pro',
+        broker_account_id: acc.id,
+        read_only: true,
+      })
+      .select('id')
+      .single();
+    if (pErr || !portfolio) {
+      return jsonResponse({ error: 'portfolio_create_failed', detail: pErr?.message }, 500);
+    }
+
+    portfolioId = portfolio.id;
+    await sb
+      .from('broker_accounts')
+      .update({ portfolio_id: portfolio.id })
+      .eq('id', acc.id);
   }
 
-  const portfolioName = (body.name || acc.account_name || `Colmex ${acc.broker_account_id}`).slice(0, 128);
-  const currency = body.currency || acc.currency || 'USD';
-
-  // create portfolio
-  const { data: portfolio, error: pErr } = await sb
-    .from('portfolios')
-    .insert({
-      user_id: userId,
-      name: portfolioName,
-      currency,
-      risk_free_rate: 4.0,
-      benchmark_symbol: 'SPY',
-      auto_adjust_splits: true,
-      description: body.description ?? `מסונכרן מ-Colmex Pro · חשבון ${acc.broker_account_id}`,
-      is_public: false,
-      is_archived: false,
-      source: 'colmex_pro',
-      broker_account_id: acc.id,
-      read_only: true,
-    })
-    .select('id')
-    .single();
-  if (pErr || !portfolio) {
-    return jsonResponse({ error: 'portfolio_create_failed', detail: pErr?.message }, 500);
-  }
-
-  await sb
-    .from('broker_accounts')
-    .update({ portfolio_id: portfolio.id })
-    .eq('id', acc.id);
-
-  // trigger sync (best-effort)
-  if (body.triggerSync) {
+  // סנכרון מלא חובה אחרי link/clone — positions→trades, executions, statements, snapshots
+  let syncOk = false;
+  let syncError: string | null = null;
+  if (body.triggerSync !== false) {
     try {
       const syncUrl = `${SUPABASE_URL}/functions/v1/broker-colmex-sync`;
-      await fetch(syncUrl, {
+      const syncRes = await fetch(syncUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${SERVICE_KEY}`,
         },
-        body: JSON.stringify({ connectionId: acc.connection_id, full: true }),
+        body: JSON.stringify({
+          connectionId: acc.connection_id,
+          brokerAccountIds: [acc.broker_account_id],
+          full: true,
+        }),
       });
+      if (!syncRes.ok) {
+        syncError = `sync_http_${syncRes.status}`;
+        console.warn('sync trigger failed:', syncError, await syncRes.text().catch(() => ''));
+      } else {
+        const syncBody = (await syncRes.json().catch(() => null)) as {
+          ok?: boolean;
+          results?: Array<{ status?: string; error?: string }>;
+        } | null;
+        const first = syncBody?.results?.[0];
+        syncOk = first?.status === 'success' || first?.status === 'partial' || syncBody?.ok === true;
+        if (!syncOk) syncError = first?.error ?? 'sync_failed';
+        // לאחר sync: ודא שפוזיציות עברו ל-trades (גם אם ingest כבר רץ ב-sync)
+        await sb.rpc('sync_broker_positions_to_trades', {
+          p_broker_account_id: acc.id,
+        });
+      }
     } catch (e) {
-      console.warn('sync trigger failed:', (e as Error).message);
+      syncError = (e as Error).message;
+      console.warn('sync trigger failed:', syncError);
     }
   }
 
   return jsonResponse({
-    portfolioId: portfolio.id,
+    portfolioId,
     brokerAccountId: acc.id,
     brokerExternalId: acc.broker_account_id,
     name: portfolioName,
+    alreadyLinked,
+    syncOk,
+    syncError,
   });
 });

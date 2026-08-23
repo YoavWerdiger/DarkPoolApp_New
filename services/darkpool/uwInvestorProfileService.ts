@@ -3,6 +3,7 @@ import type {
   PortfolioSource,
   ReconstructedPortfolioMetrics,
 } from './portfolioMetricsTypes';
+import { enrichProfilePortfolioMetrics } from './profilePortfolioEngine';
 
 export type { ReconstructedPortfolioMetrics, PortfolioSource } from './portfolioMetricsTypes';
 
@@ -12,9 +13,12 @@ export interface InvestorHolding {
   owner_label?: string | null;
   trade_count: number;
   last_trade_date: string | null;
+  /** תאריך קנייה ראשון בפוזיציה הפתוחה (אם זמין) */
+  first_added_date?: string | null;
   txn_mix: string;
   allocation_pct?: number;
   amount_label?: string | null;
+  return_pct?: number | null;
 }
 
 export interface PortfolioSnapshot {
@@ -81,8 +85,18 @@ export async function fetchInvestorProfile(
   if (data && 'error' in data && data.error) throw new Error(data.error);
   if (!data || !('name' in data)) throw new Error('uw-investor-profile: empty');
 
-  cache.set(key, { at: Date.now(), data });
-  return data;
+  const profile: InvestorProfile = {
+    ...data,
+    metrics: data.metrics ? enrichProfilePortfolioMetrics(data.metrics) : null,
+  };
+
+  // לא לשמור cache ריק של metrics — אחרת גרף שווי «נתקע» אחרי תיקון שרת
+  if (profile.metrics?.series && profile.metrics.series.length >= 2) {
+    cache.set(key, { at: Date.now(), data: profile });
+  } else {
+    cache.delete(key);
+  }
+  return profile;
 }
 
 export function clearInvestorProfileCache() {

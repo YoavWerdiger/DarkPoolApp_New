@@ -38,6 +38,23 @@ import {
 } from './chatValidation';
 import { retryWithBackoff } from './chatRetry';
 import { logger } from '../../utils/logger';
+import {
+  enrichChatMessagesSenders,
+  normalizeChatSender,
+} from './chatRealtimeService';
+import {
+  canSendInAdminOnlyChat,
+  isAdminOnlySendSettings,
+} from '../../utils/canSendInAdminOnlyChat';
+
+/**
+ * מעגל ערך מספרי ל-INTEGER לעמודות DB (media_duration/size/width/height).
+ * ImagePicker מחזיר duration שברי (למשל 24.747) שנכשל על עמודת integer (22P02).
+ */
+function toIntOrNull(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  return Math.round(value);
+}
 
 // ============================================
 // שליחת הודעה חדשה
@@ -144,10 +161,31 @@ export async function sendChatMessage(
       return { data: null, error: { code: 'NOT_MEMBER', message: 'אינך חבר בקבוצה זו' } };
     }
 
-    // בדיקה אם רק אדמינים יכולים לשלוח
+    // בדיקה אם רק אדמינים יכולים לשלוח (הכרזות / onlyAdminsCanSend)
     const groupSettings = (membership as any).chat_groups?.settings;
-    if (groupSettings?.onlyAdminsCanSend && membership.role !== 'admin') {
-      return { data: null, error: { code: 'PERMISSION_DENIED', message: 'רק אדמינים יכולים לשלוח הודעות' } };
+    if (isAdminOnlySendSettings(groupSettings)) {
+      const isGroupAdmin =
+        membership.role === 'admin' || membership.role === 'owner';
+      let isAppAdmin = false;
+      if (!isGroupAdmin) {
+        const { data: appAdminFlag } = await supabase.rpc('is_app_admin');
+        isAppAdmin = !!appAdminFlag;
+      }
+      if (
+        !canSendInAdminOnlyChat({
+          isGroupAdmin,
+          isAppAdmin,
+          myRole: membership.role,
+        })
+      ) {
+        return {
+          data: null,
+          error: {
+            code: 'PERMISSION_DENIED',
+            message: 'רק מנהלי הקהילה יכולים לשלוח הודעות',
+          },
+        };
+      }
     }
 
     // ============================================
@@ -218,10 +256,11 @@ export async function sendChatMessage(
             media_url: input.media_url,
             media_thumbnail_url: input.media_thumbnail_url,
             media_type: input.media_type,
-            media_size: input.media_size,
-            media_duration: input.media_duration,
-            media_width: input.media_width,
-            media_height: input.media_height,
+            // עמודות INTEGER ב-DB — מעגלים כי ImagePicker מחזיר duration שברי (למשל 24.747)
+            media_size: toIntOrNull(input.media_size),
+            media_duration: toIntOrNull(input.media_duration),
+            media_width: toIntOrNull(input.media_width),
+            media_height: toIntOrNull(input.media_height),
             media_file_name: input.media_file_name,
             reply_to_message_id: input.reply_to_message_id,
             mentioned_users: input.mentioned_users || [],
@@ -348,11 +387,15 @@ export async function getChatMessages(
   groupId: string,
   userId: string,
   params?: ChatPaginationParams,
-  filters?: ChatMessageFilters
+  filters?: ChatMessageFilters,
+  options?: { lean?: boolean }
 ): Promise<{ data: ChatMessagesResponse | null; error: ChatError | null }> {
   try {
     const limit = params?.limit || 50;
+    const lean = options?.lean === true;
 
+    // בלי count: 'exact' — ספירה מדויקת יקרה בטבלאות גדולות ומאריכה את הכניסה לצ'אט בשניות.
+    // has_more נגזר מגודל העמוד (סטנדרטי ל-cursor/offset pagination).
     let query = supabase
       .from('chat_messages')
       .select(`
@@ -363,7 +406,7 @@ export async function getChatMessages(
           profile_picture,
           is_online
         )
-      `, { count: 'exact' })
+      `)
       .eq('group_id', groupId)
       .eq('is_deleted', false);
 
@@ -393,94 +436,114 @@ export async function getChatMessages(
 
     // Fallback to offset for backward compatibility
     const offset = params?.offset || 0;
+    // ascending+after: catch-up כרונולוגי (מונע פער כשיש יותר מ-limit הודעות חדשות)
+    const ascending = params?.ascending === true && !!params?.after && !params?.before;
 
-    const { data, error, count } = await query
-      .order('created_at', { ascending: false })
+    const { data, error } = await query
+      .order('created_at', { ascending })
       .range(offset, offset + limit - 1);
 
     if (error) {
       return { data: null, error: { code: 'FETCH_MESSAGES_ERROR', message: error.message } };
     }
 
-    const messageIds = data.map(m => m.id);
+    const rows = data ?? [];
+    const messageIds = rows.map(m => m.id);
 
-    // Run all supplementary queries in parallel instead of sequentially (~5x faster)
-    const [reactionsResult, starredResult, readResult, deletionsResult] = await Promise.all([
-      supabase
-        .from('chat_message_reactions')
-        .select(`*, user:users (id, display_name, profile_picture)`)
-        .in('message_id', messageIds),
-      supabase
-        .from('chat_starred_messages')
-        .select('message_id')
-        .eq('user_id', userId)
-        .in('message_id', messageIds),
-      supabase
-        .from('chat_message_reads')
-        .select('message_id')
-        .eq('user_id', userId)
-        .in('message_id', messageIds),
-      supabase
-        .from('chat_message_personal_deletions')
-        .select('message_id')
-        .eq('user_id', userId)
-        .in('message_id', messageIds),
-    ]);
+    // lean (prefetch): רק מחיקות אישיות. full: enrichment + reply_to — הכל במקביל.
+    const replyToMessageIds = rows
+      .filter((msg: any) => msg.reply_to_message_id)
+      .map((msg: any) => msg.reply_to_message_id);
+
+    type EmptyResult = { data: any[] | null };
+    const empty: EmptyResult = { data: [] };
+
+    const [reactionsResult, starredResult, readResult, deletionsResult, replyToResult] =
+      messageIds.length === 0
+        ? [empty, empty, empty, empty, empty]
+        : lean
+          ? await Promise.all([
+              Promise.resolve(empty),
+              Promise.resolve(empty),
+              Promise.resolve(empty),
+              supabase
+                .from('chat_message_personal_deletions')
+                .select('message_id')
+                .eq('user_id', userId)
+                .in('message_id', messageIds),
+              Promise.resolve(empty),
+            ])
+          : await Promise.all([
+              supabase
+                .from('chat_message_reactions')
+                .select(`*, user:users (id, display_name, profile_picture)`)
+                .in('message_id', messageIds),
+              supabase
+                .from('chat_starred_messages')
+                .select('message_id')
+                .eq('user_id', userId)
+                .in('message_id', messageIds),
+              supabase
+                .from('chat_message_reads')
+                .select('message_id')
+                .eq('user_id', userId)
+                .in('message_id', messageIds),
+              supabase
+                .from('chat_message_personal_deletions')
+                .select('message_id')
+                .eq('user_id', userId)
+                .in('message_id', messageIds),
+              replyToMessageIds.length > 0
+                ? supabase
+                    .from('chat_messages')
+                    .select(`
+                      id,
+                      content,
+                      message_type,
+                      media_url,
+                      sender_id,
+                      sender:users!chat_messages_sender_id_fkey (
+                        id,
+                        display_name
+                      )
+                    `)
+                    .in('id', replyToMessageIds)
+                : Promise.resolve(empty),
+            ]);
 
     const reactions = reactionsResult.data;
-    const starredIds = new Set(starredResult.data?.map(s => s.message_id) || []);
-    const readIds = new Set(readResult.data?.map(r => r.message_id) || []);
-    const deletedIds = new Set(deletionsResult.data?.map(d => d.message_id) || []);
+    const starredIds = new Set(starredResult.data?.map((s: any) => s.message_id) || []);
+    const readIds = new Set(readResult.data?.map((r: any) => r.message_id) || []);
+    const deletedIds = new Set(deletionsResult.data?.map((d: any) => d.message_id) || []);
 
     // ארגון הריאקציות לפי הודעה
     const reactionsMap = new Map<string, any[]>();
-    reactions?.forEach(r => {
+    reactions?.forEach((r: any) => {
       if (!reactionsMap.has(r.message_id)) {
         reactionsMap.set(r.message_id, []);
       }
       reactionsMap.get(r.message_id)!.push(r);
     });
 
-    // קבלת הודעות המקור עבור reply_to
-    const replyToMessageIds = data
-      .filter((msg: any) => msg.reply_to_message_id)
-      .map((msg: any) => msg.reply_to_message_id);
-    
-    let replyToMessagesMap = new Map<string, any>();
-    if (replyToMessageIds.length > 0) {
-      const { data: replyToMessages } = await supabase
-        .from('chat_messages')
-        .select(`
-          id,
-          content,
-          message_type,
-          media_url,
-          sender_id,
-          sender:users!chat_messages_sender_id_fkey (
-            id,
-            display_name
-          )
-        `)
-        .in('id', replyToMessageIds);
-      
-      replyToMessages?.forEach((msg: any) => {
-        const sender = Array.isArray(msg.sender) ? msg.sender[0] : msg.sender;
-        replyToMessagesMap.set(msg.id, {
-          message_id: msg.id,
-          content: msg.content,
-          message_type: msg.message_type,
-          media_url: msg.media_url,
-          sender_id: msg.sender_id,
-          sender_name: sender?.display_name || 'משתמש',
-        });
+    const replyToMessagesMap = new Map<string, any>();
+    replyToResult.data?.forEach((msg: any) => {
+      const sender = Array.isArray(msg.sender) ? msg.sender[0] : msg.sender;
+      replyToMessagesMap.set(msg.id, {
+        message_id: msg.id,
+        content: msg.content,
+        message_type: msg.message_type,
+        media_url: msg.media_url,
+        sender_id: msg.sender_id,
+        sender_name: sender?.display_name || 'משתמש',
       });
-      
-    }
+    });
 
     // המרת הנתונים לפורמט הנכון - סינון הודעות שנמחקו אישית
-    const filteredMessages = data.filter((msg: any) => !deletedIds.has(msg.id));
-    
-    const messages: ChatMessage[] = filteredMessages
+    const filteredMessages = rows.filter((msg: any) => !deletedIds.has(msg.id));
+    // תשובה תמיד newest-first (FlatList inverted), גם אם השאילתה הייתה ascending
+    const orderedRows = ascending ? [...filteredMessages].reverse() : filteredMessages;
+
+    const messages: ChatMessage[] = orderedRows
       .map((msg: any) => {
       const messageReactions = reactionsMap.get(msg.id) || [];
       
@@ -494,8 +557,8 @@ export async function getChatMessages(
           existing.count++;
           existing.users.push({
             id: user.id,
-            name: user.display_name,
-            profile_picture: user.profile_picture,
+            name: user?.display_name,
+            profile_picture: user?.profile_picture,
           });
           if (r.user_id === userId) {
             existing.reacted_by_me = true;
@@ -506,8 +569,8 @@ export async function getChatMessages(
             count: 1,
             users: [{
               id: user.id,
-              name: user.display_name,
-              profile_picture: user.profile_picture,
+              name: user?.display_name,
+              profile_picture: user?.profile_picture,
             }],
             reacted_by_me: r.user_id === userId,
           });
@@ -539,6 +602,7 @@ export async function getChatMessages(
         ...msg,
         content: parsedContent,
         media_urls,
+        sender: normalizeChatSender(msg.sender),
         reply_to: replyTo,
         reactions: reactionGroups,
         is_starred_by_me: starredIds.has(msg.id),
@@ -546,11 +610,14 @@ export async function getChatMessages(
       };
     });
 
+    // lean/full: אם ה-embed ל-users חזר null — משלימים בפרופילים ציבוריים (batch).
+    const enrichedMessages = await enrichChatMessagesSenders(messages);
+
     const response: ChatMessagesResponse = {
-      messages: messages, // נשאיר בסדר יורד (חדשה לישנה) עבור FlatList inverted
-      has_more: (count || 0) > offset + limit,
+      messages: enrichedMessages, // נשאיר בסדר יורד (חדשה לישנה) עבור FlatList inverted
+      has_more: rows.length >= limit,
       next_offset: offset + limit,
-      total_count: count || 0,
+      total_count: offset + filteredMessages.length,
     };
 
     return { data: response, error: null };
@@ -974,6 +1041,31 @@ export async function markChatAsRead(
   }
 }
 
+/**
+ * מסמן שהמשתמש צופה כרגע בקבוצה — השרת מדלג על unread fan-out + push עבורו.
+ * Heartbeat כל ~60s שומר על חלון ה-90s בצד השרת.
+ */
+export async function setChatGroupViewing(
+  groupId: string,
+  isViewing: boolean,
+): Promise<{ error: ChatError | null }> {
+  try {
+    if (!groupId) return { error: null };
+    const { error } = await supabase.rpc('set_chat_group_viewing', {
+      p_group_id: groupId,
+      p_is_viewing: isViewing,
+    });
+    if (error) {
+      logger.warn('ChatMessage', 'set_chat_group_viewing failed', error);
+      return { error: { code: 'VIEWING_ERROR', message: error.message } };
+    }
+    return { error: null };
+  } catch (error: any) {
+    logger.warn('ChatMessage', 'set_chat_group_viewing unexpected', error);
+    return { error: { code: 'UNEXPECTED_ERROR', message: error.message } };
+  }
+}
+
 // ============================================
 // הוספת הודעה למועדפות
 // ============================================
@@ -1121,8 +1213,8 @@ export async function getMessageReactionDetails(
         existing.count++;
         existing.users.push({
           id: user.id,
-          name: user.display_name,
-          profile_picture: user.profile_picture,
+          name: user?.display_name,
+          profile_picture: user?.profile_picture,
           reacted_at: r.created_at,
         });
       } else {
@@ -1131,8 +1223,8 @@ export async function getMessageReactionDetails(
           count: 1,
           users: [{
             id: user.id,
-            name: user.display_name,
-            profile_picture: user.profile_picture,
+            name: user?.display_name,
+            profile_picture: user?.profile_picture,
             reacted_at: r.created_at,
           }],
           reacted_by_me: false,
@@ -1149,12 +1241,138 @@ export async function getMessageReactionDetails(
 }
 
 // ============================================
+// Catch-up / around helpers (חלון מוגבל — לא היסטוריה מלאה)
+// ============================================
+
+/**
+ * מביא רק הודעות חדשות יותר מ-`afterCreatedAt` (כרונולוגי, בלי פערים).
+ * מחזיר newest-first. מגביל ל-maxTotal.
+ */
+export async function fetchMessagesSince(
+  groupId: string,
+  userId: string,
+  afterCreatedAt: string,
+  opts?: { pageSize?: number; maxTotal?: number; lean?: boolean },
+): Promise<{ data: ChatMessage[] | null; error: ChatError | null; has_more: boolean }> {
+  const pageSize = Math.min(opts?.pageSize ?? 50, 100);
+  const maxTotal = opts?.maxTotal ?? 200;
+  const collected: ChatMessage[] = [];
+  let cursor = afterCreatedAt;
+  let hasMore = false;
+
+  try {
+    while (collected.length < maxTotal) {
+      const { data, error } = await getChatMessages(
+        groupId,
+        userId,
+        { limit: pageSize, after: cursor, ascending: true },
+        undefined,
+        { lean: opts?.lean },
+      );
+      if (error) return { data: null, error, has_more: false };
+      const batch = data?.messages ?? [];
+      if (batch.length === 0) break;
+
+      // batch הוא newest-first; ל-catch-up כרונולוגי ניקח מהישן לחדש
+      const chronological = [...batch].reverse();
+      collected.push(...chronological);
+      cursor = chronological[chronological.length - 1]!.created_at;
+      if (batch.length < pageSize) {
+        hasMore = false;
+        break;
+      }
+      hasMore = true;
+      if (collected.length >= maxTotal) break;
+    }
+
+    // newest-first לצרכן
+    collected.reverse();
+    return { data: collected, error: null, has_more: hasMore };
+  } catch (error: any) {
+    logger.error('ChatMessage', 'fetchMessagesSince failed', error);
+    return {
+      data: null,
+      error: { code: 'UNEXPECTED_ERROR', message: error.message },
+      has_more: false,
+    };
+  }
+}
+
+/**
+ * חלון סביב הודעת עוגן (last_read / קפיצה) — before+after מוגבלים.
+ * מחזיר newest-first.
+ */
+export async function fetchMessagesAround(
+  groupId: string,
+  userId: string,
+  anchorMessageId: string,
+  opts?: { before?: number; after?: number; lean?: boolean },
+): Promise<{ data: ChatMessage[] | null; error: ChatError | null }> {
+  try {
+    const beforeLimit = opts?.before ?? 40;
+    const afterLimit = opts?.after ?? 80;
+
+    const { data: anchor, error: anchorError } = await supabase
+      .from('chat_messages')
+      .select('created_at')
+      .eq('id', anchorMessageId)
+      .eq('group_id', groupId)
+      .single();
+
+    if (anchorError || !anchor) {
+      return {
+        data: null,
+        error: { code: 'MESSAGE_NOT_FOUND', message: 'הודעה לא נמצאה' },
+      };
+    }
+
+    const anchorTs = anchor.created_at as string;
+    const olderPromise = getChatMessages(
+      groupId,
+      userId,
+      { limit: beforeLimit, before: new Date(new Date(anchorTs).getTime() + 1).toISOString() },
+      undefined,
+      { lean: opts?.lean },
+    );
+    const newerPromise = getChatMessages(
+      groupId,
+      userId,
+      { limit: afterLimit, after: anchorTs, ascending: true },
+      undefined,
+      { lean: opts?.lean },
+    );
+
+    const [{ data: older }, { data: newer }] = await Promise.all([olderPromise, newerPromise]);
+    if (older === null && newer === null) {
+      return { data: null, error: { code: 'FETCH_MESSAGES_ERROR', message: 'שגיאה בטעינת חלון' } };
+    }
+
+    const byId = new Map<string, ChatMessage>();
+    for (const m of [...(newer?.messages ?? []), ...(older?.messages ?? [])]) {
+      byId.set(m.id, m);
+    }
+    const messages = Array.from(byId.values()).sort((a, b) => {
+      const dt = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      if (dt !== 0) return dt;
+      return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
+    });
+
+    return { data: messages, error: null };
+  } catch (error: any) {
+    logger.error('ChatMessage', 'fetchMessagesAround failed', error);
+    return { data: null, error: { code: 'UNEXPECTED_ERROR', message: error.message } };
+  }
+}
+
+// ============================================
 // Export
 // ============================================
 
 export const chatMessageService = {
   sendChatMessage,
   getChatMessages,
+  fetchMessagesSince,
+  fetchMessagesAround,
   editChatMessage,
   deleteChatMessage,
   forwardChatMessage,
@@ -1163,6 +1381,7 @@ export const chatMessageService = {
   getMessageReactionDetails,
   markMessagesAsRead,
   markChatAsRead,
+  setChatGroupViewing,
   starMessage,
   unstarMessage,
   getStarredMessages,

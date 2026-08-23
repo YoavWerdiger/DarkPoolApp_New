@@ -13,6 +13,24 @@ export function formatUsdCompact(v: number | null | undefined): string {
   return `$${Math.round(v).toLocaleString('en-US')}`;
 }
 
+/** מחיר ממוצע לכניסה (cost/qty) — דיוק סביר למניות, בלי להמציא ערך */
+export function formatAvgEntryUsd(v: number | null | undefined): string | null {
+  if (v == null || !Number.isFinite(v) || v <= 0) return null;
+  if (v >= 1000) return formatUsdCompact(v);
+  if (v >= 1) return `$${v.toFixed(2)}`;
+  return `$${v.toFixed(4)}`;
+}
+
+/** avg = cost_usd / qty כששניהם זמינים משחזור תיק */
+export function avgEntryPriceFromCost(
+  costUsd: number | null | undefined,
+  qty: number | null | undefined
+): number | null {
+  if (costUsd == null || qty == null) return null;
+  if (!(costUsd > 0) || !(qty > 0)) return null;
+  return costUsd / qty;
+}
+
 export function formatPercent(v: number | null | undefined, digits = 1): string {
   if (v == null || !Number.isFinite(v)) return '—';
   return `${(v * 100).toFixed(digits)}%`;

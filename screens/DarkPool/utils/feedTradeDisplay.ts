@@ -3,13 +3,34 @@
 export type FeedTradeSide = 'buy' | 'sell';
 
 export function getFeedTradeSide(transactionType: string): FeedTradeSide {
-  const t = transactionType.toLowerCase();
-  if (t === 's' || t === 'sell') return 'sell';
+  const t = transactionType.trim().toLowerCase();
+  if (
+    t === 's' ||
+    t === 'sell' ||
+    t === 'sale' ||
+    t === 'sold' ||
+    t.includes('sell') ||
+    t.includes('sale') ||
+    t.includes('מכר') ||
+    t.includes('מכיר')
+  ) {
+    return 'sell';
+  }
   return 'buy';
 }
 
+/** תווית קצרה לצ׳יפ */
 export function getFeedTradeVerb(side: FeedTradeSide): string {
-  return side === 'sell' ? 'מכר' : 'רכש';
+  return side === 'sell' ? 'מכירה' : 'קנייה';
+}
+
+/** משפט פעולה מלא — נגיש יותר */
+export function getFeedTradeActionSentence(
+  side: FeedTradeSide,
+  ticker: string
+): string {
+  const t = ticker.toUpperCase();
+  return side === 'sell' ? `מכירה של ${t}` : `קנייה של ${t}`;
 }
 
 export function formatFeedUsd(amount: number): string {
@@ -37,23 +58,39 @@ export function formatFeedDisclosureRange(raw: string | null | undefined): strin
   return cleaned.startsWith('$') ? cleaned : `$${cleaned}`;
 }
 
+export type FeedTradeDetailParts = {
+  sharesLabel: string | null;
+  amountLabel: string | null;
+};
+
+/** פירוק לפירוט כרטיס — כמות / שווי בנפרד כדי לסדר טיקר באמצע. */
+export function getFeedTradeDetailParts(input: {
+  shares?: number | null;
+  valueUsd?: number | null;
+  amountLabel?: string | null;
+}): FeedTradeDetailParts {
+  const sharesLabel =
+    input.shares != null && input.shares > 0
+      ? `${formatFeedShareCount(input.shares)} מניות`
+      : null;
+
+  let amountLabel: string | null = null;
+  if (input.valueUsd != null && input.valueUsd > 0) {
+    amountLabel = formatFeedUsd(input.valueUsd);
+  } else {
+    // בלי "בטווח" — חוסך מקום בשורה הצפופה
+    amountLabel = formatFeedDisclosureRange(input.amountLabel);
+  }
+
+  return { sharesLabel, amountLabel };
+}
+
 export function formatFeedTradeDetail(input: {
   shares?: number | null;
   valueUsd?: number | null;
   amountLabel?: string | null;
 }): string | null {
-  const parts: string[] = [];
-
-  if (input.shares != null && input.shares > 0) {
-    parts.push(`${formatFeedShareCount(input.shares)} מניות`);
-  }
-
-  if (input.valueUsd != null && input.valueUsd > 0) {
-    parts.push(formatFeedUsd(input.valueUsd));
-  } else {
-    const range = formatFeedDisclosureRange(input.amountLabel);
-    if (range) parts.push(range);
-  }
-
+  const { sharesLabel, amountLabel } = getFeedTradeDetailParts(input);
+  const parts = [sharesLabel, amountLabel].filter(Boolean);
   return parts.length ? parts.join(' · ') : null;
 }

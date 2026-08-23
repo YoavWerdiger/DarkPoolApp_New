@@ -13,8 +13,8 @@ import type { ChatMessage } from '../types/chat.types';
  */
 const STORAGE_PREFIX = '@chat_messages_cache_v1';
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // שבוע
-const PER_GROUP_LIMIT = 50; // הודעות אחרונות לכל קבוצה
-const MAX_GROUPS = 20; // תקרת קבוצות לגיבוי
+const PER_GROUP_LIMIT = 200; // הודעות אחרונות לכל קבוצה (חלון unread + הקשר)
+const MAX_GROUPS = 25; // תקרת קבוצות לגיבוי (LRU לפי dataUpdatedAt)
 const PERSIST_DEBOUNCE_MS = 1500;
 
 /** מפתח אחסון מוצמד למשתמש — מונע דליפת הודעות בין חשבונות */
@@ -34,23 +34,74 @@ function sanitizeMessages(messages: ChatMessage[]): ChatMessage[] {
     .slice(0, PER_GROUP_LIMIT);
 }
 
+/** hydrate פעיל — כדי שכניסה מהירה לצ'אט תחכה לסיום במקום לפספס cache מהדיסק */
+let hydrateInFlight: Promise<void> | null = null;
+
 /** טוען את ההודעות השמורות מהדיסק לזיכרון (queryClient) — בהפעלת האפליקציה */
 export async function hydrateChatMessages(userId: string): Promise<void> {
+  const run = (async () => {
+    try {
+      const raw = await AsyncStorage.getItem(storageKey(userId));
+      if (!raw) return;
+
+      const payload = JSON.parse(raw) as PersistedPayload;
+      if (!payload?.groups || Date.now() - payload.savedAt > MAX_AGE_MS) return;
+
+      for (const [groupId, messages] of Object.entries(payload.groups)) {
+        if (!Array.isArray(messages) || messages.length === 0) continue;
+        // לא דורסים cache קיים (טרי יותר מ-realtime/רשת)
+        if (queryClient.getQueryData(appQueryKeys.chatMessages(groupId))) continue;
+        queryClient.setQueryData(appQueryKeys.chatMessages(groupId), messages);
+      }
+    } catch (error) {
+      logger.warn('chatMessagePersist', 'hydrate failed', error);
+    }
+  })();
+
+  hydrateInFlight = run.finally(() => {
+    if (hydrateInFlight === run) hydrateInFlight = null;
+  });
+  return hydrateInFlight;
+}
+
+/**
+ * הודעות מקאש לכניסה מיידית: זיכרון → ממתין ל-hydrate אם רץ → קריאה ישירה מהדיסק.
+ * לא חוסם את נתיב הרשת — הקורא מפעיל ברקע ומצייר כשיש תוצאה.
+ */
+export async function readCachedMessagesForGroup(
+  userId: string,
+  groupId: string,
+): Promise<ChatMessage[] | null> {
+  if (!userId || !groupId) return null;
+
+  const fromMemory = () => {
+    const mem = queryClient.getQueryData<ChatMessage[]>(
+      appQueryKeys.chatMessages(groupId),
+    );
+    return mem?.length ? mem : null;
+  };
+
+  const hit = fromMemory();
+  if (hit) return hit;
+
+  if (hydrateInFlight) {
+    await hydrateInFlight;
+    const afterHydrate = fromMemory();
+    if (afterHydrate) return afterHydrate;
+  }
+
   try {
     const raw = await AsyncStorage.getItem(storageKey(userId));
-    if (!raw) return;
-
+    if (!raw) return null;
     const payload = JSON.parse(raw) as PersistedPayload;
-    if (!payload?.groups || Date.now() - payload.savedAt > MAX_AGE_MS) return;
-
-    for (const [groupId, messages] of Object.entries(payload.groups)) {
-      if (!Array.isArray(messages) || messages.length === 0) continue;
-      // לא דורסים cache קיים (טרי יותר מ-realtime/רשת)
-      if (queryClient.getQueryData(appQueryKeys.chatMessages(groupId))) continue;
-      queryClient.setQueryData(appQueryKeys.chatMessages(groupId), messages);
-    }
+    if (!payload?.groups || Date.now() - payload.savedAt > MAX_AGE_MS) return null;
+    const messages = payload.groups[groupId];
+    if (!Array.isArray(messages) || messages.length === 0) return null;
+    queryClient.setQueryData(appQueryKeys.chatMessages(groupId), messages);
+    return messages;
   } catch (error) {
-    logger.warn('chatMessagePersist', 'hydrate failed', error);
+    logger.warn('chatMessagePersist', 'readCachedMessagesForGroup failed', error);
+    return null;
   }
 }
 

@@ -35,9 +35,44 @@ import type {
 import {
   ASSET_TYPE_LABELS,
   DISTRIBUTION_PALETTE,
+  SECTOR_LABELS,
+  SYMBOL_SECTOR_MAP,
 } from '../../screens/Portfolios/portfolioConstants';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * מסיק סקטור מה-symbol וה-asset_type.
+ *
+ * סדר עדיפויות:
+ *  1. סוג נכס שאינו מניה (crypto/etf/fund/forex) → סקטור ישיר
+ *  2. מניה ישראלית (suffix .TA) → 'israel'
+ *  3. symbol בטבלת SYMBOL_SECTOR_MAP → הסקטור המוגדר
+ *  4. סמלי קריפטו ידועים (suffix -USD / -USDT) → 'crypto'
+ *  5. ברירת מחדל → 'other'
+ */
+function inferSector(symbol: string, assetType: string | null): string {
+  if (assetType === 'crypto') return 'crypto';
+  if (assetType === 'etf') return 'etf';
+  if (assetType === 'fund') return 'fund';
+  if (assetType === 'forex') return 'forex';
+
+  const upper = symbol.toUpperCase();
+
+  // מניה ישראלית
+  if (upper.endsWith('.TA')) return 'israel';
+
+  // lookup טבלה סטטית
+  const mapped = SYMBOL_SECTOR_MAP.get(upper);
+  if (mapped) return mapped;
+
+  // קריפטו לפי suffix נפוץ
+  if (upper.endsWith('-USD') || upper.endsWith('-USDT') || upper.endsWith('USD')) {
+    return 'crypto';
+  }
+
+  return 'other';
+}
 
 function getDaysSince(iso: string | null): number | null {
   if (!iso) return null;
@@ -62,11 +97,16 @@ export async function loadPortfolioHoldings(
 
   // קיבוץ tx לפי symbol עבור FIFO
   const txBySymbol = new Map<string, PortfolioTransaction[]>();
+  // מיפוי symbol → מטבע (לפי הטרנזקציה האחרונה מסוג buy)
+  const symbolCurrencyMap = new Map<string, string>();
   for (const tx of transactions) {
     if (!tx.symbol) continue;
     const arr = txBySymbol.get(tx.symbol) ?? [];
     arr.push(tx);
     txBySymbol.set(tx.symbol, arr);
+    if (tx.type === 'buy' && tx.currency) {
+      symbolCurrencyMap.set(tx.symbol, tx.currency);
+    }
   }
 
   let totalValue = 0;
@@ -138,10 +178,16 @@ export async function loadPortfolioHoldings(
 
     if (fifo.open_quantity > 0) totalValue += value;
 
+    const holdingAssetType = (raw.asset_type as PortfolioHolding['asset_type']) ?? null;
+    const holdingCurrency = symbolCurrencyMap.get(raw.symbol) ?? 'USD';
+    const holdingSector = inferSector(raw.symbol, holdingAssetType);
+
     tempHoldings.push({
       symbol: raw.symbol,
-      asset_type: (raw.asset_type as PortfolioHolding['asset_type']) ?? null,
+      asset_type: holdingAssetType,
       exchange: raw.exchange,
+      currency: holdingCurrency,
+      sector: holdingSector,
       quantity: fifo.open_quantity,
       avg_price: fifo.avg_price,
       invested: fifo.invested,
@@ -286,17 +332,19 @@ export function buildDistribution(
       case 'asset_type':
         key = h.asset_type ?? 'unknown';
         label = h.asset_type
-          ? ASSET_TYPE_LABELS[h.asset_type]
+          ? (ASSET_TYPE_LABELS[h.asset_type] ?? h.asset_type)
           : 'לא ידוע';
         break;
       case 'currency':
-        key = 'USD';
-        label = 'דולר';
+        key = h.currency || 'USD';
+        label = h.currency || 'USD';
         break;
       case 'sector':
-      default:
-        key = 'other';
-        label = 'אחר';
+      default: {
+        const sec = h.sector ?? 'other';
+        key = sec;
+        label = SECTOR_LABELS[sec] ?? sec;
+      }
     }
     const prev = groups.get(key) ?? { value: 0, label };
     prev.value += h.value;
@@ -318,16 +366,19 @@ export function buildDistribution(
   }));
 }
 
-/** Daily gainers/losers – Top 5 בכל קבוצה (רק חיוביים / רק שליליים; לא אותה רשימה) */
+/**
+ * Daily gainers/losers – Top 5 בכל קבוצה לפי השפעה דולרית על התיק
+ * (daily_gain = qty × Δprice), לא לפי % המניה.
+ */
 export function getDailyGainersLosers(holdings: PortfolioHolding[]) {
   const open = holdings.filter((h) => !h.is_closed);
-  const positive = open.filter((h) => h.daily_gain_pct > 0);
-  const negative = open.filter((h) => h.daily_gain_pct < 0);
+  const positive = open.filter((h) => h.daily_gain > 0);
+  const negative = open.filter((h) => h.daily_gain < 0);
   const gainers = [...positive]
-    .sort((a, b) => b.daily_gain_pct - a.daily_gain_pct)
+    .sort((a, b) => b.daily_gain - a.daily_gain)
     .slice(0, 5);
   const losers = [...negative]
-    .sort((a, b) => a.daily_gain_pct - b.daily_gain_pct)
+    .sort((a, b) => a.daily_gain - b.daily_gain)
     .slice(0, 5);
   return { gainers, losers };
 }

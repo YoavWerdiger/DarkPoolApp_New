@@ -73,6 +73,7 @@ export default function PollCreationBottomSheet({
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
   const [multipleChoice, setMultipleChoice] = useState(false);
+  const [allowVoteChange, setAllowVoteChange] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const trimmedQuestion = question.trim();
@@ -94,6 +95,7 @@ export default function PollCreationBottomSheet({
     setQuestion('');
     setOptions(['', '']);
     setMultipleChoice(false);
+    setAllowVoteChange(false);
   };
 
   const handleClose = () => {
@@ -182,6 +184,7 @@ export default function PollCreationBottomSheet({
       system_message_data: {
         poll_id: tempId,
         multiple_choice: multipleChoice,
+        allow_vote_change: allowVoteChange,
         options: stubOptions,
       },
       is_forwarded: false,
@@ -196,8 +199,8 @@ export default function PollCreationBottomSheet({
       read_by_count: 0,
       sender: {
         id: user.id,
-        display_name: user.display_name || 'אני',
-        profile_picture: user.profile_picture,
+        display_name: user?.display_name || 'אני',
+        profile_picture: user?.profile_picture,
         is_online: true,
       },
       is_sending: true,
@@ -211,7 +214,8 @@ export default function PollCreationBottomSheet({
         trimmedQuestion,
         trimmedOptions,
         user.id,
-        multipleChoice
+        multipleChoice,
+        allowVoteChange
       );
       if (poll) {
         onPollCreated(poll);
@@ -427,6 +431,34 @@ export default function PollCreationBottomSheet({
                   ? 'משתמשים יוכלו לבחור יותר מתשובה אחת.'
                   : 'משתמשים יוכלו לבחור תשובה אחת בלבד.'}
               </Text>
+
+              <TouchableOpacity
+                onPress={() => {
+                  dismissKeyboard();
+                  setAllowVoteChange((prev) => !prev);
+                }}
+                activeOpacity={0.75}
+                style={styles.toggleRow}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: allowVoteChange }}
+              >
+                <View style={styles.toggleCopy}>
+                  <Text style={styles.toggleTitle}>אפשר לשנות תשובה</Text>
+                  <Text style={styles.helperText}>
+                    משתמשים יוכלו לשנות את הבחירה אחרי ההצבעה.
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.checkbox,
+                    allowVoteChange && styles.checkboxChecked,
+                  ]}
+                >
+                  {allowVoteChange && (
+                    <Ionicons name="checkmark" size={14} color="#fff" />
+                  )}
+                </View>
+              </TouchableOpacity>
             </UICard>
 
             <View style={{ height: 8 }} />
@@ -692,6 +724,41 @@ const createStyles = (tokens: any) => {
       fontWeight: '500',
       color: tokens.colors.text.secondary,
       textAlign: 'right',
+    },
+    toggleRow: {
+      flexDirection: 'row-reverse' as any,
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 12,
+      paddingTop: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: borderColor,
+    },
+    toggleCopy: {
+      flex: 1,
+      gap: 4,
+      alignItems: 'flex-end',
+    },
+    toggleTitle: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+    },
+    checkbox: {
+      width: 24,
+      height: 24,
+      borderRadius: 7,
+      borderWidth: 1.5,
+      borderColor: borderColor,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    checkboxChecked: {
+      backgroundColor: tokens.colors.primary.main,
+      borderColor: tokens.colors.primary.main,
     },
 
     /* Footer — bottom inset מ-ChatBottomSheet contentPaddingBottom */

@@ -79,23 +79,85 @@ export interface ColmexAuthorizeResponseEnvelope {
 }
 
 /**
+ * מנקה שדה credential שהגיע מקלט משתמש: הסרת תווי אפס-רוחב שנדבקים בהעתקה
+ * ממייל/PDF, ו-trim של רווחים (כולל NBSP, שנספר כרווח ב-String.trim).
+ * תווים כאלה נשלחים כמו שהם ל-Colmex וגורמים ל-"User/password combination is not valid".
+ */
+export function sanitizeCredentialField(value: string): string {
+  return value.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+}
+
+// ----------------------------------------------------------------------------
+// Authorize failure classification
+// ----------------------------------------------------------------------------
+
+export type ColmexAuthFailureReason =
+  | 'auth_rejected'      // TE דחה את האימות — סיסמה ו/או סטטוס משתמש
+  | 'account_locked'     // המשתמש ננעל (brute force / חסימה יזומה)
+  | 'rate_limited'
+  | 'broker_unavailable';
+
+export interface ColmexAuthFailure {
+  reason: ColmexAuthFailureReason;
+  /** מונה כשלונות של TE, כשהוא מצורף להודעה. `max` הוא סף הנעילה. */
+  attempt: { current: number; max: number } | null;
+  rawMessage: string;
+}
+
+/**
+ * TraderEvolution מחזיר את אותה הודעה גנרית — "User/password combination is not
+ * valid" — עבור כל דחיית אימות: לוגין שלא קיים, סיסמה שגויה, וגם משתמש קיים
+ * שסטטוסו אינו Unlocked (Need activation / Expired / Locked after brute force)
+ * או שנדרש ממנו שינוי סיסמה אחרי איפוס מצד הברוקר.
+ *
+ * ההבדל היחיד שנחשף החוצה הוא מונה הכשלונות, שמצורף להודעה רק כשהלוגין מזוהה
+ * כמשתמש קיים בשרת. לכן אסור להסיק "סיסמה שגויה" מההודעה עצמה — כל מה שידוע הוא
+ * שהאימות נדחה, ו-UI צריך לנסח את זה בהתאם.
+ */
+export function classifyAuthFailure(rawMessage: string): ColmexAuthFailure {
+  const msg = rawMessage ?? '';
+  const lower = msg.toLowerCase();
+
+  // "Attempt 2 of 10" / "Attempt 2/10" — הניסוח משתנה בין גרסאות TE.
+  const m = /attempt\s*(\d+)\s*(?:of|\/)\s*(\d+)/i.exec(msg);
+  const attempt = m ? { current: Number(m[1]), max: Number(m[2]) } : null;
+
+  const reason: ColmexAuthFailureReason =
+    /lock|block|brute|disabled|suspend/i.test(lower)
+      ? 'account_locked'
+      : attempt && attempt.current >= attempt.max
+      ? 'account_locked'
+      : /too many|rate limit/i.test(lower)
+      ? 'rate_limited'
+      : /timeout|timed out|unavailable|gateway|network/i.test(lower)
+      ? 'broker_unavailable'
+      : 'auth_rejected';
+
+  return { reason, attempt, rawMessage: msg };
+}
+
+/**
  * POST /authorize — login עם user/password.
  *
- * הפורמט (אומת מול ה-UAT, מסמכי TraderEvolution):
+ * הפורמט (Credentials-based auth של TraderEvolution / Colmex):
  *   Content-Type: application/x-www-form-urlencoded
- *   Body: login={user}&password={pass}&2faCode=false
+ *   Body: login={user}&password={pass}
+ *   (ללא 2faCode — השדה גרם לדחיית login ב-prod)
  *
- * NOTE: TraderEvolution תומכים גם ב-OAuth2 מלא (/oauth/authorize → /oauth/token);
- * את זה נוסיף כשיהיו לנו client_id/client_secret מ-Colmex.
+ * NOTE: אין כאן client_id/client_secret ואין בהם צורך. הם פרמטרים של
+ * OAuth 2.0 Authorization-code flow בלבד, ואילו ה-cluster של Colmex מוגדר
+ * ל-auth type `password` (הגדרת שרת ב-Zookeeper, לא הרשאה פר-משתמש):
+ * /oauth/authorize ו-/oauth/token שם מחזירים 401 ריק. כל לקוח מסחר רגיל
+ * מתחבר עם ה-credentials שלו דרך /authorize, בלי רישום פר-משתמש.
  */
 export async function authorizeWithPassword(
   env: ColmexEnv,
   creds: ColmexCredentials
 ): Promise<ColmexTokens> {
+  // URLSearchParams מבצע את קידוד ה-form-urlencoded בעצמו; אין לקדד ידנית מעליו.
   const body = new URLSearchParams({
-    login: creds.username,
-    password: creds.password,
-    '2faCode': 'false',
+    login: sanitizeCredentialField(creds.username),
+    password: sanitizeCredentialField(creds.password),
   });
 
   const res = await fetch(`${getBaseUrl(env)}/authorize`, {
@@ -105,6 +167,8 @@ export async function authorizeWithPassword(
       Accept: 'application/json',
     },
     body,
+    // Avoid Edge Function 504 (platform ~150s) when Colmex hangs.
+    signal: AbortSignal.timeout(20_000),
   });
 
   const text = await res.text();
@@ -121,7 +185,12 @@ export async function authorizeWithPassword(
       (text ? text.slice(0, 200) : '') ||
       res.statusText ||
       'unknown error';
-    throw new ColmexError(`authorize failed (${res.status}): ${msg}`, res.status);
+    // שים לב: דחיית אימות מגיעה כ-HTTP 200 עם {s:"error"}, לא כ-401.
+    throw new ColmexError(
+      `authorize failed (${res.status}): ${msg}`,
+      res.status,
+      classifyAuthFailure(msg)
+    );
   }
 
   const nowMs = Date.now();
@@ -172,9 +241,12 @@ export async function logout(env: ColmexEnv, tokens: ColmexTokens): Promise<void
 
 export class ColmexError extends Error {
   status: number;
-  constructor(msg: string, status = 0) {
+  /** מאוכלס רק לכשלונות /authorize — ראה classifyAuthFailure. */
+  authFailure: ColmexAuthFailure | null;
+  constructor(msg: string, status = 0, authFailure: ColmexAuthFailure | null = null) {
     super(msg);
     this.status = status;
+    this.authFailure = authFailure;
   }
 }
 
@@ -607,18 +679,42 @@ export function normalizePosition(
       ? 'short'
       : null;
 
-  const openedAtMs = toInt(pickFirst(rec, ['openTime', 'openedAt', 'createTime']));
+  // Colmex positions panel uses openDate (ms epoch), not openTime/createdDate
+  const openedAtMs = toInt(
+    pickFirst(rec, ['openDate', 'openTime', 'openedAt', 'createTime', 'createdDate'])
+  );
+
+  const avgOpen = toNum(pickFirst(rec, ['avgPrice', 'openPrice']));
+  // Colmex field is unrealizedPl (not unrealizedPnl)
+  const unrealized = toNum(
+    pickFirst(rec, ['unrealizedPl', 'unrealizedPnl', 'unrealizedPL', 'openPnL', 'pnl'])
+  );
+  let currentPrice = toNum(
+    pickFirst(rec, ['currentPrice', 'last', 'lastPrice', 'marketPrice', 'price'])
+  );
+  // Derive mark from avg + unrealized when Colmex omits currentPrice
+  if (
+    currentPrice == null &&
+    unrealized != null &&
+    avgOpen != null &&
+    qty != null &&
+    Math.abs(qty) > 0
+  ) {
+    const absQty = Math.abs(qty);
+    currentPrice =
+      side === 'short' ? avgOpen - unrealized / absQty : avgOpen + unrealized / absQty;
+  }
 
   return {
     position_id: positionId,
     tradable_instrument_id: toInt(pickFirst(rec, ['tradableInstrumentId', 'instrumentId'])),
     side,
     quantity: qty !== null ? Math.abs(qty) : null,
-    avg_open_price: toNum(pickFirst(rec, ['avgPrice', 'openPrice'])),
-    current_price: toNum(pickFirst(rec, ['currentPrice', 'last'])),
-    unrealized_pnl: toNum(pickFirst(rec, ['unrealizedPnl', 'openPnL', 'pnl'])),
+    avg_open_price: avgOpen,
+    current_price: currentPrice,
+    unrealized_pnl: unrealized,
     realized_pnl: toNum(pickFirst(rec, ['realizedPnl', 'closedPnL'])),
-    swap: toNum(pickFirst(rec, ['swap'])),
+    swap: toNum(pickFirst(rec, ['swap', 'swaps'])),
     commission: toNum(pickFirst(rec, ['commission'])),
     stop_loss: toNum(pickFirst(rec, ['stopLoss', 'sl'])),
     take_profit: toNum(pickFirst(rec, ['takeProfit', 'tp'])),
@@ -766,7 +862,38 @@ const STATEMENT_TYPE_MAP: Record<string, NormalizedStatement['normalized_type']>
   CORRECTION: 'other',
   TRANSFER_IN: 'deposit',
   TRANSFER_OUT: 'withdrawal',
+  // Colmex title-case variants (after uppercasing)
+  'PORTFOLIO OVERNIGHT FEE': 'fee',
+  'OVERNIGHT FEE': 'fee',
 };
+
+/** מיפוי גמיש — Colmex מחזיר לעיתים Title Case / מחרוזות עם רווחים */
+export function mapStatementOperationType(
+  opType: string | null | undefined
+): NormalizedStatement['normalized_type'] {
+  const raw = (opType ?? '').trim();
+  if (!raw) return 'other';
+  const upper = raw.toUpperCase();
+  if (STATEMENT_TYPE_MAP[upper]) return STATEMENT_TYPE_MAP[upper];
+  if (upper.includes('WITHDRAW')) return 'withdrawal';
+  if (upper.includes('DEPOSIT') || upper.includes('TRANSFER IN') || upper.includes('FUNDING')) {
+    return 'deposit';
+  }
+  if (
+    upper.includes('FEE') ||
+    upper.includes('COMMISSION') ||
+    upper.includes('SWAP') ||
+    upper.includes('TAX')
+  ) {
+    return 'fee';
+  }
+  if (upper.includes('DIVIDEND')) return 'dividend';
+  if (upper.includes('INTEREST')) return 'interest';
+  if (upper === 'P/L' || upper === 'PL' || upper === 'PNL' || upper.includes('PROFIT')) {
+    return 'other';
+  }
+  return 'other';
+}
 
 export function normalizeStatement(
   row: string[],
@@ -777,11 +904,20 @@ export function normalizeStatement(
   if (opId === null) return null;
 
   const opType = toStr(pickFirst(rec, ['operationType', 'type', 'transactionType']));
-  const normalizedKey = (opType ?? '').toUpperCase();
-  const normalized_type = STATEMENT_TYPE_MAP[normalizedKey] ?? 'other';
+  const normalized_type = mapStatementOperationType(opType);
 
   const amount = toNum(pickFirst(rec, ['amount', 'value']));
-  const occurredMs = toInt(pickFirst(rec, ['time', 'date', 'operationTime', 'eventTime']));
+  // Colmex panel uses createDate (not createdDate) — ms epoch
+  const occurredMs = toInt(
+    pickFirst(rec, [
+      'createDate',
+      'createdDate',
+      'time',
+      'date',
+      'operationTime',
+      'eventTime',
+    ])
+  );
 
   return {
     operation_id: opId,
@@ -790,8 +926,8 @@ export function normalizeStatement(
     amount,
     balance_after: toNum(pickFirst(rec, ['balance', 'balanceAfter'])),
     currency: toStr(pickFirst(rec, ['currency'])),
-    description: toStr(pickFirst(rec, ['comment', 'description', 'note'])),
-    symbol: toStr(pickFirst(rec, ['symbol'])),
+    description: toStr(pickFirst(rec, ['comment', 'description', 'note', 'details'])),
+    symbol: toStr(pickFirst(rec, ['symbol', 'instrumentName'])),
     occurred_at: occurredMs ? new Date(occurredMs).toISOString() : null,
     raw: rec,
   };

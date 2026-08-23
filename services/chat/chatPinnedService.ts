@@ -82,7 +82,7 @@ async function fetchPinnedFromTable(
 
   if (pinnerIds.length > 0) {
     const { data: users } = await supabase
-      .from('users')
+      .from('v_public_profiles')
       .select('id, display_name, full_name')
       .in('id', pinnerIds);
     for (const u of users ?? []) {

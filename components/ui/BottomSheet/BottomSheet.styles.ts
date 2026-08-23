@@ -2,19 +2,20 @@ import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+/** כרום נקי: רדיוס רך, מסגרת עדינה, צל קל — בלי שכבות זכוכית+צל כבדים. */
 const sheetChrome = {
   borderTopLeftRadius: 20,
   borderTopRightRadius: 20,
   backgroundColor: 'transparent' as const,
   overflow: 'hidden' as const,
   zIndex: 2,
-  borderWidth: 0.5,
-  borderColor: 'rgba(255, 255, 255, 0.12)',
-  borderTopColor: 'rgba(255, 255, 255, 0.20)',
+  borderWidth: StyleSheet.hairlineWidth,
+  borderColor: 'rgba(255, 255, 255, 0.08)',
+  borderTopColor: 'rgba(255, 255, 255, 0.12)',
   borderBottomWidth: 0,
   ...Platform.select({
     android: {
-      elevation: 24,
+      elevation: 12,
       shadowColor: 'transparent',
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0,
@@ -22,10 +23,10 @@ const sheetChrome = {
     },
     default: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: -8 },
-      shadowOpacity: 0.25,
-      shadowRadius: 24,
-      elevation: 8,
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.18,
+      shadowRadius: 12,
+      elevation: 6,
     },
   }),
 };
@@ -66,13 +67,17 @@ export const createStyles = (backdropColor: string) => StyleSheet.create({
     width: '100%',
     ...sheetChrome,
   },
+  /** פס גרירה — זכוכית שקופה (fill + border) כמו glass.cardElevated, לא פס אטום/אפור. */
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
     alignSelf: 'center',
     marginTop: 4,
     marginBottom: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
   content: {
     flex: 1,
@@ -80,10 +85,12 @@ export const createStyles = (backdropColor: string) => StyleSheet.create({
     zIndex: 1,
     backgroundColor: 'transparent',
   },
+  /** ממלא את גובה fitContentContainer (animated height) — חובה לשיטים גבוהים עם ScrollView */
   contentCompact: {
-    flexGrow: 0,
-    flexShrink: 0,
+    height: '100%',
     width: '100%',
+    minHeight: 0,
     alignItems: 'stretch',
+    backgroundColor: 'transparent',
   },
 });

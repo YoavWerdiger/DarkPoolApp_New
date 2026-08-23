@@ -1,12 +1,12 @@
 /**
- * מעטפת כרטיס פיד — UICard glass כמו TradeListCard (יומן מסחר).
+ * מעטפת כרטיס פיד — UICard glass.
+ * הריפוד על שכבת התוכן (לא על ה-outer), כדי שה-Blur יעטוף גם את התמונה עד שולי הכרטיס.
  */
 
-import React from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import React, { memo } from 'react';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 interface Props {
   children: React.ReactNode;
@@ -19,7 +19,7 @@ interface Props {
   haptic?: boolean;
 }
 
-export function DarkPoolFeedCard({
+export const DarkPoolFeedCard = memo(function DarkPoolFeedCard({
   children,
   onPress,
   accent = false,
@@ -28,55 +28,43 @@ export function DarkPoolFeedCard({
   haptic = true,
 }: Props) {
   const tokens = useDesignTokens();
-  const cardStyle = [
-    styles.card,
-    {
-      borderRadius: tokens.borderRadius.xl,
-      borderColor: accent ? `${tokens.colors.primary.main}44` : tokens.colors.border.subtle,
-      marginBottom: tokens.spacing.sm,
-    },
-    style,
-  ];
-
-  const inner = (
-    <View style={styles.rtlWrap}>{children}</View>
-  );
-
-  if (onPress) {
-    return (
-      <Pressable
-        onPress={() => {
-          if (haptic) void HapticFeedback.selection();
-          onPress();
-        }}
-        accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel}
-      >
-        <UICard
-          variant="glass"
-          glassIntensity="light"
-          padding="sm"
-          style={cardStyle}
-        >
-          {inner}
-        </UICard>
-      </Pressable>
-    );
-  }
 
   return (
-    <UICard variant="glass" glassIntensity="light" padding="sm" style={cardStyle}>
-      {inner}
-    </UICard>
+    <View style={styles.slot}>
+      <UICard
+        variant="glass"
+        glassIntensity="medium"
+        padding="none"
+        onPress={onPress}
+        accessibilityLabel={accessibilityLabel}
+        haptic={haptic}
+        showGlassBorder={!accent}
+        style={[
+          {
+            borderRadius: 36,
+            borderWidth: 1,
+            borderColor: accent
+              ? `${tokens.colors.primary.main}44`
+              : tokens.colors.border.subtle,
+            overflow: 'hidden',
+          },
+          accent ? { borderWidth: 1.5 } : null,
+          style,
+        ]}
+      >
+        <View style={styles.inner}>{children}</View>
+      </UICard>
+    </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    overflow: 'hidden',
+  slot: {
+    marginBottom: 8,
   },
-  rtlWrap: {
+  inner: {
     direction: 'rtl',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
 });

@@ -1,24 +1,33 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
-  TextInput,
   ScrollView,
   TouchableOpacity,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  type ImageSourcePropType,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
+import {
+  FieldLabel,
+  SectionHeader,
+  SwitchRow,
+  TextField,
+} from './components/PortfolioFormFields';
 import {
   BENCHMARK_PRESETS,
   DEFAULT_BENCHMARK,
@@ -33,18 +42,69 @@ type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'CreatePortfolio'
 
 type CreateMode = 'manual' | 'import' | 'broker' | 'watchlist';
 
+const BROKER_BENEFITS = [
+  'שכפול מלא של החשבון: פוזיציות, פקודות פתוחות והיסטוריית עסקאות',
+  'עדכון אוטומטי כל 15 דקות — בלי להזין עסקאות ידנית',
+  'התיק נשמר במצב קריאה בלבד וניתן לנתק אותו בכל עת',
+];
+
 export default function CreatePortfolioScreen() {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
 
   const [mode, setMode] = useState<CreateMode>('manual');
   const [name, setName] = useState('');
-  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
   const [benchmark, setBenchmark] = useState(DEFAULT_BENCHMARK);
   const [riskFree, setRiskFree] = useState(String(DEFAULT_RISK_FREE_RATE));
   const [autoSplits, setAutoSplits] = useState(true);
+  const [isPublic, setIsPublic] = useState(false);
   const [description, setDescription] = useState('');
+  const [initialCash, setInitialCash] = useState('');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [touchedName, setTouchedName] = useState(false);
+  const [touchedCash, setTouchedCash] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const isBrokerMode = mode === 'broker';
+  const importCsv = mode === 'import';
+
+  const currencySymbol = useMemo(
+    () => SUPPORTED_CURRENCIES.find((c) => c.code === currency)?.symbol ?? '$',
+    [currency]
+  );
+
+  const nameError = useMemo(
+    () => (name.trim().length === 0 ? 'נא להזין שם לתיק' : null),
+    [name]
+  );
+
+  const cashError = useMemo(() => {
+    const raw = initialCash.trim();
+    if (!raw) return null;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return 'יש להזין סכום מספרי תקין';
+    if (parsed < 0) return 'הסכום לא יכול להיות שלילי';
+    return null;
+  }, [initialCash]);
+
+  const riskError = useMemo(() => {
+    const parsed = parseFloat(riskFree);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+      return 'יש להזין ערך בין 0 ל-100';
+    }
+    return null;
+  }, [riskFree]);
+
+  const blockingError = nameError ?? cashError ?? riskError;
+  const canSubmit = isBrokerMode || (!blockingError && !submitting);
+  const dimmed = !canSubmit && !submitting;
+
+  // ריבית לא תקינה חיה בתוך "הגדרות מתקדמות" — נפתח אותן כדי שלא ייווצר מבוי סתום
+  useEffect(() => {
+    if (riskError) setAdvancedOpen(true);
+  }, [riskError]);
 
   const handleSubmit = useCallback(async () => {
     if (mode === 'broker') {
@@ -52,16 +112,17 @@ export default function CreatePortfolioScreen() {
       return;
     }
     if (!name.trim()) {
-      Alert.alert('שגיאה', 'נא להזין שם לתיק');
+      setTouchedName(true);
       return;
     }
     const rfNum = parseFloat(riskFree);
     if (isNaN(rfNum) || rfNum < 0 || rfNum > 100) {
-      Alert.alert('שגיאה', 'ריבית חסרת סיכון חייבת להיות בין 0 ל-100');
+      setAdvancedOpen(true);
       return;
     }
     try {
       setSubmitting(true);
+      const initialCashNum = parseFloat(initialCash) || 0;
       const portfolio = await createPortfolio({
         name: name.trim(),
         currency,
@@ -69,7 +130,10 @@ export default function CreatePortfolioScreen() {
         benchmark_symbol: benchmark,
         auto_adjust_splits: autoSplits,
         description: description.trim() || null,
+        is_public: isPublic,
+        ...(initialCashNum > 0 ? { available_cash: initialCashNum } : {}),
       });
+      void HapticFeedback.success();
       // אם המשתמש בחר ייבוא – נשלח אותו ישר למסך ה-import
       if (mode === 'import') {
         navigation.replace('ImportTransactions', { portfolioId: portfolio.id });
@@ -81,7 +145,18 @@ export default function CreatePortfolioScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [name, currency, riskFree, benchmark, autoSplits, description, mode, navigation]);
+  }, [
+    name,
+    currency,
+    riskFree,
+    benchmark,
+    autoSplits,
+    description,
+    initialCash,
+    isPublic,
+    mode,
+    navigation,
+  ]);
 
   const styles = useMemo(
     () =>
@@ -89,160 +164,110 @@ export default function CreatePortfolioScreen() {
         root: { flex: 1, backgroundColor: '#0A0E0A' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
         scrollContent: {
-          padding: 16,
-          paddingBottom: 80,
-        },
-        section: {
-          marginBottom: 22,
-        },
-        sectionTitle: {
-          fontSize: 14,
-          fontWeight: '600',
-          color: tokens.colors.text.tertiary,
-          marginBottom: 10,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-        },
-        modeRow: {
-          flexDirection: 'row-reverse',
-          gap: 10,
-        },
-        modeCard: {
-          flex: 1,
-          padding: 14,
-          borderRadius: 26,
-          borderWidth: 1.5,
-          alignItems: 'center',
-          gap: 6,
-          overflow: 'hidden',
-        },
-        modeIcon: {
-          width: 36,
-          height: 36,
-          borderRadius: 18,
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        },
-        modeLabel: {
-          fontSize: 12,
-          fontWeight: '600',
-          textAlign: 'center',
-          writingDirection: 'rtl',
-        },
-        input: {
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          borderRadius: 28,
           paddingHorizontal: 16,
-          paddingVertical: 14,
-          fontSize: 15,
-          color: tokens.colors.text.primary,
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.subtle,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-          overflow: 'hidden',
+          paddingTop: 4,
+          paddingBottom: 28,
         },
-        descriptionInput: {
-          minHeight: 90,
-          textAlignVertical: 'top',
-          paddingTop: 14,
-          borderRadius: 22,
-          overflow: 'hidden',
-        },
+        section: { marginBottom: 26 },
+        modeCards: { gap: 12 },
         chipsRow: {
           flexDirection: 'row-reverse',
           flexWrap: 'wrap',
           gap: 8,
         },
         chip: {
-          paddingVertical: 8,
+          paddingVertical: 9,
           paddingHorizontal: 14,
-          borderRadius: 24,
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.subtle,
-          backgroundColor: 'rgba(255,255,255,0.04)',
+          borderRadius: tokens.borderRadius.full,
+          borderWidth: StyleSheet.hairlineWidth * 2,
+          borderColor: tokens.colors.glass.card.border,
+          backgroundColor: tokens.colors.background.card,
           overflow: 'hidden',
         },
         chipActive: {
           borderColor: tokens.colors.primary.main,
-          backgroundColor: 'rgba(0, 200, 5, 0.12)',
+          backgroundColor: tokens.colors.primary.dim,
         },
         chipText: {
           fontSize: 13,
+          fontWeight: '600',
           color: tokens.colors.text.secondary,
-          textAlign: 'right',
+          textAlign: 'center',
           writingDirection: 'rtl',
         },
-        chipTextActive: {
-          color: tokens.colors.primary.main,
-          fontWeight: '700',
-        },
-        benchmarkCard: {
-          padding: 14,
-          borderRadius: 22,
-          borderWidth: 1.5,
-          marginBottom: 8,
-          overflow: 'hidden',
-        },
-        benchmarkRow: {
+        chipTextActive: { color: tokens.colors.primary.main },
+        advancedToggle: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-        },
-        benchmarkLabel: {
-          fontSize: 14,
-          fontWeight: '700',
-          color: tokens.colors.text.primary,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-        },
-        benchmarkDesc: {
-          fontSize: 12,
-          color: tokens.colors.text.tertiary,
-          marginTop: 2,
-          textAlign: 'right',
-          writingDirection: 'rtl',
-        },
-        toggleRow: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: 12,
+          gap: 10,
+          paddingVertical: 14,
           paddingHorizontal: 16,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderRadius: 22,
-          borderWidth: 1.5,
-          borderColor: tokens.colors.border.subtle,
+          borderRadius: tokens.borderRadius['2xl'],
+          borderWidth: StyleSheet.hairlineWidth * 2,
+          borderColor: tokens.colors.glass.card.border,
+          backgroundColor: tokens.colors.background.surface,
           overflow: 'hidden',
         },
-        toggleLabel: {
+        advancedTitle: {
           fontSize: 14,
+          fontWeight: '700',
           color: tokens.colors.text.primary,
-          flex: 1,
           textAlign: 'right',
           writingDirection: 'rtl',
         },
-        toggleHint: {
+        advancedCaption: {
           fontSize: 11,
           color: tokens.colors.text.tertiary,
           marginTop: 2,
           textAlign: 'right',
           writingDirection: 'rtl',
         },
-        toggleSwitch: {
-          width: 46,
-          height: 28,
-          borderRadius: 14,
-          padding: 3,
-          flexDirection: 'row',
+        advancedBody: { marginTop: 16 },
+        benchmarkRow: {
+          flexDirection: 'row-reverse',
           alignItems: 'center',
+          gap: 12,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
+          borderRadius: tokens.borderRadius.xl,
+          borderWidth: StyleSheet.hairlineWidth * 2,
+          marginBottom: 8,
           overflow: 'hidden',
         },
-        toggleThumb: {
-          width: 22,
-          height: 22,
-          borderRadius: 12,
-          backgroundColor: '#FFFFFF',
+        benchmarkLabel: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: tokens.colors.text.primary,
+          textAlign: 'right',
+          writingDirection: 'rtl',
+        },
+        benchmarkDesc: {
+          fontSize: 11,
+          color: tokens.colors.text.tertiary,
+          marginTop: 2,
+          textAlign: 'right',
+          writingDirection: 'rtl',
+        },
+        brokerInfoRow: {
+          flexDirection: 'row-reverse',
+          alignItems: 'center',
+          gap: 10,
+          marginBottom: 10,
+        },
+        brokerInfoText: {
+          flex: 1,
+          fontSize: 13,
+          color: tokens.colors.text.secondary,
+          textAlign: 'right',
+          writingDirection: 'rtl',
+          lineHeight: 19,
+        },
+        footer: {
+          paddingHorizontal: 16,
+          paddingTop: 12,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: tokens.colors.border.divider,
+          backgroundColor: 'rgba(10, 14, 10, 0.92)',
         },
         submit: {
           flexDirection: 'row-reverse',
@@ -251,9 +276,13 @@ export default function CreatePortfolioScreen() {
           gap: 8,
           backgroundColor: tokens.colors.primary.main,
           paddingVertical: 16,
-          borderRadius: 32,
-          marginTop: 12,
+          borderRadius: tokens.borderRadius.full,
           ...tokens.shadows.md,
+        },
+        submitDisabled: {
+          backgroundColor: tokens.colors.background.elevated,
+          shadowOpacity: 0,
+          elevation: 0,
         },
         submitText: {
           fontSize: 16,
@@ -262,13 +291,13 @@ export default function CreatePortfolioScreen() {
           textAlign: 'center',
           writingDirection: 'rtl',
         },
-        modeHint: {
-          fontSize: 12,
+        submitTextDisabled: { color: tokens.colors.text.disabled },
+        footerNote: {
+          fontSize: 11,
           color: tokens.colors.text.tertiary,
-          marginTop: 8,
-          textAlign: 'right',
+          textAlign: 'center',
           writingDirection: 'rtl',
-          lineHeight: 18,
+          marginTop: 8,
         },
       }),
     [tokens]
@@ -279,10 +308,7 @@ export default function CreatePortfolioScreen() {
       <ChatSessionBackdrop />
       <StatusBar style="light" />
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <PortfolioScreenHeader
-          title="תיק חדש"
-          onBack={() => navigation.goBack()}
-        />
+        <PortfolioScreenHeader title="תיק חדש" onBack={() => navigation.goBack()} />
         <KeyboardAvoidingView
           style={{ flex: 1, backgroundColor: 'transparent' }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -291,291 +317,376 @@ export default function CreatePortfolioScreen() {
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
           >
-            {/* Mode selection */}
+            {/* בחירת סוג תיק */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>איך נתחיל?</Text>
-              <View style={styles.modeRow}>
+              <SectionHeader
+                title="איך נתחיל?"
+                caption="אפשר לנהל את התיק ידנית, או לסנכרן אותו אוטומטית מחשבון המסחר."
+              />
+              <View style={styles.modeCards}>
                 <ModeCard
-                  active={mode === 'manual'}
-                  icon="hand-right"
-                  label="הוספה ידנית"
-                  onPress={() => setMode('manual')}
-                  styles={styles}
-                  tokens={tokens}
+                  active={!isBrokerMode}
+                  icon="journal-outline"
+                  title="תיק ידני"
+                  description="יומן מסחר — הוספת עסקאות ידנית, מעקב ביצועים וניתוח מלא"
+                  onPress={() => setMode(importCsv ? 'import' : 'manual')}
                 />
                 <ModeCard
-                  active={mode === 'import'}
-                  icon="document-text"
-                  label="ייבוא CSV"
-                  onPress={() => setMode('import')}
-                  styles={styles}
-                  tokens={tokens}
-                />
-                <ModeCard
-                  active={mode === 'broker'}
-                  icon="link"
-                  label="Colmex Pro"
+                  active={isBrokerMode}
+                  icon="link-outline"
+                  logo={require('../../assets/colmex-logo.png')}
+                  title="חיבור ברוקר"
+                  description="Colmex Pro — סנכרון אוטומטי של פוזיציות, פקודות והיסטוריה"
                   onPress={() => setMode('broker')}
-                  styles={styles}
-                  tokens={tokens}
                 />
               </View>
-              {mode === 'import' ? (
-                <Text style={styles.modeHint}>
-                  לאחר יצירת התיק תועבר/י למסך ייבוא CSV. ניתן להעלות קובץ עם
-                  עמודות: Symbol, Type, Date, Quantity, Price, Commission, Currency, Notes.
-                </Text>
-              ) : null}
-              {mode === 'broker' ? (
-                <Text style={styles.modeHint}>
-                  סנכרון אוטומטי מחשבון Colmex Pro: פוזיציות, פקודות פתוחות, הפקדות,
-                  משיכות וכל ההיסטוריה. התיק יהיה במצב read-only ויתעדכן כל 15 דקות.
-                </Text>
-              ) : null}
             </View>
 
-            {mode !== 'broker' ? (
+            {isBrokerMode ? (
+              <View style={styles.section}>
+                <SectionHeader title="מה קורה בחיבור?" />
+                <UICard
+                  variant="glass"
+                  glassIntensity="subtle"
+                  padding="none"
+                  style={{ borderRadius: tokens.borderRadius['2xl'] }}
+                  contentContainerStyle={{ padding: 16 }}
+                >
+                  {BROKER_BENEFITS.map((line) => (
+                    <View key={line} style={styles.brokerInfoRow}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={18}
+                        color={tokens.colors.primary.main}
+                      />
+                      <Text style={styles.brokerInfoText}>{line}</Text>
+                    </View>
+                  ))}
+                </UICard>
+              </View>
+            ) : (
               <>
-                {/* Name */}
+                {/* פרטי התיק */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>שם התיק</Text>
-                  <TextInput
-                    style={styles.input}
+                  <SectionHeader title="פרטי התיק" />
+
+                  <TextField
+                    label="שם התיק"
                     value={name}
                     onChangeText={setName}
+                    onBlur={() => setTouchedName(true)}
                     placeholder="לדוגמה: התיק הראשי"
-                    placeholderTextColor={tokens.colors.text.tertiary}
+                    hint="השם שיוצג ברשימת התיקים שלך"
+                    error={touchedName ? nameError : null}
                     maxLength={128}
+                    editable={!submitting}
+                  />
+
+                  <TextField
+                    label="יתרת פתיחה"
+                    optional
+                    value={initialCash}
+                    onChangeText={setInitialCash}
+                    onBlur={() => setTouchedCash(true)}
+                    placeholder="0.00"
+                    keyboardType="decimal-pad"
+                    numeric
+                    prefix={currencySymbol}
+                    hint="המזומן שהיה בתיק ביום פתיחתו. אפשר להשאיר ריק ולהוסיף הפקדה בהמשך."
+                    error={touchedCash ? cashError : null}
+                    editable={!submitting}
+                  />
+
+                  <FieldLabel label="מטבע התיק" />
+                  <View style={styles.chipsRow}>
+                    {SUPPORTED_CURRENCIES.map((c) => {
+                      const active = currency === c.code;
+                      return (
+                        <TouchableOpacity
+                          key={c.code}
+                          style={[styles.chip, active && styles.chipActive]}
+                          onPress={() => {
+                            if (!active) void HapticFeedback.selection();
+                            setCurrency(c.code);
+                          }}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                            {c.symbol} {c.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* נראות */}
+                <View style={styles.section}>
+                  <SectionHeader title="נראות" />
+                  <SwitchRow
+                    title="תיק ציבורי"
+                    hint={
+                      isPublic
+                        ? 'משתמשים אחרים בקהילה יוכלו לצפות בתיק בקריאה בלבד'
+                        : 'רק את/ה רואה את התיק. אפשר לשנות בכל עת מהגדרות התיק.'
+                    }
+                    value={isPublic}
+                    onChange={setIsPublic}
                   />
                 </View>
 
-            {/* Currency */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>מטבע התיק</Text>
-              <View style={styles.chipsRow}>
-                {SUPPORTED_CURRENCIES.map((c) => (
+                {/* הגדרות מתקדמות */}
+                <View style={styles.section}>
                   <TouchableOpacity
-                    key={c.code}
-                    style={[
-                      styles.chip,
-                      currency === c.code && styles.chipActive,
-                    ]}
-                    onPress={() => {
-                      if (currency !== c.code) void HapticFeedback.selection();
-                      setCurrency(c.code);
-                    }}
-                    activeOpacity={0.85}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        currency === c.code && styles.chipTextActive,
-                      ]}
-                    >
-                      {c.symbol} {c.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Benchmark */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>מדד השוואה (Benchmark)</Text>
-              {BENCHMARK_PRESETS.map((b) => {
-                const active = benchmark === b.symbol;
-                return (
-                  <TouchableOpacity
-                    key={b.symbol}
-                    style={[
-                      styles.benchmarkCard,
-                      {
-                        borderColor: active
-                          ? tokens.colors.primary.main
-                          : tokens.colors.border.subtle,
-                        backgroundColor: active
-                          ? 'rgba(0, 200, 5, 0.08)'
-                          : 'rgba(255,255,255,0.04)',
-                      },
-                    ]}
-                    onPress={() => {
-                      if (!active) void HapticFeedback.selection();
-                      setBenchmark(b.symbol);
-                    }}
-                    activeOpacity={0.85}
-                  >
-                    <View style={styles.benchmarkRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.benchmarkLabel}>{b.label}</Text>
-                        <Text style={styles.benchmarkDesc}>{b.description}</Text>
-                      </View>
-                      {active ? (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={22}
-                          color={tokens.colors.primary.main}
-                        />
-                      ) : (
-                        <Ionicons
-                          name="ellipse-outline"
-                          size={22}
-                          color={tokens.colors.text.tertiary}
-                        />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Risk-free rate */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                ריבית חסרת סיכון (% שנתי)
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={riskFree}
-                onChangeText={setRiskFree}
-                keyboardType="decimal-pad"
-                placeholder="4.0"
-                placeholderTextColor={tokens.colors.text.tertiary}
-              />
-              <Text style={styles.modeHint}>
-                משמש לחישוב Sharpe ו-Sortino. ברירת מחדל 4% (תשואת אג"ח אמריקאי).
-              </Text>
-            </View>
-
-            {/* Splits toggle */}
-            <View style={styles.section}>
-              <View style={styles.toggleRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.toggleLabel}>התאמה אוטומטית לפיצולי מניות</Text>
-                  <Text style={styles.toggleHint}>
-                    מומלץ – הטרנזקציות יתעדכנו אוטומטית לפי splits
-                  </Text>
-                </View>
-                <View style={{ direction: 'ltr' }}>
-                  <TouchableOpacity
+                    style={styles.advancedToggle}
                     onPress={() => {
                       void HapticFeedback.selection();
-                      setAutoSplits((v) => !v);
+                      setAdvancedOpen((v) => !v);
                     }}
-                    activeOpacity={0.85}
-                    style={[
-                      styles.toggleSwitch,
-                      {
-                        backgroundColor: autoSplits
-                          ? tokens.colors.primary.main
-                          : 'rgba(255,255,255,0.15)',
-                        justifyContent: autoSplits ? 'flex-end' : 'flex-start',
-                      },
-                    ]}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: advancedOpen }}
                   >
-                    <View style={styles.toggleThumb} />
+                    <Ionicons
+                      name="options-outline"
+                      size={20}
+                      color={tokens.colors.text.secondary}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.advancedTitle}>הגדרות מתקדמות</Text>
+                      <Text style={styles.advancedCaption}>
+                        מדד השוואה, ריבית חסרת סיכון, פיצולים, ייבוא ותיאור
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={advancedOpen ? 'chevron-up' : 'chevron-down'}
+                      size={18}
+                      color={tokens.colors.text.tertiary}
+                    />
                   </TouchableOpacity>
+
+                  {advancedOpen ? (
+                    <View style={styles.advancedBody}>
+                      <FieldLabel
+                        label="מדד השוואה"
+                        hint="מולו נשווה את ביצועי התיק בגרפים ובסטטיסטיקות"
+                      />
+                      {BENCHMARK_PRESETS.map((b) => {
+                        const active = benchmark === b.symbol;
+                        return (
+                          <TouchableOpacity
+                            key={b.symbol}
+                            style={[
+                              styles.benchmarkRow,
+                              {
+                                borderColor: active
+                                  ? tokens.colors.primary.main
+                                  : tokens.colors.glass.card.border,
+                                backgroundColor: active
+                                  ? tokens.colors.primary.subtle
+                                  : tokens.colors.background.surface,
+                              },
+                            ]}
+                            onPress={() => {
+                              if (!active) void HapticFeedback.selection();
+                              setBenchmark(b.symbol);
+                            }}
+                            activeOpacity={0.75}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.benchmarkLabel}>{b.label}</Text>
+                              <Text style={styles.benchmarkDesc}>{b.description}</Text>
+                            </View>
+                            <Ionicons
+                              name={active ? 'radio-button-on' : 'radio-button-off'}
+                              size={20}
+                              color={
+                                active ? tokens.colors.primary.main : tokens.colors.text.muted
+                              }
+                            />
+                          </TouchableOpacity>
+                        );
+                      })}
+
+                      <View style={{ height: 16 }} />
+
+                      <TextField
+                        label="ריבית חסרת סיכון (% שנתי)"
+                        value={riskFree}
+                        onChangeText={setRiskFree}
+                        placeholder="4.0"
+                        keyboardType="decimal-pad"
+                        numeric
+                        hint='משמש לחישוב Sharpe ו-Sortino. ברירת מחדל 4% (תשואת אג"ח אמריקאי).'
+                        error={riskError}
+                        editable={!submitting}
+                      />
+
+                      <SwitchRow
+                        title="התאמה אוטומטית לפיצולי מניות"
+                        hint="מומלץ — כמות ומחיר בעסקאות יתעדכנו אוטומטית לפי splits"
+                        value={autoSplits}
+                        onChange={setAutoSplits}
+                        spacing={12}
+                      />
+
+                      <SwitchRow
+                        title="ייבוא עסקאות מקובץ CSV"
+                        hint="בסיום היצירה נעבור למסך הייבוא (Symbol, Type, Date, Quantity, Price…)"
+                        value={importCsv}
+                        onChange={(v) => setMode(v ? 'import' : 'manual')}
+                        spacing={18}
+                      />
+
+                      <TextField
+                        label="תיאור"
+                        optional
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholder="מטרת התיק, אסטרטגיה, הערות…"
+                        multiline
+                        maxLength={1200}
+                        editable={!submitting}
+                        spacing={0}
+                      />
+                    </View>
+                  ) : null}
                 </View>
-              </View>
-            </View>
-
-            {/* Description */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>תיאור (אופציונלי)</Text>
-              <TextInput
-                style={[styles.input, styles.descriptionInput]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="מטרת התיק, אסטרטגיה, הערות..."
-                placeholderTextColor={tokens.colors.text.tertiary}
-                multiline
-                maxLength={1200}
-              />
-            </View>
               </>
-            ) : null}
+            )}
+          </ScrollView>
 
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
             <TouchableOpacity
-              style={[styles.submit, submitting && { opacity: 0.6 }]}
+              style={[styles.submit, dimmed && styles.submitDisabled]}
               onPress={() => {
                 void HapticFeedback.medium();
                 void handleSubmit();
               }}
-              disabled={submitting}
-              activeOpacity={0.88}
+              disabled={!canSubmit}
+              activeOpacity={0.85}
             >
-              <Ionicons
-                name={mode === 'broker' ? 'link' : 'checkmark'}
-                size={22}
-                color={tokens.colors.text.inverse}
-              />
-              <Text style={styles.submitText}>
+              {submitting ? (
+                <ActivityIndicator color={tokens.colors.text.inverse} />
+              ) : (
+                <Ionicons
+                  name={isBrokerMode ? 'link' : 'checkmark'}
+                  size={20}
+                  color={dimmed ? tokens.colors.text.disabled : tokens.colors.text.inverse}
+                />
+              )}
+              <Text style={[styles.submitText, dimmed && styles.submitTextDisabled]}>
                 {submitting
                   ? 'יוצר תיק…'
-                  : mode === 'broker'
+                  : isBrokerMode
                   ? 'המשך לחיבור Colmex Pro'
                   : 'צור תיק'}
               </Text>
             </TouchableOpacity>
-          </ScrollView>
+            {!isBrokerMode && blockingError && !submitting ? (
+              <Text style={styles.footerNote}>{blockingError}</Text>
+            ) : null}
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
 }
 
+/* -------------------------------------------------------------------------- */
+
 interface ModeCardProps {
   active: boolean;
   icon: keyof typeof Ionicons.glyphMap;
-  label: string;
+  title: string;
+  description: string;
   onPress: () => void;
-  styles: ReturnType<typeof StyleSheet.create>;
-  tokens: ReturnType<typeof useDesignTokens>;
+  /** לוגו ברוקר — מוצג במקום האייקון הגנרי */
+  logo?: ImageSourcePropType;
 }
 
-function ModeCard({ active, icon, label, onPress, styles, tokens }: ModeCardProps) {
+function ModeCard({ active, icon, title, description, onPress, logo }: ModeCardProps) {
+  const tokens = useDesignTokens();
   return (
-    <TouchableOpacity
-      onPress={() => {
-        if (!active) void HapticFeedback.selection();
-        onPress();
+    <UICard
+      variant="glass"
+      glassIntensity={active ? 'light' : 'subtle'}
+      padding="none"
+      onPress={onPress}
+      showGlassBorder={!active}
+      accessibilityLabel={title}
+      style={{
+        borderRadius: tokens.borderRadius['3xl'],
+        overflow: 'hidden',
+        borderWidth: active ? 1.5 : 0,
+        borderColor: active ? tokens.colors.primary.main : 'transparent',
+        backgroundColor: active ? tokens.colors.primary.dim : 'transparent',
       }}
-      activeOpacity={0.85}
-      style={[
-        styles.modeCard,
-        {
-          borderColor: active ? tokens.colors.primary.main : tokens.colors.border.subtle,
-          backgroundColor: active ? 'rgba(0, 200, 5, 0.10)' : 'rgba(255,255,255,0.04)',
-        },
-      ]}
+      contentContainerStyle={{
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+        gap: 12,
+        padding: 16,
+      }}
     >
       <View
-        style={[
-          styles.modeIcon,
-          {
-            backgroundColor: active
-              ? 'rgba(0, 200, 5, 0.20)'
-              : 'rgba(255,255,255,0.06)',
-          },
-        ]}
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 21,
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          backgroundColor: logo
+            ? '#FFFFFF'
+            : active
+            ? 'rgba(0, 200, 5, 0.20)'
+            : tokens.colors.background.card,
+        }}
       >
-        <Ionicons
-          name={icon}
-          size={20}
-          color={active ? tokens.colors.primary.main : tokens.colors.text.secondary}
-        />
+        {logo ? (
+          <Image source={logo} style={{ width: 42, height: 42 }} resizeMode="cover" />
+        ) : (
+          <Ionicons
+            name={icon}
+            size={21}
+            color={active ? tokens.colors.primary.main : tokens.colors.text.secondary}
+          />
+        )}
       </View>
-      <Text
-        style={[
-          styles.modeLabel,
-          {
-            color: active ? tokens.colors.primary.main : tokens.colors.text.secondary,
-          },
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            fontSize: 15,
+            fontWeight: '700',
+            color: active ? tokens.colors.primary.main : tokens.colors.text.primary,
+            textAlign: 'right',
+            writingDirection: 'rtl',
+          }}
+        >
+          {title}
+        </Text>
+        <Text
+          style={{
+            fontSize: 12,
+            color: tokens.colors.text.tertiary,
+            marginTop: 3,
+            lineHeight: 17,
+            textAlign: 'right',
+            writingDirection: 'rtl',
+          }}
+        >
+          {description}
+        </Text>
+      </View>
+      <Ionicons
+        name={active ? 'checkmark-circle' : 'ellipse-outline'}
+        size={22}
+        color={active ? tokens.colors.primary.main : tokens.colors.text.muted}
+      />
+    </UICard>
   );
 }

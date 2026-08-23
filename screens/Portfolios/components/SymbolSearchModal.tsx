@@ -8,15 +8,19 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
+import UICard from '../../../components/ui/UICard';
+import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../../components/ui/DayNavBlurButton';
 import { ChatSessionBackdrop } from '../../../components/chat/ChatSessionBackdrop';
 import {
   searchSymbols,
   type SymbolSearchResult,
 } from '../../../services/portfolios/portfolioPriceFeed';
+import { hebrewAssetTypeLabel } from '../../../services/portfolios/symbolSearchFilter';
 import { TickerLogo } from './TickerLogo';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
@@ -27,8 +31,7 @@ interface Props {
 }
 
 /**
- * חיפוש סימבול עם autocomplete חי - debounce של 300ms.
- * משתמש ב-Finnhub /search (חינמי).
+ * חיפוש סימבול — UICard + סינון מניות אמריקאיות (בלי listings זרים).
  */
 export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
   const tokens = useDesignTokens();
@@ -48,6 +51,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
     if (debounce.current) clearTimeout(debounce.current);
     if (!query.trim()) {
       setResults([]);
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -66,7 +70,7 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
       StyleSheet.create({
         outer: {
           flex: 1,
-          backgroundColor: '#0A0E0A',
+          backgroundColor: tokens.colors.background.primary,
         },
         safe: {
           flex: 1,
@@ -75,80 +79,122 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
         header: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          paddingHorizontal: 16,
+          paddingHorizontal: tokens.layout.screenPadding,
           paddingVertical: 12,
-          gap: 12,
+          gap: 10,
         },
-        searchBox: {
+        searchCard: {
           flex: 1,
-          backgroundColor: 'rgba(255,255,255,0.06)',
-          borderRadius: 28,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
+          borderRadius: tokens.borderRadius['2xl'],
+          overflow: 'hidden',
+        },
+        searchInner: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
+          paddingHorizontal: 14,
+          paddingVertical: 12,
           gap: 8,
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
         },
         searchInput: {
           flex: 1,
           fontSize: 15,
+          fontWeight: '500',
           color: tokens.colors.text.primary,
           textAlign: 'right',
           writingDirection: 'rtl',
+          padding: 0,
         },
-        closeBtn: {
-          padding: 10,
-          borderRadius: 24,
-          backgroundColor: 'rgba(255,255,255,0.08)',
+        hint: {
+          paddingHorizontal: tokens.layout.screenPadding,
+          paddingBottom: 8,
+          color: tokens.colors.text.tertiary,
+          fontSize: 12,
+          fontWeight: '500',
+          textAlign: 'right',
+          writingDirection: 'rtl',
         },
-        item: {
+        list: {
+          flex: 1,
+          backgroundColor: 'transparent',
+        },
+        listContent: {
+          paddingHorizontal: tokens.layout.screenPadding,
+          paddingTop: 4,
+          paddingBottom: 32,
+        },
+        rowCard: {
+          borderRadius: tokens.borderRadius['2xl'],
+          overflow: 'hidden',
+          marginBottom: 8,
+        },
+        rowInner: {
           flexDirection: 'row-reverse',
           alignItems: 'center',
-          paddingVertical: 14,
-          paddingHorizontal: 16,
-          marginHorizontal: 12,
-          marginBottom: 8,
-          borderRadius: 26,
+          paddingVertical: 12,
+          paddingHorizontal: 14,
           gap: 12,
-          backgroundColor: 'rgba(255,255,255,0.04)',
-          borderWidth: 1,
-          borderColor: tokens.colors.border.subtle,
+        },
+        rowPressed: {
+          opacity: 0.9,
+        },
+        textBlock: {
+          flex: 1,
+          minWidth: 0,
+          alignItems: 'flex-end',
+          gap: 2,
         },
         symbolText: {
-          fontSize: 15,
-          fontWeight: '700',
+          fontSize: 16,
+          fontWeight: '800',
           color: tokens.colors.text.primary,
           textAlign: 'right',
         },
         descriptionText: {
           fontSize: 12,
+          fontWeight: '500',
           color: tokens.colors.text.tertiary,
-          marginTop: 2,
           textAlign: 'right',
+          writingDirection: 'rtl',
         },
         typeChip: {
           paddingVertical: 5,
-          paddingHorizontal: 12,
-          borderRadius: 999,
-          backgroundColor: 'rgba(255,255,255,0.06)',
+          paddingHorizontal: 10,
+          borderRadius: tokens.borderRadius.full,
+          backgroundColor: tokens.colors.primary.dim,
+          borderWidth: 1,
+          borderColor: tokens.colors.border.accent,
         },
         typeChipText: {
-          fontSize: 10,
-          color: tokens.colors.text.tertiary,
+          fontSize: 11,
+          fontWeight: '700',
+          color: tokens.colors.primary.main,
         },
         emptyState: {
           alignItems: 'center',
-          paddingTop: 80,
-          paddingHorizontal: 30,
+          paddingTop: 72,
+          paddingHorizontal: 28,
+          gap: 10,
+        },
+        emptyIcon: {
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'rgba(255,255,255,0.04)',
+          marginBottom: 4,
         },
         emptyText: {
-          fontSize: 13,
+          fontSize: 14,
+          fontWeight: '500',
           color: tokens.colors.text.tertiary,
-          marginTop: 12,
           textAlign: 'center',
-          lineHeight: 18,
+          writingDirection: 'rtl',
+          lineHeight: 20,
+        },
+        loadingWrap: {
+          paddingVertical: 20,
+          alignItems: 'center',
         },
       }),
     [tokens]
@@ -163,97 +209,125 @@ export function SymbolSearchModal({ visible, onClose, onSelect }: Props) {
     >
       <View style={styles.outer}>
         <ChatSessionBackdrop />
-        <SafeAreaView style={styles.safe}>
+        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
           <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={() => {
-              void HapticFeedback.impactLight();
-              onClose();
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="close" size={24} color={tokens.colors.text.primary} />
-          </TouchableOpacity>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
-            <TextInput
-              style={styles.searchInput}
-              value={query}
-              onChangeText={setQuery}
-              placeholder="חפש סימבול: AAPL, MSFT, NVDA..."
-              placeholderTextColor={tokens.colors.text.tertiary}
-              autoFocus
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            {query ? (
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.selection();
-                  setQuery('');
-                }}
-                hitSlop={10}
-              >
-                <Ionicons
-                  name="close-circle"
-                  size={18}
-                  color={tokens.colors.text.tertiary}
-                />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          </View>
-
-        {loading ? (
-          <View style={{ padding: 20 }}>
-            <ActivityIndicator color={tokens.colors.primary.main} />
-          </View>
-        ) : null}
-
-        {!loading && results.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="search-outline"
-              size={40}
-              color={tokens.colors.text.tertiary}
-            />
-            <Text style={styles.emptyText}>
-              {query
-                ? 'לא נמצאו תוצאות. נסה סימבול אחר או שם חברה באנגלית.'
-                : 'הקלד שם חברה (Apple) או סימבול (AAPL) כדי לחפש.'}
-            </Text>
-          </View>
-        ) : null}
-
-          <FlatList
-          style={{ flex: 1, backgroundColor: 'transparent' }}
-          contentContainerStyle={{ paddingTop: 6, paddingBottom: 24 }}
-          data={results}
-          keyExtractor={(item) => item.symbol}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.item}
+            <DayNavBlurButton
               onPress={() => {
                 void HapticFeedback.impactLight();
-                onSelect(item);
                 onClose();
               }}
-              activeOpacity={0.85}
+              glassIntensity="subtle"
+              size={DRAWER_MENU_BUTTON_SIZE}
+              accessibilityLabel="סגור"
             >
-              <TickerLogo symbol={item.symbol} size={36} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.symbolText}>{item.display_symbol}</Text>
-                <Text style={styles.descriptionText} numberOfLines={1}>
-                  {item.description}
-                </Text>
+              <Ionicons name="close" size={22} color={tokens.colors.text.primary} />
+            </DayNavBlurButton>
+
+            <UICard
+              variant="glass"
+              glassIntensity="light"
+              padding="none"
+              style={styles.searchCard}
+            >
+              <View style={styles.searchInner}>
+                <Ionicons name="search" size={18} color={tokens.colors.text.tertiary} />
+                <TextInput
+                  style={styles.searchInput}
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="חפש מניה: AAPL, Apple, NVDA…"
+                  placeholderTextColor={tokens.colors.text.tertiary}
+                  autoFocus
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                />
+                {query ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      void HapticFeedback.selection();
+                      setQuery('');
+                    }}
+                    hitSlop={10}
+                  >
+                    <Ionicons
+                      name="close-circle"
+                      size={18}
+                      color={tokens.colors.text.tertiary}
+                    />
+                  </TouchableOpacity>
+                ) : null}
               </View>
-              <View style={styles.typeChip}>
-                <Text style={styles.typeChipText}>{item.type}</Text>
+            </UICard>
+          </View>
+
+          <Text style={styles.hint}>מניות ו־ETF אמריקאיים · בלי בורסות זרות</Text>
+
+          {loading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color={tokens.colors.primary.main} />
+            </View>
+          ) : null}
+
+          {!loading && results.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons
+                  name="search-outline"
+                  size={26}
+                  color={tokens.colors.text.tertiary}
+                />
               </View>
-            </TouchableOpacity>
-          )}
-          keyboardShouldPersistTaps="handled"
+              <Text style={styles.emptyText}>
+                {query
+                  ? 'לא נמצאו מניות רלוונטיות. נסו סימבול אמריקאי (AAPL) או שם באנגלית.'
+                  : 'הקלידו סימבול או שם חברה כדי להוסיף לרשימה.'}
+              </Text>
+            </View>
+          ) : null}
+
+          <FlatList
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            data={results}
+            keyExtractor={(item) => item.symbol}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  onSelect(item);
+                  onClose();
+                }}
+                style={({ pressed }) => [pressed && styles.rowPressed]}
+              >
+                <UICard
+                  variant="glass"
+                  glassIntensity="light"
+                  padding="none"
+                  style={styles.rowCard}
+                  haptic={false}
+                >
+                  <View style={styles.rowInner}>
+                    <TickerLogo symbol={item.symbol} size={40} />
+                    <View style={styles.textBlock}>
+                      <Text style={styles.symbolText}>
+                        {item.display_symbol || item.symbol}
+                      </Text>
+                      <Text style={styles.descriptionText} numberOfLines={1}>
+                        {item.description}
+                      </Text>
+                    </View>
+                    <View style={styles.typeChip}>
+                      <Text style={styles.typeChipText}>
+                        {hebrewAssetTypeLabel(item.type)}
+                      </Text>
+                    </View>
+                  </View>
+                </UICard>
+              </Pressable>
+            )}
           />
         </SafeAreaView>
       </View>

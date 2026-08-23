@@ -1,37 +1,49 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity, StyleSheet, I18nManager, Linking } from 'react-native';
 import {
-  User,
-  Settings,
-  ChevronLeft,
-  Star,
-  Bell,
-  CreditCard,
-  Edit3,
-} from 'lucide-react-native';
+  View,
+  Text,
+  ScrollView,
+  Image,
+  ActivityIndicator,
+  TouchableOpacity,
+  StyleSheet,
+  Switch,
+} from 'react-native';
+import { User } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useRegistration } from '../../context/RegistrationContext';
 import { useSubscription } from '../../hooks/useSubscription';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic, HapticFeedback } from '../../utils/hapticFeedback';
-import { getStoreReviewUrl } from '../../utils/appMeta';
+import {
+  SettingsSectionTitle,
+  SettingsGlassCard,
+  ProfileMenuRow,
+  SettingsActionRow,
+} from '../../components/profile/ProfileSettingsUI';
 
-interface MenuItem {
+type MenuRow = {
   id: string;
   title: string;
   subtitle?: string;
-  icon: any;
   onPress: () => void;
-}
+  danger?: boolean;
+};
 
 export default function UserProfileScreen({ navigation }: any) {
   const { user, isLoading, signOut } = useAuth();
+  const { resetData: resetRegistrationData } = useRegistration();
   const { planName, isLoading: subscriptionLoading } = useSubscription();
+  const { isAdmin } = useIsAdmin();
+  const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
 
   const openMainDrawer = useCallback(() => {
@@ -44,70 +56,186 @@ export default function UserProfileScreen({ navigation }: any) {
   }, [navigation]);
 
   const [profileData, setProfileData] = useState<any>(null);
+  const [systemNotifs, setSystemNotifs] = useState(true);
+  const [contentNotifs, setContentNotifs] = useState(true);
+  const [notifLoading, setNotifLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      loadProfileData();
+      void loadProfileData();
+      void loadNotificationToggles();
     }
   }, [user]);
 
   const loadProfileData = async () => {
     try {
       if (!user) return;
-      
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (data) {
-        setProfileData(data);
-      }
-    } catch (error) {
+      // הפרופיל המלא של המשתמש עצמו (כולל email/phone) — RPC נעול על auth.uid();
+      // public.users לא מחזירה את העמודות הפרטיות ל-`authenticated`.
+      const { data: rows } = await supabase.rpc('get_my_profile');
+      const data = Array.isArray(rows) ? rows[0] : rows;
+      if (data) setProfileData(data);
+    } catch {
+      /* noop */
     }
   };
 
-  const mainMenuItems: MenuItem[] = [
+  const loadNotificationToggles = async () => {
+    if (!user) {
+      setNotifLoading(false);
+      return;
+    }
+    try {
+      const { data } = await supabase
+        .from('user_notification_settings')
+        .select('notifications_enabled, news_notifications, message_notifications')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        setSystemNotifs(data.notifications_enabled ?? true);
+        setContentNotifs(
+          (data.news_notifications ?? true) || (data.message_notifications ?? true),
+        );
+      }
+    } finally {
+      setNotifLoading(false);
+    }
+  };
+
+  const upsertNotifPatch = async (patch: Record<string, boolean>) => {
+    if (!user) return;
+    const { error } = await supabase.from('user_notification_settings').upsert(
+      {
+        user_id: user.id,
+        ...patch,
+      },
+      { onConflict: 'user_id' },
+    );
+    if (error) {
+      legacyAlert('שגיאה', 'לא הצלחנו לשמור את הגדרת ההתראות');
+      throw error;
+    }
+  };
+
+  const toggleSystemNotifs = async (value: boolean) => {
+    void HapticFeedback.selection();
+    const prev = systemNotifs;
+    setSystemNotifs(value);
+    try {
+      await upsertNotifPatch({ notifications_enabled: value });
+    } catch {
+      setSystemNotifs(prev);
+    }
+  };
+
+  const toggleContentNotifs = async (value: boolean) => {
+    void HapticFeedback.selection();
+    const prev = contentNotifs;
+    setContentNotifs(value);
+    try {
+      await upsertNotifPatch({
+        news_notifications: value,
+        message_notifications: value,
+      });
+    } catch {
+      setContentNotifs(prev);
+    }
+  };
+
+  const personalItems: MenuRow[] = [
     {
       id: 'edit',
       title: 'עריכת פרופיל',
-      subtitle: 'עדכן את פרטיך האישיים',
-      icon: Edit3,
-      onPress: () => navigation.navigate('EditProfile')
+      subtitle: 'שם, טלפון ותמונה',
+      onPress: () => navigation.navigate('EditProfile'),
     },
     {
       id: 'settings',
-      title: 'הגדרות',
-      subtitle: 'הגדרות אפליקציה כלליות',
-      icon: Settings,
-      onPress: () => navigation.navigate('Settings')
+      title: 'הגדרות כלליות',
+      subtitle: 'שפה, ביומטריה ומטמון',
+      onPress: () => navigation.navigate('Settings'),
     },
     {
-      id: 'notifications',
-      title: 'התראות',
-      subtitle: 'הגדרות התראות וצלילים',
-      icon: Bell,
-      onPress: () => navigation.navigate('Notifications')
+      id: 'password',
+      title: 'שינוי סיסמה',
+      subtitle: 'אבטחת החשבון',
+      onPress: () => navigation.navigate('ChangePassword'),
+    },
+  ];
+
+  const billingItems: MenuRow[] = [
+    {
+      id: 'billing',
+      title: 'מנוי והיסטוריית רכישות',
+      subtitle: 'סטטוס, חידוש וחשבוניות',
+      onPress: () => navigation.navigate('Billing'),
+    },
+  ];
+
+  const adminItems: MenuRow[] = isAdmin
+    ? [
+        {
+          id: 'admin-panel',
+          title: 'פאנל מנהלים',
+          subtitle: 'משתמשים, מנויים ופושים',
+          onPress: () => {
+            const root = navigation.getParent?.();
+            try {
+              (root as any)?.navigate('Admin');
+            } catch {
+              (navigation as any).navigate('Admin');
+            }
+          },
+        },
+        {
+          id: 'admin-tickets',
+          title: 'תיבת פניות תמיכה',
+          subtitle: 'טיקטים מהמשתמשים',
+          onPress: () => {
+            const root = navigation.getParent?.();
+            try {
+              (root as any)?.navigate('Admin', { screen: 'AdminTickets' });
+            } catch {
+              (navigation as any).navigate('AdminTickets');
+            }
+          },
+        },
+      ]
+    : [];
+
+  const supportItems: MenuRow[] = [
+    {
+      id: 'contact',
+      title: 'יצירת קשר',
+      subtitle: 'פתיחת פנייה לתמיכה',
+      onPress: () => navigation.navigate('ContactSupport'),
+    },
+  ];
+
+  const legalItems: MenuRow[] = [
+    {
+      id: 'privacy',
+      title: 'מדיניות פרטיות',
+      subtitle: 'darkpool.site/privacy',
+      onPress: () => navigation.navigate('LegalWebView', { kind: 'privacy' }),
     },
     {
-      id: 'subscription',
-      title: 'מנוי ומסלול',
-      subtitle: 'צפייה במסלולים (תשלום בקרוב)',
-      icon: CreditCard,
-      onPress: () => navigation.navigate('SubscriptionPlans')
+      id: 'terms',
+      title: 'תנאי שימוש',
+      subtitle: 'darkpool.site/terms',
+      onPress: () => navigation.navigate('LegalWebView', { kind: 'terms' }),
     },
+  ];
+
+  const dangerItems: MenuRow[] = [
     {
-      id: 'rate',
-      title: 'דרג אותנו',
-      subtitle: 'שתף את החוויה שלך בחנות',
-      icon: Star,
-      onPress: () => {
-        void Linking.openURL(getStoreReviewUrl()).catch(() => {
-          legacyAlert('שגיאה', 'לא הצלחנו לפתוח את דף החנות.');
-        });
-      }
-    }
+      id: 'delete',
+      title: 'מחיקת חשבון',
+      subtitle: 'פעולה בלתי הפיכה',
+      danger: true,
+      onPress: () => navigation.navigate('DeleteAccount'),
+    },
   ];
 
   if (isLoading) {
@@ -115,13 +243,12 @@ export default function UserProfileScreen({ navigation }: any) {
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-          <Text style={{ 
-            color: DesignTokens.colors.text.secondary, 
-            fontSize: DesignTokens.typography.body.size,
-            fontWeight: DesignTokens.typography.body.weight as any,
-            lineHeight: DesignTokens.typography.body.lineHeight,
-            marginTop: DesignTokens.spacing.lg 
-          }}>
+          <Text
+            style={{
+              color: DesignTokens.colors.text.secondary,
+              marginTop: DesignTokens.spacing.lg,
+            }}
+          >
             טוען פרופיל...
           </Text>
         </View>
@@ -132,24 +259,22 @@ export default function UserProfileScreen({ navigation }: any) {
   if (!user) {
     return (
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: DesignTokens.spacing.xl }}>
-          <Text style={{ 
-            color: DesignTokens.colors.text.primary, 
-            fontSize: DesignTokens.typography.titleSmall.size,
-            fontWeight: DesignTokens.typography.titleSmall.weight as any,
-            letterSpacing: DesignTokens.typography.titleSmall.letterSpacing,
-            marginBottom: DesignTokens.spacing.sm 
-          }}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: DesignTokens.spacing.xl,
+          }}
+        >
+          <Text
+            style={{
+              color: DesignTokens.colors.text.primary,
+              fontSize: DesignTokens.typography.titleSmall.size,
+              marginBottom: DesignTokens.spacing.sm,
+            }}
+          >
             לא מחובר
-          </Text>
-          <Text style={{ 
-            color: DesignTokens.colors.text.secondary, 
-            fontSize: DesignTokens.typography.body.size,
-            fontWeight: DesignTokens.typography.body.weight as any,
-            lineHeight: DesignTokens.typography.body.lineHeight,
-            textAlign: 'center' 
-          }}>
-            יש להתחבר לאפליקציה
           </Text>
         </View>
       </RNSafeAreaView>
@@ -158,102 +283,55 @@ export default function UserProfileScreen({ navigation }: any) {
 
   const displayName = profileData?.full_name || user?.email?.split('@')[0] || 'משתמש';
   const email = user?.email || '';
-  
-  // Get member since date from user creation
+
   const getMemberSinceDate = () => {
     if (profileData?.created_at) {
-      const date = new Date(profileData.created_at);
-      return date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' });
+      return new Date(profileData.created_at).toLocaleDateString('he-IL', {
+        month: 'long',
+        year: 'numeric',
+      });
     }
-    return 'ינואר 2024';
+    return '—';
   };
 
   const profileTextBlock = (
-    <View
-      style={{
-        flex: 1,
-        minWidth: 0,
-        alignItems: 'flex-end',
-        gap: DesignTokens.spacing.xs,
-      }}
-    >
+    <View style={{ flex: 1, minWidth: 0, alignItems: 'flex-end', gap: DesignTokens.spacing.xs }}>
       <Text
         style={{
           fontSize: DesignTokens.typography.titleSmall.size,
           fontWeight: DesignTokens.typography.titleSmall.weight as any,
-          letterSpacing: DesignTokens.typography.titleSmall.letterSpacing,
-          lineHeight: DesignTokens.typography.titleSmall.lineHeight,
           color: DesignTokens.colors.text.primary,
           textAlign: 'right',
+          writingDirection: 'rtl',
           width: '100%',
         }}
       >
         {displayName}
       </Text>
-
       <Text
         style={{
           fontSize: DesignTokens.typography.bodySmall.size,
-          fontWeight: DesignTokens.typography.bodySmall.weight as any,
-          lineHeight: DesignTokens.typography.bodySmall.lineHeight,
           color: DesignTokens.colors.text.secondary,
           textAlign: 'right',
+          writingDirection: 'ltr',
           width: '100%',
-        } as any}
+        }}
       >
         {email}
       </Text>
-
-      <View
+      <Text
         style={{
           marginTop: DesignTokens.spacing.xs,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          flexWrap: 'wrap',
-          rowGap: DesignTokens.spacing.xs,
-          columnGap: DesignTokens.spacing.sm,
-          paddingVertical: DesignTokens.spacing.sm,
-          paddingHorizontal: DesignTokens.spacing.md,
-          borderRadius: DesignTokens.borderRadius.full,
-          backgroundColor: 'rgba(255, 255, 255, 0.06)',
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          alignSelf: 'stretch',
+          fontSize: DesignTokens.typography.caption.size,
+          color: DesignTokens.colors.text.tertiary,
+          textAlign: 'right',
+          writingDirection: 'rtl',
+          width: '100%',
         }}
       >
-        <Text
-          style={{
-            fontSize: DesignTokens.typography.caption.size,
-            fontWeight: DesignTokens.typography.caption.weight as any,
-            lineHeight: DesignTokens.typography.caption.lineHeight,
-            color: DesignTokens.colors.text.tertiary,
-            textAlign: 'right',
-          }}
-        >
-          מסלול {subscriptionLoading ? '...' : (planName ?? 'חינמי')}
-        </Text>
-        <View
-          style={{
-            width: StyleSheet.hairlineWidth * 2,
-            height: 11,
-            borderRadius: 1,
-            backgroundColor: DesignTokens.colors.border.divider,
-          }}
-        />
-        <Text
-          style={{
-            fontSize: DesignTokens.typography.caption.size,
-            fontWeight: DesignTokens.typography.caption.weight as any,
-            lineHeight: DesignTokens.typography.caption.lineHeight,
-            color: DesignTokens.colors.text.tertiary,
-            textAlign: 'right',
-            flexShrink: 1,
-          }}
-        >
-          חבר קהילה מאז {getMemberSinceDate()}
-        </Text>
-      </View>
+        חבר מאז {getMemberSinceDate()} · מסלול{' '}
+        {subscriptionLoading ? '...' : (planName ?? 'חינמי')}
+      </Text>
     </View>
   );
 
@@ -288,14 +366,12 @@ export default function UserProfileScreen({ navigation }: any) {
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
-        <MainDrawerScreenHeader title="פרופיל" onMenuPress={openMainDrawer} />
-        <View style={{ flex: 1 }}>
-          <ScrollView 
-            style={{ flex: 1 }} 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: DesignTokens.spacing.xl }}
-          >
-          {/* Profile Header — זכוכית (glass) */}
+        <MainDrawerScreenHeader title="פרופיל והגדרות" onMenuPress={openMainDrawer} />
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: DesignTokens.spacing.xl }}
+        >
           <UICard
             variant="glass"
             glassIntensity="light"
@@ -309,184 +385,284 @@ export default function UserProfileScreen({ navigation }: any) {
               borderRadius: DesignTokens.borderRadius['2xl'],
             }}
           >
-          {/* טקסטים משמאל, תמונה מימין (ב־RTL סדר הילדים מתהפך) */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              width: '100%',
-              paddingTop: DesignTokens.spacing.md,
-              gap: DesignTokens.spacing.md,
-            }}
-          >
-            {I18nManager.isRTL ? (
-              <>
-                {profileAvatar}
-                {profileTextBlock}
-              </>
-            ) : (
-              <>
-                {profileTextBlock}
-                {profileAvatar}
-              </>
-            )}
-          </View>
-        </UICard>
+            {/* App LTR tree + forceRTL: אל תסמכו על isRTL — row-reverse שומר אווטאר בימין */}
+            <View
+              style={{
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                width: '100%',
+                paddingTop: DesignTokens.spacing.md,
+                gap: DesignTokens.spacing.md,
+              }}
+            >
+              {profileAvatar}
+              {profileTextBlock}
+            </View>
+          </UICard>
 
-      {/* Menu Sections */}
-      <View style={{ paddingHorizontal: DesignTokens.spacing.base, marginTop: DesignTokens.spacing.md }}>
-        {/* תפריט ראשי — זכוכית */}
-        <UICard
-          variant="glass"
-          glassIntensity="light"
-          padding="none"
-          style={{
-            marginBottom: DesignTokens.spacing.md,
-            borderRadius: DesignTokens.borderRadius.lg,
-          }}
-        >
-            {mainMenuItems.map((item, index) => (
-              <View key={item.id}>
-                <TouchableOpacity
+          <View style={{ paddingHorizontal: DesignTokens.spacing.base, marginTop: DesignTokens.spacing.md }}>
+            <SettingsSectionTitle title="אישי" />
+            <SettingsGlassCard>
+              {personalItems.map((item, index) => (
+                <ProfileMenuRow
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle}
                   onPress={() => {
                     void HapticFeedback.impactLight();
                     item.onPress();
                   }}
-                  activeOpacity={0.7}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: DesignTokens.spacing.md,
-                    paddingHorizontal: DesignTokens.spacing.base,
-                  }}
-                >
-                {/* Chevron - שמאל */}
-                <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+                  showDivider={index < personalItems.length - 1}
+                />
+              ))}
+            </SettingsGlassCard>
 
-                {/* Text Content - מרכז */}
-                <View style={{
-                  flex: 1,
-                  marginLeft: DesignTokens.spacing.sm,
-                  marginRight: DesignTokens.spacing.sm,
-                  gap: DesignTokens.spacing.micro,
-                }}>
-                  <Text style={{
-                    fontSize: DesignTokens.typography.body.size,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                    lineHeight: DesignTokens.typography.body.lineHeight,
-                    color: DesignTokens.colors.text.primary,
-                    textAlign: 'right',
-                  }}>
-                    {item.title}
-                  </Text>
-                  {item.subtitle && (
-                    <Text style={{
-                      fontSize: DesignTokens.typography.bodySmall.size,
-                      fontWeight: DesignTokens.typography.bodySmall.weight as any,
-                      lineHeight: DesignTokens.typography.bodySmall.lineHeight,
-                      color: DesignTokens.colors.text.tertiary,
-                      textAlign: 'right',
-                    }}>
-                      {item.subtitle}
-                    </Text>
-                  )}
-                </View>
-
-                {/* Icon - ימין - עם Glassmorphism עדין */}
-                <View style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: DesignTokens.borderRadius.md,
-                  backgroundColor: `${DesignTokens.colors.primary.main}20`,
-                  borderWidth: DesignTokens.layout.borderWidth.normal,
-                  borderColor: DesignTokens.colors.border.primary,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  ...DesignTokens.shadows.xs,
-                }}>
-                  <item.icon 
-                    size={20} 
-                    color={DesignTokens.colors.primary.main} 
-                    strokeWidth={2.5} 
-                  />
-                </View>
-              </TouchableOpacity>
-              {index < mainMenuItems.length - 1 && (
-                <View style={{
-                  height: 1,
+            <SettingsSectionTitle title="התראות" />
+            <SettingsGlassCard>
+              <ToggleRow
+                title="התראות מערכת"
+                subtitle="התראות כלליות של האפליקציה"
+                value={systemNotifs}
+                disabled={notifLoading}
+                onToggle={toggleSystemNotifs}
+                theme={theme}
+                tokens={DesignTokens}
+              />
+              <View
+                style={{
+                  height: StyleSheet.hairlineWidth,
                   backgroundColor: DesignTokens.colors.border.divider,
-                  marginLeft: DesignTokens.spacing.base,
-                  marginRight: DesignTokens.spacing.base,
-                }} />
-              )}
-            </View>
-            ))}
-        </UICard>
+                  marginHorizontal: DesignTokens.spacing.base,
+                }}
+              />
+              <ToggleRow
+                title="התראות תוכן"
+                subtitle="חדשות והודעות צ׳אט"
+                value={contentNotifs}
+                disabled={notifLoading}
+                onToggle={toggleContentNotifs}
+                theme={theme}
+                tokens={DesignTokens}
+              />
+              <View
+                style={{
+                  height: StyleSheet.hairlineWidth,
+                  backgroundColor: DesignTokens.colors.border.divider,
+                  marginHorizontal: DesignTokens.spacing.base,
+                }}
+              />
+              <ProfileMenuRow
+                title="עוד הגדרות התראות"
+                subtitle="צלילים, רעידות ופירוט"
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  navigation.navigate('Notifications');
+                }}
+                showDivider={false}
+              />
+            </SettingsGlassCard>
 
-        {/* Logout Button - כפתור נורמלי */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => {
-            void HapticFeedback.warning();
-            legacyAlert(
-              'התנתקות',
-              'האם אתה בטוח שברצונך להתנתק?',
-              [
-                { text: 'ביטול', style: 'cancel' },
-                { 
-                  text: 'התנתק', 
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      const { error } = await signOut();
-                      if (error) {
-                        legacyAlert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
-                      } else {
-                        // הניווט יתבצע אוטומטית דרך AuthContext
+            <SettingsSectionTitle title="חיובים" />
+            <SettingsGlassCard>
+              {billingItems.map((item, index) => (
+                <ProfileMenuRow
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    item.onPress();
+                  }}
+                  showDivider={index < billingItems.length - 1}
+                />
+              ))}
+            </SettingsGlassCard>
+
+            {adminItems.length > 0 ? (
+              <>
+                <SettingsSectionTitle title="ניהול" />
+                <SettingsGlassCard>
+                  {adminItems.map((item, index) => (
+                    <ProfileMenuRow
+                      key={item.id}
+                      title={item.title}
+                      subtitle={item.subtitle}
+                      onPress={() => {
+                        void HapticFeedback.impactLight();
+                        item.onPress();
+                      }}
+                      showDivider={index < adminItems.length - 1}
+                    />
+                  ))}
+                </SettingsGlassCard>
+              </>
+            ) : null}
+
+            <SettingsSectionTitle title="תמיכה" />
+            <SettingsGlassCard>
+              {supportItems.map((item, index) => (
+                <ProfileMenuRow
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    item.onPress();
+                  }}
+                  showDivider={index < supportItems.length - 1}
+                />
+              ))}
+            </SettingsGlassCard>
+
+            <SettingsSectionTitle title="משפטי" />
+            <SettingsGlassCard>
+              {legalItems.map((item, index) => (
+                <ProfileMenuRow
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle}
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    item.onPress();
+                  }}
+                  showDivider={index < legalItems.length - 1}
+                />
+              ))}
+            </SettingsGlassCard>
+
+            <SettingsSectionTitle title="חשבון" />
+            <SettingsGlassCard style={{ marginBottom: DesignTokens.spacing.md }}>
+              {dangerItems.map((item, index) => (
+                <SettingsActionRow
+                  key={item.id}
+                  title={item.title}
+                  subtitle={item.subtitle ?? ''}
+                  danger
+                  onPress={() => {
+                    void HapticFeedback.impactLight();
+                    item.onPress();
+                  }}
+                  showDivider={index < dangerItems.length - 1}
+                />
+              ))}
+            </SettingsGlassCard>
+
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={() => {
+                void HapticFeedback.warning();
+                legacyAlert('התנתקות', 'האם אתה בטוח שברצונך להתנתק?', [
+                  { text: 'ביטול', style: 'cancel' },
+                  {
+                    text: 'התנתק',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        const { error } = await signOut();
+                        resetRegistrationData();
+                        if (error) legacyAlert('שגיאה', 'לא הצלחנו להתנתק. נסה שוב.');
+                      } catch {
+                        resetRegistrationData();
+                        legacyAlert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
                       }
-                    } catch (error) {
-                      legacyAlert('שגיאה', 'אירעה שגיאה בהתנתקות. נסה שוב.');
-                    }
-                  }
-                }
-              ]
-            );
-          }}
+                    },
+                  },
+                ]);
+              }}
+              style={{
+                marginTop: DesignTokens.spacing.sm,
+                marginBottom: DesignTokens.spacing['3xl'],
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 52,
+                paddingVertical: DesignTokens.spacing.md,
+                paddingHorizontal: DesignTokens.spacing.xl,
+                borderRadius: DesignTokens.borderRadius.full,
+                overflow: 'hidden',
+                backgroundColor: `${DesignTokens.colors.danger.main}1A`,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: `${DesignTokens.colors.danger.main}55`,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: DesignTokens.typography.body.size,
+                  fontWeight: DesignTokens.typography.buttonSmall.weight as any,
+                  lineHeight: DesignTokens.typography.body.lineHeight,
+                  color: DesignTokens.colors.danger.main,
+                  textAlign: 'center',
+                }}
+              >
+                התנתקות
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </RNSafeAreaView>
+    </View>
+  );
+}
+
+function ToggleRow({
+  title,
+  subtitle,
+  value,
+  disabled,
+  onToggle,
+  theme,
+  tokens,
+}: {
+  title: string;
+  subtitle: string;
+  value: boolean;
+  disabled?: boolean;
+  onToggle: (v: boolean) => void;
+  theme: any;
+  tokens: any;
+}) {
+  return (
+    <View
+      style={{
+        // עץ האפליקציה LTR — switch ראשון = שמאל ויזואלי (כמו בצילום RTL הרצוי)
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: tokens.spacing.md,
+        paddingHorizontal: tokens.spacing.base,
+      }}
+    >
+      <Switch
+        value={value}
+        disabled={disabled}
+        onValueChange={onToggle}
+        trackColor={{ false: theme.switchTrackOff, true: tokens.colors.primary.main }}
+        thumbColor={value ? tokens.colors.text.primary : theme.switchThumbOff}
+        ios_backgroundColor={theme.switchTrackOff}
+        style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+      />
+      <View style={{ flex: 1, marginLeft: tokens.spacing.sm }}>
+        <Text
           style={{
-            marginTop: DesignTokens.spacing.lg,
-            marginBottom: DesignTokens.spacing['3xl'],
-            marginHorizontal: DesignTokens.spacing.base,
+            fontSize: tokens.typography.body.size,
+            fontWeight: '600',
+            color: tokens.colors.text.primary,
+            textAlign: 'right',
+            writingDirection: 'rtl',
           }}
         >
-          <UICard
-            variant="glass"
-            glassIntensity="light"
-            padding="none"
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: 52,
-              paddingVertical: DesignTokens.spacing.md,
-              paddingHorizontal: DesignTokens.spacing.xl,
-              borderRadius: DesignTokens.borderRadius.full,
-              borderWidth: 1.5,
-              borderColor: `${DesignTokens.colors.danger.main}66`,
-            }}
-          >
-            <Text style={{
-              fontSize: DesignTokens.typography.body.size,
-              fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-              lineHeight: DesignTokens.typography.body.lineHeight,
-              color: DesignTokens.colors.danger.main
-            }}>
-              התנתקות
-            </Text>
-          </UICard>
-        </TouchableOpacity>
+          {title}
+        </Text>
+        <Text
+          style={{
+            fontSize: tokens.typography.bodySmall.size,
+            color: tokens.colors.text.tertiary,
+            textAlign: 'right',
+            writingDirection: 'rtl',
+            marginTop: 2,
+          }}
+        >
+          {subtitle}
+        </Text>
       </View>
-          </ScrollView>
-        </View>
-      </RNSafeAreaView>
     </View>
   );
 }

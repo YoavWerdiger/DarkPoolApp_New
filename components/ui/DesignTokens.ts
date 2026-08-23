@@ -91,8 +91,8 @@ const darkColors = {
       border: 'rgba(255, 255, 255, 0.08)',
     },
     cardElevated: {
-      bg: 'rgba(255, 255, 255, 0.08)',
-      border: 'rgba(255, 255, 255, 0.10)',
+      bg: 'rgba(255, 255, 255, 0.14)',
+      border: 'rgba(255, 255, 255, 0.22)',
     },
     sheet: {
       bg: 'rgba(18, 30, 18, 0.97)',
@@ -318,6 +318,18 @@ const staticTokens = {
     '2xl': 24,
     '3xl': 30,
     full: 9999,
+    /** כל כפתור באפליקציה — pill. אין להגדיר רדיוס כפתור פר-מסך. */
+    button: 9999,
+  },
+
+  /**
+   * יישור טקסט עברי — הבסיס של עץ הלייאאוט הוא `direction: 'ltr'` (App.tsx),
+   * ולכן טקסט בעברית חייב יישור מפורש. בלי `writingDirection` מחרוזות עם ספרות /
+   * פיסוק (`+3 החודש`, `שם · תאריך`) מסתדרות לפי כללי BiDi של פסקה לטינית ונראות הפוכות.
+   */
+  rtlText: {
+    textAlign: 'right' as const,
+    writingDirection: 'rtl' as const,
   },
 
   shadows: {
@@ -540,11 +552,18 @@ const staticTokens = {
     },
   },
 
-  /** כמו OnboardingInput — מילוי שקוף + מסגרת, ללא BlurView */
+  /**
+   * משטח שדות רישום / onboarding — זכוכית כהה יותר עם מסגרת ברורה.
+   * blurIntensity משמש ב־UICard variant="inputGlass" (iOS בלבד; Android — מילוי כהה).
+   */
   onboardingInputSurface: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    /** BlurView intensity — עדין כדי לא לפגוע בקריאות / ביצועים */
+    blurIntensity: 26,
+    /** רקע Android כשאין blur אמיתי */
+    androidFallback: 'rgba(14, 22, 16, 0.82)',
   },
 };
 

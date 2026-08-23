@@ -7,13 +7,13 @@ import {
   ScrollView,
   Dimensions,
   Image,
+  InteractionManager,
   Platform,
-  I18nManager,
 } from 'react-native';
 import { createDrawerNavigator, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { CommonActions } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import NewsScreen from '../screens/News';
 import NewsEconomicCalendarScreen from '../screens/News/NewsEconomicCalendarScreen';
 import NewsEarningsScreen from '../screens/News/NewsEarningsScreen';
@@ -21,8 +21,7 @@ import LikedArticlesScreen from '../screens/News/LikedArticlesScreen';
 import JournalStack from './JournalStack';
 import PortfoliosStack from './PortfoliosStack';
 import DarkPoolStack from './DarkPoolStack';
-import MarketsScreen from '../screens/Markets/MarketsScreen';
-import MarketsScreenerScreen from '../screens/Markets/MarketsScreenerScreen';
+import WatchlistScreen from '../screens/Watchlist/WatchlistScreen';
 import MarketsHeatmapScreen from '../screens/Markets/MarketsHeatmapScreen';
 import ChatStack from './ChatStack';
 import LearningStack from './LearningStack';
@@ -34,8 +33,12 @@ import {
 } from './mainDrawerNav';
 import { useAuth } from '../context/AuthContext';
 import { HapticFeedback } from '../utils/hapticFeedback';
+import { DesignTokens } from '../components/ui/DesignTokens';
 
 const Drawer = createDrawerNavigator();
+
+/** תואם DesignTokens.colors.background.primary / lib/androidSystemUI */
+const SCREEN_BG = DesignTokens.colors.background.primary;
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(300, Math.round(SCREEN_W * 0.82));
@@ -45,22 +48,33 @@ const DRAWER_PAD_INNER = 15;
 /** צד המסגרת / לוגו / אווטאר — מעט פחות כדי לאזן את ההזחה ימינה */
 const DRAWER_PAD_OUTER = 17;
 
+type DrawerIconFamily = 'ion' | 'mci';
+
 /** סדר מלמעלה למטה לפי חשיבות (מגירה) */
-const DRAWER_ITEMS = [
-  { name: 'Chat' as const, title: 'קהילה', icon: 'chatbubbles-outline' as const },
-  { name: 'Courses' as const, title: 'אקדמיה', icon: 'school-outline' as const },
-  {
-    name: 'Portfolios' as const,
-    title: 'יומן מסחר',
-    icon: 'book-outline' as const,
-  },
-  { name: 'DarkPool' as const, title: 'Dark Pool', icon: 'water-outline' as const },
-  { name: 'News' as const, title: 'חדשות', icon: 'newspaper-outline' as const },
-  { name: 'Markets' as const, title: 'שווקים', icon: 'trending-up-outline' as const },
-  { name: 'NewsEarnings' as const, title: 'דיווחי רווח', icon: 'notifications-outline' as const },
-  { name: 'NewsCalendar' as const, title: 'יומן כלכלי', icon: 'calendar-outline' as const },
-  { name: 'MarketsScreener' as const, title: 'סורק', icon: 'search-outline' as const },
-  { name: 'MarketsHeatmap' as const, title: 'מפת חום', icon: 'map-outline' as const },
+const DRAWER_ITEMS: Array<{
+  name:
+    | 'Chat'
+    | 'Courses'
+    | 'Portfolios'
+    | 'DarkPool'
+    | 'News'
+    | 'Watchlist'
+    | 'NewsEarnings'
+    | 'NewsCalendar'
+    | 'MarketsHeatmap';
+  title: string;
+  icon: string;
+  iconFamily?: DrawerIconFamily;
+}> = [
+  { name: 'Chat', title: 'קהילה', icon: 'chatbubbles-outline' },
+  { name: 'Courses', title: 'האקדמיה', icon: 'school-outline' },
+  { name: 'Portfolios', title: 'יומן מסחר', icon: 'book-outline' },
+  { name: 'DarkPool', title: 'אינסיידרים', icon: 'eye-outline' },
+  { name: 'News', title: 'חדשות', icon: 'newspaper-outline' },
+  { name: 'Watchlist', title: 'רשימת מעקב', icon: 'list-outline' },
+  { name: 'NewsEarnings', title: 'דיווחי רווח', icon: 'notifications-outline' },
+  { name: 'NewsCalendar', title: 'יומן כלכלי', icon: 'calendar-outline' },
+  { name: 'MarketsHeatmap', title: 'מפת חום', icon: 'map-outline' },
 ];
 
 const ACCENT = '#00C805';
@@ -92,6 +106,14 @@ function navigateDrawerItem(
   }
 }
 
+/** `created_at` מגיע כמחרוזת ISO מהשרת — עלול להיות חסר או לא תקין */
+function formatActiveSince(createdAt: string | null | undefined): string {
+  if (!createdAt) return 'חבר קהילה';
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return 'חבר קהילה';
+  return `חבר קהילה מאז ${date.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}`;
+}
+
 /**
  * פרודקשן — הפרדה מפורשת לפלטפורמה:
  * - Android: `front` כמו תמיד (אין שינוי בהתנהגות המגירה).
@@ -113,15 +135,12 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
   const activeRoute = state.routes[state.index]?.name;
   const drawerSide = getMainDrawerPosition();
   const displayName =
-    (user as any)?.user_metadata?.display_name ||
-    (user as any)?.user_metadata?.full_name ||
-    (user as any)?.email?.split('@')?.[0] ||
+    user?.display_name ||
+    user?.full_name ||
+    user?.email?.split('@')?.[0] ||
     'משתמש';
-  const avatarUrl = (user as any)?.user_metadata?.avatar_url as string | undefined;
-  const createdAt = (user as any)?.created_at ? new Date((user as any).created_at) : null;
-  const activeSinceText = createdAt
-    ? `חבר קהילה מאז ${createdAt.toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}`
-    : 'חבר קהילה';
+  const avatarUrl = user?.profile_picture;
+  const activeSinceText = useMemo(() => formatActiveSince(user?.created_at), [user?.created_at]);
 
   const isIos = Platform.OS === 'ios';
 
@@ -150,11 +169,12 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
       ]}
     >
       <View style={drawerStyles.brandHeader}>
-        <Image source={require('../assets/bull-bear-drawer.png')} style={drawerStyles.brandLogo} resizeMode="contain" />
-        <View style={drawerStyles.brandTextWrap}>
-          <Text style={drawerStyles.brand}>DarkPool</Text>
-          <Text style={drawerStyles.hint}>הבית של הסוחרים בישראל</Text>
-        </View>
+        <Image
+          source={require('../assets/darkpool-drawer-logo.png')}
+          style={drawerStyles.brandLogo}
+          resizeMode="contain"
+          accessibilityLabel="DarkPool"
+        />
       </View>
       <ScrollView style={drawerStyles.scroll} showsVerticalScrollIndicator={false}>
         {DRAWER_ITEMS.map((item) => {
@@ -166,13 +186,28 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
               activeOpacity={0.75}
               onPress={() => {
                 void HapticFeedback.selection();
-                navigateDrawerItem(navigation, item.name);
+                // סוגרים מגירה קודם — mount של מסך כבד אחרי האנימציה מונע גמגום
                 navigation.closeDrawer();
+                InteractionManager.runAfterInteractions(() => {
+                  navigateDrawerItem(navigation, item.name);
+                });
               }}
               accessibilityRole="button"
               accessibilityState={{ selected: focused }}
             >
-              <Ionicons name={item.icon} size={24} color={focused ? ACCENT : LABEL} />
+              {item.iconFamily === 'mci' ? (
+                <MaterialCommunityIcons
+                  name={item.icon as React.ComponentProps<typeof MaterialCommunityIcons>['name']}
+                  size={24}
+                  color={focused ? ACCENT : LABEL}
+                />
+              ) : (
+                <Ionicons
+                  name={item.icon as React.ComponentProps<typeof Ionicons>['name']}
+                  size={24}
+                  color={focused ? ACCENT : LABEL}
+                />
+              )}
               <Text style={[drawerStyles.label, focused && drawerStyles.labelActive]}>{item.title}</Text>
               {focused ? (
                 <Ionicons
@@ -201,13 +236,8 @@ function CustomDrawerContent(props: DrawerContentComponentProps) {
           }
         }}
       >
-        <View
-          style={[
-            drawerStyles.profileFooterRow,
-            /** RTL: cross-start = ימין פיזי; LTR: flex-end = ימין */
-            { alignSelf: I18nManager.isRTL ? 'flex-start' : 'flex-end' },
-          ]}
-        >
+        {/* App LTR tree + forceRTL: alignSelf קבוע flex-end — לא I18nManager.isRTL */}
+        <View style={drawerStyles.profileFooterRow}>
           {avatarUrl ? (
             <View style={drawerStyles.profileAvatarWrap}>
               <Image source={{ uri: avatarUrl }} style={drawerStyles.profileAvatarImage} resizeMode="cover" />
@@ -233,34 +263,15 @@ const drawerStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0F1A0F',
   },
-  brand: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  hint: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.38)',
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    marginTop: 4,
-  },
   brandHeader: {
-    flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 18,
-  },
-  brandTextWrap: {
-    flex: 1,
-    alignItems: 'flex-end',
+    justifyContent: 'center',
+    marginBottom: 20,
+    paddingTop: 4,
   },
   brandLogo: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: '100%',
+    height: 96,
   },
   scroll: { flex: 1 },
   row: {
@@ -295,11 +306,13 @@ const drawerStyles = StyleSheet.create({
     borderTopColor: 'rgba(255,255,255,0.20)',
     alignSelf: 'stretch',
   },
-  /** צמוד לימין המגירה (קצה המסך) — שורת אווטאר + טקסט */
+  /** צמוד לימין הפיזי (עץ LTR) — אווטאר ימין, טקסט משמאלו */
   profileFooterRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    alignSelf: 'flex-end',
     gap: 12,
+    direction: 'ltr',
   },
   profileFooterInfo: {
     alignItems: 'flex-end',
@@ -349,7 +362,7 @@ export default function MainTabs() {
   const drawerPosition = getMainDrawerPosition();
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+    <View style={{ flex: 1, backgroundColor: SCREEN_BG }}>
       <Drawer.Navigator
         id={MAIN_DRAWER_NAVIGATOR_ID}
         initialRouteName="Chat"
@@ -366,11 +379,13 @@ export default function MainTabs() {
             width: DRAWER_WIDTH,
             backgroundColor: '#0F1A0F',
           },
-          sceneStyle: { backgroundColor: 'transparent' },
+          sceneStyle: { backgroundColor: SCREEN_BG },
+          // enableFreeze(true) ב-App — משאירים הקפאה ב-blur כדי שמסכי Drawer כבדים
+          // (צ'אט/realtime) לא ימשיכו לרנדר ברקע וייגנבו את ה-JS thread בניווט.
         }}
       >
         <Drawer.Screen name="Chat" component={ChatStack} options={{ title: 'קהילה' }} />
-        <Drawer.Screen name="Courses" component={LearningStack} options={{ title: 'אקדמיה' }} />
+        <Drawer.Screen name="Courses" component={LearningStack} options={{ title: 'האקדמיה' }} />
         {/* Journal stack kept registered for backward-compat deep links, hidden from drawer menu. */}
         <Drawer.Screen
           name="Journal"
@@ -385,10 +400,20 @@ export default function MainTabs() {
         <Drawer.Screen
           name="DarkPool"
           component={DarkPoolStack}
-          options={{ title: 'Dark Pool' }}
+          options={{ title: 'אינסיידרים' }}
         />
         <Drawer.Screen name="News" component={NewsScreen} options={{ title: 'חדשות' }} />
-        <Drawer.Screen name="Markets" component={MarketsScreen} options={{ title: 'שווקים' }} />
+        <Drawer.Screen
+          name="Watchlist"
+          component={WatchlistScreen}
+          options={{ title: 'רשימת מעקב' }}
+        />
+        {/* Legacy alias — deep links ישנים ל-"Markets" */}
+        <Drawer.Screen
+          name="Markets"
+          component={WatchlistScreen}
+          options={{ title: 'רשימת מעקב', drawerItemStyle: { display: 'none' } }}
+        />
         <Drawer.Screen
           name="NewsEarnings"
           component={NewsEarningsScreen}
@@ -403,11 +428,6 @@ export default function MainTabs() {
           name="MarketsHeatmap"
           component={MarketsHeatmapScreen}
           options={{ title: 'מפת חום' }}
-        />
-        <Drawer.Screen
-          name="MarketsScreener"
-          component={MarketsScreenerScreen}
-          options={{ title: 'סורק' }}
         />
         <Drawer.Screen
           name="NewsLiked"

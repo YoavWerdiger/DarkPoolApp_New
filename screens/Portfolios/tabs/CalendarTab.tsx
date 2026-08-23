@@ -11,14 +11,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { loadDerivedTrades } from '../../../services/portfolios/portfolioTradeDerive';
-import type { DerivedTrade } from '../portfolioTypes';
+import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
+import type { Trade } from '../portfolioTypes';
+import { toLocalDateKey } from '../../../utils/dateKeys';
 import { formatCurrency } from '../utils/format';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 
 interface Props {
   portfolioId: string;
   currency: string;
+  refreshKey?: number;
 }
 
 const HEB_MONTHS = [
@@ -30,14 +32,10 @@ const HEB_DAYS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
 const TINT_ALPHA = '65';
 
-function ymd(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-export default function CalendarTab({ portfolioId, currency }: Props) {
+export default function CalendarTab({ portfolioId, currency, refreshKey }: Props) {
   const tokens = useDesignTokens();
   const { width: windowWidth } = useWindowDimensions();
-  const [trades, setTrades] = useState<DerivedTrade[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState<{ y: number; m: number }>(() => {
     const now = new Date();
@@ -46,26 +44,33 @@ export default function CalendarTab({ portfolioId, currency }: Props) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancel = false;
     (async () => {
       try {
-        const data = await loadDerivedTrades(portfolioId);
-        setTrades(data.filter((t) => !t.is_open && t.closed_at));
+        setLoading(true);
+        const data = await loadTrades(portfolioId, 'CLOSED');
+        if (!cancel) {
+          setTrades(data.filter((t) => t.exit_date != null));
+        }
       } catch (err) {
-        console.error('loadDerivedTrades calendar:', err);
+        console.error('loadTrades calendar:', err);
       } finally {
-        setLoading(false);
+        if (!cancel) setLoading(false);
       }
     })();
-  }, [portfolioId]);
+    return () => {
+      cancel = true;
+    };
+  }, [portfolioId, refreshKey]);
 
   /** מפת yyyy-mm-dd → סיכום יומי */
   const dailyPnl = useMemo(() => {
     const map = new Map<string, { pnl: number; count: number }>();
     for (const t of trades) {
-      if (!t.closed_at) continue;
-      const key = ymd(new Date(t.closed_at));
+      if (!t.exit_date) continue;
+      const key = toLocalDateKey(new Date(t.exit_date));
       const cur = map.get(key) ?? { pnl: 0, count: 0 };
-      cur.pnl += t.realized_pnl;
+      cur.pnl += t.profit_loss ?? 0;
       cur.count += 1;
       map.set(key, cur);
     }
@@ -97,7 +102,7 @@ export default function CalendarTab({ portfolioId, currency }: Props) {
     for (let i = 0; i < startDow; i++) cells.push(null);
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(cursor.y, cursor.m, d);
-      cells.push({ day: d, key: ymd(date) });
+      cells.push({ day: d, key: toLocalDateKey(date) });
     }
     while (cells.length % 7 !== 0) cells.push(null);
     return cells;
@@ -131,10 +136,10 @@ export default function CalendarTab({ portfolioId, currency }: Props) {
   const selectedDayTrades = useMemo(() => {
     if (!selectedDay) return [];
     return trades
-      .filter((t) => t.closed_at && ymd(new Date(t.closed_at)) === selectedDay)
+      .filter((t) => t.exit_date && toLocalDateKey(new Date(t.exit_date)) === selectedDay)
       .sort(
         (a, b) =>
-          new Date(b.closed_at!).getTime() - new Date(a.closed_at!).getTime()
+          new Date(b.exit_date!).getTime() - new Date(a.exit_date!).getTime()
       );
   }, [selectedDay, trades]);
 
@@ -544,14 +549,15 @@ export default function CalendarTab({ portfolioId, currency }: Props) {
             const accent = isLong
               ? tokens.colors.primary.main
               : tokens.colors.text.danger;
+            const pnl = t.profit_loss ?? 0;
             const pnlColor =
-              t.realized_pnl > 0
+              pnl > 0
                 ? tokens.colors.primary.main
-                : t.realized_pnl < 0
+                : pnl < 0
                   ? tokens.colors.text.danger
                   : tokens.colors.text.secondary;
             return (
-              <View key={t.key} style={styles.tradeRow}>
+              <View key={t.id} style={styles.tradeRow}>
                 <Text style={styles.tradeSymbol}>{t.symbol}</Text>
                 <View
                   style={[
@@ -567,7 +573,7 @@ export default function CalendarTab({ portfolioId, currency }: Props) {
                   </Text>
                 </View>
                 <Text style={[styles.tradePnl, { color: pnlColor }]}>
-                  {formatCurrency(t.realized_pnl, t.currency)}
+                  {formatCurrency(pnl, t.currency)}
                 </Text>
               </View>
             );

@@ -3,7 +3,6 @@ import { useDesignTokens } from '../../../components/ui/DesignTokens';
 export type MarketsTokens = ReturnType<typeof useDesignTokens>;
 
 export type HeatmapKind = 'sp500' | 'crypto' | 'nasdaq';
-export type ScreenerKind = 'sp500' | 'nasdaq' | 'crypto';
 
 const hexToRgba = (hex: string, alpha: number) => {
   const normalized = (hex || '').trim();
@@ -326,6 +325,42 @@ export function getTradingViewHeatmapHTML(type: HeatmapKind) {
 }
 
 /**
+ * Advanced Chart לסימבול בודד — רשימת מעקב / פירוט מניה.
+ */
+export function getTradingViewSymbolChartHTML(symbol: string) {
+  const clean = (symbol || '').replace(/\.US$/i, '').trim().toUpperCase();
+  const config = {
+    autosize: true,
+    symbol: clean,
+    interval: 'D',
+    timezone: 'Asia/Jerusalem',
+    theme: 'dark',
+    style: '1',
+    locale: 'he_IL',
+    backgroundColor: 'rgba(10, 14, 10, 0)',
+    gridColor: 'rgba(255,255,255,0.06)',
+    enable_publishing: false,
+    hide_top_toolbar: true,
+    hide_side_toolbar: true,
+    hide_legend: true,
+    save_image: false,
+    calendar: false,
+    hide_volume: false,
+    withdateranges: false,
+    allow_symbol_change: false,
+    support_host: 'https://www.tradingview.com',
+    width: '100%',
+    height: '100%',
+  };
+
+  return tvWidgetHtml(
+    'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js',
+    config,
+    0
+  );
+}
+
+/**
  * Advanced Chart for a specific symbol — used in Trade Detail.
  * interval is auto-calculated from trade duration.
  */
@@ -374,54 +409,4 @@ export function getTradingViewTradeChartHTML(symbol: string, entryDate: string, 
     config,
     0
   );
-}
-
-export function getTradingViewScreenerHTML(type: ScreenerKind) {
-  const widgetSrc = 'https://s3.tradingview.com/external-embedding/embed-widget-screener.js';
-
-  let config: Record<string, unknown> = {};
-
-  switch (type) {
-    case 'sp500':
-      config = {
-        market: 'america',
-        showToolbar: true,
-        defaultColumn: 'overview',
-        defaultScreen: 'most_capitalized',
-        isTransparent: true,
-        locale: 'he_IL',
-        colorTheme: 'dark',
-        width: '100%',
-        height: '100%',
-      };
-      break;
-    case 'nasdaq':
-      config = {
-        market: 'america',
-        showToolbar: true,
-        defaultColumn: 'overview',
-        defaultScreen: 'nasdaq',
-        isTransparent: true,
-        locale: 'he_IL',
-        colorTheme: 'dark',
-        width: '100%',
-        height: '100%',
-      };
-      break;
-    case 'crypto':
-      config = {
-        market: 'crypto',
-        showToolbar: true,
-        defaultColumn: 'overview',
-        defaultScreen: 'general',
-        isTransparent: true,
-        locale: 'he_IL',
-        colorTheme: 'dark',
-        width: '100%',
-        height: '100%',
-      };
-      break;
-  }
-
-  return tvWidgetHtml(widgetSrc, config, 48);
 }

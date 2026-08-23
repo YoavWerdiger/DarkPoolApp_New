@@ -22,6 +22,7 @@
 //      e. /statements (incremental) → broker_statements
 //      f. RPC ingest_broker_executions_to_portfolio
 //      g. RPC ingest_broker_statements_to_portfolio
+//      h. RPC sync_broker_positions_to_trades (broker_positions → trades + cash)
 //   6. broker_connections.last_sync_at + log row
 // ----------------------------------------------------------------------------
 
@@ -234,6 +235,27 @@ async function syncConnection(
     return { status: 'failed', metrics: {} };
   }
 
+  // Colmex מגבילה session אחד למשתמש: כל /authorize חדש הורג את ה-token הקודם,
+  // גם אם token_expires_at עדיין עתידי. לכן 401 הוא אירוע צפוי ולא שגיאה סופית —
+  // מבצעים re-authorize ומנסים שוב פעם אחת. ה-flag מבטיח authorize אחד לכל ריצה,
+  // כדי שלא ייווצר לופ מול חיבור מתחרה שהורג את ה-session שוב ושוב.
+  let activeTokens: ColmexTokens = tokens;
+  let reauthAttempted = false;
+
+  const withAuth = async <T>(fn: (t: ColmexTokens) => Promise<T>): Promise<T> => {
+    try {
+      return await fn(activeTokens);
+    } catch (e) {
+      const is401 = e instanceof ColmexError && e.status === 401;
+      if (!is401 || reauthAttempted) throw e;
+      reauthAttempted = true;
+      const fresh = await ensureFreshTokens(sb, conn, activeTokens);
+      if (!fresh) throw e;
+      activeTokens = fresh;
+      return await fn(fresh);
+    }
+  };
+
   // 2. config refresh
   let positionsCols: ColmexColumn[] = [];
   let ordersCols:    ColmexColumn[] = [];
@@ -241,7 +263,7 @@ async function syncConnection(
   let accountStateCols: ColmexColumn[] = [];
   let statementsCols: ColmexColumn[] = [];
   try {
-    const config = await getConfig(env, tokens);
+    const config = await withAuth((t) => getConfig(env, t));
     if (config) {
       positionsCols    = config.positionsConfig?.columns       ?? [];
       ordersCols       = config.ordersConfig?.columns          ?? [];
@@ -288,7 +310,7 @@ async function syncConnection(
   }
 
   // 3. accounts
-  const accountsApi = await listAccounts(env, tokens);
+  const accountsApi = await withAuth((t) => listAccounts(env, t));
   if (accountsApi.length === 0) {
     await sb
       .from('broker_connections')
@@ -316,7 +338,7 @@ async function syncConnection(
 
   // refresh instrument map (primary account only)
   try {
-    const insts = await listInstruments(env, tokens, accountsApi[0].id);
+    const insts = await withAuth((t) => listInstruments(env, t, accountsApi[0].id));
     if (insts.length > 0) {
       const rows = insts.map((i) => colmexInstrumentToMapRow(i, 'colmex_pro'));
       const chunk = 500;
@@ -354,7 +376,7 @@ async function syncConnection(
 
     // 4a. state
     try {
-      const stateArr = await getAccountState(env, tokens, acc.id);
+      const stateArr = await withAuth((t) => getAccountState(env, t, acc.id));
       const ns = normalizeAccountState(stateArr as Array<number | string>, accountStateCols);
       await sb.from('broker_account_state').upsert(
         {
@@ -383,7 +405,7 @@ async function syncConnection(
 
     // 4b. positions (full replace)
     try {
-      const posRows = await getPositions(env, tokens, acc.id);
+      const posRows = await withAuth((t) => getPositions(env, t, acc.id));
       const positions = posRows
         .map((r) => normalizePosition(r, positionsCols))
         .filter((p): p is NonNullable<typeof p> => !!p);
@@ -436,7 +458,7 @@ async function syncConnection(
 
     // 4c. orders (full replace)
     try {
-      const ordRows = await getOrders(env, tokens, acc.id);
+      const ordRows = await withAuth((t) => getOrders(env, t, acc.id));
       const orders = ordRows
         .map((r) => normalizeOpenOrder(r, ordersCols))
         .filter((o): o is NonNullable<typeof o> => !!o);
@@ -490,10 +512,12 @@ async function syncConnection(
     // 4d. executions (incremental: pull לפי last fetched)
     try {
       const sinceTs = full ? 0 : await loadIncrementalCursor(sb, brokerAccountUuid, 'executions');
-      const execRows = await getExecutions(env, tokens, acc.id, {
-        from: sinceTs > 0 ? sinceTs : undefined,
-        numberOfLines: 1000,
-      });
+      const execRows = await withAuth((t) =>
+        getExecutions(env, t, acc.id, {
+          from: sinceTs > 0 ? sinceTs : undefined,
+          numberOfLines: 1000,
+        })
+      );
       const execs = execRows
         .map((r) => normalizeExecution(r, executionsCols))
         .filter((e): e is NonNullable<typeof e> => !!e);
@@ -530,44 +554,72 @@ async function syncConnection(
       console.warn(`executions sync failed for ${acc.id}:`, (e as Error).message);
     }
 
-    // 4e. statements (incremental)
+    // 4e. statements — pagination ב-operationId (גם ב-incremental, כדי לא לפספס דפים)
     try {
       const sinceTs = full ? 0 : await loadIncrementalCursor(sb, brokerAccountUuid, 'statements');
-      const stRows = await getStatements(env, tokens, acc.id, {
-        from: sinceTs > 0 ? sinceTs : undefined,
-        numberOfLines: 1000,
-      });
-      const stmts = stRows
-        .map((r) => normalizeStatement(r, statementsCols))
-        .filter((s): s is NonNullable<typeof s> => !!s);
+      const allStmts: NonNullable<ReturnType<typeof normalizeStatement>>[] = [];
+      let opCursor: number | undefined;
+      let pages = 0;
+      // full: עד 200 דפים; incremental: עד 20 (מספיק ליום מסחר עמוס)
+      const maxPages = full ? 200 : 20;
+      const pageSize = 1000;
 
-      if (stmts.length > 0) {
-        await sb.from('broker_statements').upsert(
-          stmts.map((s) => ({
-            broker_account_id: brokerAccountUuid,
-            user_id: conn.user_id,
-            operation_id: s.operation_id,
-            operation_type: s.operation_type,
-            normalized_type: s.normalized_type,
-            amount: s.amount,
-            balance_after: s.balance_after,
-            currency: s.currency,
-            description: s.description,
-            symbol: s.symbol,
-            occurred_at: s.occurred_at,
-            raw: s.raw,
-          })),
-          { onConflict: 'broker_account_id,operation_id' }
+      while (pages < maxPages) {
+        pages += 1;
+        const stRows = await withAuth((t) =>
+          getStatements(env, t, acc.id, {
+            // full: ללא from — כל ההיסטוריה שה-API מחזיר
+            from: !full && sinceTs > 0 ? sinceTs : full ? 0 : undefined,
+            operationId: opCursor,
+            numberOfLines: pageSize,
+          })
         );
+        if (stRows.length === 0) break;
+        const batch = stRows
+          .map((r) => normalizeStatement(r, statementsCols))
+          .filter((s): s is NonNullable<typeof s> => !!s);
+        allStmts.push(...batch);
+        const minOp = batch.reduce(
+          (m, s) => (m == null || s.operation_id < m ? s.operation_id : m),
+          null as number | null
+        );
+        // אין עוד דפים אם קיבלנו פחות מ-full page או אין operationId קטן יותר
+        if (stRows.length < pageSize || minOp == null) break;
+        if (opCursor != null && minOp >= opCursor) break;
+        opCursor = minOp;
+      }
+
+      if (allStmts.length > 0) {
+        // upsert במנות כדי לא לחרוג ממגבלת payload
+        for (let i = 0; i < allStmts.length; i += 500) {
+          const chunk = allStmts.slice(i, i + 500);
+          await sb.from('broker_statements').upsert(
+            chunk.map((s) => ({
+              broker_account_id: brokerAccountUuid,
+              user_id: conn.user_id,
+              operation_id: s.operation_id,
+              operation_type: s.operation_type,
+              normalized_type: s.normalized_type,
+              amount: s.amount,
+              balance_after: s.balance_after,
+              currency: s.currency,
+              description: s.description,
+              symbol: s.symbol,
+              occurred_at: s.occurred_at,
+              raw: s.raw,
+            })),
+            { onConflict: 'broker_account_id,operation_id' }
+          );
+        }
         await saveIncrementalCursor(sb, brokerAccountUuid, 'statements', Date.now());
       }
-      metrics.statements_synced = stmts.length;
+      metrics.statements_synced = allStmts.length;
     } catch (e) {
       overallStatus = 'partial';
       console.warn(`statements sync failed for ${acc.id}:`, (e as Error).message);
     }
 
-    // 4f+g. ingest to portfolio_transactions (אם יש portfolio_id)
+    // 4f+g. ingest to portfolio + sync positions → trades (אם יש portfolio_id)
     if (db.portfolio_id) {
       try {
         const { data: ingestEx } = await sb.rpc('ingest_broker_executions_to_portfolio', {
@@ -581,6 +633,35 @@ async function syncConnection(
       } catch (e) {
         overallStatus = 'partial';
         console.warn(`portfolio ingest failed:`, (e as Error).message);
+      }
+
+      // גשר ל-UI: Overview / Open Trades / סטטיסטיקות קוראים מ-trades + available_cash
+      try {
+        await sb.rpc('sync_broker_positions_to_trades', {
+          p_broker_account_id: brokerAccountUuid,
+        });
+      } catch (e) {
+        overallStatus = 'partial';
+        console.warn(`positions→trades sync failed:`, (e as Error).message);
+      }
+
+      // יתרת פתיחה + snapshot בנוסחת net_deposits+realized (כמו תיקים ידניים)
+      try {
+        await sb.rpc('reconcile_colmex_opening_deposit', {
+          p_portfolio_id: db.portfolio_id,
+        });
+      } catch (e) {
+        console.warn(`opening balance reconcile failed:`, (e as Error).message);
+      }
+
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        await sb.rpc('upsert_daily_snapshot', {
+          p_portfolio_id: db.portfolio_id,
+          p_date: today,
+        });
+      } catch (e) {
+        console.warn(`daily snapshot failed:`, (e as Error).message);
       }
     }
 

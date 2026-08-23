@@ -1,20 +1,29 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  RefreshControl,
+  ActivityIndicator,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { learningProgressService } from '../../services/learningProgressService';
 import { useAuth } from '../../context/AuthContext';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
-import { FileText, Copy } from 'lucide-react-native';
 import { AcademySubScreenBar } from '../../components/learning';
 import UICard from '../../components/ui/UICard';
 import { ScreenChrome } from '../../components/ui';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import * as Clipboard from 'expo-clipboard';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { ACADEMY_CARD_HP, academyCardFrameStyle } from '../../components/learning/academyCardLayout';
+import { ACADEMY_CARD_HP, ACADEMY_CARD_RADIUS } from '../../components/learning/academyCardLayout';
 
 interface NoteWithDetails {
   id?: string;
@@ -33,7 +42,7 @@ export const MyNotesScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
   const DesignTokens = useDesignTokens();
-  const styles = React.useMemo(() => createStyles(DesignTokens), [DesignTokens]);
+  const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
 
   const [notes, setNotes] = useState<NoteWithDetails[]>([]);
@@ -49,7 +58,8 @@ export const MyNotesScreen: React.FC = () => {
     try {
       const userNotes = await learningProgressService.getAllUserNotes(user.id);
       setNotes(userNotes);
-    } catch (error) {
+    } catch {
+      /* noop */
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -57,7 +67,7 @@ export const MyNotesScreen: React.FC = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    loadNotes();
+    void loadNotes();
   }, [loadNotes]);
 
   const handleRefresh = useCallback(async () => {
@@ -69,47 +79,49 @@ export const MyNotesScreen: React.FC = () => {
     }
   }, [loadNotes]);
 
-  const handleNotePress = useCallback((note: NoteWithDetails) => {
-    void HapticFeedback.impactLight();
-    (navigation as { navigate: (n: string, p: object) => void }).navigate('LearningScreen', {
-      courseId: note.course_id,
-      lessonId: note.lesson_id,
-    });
-  }, [navigation]);
+  const handleNotePress = useCallback(
+    (note: NoteWithDetails) => {
+      void HapticFeedback.impactLight();
+      (navigation as { navigate: (n: string, p: object) => void }).navigate('LearningScreen', {
+        courseId: note.course_id,
+        lessonId: note.lesson_id,
+      });
+    },
+    [navigation]
+  );
 
-  const handleCopyNote = useCallback(async (note: NoteWithDetails, e: any) => {
-    e.stopPropagation();
+  const handleCopyNote = useCallback(async (note: NoteWithDetails) => {
     try {
       await Clipboard.setStringAsync(note.notes_content);
       void HapticFeedback.selection();
       legacyAlert('הועתק', 'ההערה הועתקה ללוח');
-    } catch (error) {
+    } catch {
       legacyAlert('שגיאה', 'לא ניתן להעתיק את ההערה');
     }
   }, []);
 
-  const renderNote = useCallback(({ item }: { item: NoteWithDetails }) => {
-    const notePreview = item.notes_content.length > 150
-      ? item.notes_content.substring(0, 150) + '...'
-      : item.notes_content;
+  const renderNote = useCallback(
+    ({ item }: { item: NoteWithDetails }) => {
+      const dateLabel = item.updated_at
+        ? new Date(item.updated_at).toLocaleDateString('he-IL')
+        : null;
 
-    return (
-      <TouchableOpacity
-        onPress={() => handleNotePress(item)}
-        activeOpacity={0.7}
-        style={{ marginBottom: DesignTokens.spacing.md }}
-      >
-        <UICard
-          variant="blur"
-          padding="md"
-          showGlassBorder={false}
-          style={academyCardFrameStyle('neutral')}
+      return (
+        <TouchableOpacity
+          onPress={() => handleNotePress(item)}
+          activeOpacity={0.88}
+          style={styles.noteWrap}
+          accessibilityRole="button"
+          accessibilityLabel={`הערה מ${item.lesson_title || 'שיעור'}`}
         >
-          <View style={styles.noteContentContainer}>
+          <UICard
+            variant="blur"
+            glassIntensity="subtle"
+            padding="md"
+            showGlassBorder={false}
+            style={styles.noteCard}
+          >
             <View style={styles.noteHeader}>
-              <View style={styles.noteIconContainer}>
-                <FileText size={18} color={DesignTokens.colors.primary.main} />
-              </View>
               <View style={styles.noteInfo}>
                 <Text style={styles.noteCourseTitle} numberOfLines={1}>
                   {item.course_title || 'קורס ללא שם'}
@@ -118,32 +130,44 @@ export const MyNotesScreen: React.FC = () => {
                   {item.lesson_title || 'שיעור ללא שם'}
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={(e) => handleCopyNote(item, e)}
-                activeOpacity={0.7}
+
+              <DayNavBlurButton
+                size={36}
+                glassIntensity="subtle"
+                accessibilityLabel="העתק הערה"
+                onPress={() => void handleCopyNote(item)}
+                style={styles.copyBtn}
               >
-                <Copy size={16} color={DesignTokens.colors.text.secondary} />
-              </TouchableOpacity>
+                <Ionicons
+                  name="copy-outline"
+                  size={16}
+                  color={DesignTokens.colors.text.primary}
+                />
+              </DayNavBlurButton>
             </View>
+
             <Text style={styles.noteContent} numberOfLines={3}>
-              {notePreview}
+              {item.notes_content}
             </Text>
-            {item.updated_at && (
-              <Text style={styles.noteDate}>
-                עודכן: {new Date(item.updated_at).toLocaleDateString('he-IL')}
-              </Text>
-            )}
-          </View>
-        </UICard>
-      </TouchableOpacity>
-    );
-  }, [styles, DesignTokens, handleNotePress, handleCopyNote]);
+
+            {dateLabel ? (
+              <Text style={styles.noteDate}>עודכן · {dateLabel}</Text>
+            ) : null}
+          </UICard>
+        </TouchableOpacity>
+      );
+    },
+    [styles, DesignTokens, handleNotePress, handleCopyNote]
+  );
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <View style={styles.emptyIconContainer}>
-        <FileText size={64} color={DesignTokens.colors.text.tertiary} />
+      <View style={styles.emptyIconWrap}>
+        <Ionicons
+          name="document-text-outline"
+          size={40}
+          color={DesignTokens.colors.text.tertiary}
+        />
       </View>
       <Text style={styles.emptyTitle}>אין הערות עדיין</Text>
       <Text style={styles.emptySubtitle}>
@@ -175,7 +199,7 @@ export const MyNotesScreen: React.FC = () => {
           subtitle={`${notes.length} הערות`}
         />
 
-        <View style={{ flex: 1, marginBottom: mainTabsHeight - 12 }}>
+        <View style={[styles.listShell, { marginBottom: Math.max(0, mainTabsHeight - 12) }]}>
           <FlatList
             data={notes}
             renderItem={renderNote}
@@ -197,101 +221,113 @@ export const MyNotesScreen: React.FC = () => {
   );
 };
 
-const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.create({
-  safeAreaContainer: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: tokens.spacing.md,
-    fontSize: tokens.typography.fontSize.base,
-    color: tokens.colors.text.secondary,
-  },
-  listContainer: {
-    paddingHorizontal: ACADEMY_CARD_HP,
-    paddingTop: tokens.spacing.md,
-    paddingBottom: tokens.spacing['5xl'],
-  },
-  noteContentContainer: {
-    flex: 1,
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: tokens.spacing.xs,
-  },
-  noteIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: tokens.borderRadius.md,
-    backgroundColor: tokens.colors.primary.main + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: tokens.spacing.sm,
-  },
-  noteInfo: {
-    flex: 1,
-  },
-  copyButton: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: tokens.borderRadius.md,
-    backgroundColor: tokens.colors.background.primary,
-    marginRight: tokens.spacing.xs,
-  },
-  noteCourseTitle: {
-    fontSize: tokens.typography.fontSize.base,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.text.primary,
-    textAlign: 'right',
-    marginBottom: 2,
-  },
-  noteLessonTitle: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-  },
-  noteContent: {
-    fontSize: tokens.typography.fontSize.sm,
-    color: tokens.colors.text.secondary,
-    textAlign: 'right',
-    lineHeight: tokens.typography.lineHeight.relaxed * tokens.typography.fontSize.sm,
-    marginBottom: tokens.spacing.xs,
-    marginTop: tokens.spacing.xs,
-  },
-  noteDate: {
-    fontSize: tokens.typography.fontSize.xs,
-    color: tokens.colors.text.tertiary,
-    textAlign: 'right',
-    marginTop: tokens.spacing.xs / 2,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: tokens.spacing['5xl'],
-    paddingHorizontal: tokens.spacing.xl,
-  },
-  emptyIconContainer: {
-    marginBottom: tokens.spacing.lg,
-    opacity: 0.5,
-  },
-  emptyTitle: {
-    fontSize: tokens.typography.fontSize.lg,
-    fontWeight: tokens.typography.fontWeight.semibold as any,
-    color: tokens.colors.text.primary,
-    marginBottom: tokens.spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: tokens.typography.fontSize.base,
-    color: tokens.colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: tokens.typography.lineHeight.relaxed * tokens.typography.fontSize.base,
-  },
-});
-
+const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
+  StyleSheet.create({
+    safeAreaContainer: {
+      flex: 1,
+    },
+    listShell: {
+      flex: 1,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: tokens.spacing.md,
+      fontSize: tokens.typography.fontSize.base,
+      color: tokens.colors.text.secondary,
+    },
+    listContainer: {
+      paddingHorizontal: ACADEMY_CARD_HP,
+      paddingTop: tokens.spacing.sm,
+      paddingBottom: tokens.spacing['5xl'],
+      flexGrow: 1,
+    },
+    noteWrap: {
+      marginBottom: tokens.spacing.md,
+    },
+    noteCard: {
+      borderRadius: ACADEMY_CARD_RADIUS,
+      overflow: 'hidden',
+      borderWidth: 0,
+    },
+    noteHeader: {
+      // מימין לשמאל: טקסט → העתק
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: tokens.spacing.sm,
+    },
+    noteInfo: {
+      flex: 1,
+      minWidth: 0,
+      alignItems: 'flex-end',
+      gap: 2,
+    },
+    copyBtn: {
+      flexShrink: 0,
+    },
+    noteCourseTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      width: '100%',
+    },
+    noteLessonTitle: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: tokens.colors.text.secondary,
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      width: '100%',
+    },
+    noteContent: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: tokens.colors.text.secondary,
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      lineHeight: 21,
+    },
+    noteDate: {
+      marginTop: tokens.spacing.sm,
+      fontSize: 12,
+      fontWeight: '500',
+      color: tokens.colors.text.tertiary,
+      textAlign: 'right',
+      writingDirection: 'rtl',
+    },
+    emptyState: {
+      alignItems: 'center',
+      paddingVertical: tokens.spacing['5xl'],
+      paddingHorizontal: tokens.spacing.xl,
+    },
+    emptyIconWrap: {
+      width: 88,
+      height: 88,
+      borderRadius: 44,
+      borderWidth: 1,
+      borderColor: tokens.colors.border.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: tokens.spacing.lg,
+      backgroundColor: 'rgba(255,255,255,0.04)',
+    },
+    emptyTitle: {
+      fontSize: tokens.typography.fontSize.lg,
+      fontWeight: '700',
+      color: tokens.colors.text.primary,
+      marginBottom: tokens.spacing.sm,
+      textAlign: 'center',
+    },
+    emptySubtitle: {
+      fontSize: tokens.typography.fontSize.base,
+      color: tokens.colors.text.secondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+  });

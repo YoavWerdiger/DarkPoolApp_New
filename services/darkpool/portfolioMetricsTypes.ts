@@ -8,6 +8,8 @@ export interface PortfolioHoldingMetric {
   market_value: number;
   allocation_pct: number;
   return_pct: number;
+  /** תאריך קנייה ראשון בפוזיציה הפתוחה הנוכחית (YYYY-MM-DD) — משחזור עסקאות */
+  first_added_date?: string | null;
 }
 
 export interface PortfolioValuePoint {
@@ -26,6 +28,38 @@ export interface ReconstructedPortfolioMetrics {
   win_rate: number | null;
   avg_delay_days: number | null;
   trade_count: number;
+  /** מטריקות סיכון — Sharpe, volatility, max drawdown */
+  risk?: ProfilePortfolioRiskMetrics;
+  /** ריכוזיות — HHI, top-3 */
+  concentration?: ProfilePortfolioConcentration;
+  /** ציון פרופיל 0–100 */
+  score?: ProfilePortfolioScore;
+}
+
+export interface ProfilePortfolioRiskMetrics {
+  volatility_pct: number | null;
+  sharpe: number | null;
+  sortino: number | null;
+  max_drawdown_pct: number | null;
+  period_days: number;
+}
+
+export interface ProfilePortfolioConcentration {
+  /** Herfindahl 0–1 (1 = מניה בודדת) */
+  hhi: number;
+  top3_pct: number;
+  unique_tickers: number;
+}
+
+export interface ProfilePortfolioScore {
+  total: number;
+  components: {
+    return: number;
+    win_rate: number;
+    sharpe: number;
+    diversification: number;
+    activity: number;
+  };
 }
 
 export type PortfolioSource = 'reconstructed' | 'trades_only' | 'none';

@@ -1,20 +1,33 @@
-import { useDesignTokens } from "../ui/DesignTokens";
-import React, { useRef, useEffect } from 'react';
+/**
+ * MessageActionSheet — legacy API; עטוף ב-ChatBottomSheet (אותו glass כמו שאר שיטי הצ׳אט).
+ * המסלול הפעיל ב-ChatGroupScreen הוא LongPressOverlay.
+ */
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  Modal,
   Pressable,
-  Animated,
-  Dimensions,
   StyleSheet,
-  Platform,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Mic, FileText, MessageCircle, RotateCcw, Copy, Edit, Heart } from 'lucide-react-native';
 import { Message, ReactionSummary } from '../../services/supabase';
-import { MediaFile } from '../../services/mediaService';
+import { HapticFeedback } from '../../utils/hapticFeedback';
+import { useDesignTokens } from '../ui/DesignTokens';
+import {
+  ChatBottomSheet,
+  ChatSheetContent,
+  ChatSheetTitle,
+  useChatFitContentSnap,
+} from './ChatBottomSheet';
+import { chatPalette } from './chatDesignTokens';
+import {
+  SHEET_GLASS_INTENSITY,
+  SHEET_GLASS_OVERLAY,
+  sheetContentBottomPadding,
+} from '../ui/BottomSheet/sheetGlass';
+import { BlurView } from 'expo-blur';
 
 interface MessageActionSheetProps {
   visible: boolean;
@@ -34,8 +47,6 @@ interface MessageActionSheetProps {
   isPinned?: boolean;
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 export default function MessageActionSheet({
   visible,
   onClose,
@@ -51,434 +62,343 @@ export default function MessageActionSheet({
   onUnpin,
   canPin = false,
   canEdit = false,
-  isPinned = false
+  isPinned = false,
 }: MessageActionSheetProps) {
   const DesignTokens = useDesignTokens();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(100)).current;
+  const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    if (visible) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 100,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [visible]);
+  /** כמו MediaPickerSheet — מינימום אמין באנדרואיד כש-insets.bottom=0 (Galaxy) */
+  const sheetBottomPad = useMemo(
+    () => sheetContentBottomPadding(insets.bottom),
+    [insets.bottom],
+  );
+
+  const actionCount = 4 + (canEdit && onEdit ? 1 : 0) + (canPin ? 1 : 0);
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(
+    0.42 + Math.min(0.12, actionCount * 0.02),
+    0.88,
+    0.28,
+    `${visible}-${actionCount}-${reactions?.length ?? 0}`,
+  );
 
   const handleAction = (action: () => void) => {
+    void HapticFeedback.selection();
     action();
     onClose();
   };
 
-  // רנדור תוכן ההודעה
   const renderMessageContent = () => {
     if (message.type === 'image' || message.type === 'video') {
       return (
-        <View className="w-16 h-16 bg-[#333] rounded-xl items-center justify-center mr-3">
-          <Ionicons 
-            name={message.type === 'image' ? 'image' : 'videocam'} 
-            size={24} 
-            color="#666" 
+        <View style={styles.mediaThumb}>
+          <Ionicons
+            name={message.type === 'image' ? 'image' : 'videocam'}
+            size={24}
+            color={DesignTokens.colors.text.tertiary}
           />
         </View>
       );
     }
-    
+
     if (message.type === 'audio' || message.type === 'voice') {
       return (
-        <View className="w-16 h-16 bg-[#333] rounded-xl items-center justify-center mr-3">
-          <Mic size={24} color="#666" strokeWidth={2} />
-        </View>
-      );
-    }
-    
-    if (message.type === 'file' || message.type === 'document') {
-      return (
-        <View className="w-16 h-16 bg-[#333] rounded-xl items-center justify-center mr-3">
-          <FileText size={24} color="#666" strokeWidth={2} />
+        <View style={styles.mediaThumb}>
+          <Mic size={24} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
         </View>
       );
     }
 
-    // הודעת טקסט
+    if (message.type === 'file' || message.type === 'document') {
+      return (
+        <View style={styles.mediaThumb}>
+          <FileText size={24} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+        </View>
+      );
+    }
+
     return (
-      <View className="flex-1 mr-3">
-        <Text className="text-white text-base leading-5" numberOfLines={3}>
+      <View style={styles.textPreview}>
+        <Text style={styles.previewBody} numberOfLines={3}>
           {message.content}
         </Text>
       </View>
     );
   };
 
-  // רנדור ריאקציות
   const renderReactions = () => {
     if (!reactions || reactions.length === 0) return null;
 
-    const displayReactions = reactions.slice(0, 5); // עד 5 ריאקציות
+    const displayReactions = reactions.slice(0, 5);
     const remainingCount = reactions.length > 5 ? reactions.length - 5 : 0;
 
     return (
-      <View className="flex-row items-center justify-center mb-4">
+      <View style={styles.reactionsRow}>
         {displayReactions.map((reaction, index) => (
           <Pressable
             key={index}
             onPress={onReactionDetails}
-            className="px-3 py-2 rounded-full border mx-1 items-center justify-center"
-            style={{
-              backgroundColor: 'rgba(26, 26, 26, 0.7)',
-              borderColor: 'rgba(51, 51, 51, 0.5)',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-              shadowRadius: 4,
-              elevation: 3,
-              minWidth: 40,
-              minHeight: 36
-            }}
+            style={styles.reactionChip}
           >
-            <Text className="text-base">{reaction.emoji}</Text>
+            <Text style={styles.reactionEmoji}>{reaction.emoji}</Text>
             {reaction.count > 1 && (
-              <Text className="text-xs text-gray-400 mt-1 font-medium">
-                {reaction.count}
-              </Text>
+              <Text style={styles.reactionCount}>{reaction.count}</Text>
             )}
           </Pressable>
         ))}
-        
+
         {remainingCount > 0 && (
-          <View className="px-3 py-2 rounded-full border mx-1 items-center justify-center"
-            style={{
-              backgroundColor: 'rgba(26, 26, 26, 0.7)',
-              borderColor: 'rgba(51, 51, 51, 0.5)',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.2,
-              shadowRadius: 4,
-              elevation: 3,
-              minWidth: 40,
-              minHeight: 36
-            }}>
-            <Text className="text-sm text-gray-400 font-medium">
-              +{remainingCount}
-            </Text>
+          <View style={styles.reactionChip}>
+            <Text style={styles.reactionCount}>+{remainingCount}</Text>
           </View>
         )}
       </View>
     );
   };
 
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="none"
-      onRequestClose={onClose}
-    >
-      <Animated.View 
-        className="flex-1"
-        style={{ opacity: fadeAnim }}
-      >
-        {/* Backdrop — same dimmer as ChatBottomSheet / DesignTokens.colors.backdrop */}
-        <Pressable 
-          className="flex-1"
-          style={{ backgroundColor: DesignTokens.colors.backdrop }}
-          onPress={onClose}
-        />
-        
-        {/* Message Preview */}
-        <View className="absolute top-20 left-4 right-4">
-          <View className="bg-[#141F14] rounded-3xl p-4" style={{
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 12,
-            elevation: 8,
-            borderWidth: 0.5,
-            borderColor: 'rgba(255,255,255,0.08)'
-          }}>
-            <View className="flex-row items-start">
-              {renderMessageContent()}
-              
-              {/* פרטי ההודעה */}
-              <View className="flex-1">
-                <Text className="text-gray-400 text-sm mb-1">
-                  {message.sender?.full_name || 'משתמש'}
-                </Text>
-                <Text className="text-gray-500 text-xs">
-                  {new Date(message.created_at).toLocaleTimeString('he-IL', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Reactions Bar */}
-        {renderReactions()}
-
-        {/* Action Menu */}
-        <Animated.View 
-          className="absolute bottom-0 left-0 right-0"
-          style={{
-            transform: [{ translateY: slideAnim }]
-          }}
-        >
-          <View 
-            className="rounded-t-3xl p-6" 
-            style={{
-              overflow: 'hidden',
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: 'rgba(255,255,255,0.15)',
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.2,
-              shadowRadius: 12,
-              elevation: 10
-            }}
-          >
-            {Platform.OS === 'ios' ? (
-              <BlurView intensity={95} tint="dark" style={StyleSheet.absoluteFill} />
-            ) : null}
-            <View
-              pointerEvents="none"
-              style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(10,14,10,0.82)' }]}
+  const actions: Array<{
+    key: string;
+    label: string;
+    icon: React.ReactNode;
+    onPress: () => void;
+  }> = [
+    {
+      key: 'reply',
+      label: 'תגובה',
+      icon: <MessageCircle size={26} color={DesignTokens.colors.accent?.main || '#00E5FF'} strokeWidth={2} />,
+      onPress: onReply,
+    },
+    {
+      key: 'forward',
+      label: 'העבר',
+      icon: <RotateCcw size={26} color={DesignTokens.colors.warning?.main || '#F59E0B'} strokeWidth={2} />,
+      onPress: onForward,
+    },
+    {
+      key: 'copy',
+      label: 'העתק',
+      icon: <Copy size={26} color={DesignTokens.colors.success?.main || '#10B981'} strokeWidth={2} />,
+      onPress: onCopy,
+    },
+    ...(canEdit && onEdit
+      ? [{
+          key: 'edit',
+          label: 'ערוך',
+          icon: <Edit size={26} color={DesignTokens.colors.warning?.main || '#F59E0B'} strokeWidth={2} />,
+          onPress: onEdit,
+        }]
+      : []),
+    {
+      key: 'react',
+      label: 'ריאקציה',
+      icon: <Heart size={26} color={DesignTokens.colors.danger?.main || '#EF4444'} strokeWidth={2} />,
+      onPress: onReact,
+    },
+    ...(canPin
+      ? [{
+          key: 'star',
+          label: isPinned ? 'הסר כוכב' : 'סמן בכוכב',
+          icon: (
+            <Ionicons
+              name={isPinned ? 'star' : 'star-outline'}
+              size={26}
+              color="#FFD700"
             />
-            {/* Header */}
-            <View className="items-center mb-6" style={{ zIndex: 1 }}>
-              <View 
-                className="w-12 h-1 rounded-full mb-4" 
-                style={{ backgroundColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)' }}
-              />
-              <Text 
-                className="text-lg font-bold"
-                style={{ 
-                  color: DesignTokens.colors.text?.primary || '#FFFFFF',
-                  fontSize: DesignTokens.typography.fontSize.lg,
-                  fontWeight: DesignTokens.typography.fontWeight.bold
-                }}
-              >
-                פעולות הודעה
+          ),
+          onPress: () => {
+            const fn = isPinned ? onUnpin : onPin;
+            if (fn) fn();
+          },
+        }]
+      : []),
+  ];
+
+  return (
+    <ChatBottomSheet
+      visible={visible}
+      onClose={onClose}
+      snapPoints={[snapPoint]}
+      fitContent
+      useGlassBackground
+      showBrandBackground={false}
+      showBrandWatermark={false}
+      contentPaddingBottom={0}
+    >
+      <ChatSheetContent
+        onLayout={onContentLayout}
+        style={{
+          direction: 'rtl',
+          paddingBottom: sheetBottomPad,
+          backgroundColor: 'transparent',
+        }}
+      >
+        <ChatSheetTitle title="פעולות הודעה" />
+
+        <BlurView
+          intensity={SHEET_GLASS_INTENSITY}
+          tint="dark"
+          style={styles.previewCard}
+        >
+          <View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, { backgroundColor: SHEET_GLASS_OVERLAY }]}
+          />
+          <View style={styles.previewRow}>
+            {renderMessageContent()}
+            <View style={styles.previewMeta}>
+              <Text style={styles.previewName}>
+                {message.sender?.full_name || 'משתמש'}
+              </Text>
+              <Text style={styles.previewTime}>
+                {new Date(message.created_at).toLocaleTimeString('he-IL', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </Text>
             </View>
-
-            {/* Actions Grid */}
-            <View className="flex-row flex-wrap justify-center" style={{ zIndex: 1 }}>
-              {/* Reply */}
-              <Pressable
-                onPress={() => handleAction(onReply)}
-                className="w-20 h-20 rounded-2xl items-center justify-center m-2"
-                style={{
-                  backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 3,
-                  borderWidth: 0.5,
-                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
-                }}
-              >
-                <MessageCircle size={28} color={DesignTokens.colors.accent?.main || '#00E5FF'} strokeWidth={2} />
-                <Text 
-                  className="text-xs font-semibold mt-2"
-                  style={{ 
-                    color: DesignTokens.colors.text?.primary || '#FFFFFF',
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold
-                  }}
-                >
-                  תגובה
-                </Text>
-              </Pressable>
-
-              {/* Forward */}
-              <Pressable
-                onPress={() => handleAction(onForward)}
-                className="w-20 h-20 rounded-2xl items-center justify-center m-2"
-                style={{
-                  backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 3,
-                  borderWidth: 0.5,
-                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
-                }}
-              >
-                <RotateCcw size={28} color={DesignTokens.colors.warning?.main || '#F59E0B'} strokeWidth={2} />
-                <Text 
-                  className="text-xs font-semibold mt-2"
-                  style={{ 
-                    color: DesignTokens.colors.text?.primary || '#FFFFFF',
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold
-                  }}
-                >
-                  העבר
-                </Text>
-              </Pressable>
-
-              {/* Copy */}
-              <Pressable
-                onPress={() => handleAction(onCopy)}
-                className="w-20 h-20 rounded-2xl items-center justify-center m-2"
-                style={{
-                  backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 3,
-                  borderWidth: 0.5,
-                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
-                }}
-              >
-                <Copy size={28} color={DesignTokens.colors.success?.main || '#10B981'} strokeWidth={2} />
-                <Text 
-                  className="text-xs font-semibold mt-2"
-                  style={{ 
-                    color: DesignTokens.colors.text?.primary || '#FFFFFF',
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold
-                  }}
-                >
-                  העתק
-                </Text>
-              </Pressable>
-
-              {/* Edit - Only show if canEdit is true */}
-              {canEdit && onEdit && (
-                <Pressable
-                  onPress={() => handleAction(onEdit)}
-                  className="w-20 h-20 rounded-2xl items-center justify-center m-2"
-                  style={{
-                    backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 4,
-                    elevation: 3,
-                    borderWidth: 0.5,
-                    borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
-                  }}
-                >
-                  <Edit size={28} color={DesignTokens.colors.warning?.main || '#F59E0B'} strokeWidth={2} />
-                  <Text 
-                    className="text-xs font-semibold mt-2"
-                    style={{ 
-                      color: DesignTokens.colors.text?.primary || '#FFFFFF',
-                      fontSize: DesignTokens.typography.fontSize.xs,
-                      fontWeight: DesignTokens.typography.fontWeight.semibold
-                    }}
-                  >
-                    ערוך
-                  </Text>
-                </Pressable>
-              )}
-
-              {/* React */}
-              <Pressable
-                onPress={() => handleAction(onReact)}
-                className="w-20 h-20 rounded-2xl items-center justify-center m-2"
-                style={{
-                  backgroundColor: DesignTokens.colors.background?.elevated || '#1A1A1A',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 4,
-                  elevation: 3,
-                  borderWidth: 0.5,
-                  borderColor: DesignTokens.colors.border?.primary || 'rgba(255,255,255,0.1)'
-                }}
-              >
-                <Heart size={28} color={DesignTokens.colors.danger?.main || '#EF4444'} strokeWidth={2} />
-                <Text 
-                  className="text-xs font-semibold mt-2"
-                  style={{ 
-                    color: DesignTokens.colors.text?.primary || '#FFFFFF',
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    fontWeight: DesignTokens.typography.fontWeight.semibold
-                  }}
-                >
-                  ריאקציה
-                </Text>
-              </Pressable>
-
-              {/* Star/Unstar - Only show if user can star */}
-              {canPin && (
-                <Pressable
-                  onPress={() => {
-                    const fn = isPinned ? onUnpin : onPin;
-                    if (fn) handleAction(fn);
-                  }}
-                  className="w-20 h-20 bg-[#1F1F1F] rounded-2xl items-center justify-center m-2 active:bg-yellow-500/20"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 4,
-                    elevation: 3,
-                    borderWidth: 0.5,
-                    borderColor: 'rgba(255,255,255,0.1)'
-                  }}
-                >
-                  <Ionicons 
-                    name={isPinned ? "star" : "star-outline"} 
-                    size={28} 
-                    color={isPinned ? "#FFD700" : "#FFD700"} 
-                  />
-                  <Text className="text-white text-xs font-semibold mt-2">
-                    {isPinned ? 'הסר כוכב' : 'סמן בכוכב'}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-
-            {/* Close Button */}
-            <Pressable
-              onPress={onClose}
-              className="mt-6 bg-[#1F1F1F] py-4 rounded-2xl items-center"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 3,
-                borderWidth: 0.5,
-                borderColor: 'rgba(255,255,255,0.1)'
-              }}
-            >
-              <Text className="text-white font-semibold text-base">ביטול</Text>
-            </Pressable>
           </View>
-        </Animated.View>
-      </Animated.View>
-    </Modal>
+        </BlurView>
+
+        {renderReactions()}
+
+        <View style={styles.actionsGrid}>
+          {actions.map((action) => (
+            <Pressable
+              key={action.key}
+              onPress={() => handleAction(action.onPress)}
+              style={({ pressed }) => [
+                styles.actionTile,
+                pressed && styles.actionTilePressed,
+              ]}
+            >
+              {action.icon}
+              <Text style={styles.actionLabel}>{action.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Pressable
+          onPress={onClose}
+          style={({ pressed }) => [styles.cancelBtn, pressed && { opacity: 0.75 }]}
+        >
+          <Text style={styles.cancelText}>ביטול</Text>
+        </Pressable>
+      </ChatSheetContent>
+    </ChatBottomSheet>
   );
 }
 
+const styles = StyleSheet.create({
+  previewCard: {
+    borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
+    borderTopColor: 'rgba(255,255,255,0.22)',
+    overflow: 'hidden',
+    padding: 14,
+    marginBottom: 12,
+  },
+  previewRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  mediaThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: chatPalette.glassStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textPreview: {
+    flex: 1,
+  },
+  previewBody: {
+    color: chatPalette.text,
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: 'right',
+  },
+  previewMeta: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  previewName: {
+    color: chatPalette.textSecondary,
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  previewTime: {
+    color: chatPalette.textTertiary,
+    fontSize: 11,
+  },
+  reactionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  reactionChip: {
+    minWidth: 40,
+    minHeight: 36,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: chatPalette.glassBorderStrong,
+    backgroundColor: chatPalette.glass,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reactionEmoji: {
+    fontSize: 16,
+  },
+  reactionCount: {
+    fontSize: 11,
+    color: chatPalette.textSecondary,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  actionTile: {
+    width: 76,
+    height: 76,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: chatPalette.glass,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: chatPalette.glassBorder,
+    gap: 6,
+  },
+  actionTilePressed: {
+    backgroundColor: chatPalette.glassStrong,
+    opacity: 0.9,
+  },
+  actionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: chatPalette.text,
+    textAlign: 'center',
+  },
+  cancelBtn: {
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    backgroundColor: chatPalette.glass,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: chatPalette.glassBorder,
+  },
+  cancelText: {
+    color: chatPalette.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

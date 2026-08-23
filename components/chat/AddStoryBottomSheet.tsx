@@ -8,10 +8,10 @@ import { chatPalette } from './chatDesignTokens';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import BottomSheet from '../ui/BottomSheet/BottomSheet';
 import { useAuth } from '../../context/AuthContext';
 import { uploadStoryImage, createStory } from '../../services/storiesService';
 import { logger } from '../../utils/logger';
+import { ChatBottomSheet, ChatSheetContent } from './ChatBottomSheet';
 
 interface AddStoryBottomSheetProps {
   visible: boolean;
@@ -98,34 +98,41 @@ export default function AddStoryBottomSheet({ visible, onClose, onAdded }: AddSt
   };
 
   return (
-    <BottomSheet isOpen={visible} onClose={onClose}>
-      <View style={styles.content}>
-        {isUploading ? (
-          <View style={styles.uploading}>
-            <ActivityIndicator size="large" color={chatPalette.primary} />
-            <Text style={styles.uploadingText}>מעלה...</Text>
-          </View>
-        ) : (
-          <>
-            <TouchableOpacity style={styles.option} onPress={handleTakePhoto}>
-              <Ionicons name="camera" size={28} color={chatPalette.primary} />
-              <Text style={styles.optionText}>צלם תמונה</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.option} onPress={handlePickImage}>
-              <Ionicons name="images" size={28} color={chatPalette.primary} />
-              <Text style={styles.optionText}>בחר מהגלריה</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </BottomSheet>
+    <ChatBottomSheet
+      visible={visible}
+      onClose={onClose}
+      snapPoints={[0.34]}
+      showBrandWatermark={false}
+    >
+      <ChatSheetContent>
+        <View style={styles.content}>
+          {isUploading ? (
+            <View style={styles.uploading}>
+              <ActivityIndicator size="large" color={chatPalette.primary} />
+              <Text style={styles.uploadingText}>מעלה...</Text>
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.option} onPress={handleTakePhoto}>
+                <Ionicons name="camera" size={28} color={chatPalette.primary} />
+                <Text style={styles.optionText}>צלם תמונה</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.option} onPress={handlePickImage}>
+                <Ionicons name="images" size={28} color={chatPalette.primary} />
+                <Text style={styles.optionText}>בחר מהגלריה</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </ChatSheetContent>
+    </ChatBottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    padding: 24,
-    paddingBottom: 40,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
   option: {
     flexDirection: 'row',

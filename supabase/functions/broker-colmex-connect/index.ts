@@ -26,7 +26,9 @@ import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
 import {
   type ColmexEnv,
   type ColmexAccount,
+  ColmexError,
   authorizeWithPassword,
+  sanitizeCredentialField,
   listAccounts,
   getConfig,
   listInstruments,
@@ -87,9 +89,10 @@ serve(async (req) => {
   } catch {
     return jsonResponse({ error: 'invalid_json' }, 400);
   }
-  const username = body.username?.trim();
-  const password = body.password;
-  const env: ColmexEnv = body.environment === 'prod' ? 'prod' : 'uat';
+  const username = body.username ? sanitizeCredentialField(body.username) : '';
+  const password = body.password ? sanitizeCredentialField(body.password) : '';
+  // Default to prod — UAT only when explicitly requested.
+  const env: ColmexEnv = body.environment === 'uat' ? 'uat' : 'prod';
   if (!username || !password) {
     return jsonResponse({ error: 'missing_credentials' }, 400);
   }
@@ -99,7 +102,35 @@ serve(async (req) => {
   try {
     tokens = await authorizeWithPassword(env, { username, password });
   } catch (e) {
-    return jsonResponse({ error: 'broker_auth_failed', detail: (e as Error).message }, 401);
+    const detail = (e as Error).message;
+    const failure = e instanceof ColmexError ? e.authFailure : null;
+    // אבחון: אורכים בלבד — לעולם לא הסיסמה עצמה. הפרש אורך לפני/אחרי הניקוי
+    // מזהה רווחים/תווים נסתרים שהודבקו יחד עם ה-credentials.
+    // attempt הוא מונה הכשלונות של TE — הוא מופיע רק כשהלוגין קיים בשרת, ולכן
+    // הוא הסימן שהבעיה אינה בשם המשתמש אלא בסיסמה או בסטטוס המשתמש.
+    console.error('broker_auth_failed', {
+      env,
+      username,
+      usernameRawLen: body.username?.length ?? 0,
+      usernameCleanLen: username.length,
+      passwordRawLen: body.password?.length ?? 0,
+      passwordCleanLen: password.length,
+      reason: failure?.reason ?? 'auth_rejected',
+      attempt: failure?.attempt ?? null,
+      loginRecognised: Boolean(failure?.attempt),
+      detail,
+    });
+    return jsonResponse(
+      {
+        error: 'broker_auth_failed',
+        reason: failure?.reason ?? 'auth_rejected',
+        attempt: failure?.attempt ?? null,
+        loginRecognised: Boolean(failure?.attempt),
+        detail,
+        message: detail,
+      },
+      401
+    );
   }
 
   // ---------- 4. שמירת secrets ב-vault.secrets ----------
@@ -155,12 +186,21 @@ serve(async (req) => {
     return jsonResponse({ error: 'no_accounts_found' }, 404);
   }
 
+  // broker_accounts.account_type CHECK accepts: 'demo'|'live'|'contest'|'funded'|'challenge'
+  // Colmex may return any capitalisation or unknown type — normalise to lowercase and guard.
+  const KNOWN_ACCOUNT_TYPES = new Set(['demo', 'live', 'contest', 'funded', 'challenge']);
+  const normaliseAccountType = (t?: string | null): string | null => {
+    if (!t) return null;
+    const lc = t.toLowerCase();
+    return KNOWN_ACCOUNT_TYPES.has(lc) ? lc : null;
+  };
+
   const accountRows = accounts.map((a) => ({
     connection_id: conn.id,
     user_id: userId,
     broker_account_id: a.id,
     account_name: a.name,
-    account_type: (a.type ?? null) as string | null,
+    account_type: normaliseAccountType(a.type),
     currency: a.currency ?? 'USD',
     status: a.status ?? null,
     trading_rules: a.tradingRules ?? null,

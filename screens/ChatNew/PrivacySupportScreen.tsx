@@ -31,19 +31,19 @@ export default function PrivacySupportScreen() {
   };
 
   const handlePrivacyPolicy = () => {
-    Linking.openURL('https://darkpool.co.il/privacy').catch(() =>
+    Linking.openURL('https://darkpool.site/privacy').catch(() =>
       legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
     );
   };
 
   const handleTermsOfService = () => {
-    Linking.openURL('https://darkpool.co.il/terms').catch(() =>
+    Linking.openURL('https://darkpool.site/terms').catch(() =>
       legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
     );
   };
 
   const handleFAQ = () => {
-    Linking.openURL('https://darkpool.co.il/faq').catch(() =>
+    Linking.openURL('https://darkpool.site/faq').catch(() =>
       legacyAlert('שגיאה', 'לא ניתן לפתוח את הקישור')
     );
   };

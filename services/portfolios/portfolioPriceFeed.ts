@@ -23,6 +23,7 @@ import {
   QUOTE_CACHE_TTL_MS,
   HISTORICAL_CACHE_TTL_MS,
 } from '../../screens/Portfolios/portfolioConstants';
+import { filterSymbolSearchResults } from './symbolSearchFilter';
 
 const FINNHUB_API_KEY = 'd1uf6gpr01qpci1cbg00d1uf6gpr01qpci1cbg0g';
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
@@ -37,8 +38,23 @@ interface CachedHistory {
   fetchedAt: number;
 }
 
+export type SymbolRangeStats = {
+  weekHigh: number | null;
+  weekLow: number | null;
+  high52: number | null;
+  low52: number | null;
+};
+
+interface CachedRangeStats {
+  stats: SymbolRangeStats;
+  fetchedAt: number;
+}
+
+const RANGE_STATS_TTL_MS = 15 * 60_000;
+
 const memQuoteCache = new Map<string, CachedQuote>();
 const memHistoryCache = new Map<string, CachedHistory>();
+const memRangeStatsCache = new Map<string, CachedRangeStats>();
 
 /**
  * ממיר symbol מה-format הפנימי שלנו ל-Yahoo:
@@ -69,6 +85,32 @@ interface FinnhubQuoteResponse {
   t: number; // unix timestamp
 }
 
+function _finiteOrNull(n: unknown): number | null {
+  const v = typeof n === 'number' ? n : Number(n);
+  return Number.isFinite(v) && v !== 0 ? v : null;
+}
+
+function _volumeOrNull(n: unknown): number | null {
+  const v = typeof n === 'number' ? n : Number(n);
+  return Number.isFinite(v) && v >= 0 ? v : null;
+}
+
+function _parseFinnhubResponse(symbol: string, data: FinnhubQuoteResponse): PriceQuote | null {
+  if (!data || !data.c || data.c === 0) return null;
+  return {
+    symbol,
+    price: data.c,
+    previous_close: data.pc || null,
+    open: _finiteOrNull(data.o),
+    day_high: _finiteOrNull(data.h),
+    day_low: _finiteOrNull(data.l),
+    volume: null,
+    currency: 'USD',
+    as_of: new Date(data.t ? data.t * 1000 : Date.now()).toISOString(),
+    source: 'finnhub',
+  };
+}
+
 async function fetchFinnhubQuote(symbol: string): Promise<PriceQuote | null> {
   const url = `${FINNHUB_BASE}/quote?symbol=${encodeURIComponent(
     toFinnhubSymbol(symbol)
@@ -76,17 +118,19 @@ async function fetchFinnhubQuote(symbol: string): Promise<PriceQuote | null> {
 
   try {
     const res = await fetch(url);
+    if (res.status === 429) {
+      // Rate limited — wait 5 seconds then retry once before falling back to Yahoo
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const retry = await fetch(url);
+        if (!retry.ok) return null;
+        return _parseFinnhubResponse(symbol, (await retry.json()) as FinnhubQuoteResponse);
+      } catch {
+        return null;
+      }
+    }
     if (!res.ok) return null;
-    const data = (await res.json()) as FinnhubQuoteResponse;
-    if (!data || !data.c || data.c === 0) return null;
-    return {
-      symbol,
-      price: data.c,
-      previous_close: data.pc || null,
-      currency: 'USD',
-      as_of: new Date(data.t ? data.t * 1000 : Date.now()).toISOString(),
-      source: 'finnhub',
-    };
+    return _parseFinnhubResponse(symbol, (await res.json()) as FinnhubQuoteResponse);
   } catch {
     return null;
   }
@@ -109,6 +153,10 @@ async function fetchYahooQuote(symbol: string): Promise<PriceQuote | null> {
       symbol,
       price: meta.regularMarketPrice,
       previous_close: meta.chartPreviousClose ?? meta.previousClose ?? null,
+      open: _finiteOrNull(meta.regularMarketOpen),
+      day_high: _finiteOrNull(meta.regularMarketDayHigh),
+      day_low: _finiteOrNull(meta.regularMarketDayLow),
+      volume: _volumeOrNull(meta.regularMarketVolume),
       currency: meta.currency || 'USD',
       as_of: new Date(meta.regularMarketTime * 1000 || Date.now()).toISOString(),
       source: 'yahoo',
@@ -152,6 +200,10 @@ async function loadQuoteFromSupabase(symbol: string): Promise<PriceQuote | null>
       symbol: data.symbol,
       price: Number(data.price),
       previous_close: data.previous_close != null ? Number(data.previous_close) : null,
+      open: null,
+      day_high: null,
+      day_low: null,
+      volume: null,
       currency: data.currency,
       as_of: data.as_of,
       source: data.source,
@@ -183,8 +235,23 @@ export async function getQuote(symbol: string): Promise<PriceQuote | null> {
     return fromDb;
   }
 
-  const fresh =
-    (await fetchFinnhubQuote(sym)) || (await fetchYahooQuote(sym));
+  // Finnhub למחיר; Yahoo במקביל לווליום (וגיבוי מחיר)
+  const [finnhub, yahoo] = await Promise.all([
+    fetchFinnhubQuote(sym),
+    fetchYahooQuote(sym),
+  ]);
+  let fresh: PriceQuote | null = null;
+  if (finnhub && yahoo) {
+    fresh = {
+      ...finnhub,
+      volume: yahoo.volume ?? null,
+      open: finnhub.open ?? yahoo.open ?? null,
+      day_high: finnhub.day_high ?? yahoo.day_high ?? null,
+      day_low: finnhub.day_low ?? yahoo.day_low ?? null,
+    };
+  } else {
+    fresh = finnhub || yahoo;
+  }
   if (fresh) {
     memQuoteCache.set(sym, { quote: fresh, fetchedAt: now });
     void persistQuote(fresh);
@@ -214,10 +281,17 @@ export async function getQuotes(
 interface YahooChartResponse {
   chart: {
     result: Array<{
+      meta?: {
+        fiftyTwoWeekHigh?: number;
+        fiftyTwoWeekLow?: number;
+        regularMarketPrice?: number;
+      };
       timestamp: number[];
       indicators: {
         quote: Array<{
           close: (number | null)[];
+          high?: (number | null)[];
+          low?: (number | null)[];
         }>;
         adjclose?: Array<{
           adjclose: (number | null)[];
@@ -226,6 +300,122 @@ interface YahooChartResponse {
     }>;
     error: unknown;
   };
+}
+
+function _maxFinite(values: Array<number | null | undefined>): number | null {
+  let max: number | null = null;
+  for (const v of values) {
+    if (v == null || !Number.isFinite(v)) continue;
+    max = max == null ? v : Math.max(max, v);
+  }
+  return max;
+}
+
+function _minFinite(values: Array<number | null | undefined>): number | null {
+  let min: number | null = null;
+  for (const v of values) {
+    if (v == null || !Number.isFinite(v)) continue;
+    min = min == null ? v : Math.min(min, v);
+  }
+  return min;
+}
+
+/**
+ * שיא/שפל שבועי (~5 ימי מסחר) + 52 שבועות מ-Yahoo chart.
+ */
+export async function getSymbolRangeStats(
+  symbol: string
+): Promise<SymbolRangeStats> {
+  const sym = symbol.toUpperCase();
+  const now = Date.now();
+  const cached = memRangeStatsCache.get(sym);
+  if (cached && now - cached.fetchedAt < RANGE_STATS_TTL_MS) {
+    return cached.stats;
+  }
+
+  const empty: SymbolRangeStats = {
+    weekHigh: null,
+    weekLow: null,
+    high52: null,
+    low52: null,
+  };
+
+  try {
+    const url = `${YAHOO_BASE}/${encodeURIComponent(
+      toYahooSymbol(sym)
+    )}?range=1mo&interval=1d`;
+    const res = await fetch(url);
+    if (!res.ok) return empty;
+    const data = (await res.json()) as YahooChartResponse;
+    const result = data?.chart?.result?.[0];
+    if (!result) return empty;
+
+    const quote = result.indicators?.quote?.[0];
+    const highs = quote?.high ?? [];
+    const lows = quote?.low ?? [];
+    const closes = quote?.close ?? [];
+
+    const lastN = 5;
+    const weekHighs = highs.slice(-lastN);
+    const weekLows = lows.slice(-lastN);
+    // fallback ל-close אם אין high/low
+    const weekHigh =
+      _maxFinite(weekHighs) ?? _maxFinite(closes.slice(-lastN));
+    const weekLow = _minFinite(weekLows) ?? _minFinite(closes.slice(-lastN));
+
+    let high52 = _finiteOrNull(result.meta?.fiftyTwoWeekHigh);
+    let low52 = _finiteOrNull(result.meta?.fiftyTwoWeekLow);
+
+    if (high52 == null || low52 == null) {
+      try {
+        const yUrl = `${YAHOO_BASE}/${encodeURIComponent(
+          toYahooSymbol(sym)
+        )}?range=1y&interval=1d`;
+        const yRes = await fetch(yUrl);
+        if (yRes.ok) {
+          const yData = (await yRes.json()) as YahooChartResponse;
+          const yResult = yData?.chart?.result?.[0];
+          const yQuote = yResult?.indicators?.quote?.[0];
+          if (high52 == null) {
+            high52 =
+              _maxFinite(yQuote?.high ?? []) ??
+              _maxFinite(yQuote?.close ?? []);
+          }
+          if (low52 == null) {
+            low52 =
+              _minFinite(yQuote?.low ?? []) ??
+              _minFinite(yQuote?.close ?? []);
+          }
+        }
+      } catch {
+        /* keep partial */
+      }
+    }
+
+    const stats: SymbolRangeStats = { weekHigh, weekLow, high52, low52 };
+    memRangeStatsCache.set(sym, { stats, fetchedAt: now });
+    return stats;
+  } catch {
+    return empty;
+  }
+}
+
+export async function getSymbolsRangeStats(
+  symbols: string[]
+): Promise<Record<string, SymbolRangeStats>> {
+  const unique = Array.from(new Set(symbols.map((s) => s.toUpperCase())));
+  const out: Record<string, SymbolRangeStats> = {};
+  // concurrency מוגבל — Yahoo נחסם בקלות על burst גדול
+  const chunkSize = 4;
+  for (let i = 0; i < unique.length; i += chunkSize) {
+    const chunk = unique.slice(i, i + chunkSize);
+    await Promise.all(
+      chunk.map(async (sym) => {
+        out[sym] = await getSymbolRangeStats(sym);
+      })
+    );
+  }
+  return out;
 }
 
 /**
@@ -240,7 +430,7 @@ export async function getHistoricalPrices(
   range: '1mo' | '3mo' | '6mo' | '1y' | '5y' | 'max' = '1y'
 ): Promise<HistoricalPricePoint[]> {
   const sym = symbol.toUpperCase();
-  const cacheKey = `${sym}_${range}`;
+  const cacheKey = `${sym}_${range}_raw`;
   const now = Date.now();
   const cached = memHistoryCache.get(cacheKey);
   if (cached && now - cached.fetchedAt < HISTORICAL_CACHE_TTL_MS) {
@@ -257,9 +447,10 @@ export async function getHistoricalPrices(
     const result = data?.chart?.result?.[0];
     if (!result || !result.timestamp) return [];
 
-    const closes =
-      result.indicators.adjclose?.[0]?.adjclose ||
-      result.indicators.quote[0].close;
+    // חשוב: raw close בלבד — לא adjclose.
+    // מחירי כניסה ב-trades הם unadjusted; adjclose (אחרי reverse-split ב-UVIX וכו')
+    // יוצר ספייקים מזויפים ב-unrealized ההיסטורי של הגרף.
+    const closes = result.indicators.quote[0].close;
 
     const points: HistoricalPricePoint[] = [];
     for (let i = 0; i < result.timestamp.length; i++) {
@@ -305,7 +496,7 @@ export interface SymbolSearchResult {
   type: string;
 }
 
-/** חיפוש symbol ב-Finnhub - free tier */
+/** חיפוש symbol ב-Finnhub - free tier + סינון listings זרים/זבל */
 export async function searchSymbols(
   query: string
 ): Promise<SymbolSearchResult[]> {
@@ -323,12 +514,16 @@ export async function searchSymbols(
       displaySymbol: string;
       type: string;
     }>;
-    return arr.slice(0, 25).map((r) => ({
+    const mapped = arr.map((r) => ({
       symbol: r.symbol,
       description: r.description,
-      display_symbol: r.displaySymbol,
-      type: r.type,
+      display_symbol: r.displaySymbol || r.symbol,
+      type: r.type || '',
     }));
+    return filterSymbolSearchResults(mapped, query, {
+      usPrimaryOnly: true,
+      limit: 20,
+    });
   } catch {
     return [];
   }
@@ -336,6 +531,7 @@ export async function searchSymbols(
 
 /** ניקוי cache ידני – שימושי כש-pull-to-refresh */
 export function clearPriceCaches(): void {
+  memRangeStatsCache.clear();
   memQuoteCache.clear();
   memHistoryCache.clear();
 }

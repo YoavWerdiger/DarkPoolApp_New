@@ -19,6 +19,19 @@ import UICard from '../../components/ui/UICard';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
 import { TickerLogo } from '../../components/ui/TickerLogo';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import EarningsWeeklyView, { WeekDay, getSymbolDisplay as getWeeklySymbolDisplay } from './EarningsWeeklyView';
+
+export type EarningsViewMode = 'daily' | 'weekly';
+
+type EarningsReportsTabProps = {
+  /** תצוגה יומית/שבועית — נשלטת מהכותרת (ברירת מחדל: יומי) */
+  viewMode?: EarningsViewMode;
+  /** פתיחה מהתראת Push */
+  openReportId?: string | null;
+  openTicker?: string | null;
+  openReportDate?: string | null;
+  onOpenReportConsumed?: () => void;
+};
 
 const EarningsReportCard: React.FC<{ 
   report: EarningsReport; 
@@ -119,6 +132,14 @@ const EarningsReportCard: React.FC<{
 
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   const cardRadius = DesignTokens.borderRadius['2xl'];
+  const companyLabel = (report.company_name || report.asset_name || '').trim();
+  // חשוב: לא `{value && <View/>}` כש-value יכול להיות 0 — ב-RN זה מרנדר "0" כטקסט חשוף.
+  const hasEpsBlock =
+    report.estimate != null || report.actual != null || report.eps_estimate != null;
+  const hasRevenueBlock =
+    report.revenue_estimate != null ||
+    report.revenue_estimate_avg != null ||
+    report.revenue_actual != null;
   return (
     <Pressable onPress={() => onPress(report)} style={{ marginHorizontal: screenPad, marginBottom: 12 }}>
       <UICard
@@ -161,7 +182,7 @@ const EarningsReportCard: React.FC<{
               }}>
                 {getSymbolDisplay(report.code)}
               </Text>
-              {(report.company_name || report.asset_name) && (
+              {companyLabel ? (
                 <Text 
                   numberOfLines={1}
                   ellipsizeMode="tail"
@@ -172,9 +193,9 @@ const EarningsReportCard: React.FC<{
                     lineHeight: 14,
                     marginTop: 1
                   }}>
-                  {report.company_name || report.asset_name}
+                  {companyLabel}
                 </Text>
-              )}
+              ) : null}
             </View>
           </View>
 
@@ -213,7 +234,7 @@ const EarningsReportCard: React.FC<{
         </View>
 
         {/* בלוק ערכים - EPS מימין, Revenue משמאל, בשורה אחת */}
-        {((report.estimate || report.actual || report.eps_estimate) || (report.revenue_estimate || report.revenue_estimate_avg || report.revenue_actual)) && (
+        {hasEpsBlock || hasRevenueBlock ? (
           <View style={{ marginTop: 12, width: '100%' }}>
             {/* פס הפרדה אופקי עליון */}
             <View
@@ -226,13 +247,12 @@ const EarningsReportCard: React.FC<{
             
             <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
               {/* Revenue - משמאל */}
-              {(report.revenue_estimate || report.revenue_estimate_avg || report.revenue_actual) && (
+              {hasRevenueBlock ? (
                 <View style={{ flex: 1, alignItems: 'center', paddingRight: 8 }}>
                   <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 8, fontWeight: '600', textAlign: 'center' }}>
                     הכנסות (Revenue)
                   </Text>
                   {report.revenue_actual !== null && report.revenue_actual !== 0 ? (
-                    /* תוצאה */
                     (() => {
                       // חישוב surprise אם אין
                       let surprisePercent = report.revenue_surprise_percent;
@@ -249,11 +269,11 @@ const EarningsReportCard: React.FC<{
                           <Text style={{ fontSize: 9, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: 20 }}>
                             (תוצאה)
                           </Text>
-                          {surprisePercent !== null && surprisePercent !== undefined && (
+                          {surprisePercent !== null && surprisePercent !== undefined ? (
                             <Text style={{ fontSize: 12, fontWeight: '600', color: getSurpriseColor(surprisePercent), marginRight: 6, lineHeight: 20 }}>
                               {surprisePercent > 0 ? '+' : ''}{surprisePercent.toFixed(1)}%
                             </Text>
-                          )}
+                          ) : null}
                           <Text style={{ fontSize: 16, fontWeight: '700', color: getSurpriseColor(surprisePercent ?? null), textAlign: 'center', lineHeight: 20 }}>
                             {formatRevenue(report.revenue_actual)}
                           </Text>
@@ -261,7 +281,6 @@ const EarningsReportCard: React.FC<{
                       );
                     })()
                   ) : (report.revenue_estimate || report.revenue_estimate_avg) ? (
-                    /* תחזית */
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
                       <Text style={{ fontSize: 9, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: 20 }}>
                         (תחזית)
@@ -272,11 +291,10 @@ const EarningsReportCard: React.FC<{
                     </View>
                   ) : null}
                 </View>
-              )}
+              ) : null}
 
               {/* פס הפרדה אנכי */}
-              {((report.estimate || report.actual || report.eps_estimate) &&
-                (report.revenue_estimate || report.revenue_estimate_avg || report.revenue_actual)) && (
+              {hasEpsBlock && hasRevenueBlock ? (
                 <View
                   style={{
                     width: 1,
@@ -285,16 +303,15 @@ const EarningsReportCard: React.FC<{
                     marginHorizontal: 8,
                   }}
                 />
-              )}
+              ) : null}
 
               {/* EPS - מימין */}
-              {(report.estimate || report.actual || report.eps_estimate) && (
+              {hasEpsBlock ? (
                 <View style={{ flex: 1, alignItems: 'center', paddingLeft: 8 }}>
                   <Text style={{ fontSize: 12, color: DesignTokens.colors.text.tertiary, marginBottom: 8, fontWeight: '600', textAlign: 'center' }}>
                     רווחיות (EPS)
                   </Text>
                   {report.actual !== null && report.actual !== 0 ? (
-                    /* תוצאה */
                     (() => {
                       // חישוב surprise אם אין
                       let surprisePercent = report.percent;
@@ -312,11 +329,11 @@ const EarningsReportCard: React.FC<{
                           <Text style={{ fontSize: 9, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: 20 }}>
                             (תוצאה)
                           </Text>
-                          {surprisePercent !== null && (
+                          {surprisePercent !== null ? (
                             <Text style={{ fontSize: 12, fontWeight: '600', color: getSurpriseColor(surprisePercent), marginRight: 6, lineHeight: 20 }}>
                               {surprisePercent > 0 ? '+' : ''}{surprisePercent.toFixed(1)}%
                             </Text>
-                          )}
+                          ) : null}
                           <Text style={{ fontSize: 16, fontWeight: '700', color: getSurpriseColor(surprisePercent), textAlign: 'center', lineHeight: 20 }}>
                             ${report.actual.toFixed(2)}
                           </Text>
@@ -324,7 +341,6 @@ const EarningsReportCard: React.FC<{
                       );
                     })()
                   ) : (report.estimate || report.eps_estimate) ? (
-                    /* תחזית */
                     <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
                       <Text style={{ fontSize: 9, color: DesignTokens.colors.text.tertiary, marginRight: 4, lineHeight: 20 }}>
                         (תחזית)
@@ -337,10 +353,10 @@ const EarningsReportCard: React.FC<{
                     </View>
                   ) : null}
                 </View>
-              )}
+              ) : null}
             </View>
           </View>
-        )}
+        ) : null}
         </View>
       </UICard>
     </Pressable>
@@ -356,6 +372,39 @@ const normalizeTiming = (value: string | null | undefined): 'BeforeMarket' | 'Af
   if (lower.includes('after') || lower.includes('post-market') || lower.includes('postmarket') || lower.includes('amc')) return 'AfterMarket';
   return null;
 };
+
+/** שעת סיום חלון BMO בישראל (אחרי פתיחת מסחר ארה"ב ~16:30) — 17:00 Asia/Jerusalem */
+const PRE_MARKET_DONE_MINUTES_IL = 17 * 60;
+
+/** דקות מהחצות לפי שעון ישראל */
+function getIsraelMinutesNow(now: Date = new Date()): number {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jerusalem',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const parts = formatter.formatToParts(now);
+  let hours = parseInt(parts.find(p => p.type === 'hour')?.value || '0', 10);
+  const minutes = parseInt(parts.find(p => p.type === 'minute')?.value || '0', 10);
+  if (hours === 24) hours = 0; // חלק ממנועים מחזירים 24 בחצות
+  return hours * 60 + minutes;
+}
+
+/**
+ * האם חלון מסחר מוקדם נגמר ליום הנבחר — רק להיום.
+ * יוריסטיקה: אחרי 17:00 ישראל, או שכל דיווחי BMO כבר עם actual.
+ */
+function isPreMarketOverForDay(
+  reports: EarningsReport[],
+  selectedIsToday: boolean,
+): boolean {
+  if (!selectedIsToday) return false;
+  if (getIsraelMinutesNow() >= PRE_MARKET_DONE_MINUTES_IL) return true;
+  const beforeReports = reports.filter(r => normalizeTiming(r.before_after_market) === 'BeforeMarket');
+  if (beforeReports.length === 0) return false;
+  return beforeReports.every(r => r.actual != null);
+}
 
 // מפריד סקשן עם תווית על רקע זכוכית אמיתית (BlurView)
 const SectionDivider: React.FC<{
@@ -387,9 +436,9 @@ const SectionDivider: React.FC<{
         }}
       >
         <BlurView intensity={40} tint="dark" style={{ paddingHorizontal: 14, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)' }}>
-          {Icon && (
+          {Icon ? (
             <Icon size={11} color={iconColor || DesignTokens.colors.text.secondary} strokeWidth={2.2} />
-          )}
+          ) : null}
           <Text
             style={{
               fontSize: 11,
@@ -412,11 +461,31 @@ const SectionDivider: React.FC<{
 const WINDOW_DAYS_BEFORE = 3;
 const WINDOW_DAYS_AFTER = 7;
 
+/** YYYY-MM-DD לפי יום מקומי — לא UTC (חשוב לניווט יומי בישראל). */
 function toDateKey(d: Date): string {
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
-export default function EarningsReportsTab() {
+// מחזיר את יום שני (12:00 מקומי) של שבוע המסחר שמכיל את התאריך הנתון.
+function startOfWeekMonday(d: Date): Date {
+  const date = new Date(d);
+  date.setHours(12, 0, 0, 0);
+  const day = date.getDay(); // 0=ראשון..6=שבת
+  const diff = day === 0 ? -6 : 1 - day; // הזזה ליום שני
+  date.setDate(date.getDate() + diff);
+  return date;
+}
+
+export default function EarningsReportsTab({
+  viewMode = 'daily',
+  openReportId = null,
+  openTicker = null,
+  openReportDate = null,
+  onOpenReportConsumed,
+}: EarningsReportsTabProps) {
   const DesignTokens = useDesignTokens();
   const screenPad = DesignTokens.layout?.screenPadding ?? 20;
   // Map of date string → reports for that day. נטען הדרגתית.
@@ -431,6 +500,8 @@ export default function EarningsReportsTab() {
   );
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  // יום שני של השבוע המוצג בתצוגה השבועית
+  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeekMonday(new Date()));
   const [selectedReport, setSelectedReport] = useState<EarningsReport | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   
@@ -438,12 +509,41 @@ export default function EarningsReportsTab() {
   const flatListRef = useRef<FlatList>(null);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const scrollButtonOpacity = useRef(new Animated.Value(0)).current;
+  /** מפתח תאריך שעבורו כבר בוצעה גלילה אוטומטית ל-AfterMarket (פעם אחת ליום) */
+  const autoScrolledToAfterDateKeyRef = useRef<string | null>(null);
+  /** גבהי פריטים למדידת offset מדויק (המנווט קבוע מחוץ ל-FlatList) */
+  const itemHeightByIndexRef = useRef<Map<number, number>>(new Map());
+  const LIST_CONTENT_PADDING_TOP = 6;
 
   // פונקציה לגלילה לראש הרשימה
   const scrollToTop = useCallback(() => {
     if (flatListRef.current) {
       flatListRef.current.scrollToOffset({ offset: 0, animated: true });
     }
+  }, []);
+
+  /** גלילה כך שראש פריט האינדקס (כולל דיביידר AfterMarket) צמוד לראש ה-viewport */
+  const scrollItemToTop = useCallback((index: number, animated: boolean) => {
+    const heights = itemHeightByIndexRef.current;
+    let offset = LIST_CONTENT_PADDING_TOP;
+    let measured = true;
+    for (let i = 0; i < index; i++) {
+      const h = heights.get(i);
+      if (h == null) {
+        measured = false;
+        break;
+      }
+      offset += h;
+    }
+    if (measured) {
+      flatListRef.current?.scrollToOffset({ offset, animated });
+      return;
+    }
+    flatListRef.current?.scrollToIndex({
+      index,
+      animated,
+      viewPosition: 0,
+    });
   }, []);
 
   // טיפול באירוע גלילה
@@ -460,6 +560,21 @@ export default function EarningsReportsTab() {
       }).start();
     }
   }, [showScrollToTop, scrollButtonOpacity]);
+
+  const handleScrollToIndexFailed = useCallback((info: {
+    index: number;
+    highestMeasuredFrameIndex: number;
+    averageItemLength: number;
+  }) => {
+    // קופצים קרוב לאינדקס לפי ממוצע (מכריח מדידה), ואז מנסים שוב לצמוד לראש.
+    const offset = Math.max(0, info.averageItemLength * info.index);
+    flatListRef.current?.scrollToOffset({ offset, animated: false });
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        scrollItemToTop(info.index, true);
+      }, 50);
+    });
+  }, [scrollItemToTop]);
 
   // פונקציות ניווט יומי
   const goToPreviousDay = () => {
@@ -558,6 +673,51 @@ export default function EarningsReportsTab() {
     }
   }, []);
 
+  // טעינת שבוע מסחר שלם (שני..ראשון) בשליפה בודדת דרך getDateWindow.
+  // ממזג לאותו reportsByDate/cache של התצוגה היומית כדי לחלוק realtime.
+  const loadWeek = useCallback(async (weekMonday: Date) => {
+    try {
+      const reports = await EarningsService.getDateWindow(weekMonday, 0, 6);
+      const byDate: Record<string, EarningsReport[]> = {};
+      for (const r of reports) {
+        (byDate[r.report_date] = byDate[r.report_date] || []).push(r);
+      }
+      // מסמנים את כל ימי השבוע כ"טעונים" (כולל ימים ללא דיווחים)
+      for (let i = 0; i <= 6; i++) {
+        const d = new Date(weekMonday);
+        d.setDate(weekMonday.getDate() + i);
+        const key = toDateKey(d);
+        if (!(key in byDate)) byDate[key] = [];
+        loadedDatesRef.current.add(key);
+      }
+      const prevCached = queryClient.getQueryData<ReportsByDate>(EARNINGS_QUERY_KEY) ?? {};
+      queryClient.setQueryData(EARNINGS_QUERY_KEY, { ...prevCached, ...byDate });
+      setReportsByDate(prev => ({ ...prev, ...byDate }));
+    } catch (error) {
+      console.error('[EarningsReportsTab] load week failed:', error instanceof Error ? error.message : error);
+      legacyAlert('שגיאה', 'לא ניתן לטעון את דיווחי התוצאות');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  // בתצוגה שבועית — טוען את השבוע המוצג אם עדיין לא נטען.
+  useEffect(() => {
+    if (viewMode !== 'weekly') return;
+    const monday = startOfWeekMonday(weekStart);
+    let needLoad = false;
+    for (let i = 0; i < 5; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      if (!loadedDatesRef.current.has(toDateKey(d))) {
+        needLoad = true;
+        break;
+      }
+    }
+    if (needLoad) void loadWeek(monday);
+  }, [viewMode, weekStart, loadWeek]);
+
   // טעינה ראשונית: לפני שמטעינים, בודקים אם היום יש דיווחים. אם אין — קופצים לתאריך הקרוב.
   const didInitialLoadRef = useRef(false);
   useEffect(() => {
@@ -631,6 +791,124 @@ export default function EarningsReportsTab() {
     });
   }, [reportsByDate, selectedDate]);
 
+  // איפוס דגל גלילה אוטומטית + מדידות גובה כשמשנים תאריך
+  useEffect(() => {
+    autoScrolledToAfterDateKeyRef.current = null;
+    itemHeightByIndexRef.current = new Map();
+  }, [selectedDate]);
+
+  // בתצוגה יומית: אחרי שמסחר מוקדם נגמר — גלילה חד־פעמית למפריד "מסחר מאוחר"
+  useEffect(() => {
+    if (viewMode !== 'daily') return;
+    if (filteredReports.length === 0) return;
+
+    const dateKey = toDateKey(selectedDate);
+    if (autoScrolledToAfterDateKeyRef.current === dateKey) return;
+
+    const firstAfterIdx = filteredReports.findIndex(
+      r => normalizeTiming(r.before_after_market) === 'AfterMarket',
+    );
+    // אין AfterMarket, או שהוא כבר בראש (אין BeforeMarket לפניו)
+    if (firstAfterIdx <= 0) return;
+
+    const hasBefore = filteredReports.some(
+      r => normalizeTiming(r.before_after_market) === 'BeforeMarket',
+    );
+    if (!hasBefore) return;
+
+    if (!isPreMarketOverForDay(filteredReports, isSelectedToday)) return;
+
+    // מסמנים מיד — פעם אחת ליום; טיימר בלי cleanup כדי שרענון נתונים לא יבטל
+    autoScrolledToAfterDateKeyRef.current = dateKey;
+    const scheduledFor = dateKey;
+    const idx = firstAfterIdx;
+    setTimeout(() => {
+      // אם עברנו תאריך בינתיים — הדגל אופס / השתנה
+      if (autoScrolledToAfterDateKeyRef.current !== scheduledFor) return;
+      // מעדיפים offset ממדידות onLayout; אחרת scrollToIndex עם viewPosition: 0
+      scrollItemToTop(idx, true);
+    }, 160);
+  }, [viewMode, filteredReports, selectedDate, isSelectedToday, scrollItemToTop]);
+
+  // בניית נתוני השבוע (שני..שישי) לתצוגה השבועית — פיצול לפי מוקדם/מאוחר.
+  const weekDays = useMemo<WeekDay[]>(() => {
+    const monday = startOfWeekMonday(weekStart);
+    const todayStr = new Date().toDateString();
+    const sortByImportance = (a: EarningsReport, b: EarningsReport) =>
+      (b.importance ?? 0) - (a.importance ?? 0) ||
+      getWeeklySymbolDisplay(a.code).localeCompare(getWeeklySymbolDisplay(b.code));
+
+    const days: WeekDay[] = [];
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      const dateKey = toDateKey(date);
+      const list = reportsByDate[dateKey] ?? [];
+      const before: EarningsReport[] = [];
+      const after: EarningsReport[] = [];
+      for (const r of list) {
+        const n = normalizeTiming(r.before_after_market);
+        if (n === 'AfterMarket') after.push(r);
+        else before.push(r); // BeforeMarket או לא ידוע → מוקדם
+      }
+      before.sort(sortByImportance);
+      after.sort(sortByImportance);
+      days.push({
+        dateKey,
+        date,
+        dayLabel: date.toLocaleDateString('he-IL', { weekday: 'long' }),
+        dateLabel: date.toLocaleDateString('he-IL', { day: 'numeric', month: 'long' }),
+        before,
+        after,
+        isToday: date.toDateString() === todayStr,
+      });
+    }
+    return days;
+  }, [reportsByDate, weekStart]);
+
+  const weekLabel = useMemo(() => {
+    const monday = startOfWeekMonday(weekStart);
+    const friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    const startDay = monday.getDate();
+    const endDay = friday.getDate();
+    const endMonth = friday.toLocaleDateString('he-IL', { month: 'long' });
+    const year = friday.getFullYear();
+    if (monday.getMonth() === friday.getMonth()) {
+      return `${startDay}–${endDay} ב${endMonth} ${year}`;
+    }
+    const startMonth = monday.toLocaleDateString('he-IL', { month: 'long' });
+    return `${startDay} ב${startMonth} – ${endDay} ב${endMonth} ${year}`;
+  }, [weekStart]);
+
+  const isCurrentWeek = useMemo(
+    () => startOfWeekMonday(weekStart).toDateString() === startOfWeekMonday(new Date()).toDateString(),
+    [weekStart],
+  );
+
+  const goToPreviousWeek = useCallback(() => {
+    void HapticFeedback.impactLight();
+    setWeekStart(prev => {
+      const d = startOfWeekMonday(prev);
+      d.setDate(d.getDate() - 7);
+      return d;
+    });
+  }, []);
+
+  const goToNextWeek = useCallback(() => {
+    void HapticFeedback.impactLight();
+    setWeekStart(prev => {
+      const d = startOfWeekMonday(prev);
+      d.setDate(d.getDate() + 7);
+      return d;
+    });
+  }, []);
+
+  const goToCurrentWeek = useCallback(() => {
+    void HapticFeedback.medium();
+    setWeekStart(startOfWeekMonday(new Date()));
+  }, []);
+
   // Realtime subscription — patch נקודתי ב-state במקום refetch. זול וחלק.
   useEffect(() => {
     const subscription = supabase
@@ -686,11 +964,15 @@ export default function EarningsReportsTab() {
     try {
       EarningsService.clearCache();
       loadedDatesRef.current.clear();
-      await loadWindowAround(selectedDate, { forceReload: true });
+      if (viewMode === 'weekly') {
+        await loadWeek(startOfWeekMonday(weekStart));
+      } else {
+        await loadWindowAround(selectedDate, { forceReload: true });
+      }
     } finally {
       void HapticFeedback.impactLight();
     }
-  }, [selectedDate, loadWindowAround]);
+  }, [viewMode, weekStart, selectedDate, loadWeek, loadWindowAround]);
 
   // בחירת דיווח - פתיחת bottom sheet
   const handleReportPress = useCallback((report: EarningsReport) => {
@@ -698,6 +980,83 @@ export default function EarningsReportsTab() {
     setSelectedReport(report);
     setDetailModalVisible(true);
   }, []);
+
+  const openedReportFromPushRef = useRef<string | null>(null);
+
+  // פתיחה מהתראת Push (earnings_report_id / ticker+date)
+  useEffect(() => {
+    const pushKey = `${openReportId || ''}|${openTicker || ''}|${openReportDate || ''}`;
+    if (!openReportId && !openTicker) {
+      openedReportFromPushRef.current = null;
+      return;
+    }
+    if (openedReportFromPushRef.current === pushKey) return;
+    let cancelled = false;
+
+    const findInLoaded = (): EarningsReport | null => {
+      if (openReportId) {
+        for (const list of Object.values(reportsByDate)) {
+          const hit = list.find((r) => r.id === openReportId);
+          if (hit) return hit;
+        }
+      }
+      if (openTicker && openReportDate) {
+        const dayList = reportsByDate[openReportDate] || [];
+        const tickerUpper = openTicker.toUpperCase();
+        return (
+          dayList.find(
+            (r) =>
+              (r.ticker || r.code || '').toUpperCase() === tickerUpper ||
+              (r.code || '').toUpperCase().replace(/\.US$/i, '') ===
+                tickerUpper.replace(/\.US$/i, ''),
+          ) || null
+        );
+      }
+      return null;
+    };
+
+    const openFromParams = async () => {
+      let report = findInLoaded();
+      if (!report && openReportId) {
+        report = await EarningsService.getById(openReportId);
+      }
+      if (!report && openTicker) {
+        const bySymbol = await EarningsService.getBySymbol(openTicker);
+        if (openReportDate) {
+          report =
+            bySymbol.find((r) => (r.report_date || r.date) === openReportDate) ||
+            null;
+        } else {
+          report = bySymbol[0] || null;
+        }
+      }
+      if (cancelled) return;
+      if (!report) {
+        openedReportFromPushRef.current = pushKey;
+        onOpenReportConsumed?.();
+        return;
+      }
+      openedReportFromPushRef.current = pushKey;
+      const dateStr = report.report_date || report.date;
+      if (dateStr) {
+        setSelectedDate(new Date(`${dateStr}T12:00:00`));
+      }
+      handleReportPress(report);
+      onOpenReportConsumed?.();
+    };
+
+    void openFromParams();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    openReportId,
+    openTicker,
+    openReportDate,
+    reportsByDate,
+    handleReportPress,
+    onOpenReportConsumed,
+  ]);
 
   // סגירת bottom sheet
   const handleCloseDetail = useCallback(() => {
@@ -710,8 +1069,7 @@ export default function EarningsReportsTab() {
       style={{
         paddingHorizontal: screenPad,
         paddingTop: 10,
-        paddingBottom: 20,
-        marginBottom: 4,
+        paddingBottom: 12,
       }}
     >
       <UICard
@@ -780,18 +1138,25 @@ export default function EarningsReportsTab() {
   // רינדור דיווח עם מרווח בין סוגים
   const renderReport = ({ item, index }: { item: EarningsReport; index: number }) => {
     const reports = filteredReports;
-    const currentType = item.before_after_market;
-    const prevType = index > 0 ? reports[index - 1].before_after_market : null;
+    const currentType = normalizeTiming(item.before_after_market);
+    const prevType = index > 0 ? normalizeTiming(reports[index - 1].before_after_market) : null;
     
     // בדיקה אם זה הפריט הראשון של BeforeMarket
     const isFirstBeforeMarket = currentType === 'BeforeMarket' && (index === 0 || prevType !== 'BeforeMarket');
     const isListHead = index === 0;
     
-    // בדיקה אם צריך להוסיף הפרדה - מעבר מ-BeforeMarket ל-AfterMarket
-    const showDivider = currentType === 'AfterMarket' && prevType === 'BeforeMarket';
+    // מפריד "מסחר מאוחר" בפעם הראשונה שמופיע AfterMarket
+    const isFirstAfterMarket =
+      currentType === 'AfterMarket' &&
+      (index === 0 || prevType !== 'AfterMarket');
     
+    // עטיפת View יחידה (לא Fragment) — חובה למדידת גובה תקינה ב-FlatList/scrollToIndex
     return (
-      <>
+      <View
+        onLayout={(e) => {
+          itemHeightByIndexRef.current.set(index, e.nativeEvent.layout.height);
+        }}
+      >
         {isFirstBeforeMarket && (
           <SectionDivider
             label="מסחר מוקדם"
@@ -800,16 +1165,16 @@ export default function EarningsReportsTab() {
             marginTop={isListHead ? 4 : 12}
           />
         )}
-        {showDivider && (
+        {isFirstAfterMarket && (
           <SectionDivider label="מסחר מאוחר" icon={Moon} iconColor="#007AFF" marginTop={14} />
         )}
-        <View style={isListHead && !isFirstBeforeMarket ? { marginTop: 8 } : undefined}>
+        <View style={isListHead && !isFirstBeforeMarket && !isFirstAfterMarket ? { marginTop: 8 } : undefined}>
           <EarningsReportCard
             report={item}
             onPress={handleReportPress}
           />
         </View>
-      </>
+      </View>
     );
   };
 
@@ -934,57 +1299,77 @@ export default function EarningsReportsTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={{ flex: 1, minHeight: 0 }}>
-        <FlatList
-          ref={flatListRef}
-          data={filteredReports}
-          keyExtractor={(item, index) => `${item.id}-${index}`}
-          renderItem={({ item, index }) => renderReport({ item, index })}
-          style={{ flex: 1 }}
-          ListHeaderComponent={renderDateNavigator}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={DesignTokens.colors.success.main}
-            colors={[DesignTokens.colors.success.main]}
-          />
-        }
-        ListEmptyComponent={renderEmptyState}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingTop: 6, paddingBottom: listBottomPad }}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        // אופטימיזציות ביצועים
-        initialNumToRender={10}
-        maxToRenderPerBatch={8}
-        windowSize={10}
-        removeClippedSubviews={false}
+      {viewMode === 'weekly' ? (
+        <EarningsWeeklyView
+          weekDays={weekDays}
+          weekLabel={weekLabel}
+          isCurrentWeek={isCurrentWeek}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          onReportPress={handleReportPress}
+          onPrevWeek={goToPreviousWeek}
+          onNextWeek={goToNextWeek}
+          onGoToCurrentWeek={goToCurrentWeek}
+          bottomPad={isCurrentWeek ? DesignTokens.spacing.lg : DesignTokens.spacing.lg + 84}
         />
-      </View>
+      ) : (
+        <>
+          <View style={{ flex: 1, minHeight: 0 }}>
+            {renderDateNavigator()}
+            <FlatList
+              ref={flatListRef}
+              data={filteredReports}
+              keyExtractor={(item, index) => `${item.id}-${index}`}
+              renderItem={({ item, index }) => renderReport({ item, index })}
+              style={{ flex: 1 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={DesignTokens.colors.success.main}
+                colors={[DesignTokens.colors.success.main]}
+              />
+            }
+            ListEmptyComponent={renderEmptyState}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ flexGrow: 1, paddingTop: LIST_CONTENT_PADDING_TOP, paddingBottom: listBottomPad }}
+            onScroll={handleScroll}
+            onScrollToIndexFailed={handleScrollToIndexFailed}
+            scrollEventThrottle={16}
+            // אופטימיזציות ביצועים
+            initialNumToRender={10}
+            maxToRenderPerBatch={8}
+            windowSize={10}
+            removeClippedSubviews={false}
+            />
+          </View>
 
-      {!isSelectedToday ? (
-        <View style={fabStyles.wrap} pointerEvents="box-none">
-          <TouchableOpacity
-            style={fabStyles.btn}
-            onPress={goToToday}
-            activeOpacity={0.88}
-            accessibilityRole="button"
-            accessibilityLabel="חזרה להיום"
-          >
-            <Ionicons name="today-outline" size={24} color={DesignTokens.colors.text.inverse} />
-            <Text style={fabStyles.btnText}>חזרה להיום</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-      
-      {/* כפתור גלילה לראש */}
-      {showScrollToTop && (
+          {!isSelectedToday ? (
+            <View style={fabStyles.wrap} pointerEvents="box-none">
+              <TouchableOpacity
+                style={fabStyles.btn}
+                onPress={goToToday}
+                activeOpacity={0.88}
+                accessibilityRole="button"
+                accessibilityLabel="חזרה להיום"
+              >
+                <Ionicons name="today-outline" size={24} color={DesignTokens.colors.text.inverse} />
+                <Text style={fabStyles.btnText}>חזרה להיום</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </>
+      )}
+
+      {/* כפתור גלילה לראש — מיקום כמו צ'אט (ימין תחתון), זכוכית UICard glass/light, גודל 44 */}
+      {viewMode === 'daily' && showScrollToTop && (
         <Animated.View
           style={{
             position: 'absolute',
-            bottom: isSelectedToday ? 90 : fabBottomInset + 72,
-            right: 16,
+            bottom: isSelectedToday ? fabBottomInset : fabBottomInset + 72,
+            right: 12,
+            width: 44,
+            height: 44,
             opacity: scrollButtonOpacity,
             transform: [
               {
@@ -998,27 +1383,32 @@ export default function EarningsReportsTab() {
           }}
           pointerEvents="auto"
         >
-          <TouchableOpacity
-            onPress={scrollToTop}
-            activeOpacity={0.8}
+          <View
             style={{
               width: 44,
               height: 44,
               borderRadius: 22,
-              backgroundColor: DesignTokens.colors.background.secondary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderWidth: 1,
-              borderColor: DesignTokens.colors.border.primary,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: 0.3,
-              shadowRadius: 6,
-              elevation: 6,
+              overflow: 'hidden',
+              flexShrink: 0,
             }}
           >
-            <ChevronUp size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.3} />
-          </TouchableOpacity>
+            <UICard
+              variant="glass"
+              glassIntensity="light"
+              padding="none"
+              onPress={scrollToTop}
+              accessibilityLabel="גלול לראש הרשימה"
+              style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden' }}
+              contentContainerStyle={{
+                width: 44,
+                height: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ChevronUp size={22} color={DesignTokens.colors.text.primary} strokeWidth={2.3} />
+            </UICard>
+          </View>
         </Animated.View>
       )}
 
@@ -1331,8 +1721,8 @@ const EarningsDetailSheet: React.FC<EarningsDetailSheetProps> = ({ visible, repo
       edgeToEdge
       showHandle
       enablePanDownToClose
-      backdropOpacity={0.5}
-      showBrandWatermark={false}
+      showBrandBackground={false}
+      useGlassBackground
       topCornerRadius={28}
     >
       <View style={sheetStyles.container}>

@@ -27,7 +27,7 @@ export const TickerLogo = memo(function TickerLogo({
         width: size,
         height: size,
         borderRadius: radius,
-        backgroundColor: tokens.colors.background.elevated,
+        backgroundColor: '#FFFFFF',
         overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',
@@ -40,7 +40,7 @@ export const TickerLogo = memo(function TickerLogo({
           contentFit="cover"
           transition={120}
           cachePolicy="memory-disk"
-          recyclingKey={symbol}
+          recyclingKey={`${symbol}-icon-light`}
           onError={() => setFailed(true)}
         />
       ) : (

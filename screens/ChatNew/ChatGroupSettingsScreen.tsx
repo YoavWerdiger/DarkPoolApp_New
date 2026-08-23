@@ -110,7 +110,9 @@ export default function ChatGroupSettingsScreen() {
     if (!success) {
       setIsMuted(!value);
       legacyAlert('שגיאה', 'לא ניתן לשנות את הגדרות ההשתקה');
+      return;
     }
+    await refreshCurrentGroupDetails();
   };
 
   const handleRename = () => {

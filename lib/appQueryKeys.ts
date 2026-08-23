@@ -11,6 +11,8 @@ export const appQueryKeys = {
 
   // DarkPool / Unusual Whales — list-type (נשמרים לדיסק)
   uwExplore: ['uw', 'explore'] as const,
+  /** פס אנשים במסך בית אינסיידרים */
+  uwExploreHomeStrip: ['uw', 'explore', 'home-strip-v2'] as const,
   uwSignals: ['uw', 'signals'] as const,
   featuredProfiles: ['uw', 'featured'] as const,
   darkPoolFeed: (isPremium: boolean) => ['darkpool', 'feed', isPremium] as const,
@@ -35,11 +37,23 @@ export const appQueryKeys = {
 
   // User entitlements (cache בזיכרון בלבד — לא נשמר לדיסק כדי לא להציג הרשאה ישנה)
   userSubscription: (userId: string) => ['user', 'subscription', userId] as const,
+  userPaymentHistory: (userId: string) => ['user', 'paymentHistory', userId] as const,
   userIsAdmin: (userId: string) => ['user', 'isAdmin', userId] as const,
 
   // Portfolios / Stories
   portfolios: ['portfolios', 'list'] as const,
   storiesUsers: ['stories', 'users'] as const,
+
+  // Stock watchlists
+  watchlists: ['watchlist', 'lists'] as const,
+  watchlistItems: (watchlistId: string) =>
+    ['watchlist', 'items', watchlistId] as const,
+  watchlistQuotes: (symbolsKey: string) =>
+    ['watchlist', 'quotes', symbolsKey] as const,
+  watchlistInsights: (symbolsKey: string) =>
+    ['watchlist', 'insights', symbolsKey] as const,
+  watchlistRangeStats: (symbolsKey: string) =>
+    ['watchlist', 'rangeStats', symbolsKey] as const,
 
   // Economic calendar / Journal trades
   economicEvents: ['economic', 'events'] as const,

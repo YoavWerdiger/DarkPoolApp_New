@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { loadDerivedTrades } from '../../../services/portfolios/portfolioTradeDerive';
-import type { DerivedTrade, PortfolioHolding } from '../portfolioTypes';
+import { loadTrades } from '../../../services/portfolios/portfolioTradeDerive';
+import type { Trade, PortfolioHolding } from '../portfolioTypes';
 import {
   formatCurrency,
   formatPercent,
@@ -23,6 +23,8 @@ import { HapticFeedback } from '../../../utils/hapticFeedback';
 interface Props {
   portfolioId: string;
   holdings?: PortfolioHolding[];
+  /** מפתח שמשתנה בכל פעם שהמסך האב מרענן נתונים — מאלץ טעינה מחדש */
+  refreshKey?: number;
 }
 
 function formatQty(qty: number): string {
@@ -33,12 +35,12 @@ function ClosedTradeCard({
   trade: t,
   styles,
 }: {
-  trade: DerivedTrade;
+  trade: Trade;
   styles: ReturnType<typeof createCardStyles>;
 }) {
   const tokens = useDesignTokens();
   const isLong = t.direction === 'long';
-  const pnl = t.realized_pnl;
+  const pnl = t.profit_loss ?? 0;
   const pnlPositive = pnl > 0;
   const pnlNegative = pnl < 0;
   const pnlColor = pnlPositive
@@ -48,14 +50,22 @@ function ClosedTradeCard({
       : tokens.colors.text.secondary;
 
   const exitStr =
-    t.exit_avg_price != null
-      ? formatCurrency(t.exit_avg_price, t.currency, 2)
+    t.exit_price != null
+      ? formatCurrency(t.exit_price, t.currency, 2)
       : '—';
-  const entryStr = formatCurrency(t.entry_avg_price, t.currency, 2);
+  const entryStr = formatCurrency(t.entry_price, t.currency, 2);
   let subtitle = `${formatQty(t.quantity)} × ${entryStr} → ${exitStr}`;
-  if (t.fees > 0) {
-    subtitle += ` · עמלות ${formatCurrency(t.fees, t.currency, 2)}`;
+  if (t.commission > 0) {
+    subtitle += ` · עמלות ${formatCurrency(t.commission, t.currency, 2)}`;
   }
+
+  // אחוז P&L
+  const pnlPct =
+    t.exit_price != null && t.entry_price > 0
+      ? isLong
+        ? ((t.exit_price - t.entry_price) / t.entry_price) * 100 * t.leverage
+        : ((t.entry_price - t.exit_price) / t.entry_price) * 100 * t.leverage
+      : null;
 
   return (
     <UICard
@@ -83,9 +93,9 @@ function ClosedTradeCard({
             {pnlPositive ? '+' : pnlNegative ? '−' : ''}
             {formatCurrency(Math.abs(pnl), t.currency)}
           </Text>
-          {t.realized_pnl_pct != null ? (
+          {pnlPct != null ? (
             <Text style={[styles.rowPct, { color: pnlColor }]}>
-              {formatPercent(t.realized_pnl_pct)}
+              {formatPercent(pnlPct)}
             </Text>
           ) : null}
         </View>
@@ -156,43 +166,49 @@ function createCardStyles(tokens: ReturnType<typeof useDesignTokens>) {
   });
 }
 
+
 /** טאב היסטוריה — טריידים סגורים, חיפוש לפי סימבול. */
-export default function HistoryTab({ portfolioId, holdings = [] }: Props) {
+export default function HistoryTab({ portfolioId, refreshKey }: Props) {
   const tokens = useDesignTokens();
   const cardStyles = useMemo(() => createCardStyles(tokens), [tokens]);
-  const [trades, setTrades] = useState<DerivedTrade[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const priceMap = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const h of holdings) {
-      if (h.last_price && h.symbol) m[h.symbol] = h.last_price;
-    }
-    return m;
-  }, [holdings]);
-
   const load = useCallback(async () => {
     try {
-      const data = await loadDerivedTrades(portfolioId, priceMap);
-      const closed = data
-        .filter((t) => !t.is_open && t.closed_at)
-        .sort(
-          (a, b) =>
-            new Date(b.closed_at!).getTime() -
-            new Date(a.closed_at!).getTime()
-        );
-      setTrades(closed);
+      const data = await loadTrades(portfolioId, 'CLOSED');
+      const sorted = [...data].sort(
+        (a, b) =>
+          new Date(b.exit_date!).getTime() -
+          new Date(a.exit_date!).getTime()
+      );
+      setTrades(sorted);
     } catch (err) {
-      console.error('history loadDerivedTrades:', err);
+      console.error('history loadTrades:', err);
     } finally {
       setLoading(false);
     }
-  }, [portfolioId, priceMap]);
+  }, [portfolioId]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // רענון כשהמסך האב מעדכן נתונים (למשל אחרי סגירת פוזיציה)
+  const refreshKeyRef = useRef(false);
+  useEffect(() => {
+    if (!refreshKeyRef.current) {
+      refreshKeyRef.current = true;
+      return;
+    }
+    void load();
+  }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const totalPnl = useMemo(
+    () => trades.reduce((s, t) => s + (t.profit_loss ?? 0), 0),
+    [trades]
+  );
 
   const filteredTrades = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -277,9 +293,35 @@ export default function HistoryTab({ portfolioId, holdings = [] }: Props) {
   }
 
   const hasQuery = searchQuery.trim().length > 0;
+  const pnlPositive = totalPnl > 0;
+  const pnlNegative = totalPnl < 0;
 
   return (
     <View>
+      {/* סיכום P&L כולל */}
+      {trades.length > 0 && (
+        <UICard variant="glass" glassIntensity="light" padding="none" style={{ borderRadius: 20, marginBottom: 12, overflow: 'hidden' }}>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: tokens.colors.text.tertiary, textAlign: 'right' }}>
+              סך P&L ממומש ({trades.length} עסקאות)
+            </Text>
+            <Text style={{
+              fontSize: 16,
+              fontWeight: '800',
+              writingDirection: 'ltr',
+              color: pnlPositive
+                ? tokens.colors.primary.main
+                : pnlNegative
+                  ? tokens.colors.text.danger
+                  : tokens.colors.text.secondary,
+            }}>
+              {pnlPositive ? '+' : pnlNegative ? '−' : ''}
+              {formatCurrency(Math.abs(totalPnl), 'USD')}
+            </Text>
+          </View>
+        </UICard>
+      )}
+
       <View style={layoutStyles.searchRow}>
         <UICard
           variant="glass"
@@ -337,7 +379,7 @@ export default function HistoryTab({ portfolioId, holdings = [] }: Props) {
         </View>
       ) : (
         filteredTrades.map((t) => (
-          <ClosedTradeCard key={t.key} trade={t} styles={cardStyles} />
+          <ClosedTradeCard key={t.id} trade={t} styles={cardStyles} />
         ))
       )}
     </View>

@@ -11,12 +11,11 @@ export interface IsAdminInfo {
   isLoading: boolean;
 }
 
-async function fetchIsAdmin(userId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('users')
-    .select('subscription_role')
-    .eq('id', userId)
-    .maybeSingle();
+async function fetchIsAdmin(): Promise<boolean> {
+  // subscription_role לא קריא ל-`authenticated` על public.users; הפרופיל
+  // של המשתמש עצמו מגיע מ-RPC שנעול על auth.uid().
+  const { data: rows, error } = await supabase.rpc('get_my_profile');
+  const data = Array.isArray(rows) ? rows[0] : rows;
 
   if (error || !data) return false;
   const role = String(data.subscription_role || '').toLowerCase();
@@ -34,7 +33,7 @@ export function useIsAdmin(): IsAdminInfo {
 
   const query = useQuery<boolean>({
     queryKey: appQueryKeys.userIsAdmin(userId ?? 'anon'),
-    queryFn: () => fetchIsAdmin(userId as string),
+    queryFn: () => fetchIsAdmin(),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
   });

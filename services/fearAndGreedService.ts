@@ -50,20 +50,28 @@ export const FEAR_GREED_MINI_SEGMENTS = [
   { label: 'תאווה\nקיצונית', color: FEAR_GREED_COLORS.greedExtreme, from: 75, to: 100 },
 ] as const;
 
-const PERSISTENT_CACHE_KEY = '@fear_and_greed_index_cache_v1';
+// v2 — מבטל קאש ישן (RapidAPI/יולי) שנשמר תחת v1 והציג 45/Neutral לנצח.
+const PERSISTENT_CACHE_KEY = '@fear_and_greed_index_cache_v2';
+const LEGACY_PERSISTENT_CACHE_KEY = '@fear_and_greed_index_cache_v1';
 const PERSISTENT_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // נשתמש בקאש עד שבוע במקרה של offline
+
+/** CNN stock-market Fear & Greed (RapidAPI listing is gone — 404). */
+const CNN_FGI_URL = 'https://production.dataviz.cnn.io/index/fearandgreed/graphdata';
+const CNN_FGI_HEADERS: Record<string, string> = {
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  Accept: 'application/json, text/plain, */*',
+  Origin: 'https://www.cnn.com',
+  Referer: 'https://www.cnn.com/markets/fear-and-greed',
+};
 
 class FearAndGreedService {
   private static instance: FearAndGreedService;
-  private apiKey: string;
-  private baseUrl = 'https://fear-and-greed-index.p.rapidapi.com';
   private cache: { data: FearAndGreedResponse | null; timestamp: number } | null = null;
   private cacheTimeout = 15 * 60 * 1000; // 15 דק' — בפרודקשן ה-cron מעדכן את המסד כל 15 דק'
   private persistentRestorePromise: Promise<void> | null = null;
 
   private constructor() {
-    const key = process.env.EXPO_PUBLIC_RAPIDAPI_KEY;
-    this.apiKey = (key ?? '').trim();
     // טעינה אסינכרונית של קאש מתמשך מ-AsyncStorage כך שגם בהפעלה ראשונה
     // (לפני שהבקשה הראשונה הסתיימה) יהיה לנו ערך אמיתי אחרון להציג.
     this.persistentRestorePromise = this.restoreFromPersistentCache();
@@ -71,6 +79,9 @@ class FearAndGreedService {
 
   private async restoreFromPersistentCache(): Promise<void> {
     try {
+      // ניקוי חד-פעמי של קאש v1 (יולי / RapidAPI) שלא יחזור כ-fallback
+      void AsyncStorage.removeItem(LEGACY_PERSISTENT_CACHE_KEY).catch(() => undefined);
+
       const raw = await AsyncStorage.getItem(PERSISTENT_CACHE_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
@@ -81,7 +92,9 @@ class FearAndGreedService {
       // לא משחזרים נתון ישן מדי כדי לא להציג ערך מטעה לאחר תקופה ארוכה ללא רשת
       if (Date.now() - parsed.timestamp > PERSISTENT_CACHE_MAX_AGE) return;
       if (!this.cache) {
-        this.cache = parsed;
+        // לשחזר רק כ-offline fallback — timestamp:0 מבטיח ש-getCachedData
+        // לא יחזיר את הערך כ"טרי" ויחסום fetch מ-DB/CNN.
+        this.cache = { data: parsed.data, timestamp: 0 };
       }
     } catch {
       /* קאש פגום — נתעלם */
@@ -180,10 +193,14 @@ class FearAndGreedService {
   /**
    * Try to load the cached Fear & Greed value from Supabase. The
    * `fear_and_greed_index` table is populated by the `fear-greed-update`
-   * Edge Function (cron) — this is what makes the card work in production
-   * even when no `EXPO_PUBLIC_RAPIDAPI_KEY` is bundled in the client.
+   * Edge Function (cron).
+   *
+   * Rows older than 36h are treated as a miss so the client can refresh
+   * from CNN when the cron/updater is broken (RapidAPI outage left a July row).
    */
-  private async getFromSupabase(): Promise<FearAndGreedResponse | null> {
+  private async getFromSupabase(opts?: {
+    allowStale?: boolean;
+  }): Promise<FearAndGreedResponse | null> {
     try {
       const { data, error } = await supabase
         .from('fear_and_greed_index')
@@ -192,10 +209,99 @@ class FearAndGreedService {
         .maybeSingle();
 
       if (error || !data) return null;
+
+      if (!opts?.allowStale && data.updated_at) {
+        const ageMs = Date.now() - new Date(data.updated_at).getTime();
+        if (Number.isFinite(ageMs) && ageMs > 36 * 60 * 60 * 1000) {
+          return null;
+        }
+      }
+
       return this.buildFromSupabaseRow(data as any);
     } catch {
       return null;
     }
+  }
+
+  private clampScore(raw: unknown): number | null {
+    const n =
+      typeof raw === 'number'
+        ? raw
+        : typeof raw === 'string' && raw.trim() !== ''
+          ? Number(raw)
+          : NaN;
+    if (!Number.isFinite(n)) return null;
+    return Math.max(0, Math.min(100, Math.round(n)));
+  }
+
+  private toUnixSeconds(raw: unknown): number {
+    if (typeof raw === 'number' && Number.isFinite(raw)) {
+      return raw > 1e12 ? Math.floor(raw / 1000) : Math.floor(raw);
+    }
+    if (typeof raw === 'string' && raw.trim() !== '') {
+      const ms = Date.parse(raw);
+      if (Number.isFinite(ms)) return Math.floor(ms / 1000);
+    }
+    return Math.floor(Date.now() / 1000);
+  }
+
+  private normalizeEnglishRating(rating: unknown, score: number): string {
+    const raw = typeof rating === 'string' ? rating.trim().toLowerCase() : '';
+    if (raw.includes('extreme') && raw.includes('fear')) return 'Extreme Fear';
+    if (raw.includes('extreme') && raw.includes('greed')) return 'Extreme Greed';
+    if (raw === 'fear') return 'Fear';
+    if (raw === 'greed') return 'Greed';
+    if (raw === 'neutral') return 'Neutral';
+    return this.getValueDescription(score);
+  }
+
+  /**
+   * Direct CNN Fear & Greed fetch (no API key). Used when Supabase cache is
+   * empty/stale-unreachable. RapidAPI was retired (endpoint 404).
+   */
+  private async getFromCnn(): Promise<FearAndGreedResponse> {
+    const response = await fetch(CNN_FGI_URL, {
+      method: 'GET',
+      headers: CNN_FGI_HEADERS,
+    });
+
+    if (!response.ok) {
+      throw new Error(`CNN Fear & Greed API Error: ${response.status} ${response.statusText}`);
+    }
+
+    const cnn = await response.json();
+    const fg = cnn?.fear_and_greed;
+    const value = this.clampScore(fg?.score);
+    if (value == null) {
+      throw new Error('CNN Fear & Greed response missing score');
+    }
+
+    const timestamp = this.toUnixSeconds(fg.timestamp);
+    const nowData: FearAndGreedData = {
+      value,
+      valueClassification: this.normalizeEnglishRating(fg.rating, value),
+      timestamp,
+    };
+
+    const hist = (score: unknown): FearAndGreedData => {
+      const v = this.clampScore(score);
+      if (v == null) return nowData;
+      return {
+        value: v,
+        valueClassification: this.normalizeEnglishRating(null, v),
+        timestamp,
+      };
+    };
+
+    return {
+      fgi: {
+        now: nowData,
+        previousClose: hist(fg.previous_close),
+        oneWeekAgo: hist(fg.previous_1_week),
+        oneMonthAgo: hist(fg.previous_1_month),
+        oneYearAgo: hist(fg.previous_1_year),
+      },
+    };
   }
 
   // שליפת מדד הפחד והתאווה
@@ -217,154 +323,17 @@ class FearAndGreedService {
         return cached;
       }
 
-      // 1) קודם כל ננסה Supabase — הטבלה מתעדכנת ע״י Edge Function עם הסוד מוסתר.
-      //    זה גם הפתרון לפרודקשן (אין EXPO_PUBLIC_RAPIDAPI_KEY ב-bundle).
+      // 1) קודם כל ננסה Supabase — הטבלה מתעדכנת ע״י Edge Function.
       const fromDb = await this.getFromSupabase();
       if (fromDb) {
         this.setCachedData(fromDb);
         return fromDb;
       }
 
-      // 2) אם אין נתונים ב-DB, ננסה RapidAPI (במצבי dev/preview עם מפתח ב-.env)
-      if (!this.apiKey) {
-        throw new Error('RapidAPI key is not configured');
-      }
-
-
-      const response = await fetch(`${this.baseUrl}/v1/fgi`, {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-host': 'fear-and-greed-index.p.rapidapi.com',
-          'x-rapidapi-key': this.apiKey,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Invalid RapidAPI key');
-        }
-        if (response.status === 429) {
-          throw new Error('Rate limit exceeded. Please try again later.');
-        }
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-
-      const rawData = await response.json();
-      
-      // המרת הנתונים לפורמט אחיד
-      let data: FearAndGreedResponse;
-      
-      // טיפול בפורמטים שונים של תגובה
-      let nowData: FearAndGreedData;
-      
-      // פורמט 1: fgi.now (הפורמט הסטנדרטי)
-      if (rawData.fgi?.now) {
-        // קבלת הערך - יכול להיות value או valueClassification
-        const value = rawData.fgi.now.value ?? 
-                     (typeof rawData.fgi.now.valueClassification === 'number' ? rawData.fgi.now.valueClassification : null) ??
-                     50;
-        
-        // קבלת התיאור - יכול להיות valueText או valueClassification
-        const classification = rawData.fgi.now.valueText || 
-                              rawData.fgi.now.valueClassification || 
-                              this.getValueDescription(value);
-        
-        // קבלת timestamp - יכול להיות timestamp, lastUpdated.epochUnixSeconds, או lastUpdated.humanDate
-        let timestamp = rawData.fgi.now.timestamp;
-        if (!timestamp && rawData.lastUpdated) {
-          timestamp = rawData.lastUpdated.epochUnixSeconds || 
-                     (rawData.lastUpdated.humanDate ? Math.floor(new Date(rawData.lastUpdated.humanDate).getTime() / 1000) : null);
-        }
-        if (!timestamp) {
-          timestamp = Math.floor(Date.now() / 1000);
-        }
-        
-        nowData = {
-          value: typeof value === 'number' ? value : parseInt(String(value)) || 50,
-          valueClassification: classification,
-          timestamp: timestamp,
-          timeUntilUpdate: rawData.fgi.now.timeUntilUpdate,
-        };
-        
-        // פונקציה עזר ליצירת נתונים היסטוריים
-        const createHistoricalData = (item: any) => {
-          if (!item) return nowData;
-          const itemValue = item.value ?? 50;
-          const itemClassification = item.valueText || item.valueClassification || this.getValueDescription(itemValue);
-          return {
-            value: typeof itemValue === 'number' ? itemValue : parseInt(String(itemValue)) || 50,
-            valueClassification: itemClassification,
-            timestamp: item.timestamp || timestamp,
-            timeUntilUpdate: item.timeUntilUpdate,
-          };
-        };
-        
-        data = {
-          fgi: {
-            now: nowData,
-            previousClose: createHistoricalData(rawData.fgi.previousClose),
-            oneWeekAgo: createHistoricalData(rawData.fgi.oneWeekAgo),
-            oneMonthAgo: createHistoricalData(rawData.fgi.oneMonthAgo),
-            oneYearAgo: createHistoricalData(rawData.fgi.oneYearAgo),
-          },
-        };
-      }
-      // פורמט 2: נתונים ישירים ברמה העליונה
-      else if (rawData.value !== undefined || rawData.now) {
-        const value = rawData.value ?? rawData.now?.value ?? 50;
-        const classification = rawData.valueClassification || rawData.now?.valueClassification || this.getValueDescription(value);
-        
-        nowData = {
-          value: typeof value === 'number' ? value : parseInt(value) || 50,
-          valueClassification: classification,
-          timestamp: rawData.timestamp || rawData.now?.timestamp || Math.floor(Date.now() / 1000),
-          timeUntilUpdate: rawData.timeUntilUpdate || rawData.now?.timeUntilUpdate,
-        };
-        
-        data = {
-          fgi: {
-            now: nowData,
-            previousClose: nowData,
-            oneWeekAgo: nowData,
-            oneMonthAgo: nowData,
-            oneYearAgo: nowData,
-          },
-        };
-      }
-      // פורמט 3: מבנה אחר (למשל array או מבנה שונה)
-      else if (Array.isArray(rawData) && rawData.length > 0) {
-        const firstItem = rawData[0];
-        nowData = {
-          value: firstItem.value ?? firstItem.score ?? 50,
-          valueClassification: firstItem.valueClassification || firstItem.classification || this.getValueDescription(firstItem.value ?? 50),
-          timestamp: firstItem.timestamp || Math.floor(Date.now() / 1000),
-          timeUntilUpdate: firstItem.timeUntilUpdate,
-        };
-        
-        data = {
-          fgi: {
-            now: nowData,
-            previousClose: nowData,
-            oneWeekAgo: nowData,
-            oneMonthAgo: nowData,
-            oneYearAgo: nowData,
-          },
-        };
-      }
-      // פורמט לא צפוי - נזרוק שגיאה עם פרטים
-      else {
-        throw new Error(`Unexpected API response format. Received: ${JSON.stringify(rawData).substring(0, 200)}`);
-      }
-      
-      // וידוא שהערך תקין (0-100)
-      if (data.fgi.now.value < 0 || data.fgi.now.value > 100) {
-        data.fgi.now.value = Math.max(0, Math.min(100, data.fgi.now.value));
-      }
-
-      // שמירה ב-cache
-      this.setCachedData(data);
-
-      return data;
+      // 2) fallback ישיר מ-CNN (בלי מפתח) אם ה-DB ריק / מיושן / לא נגיש
+      const fromCnn = await this.getFromCnn();
+      this.setCachedData(fromCnn);
+      return fromCnn;
     } catch (error: any) {
 
       // אם יש cache ישן, נחזיר אותו במקום לזרוק שגיאה
@@ -372,11 +341,19 @@ class FearAndGreedService {
         return this.cache.data;
       }
 
-      // ניסיון אחרון — לקרוא מ-Supabase גם אם RapidAPI נכשל
-      const fromDb = await this.getFromSupabase();
+      // ניסיון אחרון — DB גם אם מיושן, ואז CNN
+      const fromDb = await this.getFromSupabase({ allowStale: true });
       if (fromDb) {
         this.setCachedData(fromDb);
         return fromDb;
+      }
+
+      try {
+        const fromCnn = await this.getFromCnn();
+        this.setCachedData(fromCnn);
+        return fromCnn;
+      } catch {
+        /* fall through */
       }
 
       throw error;

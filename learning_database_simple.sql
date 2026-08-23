@@ -176,7 +176,7 @@ CREATE POLICY "Anyone can view media links" ON lesson_media_links
 
 -- הוספת נתוני דמה
 INSERT INTO courses (id, title, subtitle, description, cover_url, instructor_name, instructor_avatar, duration_hours, level, rating, students_count, price, original_price, is_active) VALUES
-('whales-course-1', 'קורס הלוויתנים', 'הפריצה לשוק - דוד אריאל', 'קורס דיגיטלי פרקטי ומעשי שכולל בתוכו קונספטים ואסטרטגיית מסחר יומי מוכחת! הקורס פונה לסוחרים מתקדמים בשוק ההון שרוצים לקחת את המסחר שלהם לרמה הבאה! וללמוד אסטרטגיית מסחר מקצועית במסחר יומי!', 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/Wheles.png', 'דוד אריאל', 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg', 8, 'מתקדם', 4.8, 1250, 0, 0, true)
+('whales-course-1', 'קורס הלוויתנים', 'הפריצה לשוק - דוד אריאל', 'קורס דיגיטלי פרקטי ומעשי שכולל בתוכו קונספטים ואסטרטגיית מסחר יומי מוכחת! הקורס פונה לסוחרים מתקדמים בשוק ההון שרוצים לקחת את המסחר שלהם לרמה הבאה! וללמוד אסטרטגיית מסחר מקצועית במסחר יומי!', 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/whales-course-banner.jpg', 'דוד אריאל', 'https://wpmrtczbfcijoocguime.supabase.co/storage/v1/object/public/course_media/channels4_profile.jpg', 8, 'מתקדם', 4.8, 1250, 0, 0, true)
 ON CONFLICT (id) DO UPDATE SET
   title = EXCLUDED.title,
   subtitle = EXCLUDED.subtitle,

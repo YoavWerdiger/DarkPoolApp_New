@@ -30,7 +30,7 @@ Priority bands:
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 1.1 | **Stop bundling CardCom API password into the client.** `EXPO_PUBLIC_CARDCOM_API_PASSWORD` (and `_API_NAME`, `_TERMINAL`) are read inside `services/paymentService.ts` and therefore inlined into every APK/IPA. | TODO | Rotate the CardCom credentials immediately. Move the password and API name into Supabase Edge Function secrets and call `create-payment` / `rapid-responder` from the client without secrets. Keep only the terminal number client-side if needed. |
+| 1.1 | **Stop bundling CardCom API password into the client.** Client no longer reads `EXPO_PUBLIC_CARDCOM_*` secrets; checkout goes through `create-payment` / webhook `rapid-responder`. Config in Admin → CardCom (`cardcom_config`) or Edge secrets. | DONE (code) | **Ops still required:** rotate any previously published CardCom ApiName/ApiPassword in the CardCom portal, save the new credentials in Admin/Edge, revoke the old API user, and remove leftover `EXPO_PUBLIC_CARDCOM_*` from EAS/Expo env on next build. |
 | 1.2 | **Rotate Benzinga / EODHD / RapidAPI keys** – all currently exposed via `EXPO_PUBLIC_*`. | TODO | Proxy market-data requests through Edge Functions (`benzinga-*`, `daily-earnings-sync-*` already exist) and remove the keys from the client. |
 | 1.3 | **Rotate Firebase API key** in `google-services.json`. Keep the platform-local copy under `android/app/`, do not commit a copy at the repo root. | TODO | The root-level `google-services.json` is now `.gitignore`d. For EAS Build, upload the file as an EAS Secret and reference it from `eas.json`. |
 | 1.4 | **Untrack secrets and binary build artifacts.** Done: `git rm --cached` for `google-oauth-credentials.json`, root `google-services.json`, 8 × `app-release-*.aab`, loose `payment-callback-function.ts` / `payment-success-function.ts` / `send-push-direct.ts`, build logs. New `.gitignore` blocks future re-introduction. | DONE | Working tree intact; nothing was deleted from disk. Commit the staged removals to actually remove them from `HEAD`. |
@@ -72,7 +72,7 @@ Coverage gate currently set to `lines: 5 / statements: 5` in `jest.config.js`. R
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 4.1 | **Move payment session creation server-side.** `create-payment` already exists in `supabase/functions/`; ensure the client calls it instead of building the CardCom request directly. | TODO | Pre-req for 1.1. |
+| 4.1 | **Move payment session creation server-side.** Client invokes `create-payment`; admin refund/deferred via `admin-cardcom`. | DONE | Recurring plans still map Create to Operation `"2"` until a scheduled renew uses CreateTokenOnly + deferred charge. |
 | 4.2 | **Server-side rate-limit enforcement on message send.** Today rate-limit is client-side only (`chatValidation.checkRateLimit`); the `rate_limits` table + `atomic_rate_limit` RPC already exist (migrations 002 / 008) — wire them into `chat-send-message` Edge Function and require it from the client. | TODO | |
 | 4.3 | **Audit RLS on `chat_messages`, `chat_group_members`, `polls`, `trades`, `portfolio_transactions`.** Confirm every read/write path is restricted by `auth.uid()` and that no `usingChat()` policy uses heavy joins. | TODO | |
 | 4.4 | **Edge Function consolidation.** 12+ overlapping `daily-earnings-sync-*` variants in `supabase/functions/` — delete dead ones, keep one canonical version per cadence (daily / live / notifications). | TODO | |

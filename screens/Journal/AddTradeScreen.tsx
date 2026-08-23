@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -40,13 +40,19 @@ type Nav = NativeStackNavigationProp<JournalStackParamList, 'AddTrade'>;
 export default function AddTradeScreen() {
   const DesignTokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
+  const route = useRoute<any>();
   const { user } = useAuth();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
 
   const [step, setStep] = useState(0);
-  const [symbol, setSymbol] = useState('');
+  const [symbol, setSymbol] = useState(
+    () => String(route.params?.initialSymbol ?? '').toUpperCase()
+  );
   const [direction, setDirection] = useState<'long' | 'short'>('long');
-  const [entryPrice, setEntryPrice] = useState('');
+  const [entryPrice, setEntryPrice] = useState(() => {
+    const p = route.params?.initialEntryPrice;
+    return p != null && Number.isFinite(Number(p)) ? String(p) : '';
+  });
   const [exitPrice, setExitPrice] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [stopLoss, setStopLoss] = useState('');
@@ -64,7 +70,9 @@ export default function AddTradeScreen() {
   const [moodAfter, setMoodAfter] = useState<MoodId | null>(null);
   const [followedPlan, setFollowedPlan] = useState<boolean | null>(null);
   const [strategyType, setStrategyType] = useState('');
-  const [entryReason, setEntryReason] = useState('');
+  const [entryReason, setEntryReason] = useState(
+    () => String(route.params?.initialNotes ?? '')
+  );
   const [exitReason, setExitReason] = useState('');
   const [mistakeIds, setMistakeIds] = useState<string[]>([]);
 

@@ -80,5 +80,6 @@ curl -X POST "https://wpmrtczbfcijoocguime.supabase.co/functions/v1/sync-insider
 
 - **מומלצים + 13F:** הרץ מיגרציה `044_featured_funds.sql` ב-SQL Editor (Dashboard → SQL).
 - אחרי המיגרציה: `curl -X POST .../sync-fund-13f` לטעינת תיקי באפי/ARK.
+- **היסטוריה לפוליטיקאים מאוצרים:** `sync-congress-trades` עם `{"deep":true}` מושך היסטוריה לפי BioGuide (UW/Quiver) לפלוסי וכו׳ — עדיין **שחזור מדיווחים**, לא net worth.
 
 אם תרצה תיק snapshot אמיתי: UW Enterprise **או** Quiver Commercial — בלי refactor גדול, רק להפעיל `politician-portfolios` שוב.

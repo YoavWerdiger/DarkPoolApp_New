@@ -21,6 +21,7 @@ import { useDesignTokens } from '../ui/DesignTokens';
 export interface ChatComposerBarProps {
   value: string;
   onChangeText: (text: string) => void;
+  onBlur?: () => void;
   placeholder?: string;
   placeholderTextColor?: string;
   editable?: boolean;
@@ -48,6 +49,7 @@ export interface ChatComposerBarProps {
 export default function ChatComposerBar({
   value,
   onChangeText,
+  onBlur,
   placeholder,
   placeholderTextColor,
   editable = true,
@@ -88,6 +90,7 @@ export default function ChatComposerBar({
           placeholderTextColor={placeholderTextColor ?? tokens.colors.text.secondary}
           value={value}
           onChangeText={onChangeText}
+          onBlur={onBlur}
           multiline={multiline}
           numberOfLines={numberOfLines}
           maxLength={maxLength}

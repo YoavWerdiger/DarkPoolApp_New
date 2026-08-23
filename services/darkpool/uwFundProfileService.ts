@@ -6,6 +6,8 @@ export interface FundHolding {
   shares: number | null;
   value_usd: number | null;
   allocation_pct: number | null;
+  /** דיווח 13F ראשון שבו הטיקר מופיע אצלנו (לא בהכרח קנייה ראשונה) */
+  first_added_date?: string | null;
 }
 
 export interface FundValuePoint {

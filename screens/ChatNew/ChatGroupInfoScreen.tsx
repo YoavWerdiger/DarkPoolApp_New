@@ -3,7 +3,7 @@
 // ============================================
 
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,11 +16,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  Animated,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
-import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import { ChatGroupMember, ChatMemberRole } from '../../types/chat.types';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,6 +38,13 @@ import {
   formatUserPresenceLabel,
   isUserPresenceOnline,
 } from '../../utils/userPresence';
+
+if (
+  Platform.OS === 'android' &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function ChatGroupInfoScreen() {
   const navigation = useNavigation();
@@ -148,6 +158,53 @@ export default function ChatGroupInfoScreen() {
       return (a.user?.display_name || '').localeCompare(b.user?.display_name || '', 'he');
     });
   }, [currentGroup?.members, getMemberPresence]);
+
+  const currentUserId = user?.id;
+
+  const { activeMembers, otherRows } = useMemo(() => {
+    let me: ChatGroupMember | null = null;
+    const admins: ChatGroupMember[] = [];
+    const others: ChatGroupMember[] = [];
+    for (const member of sortedMembers) {
+      if (currentUserId && member.user_id === currentUserId) {
+        me = member;
+        continue;
+      }
+      if (member.role === 'admin') {
+        admins.push(member);
+      } else {
+        others.push(member);
+      }
+    }
+    return {
+      activeMembers: me ? [me, ...admins] : admins,
+      otherRows: others,
+    };
+  }, [sortedMembers, currentUserId]);
+
+  const [expandedMembers, setExpandedMembers] = useState(false);
+  const chevronAnim = useRef(new Animated.Value(0)).current;
+
+  const toggleExpandedMembers = useCallback(() => {
+    void HapticFeedback.selection();
+    if (Platform.OS !== 'web') {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+    setExpandedMembers((prev) => {
+      const next = !prev;
+      Animated.timing(chevronAnim, {
+        toValue: next ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+      return next;
+    });
+  }, [chevronAnim]);
+
+  const chevronRotate = chevronAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
 
   // ============================================
   // Handle Actions
@@ -280,7 +337,10 @@ export default function ChatGroupInfoScreen() {
     if (!success) {
       setIsMuted(!value);
       legacyAlert('שגיאה', 'לא ניתן לשנות את הגדרות ההשתקה');
+      return;
     }
+    // רענון כדי ש-currentGroup.is_muted / רשימת הקבוצות ישקפו את DB
+    await refreshCurrentGroupDetails();
   };
 
   const handleOpenGallery = (initialMediaId?: string) => {
@@ -304,9 +364,13 @@ export default function ChatGroupInfoScreen() {
             try {
               const result = await leaveGroup(groupId);
               if (result.success) {
-                (navigation as any).popToTop
-                  ? (navigation as any).popToTop()
-                  : (navigation as any).navigate('ChatGroupsList');
+                // Reset so Back cannot return into the left group
+                navigation.dispatch(
+                  CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: 'ChatGroupsList' }],
+                  })
+                );
               } else {
                 legacyAlert('שגיאה', result.error || 'לא הצלחנו לעזוב את הקבוצה');
               }
@@ -322,6 +386,52 @@ export default function ChatGroupInfoScreen() {
   // ============================================
   // Render
   // ============================================
+
+  const renderMemberRow = (member: ChatGroupMember) => {
+    const { isOnline, label } = getMemberPresence(member);
+    return (
+      <TouchableOpacity
+        style={styles.memberRow}
+        onPress={() => handleMemberPress(member)}
+        disabled={!isAdmin && member.user_id !== user?.id}
+        activeOpacity={0.7}
+      >
+        <View style={styles.memberAvatarWrap}>
+          {member.user?.profile_picture ? (
+            <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
+          ) : (
+            <View style={styles.memberAvatarPlaceholder}>
+              <Text style={styles.memberAvatarText}>
+                {member.user?.display_name?.charAt(0) || '?'}
+              </Text>
+            </View>
+          )}
+          {isOnline ? <View style={styles.avatarOnlineDot} /> : null}
+        </View>
+        <View style={styles.memberInfo}>
+          <View style={styles.memberNameRow}>
+            <Text style={styles.memberName} numberOfLines={1}>
+              {member.user?.display_name || 'משתמש'}
+            </Text>
+            {member.role === 'admin' && (
+              <View style={styles.adminBadge}>
+                <Ionicons name="star" size={10} color={DesignTokens.colors.warning.main} />
+                <Text style={styles.adminBadgeText}>אדמין</Text>
+              </View>
+            )}
+            {member.user_id === user?.id && (
+              <Text style={styles.youLabel}>(אתה)</Text>
+            )}
+          </View>
+          {label ? (
+            <Text style={isOnline ? styles.onlineText : styles.lastSeenText} numberOfLines={1}>
+              {label}
+            </Text>
+          ) : null}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (!groupId) {
     navigation.goBack();
@@ -498,55 +608,43 @@ export default function ChatGroupInfoScreen() {
                 </TouchableOpacity>
               ) : undefined,
             )}
-            {sortedMembers.map((member, index) => {
-              const { isOnline, label } = getMemberPresence(member);
-
-              return (
-                <React.Fragment key={member.id}>
-                  <TouchableOpacity
-                    style={styles.memberRow}
-                    onPress={() => handleMemberPress(member)}
-                    disabled={!isAdmin && member.user_id !== user?.id}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.memberAvatarWrap}>
-                      {member.user?.profile_picture ? (
-                        <Image source={{ uri: member.user.profile_picture }} style={styles.memberAvatar} />
-                      ) : (
-                        <View style={styles.memberAvatarPlaceholder}>
-                          <Text style={styles.memberAvatarText}>
-                            {member.user?.display_name?.charAt(0) || '?'}
-                          </Text>
-                        </View>
-                      )}
-                      {isOnline ? <View style={styles.avatarOnlineDot} /> : null}
-                    </View>
-                    <View style={styles.memberInfo}>
-                      <View style={styles.memberNameRow}>
-                        <Text style={styles.memberName} numberOfLines={1}>
-                          {member.user?.display_name || 'משתמש'}
-                        </Text>
-                        {member.role === 'admin' && (
-                          <View style={styles.adminBadge}>
-                            <Ionicons name="star" size={10} color={DesignTokens.colors.warning.main} />
-                            <Text style={styles.adminBadgeText}>אדמין</Text>
-                          </View>
-                        )}
-                        {member.user_id === user?.id && (
-                          <Text style={styles.youLabel}>(אתה)</Text>
-                        )}
-                      </View>
-                      {label ? (
-                        <Text style={isOnline ? styles.onlineText : styles.lastSeenText} numberOfLines={1}>
-                          {label}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </TouchableOpacity>
-                  {index < sortedMembers.length - 1 ? <View style={styles.separator} /> : null}
-                </React.Fragment>
-              );
-            })}
+            {activeMembers.map((member, index) => (
+              <React.Fragment key={member.id}>
+                {renderMemberRow(member)}
+                {index < activeMembers.length - 1 ? <View style={styles.separator} /> : null}
+              </React.Fragment>
+            ))}
+            {otherRows.length > 0 ? (
+              <>
+                <View style={styles.separator} />
+                <TouchableOpacity
+                  style={styles.othersToggleRow}
+                  onPress={toggleExpandedMembers}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: expandedMembers }}
+                >
+                  <Text style={styles.othersToggleText}>
+                    חברים נוספים · {otherRows.length}
+                  </Text>
+                  <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
+                    <Ionicons
+                      name="chevron-down"
+                      size={20}
+                      color={DesignTokens.colors.text.tertiary}
+                    />
+                  </Animated.View>
+                </TouchableOpacity>
+                {expandedMembers
+                  ? otherRows.map((member) => (
+                      <React.Fragment key={member.id}>
+                        <View style={styles.separator} />
+                        {renderMemberRow(member)}
+                      </React.Fragment>
+                    ))
+                  : null}
+              </>
+            ) : null}
           </UICard>
 
           <TouchableOpacity
@@ -894,6 +992,29 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) => StyleSheet.
     ...chatRtlRow,
     alignItems: 'center',
     gap: tokens.spacing.xs,
+  },
+  othersToggleRow: {
+    ...chatRtlRow,
+    alignItems: 'center',
+    paddingVertical: tokens.spacing.md,
+    paddingHorizontal: tokens.spacing.base,
+    gap: tokens.spacing.md,
+  },
+  othersToggleIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: tokens.borderRadius.sm,
+    backgroundColor: tokens.colors.background.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  othersToggleText: {
+    ...chatRtlText,
+    flex: 1,
+    fontSize: tokens.typography.body.size,
+    fontWeight: tokens.typography.fontWeight.semibold as '600',
+    lineHeight: tokens.typography.body.lineHeight,
+    color: tokens.colors.text.primary,
   },
   addButtonText: {
     ...chatRtlText,

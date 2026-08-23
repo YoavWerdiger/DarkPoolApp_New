@@ -11,6 +11,7 @@ import type {
   HoldingsViewMode,
   AssetType,
 } from './portfolioTypes';
+import type { TextStyle } from 'react-native';
 
 export interface BenchmarkOption {
   symbol: string;
@@ -59,7 +60,104 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   fund: 'קרן',
   forex: 'מט"ח',
   crypto: 'קריפטו',
+  futures: 'פיוצ\'רס',
 };
+
+/** תוויות עברית לסקטורים */
+export const SECTOR_LABELS: Record<string, string> = {
+  tech: 'טכנולוגיה',
+  healthcare: 'בריאות',
+  finance: 'פיננסים',
+  energy: 'אנרגיה',
+  consumer: 'צרכנות',
+  industrial: 'תעשייה',
+  realestate: 'נדל"ן',
+  utilities: 'תשתיות',
+  materials: 'חומרי גלם',
+  telecom: 'תקשורת',
+  crypto: 'קריפטו',
+  etf: 'ETF',
+  fund: 'קרן',
+  forex: 'מט"ח',
+  israel: 'מניות ישראל',
+  other: 'אחר',
+};
+
+/**
+ * מיפוי symbol → sector.
+ * מכסה את הסמלים הנפוצים ביותר בשוק האמריקאי + ישראל + קריפטו.
+ * מוגדר כ-Map (ולא כ-object literal גדול) כדי למנוע stack-overflow ב-tsc.
+ */
+function buildSectorMap(): Map<string, string> {
+  const m = new Map<string, string>();
+  const add = (sector: string, ...syms: string[]) => {
+    for (const s of syms) m.set(s, sector);
+  };
+  // Tech
+  add('tech',
+    'AAPL','MSFT','GOOGL','GOOG','META','NVDA','AMD','INTC','QCOM','AVGO',
+    'TXN','MU','AMAT','LRCX','KLAC','MRVL','ADI','MCHP','NXPI','ON','TSM',
+    'CRM','ORCL','SAP','IBM','HPE','HPQ','DELL','CSCO','ANET','PANW','FTNT',
+    'CRWD','ZS','OKTA','NET','DDOG','SNOW','PLTR','ABNB','UBER','LYFT','DASH',
+    'PINS','SNAP','SPOT','NFLX','AMZN','SHOP','INTU','ADSK','ANSS','CDNS',
+    'VEEV','WDAY','NOW','TWLO','ZM','DOCU','BOX','GTLB','DSGX','HUBS','SMAR',
+    'COUP','MNDY','GLBE','WIX','FROG','RSKD','NICE','CHKP','CYBR','RDWR',
+    'KLAR','EBAY','ETSY','WISH',
+  );
+  // Healthcare
+  add('healthcare',
+    'JNJ','PFE','MRK','ABBV','BMY','LLY','AMGN','GILD','BIIB','REGN','VRTX',
+    'MRNA','BNTX','ISRG','MDT','SYK','BSX','EW','DXCM','TDOC','CVS','UNH',
+    'HUM','CI','TMO','DHR','ILMN','ZBH','BAX','BDX','HOLX','IDXX','A','PKI',
+    'RGEN','TECH',
+  );
+  // Finance
+  add('finance',
+    'JPM','BAC','WFC','C','GS','MS','BK','STT','SCHW','AXP','BLK','BX','APO',
+    'KKR','CG','TROW','USB','PNC','TFC','FITB','KEY','CFG','RF','HBAN','MTB',
+    'ZION','COIN','HOOD','SQ','PYPL','V','MA','MSCI','SPGI','MCO','ICE','CME',
+    'CBOE','NDAQ','FDS',
+  );
+  // Energy
+  add('energy',
+    'XOM','CVX','COP','EOG','PXD','DVN','MRO','APA','OXY','SLB','HAL','BKR',
+    'VLO','MPC','PSX','HES','WMB','KMI','OKE','ENB','BP','SHEL','TTE','PBR',
+  );
+  // Consumer
+  add('consumer',
+    'WMT','TGT','COST','HD','LOW','TJX','ROST','DG','DLTR','NKE','LULU','PG',
+    'KO','PEP','MCD','SBUX','YUM','CMG','QSR','DPZ','MO','PM','BTI','MNST',
+    'CL','KMB','KHC','GIS','K','SJM','HSY','MDLZ','EL','ULTA','FL','GPS',
+  );
+  // Industrial
+  add('industrial',
+    'BA','GE','MMM','CAT','DE','HON','RTX','LMT','NOC','GD','LHX','HII','UPS',
+    'FDX','DAL','UAL','AAL','LUV','JBHT','CNI','CSX','UNP','NSC','EMR','ETN',
+    'PH','ROK','AME',
+  );
+  // Real Estate
+  add('realestate',
+    'SPG','O','PLD','AMT','CCI','EQIX','DLR','VTR','WELL','AVB','EQR','ESS',
+    'PSA','EXR','CBRE','JLL',
+  );
+  // Utilities
+  add('utilities',
+    'NEE','DUK','SO','D','AEP','EXC','XEL','WEC','ES','AWK','PCG','SRE',
+  );
+  // Materials
+  add('materials',
+    'LIN','APD','NEM','FCX','NUE','STLD','X','AA','ALB','SQM','MP','VALE',
+    'BHP','RIO','GOLD','AEM',
+  );
+  // Telecom / Media
+  add('telecom',
+    'T','VZ','TMUS','CMCSA','CHTR','DISH','LUMN','ATUS','AMX','NTES','WBD',
+    'DIS','PARA','FOXA',
+  );
+  return m;
+}
+
+export const SYMBOL_SECTOR_MAP: Map<string, string> = buildSectorMap();
 
 /** תקופות ביצועים (Performance) */
 export const PERFORMANCE_PERIODS: { id: PerformancePeriod; label: string }[] = [
@@ -90,12 +188,20 @@ export const PORTFOLIO_DETAIL_TABS = [
   { id: 'transactions' as const, label: 'עסקאות'          },
 ];
 
-/** טאבים נוספים שמופיעים רק לתיקים מסונכרנים מ-broker */
-export const PORTFOLIO_BROKER_TAB = { id: 'broker' as const, label: 'Broker' };
-
 export type PortfolioDetailTab =
-  | (typeof PORTFOLIO_DETAIL_TABS)[number]['id']
-  | typeof PORTFOLIO_BROKER_TAB['id'];
+  (typeof PORTFOLIO_DETAIL_TABS)[number]['id'];
+
+/**
+ * Inactive tab label in PortfolioDetailScreen (tabText) — e.g. "פוזיציות פתוחות".
+ * Color: tokens.colors.text.secondary (dark: rgba(255,255,255,0.70)).
+ */
+export function portfolioDetailTabLabelStyle(textSecondary: string): TextStyle {
+  return {
+    fontSize: 13,
+    fontWeight: '600',
+    color: textSecondary,
+  };
+}
 
 /** מספר ימים שמייצגים תקופה (לחישוב Performance) */
 export const PERIOD_TO_DAYS: Record<PerformancePeriod, number | null> = {

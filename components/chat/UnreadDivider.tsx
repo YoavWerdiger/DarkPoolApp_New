@@ -5,50 +5,75 @@ import { useDesignTokens } from '../ui/DesignTokens';
 interface UnreadDividerProps {
   unreadCount: number;
   onPress?: () => void;
+  /** When true, fade out then call onDismissed (WhatsApp-style, no abrupt pop). */
+  dismissing?: boolean;
+  onDismissed?: () => void;
 }
 
-const UnreadDivider: React.FC<UnreadDividerProps> = ({ 
-  unreadCount, 
-  onPress 
+const FADE_OUT_MS = 420;
+const AUTO_HIDE_MS = 60_000;
+
+const UnreadDivider: React.FC<UnreadDividerProps> = ({
+  unreadCount,
+  onPress,
+  dismissing = false,
+  onDismissed,
 }) => {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  
+  const dismissedRef = useRef(false);
+  const onDismissedRef = useRef(onDismissed);
+  onDismissedRef.current = onDismissed;
+
+  const finishDismiss = () => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
+    onDismissedRef.current?.();
+  };
+
   useEffect(() => {
-    // Fade out אוטומטי אחרי 60 שניות
+    if (!dismissing) return;
+    const anim = Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: FADE_OUT_MS,
+      useNativeDriver: true,
+    });
+    anim.start(({ finished }) => {
+      if (finished) finishDismiss();
+    });
+    return () => anim.stop();
+  }, [dismissing, fadeAnim]);
+
+  useEffect(() => {
+    if (dismissing || unreadCount <= 0) return;
     const timer = setTimeout(() => {
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 1500,
         useNativeDriver: true,
-      }).start();
-    }, 60000);
-    
+      }).start(({ finished }) => {
+        if (finished) finishDismiss();
+      });
+    }, AUTO_HIDE_MS);
     return () => clearTimeout(timer);
-  }, [fadeAnim]);
-  
+  }, [dismissing, unreadCount, fadeAnim]);
+
   if (unreadCount <= 0) {
     return null;
   }
 
-  // טקסט דינמי
   const text = unreadCount === 1 ? 'הודעה חדשה' : `${unreadCount} הודעות חדשות`;
 
   return (
-    <Animated.View key={`unread-divider-${unreadCount}`} style={[styles.container, { opacity: fadeAnim }]}>
-      <Pressable onPress={onPress} disabled={!onPress}>
-        <View key={`unread-content-${unreadCount}`} style={styles.content}>
-          {/* קו שמאל */}
-          <View key={`unread-line-left-${unreadCount}`} style={styles.line} />
-          
-          {/* טקסט במרכז */}
-          <View key={`unread-badge-${unreadCount}`} style={styles.badge}>
-            <Text key={`unread-text-${unreadCount}`} style={styles.text}>{text}</Text>
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <Pressable onPress={onPress} disabled={!onPress || dismissing}>
+        <View style={styles.content}>
+          <View style={styles.line} />
+          <View style={styles.badge}>
+            <Text style={styles.text}>{text}</Text>
           </View>
-          
-          {/* קו ימין */}
-          <View key={`unread-line-right-${unreadCount}`} style={styles.line} />
+          <View style={styles.line} />
         </View>
       </Pressable>
     </Animated.View>

@@ -1,135 +1,104 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, ActivityIndicator, Dimensions, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard, ImageBackground, ScrollView } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
-import { Check, User, Phone, TrendingUp, BarChart3, Clock, Rocket } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { AuthService } from '../../services/authService';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
 import { DesignTokens } from '../../components/ui/DesignTokens';
-import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import UICard from '../../components/ui/UICard';
+import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
+import OnboardingButton from '../../components/onboarding/OnboardingButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SUPABASE_URL } from '../../config/publicEnv';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-
-const { width, height } = Dimensions.get('window');
-
-const tracks: Record<string, string> = {
-  '1': 'מסלול משקיעים מתחילים',
-  '2': 'מסלול מסחר יומי',
-  '3': 'מסלול ניתוח טכני',
-};
-
-const ProgressBar = ({ current, total }: { current: number; total: number }) => (
-  <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 4 }}>
-    <View style={{ flexDirection: 'row', gap: 6 }}>
-      {Array.from({ length: total }).map((_, i) => (
-        <View
-          key={i}
-          style={{
-            flex: 1,
-            height: 4,
-            borderRadius: 2,
-            backgroundColor:
-              i < current
-                ? DesignTokens.colors.primary.main
-                : 'rgba(255,255,255,0.12)',
-          }}
-        />
-      ))}
-    </View>
-  </View>
-);
-
-// Row item in summary card
-const SummaryRow = ({
-  icon,
-  label,
-}: {
-  icon: React.ReactNode;
-  label: string;
-}) => (
-  <View
-    style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(255,255,255,0.05)',
-    }}
-  >
-    <View
-      style={{
-        width: 36,
-        height: 36,
-        borderRadius: 10,
-        backgroundColor: 'rgba(0,230,84,0.1)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginLeft: 12,
-      }}
-    >
-      {icon}
-    </View>
-    <Text
-      style={{
-        color: 'rgba(255,255,255,0.8)',
-        fontSize: 14,
-        textAlign: 'right',
-        flex: 1,
-      }}
-    >
-      {label}
-    </Text>
-  </View>
-);
+import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
+import { buildOnboardingIntroData } from '../../constants/onboardingQuestionnaire';
+import { mediaService } from '../../services/mediaService';
 
 const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   const { data, resetData } = useRegistration();
-  const { signIn, setUser, signOut, user: currentUser } = useAuth();
+  const { setUser, signOut, user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
+
+  const badgeScale = useRef(new Animated.Value(0.82)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(badgeScale, {
+        toValue: 1,
+        damping: 10,
+        stiffness: 150,
+        mass: 0.5,
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentOpacity, {
+        toValue: 1,
+        duration: 320,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [badgeScale, contentOpacity]);
 
   const handleFinish = async () => {
     setLoading(true);
     try {
-      const introData = {
-        markets:        data.markets        || [],
-        experience:     data.experience     || '',
-        styles:         data.styles         || [],
-        brokers:        data.brokers        || [],
-        level:          data.level          || '',
-        goal:           data.goal           || '',
-        communityGoals: data.communityGoals || [],
-        hours:          data.hours          || '',
-        socials:        data.socials        || [],
-        heardFrom:      data.heardFrom      || '',
-        wish:           data.wish           || '',
-        fullTime:       data.fullTime       || '',
-        style:          data.style          || '',
+      const introData = buildOnboardingIntroData({
+        age: data.age,
+        ageRange: data.ageRange,
+        experienceLevel: data.experienceLevel,
+        tradingFocus: data.tradingFocus,
+        tradingPlatform: data.tradingPlatform,
+        portfolioSize: data.portfolioSize,
+      });
+
+      const planId = data.accountType || 'free';
+      const pendingId = data.pendingAuthUserId || data.googleUserId || null;
+      let user;
+      let signUpError: string | null = null;
+
+      // תמונת הרישום נשמרת מקומית עד לסיכום — מעלים לפני כתיבה ל-users.
+      const remoteProfile = await mediaService.ensureRemoteMediaUrl(data.profileImage, 'image');
+      if (data.profileImage && remoteProfile.error) {
+        setLoading(false);
+        legacyAlert('שגיאה', remoteProfile.error || 'העלאת תמונת הפרופיל נכשלה');
+        return;
+      }
+      const profilePictureUrl = remoteProfile.url;
+
+      const finalizeExistingUser = async (userId: string) => {
+        // account_type לא נכתב מהקליינט — היא עמודת הרשאה. המסלול שנבחר כבר
+        // רשום ב-payment_transactions, וה-webhook של Cardcom הוא שמעדכן את
+        // המנוי אחרי תשלום מאומת.
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({
+            phone: data.phone || null,
+            track_id: data.trackId || '1',
+            intro_data: introData,
+            display_name: data.fullName || undefined,
+            full_name: data.fullName || undefined,
+            profile_picture: profilePictureUrl,
+            registration_completed: true,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId);
+
+        if (updateError) throw new Error(updateError.message);
+
+        if (planId === 'free') {
+          await AuthService.ensureFreeSubscriptionRow(userId);
+        }
+
+        return AuthService.getUserProfile(userId);
       };
 
-      let user, signUpError;
-
-      if (data.isGoogleSignUp && data.googleUserId) {
+      if (pendingId) {
         try {
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({
-              phone:        data.phone || null,
-              track_id:     data.trackId || '1',
-              account_type: data.accountType,
-              intro_data:   introData,
-              updated_at:   new Date().toISOString(),
-            })
-            .eq('id', data.googleUserId);
-          if (updateError) {
-            signUpError = updateError.message;
-          } else {
-            user = await AuthService.getUserProfile(data.googleUserId);
-          }
+          user = await finalizeExistingUser(pendingId);
         } catch (error: any) {
           signUpError = error.message || 'שגיאה בעדכון הפרופיל';
         }
@@ -145,46 +114,61 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
 
         try {
           const result = await AuthService.signUp({
-            email:           data.email,
-            password:        data.password,
-            display_name:    data.fullName,
-            full_name:       data.fullName,
-            profile_picture: data.profileImage ?? undefined,
-            phone:           data.phone,
-            track_id:        data.trackId || '1',
-            account_type:    data.accountType,
-            intro_data:      introData,
+            email: data.email,
+            password: data.password,
+            display_name: data.fullName,
+            full_name: data.fullName,
+            profile_picture: profilePictureUrl ?? undefined,
+            phone: data.phone,
+            track_id: data.trackId || '1',
+            account_type: planId,
+            intro_data: introData,
+            registration_completed: true,
           });
-          user       = result.user;
+          user = result.user;
           signUpError = result.error;
+
+          if (user && planId === 'free') {
+            await AuthService.ensureFreeSubscriptionRow(user.id);
+          }
         } catch (authError: any) {
           signUpError = authError.message || 'Unknown error in AuthService';
         }
       }
 
-      if (signUpError) { setLoading(false); legacyAlert('שגיאה בהרשמה', signUpError); return; }
+      if (signUpError) {
+        setLoading(false);
+        legacyAlert('שגיאה בהרשמה', signUpError);
+        return;
+      }
 
       if (user) {
-        if (data.isGoogleSignUp) {
-          setLoading(false);
-          try { await AsyncStorage.removeItem('explicit_logout'); } catch {}
-          setUser(user);
-          if (resetData) resetData();
+        const selectedPlan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
+        const planName = selectedPlan ? selectedPlan.name : 'מסלול חינמי';
+        const enteredViaGoogle = data.isGoogleSignUp || !!data.googleUserId;
+        const emailAlreadyVerified = data.emailVerified === true;
+        const staySignedIn =
+          enteredViaGoogle || emailAlreadyVerified || (!!pendingId && !!currentUser);
 
-          const selectedPlan = SUBSCRIPTION_PLANS[data.accountType as keyof typeof SUBSCRIPTION_PLANS];
-          const planName     = selectedPlan ? selectedPlan.name : 'מסלול חודשי';
+        if (staySignedIn) {
+          setLoading(false);
+          try {
+            await AsyncStorage.removeItem('explicit_logout');
+          } catch {}
+          const fresh = await AuthService.getUserProfile(user.id);
+          setUser(fresh || { ...user, registration_completed: true });
+          if (resetData) resetData();
 
           legacyAlert(
             'הרשמה הושלמה בהצלחה! 🎉',
             `ברוכים הבאים ל-DarkPool! החשבון שלך נוצר עם תוכנית ${planName}.`,
-            [{
-              text: 'התחל',
-              onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Main' }] }),
-            }]
+            [{ text: 'התחל' }]
           );
         } else {
           setLoading(false);
-          try { await AsyncStorage.setItem('explicit_logout', 'true'); } catch {}
+          try {
+            await AsyncStorage.setItem('explicit_logout', 'true');
+          } catch {}
           await signOut(true);
           if (resetData) resetData();
 
@@ -220,254 +204,109 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <LinearGradient
-          colors={['#0A0E0A', '#0F1A0F', '#142014', '#0A0E0A']}
-          start={{ x: 0.1, y: 0 }}
-          end={{ x: 0.9, y: 1 }}
-          style={{ flex: 1 }}
-        >
-          {/* Depth overlay */}
-          <LinearGradient
-            colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.35)']}
-            start={{ x: 1, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-          />
-
-          {/* Bull & Bear background */}
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', opacity: 0.22 }}>
-            <ImageBackground
-              source={{ uri: `${SUPABASE_URL}/storage/v1/object/public/backgrounds/transback.png` }}
-              style={{ width: width * 1.6, height: height * 1.6 }}
-              imageStyle={{ resizeMode: 'contain' }}
-            />
-          </View>
-
-          {/* Animated candlestick chart */}
-
-          {/* SafeArea with progress bar */}
-          <View style={{ paddingTop: 44 }}>
-            <ProgressBar current={5} total={5} />
-          </View>
-
-          <RNSafeAreaView style={{ flex: 1 }} edges={['bottom']}>
-          <ScrollView
-            contentContainerStyle={{
-              flexGrow: 1,
-              paddingHorizontal: 24,
-              paddingBottom: 24,
-              paddingTop: 20,
-            }}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Success icon */}
-            <View style={{ alignItems: 'center', marginBottom: 28 }}>
-              <LinearGradient
-                colors={['rgba(0,230,84,0.25)', 'rgba(0,230,84,0.05)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{
-                  width: 90,
-                  height: 90,
-                  borderRadius: 45,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 20,
-                  borderWidth: 1.5,
-                  borderColor: 'rgba(0,230,84,0.3)',
-                }}
-              >
-                <Check size={44} color={DesignTokens.colors.primary.main} strokeWidth={2.5} />
-              </LinearGradient>
-
-              <Text
-                style={{
-                  fontSize: 30,
-                  fontWeight: '800',
-                  color: '#fff',
-                  marginBottom: 8,
-                  letterSpacing: -0.5,
-                  textAlign: 'center',
-                }}
-              >
-                הרשמה הושלמה!
-              </Text>
-              <Text
-                style={{
-                  fontSize: 15,
-                  color: 'rgba(255,255,255,0.55)',
-                  textAlign: 'center',
-                  lineHeight: 22,
-                }}
-              >
-                ברוכים הבאים ל-DarkPool
-              </Text>
-            </View>
-
-            {/* Summary card */}
-            <View
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.08)',
-                padding: 20,
-                marginBottom: 28,
-              }}
+    <OnboardingLayout
+      currentStep={ONBOARDING_STEPS.summary}
+      totalSteps={ONBOARDING_TOTAL_STEPS}
+      showProgress={false}
+      showClose={false}
+      footer={
+        <OnboardingButton
+          title="התחל להשתמש"
+          onPress={() => {
+            void HapticFeedback.success();
+            handleFinish();
+          }}
+          loading={loading}
+          disabled={loading}
+        />
+      }
+    >
+      <View style={styles.centered}>
+        <Animated.View style={[styles.halo, { transform: [{ scale: badgeScale }] }]}>
+          <View style={styles.ring}>
+            <UICard
+              variant="glass"
+              glassIntensity="medium"
+              padding="none"
+              style={styles.badge}
+              contentContainerStyle={styles.badgeContent}
             >
-              {/* Profile header */}
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginBottom: 16,
-                  paddingBottom: 16,
-                  borderBottomWidth: 1,
-                  borderBottomColor: 'rgba(255,255,255,0.06)',
-                }}
-              >
-                {data.profileImage ? (
-                  <Image
-                    source={{ uri: data.profileImage }}
-                    style={{ width: 56, height: 56, borderRadius: 28, marginLeft: 14 }}
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: 28,
-                      backgroundColor: 'rgba(0,230,84,0.15)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginLeft: 14,
-                    }}
-                  >
-                    <User size={28} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-                  </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      color: '#fff',
-                      fontSize: 18,
-                      fontWeight: '700',
-                      textAlign: 'right',
-                      marginBottom: 3,
-                    }}
-                  >
-                    {data.fullName}
-                  </Text>
-                  <Text
-                    style={{
-                      color: 'rgba(255,255,255,0.45)',
-                      fontSize: 13,
-                      textAlign: 'right',
-                    }}
-                  >
-                    {data.email}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Details */}
-              {data.phone && (
-                <SummaryRow
-                  icon={<Phone size={18} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                  label={data.phone}
-                />
-              )}
-              <SummaryRow
-                icon={<TrendingUp size={18} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                label={tracks[data.trackId] || 'מסלול לא נבחר'}
+              <Ionicons
+                name="checkmark"
+                size={52}
+                color={DesignTokens.colors.primary.main}
               />
-              {data.markets && data.markets.length > 0 && (
-                <SummaryRow
-                  icon={<BarChart3 size={18} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                  label={data.markets.join(' · ')}
-                />
-              )}
-              {data.experience && (
-                <SummaryRow
-                  icon={<Clock size={18} color={DesignTokens.colors.primary.main} strokeWidth={2} />}
-                  label={data.experience}
-                />
-              )}
-            </View>
+            </UICard>
+          </View>
+        </Animated.View>
 
-            {/* Buttons */}
-            <View style={{ gap: 8 }}>
-              <LinearGradient
-                colors={['#00C805', '#00A004', '#008F03']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{
-                  borderRadius: 30,
-                  shadowColor: DesignTokens.colors.primary.main,
-                  shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 16,
-                  elevation: 8,
-                }}
-              >
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.success();
-                    handleFinish();
-                  }}
-                  disabled={loading}
-                  activeOpacity={0.85}
-                  style={{
-                    paddingVertical: 17,
-                    alignItems: 'center',
-                    flexDirection: 'row',
-                    justifyContent: 'center',
-                    opacity: loading ? 0.75 : 1,
-                  }}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#000" size="small" />
-                  ) : (
-                    <>
-                      <Rocket size={18} color="#000" strokeWidth={2} style={{ marginLeft: 8 }} />
-                      <Text style={{ color: '#000', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 }}>
-                        התחל להשתמש
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </LinearGradient>
-
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.impactLight();
-                  navigation.goBack();
-                }}
-                activeOpacity={0.7}
-                style={{ paddingVertical: 16, alignItems: 'center' }}
-              >
-                <Text
-                  style={{
-                    color: 'rgba(255,255,255,0.45)',
-                    fontSize: 15,
-                    fontWeight: '500',
-                  }}
-                >
-                  ערוך פרטים
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-          </RNSafeAreaView>
-        </LinearGradient>
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+        <Animated.View style={{ opacity: contentOpacity }}>
+          <Text style={styles.title}>הכל מוכן!</Text>
+          <Text style={styles.subtitle}>
+            החשבון שלך נוצר בהצלחה — הכל מחכה לך בפנים.
+          </Text>
+        </Animated.View>
+      </View>
+    </OnboardingLayout>
   );
 };
+
+const BADGE_SIZE = 96;
+const RING_SIZE = 124;
+const HALO_SIZE = 156;
+
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  halo: {
+    width: HALO_SIZE,
+    height: HALO_SIZE,
+    borderRadius: DesignTokens.borderRadius.full,
+    backgroundColor: DesignTokens.colors.primary.subtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: DesignTokens.spacing['2xl'],
+    ...DesignTokens.shadows.greenGlow,
+  },
+  ring: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: DesignTokens.borderRadius.full,
+    backgroundColor: DesignTokens.colors.primary.dim,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badge: {
+    width: BADGE_SIZE,
+    height: BADGE_SIZE,
+    borderRadius: DesignTokens.borderRadius.full,
+  },
+  badgeContent: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: DesignTokens.typography.heroTitle.size,
+    lineHeight: DesignTokens.typography.heroTitle.lineHeight,
+    fontWeight: DesignTokens.typography.heroTitle.weight,
+    color: DesignTokens.colors.text.primary,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    marginBottom: DesignTokens.spacing.md,
+  },
+  subtitle: {
+    fontSize: DesignTokens.typography.callout.size,
+    lineHeight: DesignTokens.typography.callout.lineHeight,
+    color: DesignTokens.colors.text.tertiary,
+    textAlign: 'center',
+    writingDirection: 'rtl',
+    paddingHorizontal: DesignTokens.spacing.lg,
+  },
+});
 
 export default RegistrationSummaryScreen;

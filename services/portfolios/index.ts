@@ -10,3 +10,4 @@ export * from './portfolioAnalysis';
 export * from './portfolioImport';
 export * from './realtimeQuotes';
 export * from './portfolioTradeDerive';
+export * from './portfolioDisplaySummary';

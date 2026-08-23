@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import UICard from '../../../components/ui/UICard';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
@@ -67,12 +67,21 @@ export function PortfolioCard({ portfolio, summary, onPress, onLongPress }: Prop
           style={styles.card}
         >
         <View style={styles.header}>
-          <View style={styles.iconWrap}>
-            <Ionicons
-              name={portfolio.source === 'colmex_pro' ? 'link' : 'briefcase'}
-              size={20}
-              color={tokens.colors.primary.main}
-            />
+          <View
+            style={[
+              styles.iconWrap,
+              portfolio.source === 'colmex_pro' && styles.iconWrapLogo,
+            ]}
+          >
+            {portfolio.source === 'colmex_pro' ? (
+              <Image
+                source={require('../../../assets/colmex-logo.png')}
+                style={styles.brokerLogo}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="briefcase" size={20} color={tokens.colors.primary.main} />
+            )}
           </View>
           <View style={styles.headerText}>
             <View style={styles.titleRow}>
@@ -182,6 +191,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconWrapLogo: {
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  brokerLogo: { width: 38, height: 38 },
   headerText: {
     flex: 1,
   },

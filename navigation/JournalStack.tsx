@@ -6,7 +6,13 @@ import TradeDetailScreen from '../screens/Journal/TradeDetailScreen';
 
 export type JournalStackParamList = {
   JournalMain: undefined;
-  AddTrade: undefined;
+  AddTrade:
+    | {
+        initialSymbol?: string;
+        initialEntryPrice?: number;
+        initialNotes?: string;
+      }
+    | undefined;
   TradeDetail: { tradeId: string };
 };
 

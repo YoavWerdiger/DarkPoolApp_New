@@ -73,7 +73,9 @@ const UICard: React.FC<UICardProps> = ({
         };
       case 'inputGlass':
         return {
-          ...StaticDesignTokens.onboardingInputSurface,
+          backgroundColor: 'transparent',
+          borderWidth: StaticDesignTokens.onboardingInputSurface.borderWidth,
+          borderColor: StaticDesignTokens.onboardingInputSurface.borderColor,
           ...shadows.none,
         };
       default:
@@ -98,21 +100,40 @@ const UICard: React.FC<UICardProps> = ({
   };
 
   const flatOuterStyle = StyleSheet.flatten(style) as ViewStyle | undefined;
+  const isInputGlass = variant === 'inputGlass';
+  const inputSurface = StaticDesignTokens.onboardingInputSurface;
+  /** ל־inputGlass: רקע עובר לשכבת overlay כדי ש־BlurView יעבוד מאחוריו */
+  const inputOverlayColor =
+    (isInputGlass ? (flatOuterStyle?.backgroundColor as string | undefined) : undefined) ??
+    inputSurface.backgroundColor;
+  const outerStyleForBase =
+    isInputGlass && flatOuterStyle
+      ? (() => {
+          const { backgroundColor: _bg, ...rest } = flatOuterStyle;
+          return rest;
+        })()
+      : flatOuterStyle;
+
   const baseStyle: ViewStyle = {
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     ...getVariantStyle(),
     ...getPaddingStyle(),
-    ...flatOuterStyle,
+    ...outerStyleForBase,
   };
 
   /** רדיוס לשכבות blur/מילוי — חייב להתאים ל־outer כדי שהעיגול ייראה מלא (לא "ריבוע עם blur"). */
   const clipCornerRadius = flatOuterStyle?.borderRadius ?? borderRadius.lg;
 
   const themeMode = isDarkMode ? 'dark' : 'light';
-  const glassOverlay = glassmorphism.cardBackground[themeMode][glassIntensity];
+  const glassOverlay = isInputGlass
+    ? inputOverlayColor
+    : glassmorphism.cardBackground[themeMode][glassIntensity];
   const glassBorder = glassmorphism.border[themeMode][glassIntensity];
   const glassTopHighlight = glassmorphism.topHighlight[themeMode][glassIntensity];
+  const blurIntensityValue = isInputGlass
+    ? inputSurface.blurIntensity
+    : glassmorphism.blurIntensity[glassIntensity];
   const blurTint =
     Platform.OS === 'ios'
       ? isDarkMode
@@ -122,26 +143,37 @@ const UICard: React.FC<UICardProps> = ({
         ? ('dark' as const)
         : ('light' as const);
 
+  const usesGlassLayers = variant === 'glass' || variant === 'blur' || isInputGlass;
+
+  const flatContentStyle = StyleSheet.flatten(contentContainerStyle) as ViewStyle | undefined;
+  const contentFillsParent =
+    flatContentStyle?.flex === 1 ||
+    flatContentStyle?.flexGrow === 1 ||
+    flatContentStyle?.height === '100%';
+
   const cardContent = (
     <>
-      {(variant === 'glass' || variant === 'blur') ? (
+      {usesGlassLayers ? (
         <>
           {Platform.OS === 'ios' ? (
             <BlurView
-              intensity={glassmorphism.blurIntensity[glassIntensity]}
+              intensity={blurIntensityValue}
               tint={blurTint}
               style={[StyleSheet.absoluteFill, { borderRadius: clipCornerRadius, overflow: 'hidden' }]}
             />
           ) : (
-            // Android: use cardSolid as backdrop so the glass overlay on top
-            // produces the same dark-card appearance as iOS blur at ~85% opacity.
+            // Android: solid/dark backdrop (no BlurView) so overlay still reads as frosted glass.
             <View
               style={[
                 StyleSheet.absoluteFill,
                 {
                   borderRadius: clipCornerRadius,
                   overflow: 'hidden',
-                  backgroundColor: isDarkMode ? colors.background.cardSolid : colors.background.secondary,
+                  backgroundColor: isInputGlass
+                    ? inputSurface.androidFallback
+                    : isDarkMode
+                      ? colors.background.cardSolid
+                      : colors.background.secondary,
                 },
               ]}
             />
@@ -156,7 +188,7 @@ const UICard: React.FC<UICardProps> = ({
               },
             ]}
           />
-          {showGlassBorder ? (
+          {showGlassBorder && !isInputGlass ? (
             <View
               style={[
                 StyleSheet.absoluteFill,
@@ -171,7 +203,16 @@ const UICard: React.FC<UICardProps> = ({
           ) : null}
         </>
       ) : null}
-      <View style={[{ position: 'relative', zIndex: 1 }, StyleSheet.flatten(contentContainerStyle)]}>
+      <View
+        style={[
+          { position: 'relative', zIndex: 1 },
+          // רשימות בגובה מלא בתוך glass — למנוע קריסה ל-0
+          contentFillsParent
+            ? { alignSelf: 'stretch', minHeight: 0, height: '100%' }
+            : null,
+          contentContainerStyle,
+        ]}
+      >
         {children}
       </View>
     </>

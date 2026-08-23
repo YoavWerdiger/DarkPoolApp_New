@@ -13,7 +13,6 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useDesignTokens } from '../ui/DesignTokens';
 import { flatWaveformBars, normalizeWaveformSamples, WAVEFORM_DISPLAY_BARS } from '../../utils/waveformSamples';
 
 export interface VoiceWaveformWithProgressProps {
@@ -98,9 +97,9 @@ function VoiceWaveformWithProgress({
   inactiveColor = 'rgba(255, 255, 255, 0.25)',
   nearActiveColor = 'rgba(255, 255, 255, 0.45)',
 }: VoiceWaveformWithProgressProps) {
-  const DesignTokens = useDesignTokens();
-  const resolvedActive = activeColor ?? DesignTokens.colors.primary.main;
-  const resolvedThumb = thumbColor ?? DesignTokens.colors.accent.main;
+  // ברירת מחדל סגנון WhatsApp: אפור בהיר לחלק שנוגן, לא ירוק/אקצנט מותג
+  const resolvedActive = activeColor ?? 'rgba(255, 255, 255, 0.72)';
+  const resolvedThumb = thumbColor ?? 'rgba(255, 255, 255, 0.92)';
 
   const trackWidthSV = useSharedValue(0);
   const scrubStartSV = useSharedValue(0);
@@ -244,7 +243,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bar: {
-    width: 3,
+    width: 2.5,
     borderRadius: 999,
   },
   thumb: {

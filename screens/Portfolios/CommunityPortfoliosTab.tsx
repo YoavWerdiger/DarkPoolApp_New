@@ -20,9 +20,10 @@ import BottomSheet from '../../components/ui/BottomSheet/BottomSheet';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import {
   listPublicPortfolios,
-  loadPortfolioSummary,
+  loadPortfolioDisplaySummary,
+  buildHistoricalPortfolioSeriesFromSnapshots,
+  buildHistoricalPortfolioSeries,
   getValueHistory,
-  getTransactionSparkline,
   getUsersDisplayNamesByIds,
 } from '../../services/portfolios';
 import type { Portfolio, PortfolioSummary } from './portfolioTypes';
@@ -33,6 +34,15 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfoliosHub'>;
 
 type SortMode = 'default' | 'value_desc' | 'return_desc' | 'name_asc';
+
+/** מדגם עד 60 נקודות מהסדרה לגרף sparkline */
+function _downsampleSparkline(values: number[], maxPoints = 60): number[] {
+  if (values.length <= maxPoints) return values;
+  const result: number[] = [];
+  const step = (values.length - 1) / (maxPoints - 1);
+  for (let i = 0; i < maxPoints; i++) result.push(values[Math.round(i * step)]);
+  return result;
+}
 
 const SORT_OPTIONS: Array<{
   id: SortMode;
@@ -95,33 +105,43 @@ export default function CommunityPortfoliosTab() {
       );
       const enriched = await Promise.all(
         portfolios.map(async (p) => {
-          const [sumRes, histRes] = await Promise.allSettled([
-            loadPortfolioSummary(p.id, p.currency),
-            getValueHistory(p.id, 120),
-          ]);
-          const summary = sumRes.status === 'fulfilled' ? sumRes.value : null;
-          const historyPoints = histRes.status === 'fulfilled' ? histRes.value : [];
-
-          // עדיפות: value_history (snapshots יומיים) → טרנזקציות → ריק
-          const histValues = historyPoints
-            .map((h) => h.total_value)
-            .filter((v) => Number.isFinite(v) && v > 0);
+          const sumRes = await loadPortfolioDisplaySummary(p).catch(() => null);
+          const summary = sumRes ?? null;
 
           let sparklineValues: number[] | null = null;
           let sparklineSource: Row['sparklineSource'] = 'none';
 
-          if (histValues.length >= 2) {
-            sparklineValues = histValues;
-            sparklineSource = 'history';
-          } else {
-            const txValues = await getTransactionSparkline(p.id).catch(() => [] as number[]);
-            if (txValues.length >= 2) {
-              sparklineValues = txValues;
-              sparklineSource = 'transactions';
-            } else if (histValues.length === 1) {
-              sparklineValues = [histValues[0], histValues[0]];
+          try {
+            // עדיפות זהה ל-OverviewTab: snapshots (+ unrealized) → tx (ידני) → value_history
+            const snapshots = await buildHistoricalPortfolioSeriesFromSnapshots(p.id, 365);
+            if (snapshots.length >= 2) {
+              sparklineValues = _downsampleSparkline(snapshots.map((s) => s.value));
               sparklineSource = 'history';
+            } else if (snapshots.length === 1) {
+              sparklineValues = [snapshots[0].value, snapshots[0].value];
+              sparklineSource = 'history';
+            } else if (p.source !== 'colmex_pro') {
+              const txSeries = await buildHistoricalPortfolioSeries(p.id, 365);
+              if (txSeries.length >= 2) {
+                sparklineValues = _downsampleSparkline(txSeries.map((s) => s.value));
+                sparklineSource = 'transactions';
+              } else {
+                const hist = await getValueHistory(p.id, 365);
+                const histValues = hist
+                  .map((h) => h.total_value)
+                  .filter((v) => Number.isFinite(v) && v > 0);
+                if (histValues.length >= 2) {
+                  sparklineValues = histValues;
+                  sparklineSource = 'history';
+                } else if (histValues.length === 1) {
+                  sparklineValues = [histValues[0], histValues[0]];
+                  sparklineSource = 'history';
+                }
+              }
             }
+            // Colmex בלי snapshots: ריק (לא seed מלאכותי מ-equity)
+          } catch {
+            // כשל בשליפה — מציגים ריק
           }
 
           const ownerLabel = nameByUser[p.user_id] ?? 'משתמש';
@@ -464,6 +484,9 @@ export default function CommunityPortfoliosTab() {
           setSortSheetHeight(0);
         }}
         snapPoints={sortSnapPoints}
+        useGlassBackground
+        showBrandBackground={false}
+        showHandle
       >
         <View style={styles.sortSheet} onLayout={handleSortSheetLayout}>
           <Text style={styles.sortSheetTitle}>מיון תיקים</Text>

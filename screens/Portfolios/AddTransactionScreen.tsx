@@ -22,15 +22,21 @@ import { useDesignTokens } from '../../components/ui/DesignTokens';
 import type { PortfoliosStackParamList } from '../../navigation/PortfoliosStack';
 import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { PortfolioScreenHeader } from './components/PortfolioScreenHeader';
+import { useToast } from '../../components/ui/Toast';
 import { SymbolSearchModal } from './components/SymbolSearchModal';
 import {
   createTransaction,
   updateTransaction,
   getTransaction,
   getQuote,
-  getCashFlowSummary,
-  getHoldingsRaw,
 } from '../../services/portfolios';
+import {
+  insertOpenTrade,
+  getTrade,
+  updateTrade,
+} from '../../services/portfolios/portfolioTradeDerive';
+import { ASSET_TYPE_LABELS } from './portfolioConstants';
+import { supabase } from '../../lib/supabase';
 import type {
   AssetType,
   AssetTransactionType,
@@ -49,15 +55,24 @@ export default function AddTransactionScreen() {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { portfolioId, initialMode = 'asset', transactionId } = route.params;
+  const {
+    portfolioId,
+    initialMode = 'asset',
+    transactionId,
+    editTradeId,
+    initialSymbol,
+  } = route.params;
 
-  const isEdit = Boolean(transactionId);
+  const isEdit = Boolean(transactionId) || Boolean(editTradeId);
   const [mode, setMode] = useState<Mode>(initialMode);
+  const { showToast } = useToast();
 
   // Asset/dividend fields
   const [side, setSide] = useState<AssetTransactionType>('buy');
   const [direction, setDirection] = useState<TradeDirection>('long');
-  const [symbol, setSymbol] = useState('');
+  const [symbol, setSymbol] = useState(
+    () => String(initialSymbol ?? '').toUpperCase()
+  );
   const [assetType, setAssetType] = useState<AssetType>('stock');
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
@@ -77,7 +92,8 @@ export default function AddTransactionScreen() {
 
   // Cash & position validation
   const [availableCash, setAvailableCash] = useState<number | null>(null);
-  const [holdingsMap, setHoldingsMap] = useState<Record<string, number>>({});
+  const [leverage, setLeverage] = useState('1');
+  const [pointValue, setPointValue] = useState('');
 
   // טען נתונים אם זה ריידיט
   useEffect(() => {
@@ -113,32 +129,50 @@ export default function AddTransactionScreen() {
     })();
   }, [transactionId]);
 
-  // טעינת יתרת מזומן + אחזקות קיימות לצורך validation
+  // טעינת trade קיים ממודל החדש (editTradeId)
+  useEffect(() => {
+    if (!editTradeId) return;
+    (async () => {
+      try {
+        const trade = await getTrade(editTradeId);
+        if (!trade) return;
+        setMode('asset');
+        setDirection(trade.direction);
+        setSide(trade.direction === 'long' ? 'buy' : 'sell');
+        setSymbol(trade.symbol);
+        setAssetType((trade.asset_type as AssetType) ?? 'stock');
+        setQuantity(String(trade.quantity));
+        setPrice(String(trade.entry_price));
+        setCommission(String(trade.commission ?? 0));
+        setLeverage(String(trade.leverage ?? 1));
+        if (trade.point_value) setPointValue(String(trade.point_value));
+        setTradeDate(new Date(trade.entry_date));
+        setNotes(trade.notes ?? '');
+        setCurrency(trade.currency);
+      } catch {
+        Alert.alert('שגיאה', 'לא הצלחנו לטעון את הטרייד');
+      }
+    })();
+  }, [editTradeId]);
+
+  // טעינת יתרת מזומן מ-portfolios.available_cash לצורך validation
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [cf, rawHoldings] = await Promise.all([
-          getCashFlowSummary(portfolioId),
-          getHoldingsRaw(portfolioId),
-        ]);
+        const { data, error } = await supabase
+          .from('portfolios')
+          .select('available_cash')
+          .eq('id', portfolioId)
+          .single();
         if (cancelled) return;
-        const cash = cf
-          ? Number(cf.total_deposits) -
-            Number(cf.total_withdrawals) -
-            Number(cf.total_fees) -
-            Number(cf.total_buys) +
-            Number(cf.total_sells) +
-            Number(cf.total_dividends)
-          : 0;
-        setAvailableCash(cash);
-        const map: Record<string, number> = {};
-        for (const h of rawHoldings) {
-          if (h.quantity > 0) map[h.symbol.toUpperCase()] = h.quantity;
+        if (error) {
+          console.warn('[AddTransaction] failed to load available_cash:', error.message);
+          return;
         }
-        setHoldingsMap(map);
-      } catch {
-        // non-critical
+        setAvailableCash(Number(data?.available_cash ?? 0));
+      } catch (err) {
+        console.warn('[AddTransaction] available_cash fetch error:', err);
       }
     })();
     return () => { cancelled = true; };
@@ -164,29 +198,79 @@ export default function AddTransactionScreen() {
         const qtyNum = parseFloat(quantity);
         const priceNum = parseFloat(price);
         const commNum = parseFloat(commission) || 0;
-        if (!symbol || !qtyNum || qtyNum <= 0 || isNaN(priceNum) || priceNum < 0) {
-          Alert.alert('שגיאה', 'מלא symbol, quantity (>0) ו-price');
+        const leverageNum = parseFloat(leverage) || 1;
+        const pvNum = parseFloat(pointValue) || null;
+
+        if (!symbol) {
+          Alert.alert('שדה חסר', 'יש לבחור סימבול לנכס.');
           return;
         }
-        const payload = {
-          portfolio_id: portfolioId,
-          type: side,
-          direction,
-          symbol: symbol.toUpperCase(),
-          asset_type: assetType,
-          quantity: qtyNum,
-          price: priceNum,
-          commission: commNum,
-          currency,
-          date: dateIso,
-          notes: notes.trim() || null,
-        } as const;
-        if (transactionId) await updateTransaction(transactionId, payload);
-        else await createTransaction(payload);
+        if (!qtyNum || qtyNum <= 0) {
+          Alert.alert('כמות לא תקינה', 'הכנס כמות גדולה מ-0.');
+          return;
+        }
+        if (isNaN(priceNum) || priceNum < 0) {
+          Alert.alert('מחיר לא תקין', 'הכנס מחיר אמיתי (0 ומעלה).');
+          return;
+        }
+        // ולידציה: תאריך פתיחה לא יכול להיות בעתיד (רק לפוזיציות חדשות)
+        if (!editTradeId && !transactionId && tradeDate > new Date()) {
+          Alert.alert('תאריך לא תקין', 'תאריך הפתיחה לא יכול להיות בעתיד.');
+          return;
+        }
+
+        if (editTradeId) {
+          // עריכת trade קיים ממודל החדש (trades table)
+          await updateTrade(editTradeId, {
+            portfolio_id: portfolioId,
+            symbol: symbol.toUpperCase(),
+            asset_type: assetType,
+            currency,
+            direction,
+            entry_date: dateIso,
+            entry_price: priceNum,
+            quantity: qtyNum,
+            leverage: leverageNum,
+            point_value: pvNum,
+            commission: commNum,
+            notes: notes.trim() || null,
+          });
+        } else if (transactionId) {
+          // מצב עריכה — עדכן ב-portfolio_transactions (backward compat)
+          await updateTransaction(transactionId, {
+            portfolio_id: portfolioId,
+            type: side,
+            direction,
+            symbol: symbol.toUpperCase(),
+            asset_type: assetType,
+            quantity: qtyNum,
+            price: priceNum,
+            commission: commNum,
+            currency,
+            date: dateIso,
+            notes: notes.trim() || null,
+          } as const);
+        } else {
+          // פתיחת פוזיציה חדשה — INSERT ל-trades עם status='OPEN'
+          await insertOpenTrade({
+            portfolio_id: portfolioId,
+            symbol: symbol.toUpperCase(),
+            asset_type: assetType,
+            currency,
+            direction,
+            entry_date: dateIso,
+            entry_price: priceNum,
+            quantity: qtyNum,
+            leverage: leverageNum,
+            point_value: pvNum,
+            commission: commNum,
+            notes: notes.trim() || null,
+          });
+        }
       } else if (mode === 'cash') {
         const amountNum = parseFloat(amount);
-        if (!amountNum || amountNum < 0) {
-          Alert.alert('שגיאה', 'מלא amount תקין');
+        if (!amountNum || amountNum <= 0) {
+          Alert.alert('סכום לא תקין', 'הכנס סכום גדול מ-0.');
           return;
         }
         const payload = {
@@ -201,8 +285,12 @@ export default function AddTransactionScreen() {
         else await createTransaction(payload);
       } else if (mode === 'dividend') {
         const amountNum = parseFloat(amount);
-        if (!symbol || !amountNum || amountNum < 0) {
-          Alert.alert('שגיאה', 'מלא symbol ו-amount');
+        if (!symbol) {
+          Alert.alert('שדה חסר', 'יש לבחור סימבול לדיבידנד.');
+          return;
+        }
+        if (!amountNum || amountNum <= 0) {
+          Alert.alert('סכום לא תקין', 'הכנס סכום דיבידנד גדול מ-0.');
           return;
         }
         const payload = {
@@ -217,15 +305,24 @@ export default function AddTransactionScreen() {
         if (transactionId) await updateTransaction(transactionId, payload);
         else await createTransaction(payload);
       }
+      showToast(isEdit ? 'העסקה עודכנה בהצלחה' : 'העסקה נוספה בהצלחה', 'success', 2500);
       navigation.goBack();
     } catch (err) {
-      Alert.alert('שגיאה', 'הוספת הטרנזקציה נכשלה');
+      const msg = err instanceof Error ? err.message : (err as { message?: string })?.message ?? String(err);
+      console.error('[AddTransaction] submit error:', err);
+      Alert.alert(
+        'שגיאה',
+        isEdit
+          ? `עדכון העסקה נכשל: ${msg}`
+          : `הוספת העסקה נכשלה: ${msg}`,
+      );
     } finally {
       setSubmitting(false);
     }
   }, [
     mode, side, direction, cashSide, symbol, assetType, quantity, price, commission,
-    amount, tradeDate, notes, currency, portfolioId, transactionId, navigation,
+    leverage, pointValue, amount, tradeDate, notes, currency, portfolioId,
+    transactionId, editTradeId, navigation,
   ]);
 
   // עלות עסקה בזמן אמת
@@ -238,14 +335,8 @@ export default function AddTransactionScreen() {
     return qty * pr + comm;
   }, [mode, quantity, price, commission]);
 
-  const heldQty = useMemo(
-    () => (symbol ? (holdingsMap[symbol.toUpperCase()] ?? 0) : null),
-    [symbol, holdingsMap]
-  );
-
   type CashValidation =
     | { kind: 'cash'; available: number; cost: number; remaining: number; ok: boolean }
-    | { kind: 'position'; held: number; selling: number; remaining: number; ok: boolean }
     | null;
 
   const cashValidation = useMemo((): CashValidation => {
@@ -254,20 +345,15 @@ export default function AddTransactionScreen() {
       if (availableCash === null || txCost === null) return null;
       return { kind: 'cash', available: availableCash, cost: txCost, remaining: availableCash - txCost, ok: availableCash >= txCost };
     }
-    if (direction === 'long' && side === 'sell') {
-      const qty = parseFloat(quantity);
-      if (!qty || qty <= 0 || heldQty === null) return null;
-      return { kind: 'position', held: heldQty, selling: qty, remaining: heldQty - qty, ok: qty <= heldQty };
-    }
     return null;
-  }, [mode, direction, side, availableCash, txCost, heldQty, quantity]);
+  }, [mode, direction, side, availableCash, txCost]);
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         root: { flex: 1, backgroundColor: '#0A0E0A' },
         scroll: { flex: 1, backgroundColor: 'transparent' },
-        scrollContent: { padding: 16, paddingBottom: 80 },
+        scrollContent: { padding: 16, paddingBottom: 100 },
         modeRow: {
           flexDirection: 'row-reverse',
           gap: 8,
@@ -497,12 +583,14 @@ export default function AddTransactionScreen() {
         />
         <KeyboardAvoidingView
           style={{ flex: 1, backgroundColor: 'transparent' }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
           >
             {/* Mode tabs */}
             <View style={styles.modeRow}>
@@ -654,9 +742,43 @@ export default function AddTransactionScreen() {
                   </TouchableOpacity>
                 </View>
 
+                <View style={styles.section}>
+                  <Text style={styles.label}>סוג נכס</Text>
+                  <View style={[styles.sideRow, { flexWrap: 'wrap', gap: 6 }]}>
+                    {(['stock', 'etf', 'crypto', 'forex', 'futures', 'fund'] as AssetType[]).map((t) => (
+                      <TouchableOpacity
+                        key={t}
+                        activeOpacity={1}
+                        style={[
+                          styles.sideBtn,
+                          { flex: 0, paddingHorizontal: 14, paddingVertical: 10 },
+                          assetType === t && {
+                            borderColor: tokens.colors.primary.main,
+                            backgroundColor: 'rgba(0,200,5,0.10)',
+                          },
+                        ]}
+                        onPress={() => {
+                          if (assetType !== t) void HapticFeedback.selection();
+                          setAssetType(t);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.sideBtnText,
+                            { fontSize: 12 },
+                            { color: assetType === t ? tokens.colors.primary.main : tokens.colors.text.secondary },
+                          ]}
+                        >
+                          {ASSET_TYPE_LABELS[t]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
                 <View style={styles.twoCol}>
                   <View style={[styles.section, styles.col]}>
-                    <Text style={styles.label}>כמות</Text>
+                    <Text style={styles.label}>{assetType === 'futures' ? 'חוזים' : 'כמות'}</Text>
                     <TextInput
                       style={styles.input}
                       value={quantity}
@@ -679,17 +801,44 @@ export default function AddTransactionScreen() {
                   </View>
                 </View>
 
-                <View style={styles.section}>
-                  <Text style={styles.label}>עמלה</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={commission}
-                    onChangeText={setCommission}
-                    keyboardType="decimal-pad"
-                    placeholder="0.00"
-                    placeholderTextColor={tokens.colors.text.tertiary}
-                  />
+                <View style={styles.twoCol}>
+                  <View style={[styles.section, styles.col]}>
+                    <Text style={styles.label}>עמלה</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={commission}
+                      onChangeText={setCommission}
+                      keyboardType="decimal-pad"
+                      placeholder="0.00"
+                      placeholderTextColor={tokens.colors.text.tertiary}
+                    />
+                  </View>
+                  <View style={[styles.section, styles.col]}>
+                    <Text style={styles.label}>מינוף (Leverage)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={leverage}
+                      onChangeText={setLeverage}
+                      keyboardType="decimal-pad"
+                      placeholder="1"
+                      placeholderTextColor={tokens.colors.text.tertiary}
+                    />
+                  </View>
                 </View>
+
+                {assetType === 'futures' ? (
+                  <View style={styles.section}>
+                    <Text style={styles.label}>ערך לנקודה (Point Value)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={pointValue}
+                      onChangeText={setPointValue}
+                      keyboardType="decimal-pad"
+                      placeholder="לדוגמה: 50 ל-ES, 20 ל-NQ"
+                      placeholderTextColor={tokens.colors.text.tertiary}
+                    />
+                  </View>
+                ) : null}
               </>
             )}
 
@@ -795,7 +944,7 @@ export default function AddTransactionScreen() {
               </>
             )}
 
-            {/* Cash / Position Validation Bar */}
+            {/* Cash Validation Bar */}
             {cashValidation && (
               <View
                 style={[
@@ -810,77 +959,38 @@ export default function AddTransactionScreen() {
                   },
                 ]}
               >
-                {cashValidation.kind === 'cash' ? (
-                  <>
-                    <View style={styles.validationRow}>
-                      <Text style={styles.validationLabel}>מזומן זמין</Text>
-                      <Text style={[styles.validationValue, { color: tokens.colors.text.primary }]}>
-                        {cashValidation.available.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
-                      </Text>
-                    </View>
-                    <View style={styles.validationRow}>
-                      <Text style={styles.validationLabel}>עלות עסקה</Text>
-                      <Text style={[styles.validationValue, { color: tokens.colors.text.danger }]}>
-                        −{cashValidation.cost.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
-                      </Text>
-                    </View>
-                    <View style={styles.validationDivider} />
-                    <View style={styles.validationRow}>
-                      <Text style={[styles.validationLabel, { fontWeight: '700', color: tokens.colors.text.primary }]}>
-                        לאחר עסקה
-                      </Text>
-                      <Text style={[
-                        styles.validationValue,
-                        { color: cashValidation.ok ? tokens.colors.primary.main : tokens.colors.text.danger, fontSize: 14 }
-                      ]}>
-                        {cashValidation.remaining.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
-                      </Text>
-                    </View>
-                    {!cashValidation.ok && (
-                      <View style={styles.validationWarningRow}>
-                        <Ionicons name="warning" size={14} color={tokens.colors.text.danger} />
-                        <Text style={[styles.validationWarningText, { color: tokens.colors.text.danger }]}>
-                          מזומן לא מספיק — חסרים{' '}
-                          {Math.abs(cashValidation.remaining).toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
-                        </Text>
-                      </View>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.validationRow}>
-                      <Text style={styles.validationLabel}>מניות בידך</Text>
-                      <Text style={[styles.validationValue, { color: tokens.colors.text.primary }]}>
-                        {cashValidation.held.toLocaleString()} {symbol}
-                      </Text>
-                    </View>
-                    <View style={styles.validationRow}>
-                      <Text style={styles.validationLabel}>מוכר</Text>
-                      <Text style={[styles.validationValue, { color: tokens.colors.text.danger }]}>
-                        −{cashValidation.selling.toLocaleString()} {symbol}
-                      </Text>
-                    </View>
-                    <View style={styles.validationDivider} />
-                    <View style={styles.validationRow}>
-                      <Text style={[styles.validationLabel, { fontWeight: '700', color: tokens.colors.text.primary }]}>
-                        נותר לאחר מכירה
-                      </Text>
-                      <Text style={[
-                        styles.validationValue,
-                        { color: cashValidation.ok ? tokens.colors.primary.main : tokens.colors.text.danger, fontSize: 14 }
-                      ]}>
-                        {cashValidation.remaining.toLocaleString()} {symbol}
-                      </Text>
-                    </View>
-                    {!cashValidation.ok && (
-                      <View style={styles.validationWarningRow}>
-                        <Ionicons name="warning" size={14} color={tokens.colors.text.danger} />
-                        <Text style={[styles.validationWarningText, { color: tokens.colors.text.danger }]}>
-                          כמות גבוהה מהמצאי — בידך {cashValidation.held.toLocaleString()} {symbol} בלבד
-                        </Text>
-                      </View>
-                    )}
-                  </>
+                <View style={styles.validationRow}>
+                  <Text style={styles.validationLabel}>מזומן זמין</Text>
+                  <Text style={[styles.validationValue, { color: tokens.colors.text.primary }]}>
+                    {cashValidation.available.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
+                <View style={styles.validationRow}>
+                  <Text style={styles.validationLabel}>עלות עסקה</Text>
+                  <Text style={[styles.validationValue, { color: tokens.colors.text.danger }]}>
+                    −{cashValidation.cost.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
+                <View style={styles.validationDivider} />
+                <View style={styles.validationRow}>
+                  <Text style={[styles.validationLabel, { fontWeight: '700', color: tokens.colors.text.primary }]}>
+                    לאחר עסקה
+                  </Text>
+                  <Text style={[
+                    styles.validationValue,
+                    { color: cashValidation.ok ? tokens.colors.primary.main : tokens.colors.text.danger, fontSize: 14 }
+                  ]}>
+                    {cashValidation.remaining.toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
+                {!cashValidation.ok && (
+                  <View style={styles.validationWarningRow}>
+                    <Ionicons name="warning" size={14} color={tokens.colors.text.danger} />
+                    <Text style={[styles.validationWarningText, { color: tokens.colors.text.danger }]}>
+                      מזומן לא מספיק — חסרים{' '}
+                      {Math.abs(cashValidation.remaining).toLocaleString('en-US', { style: 'currency', currency, maximumFractionDigits: 2 })}
+                    </Text>
+                  </View>
                 )}
               </View>
             )}

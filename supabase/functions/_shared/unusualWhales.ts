@@ -420,16 +420,94 @@ export async function fetchUwPoliticianTrades(
   limit = 300
 ): Promise<UwCongressTrade[]> {
   const clamped = Math.min(500, Math.max(1, limit));
-  const { data } = await uwGet<UwCongressTrade>(apiKey, '/api/politician-portfolios/recent_trades', {
-    politician_id: politicianId,
-    limit: clamped,
-    page: 0,
-  });
-  if (data.length) return data;
+  const out: UwCongressTrade[] = [];
+  const maxPages = Math.min(8, Math.ceil(clamped / 50));
+  for (let page = 0; page < maxPages; page++) {
+    const { data } = await uwGet<UwCongressTrade>(
+      apiKey,
+      '/api/politician-portfolios/recent_trades',
+      {
+        politician_id: politicianId,
+        limit: Math.min(100, clamped),
+        page,
+      }
+    );
+    if (!data.length) break;
+    out.push(...data);
+    if (out.length >= clamped || data.length < 20) break;
+  }
+  if (out.length) return dedupeCongressTrades(out).slice(0, clamped);
+
   const { data: recent } = await uwGet<UwCongressTrade>(apiKey, '/api/congress/recent-trades', {
     limit: clamped,
   });
   return recent.filter((t) => String(t.politician_id ?? '') === politicianId);
+}
+
+/**
+ * היסטוריה לפוליטיקאים לפי BioGuide — ממפה ל־UUID של UW ומושך עסקאות.
+ */
+export async function fetchUwTradesForBioguides(
+  apiKey: string,
+  bioguides: string[],
+  perPersonLimit = 400
+): Promise<{ trades: UwCongressTrade[]; bioMap: Map<string, string> }> {
+  const want = new Set(
+    bioguides.map((b) => b.trim().toUpperCase()).filter((b) => /^[A-Z]\d{6}$/.test(b))
+  );
+  const politicians = await fetchUwPoliticians(apiKey, 60).catch(() => [] as UwPolitician[]);
+  const bioToUw = new Map<string, string>();
+  const uwToBio = new Map<string, string>();
+  for (const p of politicians) {
+    const bg = String(p.bioguide_id ?? '')
+      .trim()
+      .toUpperCase();
+    const id = String(p.politician_id ?? p.id ?? '').trim();
+    if (!bg || !id || !want.has(bg)) continue;
+    bioToUw.set(bg, id);
+    uwToBio.set(id, bg);
+  }
+
+  // גיבוי שמות מוכרים אם הרשימה לא החזירה bioguide
+  const NAME_FALLBACK: Record<string, string[]> = {
+    P000197: ['pelosi'],
+    S000148: ['schumer'],
+    M000355: ['mcconnell'],
+    R000595: ['rubio'],
+    C001098: ['cruz'],
+    O000172: ['ocasio'],
+    P000603: ['rand paul', 'paul'],
+    C001114: ['crenshaw'],
+  };
+  for (const bg of want) {
+    if (bioToUw.has(bg)) continue;
+    const needles = NAME_FALLBACK[bg] ?? [];
+    for (const p of politicians) {
+      const name = String(p.name ?? '').toLowerCase();
+      if (needles.some((n) => name.includes(n))) {
+        const id = String(p.politician_id ?? p.id ?? '').trim();
+        if (id) {
+          bioToUw.set(bg, id);
+          uwToBio.set(id, bg);
+          break;
+        }
+      }
+    }
+  }
+
+  const trades: UwCongressTrade[] = [];
+  for (const [bg, uwId] of bioToUw) {
+    try {
+      const rows = await fetchUwPoliticianTrades(apiKey, uwId, perPersonLimit);
+      for (const t of rows) {
+        trades.push({ ...t, politician_id: bg });
+      }
+    } catch (e) {
+      console.warn(`uw trades for ${bg}/${uwId}:`, (e as Error).message);
+    }
+  }
+
+  return { trades: dedupeCongressTrades(trades), bioMap: uwToBio };
 }
 
 export interface UwPoliticianStockHolding {
@@ -802,4 +880,190 @@ export async function fetchUwFlowAlertsForTicker(
     .filter((x): x is NonNullable<typeof x> => x != null)
     .sort((a, b) => b.premium - a.premium)
     .slice(0, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Institution 13F holdings (fallback כש-sec-api נחסם / חסר)
+// ---------------------------------------------------------------------------
+
+export interface Uw13fHolding {
+  ticker: string;
+  issuer_name: string | null;
+  cusip: string | null;
+  shares: number;
+  value_usd: number;
+}
+
+export interface Uw13fFiling {
+  cik: string;
+  filing_date: string;
+  report_date: string | null;
+  manager_name: string | null;
+  holdings: Uw13fHolding[];
+  total_value_usd: number;
+}
+
+interface UwInstitutionHoldingRow {
+  ticker?: string;
+  full_name?: string;
+  cusip?: string;
+  units?: number | string;
+  value?: number | string;
+  date?: string;
+  security_type?: string;
+  put_call?: string | null;
+}
+
+/** היסטוריית 13F לפי CIK מ-Unusual Whales — `/api/institution/{cik}/holdings`. */
+export async function fetchUw13fHistoryForCik(
+  apiKey: string,
+  cik: string,
+  historyLimit = 12
+): Promise<Uw13fFiling[]> {
+  const digits = cik.replace(/\D/g, '');
+  const nameParam = digits.padStart(10, '0');
+  const meta = await fetchUwInstitutionHoldingsPage(apiKey, nameParam, {
+    limit: 1,
+    page: 0,
+  });
+  let reportDates = (meta.dates ?? []).filter(Boolean).slice(0, Math.max(1, historyLimit));
+  if (!reportDates.length && meta.rows[0]?.date) {
+    reportDates = [String(meta.rows[0].date).slice(0, 10)];
+  }
+  // ה-API הציבורי לא תמיד מחזיר dates[] — משלימים רבעונים אחורה
+  if (reportDates.length < historyLimit) {
+    const synthesized = synthesizeQuarterEnds(
+      reportDates[0] ?? new Date().toISOString().slice(0, 10),
+      historyLimit
+    );
+    const seen = new Set(reportDates);
+    for (const d of synthesized) {
+      if (seen.has(d)) continue;
+      reportDates.push(d);
+      seen.add(d);
+      if (reportDates.length >= historyLimit) break;
+    }
+  }
+  if (!reportDates.length) return [];
+
+  const filings: Uw13fFiling[] = [];
+  for (const reportDate of reportDates) {
+    const rows = await fetchAllUwInstitutionHoldingsForDate(apiKey, nameParam, reportDate);
+    const holdings: Uw13fHolding[] = [];
+    let total = 0;
+    for (const r of rows) {
+      const rowDate = String(r.date ?? '').slice(0, 10);
+      if (rowDate && rowDate !== reportDate) continue;
+      const security = String(r.security_type ?? 'Share');
+      if (security && security !== 'Share') continue;
+      if (r.put_call) continue;
+      const ticker = String(r.ticker ?? '').toUpperCase().trim();
+      if (!ticker) continue;
+      const shares = Number(r.units) || 0;
+      const value_usd = Number(r.value) || 0;
+      if (value_usd <= 0 && shares <= 0) continue;
+      holdings.push({
+        ticker,
+        issuer_name: r.full_name ? String(r.full_name) : null,
+        cusip: r.cusip ? String(r.cusip) : null,
+        shares,
+        value_usd,
+      });
+      total += value_usd;
+    }
+    if (!holdings.length) continue;
+    filings.push({
+      cik: digits || cik,
+      filing_date: reportDate,
+      report_date: reportDate,
+      manager_name: null,
+      holdings,
+      total_value_usd: total,
+    });
+  }
+
+  return filings.sort((a, b) => a.filing_date.localeCompare(b.filing_date));
+}
+
+/** רבעוני 13F טיפוסיים (31/3, 30/6, 30/9, 31/12) אחורה מ-anchor. */
+function synthesizeQuarterEnds(anchor: string, limit: number): string[] {
+  const ends = ['03-31', '06-30', '09-30', '12-31'];
+  const a = new Date(`${anchor}T00:00:00Z`);
+  let y = a.getUTCFullYear();
+  let qi = ends.findIndex((e) => `${y}-${e}` <= anchor);
+  if (qi < 0) {
+    y -= 1;
+    qi = 3;
+  }
+  const out: string[] = [];
+  while (out.length < limit) {
+    out.push(`${y}-${ends[qi]}`);
+    qi -= 1;
+    if (qi < 0) {
+      qi = 3;
+      y -= 1;
+    }
+  }
+  return out;
+}
+
+async function fetchAllUwInstitutionHoldingsForDate(
+  apiKey: string,
+  nameParam: string,
+  reportDate: string
+): Promise<UwInstitutionHoldingRow[]> {
+  const out: UwInstitutionHoldingRow[] = [];
+  for (let page = 0; page < 20; page++) {
+    const { rows } = await fetchUwInstitutionHoldingsPage(apiKey, nameParam, {
+      limit: 500,
+      page,
+      start_date: reportDate,
+      end_date: reportDate,
+      order: 'value',
+      order_direction: 'desc',
+    });
+    if (!rows.length) break;
+    out.push(...rows);
+    if (rows.length < 500) break;
+  }
+  return out;
+}
+
+async function fetchUwInstitutionHoldingsPage(
+  apiKey: string,
+  nameParam: string,
+  params: {
+    limit: number;
+    page: number;
+    start_date?: string;
+    end_date?: string;
+    order?: string;
+    order_direction?: string;
+  }
+): Promise<{ rows: UwInstitutionHoldingRow[]; dates: string[] }> {
+  const url = new URL(
+    `${UW_BASE}/api/institution/${encodeURIComponent(nameParam)}/holdings`
+  );
+  url.searchParams.set('limit', String(params.limit));
+  url.searchParams.set('page', String(params.page));
+  if (params.start_date) url.searchParams.set('start_date', params.start_date);
+  if (params.end_date) url.searchParams.set('end_date', params.end_date);
+  if (params.order) url.searchParams.set('order', params.order);
+  if (params.order_direction) {
+    url.searchParams.set('order_direction', params.order_direction);
+  }
+
+  const res = await fetch(url.toString(), { headers: uwHeaders(apiKey) });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`unusualwhales institution holdings ${res.status}: ${body.slice(0, 280)}`);
+  }
+  const json = (await res.json()) as {
+    data?: UwInstitutionHoldingRow[];
+    dates?: string[];
+  };
+  return {
+    rows: Array.isArray(json.data) ? json.data : [],
+    dates: Array.isArray(json.dates) ? json.dates.map((d) => String(d).slice(0, 10)) : [],
+  };
 }

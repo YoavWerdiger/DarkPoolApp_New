@@ -37,7 +37,7 @@ import {
 import { buildExploreFromDb } from '../_shared/exploreFromDb.ts';
 import { isSecProductionMode } from '../_shared/darkPoolMode.ts';
 
-const EXPLORE_CACHE_KEY = 'explore_v1';
+const EXPLORE_CACHE_KEY = 'explore_v3';
 const EXPLORE_FRESH_MS = 30 * 60 * 1000;
 
 const cors = {
@@ -214,7 +214,7 @@ async function buildExploreFromQuiver(
   let insidersDb = await buildInsidersFromDb(supabase);
   if (uwKey) {
     const insiderTx = await fetchUwInsiderTransactions(uwKey, {
-      limit: 80,
+      limit: 150,
       transactionCodes: ['P'],
       group: true,
       commonStockOnly: true,
@@ -225,9 +225,9 @@ async function buildExploreFromQuiver(
     const insidersUw = await buildInsidersFromUwTx(uwKey, insiderTx);
     insidersDb = mergeInsiders(insidersDb, insidersUw);
   }
-  const insiders = insidersDb.slice(0, 20);
+  const insiders = insidersDb.slice(0, 60);
 
-  const trending = congressRanked.slice(0, 10).map((p) => ({
+  const trending = congressRanked.slice(0, 30).map((p) => ({
     ...toPerson(p, bioByPolitician, sparkByPolitician),
     metric: `${p.trade_count}`,
     metric_label: 'עסקאות',
@@ -236,7 +236,7 @@ async function buildExploreFromQuiver(
 
   const followerMap = await loadFollowerCounts(supabase);
 
-  let mostFollowed = congressRanked.slice(0, 8).map((p) => {
+  let mostFollowed = congressRanked.slice(0, 36).map((p) => {
     const person = toPerson(p, bioByPolitician, sparkByPolitician);
     const fc = followerMap.get(`politician:${p.id}`) ?? 0;
     return {
@@ -253,12 +253,12 @@ async function buildExploreFromQuiver(
   });
 
   mostFollowed = [
-    ...(await enrichMostFollowedPortfolio(mostFollowed.slice(0, 4), congressTrades)),
-    ...mostFollowed.slice(4),
+    ...(await enrichMostFollowedPortfolio(mostFollowed.slice(0, 6), congressTrades)),
+    ...mostFollowed.slice(6),
   ];
 
   let topActive = enrichTopPerformersFromQuiver(
-    trending.slice(0, 8),
+    trending.slice(0, 24),
     equityTrades
   );
   topActive = await enrichTopPerformers(topActive, congressTrades);
@@ -270,7 +270,7 @@ async function buildExploreFromQuiver(
     recently_active: withPhoto(agg)
       .filter((p) => p.days_since != null)
       .sort((a, b) => (a.days_since ?? 999) - (b.days_since ?? 999))
-      .slice(0, 12)
+      .slice(0, 48)
       .map((p) => ({
         ...toPerson(p, bioByPolitician, sparkByPolitician),
         subtitle:
@@ -411,16 +411,16 @@ function enrichTopPerformersFromQuiver(
 
 async function buildExplore(apiKey: string): Promise<ExplorePayload> {
   const warnings: string[] = [];
-  const politicians = await fetchUwPoliticians(apiKey, 24).catch((e) => {
+  const politicians = await fetchUwPoliticians(apiKey, 36).catch((e) => {
     console.warn('uw-explore uw politicians', e);
     return [] as UwPolitician[];
   });
   const [congressBase, unusualRaw] = await Promise.all([
-    fetchUwCongressRecent(apiKey, 120).catch((e) => {
+    fetchUwCongressRecent(apiKey, 200).catch((e) => {
       console.warn('uw-explore uw congress', e);
       return [] as UwCongressTrade[];
     }),
-    fetchUwCongressUnusualTrades(apiKey, { limit: 80 }).catch((e) => {
+    fetchUwCongressUnusualTrades(apiKey, { limit: 120 }).catch((e) => {
       console.warn('uw-explore uw unusual', e);
       return [];
     }),
@@ -449,7 +449,7 @@ async function buildExplore(apiKey: string): Promise<ExplorePayload> {
   }
   await delay(350);
   const insiderTx = await fetchUwInsiderTransactions(apiKey, {
-    limit: 80,
+    limit: 150,
     transactionCodes: ['P'],
     group: true,
     commonStockOnly: true,
@@ -469,7 +469,7 @@ async function buildExplore(apiKey: string): Promise<ExplorePayload> {
 
   const executives = withPhoto(agg.filter((p) => p.chamber === 'executive'))
     .sort((a, b) => b.trade_count - a.trade_count)
-    .slice(0, 10)
+    .slice(0, 20)
     .map((p) => toPerson(p, bioByPolitician, sparkByPolitician));
 
   const congressRanked = withPhoto(agg.filter((p) => p.chamber !== 'executive'))
@@ -478,9 +478,9 @@ async function buildExplore(apiKey: string): Promise<ExplorePayload> {
   const supabase = createServiceClient();
   const insidersDb = await buildInsidersFromDb(supabase);
   const insidersUw = await buildInsidersFromUwTx(apiKey, insiderTx);
-  const insiders = mergeInsiders(insidersDb, insidersUw).slice(0, 20);
+  const insiders = mergeInsiders(insidersDb, insidersUw).slice(0, 60);
 
-  const trending = congressRanked.slice(0, 10).map((p) => ({
+  const trending = congressRanked.slice(0, 30).map((p) => ({
     ...toPerson(p, bioByPolitician, sparkByPolitician),
     metric: `${p.trade_count}`,
     metric_label: 'עסקאות',
@@ -489,7 +489,7 @@ async function buildExplore(apiKey: string): Promise<ExplorePayload> {
 
   const followerMap = await loadFollowerCounts(supabase);
 
-  let mostFollowed = congressRanked.slice(0, 8).map((p) => {
+  let mostFollowed = congressRanked.slice(0, 36).map((p) => {
     const person = toPerson(p, bioByPolitician, sparkByPolitician);
     const fc = followerMap.get(`politician:${p.id}`) ?? 0;
     return {
@@ -506,11 +506,11 @@ async function buildExplore(apiKey: string): Promise<ExplorePayload> {
   });
 
   mostFollowed = [
-    ...(await enrichMostFollowedPortfolio(mostFollowed.slice(0, 4), congressTrades)),
-    ...mostFollowed.slice(4),
+    ...(await enrichMostFollowedPortfolio(mostFollowed.slice(0, 6), congressTrades)),
+    ...mostFollowed.slice(6),
   ];
 
-  let topActive = await enrichTopPerformers(trending.slice(0, 8), congressTrades);
+  let topActive = await enrichTopPerformers(trending.slice(0, 24), congressTrades);
 
   return {
     most_followed: mostFollowed,
@@ -519,7 +519,7 @@ async function buildExplore(apiKey: string): Promise<ExplorePayload> {
     recently_active: withPhoto(agg)
       .filter((p) => p.days_since != null)
       .sort((a, b) => (a.days_since ?? 999) - (b.days_since ?? 999))
-      .slice(0, 12)
+      .slice(0, 48)
       .map((p) => ({
         ...toPerson(p, bioByPolitician, sparkByPolitician),
         subtitle:
@@ -667,11 +667,11 @@ async function buildInsidersFromUwTx(
 ): Promise<ExplorePerson[]> {
   const ranked = txs
     .filter((t) => t.ticker && t.owner_name && !t.is_10b5_1)
-    .slice(0, 40);
+    .slice(0, 120);
 
   const tickers = Array.from(
     new Set(ranked.map((t) => (t.ticker || '').toUpperCase()).filter(Boolean))
-  ).slice(0, 3);
+  ).slice(0, 8);
 
   const rosterByTicker = new Map<string, Awaited<ReturnType<typeof fetchUwInsidersForTicker>>>();
   for (const ticker of tickers) {
@@ -681,7 +681,7 @@ async function buildInsidersFromUwTx(
       console.warn(`roster ${ticker}`, e);
       rosterByTicker.set(ticker, []);
     }
-    await delay(400);
+    await delay(350);
   }
 
   const out: ExplorePerson[] = [];
@@ -697,7 +697,6 @@ async function buildInsidersFromUwTx(
     const roster = rosterByTicker.get(ticker) ?? [];
     const match = roster.find((r) => namesLooseMatch(name, r.display_name || r.name || ''));
     const image_url = match ? resolveUwLogoUrl(match) : null;
-    if (!image_url) continue;
 
     seen.add(key);
     out.push({
@@ -707,8 +706,9 @@ async function buildInsidersFromUwTx(
       image_url,
       kind: 'insider',
       ticker,
+      activity_score: Number(tx.amount) || Number(tx.transactions) || 1,
     });
-    if (out.length >= 16) break;
+    if (out.length >= 60) break;
   }
 
   return out;
@@ -738,7 +738,7 @@ async function buildInsidersFromDb(
     .from('dark_pool_insider_buys')
     .select('insider_name, insider_logo_url, ticker, insider_role')
     .order('filed_at', { ascending: false })
-    .limit(120);
+    .limit(250);
 
   if (error) return [];
 

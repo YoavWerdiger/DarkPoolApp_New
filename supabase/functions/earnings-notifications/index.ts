@@ -4,7 +4,12 @@ import {
   buildEarningsUpcomingBody,
   earningsUpcomingTitle,
 } from '../_shared/notificationBidi.ts'
-import { deriveEarningsDateTimeIso, fetchEarningsNotificationUsers } from '../_shared/earnings-utils.ts'
+import {
+  claimEarningsNotificationSlot,
+  deriveEarningsDateTimeIso,
+  fetchEarningsNotificationUsers,
+  normalizeEarningsTicker,
+} from '../_shared/earnings-utils.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,16 +34,13 @@ async function flushPendingNotifications(supabaseUrl: string, serviceKey: string
   }
 }
 
-interface EarningsReport {
-  id: string;
-  code: string;
-  ticker: string | null;
-  company_name: string | null;
-  report_date: string;
-  earnings_date_time: string | null;
-  before_after_market: string | null;
-  actual: number | null;
-  estimate: number | null;
+function dateInTimeZone(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
 }
 
 serve(async (req) => {
@@ -59,27 +61,16 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const now = new Date()
-    
-    // המרת הזמן הנוכחי לשעון ישראל (כשעות ודקות)
-    const israelNowStr = now.toLocaleString('en-US', { 
-      timeZone: 'Asia/Jerusalem',
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-    const [israelHour, israelMinute, israelSecond] = israelNowStr.split(':').map(Number)
-    const israelNowMinutes = israelHour * 60 + israelMinute
-    
-    // בדיקת דיווחים ב-15 דקות הקרובות
+    // יום מסחר לפי ET (לא UTC) — דיווחי AMC ליד חצות לא ייעלמו בטעות
+    const etToday = dateInTimeZone(now, 'America/New_York')
     const minutesFromNow = 15
-    
-    // חיפוש דיווחים שעדיין לא פורסמו (אין actual) ושצפויים ב-15 דקות הקרובות
+
     const { data: upcomingReports, error: reportsError } = await supabase
       .from('earnings_calendar')
-      .select('id, code, ticker, company_name, report_date, earnings_date_time, before_after_market, actual, estimate, revenue_estimate_avg, revenue_estimate')
-      .eq('report_date', now.toISOString().split('T')[0])
-      .is('actual', null) // רק דיווחים שעדיין לא פורסמו
+      .select('id, code, ticker, company_name, report_date, earnings_date_time, before_after_market, actual, estimate, revenue_estimate_avg, revenue_estimate, reminder_push_sent_at')
+      .eq('report_date', etToday)
+      .is('actual', null)
+      .is('reminder_push_sent_at', null)
       .or('importance.gte.3,importance.is.null')
       .like('code', '%.US')
       .order('earnings_date_time', { ascending: true })
@@ -89,7 +80,7 @@ serve(async (req) => {
       throw new Error(`Failed to fetch upcoming reports: ${reportsError.message}`)
     }
 
-    console.log(`📊 Found ${upcomingReports?.length || 0} upcoming reports`)
+    console.log(`📊 Found ${upcomingReports?.length || 0} upcoming reports for ET date ${etToday}`)
 
     if (!upcomingReports || upcomingReports.length === 0) {
       return new Response(
@@ -118,6 +109,7 @@ serve(async (req) => {
     }
 
     let notificationsCreated = 0
+    let skippedAlreadySent = 0
 
     const formatRevenue = (val: number | null | undefined): string => {
       if (val == null || isNaN(val)) return ''
@@ -129,46 +121,30 @@ serve(async (req) => {
       return `$${val.toFixed(2)}`
     }
 
-    // יצירת התראות לכל דיווח קרוב
     for (const report of upcomingReports) {
       const earningsDateTime =
         report.earnings_date_time
         ?? deriveEarningsDateTimeIso(report.report_date, report.before_after_market)
 
-      // המרת זמן הדיווח לשעון ישראל
       const reportTimeUTC = new Date(earningsDateTime)
-      const reportTimeIsraelStr = reportTimeUTC.toLocaleString('en-US', { 
-        timeZone: 'Asia/Jerusalem',
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      })
-      const [reportHour, reportMinute, reportSecond] = reportTimeIsraelStr.split(':').map(Number)
-      const reportTimeMinutes = reportHour * 60 + reportMinute
-      
-      // חישוב ההבדל בדקות (בשעון ישראל)
-      let minutesDiff = reportTimeMinutes - israelNowMinutes
-      
-      // אם הדיווח למחר (reportTimeMinutes קטן מ-israelNowMinutes), נדלג
-      if (minutesDiff < 0) {
-        // יכול להיות שהדיווח הוא למחר - נבדוק לפי report_date
-        const reportDate = new Date(report.report_date)
-        const todayDate = new Date(now.toISOString().split('T')[0])
-        if (reportDate.getTime() > todayDate.getTime()) {
-          // זה למחר - נחשב את ההבדל כולל יום
-          minutesDiff = (24 * 60 - israelNowMinutes) + reportTimeMinutes
-        } else {
-          continue // זה אתמול - נדלג
-        }
+      if (Number.isNaN(reportTimeUTC.getTime())) {
+        console.warn(`⚠️ Invalid earnings_date_time for ${report.code}: ${earningsDateTime}`)
+        continue
       }
-      
-      // רק אם הדיווח ב-15 דקות הקרובות (עם טולרנס של 2 דקות)
-      if (minutesDiff > minutesFromNow + 2) continue
+
+      // השוואה אבסולוטית ב-UTC — לא minute-of-day בשעון ישראל
+      // (שגרמה לכל BMO להיראות כ-15:00 ישראל בגלל 12:00Z)
+      const minutesDiff = Math.round((reportTimeUTC.getTime() - now.getTime()) / 60000)
+
+      // רק חלון 0..17 דקות לפני זמן הדיווח המשוער (BMO/AMC)
+      if (minutesDiff < 0 || minutesDiff > minutesFromNow + 2) continue
 
       const timeDisplay = report.before_after_market === 'BeforeMarket' ? 'לפני פתיחה' : 'אחרי סגירה'
-      const ticker = report.ticker || report.code.replace('.US', '')
+      const ticker = normalizeEarningsTicker(report.ticker, report.code)
       const companyName = report.company_name || ticker
+      const reportDate = String(report.report_date ?? '').slice(0, 10)
+
+      if (!ticker || !reportDate) continue
 
       const revEstimate = report.revenue_estimate_avg ?? report.revenue_estimate ?? null
       let revenueEstimateStr: string | null = null
@@ -188,23 +164,22 @@ serve(async (req) => {
         revenueEstimateStr,
       )
 
-      // יצירת התראה לכל משתמש
-      for (const user of usersWithNotifications) {
-        // בדיקת כפילות לפי מזהה דיווח (לא is_sent) — אחרי שליחה השורה נשארת is_sent=true
-        // אחרת ה-cron יחזור על אותו דיווח וייצר עוד push
-        const { data: existingAny } = await supabase
-          .from('pending_notifications')
-          .select('id')
-          .eq('user_id', user.user_id)
-          .eq('notification_type', 'earnings')
-          .contains('data', { type: 'earnings', earnings_report_id: report.id })
-          .limit(1)
+      let processedUsers = 0
 
-        if (existingAny && existingAny.length > 0) {
+      for (const user of usersWithNotifications) {
+        const claimed = await claimEarningsNotificationSlot(supabase, {
+          userId: user.user_id,
+          ticker,
+          reportDate,
+          notificationType: 'reminder_15m',
+          earningsReportId: report.id ?? null,
+        })
+        if (!claimed) {
+          skippedAlreadySent++
+          processedUsers++
           continue
         }
 
-        // יצירת התראה
         const { error: insertError } = await supabase
           .from('pending_notifications')
           .insert({
@@ -214,11 +189,12 @@ serve(async (req) => {
             body,
             data: {
               type: 'earnings',
+              durable_type: 'reminder_15m',
               earnings_report_id: report.id,
               ticker: ticker,
               company_name: companyName,
               code: report.code,
-              report_date: report.report_date,
+              report_date: reportDate,
               before_after_market: report.before_after_market,
               earnings_date_time: earningsDateTime,
               minutes_until: minutesDiff
@@ -236,10 +212,20 @@ serve(async (req) => {
           notificationsCreated++
           console.log(`✅ Created notification for ${ticker} (${companyName}) - ${minutesDiff} minutes`)
         }
+        processedUsers++
+      }
+
+      if (processedUsers >= usersWithNotifications.length && report.id) {
+        await supabase
+          .from('earnings_calendar')
+          .update({ reminder_push_sent_at: new Date().toISOString() })
+          .eq('id', report.id)
       }
     }
 
-    console.log(`✅ Created ${notificationsCreated} notifications`)
+    console.log(
+      `✅ Created ${notificationsCreated} notifications (skipped_already_sent=${skippedAlreadySent})`,
+    )
 
     if (notificationsCreated > 0) {
       await flushPendingNotifications(supabaseUrl, supabaseServiceKey)
@@ -249,9 +235,11 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'Earnings notifications check completed',
+        et_trading_date: etToday,
         upcoming_reports: upcomingReports.length,
         users_with_notifications: usersWithNotifications.length,
-        notifications_created: notificationsCreated
+        notifications_created: notificationsCreated,
+        skipped_already_sent: skippedAlreadySent,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -271,8 +259,3 @@ serve(async (req) => {
     )
   }
 })
-
-
-
-
-

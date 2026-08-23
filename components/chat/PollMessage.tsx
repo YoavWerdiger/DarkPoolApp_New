@@ -20,6 +20,27 @@ interface PollMessageProps {
   embeddedInBubble?: boolean;
 }
 
+function applyOptimisticVotes(
+  poll: PollWithVotes,
+  nextVotes: string[],
+): PollWithVotes {
+  const prevVotes = new Set(poll.user_votes || []);
+  const nextSet = new Set(nextVotes);
+  const options = poll.options.map((opt) => {
+    let count = opt.votes_count || 0;
+    if (prevVotes.has(opt.id) && !nextSet.has(opt.id)) count -= 1;
+    if (!prevVotes.has(opt.id) && nextSet.has(opt.id)) count += 1;
+    return { ...opt, votes_count: Math.max(0, count) };
+  });
+  const total_votes = options.reduce((sum, o) => sum + (o.votes_count || 0), 0);
+  return {
+    ...poll,
+    options,
+    user_votes: nextVotes,
+    total_votes,
+  };
+}
+
 function PollMessage({
   poll,
   onPollUpdated,
@@ -46,8 +67,14 @@ function PollMessage({
     }
   }, [poll]);
 
+  const allowVoteChange = !!currentPoll.allow_vote_change;
+  const isUserVoted = !!(currentPoll.user_votes && currentPoll.user_votes.length > 0);
+  const canVote = !currentPoll.is_locked && (!isUserVoted || allowVoteChange);
+  const showAdmin = isAdmin && currentPoll.creator_id === user?.id;
+  const isChangingVote = isUserVoted && allowVoteChange && !showResults;
+
   const handleOptionSelect = (optionId: string) => {
-    if (currentPoll.is_locked) return;
+    if (currentPoll.is_locked || !canVote) return;
 
     if (currentPoll.multiple_choice) {
       setSelectedOptions((prev) => {
@@ -56,42 +83,94 @@ function PollMessage({
         }
         return [...prev, optionId];
       });
-    } else {
-      setSelectedOptions([optionId]);
+      return;
     }
+
+    // בחירה יחידה + שינוי מותר: לחיצה מיידית מעדכנת הצבעה
+    if (isUserVoted && allowVoteChange) {
+      const sameAsCurrent =
+        (currentPoll.user_votes?.length === 1 && currentPoll.user_votes[0] === optionId);
+      if (sameAsCurrent && showResults) {
+        // retap על אותה אפשרות — אין שינוי
+        return;
+      }
+      void submitVote([optionId], { silent: true });
+      return;
+    }
+
+    setSelectedOptions([optionId]);
   };
 
-  const handleVote = async () => {
-    if (selectedOptions.length === 0) {
+  const submitVote = async (
+    optionIds: string[],
+    opts?: { silent?: boolean },
+  ) => {
+    if (optionIds.length === 0) {
       legacyAlert('שגיאה', 'יש לבחור לפחות אפשרות אחת');
       return;
     }
 
-    if (!currentPoll.multiple_choice && selectedOptions.length > 1) {
+    if (!currentPoll.multiple_choice && optionIds.length > 1) {
       legacyAlert('שגיאה', 'סקר זה מאפשר רק תשובה אחת');
       return;
     }
 
+    if (!user?.id || isVoting) return;
+
+    const previous = currentPoll;
+    const optimistic = applyOptimisticVotes(currentPoll, optionIds);
+    setCurrentPoll(optimistic);
+    onPollUpdated(optimistic);
+    setShowResults(true);
+    setSelectedOptions([]);
     setIsVoting(true);
+
     try {
-      await PollService.votePoll(currentPoll.id, selectedOptions, user?.id || '');
-
-      const updatedPoll = await PollService.getPollResults(currentPoll.id, user?.id);
-
+      await PollService.votePoll(currentPoll.id, optionIds, user.id);
+      const updatedPoll = await PollService.getPollResults(currentPoll.id, user.id);
       if (updatedPoll) {
         setCurrentPoll(updatedPoll);
         onPollUpdated(updatedPoll);
-        setShowResults(true);
-        setSelectedOptions([]);
         void HapticFeedback.impactLight();
-        legacyAlert('הצלחה', 'ההצבעה נשלחה בהצלחה!');
+        if (!opts?.silent) {
+          legacyAlert(
+            'הצלחה',
+            isUserVoted && allowVoteChange
+              ? 'הבחירה עודכנה בהצלחה!'
+              : 'ההצבעה נשלחה בהצלחה!',
+          );
+        }
       }
     } catch (error: any) {
+      setCurrentPoll(previous);
+      onPollUpdated(previous);
+      setShowResults(!!(previous.user_votes && previous.user_votes.length > 0));
       void HapticFeedback.error();
       legacyAlert('שגיאה', error.message || 'לא ניתן לשלוח את ההצבעה');
     } finally {
       setIsVoting(false);
     }
+  };
+
+  const handleVote = async () => {
+    await submitVote(selectedOptions, { silent: false });
+  };
+
+  const handleStartChangeVote = () => {
+    if (!allowVoteChange || currentPoll.is_locked) return;
+    setSelectedOptions([...(currentPoll.user_votes || [])]);
+    setShowResults(false);
+  };
+
+  const handleResultsOptionPress = (optionId: string) => {
+    if (!allowVoteChange || currentPoll.is_locked || isVoting) return;
+
+    if (currentPoll.multiple_choice) {
+      handleStartChangeVote();
+      return;
+    }
+
+    handleOptionSelect(optionId);
   };
 
   const handleLockPoll = async () => {
@@ -140,20 +219,22 @@ function PollMessage({
     ]);
   };
 
-  const isUserVoted = currentPoll.user_votes && currentPoll.user_votes.length > 0;
-  const canVote = !currentPoll.is_locked && !isUserVoted;
-  const showAdmin = isAdmin && currentPoll.creator_id === user?.id;
-
   const accent = lightOnBubble ? '#FFFFFF' : chatPalette.primary;
   const mutedIcon = lightOnBubble ? 'rgba(255,255,255,0.5)' : DesignTokens.colors.text.tertiary;
 
   return (
     <View style={styles.container}>
-      {(currentPoll.multiple_choice || currentPoll.is_locked || showAdmin) && (
+      {(currentPoll.multiple_choice ||
+        currentPoll.is_locked ||
+        allowVoteChange ||
+        showAdmin) && (
         <View style={styles.topMeta}>
           <View style={styles.topMetaLeft}>
             {currentPoll.multiple_choice && (
               <Text style={styles.metaHint}>בחירה מרובה</Text>
+            )}
+            {allowVoteChange && !currentPoll.is_locked && (
+              <Text style={styles.metaHint}>ניתן לשנות</Text>
             )}
             {currentPoll.is_locked && (
               <Text style={styles.lockedHint}>נעול</Text>
@@ -190,12 +271,12 @@ function PollMessage({
               <TouchableOpacity
                 key={option.id}
                 onPress={() => handleOptionSelect(option.id)}
-                disabled={!canVote}
+                disabled={!canVote || isVoting}
                 activeOpacity={0.7}
                 style={[
                   styles.optionButton,
                   isSelected && styles.optionButtonSelected,
-                  !canVote && styles.optionButtonDisabled,
+                  (!canVote || isVoting) && styles.optionButtonDisabled,
                 ]}
               >
                 <Ionicons
@@ -227,27 +308,48 @@ function PollMessage({
               style={[styles.voteButton, isVoting && styles.voteButtonDisabled]}
             >
               <Text style={styles.voteButtonText}>
-                {isVoting ? 'שולח...' : 'הצבע'}
+                {isVoting
+                  ? 'שולח...'
+                  : isChangingVote
+                    ? 'עדכן הצבעה'
+                    : 'הצבע'}
               </Text>
             </TouchableOpacity>
           )}
 
-          {isUserVoted && (
-            <TouchableOpacity onPress={() => setShowResults(true)} style={styles.showResultsButton}>
-              <Text style={styles.showResultsText}>הצג תוצאות</Text>
+          {isUserVoted && allowVoteChange && (
+            <TouchableOpacity
+              onPress={() => {
+                setShowResults(true);
+                setSelectedOptions([]);
+              }}
+              style={styles.showResultsButton}
+            >
+              <Text style={styles.showResultsText}>חזרה לתוצאות</Text>
             </TouchableOpacity>
           )}
         </View>
       ) : (
-        <PollResults
-          options={currentPoll.options}
-          userVotes={currentPoll.user_votes || []}
-          totalVotes={currentPoll.total_votes}
-          multipleChoice={currentPoll.multiple_choice}
-          isLocked={currentPoll.is_locked}
-          isMe={isMe}
-          embeddedInBubble={embeddedInBubble}
-        />
+        <View style={styles.optionsBlock}>
+          <PollResults
+            options={currentPoll.options}
+            userVotes={currentPoll.user_votes || []}
+            totalVotes={currentPoll.total_votes}
+            multipleChoice={currentPoll.multiple_choice}
+            isLocked={currentPoll.is_locked}
+            isMe={isMe}
+            embeddedInBubble={embeddedInBubble}
+            allowChangeVote={canVote && allowVoteChange}
+            onOptionPress={
+              canVote && allowVoteChange ? handleResultsOptionPress : undefined
+            }
+          />
+          {canVote && allowVoteChange && currentPoll.multiple_choice && (
+            <TouchableOpacity onPress={handleStartChangeVote} style={styles.showResultsButton}>
+              <Text style={styles.showResultsText}>שנה בחירה</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
     </View>
   );

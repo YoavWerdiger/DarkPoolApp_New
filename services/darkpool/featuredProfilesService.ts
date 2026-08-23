@@ -1,11 +1,16 @@
 import { supabase } from '../../lib/supabase';
 import type { ExplorePerson } from './uwExploreService';
+import { fetchUwExplore } from './uwExploreService';
 import { knownPortraitForInvestor } from '../../screens/DarkPool/utils/knownInvestorPortraits';
 import {
   CURATED_EXPLORE_PROFILES,
   isCuratedExploreId,
   isTrustedPortraitUrl,
 } from '../../screens/DarkPool/utils/curatedExploreProfiles';
+import {
+  buildExploreProfileGrid,
+  collectExploreSources,
+} from '../../screens/DarkPool/utils/exploreGrid';
 
 export interface FeaturedProfile {
   id: string;
@@ -95,4 +100,22 @@ export async function fetchCuratedExploreGrid(): Promise<ExplorePerson[]> {
   return Array.from(byId.values()).sort(
     (a, b) => (b.activity_score ?? 0) - (a.activity_score ?? 0)
   );
+}
+
+/**
+ * פס אנשים / גילוי — מאוצרים + כל מה ש־uw-explore מחזיר (קונגרס + בכירים).
+ */
+export async function fetchExplorePeopleMerged(opts?: {
+  requirePhoto?: boolean;
+}): Promise<ExplorePerson[]> {
+  const curated = await fetchCuratedExploreGrid();
+  let explore: Awaited<ReturnType<typeof fetchUwExplore>> | null = null;
+  try {
+    explore = await fetchUwExplore();
+  } catch {
+    /* curated fallback */
+  }
+  return buildExploreProfileGrid(collectExploreSources(explore, curated), {
+    requirePhoto: opts?.requirePhoto,
+  });
 }

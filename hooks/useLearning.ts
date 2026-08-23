@@ -1,7 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { LearningService } from '../services/learningService';
 import { appQueryKeys } from '../lib/appQueryKeys';
-import { CourseListParams, CourseWithProgress, CourseWithModules, LessonWithProgress, Enrollment, LessonProgress, ProgressUpdateRequest, SignedUrlRequest } from '../types/learning';
+import { CourseListParams, ProgressUpdateRequest, SignedUrlRequest } from '../types/learning';
+
+/** קורסים משתנים לעיתים רחוקות — cache ארוך לתחושת טעינה מיידית */
+export const ACADEMY_COURSES_STALE_MS = 30 * 60 * 1000;
+export const ACADEMY_COURSE_DETAIL_STALE_MS = 15 * 60 * 1000;
 
 // Query keys
 export const learningKeys = {
@@ -18,7 +22,10 @@ export function useCourses(params?: CourseListParams) {
   return useQuery({
     queryKey: learningKeys.courses(params),
     queryFn: () => LearningService.fetchCourses(params || {}),
-    staleTime: 5 * 60 * 1000, // 5 דקות
+    staleTime: ACADEMY_COURSES_STALE_MS,
+    gcTime: 24 * 60 * 60 * 1000,
+    // מציג cache מיד גם בזמן רענון ברקע
+    placeholderData: (previous) => previous,
   });
 }
 
@@ -28,7 +35,8 @@ export function useCourse(courseId: string) {
     queryKey: learningKeys.course(courseId),
     queryFn: () => LearningService.fetchCourse(courseId),
     enabled: !!courseId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: ACADEMY_COURSE_DETAIL_STALE_MS,
+    placeholderData: (previous) => previous,
   });
 }
 
@@ -38,7 +46,8 @@ export function useLesson(lessonId: string) {
     queryKey: learningKeys.lesson(lessonId),
     queryFn: () => LearningService.fetchLesson(lessonId),
     enabled: !!lessonId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: ACADEMY_COURSE_DETAIL_STALE_MS,
+    placeholderData: (previous) => previous,
   });
 }
 

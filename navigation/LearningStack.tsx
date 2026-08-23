@@ -2,6 +2,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LearningScreen from '../screens/Learning';
 import { CoursesScreen } from '../screens/Learning/CoursesScreen';
 import { CourseDetailScreen } from '../screens/Learning/CourseDetailScreen';
+import { CourseComingSoonScreen } from '../screens/Learning/CourseComingSoonScreen';
 import { CoursePreviewScreen } from '../screens/Learning/CoursePreviewScreen';
 import { MyNotesScreen } from '../screens/Learning/MyNotesScreen';
 import { LessonPlayerScreen } from '../screens/Learning/LessonPlayerScreen';
@@ -11,6 +12,7 @@ import { withVideoBackground } from '../components/VideoBackground';
 const CoursesScreenPlain = CoursesScreen;
 const LearningWithVideo = withVideoBackground(LearningScreen);
 const CourseDetailWithVideo = withVideoBackground(CourseDetailScreen);
+const CourseComingSoonPlain = CourseComingSoonScreen;
 const CoursePreviewWithVideo = withVideoBackground(CoursePreviewScreen);
 /** מסך שיעור: בלי withVideoBackground — רקע ירוק־שחור מאחורי blur גרם לכתם ירוק; המסך מגדיר רקע נייטרלי משלו */
 const LessonPlayerPlain = LessonPlayerScreen;
@@ -20,6 +22,12 @@ export type LearningStackParamList = {
   CoursesScreen: undefined;
   LearningScreen: { courseId?: string; lessonId?: string };
   CourseDetailScreen: { courseId: string };
+  CourseComingSoonScreen: {
+    courseId: string;
+    title?: string;
+    subtitle?: string;
+    coverUrl?: string;
+  };
   CoursePreviewScreen: { youtubeLinks?: string[] };
   LessonPlayerScreen: { lessonId: string; initialBlockIndex?: number };
   MyNotesScreen: undefined;
@@ -53,6 +61,11 @@ export default function LearningStack() {
         name="CourseDetailScreen"
         component={CourseDetailWithVideo}
         options={{ title: 'פרטי קורס' }}
+      />
+      <Stack.Screen
+        name="CourseComingSoonScreen"
+        component={CourseComingSoonPlain}
+        options={{ title: 'בקרוב' }}
       />
       <Stack.Screen
         name="CoursePreviewScreen"

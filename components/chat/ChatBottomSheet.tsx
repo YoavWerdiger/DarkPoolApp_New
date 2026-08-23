@@ -28,12 +28,18 @@ import {
 } from '../ui/BottomSheet/sheetMotion';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { DayNavBlurButton, DAY_NAV_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import {
+  sheetActionColors,
+  SHEET_BACKDROP_OPACITY,
+  SHEET_GLASS_INTENSITY,
+  SHEET_GLASS_OVERLAY,
+} from '../ui/BottomSheet/sheetGlass';
 import { chatPalette, chatRtlRow, chatRtlText } from './chatDesignTokens';
 
-export const CHAT_SHEET_BACKDROP_OPACITY = 0.48;
-/** Blur + tint — אטום מספיק מעל צ׳אט, עדיין עם מראה זכוכית. */
-export const CHAT_SHEET_GLASS_INTENSITY = 95;
-export const CHAT_SHEET_GLASS_OVERLAY = 'rgba(10,14,10,0.82)';
+/** ירושה מ־sheetGlass — שיטי צ׳אט לא דורסים את ההפרדה הגלובלית. */
+export const CHAT_SHEET_BACKDROP_OPACITY = SHEET_BACKDROP_OPACITY;
+export const CHAT_SHEET_GLASS_INTENSITY = SHEET_GLASS_INTENSITY;
+export const CHAT_SHEET_GLASS_OVERLAY = SHEET_GLASS_OVERLAY;
 export const CHAT_SHEET_WATERMARK_SCALE = 0.58;
 export {
   BOTTOM_SHEET_EDGE_HANDLE_HEIGHT,
@@ -101,14 +107,22 @@ type ChatBottomSheetProps = {
   showBrandWatermark?: boolean;
   contentPaddingBottom?: number;
   /**
-   * ברירת מחדל: true. רקע זכוכית קפואה (BlurView + tint כהה) — כמו שיט
-   * הצפיות/ריאקציות ב-StoryViewer. העברה false מחזירה לרקע המותגי הקודם.
+   * ברירת מחדל: true. רקע זכוכית כהה כמו UICard (Blur + overlay לבן עדין) — יורש
+   * מ־sheetGlass הגלובלי. העברה false מחזירה לרקע המותגי הקודם.
    */
   useGlassBackground?: boolean;
-  /** עוצמת ה-blur כשהזכוכית פעילה (0–100). ברירת מחדל: 95. */
+  /** עוצמת ה-blur כשהזכוכית פעילה (0–100). ברירת מחדל: CHAT_SHEET_GLASS_INTENSITY. */
   glassIntensity?: number;
-  /** tint כהה מעל ה-blur. ברירת מחדל: CHAT_SHEET_GLASS_OVERLAY. */
+  /** overlay עדין מעל ה-blur. ברירת מחדל: CHAT_SHEET_GLASS_OVERLAY. */
   glassOverlayColor?: string;
+  /** עוצמת ה-dim מאחורי השיט. ברירת מחדל: CHAT_SHEET_BACKDROP_OPACITY. */
+  backdropOpacity?: number;
+  /** פס handle עליון (אזור גרירה). ברירת מחדל true. */
+  showHandle?: boolean;
+  /** צבע מילוי ל-handle (אופציונלי). ברירת מחדל: זכוכית שקופה מהסגנון הגלובלי. */
+  handleColor?: string;
+  /** הזזת השיט כשהמקלדת עולה (מועבר ל-BottomSheet). */
+  avoidKeyboard?: boolean;
   children: React.ReactNode;
 };
 
@@ -125,6 +139,10 @@ export function ChatBottomSheet({
   useGlassBackground = true,
   glassIntensity = CHAT_SHEET_GLASS_INTENSITY,
   glassOverlayColor = CHAT_SHEET_GLASS_OVERLAY,
+  backdropOpacity = CHAT_SHEET_BACKDROP_OPACITY,
+  showHandle = true,
+  handleColor,
+  avoidKeyboard,
   children,
 }: ChatBottomSheetProps) {
   return (
@@ -132,10 +150,11 @@ export function ChatBottomSheet({
       isOpen={visible}
       onClose={onClose}
       snapPoints={snapPoints}
-      showHandle
+      showHandle={showHandle}
+      handleColor={handleColor}
       enablePanDownToClose
       useModal
-      backdropOpacity={CHAT_SHEET_BACKDROP_OPACITY}
+      backdropOpacity={backdropOpacity}
       showBrandBackground={showBrandBackground}
       showBrandWatermark={showBrandWatermark}
       edgeToEdge={edgeToEdge}
@@ -145,6 +164,7 @@ export function ChatBottomSheet({
       useGlassBackground={useGlassBackground}
       glassIntensity={glassIntensity}
       glassOverlayColor={glassOverlayColor}
+      avoidKeyboard={avoidKeyboard}
     >
       {children}
     </BottomSheet>
@@ -379,6 +399,7 @@ export function ChatSheetUserRow({
 
 export function useChatSheetStyles() {
   const tokens = useDesignTokens();
+  const actionColors = useMemo(() => sheetActionColors(tokens), [tokens]);
   return useMemo(
     () =>
       StyleSheet.create({
@@ -474,12 +495,13 @@ export function useChatSheetStyles() {
           color: tokens.colors.text.primary,
         },
         titlePill: {
-          backgroundColor: tokens.colors.background.secondary,
-          borderWidth: 1,
-          borderColor: chatPalette.glassBorder,
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          borderRadius: 20,
+          // שקוף/זכוכית עדינה — בלי כדור אטום שנלחם ברקע ה-glass של השיט
+          backgroundColor: 'transparent',
+          borderWidth: 0,
+          borderColor: 'transparent',
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 0,
         },
         titleText: {
           ...chatRtlText,
@@ -496,16 +518,16 @@ export function useChatSheetStyles() {
         },
         cancelButton: {
           marginTop: tokens.spacing.md,
-          backgroundColor: tokens.colors.background.secondary,
-          borderWidth: 1,
-          borderColor: chatPalette.glassBorder,
+          backgroundColor: actionColors.cancel.backgroundColor,
+          borderWidth: actionColors.cancel.borderWidth,
+          borderColor: actionColors.cancel.borderColor,
           paddingVertical: 14,
-          borderRadius: 12,
+          borderRadius: 9999,
           alignItems: 'center',
         },
         cancelButtonText: {
           ...chatRtlText,
-          color: tokens.colors.text.secondary,
+          color: actionColors.cancel.color,
           fontSize: 16,
           fontWeight: '500',
         },
@@ -521,8 +543,10 @@ export function useChatSheetStyles() {
         tabsContainer: {
           flexDirection: 'row-reverse',
           direction: 'rtl',
-          backgroundColor: tokens.colors.background.secondary,
+          backgroundColor: chatPalette.glass,
           borderRadius: 30,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: chatPalette.glassBorder,
           padding: 4,
           gap: 4,
           alignItems: 'center',
@@ -686,6 +710,6 @@ export function useChatSheetStyles() {
           fontWeight: '700',
         },
       }),
-    [tokens],
+    [tokens, actionColors],
   );
 }

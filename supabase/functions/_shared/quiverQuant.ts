@@ -105,6 +105,115 @@ export async function fetchQuiverLiveCongressTrades(
   return json.data ?? [];
 }
 
+/** היסטוריה לפי טיקר — GET /beta/historical/congresstrading/{ticker} */
+export async function fetchQuiverHistoricalCongressByTicker(
+  apiKey: string,
+  ticker: string
+): Promise<QuiverCongressTrade[]> {
+  const sym = ticker.trim().toUpperCase();
+  if (!sym) return [];
+  const json = await quiverGetJson<QuiverCongressTrade[] | { data?: QuiverCongressTrade[] }>(
+    apiKey,
+    `/beta/historical/congresstrading/${encodeURIComponent(sym)}`
+  );
+  if (Array.isArray(json)) return json;
+  return json.data ?? [];
+}
+
+/**
+ * היסטוריה לפוליטיקאים מאוצרים — live מלא + historical לטיקרים פופולריים,
+ * מסונן לפי BioGuideID.
+ */
+export async function fetchQuiverTradesForBioguides(
+  apiKey: string,
+  bioguides: string[],
+  tickers: string[] = DEFAULT_HISTORY_TICKERS
+): Promise<QuiverCongressTrade[]> {
+  const want = new Set(
+    bioguides.map((b) => b.trim().toUpperCase()).filter((b) => /^[A-Z]\d{6}$/.test(b))
+  );
+  if (!want.size) return [];
+
+  const merged: QuiverCongressTrade[] = [];
+  try {
+    const live = await fetchQuiverLiveCongressTrades(apiKey);
+    merged.push(...live);
+  } catch (e) {
+    console.warn('quiver live congress:', (e as Error).message);
+  }
+
+  for (const ticker of tickers) {
+    try {
+      const hist = await fetchQuiverHistoricalCongressByTicker(apiKey, ticker);
+      merged.push(...hist);
+      await delay(80);
+    } catch (e) {
+      console.warn(`quiver historical ${ticker}:`, (e as Error).message);
+    }
+  }
+
+  const out: QuiverCongressTrade[] = [];
+  const seen = new Set<string>();
+  for (const row of merged) {
+    const bg = String(row.BioGuideID ?? '')
+      .trim()
+      .toUpperCase();
+    if (!want.has(bg)) continue;
+    if (!isQuiverEquityTrade(row)) continue;
+    const key = [
+      bg,
+      String(row.Ticker ?? '').toUpperCase(),
+      String(row.TransactionDate ?? '').slice(0, 10),
+      String(row.Transaction ?? ''),
+      String(row.Range ?? row.Amount ?? ''),
+    ].join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return out;
+}
+
+/** טיקרים עם דיווחי קונגרס נפוצים — מכסים היסטוריה של פלוסי וכו׳ */
+export const DEFAULT_HISTORY_TICKERS = [
+  'NVDA',
+  'AAPL',
+  'MSFT',
+  'GOOGL',
+  'GOOG',
+  'AMZN',
+  'META',
+  'TSLA',
+  'NFLX',
+  'CRM',
+  'AVGO',
+  'AMD',
+  'INTC',
+  'UBER',
+  'DIS',
+  'BA',
+  'JPM',
+  'V',
+  'MA',
+  'COST',
+  'PANW',
+  'CRWD',
+  'PLTR',
+  'COIN',
+];
+
+/** BioGuides של פרופילים מאוצרים במסך אינסיידרים */
+export const CURATED_CONGRESS_BIOGUIDES = [
+  'P000197', // Nancy Pelosi
+  'S000148', // Chuck Schumer
+  'M000355', // Mitch McConnell
+  'R000595', // Marco Rubio
+  'C001098', // Ted Cruz
+  'O000172', // AOC
+  'P000603', // Rand Paul
+  'C001114', // Dan Crenshaw
+];
+
 /** רשימת פוליטיקאים — GET /beta/bulk/congress/politicians (paginated) */
 export async function fetchQuiverCongressPoliticians(
   apiKey: string,

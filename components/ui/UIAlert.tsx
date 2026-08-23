@@ -8,12 +8,13 @@ import {
   StyleSheet,
   ViewStyle,
   TextStyle,
-  StatusBar,
   I18nManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { sheetActionColors } from './BottomSheet/sheetGlass';
+import { applyAppSystemUI } from '../../lib/androidSystemUI';
 
 export type UIAlertType = 'info' | 'success' | 'warning' | 'error';
 
@@ -61,6 +62,11 @@ const UIAlert: React.FC<UIAlertProps> = ({
     }).start();
   }, [visible]);
 
+  useEffect(() => {
+    if (visible) return;
+    void applyAppSystemUI();
+  }, [visible]);
+
   const getTypeConfig = () => {
     switch (type) {
       case 'success':
@@ -83,6 +89,7 @@ const UIAlert: React.FC<UIAlertProps> = ({
   };
 
   const typeConfig = getTypeConfig();
+  const actionColors = sheetActionColors(DesignTokens);
 
   const handleButtonPress = (button: UIAlertButton) => {
     if (button.style === 'destructive') {
@@ -162,19 +169,24 @@ const UIAlert: React.FC<UIAlertProps> = ({
       case 'destructive':
         return {
           ...baseStyle,
-          backgroundColor: colors.danger.main,
+          backgroundColor: actionColors.destructive.backgroundColor,
+          borderWidth: actionColors.destructive.borderWidth,
+          borderColor: actionColors.destructive.borderColor,
         };
       case 'cancel':
         return {
           ...baseStyle,
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          borderColor: colors.border.primary,
+          backgroundColor: actionColors.cancel.backgroundColor,
+          borderWidth: actionColors.cancel.borderWidth,
+          borderColor: actionColors.cancel.borderColor,
         };
       default:
+        // Primary brand — לא מילוי לבן כפוי על רקע כהה
         return {
           ...baseStyle,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: actionColors.primary.backgroundColor,
+          borderWidth: actionColors.primary.borderWidth,
+          borderColor: actionColors.primary.borderColor,
         };
     }
   };
@@ -183,21 +195,21 @@ const UIAlert: React.FC<UIAlertProps> = ({
     switch (button.style) {
       case 'destructive':
         return {
-          color: '#FFFFFF',
+          color: actionColors.destructive.color,
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
         };
       case 'cancel':
         return {
-          color: '#FFFFFF',
+          color: actionColors.cancel.color,
           fontWeight: typography.fontWeight.medium,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
         };
-        default:
+      default:
         return {
-          color: '#FFFFFF',
+          color: actionColors.primary.color,
           fontWeight: typography.fontWeight.semibold,
           textAlign: 'center',
           fontSize: typography.fontSize.base,
@@ -212,9 +224,10 @@ const UIAlert: React.FC<UIAlertProps> = ({
       animationType="fade"
       statusBarTranslucent={true}
       onRequestClose={onClose}
+      onDismiss={() => {
+        void applyAppSystemUI();
+      }}
     >
-      <StatusBar backgroundColor="rgba(0,0,0,0.6)" barStyle="light-content" />
-
       <View style={{ flex: 1 }}>
         <Pressable
           style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.background.overlayHeavy }]}

@@ -8,27 +8,41 @@ import { warmAppCache } from '../services/appPrefetch';
 /**
  * אתחול cache גלובלי:
  * 1. hydrate מ-AsyncStorage בהפעלה
- * 2. prefetch אחרי login
- * 3. רענון שקט כשחוזרים לאפליקציה
+ * 2. prefetch אחרי login (רק אחרי שה-hydrate סיים — אחרת warm רץ על cache ריק)
+ * 3. רענון שקט כשחוזרים לאפליקציה (debounced בתוך warmAppCache)
  */
 export function useAppBootstrap(userId: string | undefined, authReady: boolean) {
-  const hydratedRef = useRef(false);
+  const hydratePromiseRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
-    void hydrateQueryCache();
+    if (!hydratePromiseRef.current) {
+      hydratePromiseRef.current = hydrateQueryCache();
+    }
   }, []);
 
   useEffect(() => {
     if (!userId || !authReady) return;
-    void hydrateChatMessages(userId);
-    void hydrateMediaCacheIndex();
-    void warmAppCache(userId);
+    let cancelled = false;
+
+    void (async () => {
+      const hydratePromise = hydratePromiseRef.current ?? hydrateQueryCache();
+      hydratePromiseRef.current = hydratePromise;
+
+      // Query + chat מהדיסק במקביל — לא לחסום warm על hydrate סידרתי כפול
+      await Promise.all([hydratePromise, hydrateChatMessages(userId)]);
+      if (cancelled) return;
+
+      void hydrateMediaCacheIndex();
+      void warmAppCache(userId);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [userId, authReady]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !authReady) return;
 
     const onStateChange = (next: AppStateStatus) => {
       if (next === 'active') {
@@ -41,5 +55,5 @@ export function useAppBootstrap(userId: string | undefined, authReady: boolean) 
 
     const sub = AppState.addEventListener('change', onStateChange);
     return () => sub.remove();
-  }, [userId]);
+  }, [userId, authReady]);
 }

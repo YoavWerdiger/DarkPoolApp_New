@@ -1,40 +1,62 @@
 import { legacyAlert } from '../../utils/appDialog';
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
 import {
-  Camera,
-  User,
-  Check,
-  X,
-  ChevronDown,
-} from 'lucide-react-native';
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  TextInput,
+  StyleSheet,
+  Pressable,
+} from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { ChevronDown, Check } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 import { mediaService } from '../../services/mediaService';
-import { useDesignTokens } from '../../components/ui/DesignTokens';
-import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
+import { DesignTokens as StaticTokens, useDesignTokens } from '../../components/ui/DesignTokens';
 import UICard from '../../components/ui/UICard';
+import OnboardingButton from '../../components/onboarding/OnboardingButton';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
-import OnboardingInput from '../../components/onboarding/OnboardingInput';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+
+type Gender = 'male' | 'female' | '';
+type FocusedField = 'displayName' | 'phone' | null;
+
+const PREVIEW_SIZE = 280;
 
 export default function EditProfileScreen({ navigation }: any) {
   const { user, updateProfile } = useAuth();
-  const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
+  const insets = useSafeAreaInsets();
+  const surface = StaticTokens.onboardingInputSurface;
+
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
-  const [gender, setGender] = useState<'male' | 'female' | ''>('');
+  const [gender, setGender] = useState<Gender>('');
   const [showGenderPicker, setShowGenderPicker] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [focusedField, setFocusedField] = useState<FocusedField>(null);
 
   useEffect(() => {
     loadUserData();
   }, [user]);
+
+  useEffect(() => {
+    ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => {});
+    ImagePicker.requestCameraPermissionsAsync().catch(() => {});
+  }, []);
 
   const loadUserData = async () => {
     try {
@@ -42,32 +64,46 @@ export default function EditProfileScreen({ navigation }: any) {
         setIsLoading(false);
         return;
       }
-      
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
+
+      // phone ו-gender כבר לא קריאים ישירות מ-public.users (הרשאות עמודה),
+      // הפרופיל המלא של המשתמש עצמו מגיע מ-RPC שנעול על auth.uid().
+      const { data: rows } = await supabase.rpc('get_my_profile');
+      const userData = Array.isArray(rows) ? rows[0] : rows;
+
       if (userData) {
         setDisplayName(userData.full_name || '');
         setPhone(userData.phone || '');
         setGender(userData.gender || '');
         setProfileImage(userData.profile_picture || null);
       }
-      
+
       setIsLoading(false);
-    } catch (error) {
+    } catch {
       setIsLoading(false);
     }
   };
 
-  const handleImagePicker = async () => {
+  const processAndSetImage = async (uri: string) => {
+    setIsProcessingImage(true);
+    try {
+      const resized = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: PREVIEW_SIZE, height: PREVIEW_SIZE } }],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      setProfileImage(resized.uri);
+    } catch {
+      setProfileImage(uri);
+    } finally {
+      setIsProcessingImage(false);
+    }
+  };
+
+  const handleImageFromGallery = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
       if (status !== 'granted') {
-        legacyAlert('שגיאה', 'נדרשת הרשאה לגישה לתמונות');
+        legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה');
         return;
       }
 
@@ -78,11 +114,33 @@ export default function EditProfileScreen({ navigation }: any) {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        setProfileImage(result.assets[0].uri);
+      if (!result.canceled && result.assets?.[0]) {
+        await processAndSetImage(result.assets[0].uri);
       }
-    } catch (error) {
+    } catch {
       legacyAlert('שגיאה', 'שגיאה בבחירת תמונה');
+    }
+  };
+
+  const handleImageFromCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        legacyAlert('אין הרשאה', 'יש לאפשר גישה למצלמה');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets?.[0]) {
+        await processAndSetImage(result.assets[0].uri);
+      }
+    } catch {
+      legacyAlert('שגיאה', 'שגיאה בצילום תמונה');
     }
   };
 
@@ -101,58 +159,52 @@ export default function EditProfileScreen({ navigation }: any) {
         return;
       }
 
-      let profilePictureUrl: string | null = profileImage;
-
-      const isRemoteImage =
-        typeof profileImage === 'string' && /^https?:\/\//i.test(profileImage);
-      if (profileImage && !isRemoteImage) {
-        const upload = await mediaService.uploadMedia(profileImage, 'image');
-        if (!upload.success) {
-          setIsSaving(false);
-          legacyAlert('שגיאה', upload.error || 'העלאת תמונת הפרופיל נכשלה. נסה שוב או בחר תמונה אחרת.');
-          return;
-        }
-        profilePictureUrl = upload.url ?? null;
+      const remote = await mediaService.ensureRemoteMediaUrl(profileImage, 'image');
+      if (profileImage && remote.error) {
+        setIsSaving(false);
+        legacyAlert(
+          'שגיאה',
+          remote.error || 'העלאת תמונת הפרופיל נכשלה. נסה שוב או בחר תמונה אחרת.',
+        );
+        return;
       }
+      const profilePictureUrl = remote.url;
 
+      const trimmedPhone = phone.trim();
       const { error } = await updateProfile({
         id: user.id,
         full_name: displayName.trim(),
-        phone: phone.trim(),
+        // ריק → '' ואז authService מנרמל ל-null (לא '' — לא מתנגש ב-UNIQUE)
+        phone: trimmedPhone,
         gender: gender || undefined,
         profile_picture: profilePictureUrl || undefined,
       });
 
       setIsSaving(false);
-      
+
       if (error) {
         legacyAlert('שגיאה', error);
         return;
       }
-      
+
+      void HapticFeedback.success();
       legacyAlert('הצלחה', 'הפרופיל נשמר בהצלחה', [
-        { text: 'אישור', onPress: () => navigation.goBack() }
+        { text: 'אישור', onPress: () => navigation.goBack() },
       ]);
-      
-    } catch (error: unknown) {
+    } catch {
       setIsSaving(false);
-      const msg = error instanceof Error ? error.message : 'שגיאה בעדכון הפרופיל';
-      legacyAlert('שגיאה', msg);
+      legacyAlert('שגיאה', 'לא הצלחנו לשמור את הפרופיל. נסה שוב.');
     }
   };
 
+  const fieldBorder = (field: FocusedField) =>
+    focusedField === field
+      ? DesignTokens.colors.primary.main
+      : DesignTokens.colors.border.divider;
+
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-        <Text style={{ color: DesignTokens.colors.text.secondary, fontSize: 16, marginTop: 16 }}>טוען...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <RNSafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top', 'bottom']}>
+      <RNSafeAreaView style={styles.root} edges={['top', 'bottom']}>
         <ChatSubScreenHeader
           title="עריכת פרופיל"
           onBack={() => {
@@ -160,362 +212,589 @@ export default function EditProfileScreen({ navigation }: any) {
             navigation.goBack();
           }}
         />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+          <Text
+            style={[
+              styles.loadingText,
+              {
+                color: DesignTokens.colors.text.secondary,
+                marginTop: DesignTokens.spacing.md,
+              },
+            ]}
+          >
+            טוען פרופיל...
+          </Text>
+        </View>
+      </RNSafeAreaView>
+    );
+  }
 
-        <KeyboardAvoidingView 
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+  return (
+    <RNSafeAreaView style={styles.root} edges={['top']}>
+      <ChatSubScreenHeader
+        title="עריכת פרופיל"
+        onBack={() => {
+          void HapticFeedback.impactLight();
+          navigation.goBack();
+        }}
+      />
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          style={styles.flex}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            paddingHorizontal: DesignTokens.spacing.base,
+            paddingTop: DesignTokens.spacing.sm,
+            paddingBottom: DesignTokens.spacing.xl,
+          }}
         >
-          <View style={{ flex: 1 }}>
-            <ScrollView
-              style={{ flex: 1 }}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ 
-                paddingTop: DesignTokens.spacing.md
-              }}
-            >
-            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
-              <UICard
-                variant="glass"
-                glassIntensity="light"
-                padding="lg"
-                style={{
-                  borderRadius: DesignTokens.borderRadius.lg,
-                }}
+          {/* Avatar — אותו דפוס כמו RegistrationProfileImageScreen */}
+          <UICard
+            variant="glass"
+            glassIntensity="medium"
+            padding="none"
+            style={{
+              borderRadius: DesignTokens.borderRadius['2xl'],
+              width: '100%',
+              marginBottom: DesignTokens.spacing.base,
+            }}
+          >
+            <View style={styles.avatarCardInner}>
+              <View
+                style={[
+                  styles.avatarRing,
+                  {
+                    borderColor: profileImage
+                      ? DesignTokens.colors.primary.main
+                      : 'rgba(255,255,255,0.15)',
+                    backgroundColor: surface.backgroundColor,
+                    shadowColor: DesignTokens.colors.primary.main,
+                    shadowOpacity: profileImage ? 0.4 : 0,
+                  },
+                ]}
               >
-                <View
-                  style={{
-                    alignItems: 'center',
-                    paddingVertical: DesignTokens.spacing.sm,
-                  }}
-                >
-                  <TouchableOpacity
-                    onPress={() => {
-                      void HapticFeedback.impactLight();
-                      handleImagePicker();
-                    }}
-                    style={{ position: 'relative' }}
-                    activeOpacity={0.8}
-                  >
-                    <View style={{
-                      width: 100,
-                      height: 100,
-                      borderRadius: 50,
-                      backgroundColor: 'rgba(5, 209, 87, 0.1)',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      overflow: 'hidden',
-                      borderWidth: 2,
-                      borderColor: `${DesignTokens.colors.primary.main}60`,
-                      ...DesignTokens.shadows.greenGlow
-                    }}>
-                      {profileImage ? (
-                        <Image 
-                          source={{ uri: profileImage }} 
-                          style={{ width: '100%', height: '100%' }}
-                        />
-                      ) : (
-                        <User size={50} color={DesignTokens.colors.primary.main} strokeWidth={2} />
-                      )}
-                    </View>
-                    
-                    <View style={{
-                      position: 'absolute',
-                      bottom: 0,
-                      right: 0,
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      backgroundColor: DesignTokens.colors.primary.main,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 3,
-                      borderColor: 'rgba(0, 0, 0, 0.3)',
-                      ...DesignTokens.shadows.md
-                    }}>
-                      <Camera size={18} color={DesignTokens.colors.text.inverse} strokeWidth={2.5} />
-                    </View>
-                  </TouchableOpacity>
-
-                  <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    color: DesignTokens.colors.text.tertiary,
-                    marginTop: DesignTokens.spacing.sm,
-                    textAlign: 'center'
-                  }}>
-                    לחץ לשינוי תמונת פרופיל
-                  </Text>
-                </View>
-              </UICard>
-            </View>
-
-            {/* Form Fields - עיצוב כמו דף הכניסה (OnboardingInput) */}
-            <View style={{ paddingHorizontal: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing.md }}>
-              {/* Display Name */}
-              <OnboardingInput
-                label="שם תצוגה"
-                icon="person-outline"
-                value={displayName}
-                onChangeText={setDisplayName}
-                placeholder="הזן שם תצוגה"
-              />
-
-              {/* Phone */}
-              <OnboardingInput
-                label="טלפון"
-                icon="call-outline"
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="הזן מספר טלפון"
-                keyboardType="phone-pad"
-              />
-
-                {/* Gender - עיצוב כמו OnboardingInput */}
-                <View style={{ marginBottom: 18 }}>
-                  <Text style={{
-                    color: 'rgba(255,255,255,0.55)',
-                    fontSize: 13,
-                    fontWeight: '600',
-                    marginBottom: 8,
-                    textAlign: 'right'
-                  }}>
-                    מין
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      void HapticFeedback.impactLight();
-                      setShowGenderPicker(true);
-                    }}
-                    activeOpacity={0.7}
-                    style={{
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      borderRadius: 16,
-                      borderWidth: 1.5,
-                      borderColor: 'rgba(255,255,255,0.1)',
-                      paddingHorizontal: 16,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      minHeight: 52
-                    }}
-                  >
-                    <ChevronDown size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
-                    <Text style={{
-                      fontSize: DesignTokens.typography.fontSize.base,
-                      color: gender ? DesignTokens.colors.text.primary : DesignTokens.colors.text.tertiary,
-                      textAlign: 'right',
-                      flex: 1
-                    }}>
-                      {gender === 'male' ? 'זכר' : gender === 'female' ? 'נקבה' : 'בחר מין'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Email (Read Only) - עיצוב כמו OnboardingInput */}
-                <View style={{ marginBottom: 18 }}>
-                  <Text style={{
-                    color: 'rgba(255,255,255,0.55)',
-                    fontSize: 13,
-                    fontWeight: '600',
-                    marginBottom: 8,
-                    textAlign: 'right'
-                  }}>
-                    אימייל
-                  </Text>
-                  <View style={{
-                    backgroundColor: 'rgba(255,255,255,0.05)',
-                    borderRadius: 16,
-                    borderWidth: 1.5,
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    paddingHorizontal: 16,
-                    paddingVertical: 16,
-                    minHeight: 52,
-                    justifyContent: 'center'
-                  }}>
-                    <Text style={{
-                      fontSize: 16,
-                      color: 'rgba(255,255,255,0.7)',
-                      textAlign: 'right'
-                    }}>
-                      {user?.email || ''}
-                    </Text>
-                  </View>
-                  <Text style={{
-                    fontSize: DesignTokens.typography.fontSize.xs,
-                    color: DesignTokens.colors.text.tertiary,
-                    marginTop: DesignTokens.spacing.xs,
-                    textAlign: 'right'
-                  }}>
-                    לא ניתן לשנות את כתובת האימייל
-                  </Text>
-                </View>
-            </View>
-
-            {/* Save Button - נפרד וצמוד למטה */}
-            <View style={{ 
-              paddingHorizontal: DesignTokens.spacing.lg, 
-              marginTop: DesignTokens.spacing.md,
-              marginBottom: DesignTokens.spacing.lg
-            }}>
-              <TouchableOpacity
-                onPress={() => {
-                  void HapticFeedback.medium();
-                  handleSave();
-                }}
-                disabled={isSaving}
-                activeOpacity={0.8}
-                style={{
-                  backgroundColor: DesignTokens.colors.primary.main,
-                  paddingVertical: DesignTokens.spacing.md + 4,
-                  paddingHorizontal: DesignTokens.spacing.lg,
-                  borderRadius: DesignTokens.borderRadius.lg,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: isSaving ? 0.6 : 1,
-                  minHeight: 56,
-                  ...DesignTokens.shadows.greenGlow,
-                  shadowColor: DesignTokens.colors.primary.main,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 12,
-                  elevation: 8
-                }}
-              >
-                {isSaving ? (
-                  <ActivityIndicator size="small" color={DesignTokens.colors.text.inverse} />
+                {profileImage ? (
+                  <Image
+                    source={{ uri: profileImage }}
+                    style={styles.avatarImage}
+                    contentFit="cover"
+                    placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                    transition={150}
+                  />
+                ) : isProcessingImage ? (
+                  <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
                 ) : (
-                  <Text style={{ 
-                    fontSize: DesignTokens.typography.fontSize.base + 1,
-                    fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                    color: DesignTokens.colors.text.inverse,
-                    letterSpacing: DesignTokens.typography.letterSpacing.tight
-                  }}>
-                    שמור שינויים
-                  </Text>
+                  <Ionicons name="person-outline" size={72} color="rgba(255,255,255,0.3)" />
                 )}
-              </TouchableOpacity>
-            </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+              </View>
 
-        {/* Gender Picker Modal */}
-        {showGenderPicker && (
-          <View style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
+              {isProcessingImage ? (
+                <Text style={styles.avatarStatusPrimary}>מעבד תמונה...</Text>
+              ) : (
+                <>
+                  <Text style={styles.avatarStatusPrimary}>
+                    {profileImage ? 'תמונת הפרופיל שלך' : 'עדכון תמונת פרופיל'}
+                  </Text>
+                  <Text style={styles.avatarStatusSecondary}>
+                    {profileImage
+                      ? 'אפשר להחליף עם מצלמה או גלריה'
+                      : 'בחר תמונה שמייצגת אותך בצ׳אטים'}
+                  </Text>
+                </>
+              )}
+
+              {!isProcessingImage && (
+                <View style={styles.photoActionsRow}>
+                  <View style={styles.photoActionFlex}>
+                    <OnboardingButton
+                      title="מצלמה"
+                      onPress={() => {
+                        void handleImageFromCamera();
+                      }}
+                      variant="secondary"
+                      icon={
+                        <Ionicons name="camera" size={20} color="rgba(255,255,255,0.55)" />
+                      }
+                    />
+                  </View>
+                  <View style={styles.photoActionFlex}>
+                    <OnboardingButton
+                      title="גלריה"
+                      onPress={() => {
+                        void handleImageFromGallery();
+                      }}
+                      variant="secondary"
+                      icon={
+                        <Ionicons name="images" size={20} color="rgba(255,255,255,0.55)" />
+                      }
+                    />
+                  </View>
+                </View>
+              )}
+            </View>
+          </UICard>
+
+          {/* Form — single glass card */}
           <UICard
             variant="glass"
             glassIntensity="light"
-            padding="lg"
+            padding="md"
             style={{
-              width: '80%',
-              maxWidth: 300
+              borderRadius: DesignTokens.borderRadius.xl,
+              borderWidth: 1,
+              borderColor: DesignTokens.colors.border.main,
             }}
           >
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.xl,
-              fontWeight: DesignTokens.typography.fontWeight.bold as any,
-              color: DesignTokens.colors.text.primary,
-              marginBottom: DesignTokens.spacing.lg,
-              textAlign: 'right'
-            }}>
-              בחר מין
+            <FieldLabel tokens={DesignTokens}>שם תצוגה</FieldLabel>
+            <TextInput
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="הזן שם תצוגה"
+              placeholderTextColor={DesignTokens.colors.text.muted}
+              onFocus={() => setFocusedField('displayName')}
+              onBlur={() => setFocusedField(null)}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: DesignTokens.colors.background.input,
+                  borderColor: fieldBorder('displayName'),
+                  color: DesignTokens.colors.text.primary,
+                  borderRadius: DesignTokens.borderRadius.md,
+                },
+              ]}
+            />
+
+            <FieldLabel tokens={DesignTokens}>טלפון</FieldLabel>
+            <TextInput
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="הזן מספר טלפון"
+              placeholderTextColor={DesignTokens.colors.text.muted}
+              keyboardType="phone-pad"
+              onFocus={() => setFocusedField('phone')}
+              onBlur={() => setFocusedField(null)}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: DesignTokens.colors.background.input,
+                  borderColor: fieldBorder('phone'),
+                  color: DesignTokens.colors.text.primary,
+                  borderRadius: DesignTokens.borderRadius.md,
+                },
+              ]}
+            />
+
+            <FieldLabel tokens={DesignTokens}>מין</FieldLabel>
+            <TouchableOpacity
+              onPress={() => {
+                void HapticFeedback.impactLight();
+                setShowGenderPicker(true);
+              }}
+              activeOpacity={0.7}
+              style={[
+                styles.selectRow,
+                {
+                  backgroundColor: DesignTokens.colors.background.input,
+                  borderColor: DesignTokens.colors.border.divider,
+                  borderRadius: DesignTokens.borderRadius.md,
+                },
+              ]}
+            >
+              <ChevronDown size={18} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
+              <Text
+                style={[
+                  styles.selectText,
+                  {
+                    color: gender
+                      ? DesignTokens.colors.text.primary
+                      : DesignTokens.colors.text.muted,
+                  },
+                ]}
+              >
+                {gender === 'male' ? 'זכר' : gender === 'female' ? 'נקבה' : 'בחר מין'}
+              </Text>
+            </TouchableOpacity>
+
+            <FieldLabel tokens={DesignTokens}>אימייל</FieldLabel>
+            <View
+              style={[
+                styles.readonlyBox,
+                {
+                  backgroundColor: 'rgba(255,255,255,0.03)',
+                  borderColor: DesignTokens.colors.border.subtle,
+                  borderRadius: DesignTokens.borderRadius.md,
+                },
+              ]}
+            >
+              <Text
+                style={[styles.readonlyText, { color: DesignTokens.colors.text.secondary }]}
+                numberOfLines={1}
+              >
+                {user?.email || '—'}
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.helperText,
+                { color: DesignTokens.colors.text.muted },
+              ]}
+            >
+              לא ניתן לשנות את כתובת האימייל
             </Text>
-            
-            <TouchableOpacity
-              onPress={() => {
-                if (gender !== 'male') void HapticFeedback.selection();
-                setGender('male');
-                setShowGenderPicker(false);
-              }}
-              style={{
-                paddingVertical: DesignTokens.spacing.md,
-                paddingHorizontal: DesignTokens.spacing.lg,
-                borderRadius: DesignTokens.borderRadius.lg,
-                backgroundColor: gender === 'male' ? `${DesignTokens.colors.primary.main}20` : 'rgba(255, 255, 255, 0.05)',
-                marginBottom: DesignTokens.spacing.sm,
-                borderWidth: 1,
-                borderColor: gender === 'male' ? DesignTokens.colors.primary.main : 'rgba(255, 255, 255, 0.1)',
-                minHeight: 48,
-                justifyContent: 'center'
-              }}
-            >
-              <Text style={{
-                fontSize: DesignTokens.typography.fontSize.base,
-                fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'right'
-              }}>
-                זכר
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => {
-                if (gender !== 'female') void HapticFeedback.selection();
-                setGender('female');
-                setShowGenderPicker(false);
-              }}
-              style={{
-                paddingVertical: DesignTokens.spacing.md,
-                paddingHorizontal: DesignTokens.spacing.lg,
-                borderRadius: DesignTokens.borderRadius.lg,
-                backgroundColor: gender === 'female' ? `${DesignTokens.colors.primary.main}20` : 'rgba(255, 255, 255, 0.05)',
-                marginBottom: DesignTokens.spacing.sm,
-                borderWidth: 1,
-                borderColor: gender === 'female' ? DesignTokens.colors.primary.main : 'rgba(255, 255, 255, 0.1)',
-                minHeight: 48,
-                justifyContent: 'center'
-              }}
-            >
-              <Text style={{
-                fontSize: DesignTokens.typography.fontSize.base,
-                fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                color: DesignTokens.colors.text.primary,
-                textAlign: 'right'
-              }}>
-                נקבה
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => {
-                void HapticFeedback.selection();
-                setShowGenderPicker(false);
-              }}
-              style={{
-                paddingVertical: DesignTokens.spacing.sm,
-                paddingHorizontal: DesignTokens.spacing.lg,
-                borderRadius: DesignTokens.borderRadius.lg,
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                marginTop: DesignTokens.spacing.sm,
-                minHeight: 44,
-                justifyContent: 'center'
-              }}
-            >
-              <Text style={{
-                fontSize: DesignTokens.typography.fontSize.base,
-                fontWeight: DesignTokens.typography.fontWeight.semibold as any,
-                color: DesignTokens.colors.text.secondary,
-                textAlign: 'center'
-              }}>
-                ביטול
-              </Text>
-            </TouchableOpacity>
           </UICard>
+        </ScrollView>
+
+        {/* Sticky save CTA */}
+        <View
+          style={[
+            styles.saveBar,
+            {
+              paddingHorizontal: DesignTokens.spacing.base,
+              paddingTop: DesignTokens.spacing.sm,
+              paddingBottom: Math.max(insets.bottom, 12),
+              borderTopColor: DesignTokens.colors.border.subtle,
+              backgroundColor: 'rgba(10, 14, 10, 0.92)',
+            },
+          ]}
+        >
+          <TouchableOpacity
+            onPress={() => {
+              void HapticFeedback.medium();
+              void handleSave();
+            }}
+            disabled={isSaving}
+            activeOpacity={0.85}
+            style={[
+              styles.saveButton,
+              {
+                backgroundColor: DesignTokens.colors.primary.main,
+                borderRadius: 999,
+                opacity: isSaving ? 0.65 : 1,
+                ...DesignTokens.shadows.greenGlow,
+              },
+            ]}
+          >
+            {isSaving ? (
+              <View style={styles.saveBusy}>
+                <ActivityIndicator size="small" color={DesignTokens.colors.text.inverse} />
+                <Text
+                  style={[
+                    styles.saveButtonText,
+                    { color: DesignTokens.colors.text.inverse },
+                  ]}
+                >
+                  שומר...
+                </Text>
+              </View>
+            ) : (
+              <Text
+                style={[
+                  styles.saveButtonText,
+                  { color: DesignTokens.colors.text.inverse },
+                ]}
+              >
+                שמור שינויים
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
-        )}
-      </RNSafeAreaView>
-    </View>
+      </KeyboardAvoidingView>
+
+      {/* Gender picker */}
+      {showGenderPicker && (
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setShowGenderPicker(false)}
+        >
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <UICard
+              variant="glass"
+              glassIntensity="medium"
+              padding="lg"
+              style={{
+                width: 300,
+                maxWidth: '85%',
+                borderRadius: DesignTokens.borderRadius.xl,
+                borderWidth: 1,
+                borderColor: DesignTokens.colors.border.main,
+                alignSelf: 'center',
+              }}
+            >
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { color: DesignTokens.colors.text.primary },
+                ]}
+              >
+                בחר מין
+              </Text>
+
+              {([
+                { value: 'male' as const, label: 'זכר' },
+                { value: 'female' as const, label: 'נקבה' },
+              ]).map((opt) => {
+                const selected = gender === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => {
+                      if (!selected) void HapticFeedback.selection();
+                      setGender(opt.value);
+                      setShowGenderPicker(false);
+                    }}
+                    activeOpacity={0.75}
+                    style={[
+                      styles.genderOption,
+                      {
+                        backgroundColor: selected
+                          ? DesignTokens.colors.primary.dim
+                          : DesignTokens.colors.background.input,
+                        borderColor: selected
+                          ? DesignTokens.colors.primary.main
+                          : DesignTokens.colors.border.divider,
+                        borderRadius: DesignTokens.borderRadius.md,
+                      },
+                    ]}
+                  >
+                    {selected ? (
+                      <Check size={18} color={DesignTokens.colors.primary.main} strokeWidth={2.5} />
+                    ) : (
+                      <View style={styles.genderCheckSpacer} />
+                    )}
+                    <Text
+                      style={[
+                        styles.genderOptionText,
+                        { color: DesignTokens.colors.text.primary },
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+
+              <TouchableOpacity
+                onPress={() => {
+                  void HapticFeedback.selection();
+                  setShowGenderPicker(false);
+                }}
+                activeOpacity={0.7}
+                style={styles.cancelBtn}
+              >
+                <Text
+                  style={[
+                    styles.cancelText,
+                    { color: DesignTokens.colors.text.secondary },
+                  ]}
+                >
+                  ביטול
+                </Text>
+              </TouchableOpacity>
+            </UICard>
+          </Pressable>
+        </Pressable>
+      )}
+    </RNSafeAreaView>
   );
 }
 
+function FieldLabel({
+  children,
+  tokens,
+}: {
+  children: string;
+  tokens: ReturnType<typeof useDesignTokens>;
+}) {
+  return (
+    <Text
+      style={[
+        styles.fieldLabel,
+        {
+          color: tokens.colors.text.tertiary,
+          marginBottom: tokens.spacing.xs + 2,
+        },
+      ]}
+    >
+      {children}
+    </Text>
+  );
+}
+
+const AVATAR = 160;
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  flex: {
+    flex: 1,
+  },
+  loadingWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  avatarCardInner: {
+    alignItems: 'center',
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+  },
+  avatarRing: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 12,
+    marginBottom: 20,
+  },
+  avatarImage: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+  },
+  avatarStatusPrimary: {
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  avatarStatusSecondary: {
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 20,
+    paddingHorizontal: 12,
+  },
+  photoActionsRow: {
+    flexDirection: 'row-reverse',
+    gap: 12,
+    width: '100%',
+  },
+  photoActionFlex: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textAlign: 'right',
+  },
+  input: {
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
+    textAlign: 'right',
+    marginBottom: 16,
+    minHeight: 50,
+  },
+  selectRow: {
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    minHeight: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  selectText: {
+    flex: 1,
+    fontSize: 16,
+    textAlign: 'right',
+  },
+  readonlyBox: {
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    minHeight: 50,
+    justifyContent: 'center',
+  },
+  readonlyText: {
+    fontSize: 15,
+    textAlign: 'right',
+  },
+  helperText: {
+    fontSize: 11,
+    textAlign: 'right',
+    marginTop: 6,
+  },
+  saveBar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  saveButton: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+  },
+  saveBusy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  saveButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.62)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'right',
+    marginBottom: 16,
+  },
+  genderOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+    minHeight: 50,
+  },
+  genderOptionText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  genderCheckSpacer: {
+    width: 18,
+    height: 18,
+  },
+  cancelBtn: {
+    marginTop: 6,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  cancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+});

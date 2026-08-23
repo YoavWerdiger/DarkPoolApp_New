@@ -4,11 +4,6 @@ import { View, Text, Modal, Pressable, Dimensions, StyleSheet, ActivityIndicator
   Keyboard, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  AndroidSoftInputModes,
-  KeyboardController,
-  useGenericKeyboardHandler,
-} from 'react-native-keyboard-controller';
 import { Ionicons } from '@expo/vector-icons';
 import { X, Trash2, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react-native';
 import { Video, ResizeMode } from 'expo-av';
@@ -88,26 +83,30 @@ export default function MediaPreviewModal({
   }, [composerPaddingBottom, composerInsetSV]);
 
   useEffect(() => {
-    if (!visible || Platform.OS !== 'android') return;
-    KeyboardController.setInputMode(AndroidSoftInputModes.SOFT_INPUT_ADJUST_NOTHING);
-    return () => {
-      KeyboardController.setDefaultMode();
-    };
-  }, [visible]);
+    if (!visible) {
+      keyboardHeightSV.value = 0;
+      return;
+    }
 
-  useGenericKeyboardHandler(
-    {
-      onMove: (event) => {
-        'worklet';
-        keyboardHeightSV.value = Math.max(0, event.height);
-      },
-      onEnd: (event) => {
-        'worklet';
-        keyboardHeightSV.value = Math.max(0, event.height);
-      },
-    },
-    [],
-  );
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e: { endCoordinates?: { height?: number }; duration?: number }) => {
+      const h = Math.max(0, e.endCoordinates?.height ?? 0);
+      keyboardHeightSV.value = withTiming(h, { duration: Math.max(0, e.duration ?? 250) });
+    };
+    const onHide = (e: { duration?: number }) => {
+      keyboardHeightSV.value = withTiming(0, { duration: Math.max(0, e.duration ?? 250) });
+    };
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+      keyboardHeightSV.value = 0;
+    };
+  }, [visible, keyboardHeightSV]);
 
   /**
    * ב-Modal, event.height של המקלדת לעיתים קצר ב־~safe-area לעומת הצ'אט הרגיל.

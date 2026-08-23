@@ -16,6 +16,11 @@ import { useNavigation } from '@react-navigation/native';
 import { useMyEnrollments } from '../../hooks/useLearning';
 import { AcademyScreenHeader, CourseCard } from '../../components/learning';
 import { ACADEMY_CARD_HP, academyCardFrameStyle } from '../../components/learning/academyCardLayout';
+import {
+  getAcademyCourseSubtitle,
+  isComingSoonCourse,
+  isNativeLearningCourse,
+} from '../../components/learning/academyCourses';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { CourseWithProgress } from '../../types/learning';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
@@ -52,9 +57,16 @@ export const MyLearningScreen: React.FC = () => {
   }, [refetch]);
 
   const handleCoursePress = useCallback((course: CourseWithProgress) => {
-    // אם זה קורס הלוויתנים או קורס דוד איראל, נוביל ל-LearningScreen
-    if (course.slug === 'whales-course' || course.id === 'whales-course-1' || course.title === 'קורס הלוויתנים' ||
-        course.id === 'david-training-course' || course.title === 'הכשרה של דוד אריאל') {
+    if (isComingSoonCourse(course)) {
+      navigation.navigate('CourseComingSoonScreen', {
+        courseId: course.id,
+        title: course.title,
+        subtitle: getAcademyCourseSubtitle(course),
+        coverUrl: course.cover_url ?? undefined,
+      });
+      return;
+    }
+    if (isNativeLearningCourse(course)) {
       navigation.navigate('LearningScreen', { courseId: course.id });
     } else {
       navigation.navigate('CourseDetailScreen', { courseId: course.id });
@@ -63,19 +75,24 @@ export const MyLearningScreen: React.FC = () => {
 
   const handleContinueLearning = useCallback((course: CourseWithProgress) => {
     void HapticFeedback.impactLight();
+    if (isComingSoonCourse(course)) {
+      navigation.navigate('CourseComingSoonScreen', {
+        courseId: course.id,
+        title: course.title,
+        subtitle: getAcademyCourseSubtitle(course),
+        coverUrl: course.cover_url ?? undefined,
+      });
+      return;
+    }
     if (course.progress?.last_lesson_id) {
       navigation.navigate('LessonPlayerScreen', {
         lessonId: course.progress.last_lesson_id,
         courseId: course.id,
       });
+    } else if (isNativeLearningCourse(course)) {
+      navigation.navigate('LearningScreen', { courseId: course.id });
     } else {
-      // אם זה קורס הלוויתנים או קורס דוד איראל, נוביל ל-LearningScreen
-      if (course.slug === 'whales-course' || course.id === 'whales-course-1' || course.title === 'קורס הלוויתנים' ||
-          course.id === 'david-training-course' || course.title === 'הכשרה של דוד אריאל') {
-        navigation.navigate('LearningScreen', { courseId: course.id });
-      } else {
-        navigation.navigate('CourseDetailScreen', { courseId: course.id });
-      }
+      navigation.navigate('CourseDetailScreen', { courseId: course.id });
     }
   }, [navigation]);
 

@@ -148,7 +148,7 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
         uploadedImageUrl = upload.url;
       }
 
-      setStatusMessage('שומר ל-Supabase...');
+      setStatusMessage('שומר...');
 
       const authorName =
         (user as { full_name?: string; display_name?: string } | null)?.full_name ||
@@ -201,10 +201,10 @@ export default function CreateNewsSheet({ visible, onClose, onCreated }: CreateN
       onClose={handleClose}
       snapPoints={snapPoints}
       enablePanDownToClose={!isBusy}
-      backdropOpacity={0.5}
       edgeToEdge
       showHandle
-      showBrandBackground
+      useGlassBackground
+      showBrandBackground={false}
       showBrandWatermark={false}
       contentPaddingBottom={0}
       topCornerRadius={28}

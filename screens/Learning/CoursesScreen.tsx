@@ -3,11 +3,13 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
+  TextInput,
   ScrollView,
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
@@ -15,21 +17,24 @@ import { useCourses, useEnrollInCourse } from '../../hooks/useLearning';
 import {
   AcademyScreenHeader,
   CourseCard,
-  AcademyYouTubeCTA,
 } from '../../components/learning';
 import { ACADEMY_CARD_HP } from '../../components/learning/academyCardLayout';
 import {
+  getAcademyCourseSubtitle,
   getAcademyCourseTier,
+  isComingSoonCourse,
   isNativeLearningCourse,
+  sortAcademyCourses,
   DAVID_TRAINING_COURSE_ID,
+  ORACLE_COURSE_ID,
 } from '../../components/learning/academyCourses';
-import { ScreenChrome, MAIN_SCREEN_HEADER_HP } from '../../components/ui';
+import { MAIN_SCREEN_HEADER_HP, ScreenChrome } from '../../components/ui';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
+import { DayNavBlurButton } from '../../components/ui/DayNavBlurButton';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { MarketsEmbedSwitcher } from '../Markets/components/MarketsEmbedSwitcher';
-import type { SegmentedOption } from '../Markets/components/MarketsSegmentedControl';
 import { CourseWithProgress } from '../../types/learning';
 import { courseService } from '../../services/courseService';
+import { prefetchAcademyCovers } from '../../services/appPrefetch';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { useMainTabsHeight } from '../../hooks/useMainTabsHeight';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,15 +42,17 @@ import UICard from '../../components/ui/UICard';
 import { dispatchOpenMainDrawer, type DrawerParentNavigation } from '../../navigation/mainDrawerNav';
 import { triggerDrawerMenuHaptic } from '../../utils/hapticFeedback';
 
-type TabId = 'free' | 'premium';
+type Nav = { navigate: (n: string, p?: object) => void };
 
 export const CoursesScreen: React.FC = () => {
   const navigation = useNavigation();
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createStyles(DesignTokens), [DesignTokens]);
   const mainTabsHeight = useMainTabsHeight();
+  const { width: screenWidth } = useWindowDimensions();
+  const horizontalCardWidth = Math.min(320, Math.round(screenWidth * 0.78));
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>('free');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const openMainDrawer = useCallback(() => {
     void triggerDrawerMenuHaptic();
@@ -56,40 +63,47 @@ export const CoursesScreen: React.FC = () => {
     }
   }, [navigation]);
 
-  const { data: coursesData, isLoading, error, refetch } = useCourses();
+  const { data: coursesData, isPending, error, refetch } = useCourses();
   const courses = coursesData?.courses ?? [];
+  const showInitialLoader = isPending && courses.length === 0;
 
+  // חימום באנרים ברגע שיש נתונים (גם מ-cache)
   useEffect(() => {
+    if (courses.length === 0) return;
+    void prefetchAcademyCovers(courses);
+  }, [courses]);
+
+  // Seed רק אם חסרים קורסי ליבה ברשימה — בלי getCourseById כפול על כל mount
+  useEffect(() => {
+    if (isPending && courses.length === 0) return;
     let isMounted = true;
+    const ids = new Set(courses.map((c) => c.id));
     const initializeCourses = async () => {
       try {
-        const [davidCourse, whalesCourse] = await Promise.all([
-          courseService.getCourseById(DAVID_TRAINING_COURSE_ID),
-          courseService.getCourseById('whales-course-1'),
-        ]);
-        if (!isMounted) return;
-
         let needsRefetch = false;
-        if (!davidCourse) {
+        if (!ids.has(DAVID_TRAINING_COURSE_ID)) {
           try {
-            const created = await courseService.createDavidTrainingCourse();
-            if (created) needsRefetch = true;
+            if (await courseService.createDavidTrainingCourse()) needsRefetch = true;
           } catch {
             /* noop */
           }
         }
-        if (!whalesCourse) {
+        if (!ids.has('whales-course-1') && !ids.has('whales-course')) {
           try {
-            const created = await courseService.createWhalesCourse();
-            if (created) needsRefetch = true;
+            if (await courseService.createWhalesCourse()) needsRefetch = true;
+          } catch {
+            /* noop */
+          }
+        }
+        if (!ids.has(ORACLE_COURSE_ID)) {
+          try {
+            if (await courseService.createOracleCourse()) needsRefetch = true;
           } catch {
             /* noop */
           }
         }
         if (needsRefetch && isMounted) {
-          setTimeout(() => {
-            if (isMounted) refetch();
-          }, 1000);
+          void refetch();
         }
       } catch {
         /* noop */
@@ -99,7 +113,7 @@ export const CoursesScreen: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [refetch]);
+  }, [courses, isPending, refetch]);
 
   const enrollMutation = useEnrollInCourse();
 
@@ -115,18 +129,29 @@ export const CoursesScreen: React.FC = () => {
 
   const handleCoursePress = useCallback(
     (course: CourseWithProgress) => {
+      const nav = navigation as Nav;
+      if (isComingSoonCourse(course)) {
+        nav.navigate('CourseComingSoonScreen', {
+          courseId: course.id,
+          title: course.title,
+          subtitle: getAcademyCourseSubtitle(course),
+          coverUrl: course.cover_url ?? undefined,
+        });
+        return;
+      }
       if (isNativeLearningCourse(course)) {
-        (navigation as { navigate: (n: string, p?: object) => void }).navigate('LearningScreen', {
-          courseId: course.id,
-        });
+        nav.navigate('LearningScreen', { courseId: course.id });
       } else {
-        (navigation as { navigate: (n: string, p?: object) => void }).navigate('CourseDetailScreen', {
-          courseId: course.id,
-        });
+        nav.navigate('CourseDetailScreen', { courseId: course.id });
       }
     },
     [navigation]
   );
+
+  const handleOpenNotes = useCallback(() => {
+    void HapticFeedback.impactLight();
+    (navigation as Nav).navigate('MyNotesScreen');
+  }, [navigation]);
 
   const handleEnroll = useCallback(
     async (course: CourseWithProgress) => {
@@ -145,42 +170,55 @@ export const CoursesScreen: React.FC = () => {
     [enrollMutation]
   );
 
+  const orderedCourses = useMemo(() => sortAcademyCourses(courses), [courses]);
+  const isSearching = searchQuery.trim().length > 0;
+  const filteredCourses = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return orderedCourses;
+    return orderedCourses.filter((c) => {
+      const hay = [c.title, c.subtitle, getAcademyCourseSubtitle(c), c.description]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [orderedCourses, searchQuery]);
   const freeCourses = useMemo(
     () =>
-      courses.filter(
+      filteredCourses.filter(
         (c) => getAcademyCourseTier(c as CourseWithProgress & { price?: number }) === 'free'
       ),
-    [courses]
+    [filteredCourses]
   );
   const premiumCourses = useMemo(
     () =>
-      courses.filter(
+      filteredCourses.filter(
         (c) => getAcademyCourseTier(c as CourseWithProgress & { price?: number }) === 'premium'
       ),
-    [courses]
-  );
-  const filteredCourses = activeTab === 'free' ? freeCourses : premiumCourses;
-  const featuredCourse = filteredCourses[0] ?? null;
-
-  const academySegments: SegmentedOption<TabId>[] = useMemo(
-    () => [
-      { id: 'free', label: `חינמי · ${freeCourses.length}` },
-      { id: 'premium', label: `פרמיום · ${premiumCourses.length}` },
-    ],
-    [freeCourses.length, premiumCourses.length]
+    [filteredCourses]
   );
 
-  // Section title + total count are intentionally omitted: the free/premium
-  // tabs below already show per-category counts, so duplicating "קורסים N"
-  // in the header would just be visual noise.
-  const listHeader = useMemo(
-    () => (
-      <AcademyScreenHeader
-        onMenuPress={openMainDrawer}
-        title="אקדמיה"
-      />
-    ),
-    [openMainDrawer]
+  const renderHorizontalRow = (list: CourseWithProgress[]) => (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={styles.horizontalScroll}
+      contentContainerStyle={styles.horizontalList}
+      decelerationRate="fast"
+      snapToInterval={horizontalCardWidth + DesignTokens.spacing.md}
+      snapToAlignment="start"
+      disableIntervalMomentum
+    >
+      {list.map((course) => (
+        <CourseCard
+          key={course.id}
+          course={course}
+          width={horizontalCardWidth}
+          onPress={handleCoursePress}
+          onEnroll={course.enrollment ? undefined : handleEnroll}
+        />
+      ))}
+    </ScrollView>
   );
 
   if (error) {
@@ -200,8 +238,11 @@ export const CoursesScreen: React.FC = () => {
               <TouchableOpacity
                 style={[styles.retryButton, { backgroundColor: DesignTokens.colors.primary.main }]}
                 onPress={() => refetch()}
+                activeOpacity={0.88}
               >
-                <Text style={[styles.retryButtonText, { color: DesignTokens.colors.text.inverse }]}>נסה שוב</Text>
+                <Text style={[styles.retryButtonText, { color: DesignTokens.colors.text.inverse }]}>
+                  נסה שוב
+                </Text>
               </TouchableOpacity>
             </UICard>
           </View>
@@ -216,7 +257,7 @@ export const CoursesScreen: React.FC = () => {
       <RNSafeAreaView style={styles.flex} edges={['top']}>
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={{ paddingBottom: mainTabsHeight + 16 }}
+          contentContainerStyle={{ paddingBottom: mainTabsHeight + 28 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -226,46 +267,115 @@ export const CoursesScreen: React.FC = () => {
             />
           }
         >
-          {listHeader}
+          <AcademyScreenHeader
+            onMenuPress={openMainDrawer}
+            title="האקדמיה"
+            subtitle={
+              showInitialLoader
+                ? 'קורסים והכשרות למסחר'
+                : orderedCourses.length > 0
+                  ? `${orderedCourses.length} קורסים · הכשרות למסחר`
+                  : 'קורסים והכשרות למסחר'
+            }
+          />
 
-          {isLoading && courses.length === 0 ? (
+          {!showInitialLoader ? (
+            <View style={styles.toolbar}>
+              <DayNavBlurButton
+                onPress={handleOpenNotes}
+                size={44}
+                glassIntensity="subtle"
+                accessibilityLabel="ההערות שלי"
+                style={styles.notesBtn}
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={22}
+                  color={DesignTokens.colors.text.primary}
+                />
+              </DayNavBlurButton>
+
+              <View style={styles.searchWrap}>
+                <UICard
+                  variant="blur"
+                  glassIntensity="subtle"
+                  padding="none"
+                  showGlassBorder={false}
+                  style={styles.searchCard}
+                >
+                  <View style={styles.searchInner}>
+                    {isSearching ? (
+                      <TouchableOpacity
+                        onPress={() => setSearchQuery('')}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityLabel="נקה חיפוש"
+                      >
+                        <Ionicons
+                          name="close-circle"
+                          size={20}
+                          color={DesignTokens.colors.text.tertiary}
+                        />
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.searchClearSpacer} />
+                    )}
+                    <TextInput
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      placeholder="חיפוש קורסים..."
+                      placeholderTextColor={DesignTokens.colors.text.tertiary}
+                      style={styles.searchInput}
+                      returnKeyType="search"
+                      accessibilityLabel="חיפוש קורסים"
+                    />
+                    <Ionicons
+                      name="search"
+                      size={18}
+                      color={DesignTokens.colors.text.tertiary}
+                    />
+                  </View>
+                </UICard>
+              </View>
+            </View>
+          ) : null}
+
+          {showInitialLoader ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
-              <Text style={[styles.loadingHint, { color: DesignTokens.colors.text.secondary }]}>טוען קורסים…</Text>
+              <Text style={styles.loadingHint}>טוען קורסים…</Text>
             </View>
-          ) : (
-            <>
-              <View style={styles.tabBarWrap}>
-                <MarketsEmbedSwitcher
-                  options={academySegments}
-                  value={activeTab}
-                  onChange={setActiveTab}
-                  accessibilityGroupLabel="אקדמיה"
+          ) : filteredCourses.length === 0 ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons
+                  name={isSearching ? 'search-outline' : 'library-outline'}
+                  size={40}
+                  color={DesignTokens.colors.text.tertiary}
                 />
               </View>
+              <Text style={styles.emptyStateTitle}>
+                {isSearching ? 'אין תוצאות לחיפוש' : 'אין קורסים להצגה'}
+              </Text>
+              <Text style={styles.emptyStateSubtitle}>
+                {isSearching ? 'נסה מילה אחרת או נקה את החיפוש' : 'נסה שוב מאוחר יותר'}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.sections}>
+              {freeCourses.length > 0 ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>קורס בסיסי</Text>
+                  {renderHorizontalRow(freeCourses)}
+                </View>
+              ) : null}
 
-              <View style={styles.academyCardsSection}>
-                {!featuredCourse ? (
-                  <View style={styles.emptyState}>
-                    <View style={[styles.emptyIconWrap, { borderColor: DesignTokens.colors.border.primary }]}>
-                      <Ionicons name="library-outline" size={40} color={DesignTokens.colors.text.tertiary} />
-                    </View>
-                    <Text style={styles.emptyStateTitle}>
-                      {activeTab === 'free' ? 'אין קורסים חינמיים' : 'אין קורסי פרמיום'}
-                    </Text>
-                    <Text style={styles.emptyStateSubtitle}>נסה שוב מאוחר יותר</Text>
-                  </View>
-                ) : (
-                  <CourseCard
-                    course={featuredCourse}
-                    onPress={handleCoursePress}
-                    onEnroll={featuredCourse.enrollment ? undefined : handleEnroll}
-                  />
-                )}
-
-                <AcademyYouTubeCTA />
-              </View>
-            </>
+              {premiumCourses.length > 0 ? (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>קורסי פרמיום</Text>
+                  {renderHorizontalRow(premiumCourses)}
+                </View>
+              ) : null}
+            </View>
           )}
         </ScrollView>
       </RNSafeAreaView>
@@ -278,27 +388,79 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     flex: {
       flex: 1,
     },
-    academyCardsSection: {
+    toolbar: {
+      // כמו חדשות: כפתור משמאל, חיפוש מימין — direction:ltr מונע היפוך RTL
+      flexDirection: 'row',
+      direction: 'ltr',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
+      marginTop: 4,
+      marginBottom: tokens.spacing.md,
+    },
+    notesBtn: {
+      flexShrink: 0,
+      zIndex: 2,
+    },
+    searchWrap: {
+      flex: 1,
+      minWidth: 0,
+    },
+    searchCard: {
+      borderRadius: tokens.borderRadius.full,
+      overflow: 'hidden',
+    },
+    searchInner: {
+      flexDirection: 'row-reverse',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      minHeight: 44,
+    },
+    searchClearSpacer: {
+      width: 20,
+    },
+    searchInput: {
+      flex: 1,
+      marginHorizontal: 8,
+      color: tokens.colors.text.primary,
+      fontSize: 15,
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      paddingVertical: 6,
+    },
+    sections: {
       width: '100%',
-      paddingHorizontal: ACADEMY_CARD_HP,
+      gap: tokens.spacing.xl,
+    },
+    section: {
+      width: '100%',
       gap: tokens.spacing.md,
     },
-    tabBarWrap: {
-      marginBottom: tokens.spacing.md,
-      marginHorizontal: MAIN_SCREEN_HEADER_HP,
+    sectionTitle: {
+      fontSize: tokens.typography.fontSize.base,
+      fontWeight: '800' as const,
+      color: tokens.colors.text.primary,
+      textAlign: 'right',
+      writingDirection: 'rtl',
+      paddingHorizontal: ACADEMY_CARD_HP,
     },
-    // legacy courseRow kept for TS
-    courseRow: {
-      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
+    horizontalScroll: {
+      direction: 'rtl',
+    },
+    horizontalList: {
+      paddingHorizontal: ACADEMY_CARD_HP,
+      gap: tokens.spacing.md,
+      flexDirection: 'row',
     },
     loadingWrap: {
-      flex: 1,
-      paddingTop: tokens.spacing.md,
+      paddingTop: tokens.spacing['2xl'],
       alignItems: 'center',
       gap: tokens.spacing.md,
     },
     loadingHint: {
-      fontSize: tokens.typography.fontSize.sm,
+      fontSize: tokens.typography.subhead.size,
+      fontWeight: '500' as const,
+      color: tokens.colors.text.secondary,
     },
     emptyState: {
       alignItems: 'center',
@@ -310,6 +472,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       height: 88,
       borderRadius: 44,
       borderWidth: 1,
+      borderColor: tokens.colors.border.primary,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: tokens.spacing.lg,
@@ -317,7 +480,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     emptyStateTitle: {
       fontSize: tokens.typography.titleSmall.size,
-      fontWeight: '700' as any,
+      fontWeight: '700' as const,
       color: tokens.colors.text.primary,
       marginBottom: tokens.spacing.sm,
       textAlign: 'center',
@@ -340,7 +503,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
     },
     errorTitle: {
       fontSize: tokens.typography.titleSmall.size,
-      fontWeight: '700' as any,
+      fontWeight: '700' as const,
       textAlign: 'center',
     },
     errorMessage: {
@@ -355,7 +518,7 @@ const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
       borderRadius: tokens.borderRadius['3xl'],
     },
     retryButtonText: {
-      fontSize: tokens.typography.titleXs.size,
-      fontWeight: '700' as any,
+      fontSize: tokens.typography.button.size,
+      fontWeight: tokens.typography.button.weight,
     },
   });

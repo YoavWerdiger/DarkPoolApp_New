@@ -345,6 +345,23 @@ class MediaService {
     }
   }
 
+  /**
+   * מחזיר URL ציבורי: אם כבר remote — מחזיר כמו שהוא;
+   * אם מקומי (file:// / content://) — מעלה ל-app-media.
+   */
+  async ensureRemoteMediaUrl(
+    uri: string | null | undefined,
+    type: 'image' | 'video' | 'audio' | 'document' = 'image',
+  ): Promise<{ url: string | null; error?: string }> {
+    if (!uri) return { url: null };
+    if (/^https?:\/\//i.test(uri)) return { url: uri };
+    const upload = await this.uploadMedia(uri, type);
+    if (!upload.success) {
+      return { url: null, error: upload.error || 'העלאה נכשלה' };
+    }
+    return { url: upload.url ?? null };
+  }
+
   // העלאת מדיה ל-Supabase Storage
   async uploadMedia(uri: string, type: 'image' | 'video' | 'audio' | 'document'): Promise<{
     success: boolean;

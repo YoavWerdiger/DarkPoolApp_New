@@ -225,7 +225,7 @@ export default function ForwardMessageModal({
 const createStyles = (tokens: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
@@ -272,7 +272,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: tokens.spacing.lg,
     paddingVertical: tokens.spacing.md,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: 'transparent',
     borderBottomWidth: tokens.layout.borderWidth.normal,
     borderBottomColor: tokens.colors.border.divider,
   },
@@ -327,7 +327,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
     paddingVertical: tokens.spacing.md,
     borderTopWidth: tokens.layout.borderWidth.normal,
     borderTopColor: tokens.colors.border.divider,
-    backgroundColor: tokens.colors.background.primary,
+    backgroundColor: 'transparent',
   },
   forwardButton: {
     flexDirection: 'row',

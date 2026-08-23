@@ -12,6 +12,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { useDesignTokens } from '../ui/DesignTokens';
+import { shapeWaveformLevel } from '../../utils/waveformSamples';
 
 interface VoiceWaveformProps {
   isRecording: boolean;
@@ -28,7 +29,6 @@ const STRIDE = BAR_W + BAR_GAP;
 const BARS_PER_SEC = 16;
 const SCROLL_SPEED_PX_S = STRIDE * BARS_PER_SEC; // = מסונכרן במדויק
 const EXTRA_BARS = 8;
-const SILENCE = 0.018;
 
 function WaveBar({
   index,
@@ -93,10 +93,8 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
 
     let raf = 0;
     const pump = () => {
-      const raw = Math.max(0, Math.min(1, audioLevelRef?.current ?? 0));
-      // gamma נמוך + gain — דיבור רך עדיין מזיז ברים
-      inputSV.value =
-        raw < SILENCE ? 0 : Math.min(1, Math.pow(raw, 0.48) * 1.55);
+      // אותו shapeWaveformLevel כמו בבועה
+      inputSV.value = shapeWaveformLevel(audioLevelRef?.current ?? 0);
       raf = requestAnimationFrame(pump);
     };
     raf = requestAnimationFrame(pump);
@@ -123,12 +121,12 @@ export default function VoiceWaveform({ isRecording, audioLevelRef }: VoiceWavef
     const dt = Math.min(1 / 30, (frame.timeSincePreviousFrame ?? 16) / 1000);
     const n = barCountSV.value;
 
-    // 1) עוצמה חיה — דעיכה איטית יותר כדי שדיבור רך יישאר גלוי
+    // 1) עוצמה חיה — מעקב מהיר אחרי שינויים (יותר volatile, פחות "שטוח גבוה")
     const target = inputSV.value;
     if (target <= 0) {
-      liveSV.value = liveSV.value < 0.02 ? 0 : liveSV.value * 0.62;
+      liveSV.value = liveSV.value < 0.025 ? 0 : liveSV.value * 0.5;
     } else {
-      liveSV.value = liveSV.value * 0.22 + target * 0.78;
+      liveSV.value = liveSV.value * 0.28 + target * 0.72;
     }
 
     // 2) תמיד מעדכנים את הבר האחרון באותו פריים — אין "בר חי" נפרד שיוצא מסנכרון

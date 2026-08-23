@@ -105,12 +105,12 @@ serve(async (req) => {
 
     const senderName = senderData.display_name || senderData.full_name || 'משתמש';
 
-    // 3. קבלת כל חברי הקבוצה שלא השתיקו ושהם לא השולח
+    // 3. כל חברי הקבוצה (כולל שולח/מושתקים) — סינון גם ברמת user וגם ברמת Expo token
+    // (טוקן משותף אחרי החלפת חשבון על אותו מכשיר).
     const { data: membersData, error: membersError } = await supabase
       .from('chat_group_members')
-      .select('user_id, muted, notifications_enabled')
-      .eq('group_id', group_id)
-      .neq('user_id', sender_id);
+      .select('user_id, muted, is_muted, notifications_enabled')
+      .eq('group_id', group_id);
 
     if (membersError) {
       console.error('❌ Error fetching group members:', membersError);
@@ -121,17 +121,59 @@ serve(async (req) => {
     }
 
     if (!membersData || membersData.length === 0) {
-      console.log('ℹ️ No other members in group');
+      console.log('ℹ️ No members in group');
       return new Response(
-        JSON.stringify({ success: true, message: 'No other members to notify', sent: 0 }),
+        JSON.stringify({ success: true, message: 'No members to notify', sent: 0 }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // סינון משתמשים שהשתיקו את הקבוצה או כיבו התראות
+    // צופים פעילים בקבוצה (חלון 90s) — כבר מקבלים את ההודעה ב-Realtime, בלי Push
+    const viewerCutoff = new Date(Date.now() - 90_000).toISOString();
+    const { data: activeViewers, error: viewersError } = await supabase
+      .from('chat_active_viewers')
+      .select('user_id')
+      .eq('group_id', group_id)
+      .gt('viewing_at', viewerCutoff);
+
+    if (viewersError) {
+      console.warn('⚠️ Could not load chat_active_viewers:', viewersError.message);
+    }
+    const activelyViewing = new Set((activeViewers ?? []).map((v) => v.user_id));
+
+    const isMemberMuted = (member: {
+      muted?: boolean | null;
+      is_muted?: boolean | null;
+      notifications_enabled?: boolean | null;
+    }) =>
+      member.muted === true ||
+      member.is_muted === true ||
+      member.notifications_enabled === false;
+
+    // נמענים זכאים: לא השולח, לא צופה פעיל, לא השתיקו את הקבוצה, ולא כיבו התראות
     const eligibleUserIds = membersData
-      .filter(member => !member.muted && member.notifications_enabled !== false)
-      .map(member => member.user_id);
+      .filter(
+        (member) =>
+          member.user_id !== sender_id &&
+          !activelyViewing.has(member.user_id) &&
+          !isMemberMuted(member),
+      )
+      .map((member) => member.user_id);
+
+    // משתמשים שאסור שהמכשיר שלהם יקבל את ההתראה — שולח + מושתקים/מכובים + צופים פעילים.
+    const excludedUserIds = Array.from(
+      new Set(
+        membersData
+          .filter(
+            (member) =>
+              member.user_id === sender_id ||
+              isMemberMuted(member) ||
+              activelyViewing.has(member.user_id),
+          )
+          .map((member) => member.user_id)
+          .concat(sender_id),
+      ),
+    );
 
     if (eligibleUserIds.length === 0) {
       console.log('ℹ️ All members have muted or disabled notifications');
@@ -175,8 +217,17 @@ serve(async (req) => {
 
     console.log(`📱 Users after global prefs filter: ${filteredUserIds.length}`);
 
+    // גם מי שכיבה התראות גלובלית — הטוקן שלו עלול להיות רשום גם תחת חבר אחר בקבוצה
+    const filteredSet = new Set(filteredUserIds);
+    const tokenExclusionUserIds = Array.from(
+      new Set([
+        ...excludedUserIds,
+        ...eligibleUserIds.filter((id) => !filteredSet.has(id)),
+      ]),
+    );
+
     // 4. קבלת device tokens של המשתמשים הזכאים
-    const { data: deviceTokens, error: tokensError } = await supabase
+    const { data: recipientTokenRows, error: tokensError } = await supabase
       .from('device_tokens')
       .select('expo_push_token, user_id')
       .in('user_id', filteredUserIds)
@@ -190,15 +241,36 @@ serve(async (req) => {
       );
     }
 
+    // 4b. טוקנים שיש להחריג — של השולח ושל מי שהשתיק/כיבה התראות (אותו מכשיר/טוקן משותף)
+    let excludedTokenSet = new Set<string>();
+    if (tokenExclusionUserIds.length > 0) {
+      const { data: excludedTokenRows, error: excludedTokensError } = await supabase
+        .from('device_tokens')
+        .select('expo_push_token')
+        .in('user_id', tokenExclusionUserIds)
+        .eq('is_active', true);
+
+      if (excludedTokensError) {
+        console.warn('⚠️ Could not load excluded device tokens:', excludedTokensError.message);
+      } else {
+        excludedTokenSet = new Set((excludedTokenRows ?? []).map((t) => t.expo_push_token));
+      }
+    }
+
+    // הסרת כפילויות + החרגת הטוקנים של השולח/מושתקים (מונע Push לעצמך ולקבוצה מושתקת)
+    const deviceTokens = Array.from(
+      new Map((recipientTokenRows ?? []).map((t) => [t.expo_push_token, t])).values(),
+    ).filter((t) => !excludedTokenSet.has(t.expo_push_token));
+
     if (!deviceTokens || deviceTokens.length === 0) {
-      console.log('ℹ️ No active device tokens found');
+      console.log('ℹ️ No active device tokens found (after sender/mute token exclusion)');
       return new Response(
         JSON.stringify({ success: true, message: 'No active device tokens', sent: 0 }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`📱 Found ${deviceTokens.length} active device tokens`);
+    console.log(`📱 Found ${deviceTokens.length} active device tokens (after sender/mute token exclusion)`);
 
     // 5. הכנת תוכן ההתראה:
     //    תמונה = קבוצה | כותרת = שם הצ'אט | כותרת משנה = שם השולח: | גוף = תוכן ההודעה

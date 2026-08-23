@@ -13,12 +13,26 @@ export { AppDialogProvider, useAppDialog } from './AppDialogProvider';
 export { default as UICard } from './UICard';
 export { DayNavBlurButton, DAY_NAV_BUTTON_SIZE, DRAWER_MENU_BUTTON_SIZE } from './DayNavBlurButton';
 export { default as UIInput } from './UIInput';
+export {
+  sheetActionColors,
+  sheetContentBottomPadding,
+  sheetSafeBottomInset,
+  sheetSystemBarFillHeight,
+  SheetActionButton,
+} from './BottomSheet';
+export type { SheetActionVariant, SheetActionButtonProps } from './BottomSheet';
 
 // Design Tokens
 export { default as DesignTokens } from './DesignTokens';
 export { ScreenChrome } from './ScreenChrome';
 export { BrandTransbackWatermark } from './BrandTransbackWatermark';
-export { MainDrawerScreenHeader, MAIN_SCREEN_HEADER_HP } from './MainDrawerScreenHeader';
+export {
+  MainDrawerScreenHeader,
+  MAIN_SCREEN_HEADER_HP,
+  MAIN_SCREEN_HEADER_TITLE_SIZE,
+  MAIN_SCREEN_HEADER_TITLE_WEIGHT,
+  MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
+} from './MainDrawerScreenHeader';
 export type { MainDrawerScreenHeaderProps } from './MainDrawerScreenHeader';
 
 // Types

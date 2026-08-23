@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import UICard from '../../../components/ui/UICard';
+import FearAndGreedMiniCard from '../../../components/News/FearAndGreedMiniCard';
 import {
   getTradingViewHeatmapHTML,
   type HeatmapKind,
@@ -29,6 +30,10 @@ export function MarketsHeatmapsTab() {
 
   return (
     <View style={{ flex: 1, minHeight: 0, paddingHorizontal: hp }}>
+      <View style={{ marginBottom: tokens.spacing.md }}>
+        <FearAndGreedMiniCard />
+      </View>
+
       <View style={{ marginBottom: tokens.spacing.sm }}>
         <MarketsEmbedSwitcher
           options={heatmapSegments}

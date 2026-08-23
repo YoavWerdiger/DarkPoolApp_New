@@ -56,10 +56,27 @@ export function getMainDrawerNavigation(
  */
 let registeredMainDrawerNav: DrawerParentNavigation | null = null;
 
+/** פתיחת תפריט צד בלי react-native-drawer-layout (Expo Go worklet crash) */
+let registeredSideMenuOpener: (() => void) | null = null;
+
 export function registerMainDrawerNavigation(
   nav: DrawerParentNavigation | null
 ) {
   registeredMainDrawerNav = nav;
+}
+
+export function registerSideMenuOpener(opener: (() => void) | null) {
+  registeredSideMenuOpener = opener;
+}
+
+export function tryOpenRegisteredSideMenu(): boolean {
+  if (!registeredSideMenuOpener) return false;
+  try {
+    registeredSideMenuOpener();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -154,6 +171,10 @@ function openDrawerAfterSwitchToMain(navigation: DrawerParentNavigation) {
 export function dispatchOpenMainDrawer(navigation: DrawerParentNavigation) {
   if (isRootProfileStackFocused()) {
     openDrawerAfterSwitchToMain(navigation);
+    return;
+  }
+
+  if (tryOpenRegisteredSideMenu()) {
     return;
   }
 

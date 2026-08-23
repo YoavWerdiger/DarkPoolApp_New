@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -38,6 +38,8 @@ interface Props {
   typeFilter?: PortfolioTransaction['type'][];
   /** כותרת לסעיף — אם מוגדר מוצג מעל הרשימה */
   sectionTitle?: string;
+  /** מפתח שמשתנה כל פעם שהמסך האב מרענן נתונים — גורם לטעינה מחדש של הטרנזקציות */
+  refreshKey?: number;
 }
 
 type Nav = NativeStackNavigationProp<PortfoliosStackParamList, 'PortfolioDetail'>;
@@ -59,6 +61,7 @@ export default function TransactionsTab({
   readOnly = false,
   typeFilter,
   sectionTitle,
+  refreshKey,
 }: Props) {
   const tokens = useDesignTokens();
   const navigation = useNavigation<Nav>();
@@ -68,7 +71,18 @@ export default function TransactionsTab({
   const load = useCallback(async () => {
     try {
       const list = await listTransactions(portfolio.id, { limit: 500 });
-      setItems(typeFilter ? list.filter((tx) => typeFilter.includes(tx.type)) : list);
+      const filtered = typeFilter
+        ? list.filter((tx) => typeFilter.includes(tx.type))
+        : list;
+      // הפקדות/משיכות לפני עמלות — כדי שלא ייבלעו ברשימת fees של Colmex
+      const rank = (t: PortfolioTransaction['type']) =>
+        t === 'deposit' || t === 'withdrawal' ? 0 : t === 'dividend' ? 1 : 2;
+      filtered.sort((a, b) => {
+        const rd = rank(a.type) - rank(b.type);
+        if (rd !== 0) return rd;
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      });
+      setItems(filtered);
     } finally {
       setLoading(false);
     }
@@ -77,6 +91,16 @@ export default function TransactionsTab({
   useEffect(() => {
     void load();
   }, [load]);
+
+  // מרענן את רשימת הטרנזקציות כשהמסך האב טוען נתונים מחדש (לאחר הוספת/עריכת טרנזקציה)
+  const refreshKeyInitialized = useRef(false);
+  useEffect(() => {
+    if (!refreshKeyInitialized.current) {
+      refreshKeyInitialized.current = true;
+      return;
+    }
+    void load();
+  }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = useCallback(
     (tx: PortfolioTransaction) => {

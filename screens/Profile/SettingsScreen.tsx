@@ -9,12 +9,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { 
-  Trash2,
-  Info,
-  ChevronLeft,
-  Fingerprint
-} from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
@@ -23,14 +18,19 @@ import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import { loadAppSettings, saveAppSettings, clearAppCache } from '../../services/appSettings';
+import {
+  loadAppSettings,
+  saveAppSettings,
+  clearAppCache,
+  type AppLanguage,
+} from '../../services/appSettings';
 import { getAppVersionLabel } from '../../utils/appMeta';
+import { SettingsSectionTitle } from '../../components/profile/ProfileSettingsUI';
 
 interface SettingItem {
   id: string;
   title: string;
   subtitle: string;
-  icon: any;
   type: 'switch' | 'action';
   value?: boolean;
   onToggle?: (value: boolean) => void;
@@ -43,6 +43,7 @@ export default function SettingsScreen({ navigation }: any) {
   const { theme } = useTheme();
   const DesignTokens = useDesignTokens();
   const [biometricAuth, setBiometricAuth] = useState(false);
+  const [language, setLanguage] = useState<AppLanguage>('he');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function SettingsScreen({ navigation }: any) {
     try {
       const saved = await loadAppSettings();
       setBiometricAuth(saved.biometricAuth);
+      setLanguage(saved.language);
     } catch (error) {
     } finally {
       setIsLoading(false);
@@ -65,6 +67,23 @@ export default function SettingsScreen({ navigation }: any) {
     try {
       await saveAppSettings({ biometricAuth: value });
     } catch (error) {
+    }
+  };
+
+  const cycleLanguage = async () => {
+    void HapticFeedback.selection();
+    const next: AppLanguage = language === 'he' ? 'en' : 'he';
+    setLanguage(next);
+    try {
+      await saveAppSettings({ language: next });
+      legacyAlert(
+        'שפה',
+        next === 'he'
+          ? 'העדפת שפה: עברית (נשמר מקומית).\nתרגום מלא של הממשק עדיין לא מחובר.'
+          : 'Language preference: English (saved locally).\nFull UI translation is not wired yet.',
+      );
+    } catch {
+      /* noop */
     }
   };
 
@@ -135,13 +154,39 @@ export default function SettingsScreen({ navigation }: any) {
 
   const settingSections = [
     {
+      title: 'שפה',
+      items: [
+        {
+          id: 'language',
+          title: 'שפת ממשק',
+          subtitle: language === 'he' ? 'עברית (מועדף)' : 'English (preferred)',
+          type: 'action' as const,
+          onPress: () => void cycleLanguage(),
+        },
+      ],
+    },
+    {
+      title: 'מנוי וחיובים',
+      items: [
+        {
+          id: 'billing',
+          title: 'מנוי, תשלומים וחשבוניות',
+          subtitle: 'סטטוס מנוי והורדת חשבוניות',
+          type: 'action' as const,
+          onPress: () => {
+            void HapticFeedback.impactLight();
+            navigation.navigate('Billing');
+          },
+        },
+      ],
+    },
+    {
       title: 'אבטחה',
       items: [
         {
           id: 'biometricAuth',
           title: 'אימות ביומטרי',
           subtitle: 'השתמש ב-Face ID / Touch ID',
-          icon: Fingerprint,
           type: 'switch' as const,
           value: biometricAuth,
           onToggle: handleBiometricAuth
@@ -155,7 +200,6 @@ export default function SettingsScreen({ navigation }: any) {
           id: 'clearCache',
           title: 'נקה מטמון',
           subtitle: 'מחק נתונים זמניים',
-          icon: Trash2,
           type: 'action' as const,
           onPress: handleClearCache,
           danger: true
@@ -164,7 +208,6 @@ export default function SettingsScreen({ navigation }: any) {
           id: 'about',
           title: 'אודות האפליקציה',
           subtitle: 'מידע וגרסה',
-          icon: Info,
           type: 'action' as const,
           onPress: () => {
             legacyAlert('אודות', `DarkPool App\nגרסה ${getAppVersionLabel()}\n\n© ${new Date().getFullYear()} DarkPool`);
@@ -211,23 +254,11 @@ export default function SettingsScreen({ navigation }: any) {
               paddingTop: DesignTokens.spacing.md,
             }}
           >
-            {settingSections.map((section, sectionIndex) => (
-              <View key={sectionIndex} style={{ marginBottom: DesignTokens.spacing.lg }}>
-                {/* Section Title */}
-                <Text style={{
-                  fontSize: DesignTokens.typography.caption.size,
-                  fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                  color: DesignTokens.colors.text.tertiary,
-                  marginBottom: DesignTokens.spacing.sm,
-                  textAlign: 'right',
-                  textTransform: 'uppercase',
-                  letterSpacing: DesignTokens.typography.letterSpacing.wide
-                }}>
-                  {section.title}
-                </Text>
+            {settingSections.map((section) => (
+              <View key={section.title} style={{ marginBottom: DesignTokens.spacing.lg }}>
+                <SettingsSectionTitle title={section.title} />
 
-                {/* Section Items */}
-                <UICard 
+                <UICard
                   variant="glass"
                   glassIntensity="light"
                   padding="none"
@@ -253,7 +284,6 @@ export default function SettingsScreen({ navigation }: any) {
                         paddingHorizontal: DesignTokens.spacing.base,
                       }}
                     >
-                    {/* Switch/Chevron - שמאל */}
                     {item.type === 'switch' && item.onToggle ? (
                       <Switch
                         value={item.value}
@@ -267,8 +297,7 @@ export default function SettingsScreen({ navigation }: any) {
                       <ChevronLeft size={20} color={DesignTokens.colors.text.tertiary} strokeWidth={2} />
                     )}
 
-                    {/* Text Content - מרכז */}
-                    <View style={{ flex: 1, marginLeft: DesignTokens.spacing.md, marginRight: DesignTokens.spacing.md }}>
+                    <View style={{ flex: 1, marginStart: DesignTokens.spacing.md }}>
                       <Text style={{
                         fontSize: DesignTokens.typography.body.size,
                         fontWeight: DesignTokens.typography.fontWeight.semibold as any,
@@ -288,22 +317,6 @@ export default function SettingsScreen({ navigation }: any) {
                       }}>
                         {item.subtitle}
                       </Text>
-                    </View>
-
-                    {/* Icon - ימין */}
-                    <View style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: DesignTokens.borderRadius.sm,
-                      backgroundColor: 'danger' in item && item.danger ? `${DesignTokens.colors.danger.main}1A` : `${DesignTokens.colors.primary.main}1A`,
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <item.icon 
-                        size={20} 
-                        color={'danger' in item && item.danger ? DesignTokens.colors.danger.main : DesignTokens.colors.primary.main} 
-                        strokeWidth={2} 
-                      />
                     </View>
                   </TouchableOpacity>
                   {itemIndex < section.items.length - 1 && (

@@ -1,28 +1,41 @@
-import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import { useRegistration } from '../../context/RegistrationContext';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useRegistration } from '../../context/RegistrationContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { DesignTokens } from '../../components/ui/DesignTokens';
+import UICard from '../../components/ui/UICard';
 import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
 import OnboardingButton from '../../components/onboarding/OnboardingButton';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { legacyAlert } from '../../utils/appDialog';
+import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
+import { safeRegistrationBack } from '../../hooks/useExitRegistration';
 
 const PREVIEW_SIZE = 280;
+const AVATAR = 180;
 
 const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
   const [image, setImage] = useState<string | null>(data.profileImage || null);
   const [loading, setLoading] = useState(false);
+  const surface = DesignTokens.onboardingInputSurface;
 
   useEffect(() => {
     ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => {});
     ImagePicker.requestCameraPermissionsAsync().catch(() => {});
   }, []);
+
+  // Remount אחרי סיסמה — ProfileImage יכול להיות initialRoute בלי היסטוריה
+  useLayoutEffect(() => {
+    const syncBackState = () => {
+      navigation.setOptions({ gestureEnabled: navigation.canGoBack() });
+    };
+    syncBackState();
+    return navigation.addListener('state', syncBackState);
+  }, [navigation]);
 
   const processAndSetImage = async (uri: string) => {
     setLoading(true);
@@ -42,7 +55,10 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
 
   const pickImageFromGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה'); return; }
+    if (status !== 'granted') {
+      legacyAlert('אין הרשאה', 'יש לאפשר גישה לגלריה');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -55,8 +71,12 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
   };
 
   const takePhoto = async () => {
+    void HapticFeedback.impactLight();
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') { legacyAlert('אין הרשאה', 'יש לאפשר גישה למצלמה'); return; }
+    if (status !== 'granted') {
+      legacyAlert('אין הרשאה', 'יש לאפשר גישה למצלמה');
+      return;
+    }
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [1, 1],
@@ -67,163 +87,186 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
     }
   };
 
+  const handleTakePhoto = () => {
+    void HapticFeedback.impactLight();
+    takePhoto();
+  };
+
+  const handlePickFromGallery = () => {
+    void HapticFeedback.impactLight();
+    pickImageFromGallery();
+  };
+
   const skipImage = () => {
     setData({ ...data, profileImage: null });
-    navigation.navigate('RegistrationIntro');
+    navigation.navigate('RegistrationAge');
   };
 
   const continueWithImage = () => {
     setData({ ...data, profileImage: image });
-    navigation.navigate('RegistrationIntro');
+    navigation.navigate('RegistrationAge');
+  };
+
+  const handleBack = () => {
+    void HapticFeedback.impactLight();
+    safeRegistrationBack(navigation, { fallbackRoute: 'RegistrationPassword' });
   };
 
   return (
     <OnboardingLayout
       title="תמונת פרופיל"
-      subtitle="הוסף תמונה או דלג — ניתן לשנות בהמשך"
-      currentStep={2}
-      totalSteps={5}
-      showBack={true}
-      onBack={() => {
-        void HapticFeedback.impactLight();
-        navigation.goBack();
-      }}
+      subtitle="בחר תמונה שתייצג אותך בקהילת DarkPool"
+      density="focused"
+      currentStep={ONBOARDING_STEPS.profileImage}
+      totalSteps={ONBOARDING_TOTAL_STEPS}
+      showBack
+      onBack={handleBack}
+      footer={
+        <OnboardingButton
+          title={image ? "המשך" : "דלג לעכשיו"}
+          onPress={image ? continueWithImage : skipImage}
+          disabled={loading}
+        />
+      }
     >
-      {/* Avatar */}
-      <View style={{ alignItems: 'center', marginBottom: 44 }}>
-        <View
+      <View style={{ alignItems: 'center', marginBottom: 32, flex: 1, justifyContent: 'center' }}>
+        <UICard
+          variant="glass"
+          glassIntensity="medium"
+          padding="none"
           style={{
-            position: 'relative',
-            marginBottom: 28,
+            borderRadius: DesignTokens.borderRadius['2xl'],
+            width: '100%',
+            marginBottom: 20,
           }}
         >
-          {/* Glow ring */}
-          <LinearGradient
-            colors={['rgba(0,230,84,0.4)', 'rgba(0,230,84,0.1)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{
-              width: 140,
-              height: 140,
-              borderRadius: 70,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
+          <View style={{ alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 }}>
             <View
               style={{
-                width: 130,
-                height: 130,
-                borderRadius: 65,
-                backgroundColor: '#141F14',
+                width: AVATAR,
+                height: AVATAR,
+                borderRadius: AVATAR / 2,
+                borderWidth: 2,
+                borderColor: image
+                  ? DesignTokens.colors.primary.main
+                  : 'rgba(255,255,255,0.15)',
+                backgroundColor: surface.backgroundColor,
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
+                shadowColor: DesignTokens.colors.primary.main,
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: image ? 0.4 : 0,
+                shadowRadius: 12,
+                marginBottom: 24,
               }}
             >
               {image ? (
                 <Image
                   source={{ uri: image }}
-                  style={{ width: 130, height: 130, borderRadius: 65 }}
+                  style={{ width: AVATAR, height: AVATAR, borderRadius: AVATAR / 2 }}
                   contentFit="cover"
                   placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
                   transition={150}
                 />
               ) : loading ? (
-                <ActivityIndicator size="small" color={DesignTokens.colors.primary.main} />
+                <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
               ) : (
-                <Ionicons name="person" size={54} color="rgba(255,255,255,0.2)" />
+                <Ionicons 
+                  name="person-outline" 
+                  size={80} 
+                  color="rgba(255,255,255,0.3)" 
+                />
               )}
             </View>
-          </LinearGradient>
 
-          {/* Camera badge */}
-          {!loading && (
-            <TouchableOpacity
-              onPress={() => {
-                void HapticFeedback.impactLight();
-                pickImageFromGallery();
-              }}
-              activeOpacity={0.85}
-              style={{
-                position: 'absolute',
-                bottom: 2,
-                left: 2,
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: DesignTokens.colors.primary.main,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 2,
-                borderColor: '#060C06',
-              }}
-            >
-              <Ionicons name="camera" size={18} color="#000" />
-            </TouchableOpacity>
-          )}
-        </View>
+            {loading ? (
+              <Text
+                style={{
+                  color: DesignTokens.colors.primary.main,
+                  fontSize: 14,
+                  fontWeight: '600',
+                  textAlign: 'center',
+                  marginBottom: 20,
+                }}
+              >
+                מעבד תמונה...
+              </Text>
+            ) : image ? (
+              <>
+                <Text
+                  style={{
+                    color: 'rgba(255,255,255,0.9)',
+                    fontSize: 16,
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    marginBottom: 6,
+                  }}
+                >
+                  נראה מעולה! 🎉
+                </Text>
+                <Text
+                  style={{
+                    color: 'rgba(255,255,255,0.5)',
+                    fontSize: 13,
+                    textAlign: 'center',
+                    lineHeight: 18,
+                    marginBottom: 20,
+                  }}
+                >
+                  תמונה זו תוצג בפרופיל שלך ובצ'אטים
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text
+                  style={{
+                    color: 'rgba(255,255,255,0.75)',
+                    fontSize: 15,
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    marginBottom: 6,
+                  }}
+                >
+                  הוסף תמונת פרופיל
+                </Text>
+                <Text
+                  style={{
+                    color: 'rgba(255,255,255,0.45)',
+                    fontSize: 13,
+                    textAlign: 'center',
+                    lineHeight: 18,
+                    paddingHorizontal: 20,
+                    marginBottom: 20,
+                  }}
+                >
+                  בחר תמונה שמייצגת אותך בצ'אטים
+                </Text>
+              </>
+            )}
 
-        {loading && (
-          <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 12 }}>
-            מעבד תמונה...
-          </Text>
-        )}
-
-        {/* Source buttons */}
-        <View style={{ flexDirection: 'row', gap: 12 }}>
-          <TouchableOpacity
-            onPress={() => {
-              void HapticFeedback.impactLight();
-              pickImageFromGallery();
-            }}
-            disabled={loading}
-            activeOpacity={0.75}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              borderRadius: 24,
-              paddingHorizontal: 20,
-              paddingVertical: 11,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
-              gap: 8,
-            }}
-          >
-            <Ionicons name="images-outline" size={18} color={DesignTokens.colors.primary.main} />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>גלריה</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => {
-              void HapticFeedback.impactLight();
-              takePhoto();
-            }}
-            disabled={loading}
-            activeOpacity={0.75}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              borderRadius: 24,
-              paddingHorizontal: 20,
-              paddingVertical: 11,
-              borderWidth: 1,
-              borderColor: 'rgba(255,255,255,0.1)',
-              gap: 8,
-            }}
-          >
-            <Ionicons name="camera-outline" size={18} color={DesignTokens.colors.primary.main} />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>מצלמה</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Buttons */}
-      <View style={{ gap: 4 }}>
-        <OnboardingButton title="המשך" onPress={continueWithImage} />
-        <OnboardingButton title="דלג על השלב" onPress={skipImage} variant="secondary" />
+            {!loading && (
+              <View style={{ flexDirection: 'row-reverse', gap: 12, width: '100%' }}>
+                <View style={{ flex: 1 }}>
+                  <OnboardingButton
+                    title="מצלמה"
+                    onPress={handleTakePhoto}
+                    variant="secondary"
+                    icon={<Ionicons name="camera" size={20} color="rgba(255,255,255,0.55)" />}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <OnboardingButton
+                    title="גלריה"
+                    onPress={handlePickFromGallery}
+                    variant="secondary"
+                    icon={<Ionicons name="images" size={20} color="rgba(255,255,255,0.55)" />}
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+        </UICard>
       </View>
     </OnboardingLayout>
   );

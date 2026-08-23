@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../../utils/hapticFeedback';
 import type { ExplorePerson } from '../../../services/darkpool/uwExploreService';
+import { formatInsiderDisplayName } from '../utils/investorPlaceholder';
 import { InvestorPortrait } from './InvestorPortrait';
 
 interface Props {
@@ -35,6 +36,10 @@ export function ExplorePortraitCard({
   const isGrid = variant === 'grid';
   const w = isGrid ? undefined : variant === 'large' ? 168 : 132;
   const h = isGrid ? undefined : variant === 'large' ? 220 : 176;
+  const displayName =
+    person.kind === 'insider'
+      ? formatInsiderDisplayName(person.name)
+      : person.name;
 
   const content = (
     <View
@@ -45,7 +50,7 @@ export function ExplorePortraitCard({
       ]}
     >
       <InvestorPortrait
-        name={person.name}
+        name={displayName}
         imageUrl={person.image_url}
         ticker={person.ticker}
         kind={person.kind}
@@ -54,16 +59,20 @@ export function ExplorePortraitCard({
         style={styles.bg}
       >
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.92)']}
+          colors={['transparent', 'rgba(0,0,0,0.55)', 'rgba(0,0,0,0.92)']}
           style={styles.footer}
         >
           <Text style={styles.name} numberOfLines={2}>
-            {person.name}
+            {displayName}
           </Text>
           <Text style={styles.subtitle} numberOfLines={1}>
-            {person.kind === 'politician'
-              ? 'קונגרס'
-              : person.ticker || person.subtitle.split('·')[0]?.trim() || 'בכיר'}
+            {person.subtitle?.trim()
+              ? person.subtitle
+              : person.kind === 'politician'
+                ? 'קונגרס'
+                : person.kind === 'fund_manager'
+                  ? 'מנהל קרן'
+                  : person.ticker || 'בכיר'}
           </Text>
         </LinearGradient>
       </InvestorPortrait>
@@ -90,7 +99,7 @@ function createStyles(
 ) {
   return StyleSheet.create({
     card: {
-      borderRadius: tokens.borderRadius.xl,
+      borderRadius: tokens.borderRadius['2xl'],
       overflow: 'hidden',
       backgroundColor: 'rgba(255,255,255,0.06)',
       borderWidth: 1,

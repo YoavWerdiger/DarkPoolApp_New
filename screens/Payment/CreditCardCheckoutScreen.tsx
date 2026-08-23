@@ -1,42 +1,51 @@
-import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
-import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Shield,
-  Users,
-  Zap,
-  TrendingUp,
-  Crown,
-  Lock,
-  User,
-  Mail,
-  Phone,
-} from 'lucide-react-native';
+import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes';
+import { useQueryClient } from '@tanstack/react-query';
+import { Lock, RefreshCw } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
-import { paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { BUYER_PAYMENT_ERROR_HE, paymentService, SUBSCRIPTION_PLANS } from '../../services/paymentService';
+import { AuthService } from '../../services/authService';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 
-/** הופך hex ל-rgba עם אלפא — תואם ל-SubscriptionPlansScreen */
-const ra = (hex: string, a: number) => {
-  const h = hex.replace('#', '');
-  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
-};
+/**
+ * reCAPTCHA / "אני לא רובוט" נשבר ב-RN WebView כשה-UA כולל `; wv`
+ * (ברירת מחדל באנדרואיד) או כשעוגיות צד-ג' חסומות.
+ * UA דפדפן רגיל + shared/thirdParty cookies מאפשרים ל-google.com/recaptcha לעבוד.
+ */
+const CARDCOM_WEBVIEW_USER_AGENT = Platform.select({
+  ios: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+  android:
+    'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+  default:
+    'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+});
 
-/** פלטה מותגית אחידה — תואמת ל-SubscriptionPlansScreen */
-const PLAN_THEME: Record<string, { color: string; icon: any }> = {
-  free: { color: '#8B98A5', icon: Users },
-  monthly: { color: '#00C805', icon: Zap },
-  quarterly: { color: '#2DD4BF', icon: TrendingUp },
-  yearly: { color: '#F5B400', icon: Crown },
-};
+function parseSmartActionOutcome(url: string): { isSuccess: boolean; transactionId: string } | null {
+  try {
+    if (!/smart-action/i.test(url)) return null;
+    const u = new URL(url);
+    const dp = u.searchParams.get('dp');
+    const responseCode =
+      u.searchParams.get('ResponseCode') ?? u.searchParams.get('responsecode') ?? '';
+    const transactionId =
+      u.searchParams.get('TranzactionId') ??
+      u.searchParams.get('TransactionId') ??
+      u.searchParams.get('ReturnValue') ??
+      '';
+    const isSuccess =
+      dp === 'ok' || (dp !== 'fail' && (responseCode === '0' || responseCode === ''));
+    return { isSuccess, transactionId };
+  } catch {
+    return null;
+  }
+}
 
 interface CreditCardCheckoutScreenProps {
   navigation: any;
@@ -48,386 +57,341 @@ interface CreditCardCheckoutScreenProps {
   };
 }
 
+type CheckoutPhase = 'preparing' | 'webview' | 'error' | 'completing';
+type WebSource = { uri: string } | { html: string; baseUrl?: string };
+
+/**
+ * מעטפת תשלום CardCom — בלי טופס פרטים אישיים.
+ * הפרטים מגיעים מ-RegistrationContext (רישום) או מפרופיל המשתמש (מנוי קיים).
+ */
 export default function CreditCardCheckoutScreen({ navigation, route }: CreditCardCheckoutScreenProps) {
   const tokens = useDesignTokens();
-  const { colors, spacing, borderRadius } = tokens;
+  const { colors } = tokens;
+  const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { data: registrationData } = useRegistration();
+  const { data: registrationData, setData: setRegistrationData } = useRegistration();
   const { planId, fromRegistration = false } = route.params;
-  const insets = useSafeAreaInsets();
-  const [loading, setLoading] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(planId || 'monthly');
-  const [showIframe, setShowIframe] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState('');
-  const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  // User Details Form State (כבר לא צריך פרטי כרטיס - LowProfile iframe)
-  const [cardholderName, setCardholderName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-
+  const selectedPlan = planId || 'monthly';
   const plan = SUBSCRIPTION_PLANS[selectedPlan as keyof typeof SUBSCRIPTION_PLANS];
-  const planTheme = PLAN_THEME[selectedPlan] ?? { color: plan?.color || colors.primary.main, icon: Crown };
-  const planColor = planTheme.color;
-  const PlanIcon = planTheme.icon;
 
-  useEffect(() => {
-    if (planId) {
-      setSelectedPlan(planId);
+  const [phase, setPhase] = useState<CheckoutPhase>('preparing');
+  const [paymentUrl, setPaymentUrl] = useState('');
+  const [webSource, setWebSource] = useState<WebSource | null>(null);
+  const [errorMessage, setErrorMessage] = useState('');
+  const startingRef = useRef(false);
+  const startedOnceRef = useRef(false);
+  const paymentOutcomeHandledRef = useRef(false);
+
+  const resolveBuyerDetails = useCallback(() => {
+    if (fromRegistration) {
+      return {
+        email: (registrationData.email || '').trim(),
+        name: (registrationData.fullName || '').trim(),
+        phone: (registrationData.phone || '').trim(),
+      };
     }
-    if (user) {
-      setEmail(user.email || '');
-      setCardholderName(user.display_name || '');
-    } else if (fromRegistration && registrationData) {
-      // במהלך הרישום, נטען פרטים מהרישום
-      setEmail(registrationData.email || '');
-      setCardholderName(registrationData.fullName || '');
-      setPhone(registrationData.phone || '');
+    return {
+      email: (user?.email || '').trim(),
+      name: (user?.display_name || user?.full_name || '').trim(),
+      phone: (user?.phone || '').trim(),
+    };
+  }, [fromRegistration, registrationData, user]);
+
+  /** יוצר Auth user לפני Cardcom כדי ש-webhook יקבל userId אמיתי */
+  const resolveCheckoutUserId = async (): Promise<string> => {
+    if (!fromRegistration) {
+      if (!user?.id) throw new Error('נדרש להתחבר למערכת');
+      return user.id;
     }
-  }, [planId, user, fromRegistration, registrationData]);
 
-  // אם זה רישום והפרטים קיימים - עובר ישירות ל-Cardcom
-  useEffect(() => {
-    if (fromRegistration && registrationData && plan && !showIframe && !loading) {
-      const hasAllData = registrationData.email &&
-                        registrationData.fullName &&
-                        registrationData.phone;
+    const existingId =
+      registrationData.pendingAuthUserId ||
+      registrationData.googleUserId ||
+      user?.id ||
+      null;
 
-      if (hasAllData) {
-        // עובר ישירות ל-Cardcom ללא הצגת טופס
-        handlePaymentDirect();
+    if (existingId) {
+      if (!registrationData.pendingAuthUserId) {
+        setRegistrationData((prev) => ({ ...prev, pendingAuthUserId: existingId }));
       }
+      return existingId;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // רק פעם אחת כשהקומפוננטה נטענת
 
-  const handlePaymentDirect = async () => {
-    if (!plan || !registrationData) return;
+    if (!registrationData.email || !registrationData.password || !registrationData.fullName) {
+      throw new Error('חסרים פרטי הרשמה לפני תשלום');
+    }
 
-    setLoading(true);
+    const { userId, error } = await AuthService.ensurePendingAuthUser({
+      email: registrationData.email,
+      password: registrationData.password,
+      fullName: registrationData.fullName,
+      phone: registrationData.phone,
+      profileImage: registrationData.profileImage,
+      accountType: selectedPlan,
+      trackId: registrationData.trackId || '1',
+    });
+
+    if (error || !userId) {
+      throw new Error(error || 'שגיאה ביצירת חשבון לפני תשלום');
+    }
+
+    setRegistrationData((prev) => ({
+      ...prev,
+      pendingAuthUserId: userId,
+      accountType: selectedPlan,
+    }));
+
+    return userId;
+  };
+
+  const startCheckout = useCallback(async () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setPhase('preparing');
+    setErrorMessage('');
+    setPaymentUrl('');
+    setWebSource(null);
+    paymentOutcomeHandledRef.current = false;
 
     try {
-      // יצירת בקשת תשלום ל-CardCom LowProfile
+      if (!plan) {
+        throw new Error('תוכנית מנוי לא נמצאה');
+      }
+
+      const buyer = resolveBuyerDetails();
+      if (!buyer.email || !buyer.name) {
+        throw new Error(
+          fromRegistration
+            ? 'חסרים שם או אימייל מההרשמה. חזרו לשלב הפרטים האישיים.'
+            : 'חסרים פרטי פרופיל (שם / אימייל). עדכנו בפרופיל ונסו שוב.'
+        );
+      }
+
+      if (fromRegistration) {
+        const canPay =
+          registrationData.password ||
+          registrationData.isGoogleSignUp ||
+          registrationData.pendingAuthUserId ||
+          registrationData.googleUserId ||
+          user?.id;
+        if (!canPay) {
+          throw new Error('חסרים פרטי התחברות לפני תשלום');
+        }
+      } else if (!user?.id) {
+        throw new Error('נדרש להתחבר למערכת');
+      }
+
+      const checkoutUserId = await resolveCheckoutUserId();
+
       const paymentResponse = await paymentService.createPaymentRequest({
         amount: plan.price,
         currency: 'ILS',
-        description: `מנוי ${plan.name} - ${registrationData.fullName}`,
-        userId: null, // במהלך רישום עדיין אין userId
+        description: `מנוי ${plan.name} - ${buyer.name}`,
+        userId: checkoutUserId,
         planId: selectedPlan,
-        userEmail: registrationData.email,
-        userName: registrationData.fullName,
-        userPhone: registrationData.phone
+        userEmail: buyer.email,
+        userName: buyer.name,
+        userPhone: buyer.phone || undefined,
+        isRecurring: plan.period !== 'one_time',
       });
 
       if (paymentResponse.success && paymentResponse.paymentUrl) {
         setPaymentUrl(paymentResponse.paymentUrl);
-        setShowIframe(true);
+        setWebSource({ uri: paymentResponse.paymentUrl });
+        setPhase('webview');
       } else {
-        throw new Error(paymentResponse.error || 'שגיאה ביצירת בקשת התשלום');
+        // אל תציג Description של CardCom לקונה
+        throw new Error(paymentResponse.error || BUYER_PAYMENT_ERROR_HE);
       }
-
     } catch (error) {
       void HapticFeedback.error();
-      legacyAlert(
-        'שגיאה בתשלום',
-        error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
-      );
+      const raw = error instanceof Error ? error.message : BUYER_PAYMENT_ERROR_HE;
+      // הגנה: אם דלפה הודעת ספק (למשל "חברה חסומה") — מציגים הודעה כללית
+      const looksLikeProviderBlock =
+        /חסומ|cardcom|terminal|api|blocked|ResponseCode/i.test(raw);
+      setErrorMessage(looksLikeProviderBlock ? BUYER_PAYMENT_ERROR_HE : raw);
+      setPhase('error');
     } finally {
-      setLoading(false);
+      startingRef.current = false;
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resolveCheckoutUserId closes over latest registration/user
+  }, [
+    plan,
+    selectedPlan,
+    fromRegistration,
+    registrationData,
+    user,
+    resolveBuyerDetails,
+  ]);
 
-  const validateForm = () => {
-    if (!cardholderName.trim()) {
-      legacyAlert('שגיאה', 'אנא הכנס שם מלא');
-      return false;
-    }
-    if (!email.trim()) {
-      legacyAlert('שגיאה', 'אנא הכנס כתובת אימייל');
-      return false;
-    }
-    if (!phone.trim()) {
-      legacyAlert('שגיאה', 'אנא הכנס מספר טלפון');
-      return false;
-    }
-    return true;
-  };
+  useEffect(() => {
+    if (startedOnceRef.current) return;
+    startedOnceRef.current = true;
+    void startCheckout();
+  }, [startCheckout]);
 
-  // טיפול בהודעות מ-iframe
+  const handlePaymentOutcome = useCallback(
+    (type: 'payment_success' | 'payment_failed' | 'payment_cancelled', message?: string) => {
+      if (type === 'payment_cancelled') {
+        navigation.goBack();
+        return;
+      }
+      if (paymentOutcomeHandledRef.current) return;
+      paymentOutcomeHandledRef.current = true;
+
+      // סגירת WebView מיד — בלי דף HTML מכוער
+      setWebSource(null);
+      setPaymentUrl('');
+
+      if (type === 'payment_success') {
+        setPhase('completing');
+        void HapticFeedback.success();
+        if (user?.id) {
+          void queryClient.invalidateQueries({
+            queryKey: appQueryKeys.userSubscription(user.id),
+          });
+        }
+
+        if (fromRegistration) {
+          setRegistrationData((prev) => ({
+            ...prev,
+            accountType: selectedPlan,
+          }));
+          navigation.replace('RegistrationSummary');
+          return;
+        }
+
+        navigation.replace('SubscriptionWelcome', {
+          planId: selectedPlan,
+          planName: plan?.name,
+        });
+        return;
+      }
+
+      void HapticFeedback.error();
+      setPhase('error');
+      setErrorMessage(message || 'התשלום נכשל או בוטל. אפשר לנסות שוב.');
+      paymentOutcomeHandledRef.current = false;
+    },
+    [
+      fromRegistration,
+      navigation,
+      plan?.name,
+      queryClient,
+      selectedPlan,
+      setRegistrationData,
+      user?.id,
+    ]
+  );
+
+  /** תופס redirect להצלחה/כישלון — לא טוען את HTML של smart-action */
+  const interceptRedirectUrl = useCallback(
+    (url: string): boolean => {
+      if (!url) return false;
+
+      if (url.startsWith('darkpoolapp://payment/success')) {
+        handlePaymentOutcome('payment_success');
+        return true;
+      }
+      if (url.startsWith('darkpoolapp://payment/error')) {
+        handlePaymentOutcome('payment_failed');
+        return true;
+      }
+
+      const outcome = parseSmartActionOutcome(url);
+      if (outcome) {
+        handlePaymentOutcome(
+          outcome.isSuccess ? 'payment_success' : 'payment_failed'
+        );
+        return true;
+      }
+
+      return false;
+    },
+    [handlePaymentOutcome]
+  );
+
   const handleWebViewMessage = (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'payment_success') {
-        void HapticFeedback.success();
-        legacyAlert(
-          'תשלום הושלם בהצלחה!',
-          'המנוי שלך הופעל בהצלחה. תוכל להתחיל להשתמש בכל התכונות.',
-          [
-            {
-              text: 'אישור',
-              onPress: () => {
-                setShowIframe(false);
-                if (fromRegistration) {
-                  navigation.navigate('RegistrationSummary');
-                } else {
-                  navigation.goBack();
-                }
-              }
-            }
-          ]
-        );
-      } else if (data.type === 'payment_failed') {
-        void HapticFeedback.error();
-        legacyAlert(
-          'תשלום נכשל',
-          data.message || 'התשלום נכשל. אנא נסה שוב.',
-          [
-            {
-              text: 'אישור',
-              onPress: () => setShowIframe(false)
-            }
-          ]
-        );
-      } else if (data.type === 'payment_cancelled') {
-        setShowIframe(false);
+      if (
+        data.type === 'payment_success' ||
+        data.type === 'payment_failed' ||
+        data.type === 'payment_cancelled'
+      ) {
+        handlePaymentOutcome(data.type, data.message);
       }
-    } catch (error) {
+    } catch {
+      // הודעות לא-JSON מ-WebView — מתעלמים
     }
   };
 
-  const handlePayment = async () => {
-    // אם זה במהלך הרישום, המשתמש עדיין לא מחובר
-    if (!fromRegistration && !user) {
-      legacyAlert('שגיאה', 'נדרש להתחבר למערכת');
-      return;
-    }
-
-    if (!plan) {
-      legacyAlert('שגיאה', 'תוכנית מנוי לא נמצאה');
-      return;
-    }
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const userId = fromRegistration ? null : (user?.id || null);
-
-      // יצירת בקשת תשלום ל-CardCom LowProfile - יעביר למילוי פרטי כרטיס ב-iframe
-      const paymentResponse = await paymentService.createPaymentRequest({
-        amount: plan.price,
-        currency: 'ILS',
-        description: `מנוי ${plan.name} - ${cardholderName}`,
-        userId: userId,
-        planId: selectedPlan,
-        userEmail: email,
-        userName: cardholderName,
-        userPhone: phone
-      });
-
-      if (paymentResponse.success && paymentResponse.paymentUrl) {
-        // הצגת iframe תשלום של CardCom בתוך האפליקציה
-        setPaymentUrl(paymentResponse.paymentUrl);
-        setShowIframe(true);
-      } else {
-        throw new Error(paymentResponse.error || 'שגיאה ביצירת בקשת התשלום');
-      }
-
-    } catch (error) {
-      void HapticFeedback.error();
-      legacyAlert(
-        'שגיאה בתשלום',
-        error instanceof Error ? error.message : 'אירעה שגיאה בעיבוד התשלום. אנא נסה שוב.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /** מחיר ראשי + תיאור תקופה לפי סוג המסלול */
-  const renderPlanPrice = () => {
-    if (!plan) return null;
-    if (plan.price === 0) {
-      return <Text style={{ fontSize: 26, fontWeight: '800', color: colors.text.primary, letterSpacing: -0.5 }}>חינם</Text>;
-    }
-    if (plan.period === 'yearly') {
-      return (
-        <View style={{ alignItems: 'flex-start' }}>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 4 }}>
-            <Text style={{ fontSize: 26, fontWeight: '800', color: planColor, letterSpacing: -0.5 }}>₪117</Text>
-            <Text style={{ fontSize: 13, color: colors.text.secondary, marginBottom: 4, fontWeight: '500' }}>/חודש</Text>
-          </View>
-          <Text style={{ fontSize: 12, color: colors.text.tertiary, marginTop: 2 }}>מחויב שנתי — ₪{plan.price.toLocaleString()}</Text>
-        </View>
-      );
-    }
-    const periodLabel =
-      plan.period === 'quarterly' ? 'ל-3 חודשים' :
-      plan.period === 'one_time' ? 'תשלום חד פעמי' :
-      '/חודש';
-    return (
-      <View style={{ flexDirection: 'row-reverse', alignItems: 'flex-end', gap: 4 }}>
-        <Text style={{ fontSize: 26, fontWeight: '800', color: planColor, letterSpacing: -0.5 }}>₪{plan.price.toLocaleString()}</Text>
-        <Text style={{ fontSize: 13, color: colors.text.secondary, marginBottom: 4, fontWeight: '500' }}>{periodLabel}</Text>
-      </View>
-    );
-  };
-
-  const renderPlanCard = () => {
-    if (!plan) return null;
-
-    return (
-      <UICard
-        variant="glass"
-        glassIntensity="medium"
-        padding="none"
-        style={{
-          marginBottom: spacing.lg,
-          borderRadius: borderRadius['2xl'],
-          borderWidth: 1,
-          borderColor: ra(planColor, 0.4),
-          overflow: 'hidden',
-          shadowColor: planColor,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.18,
-          shadowRadius: 16,
-          elevation: 8,
-        }}
-      >
-        <LinearGradient
-          colors={[ra(planColor, 0.18), 'transparent']}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 90 }}
-        />
-        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', padding: spacing.lg }}>
-          <View style={{
-            width: 54,
-            height: 54,
-            borderRadius: 27,
-            backgroundColor: ra(planColor, 0.15),
-            borderWidth: 1.5,
-            borderColor: ra(planColor, 0.35),
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: spacing.base,
-          }}>
-            <PlanIcon size={24} color={planColor} strokeWidth={2} />
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={{
-              color: colors.text.primary,
-              fontSize: 19,
-              fontWeight: '700',
-              textAlign: 'right',
-              letterSpacing: -0.3,
-            }}>
-              {plan.name}
-            </Text>
-            <Text style={{ color: colors.text.tertiary, fontSize: 12, textAlign: 'right', marginTop: 2, marginBottom: 8 }}>
-              {plan.description}
-            </Text>
-            {renderPlanPrice()}
-          </View>
-        </View>
-      </UICard>
-    );
-  };
-
-  const renderInputField = (
-    label: string,
-    value: string,
-    onChangeText: (text: string) => void,
-    placeholder: string,
-    fieldKey: string,
-    keyboardType: any = 'default',
-    icon?: any,
-  ) => {
-    const isFocused = focusedField === fieldKey;
-    return (
-      <View style={{ marginBottom: spacing.base }}>
-        <Text style={{
-          color: colors.text.secondary,
-          fontSize: 13,
-          fontWeight: '600',
-          marginBottom: 8,
-          textAlign: 'right',
-        }}>
-          {label}
-        </Text>
-        <View style={{
-          backgroundColor: colors.background.input,
-          borderRadius: borderRadius.md,
-          borderWidth: 1.5,
-          borderColor: isFocused ? ra(planColor, 0.55) : colors.border.default,
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          paddingHorizontal: 14,
-        }}>
-          {icon && (
-            <View style={{ marginLeft: 10 }}>
-              {icon}
-            </View>
-          )}
-          <TextInput
-            value={value}
-            onChangeText={onChangeText}
-            onFocus={() => setFocusedField(fieldKey)}
-            onBlur={() => setFocusedField(null)}
-            placeholder={placeholder}
-            placeholderTextColor={colors.text.muted}
-            style={{
-              flex: 1,
-              color: colors.text.primary,
-              fontSize: 16,
-              paddingVertical: 14,
-              fontWeight: '500',
-              textAlign: 'right',
-            }}
-            keyboardType={keyboardType}
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-        </View>
-      </View>
-    );
-  };
-
-  // אם מציגים iframe תשלום
-  if (showIframe) {
+  if (phase === 'webview' && webSource) {
     return (
       <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-          <ChatSubScreenHeader title="השלמת תשלום" onBack={() => setShowIframe(false)} />
-
+          <ChatSubScreenHeader title="השלמת תשלום" onBack={() => navigation.goBack()} />
           <WebView
-            source={{ uri: paymentUrl }}
+            source={webSource}
             style={{ flex: 1, backgroundColor: 'transparent' }}
             onMessage={handleWebViewMessage}
             onNavigationStateChange={(navState) => {
-              const url = navState.url;
-              if (url.includes('smart-action') || url.includes('rapid-responder')) {
-                // Webhook יטפל בזה
-              }
+              interceptRedirectUrl(navState.url || '');
             }}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            startInLoadingState={true}
+            // reCAPTCHA needs JS, storage, 3rd-party cookies, and non-WebView UA
+            javaScriptEnabled
+            domStorageEnabled
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            originWhitelist={['*']}
+            mixedContentMode="always"
+            allowsInlineMediaPlayback
+            mediaPlaybackRequiresUserAction={false}
+            setSupportMultipleWindows={false}
+            userAgent={CARDCOM_WEBVIEW_USER_AGENT}
+            onShouldStartLoadWithRequest={(req: ShouldStartLoadRequest) => {
+              const url = req.url || '';
+
+              if (interceptRedirectUrl(url)) {
+                return false;
+              }
+
+              if (
+                url.startsWith('about:') ||
+                url.startsWith('data:') ||
+                url.startsWith('blob:')
+              ) {
+                return true;
+              }
+              if (!/^https?:\/\//i.test(url)) {
+                return false;
+              }
+              return true;
+            }}
+            startInLoadingState
             renderLoading={() => (
-              <View style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: ra(colors.background.primary, 0.92),
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: colors.background.primary,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 <ActivityIndicator color={colors.primary.main} size="large" />
-                <Text style={{ color: colors.text.primary, fontSize: 16, marginTop: 16, writingDirection: 'rtl' }}>
+                <Text
+                  style={{
+                    color: colors.text.primary,
+                    fontSize: 16,
+                    marginTop: 16,
+                    writingDirection: 'rtl',
+                  }}
+                >
                   טוען דף תשלום...
                 </Text>
               </View>
@@ -438,193 +402,147 @@ export default function CreditCardCheckoutScreen({ navigation, route }: CreditCa
     );
   }
 
-  // אם זה רישום - מציג מסך טעינה לפני שמופיע ה-iframe
-  if (fromRegistration && (loading || showIframe)) {
+  if (phase === 'error') {
+    const leaveCheckout = () => {
+      if (fromRegistration) {
+        navigation.goBack();
+        return;
+      }
+      navigation.reset({
+        index: 1,
+        routes: [{ name: 'ProfileMain' }, { name: 'Billing' }],
+      });
+    };
+
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
-          <View style={{
-            width: 72, height: 72, borderRadius: 36,
-            backgroundColor: colors.primary.dim,
-            borderWidth: 1, borderColor: colors.primary.subtle,
-            alignItems: 'center', justifyContent: 'center', marginBottom: 24,
-          }}>
-            <Lock size={28} color={colors.primary.main} />
-          </View>
-          <ActivityIndicator color={colors.primary.main} size="large" />
-          <Text style={{ color: colors.text.primary, fontSize: 18, fontWeight: '700', marginTop: 24, textAlign: 'center', writingDirection: 'rtl' }}>
-            מכין את דף התשלום המאובטח...
+        <ChatSubScreenHeader title="תשלום" onBack={leaveCheckout} />
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 28,
+          }}
+        >
+          <Text
+            style={{
+              color: colors.text.primary,
+              fontSize: 18,
+              fontWeight: '700',
+              textAlign: 'center',
+              writingDirection: 'rtl',
+              marginBottom: 12,
+            }}
+          >
+            {errorMessage.includes('נכשל') || errorMessage.includes('בוטל')
+              ? 'התשלום לא הושלם'
+              : 'לא הצלחנו לפתוח את דף התשלום'}
           </Text>
-          <Text style={{ color: colors.text.secondary, fontSize: 14, marginTop: 10, textAlign: 'center', writingDirection: 'rtl', lineHeight: 20 }}>
-            תועבר לדף תשלום מאובטח של CardCom
+          <Text
+            style={{
+              color: colors.text.secondary,
+              fontSize: 14,
+              textAlign: 'center',
+              writingDirection: 'rtl',
+              lineHeight: 22,
+              marginBottom: 28,
+            }}
+          >
+            {errorMessage || BUYER_PAYMENT_ERROR_HE}
           </Text>
+          <TouchableOpacity
+            onPress={() => {
+              void HapticFeedback.medium();
+              startedOnceRef.current = false;
+              void startCheckout();
+            }}
+            activeOpacity={0.85}
+            style={{
+              flexDirection: 'row-reverse',
+              alignItems: 'center',
+              backgroundColor: colors.primary.main,
+              paddingHorizontal: 22,
+              paddingVertical: 14,
+              borderRadius: 28,
+              marginBottom: 14,
+            }}
+          >
+            <RefreshCw size={18} color="#000" style={{ marginLeft: 8 }} />
+            <Text style={{ color: '#000', fontSize: 15, fontWeight: '700' }}>נסה שוב</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={leaveCheckout} activeOpacity={0.75}>
+            <Text style={{ color: colors.text.tertiary, fontSize: 14 }}>
+              {fromRegistration ? 'חזרה' : 'חזרה למנוי שלי'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
+  const isCompleting = phase === 'completing';
+
+  // preparing / completing (מעבר קצר לפני Welcome)
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1, backgroundColor: 'transparent' }}
+      <ChatSubScreenHeader
+        title={isCompleting ? 'תשלום הושלם' : 'תשלום מאובטח'}
+        onBack={isCompleting ? () => undefined : () => navigation.goBack()}
+      />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+        }}
       >
-        <ChatSubScreenHeader title="פרטי התשלום" onBack={() => navigation.goBack()} />
-
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
-          keyboardShouldPersistTaps="handled"
+        <View
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 36,
+            backgroundColor: colors.primary.dim,
+            borderWidth: 1,
+            borderColor: colors.primary.subtle,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 24,
+          }}
         >
-          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.base }}>
-            {/* Plan Card */}
-            {renderPlanCard()}
-
-            {/* Personal Details Section */}
-            <UICard
-              variant="glass"
-              glassIntensity="light"
-              padding="lg"
-              style={{ marginBottom: spacing.lg, borderRadius: borderRadius.xl }}
-            >
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: spacing.lg }}>
-                <User size={18} color={colors.primary.main} style={{ marginLeft: 8 }} />
-                <Text style={{ color: colors.text.primary, fontSize: 17, fontWeight: '700', writingDirection: 'rtl' }}>
-                  פרטים אישיים
-                </Text>
-              </View>
-
-              {renderInputField(
-                'שם מלא',
-                cardholderName,
-                setCardholderName,
-                'שם מלא',
-                'name',
-                'default',
-                <User size={16} color={colors.text.tertiary} />,
-              )}
-
-              {renderInputField(
-                'כתובת אימייל',
-                email,
-                setEmail,
-                'example@email.com',
-                'email',
-                'email-address',
-                <Mail size={16} color={colors.text.tertiary} />,
-              )}
-
-              {renderInputField(
-                'מספר טלפון',
-                phone,
-                setPhone,
-                '050-1234567',
-                'phone',
-                'phone-pad',
-                <Phone size={16} color={colors.text.tertiary} />,
-              )}
-            </UICard>
-
-            {/* Security Notice */}
-            <View style={{
-              flexDirection: 'row-reverse',
-              alignItems: 'flex-start',
-              backgroundColor: colors.primary.dim,
-              borderRadius: borderRadius.lg,
-              borderWidth: 1,
-              borderColor: colors.primary.subtle,
-              padding: spacing.base,
-              marginBottom: spacing.lg,
-            }}>
-              <Shield size={18} color={colors.primary.main} style={{ marginTop: 1, marginLeft: 10 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.primary.main, fontSize: 13, fontWeight: '700', textAlign: 'right', marginBottom: 4 }}>
-                  תשלום מאובטח עם CardCom
-                </Text>
-                <Text style={{ color: colors.text.secondary, fontSize: 12, lineHeight: 18, textAlign: 'right' }}>
-                  תועבר לדף תשלום מאובטח למילוי פרטי כרטיס האשראי. כל הפרטים מוצפנים ב-SSL 256-bit בתקן PCI DSS.
-                </Text>
-              </View>
-            </View>
-
-            {/* Payment Summary */}
-            <UICard
-              variant="glass"
-              glassIntensity="light"
-              padding="lg"
-              style={{ marginBottom: spacing.lg, borderRadius: borderRadius.xl }}
-            >
-              <Text style={{ color: colors.text.primary, fontSize: 17, fontWeight: '700', marginBottom: spacing.base, textAlign: 'right' }}>
-                סיכום התשלום
-              </Text>
-
-              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 10 }}>
-                <Text style={{ color: colors.text.secondary, fontSize: 14, textAlign: 'right' }}>
-                  {plan?.name}
-                </Text>
-                <Text style={{ color: colors.text.primary, fontSize: 14, fontWeight: '600' }}>
-                  {plan?.price === 0 ? 'חינם' : `₪${plan?.price.toLocaleString()}`}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: spacing.md }}>
-                <Text style={{ color: colors.text.tertiary, fontSize: 12, textAlign: 'right' }}>
-                  המחיר כולל מע"מ
-                </Text>
-                <Text style={{ color: colors.text.tertiary, fontSize: 12 }}>
-                  {plan?.period === 'one_time' ? 'תשלום חד פעמי' : plan?.period === 'yearly' ? 'חיוב שנתי' : plan?.period === 'quarterly' ? 'חיוב רבעוני' : 'חיוב חודשי'}
-                </Text>
-              </View>
-
-              <View style={{ height: 1, backgroundColor: colors.border.default, marginBottom: spacing.md }} />
-
-              <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: colors.text.primary, fontSize: 18, fontWeight: '800', textAlign: 'right' }}>
-                  סה"כ לתשלום
-                </Text>
-                <Text style={{ color: planColor, fontSize: 22, fontWeight: '800' }}>
-                  {plan?.price === 0 ? 'חינם' : `₪${plan?.price.toLocaleString()}`}
-                </Text>
-              </View>
-            </UICard>
-
-            {/* Payment Button */}
-            <TouchableOpacity
-              onPress={() => {
-                void HapticFeedback.medium();
-                handlePayment();
-              }}
-              disabled={loading}
-              activeOpacity={0.85}
-              style={{ borderRadius: borderRadius.lg, overflow: 'hidden', opacity: loading ? 0.7 : 1 }}
-            >
-              <LinearGradient
-                colors={[planColor, ra(planColor, 0.78)]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={{ paddingVertical: 17, alignItems: 'center', justifyContent: 'center' }}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <View style={{ flexDirection: 'row-reverse', alignItems: 'center' }}>
-                    <Lock size={18} color="#fff" style={{ marginLeft: 8 }} />
-                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', writingDirection: 'rtl', letterSpacing: 0.2 }}>
-                      המשך לתשלום מאובטח
-                    </Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Terms */}
-            <Text style={{ color: colors.text.tertiary, fontSize: 12, textAlign: 'center', marginTop: spacing.base, lineHeight: 18, writingDirection: 'rtl' }}>
-              בלחיצה על "המשך לתשלום מאובטח" אתה מסכים לתנאי השימוש ומדיניות הפרטיות שלנו
-            </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <Lock size={28} color={colors.primary.main} />
+        </View>
+        <ActivityIndicator color={colors.primary.main} size="large" />
+        <Text
+          style={{
+            color: colors.text.primary,
+            fontSize: 18,
+            fontWeight: '700',
+            marginTop: 24,
+            textAlign: 'center',
+            writingDirection: 'rtl',
+          }}
+        >
+          {isCompleting ? 'מפעיל את המנוי...' : 'מכין את דף התשלום המאובטח...'}
+        </Text>
+        <Text
+          style={{
+            color: colors.text.secondary,
+            fontSize: 14,
+            marginTop: 10,
+            textAlign: 'center',
+            writingDirection: 'rtl',
+            lineHeight: 20,
+          }}
+        >
+          {isCompleting
+            ? 'רגע אחד — מעבירים למסך הברכה'
+            : fromRegistration
+              ? 'יוצר חשבון ומעביר לדף תשלום מאובטח של CardCom'
+              : 'מעביר לדף תשלום מאובטח של CardCom'}
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }

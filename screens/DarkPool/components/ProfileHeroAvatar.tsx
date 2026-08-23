@@ -65,13 +65,17 @@ export function ProfileHeroAvatar({
     });
   }, []);
 
+  /** טבעת דקה מאוד — בלי “מסגרת עבה” */
+  const RING = 1.5;
+  const INNER = Math.max(1, size - RING * 2);
+
   const ringStyle = useMemo(
     () => [
       circle(size),
       styles.ring,
       {
+        borderWidth: RING,
         borderColor: tokens.colors.primary.main,
-        borderWidth: 2,
       },
       style,
     ],
@@ -83,7 +87,7 @@ export function ProfileHeroAvatar({
       <View style={ringStyle}>
         <Image
           source={{ uri: activeUri }}
-          style={circle(size)}
+          style={circle(INNER)}
           resizeMode="cover"
           onError={() => onPhotoError(activeUri)}
           accessibilityLabel={name}
@@ -97,8 +101,8 @@ export function ProfileHeroAvatar({
       <View style={[ringStyle, styles.logoWrap]}>
         <TickerLogo
           symbol={ticker}
-          size={Math.round(size * 0.72)}
-          borderRadius={Math.round(size * 0.16)}
+          size={Math.round(INNER * 0.72)}
+          borderRadius={Math.round(INNER * 0.16)}
         />
       </View>
     );
@@ -115,11 +119,11 @@ export function ProfileHeroAvatar({
     <View style={ringStyle}>
       <LinearGradient
         colors={['#1a261a', '#0f160f', '#0a0e0a']}
-        style={[circle(size), styles.iconBg]}
+        style={[circle(INNER), styles.iconBg]}
       >
         <Ionicons
           name={iconName}
-          size={Math.round(size * 0.38)}
+          size={Math.round(INNER * 0.38)}
           color="rgba(255,255,255,0.55)"
         />
       </LinearGradient>
@@ -131,6 +135,8 @@ const styles = StyleSheet.create({
   ring: {
     overflow: 'hidden',
     backgroundColor: '#0f160f',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoWrap: {
     alignItems: 'center',

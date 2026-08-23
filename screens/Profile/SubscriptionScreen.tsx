@@ -18,6 +18,7 @@ import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import UICard from '../../components/ui/UICard';
 import { ChatSubScreenHeader } from '../../components/chat/ChatScreenShell';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { SettingsSectionTitle } from '../../components/profile/ProfileSettingsUI';
 
 interface SubscriptionPlan {
   id: string;
@@ -117,18 +118,7 @@ export default function SubscriptionScreen({ navigation }: any) {
             {/* Current Plan */}
             {currentPlan && (
               <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg, marginBottom: DesignTokens.spacing['2xl'] }}>
-                <Text style={{
-                  fontSize: DesignTokens.typography.fontSize.xs,
-                  fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                  color: DesignTokens.colors.text.tertiary,
-                  marginBottom: DesignTokens.spacing.sm,
-                  marginRight: 4,
-                  textAlign: 'right',
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.5
-                }}>
-                  המנוי הנוכחי
-                </Text>
+                <SettingsSectionTitle title="המנוי הנוכחי" />
 
                 <UICard
                   variant="glass"
@@ -196,18 +186,7 @@ export default function SubscriptionScreen({ navigation }: any) {
 
             {/* Available Plans */}
             <View style={{ paddingHorizontal: DesignTokens.spacing.lg }}>
-              <Text style={{
-                fontSize: DesignTokens.typography.fontSize.xs,
-                fontWeight: DesignTokens.typography.fontWeight.bold as any,
-                color: DesignTokens.colors.text.tertiary,
-                marginBottom: DesignTokens.spacing.sm,
-                marginRight: 4,
-                textAlign: 'right',
-                textTransform: 'uppercase',
-                letterSpacing: 0.5
-              }}>
-                מסלולים זמינים
-              </Text>
+              <SettingsSectionTitle title="מסלולים זמינים" />
 
               {plans.map((plan, index) => {
                 const isCurrentPlan = currentPlan && plan.id === currentPlan.plan_id;

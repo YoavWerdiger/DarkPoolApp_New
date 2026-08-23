@@ -1,8 +1,9 @@
-import React, { memo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { memo, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import ChatMessage from './ChatMessage';
 import UnreadDivider from './UnreadDivider';
 import { useDesignTokens } from '../ui/DesignTokens';
+import UICard from '../ui/UICard';
 import type { ChatMessage as ChatMessageType } from '../../types/chat.types';
 
 const DateDivider = memo(function DateDivider({ label }: { label: string }) {
@@ -13,11 +14,13 @@ const DateDivider = memo(function DateDivider({ label }: { label: string }) {
         wrap: { flexDirection: 'row', alignItems: 'center', marginVertical: 12, paddingHorizontal: 16 },
         line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.12)' },
         badge: {
+          borderRadius: 14,
+          marginHorizontal: 10,
+          overflow: 'hidden',
+        },
+        badgeInner: {
           paddingHorizontal: 14,
           paddingVertical: 5,
-          borderRadius: 14,
-          backgroundColor: 'rgba(255,255,255,0.08)',
-          marginHorizontal: 10,
         },
         text: { color: tokens.colors.text.secondary, fontSize: 12 },
       }),
@@ -26,9 +29,15 @@ const DateDivider = memo(function DateDivider({ label }: { label: string }) {
   return (
     <View style={styles.wrap}>
       <View style={styles.line} />
-      <View style={styles.badge}>
+      <UICard
+        variant="glass"
+        glassIntensity="subtle"
+        padding="none"
+        style={styles.badge}
+        contentContainerStyle={styles.badgeInner}
+      >
         <Text style={styles.text}>{label}</Text>
-      </View>
+      </UICard>
       <View style={styles.line} />
     </View>
   );
@@ -36,6 +45,7 @@ const DateDivider = memo(function DateDivider({ label }: { label: string }) {
 
 export type ChatListRowProps = {
   message: ChatMessageType;
+  animateEntrance?: boolean;
   isMe: boolean;
   showAvatar: boolean;
   showSenderName: boolean;
@@ -44,6 +54,8 @@ export type ChatListRowProps = {
   dateDividerLabel: string;
   showUnreadDivider: boolean;
   unreadCount: number;
+  unreadDividerDismissing?: boolean;
+  onUnreadDividerDismissed?: () => void;
   isHighlighted: boolean;
   onLayout: (height: number) => void;
   onLongPress: () => void;
@@ -59,6 +71,7 @@ export type ChatListRowProps = {
 
 function ChatListRow({
   message,
+  animateEntrance = false,
   isMe,
   showAvatar,
   showSenderName,
@@ -67,6 +80,8 @@ function ChatListRow({
   dateDividerLabel,
   showUnreadDivider,
   unreadCount,
+  unreadDividerDismissing = false,
+  onUnreadDividerDismissed,
   isHighlighted,
   onLayout,
   onLongPress,
@@ -79,11 +94,44 @@ function ChatListRow({
   onUnreadDividerPress,
   boldText = false,
 }: ChatListRowProps) {
+  // אנימציית כניסה עדינה להודעות חדשות: fade + החלקה מלמטה.
+  // מריצים פעם אחת בלבד ב-mount; הרשימה הפוכה עם double scaleY(-1)
+  // (על ה-ScrollView ועל כל תא) ולכן translateY חיובי = למטה, כמו בתצוגה רגילה.
+  const enterAnim = useRef(new Animated.Value(animateEntrance ? 0 : 1)).current;
+  const slideAnim = useRef(new Animated.Value(animateEntrance ? 14 : 0)).current;
+
+  useEffect(() => {
+    if (!animateEntrance) return;
+    Animated.parallel([
+      Animated.timing(enterAnim, {
+        toValue: 1,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 360,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <View onLayout={(e) => onLayout(e.nativeEvent.layout.height)}>
+    <Animated.View
+      onLayout={(e) => onLayout(e.nativeEvent.layout.height)}
+      style={{ opacity: enterAnim, transform: [{ translateY: slideAnim }] }}
+    >
       {showDateDivider ? <DateDivider label={dateDividerLabel} /> : null}
       {showUnreadDivider ? (
-        <UnreadDivider unreadCount={unreadCount} onPress={onUnreadDividerPress} />
+        <UnreadDivider
+          unreadCount={unreadCount}
+          onPress={onUnreadDividerPress}
+          dismissing={unreadDividerDismissing}
+          onDismissed={onUnreadDividerDismissed}
+        />
       ) : null}
       <ChatMessage
         message={message}
@@ -101,7 +149,7 @@ function ChatListRow({
         isHighlighted={isHighlighted}
         boldText={boldText}
       />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -132,6 +180,7 @@ export default memo(ChatListRow, (prev, next) => {
     prev.dateDividerLabel === next.dateDividerLabel &&
     prev.showUnreadDivider === next.showUnreadDivider &&
     prev.unreadCount === next.unreadCount &&
+    prev.unreadDividerDismissing === next.unreadDividerDismissing &&
     prev.isHighlighted === next.isHighlighted &&
     prev.boldText === next.boldText
   );

@@ -5,10 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
-import {
-  ACADEMY_CARD_RADIUS,
-  academyCardFrameStyle,
-} from './academyCardLayout';
+import { ACADEMY_CARD_RADIUS } from './academyCardLayout';
 
 const channelAvatar = require('../../assets/youtube-channel-avatar.png');
 
@@ -126,16 +123,17 @@ const createStyles = (T: ReturnType<typeof useDesignTokens>) =>
     card: {
       width: '100%',
       overflow: 'hidden',
-      ...academyCardFrameStyle('youtube'),
+      borderRadius: ACADEMY_CARD_RADIUS,
+      borderWidth: 0,
       ...Platform.select({
         ios: {
-          shadowColor: YOUTUBE_BRAND,
-          shadowOpacity: 0.25,
-          shadowOffset: { width: 0, height: 10 },
-          shadowRadius: 22,
+          shadowColor: '#000',
+          shadowOpacity: 0.28,
+          shadowOffset: { width: 0, height: 8 },
+          shadowRadius: 16,
         },
         android: {
-          elevation: 8,
+          elevation: 6,
         },
       }),
     },

@@ -34,6 +34,7 @@ import { useChatDraft } from '../../hooks/useChatDraft';
 import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
 import MentionPicker from './MentionPicker';
 import { logger } from '../../utils/logger';
+import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   resampleWaveformSamples,
@@ -41,7 +42,14 @@ import {
   WAVEFORM_SILENCE,
 } from '../../utils/waveformSamples';
 import { meteringDbToLevel, resolveMessageWaveform } from '../../utils/audioWaveformPeaks';
-import { useFrameCallback, useSharedValue } from 'react-native-reanimated';
+import {
+  claimVoicePlayback,
+  releaseVoicePlayback,
+} from '../../utils/voicePlaybackController';
+import { useFrameCallback, useSharedValue, runOnJS } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+
+const PREVIEW_PLAYER_ID = 'chat-input-preview';
 
 /**
  * iOS: WAV/PCM — חילוץ peaks אמיתיים מהקובץ אחרי עצירה.
@@ -161,6 +169,7 @@ interface ChatInputProps {
     id: string;
     senderName: string;
     content: string;
+    messageType?: string;
   };
   onCancelReply?: () => void;
   disabled?: boolean;
@@ -254,6 +263,7 @@ function ChatInputImpl({
   const previewDurationSV = useSharedValue(0);
   const isPreviewScrubbingRef = useRef(false);
   const wasPreviewPlayingBeforeScrubRef = useRef(false);
+  const stopPreviewExternallyRef = useRef<() => Promise<void>>(async () => {});
   const sendBtnScale = useRef(new Animated.Value(1)).current;
   const attachmentIconRotate = useRef(new Animated.Value(0)).current;
   const isStartingRecordingRef = useRef<boolean>(false);
@@ -264,12 +274,17 @@ function ChatInputImpl({
 
   // Callback refs (מונעים closures ישנים ב-handlers)
   const cancelRecordingRef = useRef<() => void>(() => {});
-  const stopAndSendRecordingRef = useRef<() => void>(() => {});
+  const stopRecordingRef = useRef<() => void>(() => {});
   const isRecordingRef = useRef(false);
   const isPausedRef = useRef(false);
   const disabledRef = useRef(disabled);
   const isUploadingRef = useRef(false);
   const textRef = useRef(text);
+
+  /** פריוויו אחרי עצירת הקלטה — URI + peaks מוכנים, לפני שליחה */
+  const isVoicePreview = isPaused && !!recordedAudioUri;
+  /** הקלטה פעילה או מושהית (עדיין אפשר להמשיך) — לפני פריוויו */
+  const isVoiceCapturing = isRecording || (isPaused && !recordedAudioUri);
 
   const MAX_RECORDING_DURATION = 60; // מקסימום 60 שניות
 
@@ -489,8 +504,8 @@ function ChatInputImpl({
         read_by_count: 0,
         sender: {
           id: user.id,
-          display_name: user.display_name || 'אני',
-          profile_picture: user.profile_picture,
+          display_name: user?.display_name || 'אני',
+          profile_picture: user?.profile_picture,
           is_online: true,
         },
       };
@@ -617,8 +632,8 @@ function ChatInputImpl({
         read_by_count: 0,
         sender: {
           id: user.id,
-          display_name: user.display_name || 'אני',
-          profile_picture: user.profile_picture,
+          display_name: user?.display_name || 'אני',
+          profile_picture: user?.profile_picture,
           is_online: true,
         },
       };
@@ -859,8 +874,8 @@ function ChatInputImpl({
       metadata: { waveformData: undefined },
       sender: {
         id: user.id,
-        display_name: user.display_name || 'אני',
-        profile_picture: user.profile_picture,
+        display_name: user?.display_name || 'אני',
+        profile_picture: user?.profile_picture,
         is_online: true,
       },
     };
@@ -985,6 +1000,7 @@ function ChatInputImpl({
 
       // נקה גם sound אם יש
       if (soundRef.current) {
+        releaseVoicePlayback(PREVIEW_PLAYER_ID);
         try {
           await soundRef.current.unloadAsync();
         } catch (error) {
@@ -1028,13 +1044,13 @@ function ChatInputImpl({
       const pulseAnim = Animated.loop(
         Animated.sequence([
           Animated.timing(recordingDotOpacity, {
-            toValue: 0.3,
-            duration: 500,
+            toValue: 0.15,
+            duration: 450,
             useNativeDriver: true,
           }),
           Animated.timing(recordingDotOpacity, {
             toValue: 1,
-            duration: 500,
+            duration: 450,
             useNativeDriver: true,
           }),
         ])
@@ -1128,13 +1144,13 @@ function ChatInputImpl({
       const pulseAnim = Animated.loop(
         Animated.sequence([
           Animated.timing(recordingDotOpacity, {
-            toValue: 0.3,
-            duration: 500,
+            toValue: 0.15,
+            duration: 450,
             useNativeDriver: true,
           }),
           Animated.timing(recordingDotOpacity, {
             toValue: 1,
-            duration: 500,
+            duration: 450,
             useNativeDriver: true,
           }),
         ])
@@ -1160,7 +1176,7 @@ function ChatInputImpl({
     }
   };
 
-  // סיום הקלטה ושמירה לשליחה
+  // סיום הקלטה → מצב פריוויו (בלי שליחה). ✓ / שחרור החזקה.
   const stopRecording = async () => {
     try {
       pulseAnimationRef.current?.stop();
@@ -1170,6 +1186,8 @@ function ChatInputImpl({
       if (!recordingRef.current) {
         setIsPaused(true);
         setIsRecording(false);
+        setIsLocked(false);
+        isLockedRef.current = false;
         return;
       }
 
@@ -1191,18 +1209,32 @@ function ChatInputImpl({
       const totalMs = typeof status.durationMillis === 'number'
         ? status.durationMillis
         : recordingAccumMsRef.current + (Date.now() - recordingStartRef.current);
-      setRecordingDuration(Math.floor(totalMs / 1000));
+      setRecordingDuration(Math.max(0, Math.floor(totalMs / 1000)));
 
       setIsRecording(false);
       setIsPaused(true);
+      setIsLocked(false);
+      isLockedRef.current = false;
       setAudioLevel(0);
       audioLevelRef.current = 0;
       recordingDotOpacity.setValue(1);
+      setIsPlayingPreview(false);
+      previewPlayingSV.value = 0;
 
       // peaks מהקובץ (WAV) או envelope מה-metering — raw; עיצוב בתצוגה
       const finalWave = await resolveMessageWaveform(uri, liveSamples, WAVEFORM_STORE_BARS);
       waveformSamplesRef.current = finalWave;
       setWaveformSamples(finalWave);
+
+      // אחרי הקלטה — מצב ניגון (iOS) כדי שהפריוויו יישמע מיד
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        });
+      } catch {
+        /* noop */
+      }
 
       if (uri) {
         setRecordedAudioUri(uri);
@@ -1215,6 +1247,8 @@ function ChatInputImpl({
       logger.error('ChatInput', 'Recording error', error);
       setIsRecording(false);
       setIsPaused(true);
+      setIsLocked(false);
+      isLockedRef.current = false;
     }
   };
 
@@ -1233,24 +1267,50 @@ function ChatInputImpl({
     setPreviewPosition(0);
     setIsPlayingPreview(false);
     previewPlayingSV.value = 0;
+    releaseVoicePlayback(PREVIEW_PLAYER_ID);
     if (previewPositionInterval.current) {
       clearInterval(previewPositionInterval.current);
       previewPositionInterval.current = null;
     }
     if (soundRef.current) {
       try {
+        await soundRef.current.stopAsync();
+        await soundRef.current.setPositionAsync(0);
+      } catch {
+        try {
+          await soundRef.current?.setPositionAsync(0);
+        } catch {
+          /* noop */
+        }
+      }
+    }
+  }, [timelineProgress, previewPlayingSV]);
+
+  stopPreviewExternallyRef.current = async () => {
+    if (soundRef.current) {
+      try {
+        const st = await soundRef.current.getStatusAsync();
+        if (st.isLoaded && st.isPlaying) {
+          await soundRef.current.pauseAsync();
+        }
         await soundRef.current.setPositionAsync(0);
       } catch {
         /* noop */
       }
     }
-  }, [timelineProgress, previewPlayingSV]);
+    timelineProgress.value = 0;
+    setPreviewPosition(0);
+    setIsPlayingPreview(false);
+    previewPlayingSV.value = 0;
+  };
 
   // שמיעת ההקלטה (preview) — resume ממקום השהייה/סקראב
   const playPreview = async () => {
     if (!recordedAudioUri) return;
 
     try {
+      claimVoicePlayback(PREVIEW_PLAYER_ID, () => stopPreviewExternallyRef.current());
+
       if (soundRef.current) {
         const status = await soundRef.current.getStatusAsync();
         if (status.isLoaded) {
@@ -1278,6 +1338,7 @@ function ChatInputImpl({
           shouldPlay: true,
           positionMillis: startMs,
           progressUpdateIntervalMillis: 80,
+          isLooping: false,
         },
       );
 
@@ -1302,6 +1363,7 @@ function ChatInputImpl({
           previewDurationSV.value = st.durationMillis;
         }
         if (st.didJustFinish) {
+          // סיום טבעי — איפוס בלי לופ
           void resetPreviewPlayhead();
           return;
         }
@@ -1324,6 +1386,7 @@ function ChatInputImpl({
         }
       });
     } catch (error) {
+      releaseVoicePlayback(PREVIEW_PLAYER_ID);
       logger.error('ChatInput', 'Playback error', error);
       Alert.alert('שגיאה', 'לא ניתן להפעיל את ההקלטה');
     }
@@ -1345,6 +1408,7 @@ function ChatInputImpl({
       } catch (error) {
         logger.error('ChatInput', 'Pause preview error', error);
       }
+      releaseVoicePlayback(PREVIEW_PLAYER_ID);
       setIsPlayingPreview(false);
       previewPlayingSV.value = 0;
       if (previewPositionInterval.current) {
@@ -1360,6 +1424,7 @@ function ChatInputImpl({
     wasPreviewPlayingBeforeScrubRef.current = previewPlayingSV.value > 0.5;
     if (soundRef.current && wasPreviewPlayingBeforeScrubRef.current) {
       void soundRef.current.pauseAsync();
+      releaseVoicePlayback(PREVIEW_PLAYER_ID);
       setIsPlayingPreview(false);
       previewPlayingSV.value = 0;
     }
@@ -1389,7 +1454,12 @@ function ChatInputImpl({
         if (!soundRef.current) {
           const { sound } = await Audio.Sound.createAsync(
             { uri: recordedAudioUri },
-            { progressUpdateIntervalMillis: 80, positionMillis: targetMs },
+            {
+              progressUpdateIntervalMillis: 80,
+              positionMillis: targetMs,
+              isLooping: false,
+              shouldPlay: false,
+            },
           );
           soundRef.current = sound;
           sound.setOnPlaybackStatusUpdate((st) => {
@@ -1410,6 +1480,7 @@ function ChatInputImpl({
         }
 
         if (wasPreviewPlayingBeforeScrubRef.current) {
+          claimVoicePlayback(PREVIEW_PLAYER_ID, () => stopPreviewExternallyRef.current());
           await soundRef.current.playAsync();
           setIsPlayingPreview(true);
           previewPlayingSV.value = 1;
@@ -1474,8 +1545,8 @@ function ChatInputImpl({
       metadata: { waveformData: waveform },
       sender: {
         id: user.id,
-        display_name: user.display_name || 'אני',
-        profile_picture: user.profile_picture,
+        display_name: user?.display_name || 'אני',
+        profile_picture: user?.profile_picture,
         is_online: true,
       },
     };
@@ -1484,6 +1555,7 @@ function ChatInputImpl({
     addOptimisticMediaMessage(optimisticMessage);
 
     // נקה את ההקלטה מיד כדי שה-UI יתעדכן
+    releaseVoicePlayback(PREVIEW_PLAYER_ID);
     if (soundRef.current) {
       soundRef.current.unloadAsync().catch((error) => { logger.error('ChatInput', 'Playback error', error); });
       soundRef.current = null;
@@ -1499,6 +1571,11 @@ function ChatInputImpl({
     setIsPlayingPreview(false);
     previewPlayingSV.value = 0;
     setPreviewPosition(0);
+    setPreviewDuration(0);
+    previewDurationSV.value = 0;
+    setIsLocked(false);
+    isLockedRef.current = false;
+    timelineProgress.value = 0;
 
     setIsUploading(true);
     (async () => {
@@ -1545,6 +1622,7 @@ function ChatInputImpl({
     pulseAnimationRef.current?.stop();
     pulseAnimationRef.current = null;
     recordingDotOpacity.setValue(1);
+    releaseVoicePlayback(PREVIEW_PLAYER_ID);
 
     // עצור שמיעה אם יש
     if (soundRef.current) {
@@ -1563,6 +1641,8 @@ function ChatInputImpl({
     setIsPlayingPreview(false);
     previewPlayingSV.value = 0;
     setPreviewPosition(0);
+    setPreviewDuration(0);
+    previewDurationSV.value = 0;
     setIsLocked(false);
     isLockedRef.current = false;
     timelineProgress.value = 0;
@@ -1576,118 +1656,7 @@ function ChatInputImpl({
     setWaveformSamples([]);
   };
 
-  // ============================================
-  // שליחת הקלטה מממשק נעול (כפתור שליחה)
-  // ============================================
-
-  const stopAndSendRecording = async () => {
-    try {
-      pulseAnimationRef.current?.stop();
-      pulseAnimationRef.current = null;
-      recordingDotOpacity.setValue(1);
-
-      if (!recordingRef.current) return;
-
-      if (recordingTimerRef.current) {
-        clearInterval(recordingTimerRef.current);
-        recordingTimerRef.current = null;
-      }
-      clearWaveformPolling();
-      recordingRef.current.setOnRecordingStatusUpdate(null);
-
-      const uri = recordingRef.current.getURI();
-      const duration = recordingDuration;
-      const liveSamples = [...waveformSamplesRef.current];
-      await recordingRef.current.stopAndUnloadAsync();
-      recordingRef.current = null;
-
-      const samples = await resolveMessageWaveform(uri, liveSamples, WAVEFORM_STORE_BARS);
-      waveformSamplesRef.current = samples;
-
-      setIsRecording(false);
-      setIsPaused(false);
-      setAudioLevel(0);
-      setRecordingDuration(0);
-      setWaveformSamples([]);
-      timelineProgress.value = 0;
-
-      if (uri && duration >= 1 && user) {
-        const tempId = `temp-${Date.now()}`;
-        const optimisticMessage: ChatMessage = {
-          id: tempId,
-          group_id: groupId,
-          content: JSON.stringify({ duration, waveform: samples, waveformData: samples }),
-          message_type: ChatMessageType.AUDIO,
-          sender_id: user.id,
-          media_url: undefined,
-          local_media_uri: uri,
-          media_duration: duration,
-          is_uploading: true,
-          upload_progress: 0,
-          is_sending: true,
-          is_forwarded: false,
-          mentioned_users: [],
-          is_edited: false,
-          is_deleted: false,
-          deleted_for_everyone: false,
-          is_silent: false,
-          is_system_message: false,
-          created_at: new Date().toISOString(),
-          reactions_count: 0,
-          read_by_count: 0,
-          metadata: { waveformData: samples },
-          sender: {
-            id: user.id,
-            display_name: user.display_name || 'אני',
-            profile_picture: user.profile_picture,
-            is_online: true,
-          },
-        };
-        addOptimisticMediaMessage(optimisticMessage);
-
-        setIsUploading(true);
-        (async () => {
-          try {
-            const uploadResult = await chatMediaService.uploadAudio(
-              uri, groupId, duration,
-              (progress) => updateOptimisticMessage(tempId, { upload_progress: progress.progress })
-            );
-            if (uploadResult.error || !uploadResult.url) {
-              updateOptimisticMessage(tempId, { is_uploading: false, is_sending: false, send_error: uploadResult.error?.message || 'שגיאה בהעלאה' });
-            } else {
-              await onSendMessage(
-                '',
-                uploadResult.url,
-                ChatMessageType.AUDIO,
-                { waveformData: samples, media_duration: duration, existing_optimistic_id: tempId }
-              );
-            }
-          } catch (e) {
-            logger.error('ChatInput', 'Hold-to-record send error', e);
-            updateOptimisticMessage(tempId, { is_uploading: false, is_sending: false, send_error: 'שגיאה בשליחה' });
-          } finally {
-            setIsUploading(false);
-          }
-        })();
-      }
-    } catch (error) {
-      logger.error('ChatInput', 'stopAndSendRecording error', error);
-      setIsRecording(false);
-    }
-  };
-
-  // Keep callback refs in sync (runs every render, no deps needed)
-  useEffect(() => {
-    cancelRecordingRef.current = cancelRecording;
-    stopAndSendRecordingRef.current = stopAndSendRecording;
-    isRecordingRef.current = isRecording;
-    isPausedRef.current = isPaused;
-    disabledRef.current = disabled;
-    isUploadingRef.current = isUploading;
-    textRef.current = text;
-  });
-
-  /** לחיצה קצרה על המיקרופון → הקלטה + ממשק נעול (השהה / ביטול / שליחה) */
+  /** לחיצה קצרה על המיקרופון → הקלטה + ממשק נעול (מחיקה / השהה / ✓ → פריוויו) */
   const handleMicTapToRecord = () => {
     if (
       isRecordingRef.current ||
@@ -1700,6 +1669,115 @@ function ChatInputImpl({
     }
     void startRecording({ openInLockedMode: true });
   };
+
+  // Latest-handler refs: gesture callbacks below reference refs (not closures)
+  // so we don't re-register the native RNGH gesture on every render. Without
+  // this, the LongPress/Tap gets torn down and rebuilt too often and Android
+  // may miss the first touch entirely (which is exactly the bug we're fixing).
+  const startRecordingLatestRef = useRef(startRecording);
+  const stopRecordingLatestRef = useRef(stopRecording);
+  const cancelRecordingLatestRef = useRef(cancelRecording);
+  const handleMicTapLatestRef = useRef(handleMicTapToRecord);
+
+  // Keep callback refs in sync (runs every render, no deps needed)
+  useEffect(() => {
+    cancelRecordingRef.current = cancelRecording;
+    stopRecordingRef.current = stopRecording;
+    isRecordingRef.current = isRecording;
+    isPausedRef.current = isPaused;
+    disabledRef.current = disabled;
+    isUploadingRef.current = isUploading;
+    textRef.current = text;
+    startRecordingLatestRef.current = startRecording;
+    stopRecordingLatestRef.current = stopRecording;
+    cancelRecordingLatestRef.current = cancelRecording;
+    handleMicTapLatestRef.current = handleMicTapToRecord;
+  });
+
+  // ============================================
+  // Record button gestures (RNGH-native — fixes Android touch bug)
+  // ============================================
+  //
+  // Why: on Android the mic button is a <Pressable> that sits inside a glass
+  // pill (UICard variant="glass" with a blur overlay) next to a focused
+  // multi-line <TextInput>, inside a KeyboardAvoidingView-adjacent layout.
+  // Under those exact conditions RN's Android touch responder occasionally
+  // fails to route the initial down/up cleanly to the Pressable — the tap is
+  // simply swallowed and `onPress` never fires. iOS's UIGestureRecognizer
+  // graph handles it fine, which is why the bug is Android-only.
+  //
+  // Fix: express the mic as a first-class RNGH LongPress+Tap via
+  // GestureDetector. RNGH's native gesture pipeline receives touches
+  // BEFORE RN's touch responder tries to negotiate them, so the button
+  // becomes rock-solid regardless of nearby focused inputs or blur layers.
+  //
+  // Bonus UX: LongPress adds a WhatsApp-style "hold to record → release to
+  // preview" mode. A quick Tap starts a locked recording session
+  // (trash / pause / ✓ stop → preview), so nothing regresses for users who tap.
+  const invokeHoldStart = useCallback(() => {
+    if (disabledRef.current || isUploadingRef.current) return;
+    if (textRef.current.trim().length > 0) return;
+    if (isRecordingRef.current || isPausedRef.current) return;
+    logger.debug('ChatInput', 'record LongPress started');
+    void HapticFeedback.impactLight();
+    void startRecordingLatestRef.current?.({ openInLockedMode: false });
+  }, []);
+
+  const invokeHoldEnd = useCallback((success: boolean) => {
+    logger.debug('ChatInput', 'record LongPress ended', { success });
+    // If the user locked the recording (tap-to-lock), don't auto-stop on
+    // release — the locked UI (trash / pause / ✓) takes over.
+    if (isLockedRef.current) return;
+    // Recording may still be preparing when the finger lifts (native prepare
+    // ~50–100ms). In that race we treat it as a cancel — safer than opening
+    // an empty preview.
+    if (!isRecordingRef.current) {
+      cancelRecordingLatestRef.current?.();
+      return;
+    }
+    if (success) {
+      // שחרור החזקה → פריוויו (האזנה לפני שליחה), לא שליחה מיידית
+      void stopRecordingLatestRef.current?.();
+    } else {
+      // finger drifted outside maxDistance — treat as cancel
+      logger.debug('ChatInput', 'record swipe cancel');
+      cancelRecordingLatestRef.current?.();
+    }
+  }, []);
+
+  const invokeMicTap = useCallback(() => {
+    logger.debug('ChatInput', 'record Tap fallback fired');
+    handleMicTapLatestRef.current?.();
+  }, []);
+
+  const recordGesture = useMemo(() => {
+    const longPress = Gesture.LongPress()
+      .minDuration(240)
+      // don't cancel if the finger drifts a bit while holding — Android
+      // touchpanels report micro-movements even on a stationary press.
+      .maxDistance(1000)
+      .onStart(() => {
+        'worklet';
+        runOnJS(invokeHoldStart)();
+      })
+      .onEnd((_e, success) => {
+        'worklet';
+        runOnJS(invokeHoldEnd)(success);
+      });
+
+    const tap = Gesture.Tap()
+      .maxDuration(400)
+      .maxDistance(24)
+      .onEnd((_e, success) => {
+        'worklet';
+        if (success) runOnJS(invokeMicTap)();
+      });
+
+    // LongPress is evaluated first — if the finger releases before 240ms,
+    // LongPress fails and Tap takes over. This is what makes both gestures
+    // coexist cleanly without a global race condition.
+    return Gesture.Exclusive(longPress, tap);
+  }, [invokeHoldStart, invokeHoldEnd, invokeMicTap]);
 
   // ============================================
   // Show Attachment Options
@@ -1789,6 +1867,7 @@ function ChatInputImpl({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      releaseVoicePlayback(PREVIEW_PLAYER_ID);
       if (recordingRef.current) {
         recordingRef.current.stopAndUnloadAsync().catch((error) => { logger.error('ChatInput', 'Recording error', error); });
         recordingRef.current = null;
@@ -1833,7 +1912,9 @@ function ChatInputImpl({
           </TouchableOpacity>
           <View style={styles.replyContent}>
             <Text style={styles.replyLabel}>תשובה ל-{replyTo.senderName}</Text>
-            <Text style={styles.replyText} numberOfLines={1}>{replyTo.content || 'מדיה'}</Text>
+            <Text style={styles.replyText} numberOfLines={1}>
+              {getChatMessagePreview(replyTo.messageType, replyTo.content)}
+            </Text>
           </View>
           {/* Green bar on the RIGHT — adjacent to text in RTL reading direction */}
           <View style={styles.replyPreviewBar} />
@@ -1842,7 +1923,7 @@ function ChatInputImpl({
 
       {(isRecording || isPaused) ? (
       <View style={styles.container}>
-        {/* הקלטה — שליחה מחוץ לגלולה כמו באינפוט רגיל */}
+        {/* הקלטה / פריוויו — פעולה ראשית מחוץ לגלולה (✓ לעצירה, מטוס לשליחה) */}
         <UICard
           variant="glass"
           glassIntensity="light"
@@ -1850,7 +1931,7 @@ function ChatInputImpl({
           style={styles.inputCardOuter}
           contentContainerStyle={styles.inputCardContent}
         >
-          {(isRecording || (isPaused && !recordedAudioUri)) ? (
+          {isVoiceCapturing ? (
             <View style={styles.recordingRowFull}>
               <View style={styles.recordingLeftCluster}>
                 <TouchableOpacity
@@ -1860,6 +1941,8 @@ function ChatInputImpl({
                   }}
                   style={styles.cancelButton}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="מחיקת הקלטה"
                 >
                   <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                 </TouchableOpacity>
@@ -1871,6 +1954,8 @@ function ChatInputImpl({
                     }}
                     style={styles.pauseResumeButton}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="השהיית הקלטה"
                   >
                     <Ionicons name="pause" size={20} color={DesignTokens.colors.text.primary} />
                   </TouchableOpacity>
@@ -1882,6 +1967,8 @@ function ChatInputImpl({
                     }}
                     style={styles.pauseResumeButton}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="המשך הקלטה"
                   >
                     <Ionicons name="mic" size={20} color={DesignTokens.colors.text.primary} />
                   </TouchableOpacity>
@@ -1897,7 +1984,7 @@ function ChatInputImpl({
                   {isRecording ? (
                     <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
                   ) : (
-                    <View style={[styles.recordingDot, { backgroundColor: '#888' }]} />
+                    <View style={styles.recordingDot} />
                   )}
                 </View>
               </View>
@@ -1912,6 +1999,8 @@ function ChatInputImpl({
                   }}
                   style={styles.cancelButton}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="מחיקת הקלטה"
                 >
                   <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                 </TouchableOpacity>
@@ -1924,13 +2013,16 @@ function ChatInputImpl({
                       void playPreview();
                     }
                   }}
-                  style={styles.playButtonInside}
+                  style={styles.pauseResumeButton}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={isPlayingPreview ? 'השהיית האזנה' : 'האזנה להקלטה'}
                 >
                   <Ionicons
                     name={isPlayingPreview ? 'pause' : 'play'}
-                    size={18}
-                    color={DesignTokens.colors.primary.main}
+                    size={20}
+                    color={DesignTokens.colors.text.primary}
+                    style={!isPlayingPreview ? { marginLeft: 2 } : undefined}
                   />
                 </TouchableOpacity>
               </View>
@@ -1946,13 +2038,20 @@ function ChatInputImpl({
                     onScrubStart={onPreviewScrubStart}
                     onScrubUpdate={onPreviewScrubUpdate}
                     onScrubEnd={onPreviewScrubEnd}
+                    thumbColor="rgba(255, 255, 255, 0.92)"
+                    activeColor="rgba(255, 255, 255, 0.72)"
+                    inactiveColor="rgba(255, 255, 255, 0.28)"
+                    nearActiveColor="rgba(255, 255, 255, 0.5)"
                   />
                 </View>
                 <View style={styles.timerContainer}>
-                  <Text style={styles.recordingTime}>{formatRecordingTime(recordingDuration)}</Text>
-                  {isPlayingPreview ? (
-                    <Animated.View style={[styles.recordingDot, { opacity: recordingDotOpacity }]} />
-                  ) : null}
+                  <Text style={styles.recordingTime}>
+                    {formatRecordingTime(
+                      isPlayingPreview && previewDuration > 0
+                        ? Math.max(0, Math.floor(previewPosition / 1000))
+                        : recordingDuration,
+                    )}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -1960,24 +2059,33 @@ function ChatInputImpl({
         </UICard>
 
         <View style={styles.sendBtnOuter}>
-          <Pressable
-            onPress={() => {
-              void HapticFeedback.medium();
-              setIsLocked(false);
-              isLockedRef.current = false;
-              if (recordedAudioUri) {
-                sendRecordedAudio();
-              } else {
-                stopAndSendRecording();
-              }
-            }}
-            style={styles.sendBtnTouchable}
-            disabled={isUploading}
-            accessibilityRole="button"
-            accessibilityLabel="שליחת הקלטה"
-          >
-            <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
-          </Pressable>
+          {isVoicePreview ? (
+            <Pressable
+              onPress={() => {
+                void HapticFeedback.medium();
+                void sendRecordedAudio();
+              }}
+              style={styles.sendBtnTouchable}
+              disabled={isUploading || !recordedAudioUri}
+              accessibilityRole="button"
+              accessibilityLabel="שליחת הקלטה"
+            >
+              <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => {
+                void HapticFeedback.medium();
+                void stopRecording();
+              }}
+              style={styles.sendBtnTouchable}
+              disabled={isUploading}
+              accessibilityRole="button"
+              accessibilityLabel="סיום הקלטה לסקירה"
+            >
+              <Ionicons name="checkmark" size={28} color={DesignTokens.colors.text.inverse} />
+            </Pressable>
+          )}
         </View>
       </View>
       ) : (
@@ -2053,21 +2161,28 @@ function ChatInputImpl({
                   </Animated.View>
                 </Pressable>
               ) : (
-                <Pressable
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    handleMicTapToRecord();
-                  }}
-                  disabled={disabled || isUploading}
-                  accessibilityRole="button"
-                  accessibilityLabel="הקלטת הודעה קולית"
-                  style={({ pressed }) => [
-                    styles.sendBtnTouchable,
-                    pressed && !disabled && !isUploading ? { opacity: 0.82 } : null,
-                  ]}
-                >
-                  <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
-                </Pressable>
+                // Native RNGH gesture (see recordGesture above). Wrapping View
+                // uses collapsable={false} + zIndex/elevation so Android never
+                // merges it into a sibling and nothing sitting on top (glass
+                // blur, gradients, overlay text) intercepts the touch. hitSlop
+                // widens the reachable area defensively.
+                <GestureDetector gesture={recordGesture}>
+                  <View
+                    style={[
+                      styles.sendBtnTouchable,
+                      styles.micGestureTarget,
+                      (disabled || isUploading) ? { opacity: 0.5 } : null,
+                    ]}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    collapsable={false}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel="הקלטת הודעה קולית — לחיצה קצרה מתחילה הקלטה, החזקה מקליטה עד לשחרור לסקירה"
+                    accessibilityState={{ disabled: disabled || isUploading }}
+                  >
+                    <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
+                  </View>
+                </GestureDetector>
               )}
             </View>
           }
@@ -2109,7 +2224,7 @@ function ChatInputImpl({
 
       {/* Mention Picker */}
       <MentionPicker
-        visible={showMentionPicker && !isRecording}
+        visible={showMentionPicker && !isRecording && !isPaused}
         onClose={closeMentionPicker}
         onSelectUser={handleMentionSelect}
         groupId={groupId}
@@ -2133,7 +2248,8 @@ const ChatInput = memo(ChatInputImpl, (prev, next) => {
     prev.disabled === next.disabled &&
     prev.replyTo?.id === next.replyTo?.id &&
     prev.replyTo?.content === next.replyTo?.content &&
-    prev.replyTo?.senderName === next.replyTo?.senderName
+    prev.replyTo?.senderName === next.replyTo?.senderName &&
+    prev.replyTo?.messageType === next.replyTo?.messageType
   );
 });
 
@@ -2250,13 +2366,13 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     fontWeight: tokens.typography.fontWeight.semibold,
   },
 
-  /** שורת הקלטה: מחיקה+עצירה · זמן+גלים (שליחה מחוץ לגלולה) */
+  /** שורת הקלטה/פריוויו: מחיקה+השהה/נגן · זמן+גלים (✓ או שליחה מחוץ לגלולה) */
   recordingRowFull: {
     flex: 1,
     flexDirection: 'row',
     direction: 'ltr',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     minHeight: 40,
     minWidth: 0,
   },
@@ -2270,47 +2386,37 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
     minWidth: 0,
   },
   waveformWrapper: {
     flex: 1,
     minWidth: 0,
     height: 28,
-    alignSelf: 'stretch',
     justifyContent: 'center',
+    paddingStart: 2,
+    paddingEnd: 2,
   },
   waveformPreviewWrapper: {
     flex: 1,
     minWidth: 0,
     height: 28,
-    alignSelf: 'stretch',
     justifyContent: 'center',
-  },
-  playButtonInside: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-    borderRadius: tokens.borderRadius.md,
-    backgroundColor: tokens.colors.border.primary,
+    paddingStart: 2,
+    paddingEnd: 2,
   },
   timerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     flexShrink: 0,
+    paddingStart: 2,
   },
   recordingDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: tokens.colors.text.danger,
-    shadowColor: tokens.colors.text.danger,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 3,
+    backgroundColor: '#FF3B30',
   },
   recordingTime: {
     fontSize: tokens.typography.fontSize.sm,
@@ -2351,7 +2457,20 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  /** Standalone circular send/mic button outside the input pill — WhatsApp style */
+  /**
+   * Mic-specific hit target lifted above adjacent glass/overlay layers on
+   * Android. Without elevation the underlying Pressable/View could be shadowed
+   * by the glass pill's blur layer and drop occasional taps.
+   */
+  micGestureTarget: {
+    zIndex: 10,
+    ...(Platform.OS === 'android' ? { elevation: 6 } : null),
+  },
+  /**
+   * Standalone circular send/mic button outside the input pill — WhatsApp
+   * style. Also lifted above sibling layers on Android to guarantee the
+   * touch reaches the button (see micGestureTarget rationale).
+   */
   sendBtnOuter: {
     width: 46,
     height: 46,
@@ -2363,6 +2482,8 @@ const createStyles = (tokens: any, paddingBottom: number) => StyleSheet.create({
     marginStart: 8,
     alignSelf: 'flex-end',
     marginBottom: 3,
+    zIndex: 10,
+    ...(Platform.OS === 'android' ? { elevation: 6 } : null),
   },
 
   /** Used only inside recording rows */

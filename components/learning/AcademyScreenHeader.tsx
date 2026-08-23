@@ -1,17 +1,20 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { MainDrawerScreenHeader, MAIN_SCREEN_HEADER_HP } from '../ui/MainDrawerScreenHeader';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../ui/DayNavBlurButton';
+import { MainDrawerScreenHeader } from '../ui/MainDrawerScreenHeader';
+import { ChatSubScreenHeader } from '../chat/ChatScreenShell';
 
 export type AcademyScreenHeaderProps = {
   onMenuPress: () => void;
-  /** כותרת ממורכזת בלבד (למשל «אקדמיה») */
+  /** כותרת ממורכזת בלבד (למשל «האקדמיה») */
   title: string;
+  /** שורת הקשר מתחת לכותרת — כמו Dark Pool / הערות */
+  subtitle?: string;
   sectionTitle?: string;
   sectionCount?: number | string | null;
   sectionCountPending?: boolean;
+  /** כפתור חיפוש / פעולה בצד הנגדי לתפריט */
+  rightAccessory?: React.ReactNode;
   style?: ViewStyle;
 };
 
@@ -19,9 +22,11 @@ export type AcademyScreenHeaderProps = {
 export function AcademyScreenHeader({
   onMenuPress,
   title,
+  subtitle,
   sectionTitle,
   sectionCount,
   sectionCountPending,
+  rightAccessory,
   style,
 }: AcademyScreenHeaderProps) {
   const tokens = useDesignTokens();
@@ -46,7 +51,16 @@ export function AcademyScreenHeader({
       </View>
     ) : undefined;
 
-  return <MainDrawerScreenHeader title={title} onMenuPress={onMenuPress} section={section} style={style} />;
+  return (
+    <MainDrawerScreenHeader
+      title={title}
+      subtitle={subtitle}
+      onMenuPress={onMenuPress}
+      section={section}
+      rightAccessory={rightAccessory}
+      style={style}
+    />
+  );
 }
 
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
@@ -77,8 +91,6 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   });
 }
 
-const SUB_SCREEN_HEADER_SIDE = 72;
-
 export type AcademySubScreenBarProps = {
   onBackPress: () => void;
   title?: string;
@@ -86,94 +98,14 @@ export type AcademySubScreenBarProps = {
   style?: ViewStyle;
 };
 
-/** כותרת משנה — כמו צ׳אט: כפתור זכוכית, כותרת ממורכזת, מקום סימטרי */
+/** כותרת משנה — אותו רכיב גלובלי כמו צ׳אט/פרופיל */
 export function AcademySubScreenBar({ onBackPress, title, subtitle, style }: AcademySubScreenBarProps) {
-  const tokens = useDesignTokens();
-  const styles = useMemo(() => createSubBarStyles(tokens), [tokens]);
-
   return (
-    <View style={[styles.wrap, style]}>
-      <View style={styles.row}>
-        <View style={styles.sideSlot}>
-          <DayNavBlurButton
-            onPress={onBackPress}
-            size={DRAWER_MENU_BUTTON_SIZE}
-            glassIntensity="subtle"
-            accessibilityLabel="חזרה"
-          >
-            <Ionicons name="chevron-forward" size={24} color={tokens.colors.text.primary} />
-          </DayNavBlurButton>
-        </View>
-        <View style={styles.titleBlock}>
-          {title ? (
-            <Text style={styles.barTitle} numberOfLines={2}>
-              {title}
-            </Text>
-          ) : null}
-          {subtitle ? (
-            <Text style={styles.subBarSubtitle} numberOfLines={2}>
-              {subtitle}
-            </Text>
-          ) : null}
-        </View>
-        <View style={styles.sideSlotEnd} pointerEvents="none">
-          <View style={styles.sideSpacer} />
-        </View>
-      </View>
-    </View>
+    <ChatSubScreenHeader
+      title={title ?? ''}
+      subtitle={subtitle}
+      onBack={onBackPress}
+      style={style}
+    />
   );
-}
-
-function createSubBarStyles(tokens: ReturnType<typeof useDesignTokens>) {
-  return StyleSheet.create({
-    wrap: {
-      width: '100%',
-      marginBottom: tokens.spacing.sm,
-    },
-    row: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
-      paddingVertical: 14,
-    },
-    sideSlot: {
-      minWidth: SUB_SCREEN_HEADER_SIDE,
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-    },
-    sideSlotEnd: {
-      minWidth: SUB_SCREEN_HEADER_SIDE,
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-    },
-    sideSpacer: {
-      width: DRAWER_MENU_BUTTON_SIZE,
-      height: DRAWER_MENU_BUTTON_SIZE,
-    },
-    titleBlock: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 48,
-      paddingHorizontal: 4,
-    },
-    barTitle: {
-      fontSize: 22,
-      fontWeight: '700' as const,
-      color: tokens.colors.text.primary,
-      letterSpacing: -0.3,
-      textAlign: 'center',
-      writingDirection: 'rtl',
-    },
-    subBarSubtitle: {
-      marginTop: 3,
-      fontSize: 13,
-      fontWeight: '500' as const,
-      color: tokens.colors.text.secondary,
-      textAlign: 'center',
-      lineHeight: 17,
-      writingDirection: 'rtl',
-    },
-  });
 }

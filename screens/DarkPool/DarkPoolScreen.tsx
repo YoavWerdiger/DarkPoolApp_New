@@ -1,5 +1,4 @@
 /**
- * @deprecated השתמש ב-DarkPoolTabs / DarkPoolFeedScreen.
- * נשמר לתאימות — מפנה לטאבים.
+ * @deprecated — השתמש ב-DarkPoolHomeScreen / DarkPoolStack.
  */
-export { default } from '../../navigation/DarkPoolTabs';
+export { default } from './DarkPoolHomeScreen';

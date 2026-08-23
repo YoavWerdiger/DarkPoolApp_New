@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { resolveEconomicEventImportance } from '../_shared/economicEventImportance.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -322,12 +323,18 @@ serve(async (req) => {
     // המרת אירועים לפורמט האפליקציה
     const convertedEvents = allEvents.map((event: BenzingaEconomicEvent) => {
       // ממיר importance של Benzinga (0-5) לפורמט של האפליקציה (high/medium/low)
-      let importance: 'high' | 'medium' | 'low' = 'low';
+      let providerImportance: 'high' | 'medium' | 'low' = 'low';
       if (event.importance >= 4) {
-        importance = 'high';
+        providerImportance = 'high';
       } else if (event.importance >= 2) {
-        importance = 'medium';
+        providerImportance = 'medium';
       }
+      // טקסונומיית אדום/כתום גוברת כשיש התאמה; אחרת נשארים עם הספק
+      const importance = resolveEconomicEventImportance(
+        event.event_name || '',
+        providerImportance,
+        event.description || '',
+      )
 
       // המרת שעה לשעון ישראל ופורמט HH:MM
       const israelTime = convertToIsraelTime(event.time || '', event.date);

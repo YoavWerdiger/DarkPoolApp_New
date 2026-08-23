@@ -105,6 +105,20 @@ serve(async (req) => {
 
     if (!membership) return respond({ error: 'Not a group member' }, 403);
 
+    // --- Global mute / suspend (admin panel) ---
+    const { data: senderProfile } = await adminClient
+      .from('users')
+      .select('is_muted, is_suspended')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (senderProfile?.is_suspended) {
+      return respond({ error: 'החשבון מושעה ואינו יכול לשלוח הודעות' }, 403);
+    }
+    if (senderProfile?.is_muted) {
+      return respond({ error: 'הושתקת ואינך יכול לשלוח הודעות' }, 403);
+    }
+
     // --- Atomic rate limiting (prevents TOCTOU race condition) ---
     const isMedia = ['image', 'video', 'audio', 'document'].includes(message_type);
     const action = isMedia ? 'media_send' : 'message_send';
@@ -163,8 +177,9 @@ serve(async (req) => {
     if (metadata) {
       if (metadata.media_thumbnail_url) messageRow.media_thumbnail_url = metadata.media_thumbnail_url;
       if (metadata.media_file_name) messageRow.media_file_name = metadata.media_file_name;
-      if (metadata.media_size) messageRow.media_size = metadata.media_size;
-      if (metadata.media_duration) messageRow.media_duration = metadata.media_duration;
+      // עמודות INTEGER — מעגלים כי duration עשוי להגיע שברי (למשל 24.747) ולהיכשל (22P02)
+      if (metadata.media_size != null) messageRow.media_size = Math.round(Number(metadata.media_size));
+      if (metadata.media_duration != null) messageRow.media_duration = Math.round(Number(metadata.media_duration));
       if (metadata.media_urls) messageRow.media_urls = metadata.media_urls;
     }
 
@@ -190,12 +205,8 @@ serve(async (req) => {
       .update({ last_message_at: message.created_at })
       .eq('id', group_id);
 
-    // Increment unread for other members
-    await adminClient.rpc('increment_unread_count', {
-      p_group_id: group_id,
-      p_sender_id: user.id,
-      p_mentioned_users: mentioned_users || [],
-    });
+    // unread_count / mentioned_count: DB trigger after_chat_message_insert_unread
+    // (do NOT also call increment_unread_count here — that double-counted badges).
 
     return respond({ data: message });
   } catch (error: any) {

@@ -1,5 +1,5 @@
 /**
- * סרגל תחתון — גילוי | מעקב | פיד
+ * סרגל תחתון — פיד | אנשים | מעקב
  */
 
 import React, { useMemo } from 'react';
@@ -20,20 +20,20 @@ const TAB_META: Record<
   TabRoute,
   { label: string; icon: React.ComponentProps<typeof Ionicons>['name']; iconActive: React.ComponentProps<typeof Ionicons>['name'] }
 > = {
+  DarkPoolFeed: {
+    label: 'פיד',
+    icon: 'newspaper-outline',
+    iconActive: 'newspaper',
+  },
   DarkPoolExplore: {
-    label: 'גילוי',
-    icon: 'compass-outline',
-    iconActive: 'compass',
+    label: 'אנשים',
+    icon: 'search-outline',
+    iconActive: 'search',
   },
   DarkPoolFollowing: {
     label: 'מעקב',
     icon: 'people-outline',
     iconActive: 'people',
-  },
-  DarkPoolFeed: {
-    label: 'פיד',
-    icon: 'newspaper-outline',
-    iconActive: 'newspaper',
   },
 };
 

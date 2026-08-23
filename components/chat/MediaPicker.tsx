@@ -208,7 +208,7 @@ export default function MediaPicker({ visible, onClose, onMediaSelected, onPollR
 
   const styles = React.useMemo(() => StyleSheet.create({
     container: {
-      backgroundColor: DesignTokens.colors.background.primary,
+      backgroundColor: 'transparent',
       paddingTop: DesignTokens.spacing.md,
       paddingBottom: DesignTokens.spacing.xl + 10,
       paddingHorizontal: DesignTokens.spacing.xl,

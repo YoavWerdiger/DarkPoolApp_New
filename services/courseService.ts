@@ -220,15 +220,46 @@ class CourseService {
     }
   }
 
+  // יצירת קורס האורקל (מסחר סווינג באופציות) — ללא שיעורים בשלב ראשון
+  async createOracleCourse(): Promise<boolean> {
+    try {
+      const existing = await this.getCourseById('oracle-course');
+      if (existing) return true;
+
+      const coverUrl = `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/oracle-course-banner.jpg`;
+      const instructorAvatar = `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`;
+
+      const { error } = await supabase.from('courses').insert({
+        id: 'oracle-course',
+        title: 'האורקל',
+        subtitle: 'קורס הדגל של DarkPool למסחר סווינג באופציות',
+        description:
+          'למי הקורס מתאים?\nלסוחרים שכבר מכירים את יסודות שוק ההון ורוצים ללמוד כיצד לסחור באופציות בצורה מקצועית, מדויקת ושיטתית.\n\nמה תלמדו בקורס?\nבקורס תלמדו כיצד לאתר עסקאות סווינג איכותיות באופציות, לבצע ניתוח טכני מתקדם, לזהות אזורי כניסה ויציאה בעלי הסתברות גבוהה, להבין כיצד האופציות מתנהגות בפועל, לנהל סיכונים בצורה נכונה ולבנות אסטרטגיית מסחר עקבית לטווח הארוך.\n\nהמטרה היא להעניק לכם שיטה ברורה ומסודרת שתאפשר לכם לקבל החלטות מבוססות נתונים, במקום לפעול מתוך רגש או ניחוש.',
+        cover_url: coverUrl,
+        instructor_name: 'דוד אריאל',
+        instructor_avatar: instructorAvatar,
+        price: 299,
+        original_price: 599,
+        is_active: true,
+        access: 'free',
+      });
+
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
   // יצירת קורס הלוויתנים עם כל השיעורים
   async createWhalesCourse(): Promise<boolean> {
     try {
       // יצירת הקורס
       const course = await this.createCourse({
-        title: 'קורס הלוויתנים',
-        subtitle: 'הפריצה לשוק - דוד אריאל',
-        description: 'קורס דיגיטלי פרקטי ומעשי שכולל בתוכו קונספטים ואסטרטגיית מסחר יומי מוכחת! \nהקורס פונה לסוחרים מתקדמים בשוק ההון שרוצים לקחת את המסחר שלהם לרמה הבאה! וללמוד אסטרטגיית מסחר מקצועית במסחר יומי!',
-        cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/Wheles.png`,
+        title: 'הלווייתנים',
+        subtitle: 'מסחר יומי לפי זרימות מוסדיות ונזילות',
+        description:
+          'למי הקורס מתאים?\nלסוחרים שרוצים להעמיק במסחר יומי ולהבין כיצד לזהות זרימות גדולות ונזילות בשוק.\n\nמה תלמדו בקורס?\nבקורס תלמדו כלים לניתוח מבנה שוק ונזילות — כולל מושגים מעולם ה־Smart Money Concepts (Order Blocks, FVG, Premium & Discount ועוד) — ואיך ליישם אותם במסחר יומי במניות ובאופציות.\n\nבנוסף תלמדו כיצד לבנות תוכנית עבודה יומית, לנהל עסקאות בזמן אמת ולשלב בין ניתוח זרימות לבין ניהול סיכונים מסודר.',
+        cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/whales-course-banner.jpg`,
         instructor_name: 'דוד אריאל',
         instructor_avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
         duration_hours: 8,
@@ -430,9 +461,10 @@ class CourseService {
     return {
       course: {
         id: 'david-training-course',
-        title: 'הכשרה של דוד אריאל',
-        subtitle: 'קורס הכשרה מקצועי',
-        description: 'קורס הכשרה מקיף עם שיעורים מיוטיוב - מבוא לשוק ההון, מסחר בבורסה, אסטרטגיות מסחר וכלים מקצועיים',
+        title: 'יסודות המסחר',
+        subtitle: 'הצעד הראשון שלכם לעולם שוק ההון',
+        description:
+          'למי הקורס מתאים?\nלכל מי שרוצה להתחיל לסחור או להשקיע בשוק ההון, גם ללא ניסיון או ידע קודם.\n\nמה תלמדו בקורס?\nקורס יסודות המסחר נבנה כדי להעניק לכם בסיס מקצועי וחזק בעולם שוק ההון. במהלך הקורס תלמדו כיצד שוק ההון פועל, מהם סוגי הנכסים השונים, כיצד פותחים חשבון מסחר, איך קוראים גרפים, כיצד מזהים מגמות, מהם עקרונות הניתוח הטכני, כיצד מנהלים סיכונים בצורה נכונה ואיך בונים תוכנית מסחר מסודרת.\n\nבסיום הקורס תהיה לכם הבנה רחבה של עולם המסחר וכל הכלים הדרושים כדי להתקדם בביטחון לשלב הבא.',
         cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
         instructor_name: 'דוד אריאל',
         instructor_avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
@@ -474,9 +506,10 @@ class CourseService {
         // יצירת הקורס
         const course = await this.createCourse({
           id: 'david-training-course',
-          title: 'הכשרה של דוד אריאל',
-          subtitle: 'קורס הכשרה מקצועי',
-          description: 'ההכשרה הינו קורס מסחר מלא בשוק ההון של דוד אריאל מערוץ היוטיוב של ״הפריצה לשוק ההון״, לימוד פורה ומעשיר!',
+          title: 'יסודות המסחר',
+          subtitle: 'הצעד הראשון שלכם לעולם שוק ההון',
+          description:
+            'למי הקורס מתאים?\nלכל מי שרוצה להתחיל לסחור או להשקיע בשוק ההון, גם ללא ניסיון או ידע קודם.\n\nמה תלמדו בקורס?\nקורס יסודות המסחר נבנה כדי להעניק לכם בסיס מקצועי וחזק בעולם שוק ההון. במהלך הקורס תלמדו כיצד שוק ההון פועל, מהם סוגי הנכסים השונים, כיצד פותחים חשבון מסחר, איך קוראים גרפים, כיצד מזהים מגמות, מהם עקרונות הניתוח הטכני, כיצד מנהלים סיכונים בצורה נכונה ואיך בונים תוכנית מסחר מסודרת.\n\nבסיום הקורס תהיה לכם הבנה רחבה של עולם המסחר וכל הכלים הדרושים כדי להתקדם בביטחון לשלב הבא.',
           cover_url: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,
           instructor_name: 'דוד אריאל',
           instructor_avatar: `${process.env.EXPO_PUBLIC_SUPABASE_URL!}/storage/v1/object/public/course_media/channels4_profile.jpg`,

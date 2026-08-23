@@ -139,18 +139,119 @@ const sanitizeDateString = (value?: string | null, fallback?: string): string =>
 export const DEFAULT_EARNINGS_IMPORTANCE = 3;
 
 /**
+ * המרת זמן קיר (YYYY-MM-DD + HH:MM:SS) באזור זמן נתון ל-UTC ISO.
+ * חשוב ל-DST: לא לקודד offset קשיח כמו +00.
+ */
+export function zonedWallTimeToUtcIso(
+  reportDate: string,
+  wallTime: string,
+  timeZone: string,
+): string {
+  const date = String(reportDate).slice(0, 10);
+  const [year, month, day] = date.split('-').map(Number)
+  const [hour, minute, second = 0] = wallTime.split(':').map(Number)
+  const desiredAsUtcMs = Date.UTC(year, month - 1, day, hour, minute, second || 0)
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  })
+
+  let utcMs = desiredAsUtcMs
+  for (let i = 0; i < 4; i++) {
+    const parts = Object.fromEntries(
+      formatter
+        .formatToParts(new Date(utcMs))
+        .filter((p) => p.type !== 'literal')
+        .map((p) => [p.type, p.value]),
+    ) as Record<string, string>
+    const asUtcMs = Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour),
+      Number(parts.minute),
+      Number(parts.second),
+    )
+    utcMs += desiredAsUtcMs - asUtcMs
+  }
+
+  return new Date(utcMs).toISOString()
+}
+
+/**
  * זמן דיווח משוער (UTC) ל-scheduling של push כשאין earnings_date_time מה-API.
- * BeforeMarket ≈ 7:00 ET · AfterMarket ≈ 16:05 ET
+ * מקור הנתונים (EarningsHub/Parse) נותן רק BMO/AMC — לא timestamp מדויק למניה.
+ * BeforeMarket ≈ 07:00 America/New_York · AfterMarket ≈ 16:05 America/New_York
+ *
+ * היסטורית נשמר 12:00Z/21:00Z — זה יצר תזכורת קבועה ב-14:45 שעון ישראל
+ * לכל דיווחי BMO (12:00 UTC = 15:00 IDT → 15 דק׳ לפני).
  */
 export function deriveEarningsDateTimeIso(
   reportDate: string,
   beforeAfterMarket: string | null | undefined,
 ): string {
   const date = String(reportDate).slice(0, 10);
-  if (beforeAfterMarket === 'BeforeMarket') {
-    return `${date}T12:00:00.000Z`;
+  const wallTime = beforeAfterMarket === 'BeforeMarket' ? '07:00:00' : '16:05:00'
+  return zonedWallTimeToUtcIso(date, wallTime, 'America/New_York')
+}
+
+/** סוגי push דיווחים בטבלת הזיכרון העמיד */
+export type EarningsDurableNotifType = 'reminder_15m' | 'results_available'
+
+export function normalizeEarningsTicker(
+  ticker?: string | null,
+  code?: string | null,
+): string {
+  const fromTicker = (ticker ?? '').toString().trim().toUpperCase()
+  if (fromTicker) return fromTicker
+  const fromCode = (code ?? '').toString().trim().toUpperCase()
+  if (!fromCode) return ''
+  return fromCode.includes('.') ? fromCode.split('.')[0]! : fromCode
+}
+
+/**
+ * טוען זיכרון dedup עמיד: האם כבר נשלח/נרשם push למשתמש+טיקר+תאריך+סוג.
+ * מחזיר true אם התביעה הצליחה (מותר לשלוח), false אם כבר נשלח.
+ */
+export async function claimEarningsNotificationSlot(
+  supabase: SupabaseClient,
+  params: {
+    userId: string
+    ticker: string
+    reportDate: string
+    notificationType: EarningsDurableNotifType
+    earningsReportId?: string | null
+  },
+): Promise<boolean> {
+  const ticker = normalizeEarningsTicker(params.ticker)
+  const reportDate = String(params.reportDate ?? '').slice(0, 10)
+  if (!ticker || !/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) {
+    console.warn('claimEarningsNotificationSlot: invalid ticker/reportDate', params)
+    return false
   }
-  return `${date}T21:00:00.000Z`;
+
+  const { error } = await supabase.from('earnings_notifications_sent').insert({
+    user_id: params.userId,
+    ticker,
+    report_date: reportDate,
+    notification_type: params.notificationType,
+    earnings_report_id: params.earningsReportId ?? null,
+  })
+
+  if (error) {
+    if ((error as { code?: string }).code === '23505') return false
+    console.error('claimEarningsNotificationSlot insert failed:', error)
+    // שגיאה תשתיתית — לא מסמנים כ"נשלח" וחוזרים בריצה הבאה
+    throw error
+  }
+  return true
 }
 
 /** משתמשים עם device token פעיל + התראות דיווחים (ברירת מחדל: מופעל) */
@@ -188,6 +289,168 @@ export async function fetchEarningsNotificationUsers(
       return true
     })
     .map((user_id) => ({ user_id }))
+}
+
+/** חלון (ימים) לזיהוי תאריכי אומדן ישנים של אותו אירוע דיווח */
+export const STALE_ESTIMATE_WINDOW_DAYS = 21
+
+/** חיבור ימים לתאריך YYYY-MM-DD בלי הזזות timezone מקומיות */
+export function addCalendarDays(dateStr: string, days: number): string {
+  const d = new Date(`${String(dateStr).slice(0, 10)}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+export function calendarDaysBetween(a: string, b: string): number {
+  const msA = Date.parse(`${String(a).slice(0, 10)}T12:00:00Z`)
+  const msB = Date.parse(`${String(b).slice(0, 10)}T12:00:00Z`)
+  return Math.abs(Math.round((msA - msB) / 86_400_000))
+}
+
+function tickerKeyFromParts(ticker?: string | null, code?: string | null): string {
+  const fromTicker = (ticker ?? '').toString().trim().toUpperCase()
+  if (fromTicker) return fromTicker
+  const fromCode = (code ?? '').toString().trim().toUpperCase()
+  if (!fromCode) return ''
+  return fromCode.includes('.') ? fromCode.split('.')[0]! : fromCode
+}
+
+/**
+ * מסיר מרשומות ה-batch אומדנים ליד דיווח עם actual (אותו טיקר).
+ * מונע upsert חוזר של תאריכי אומדן ישנים כשה-API עדיין מחזיר אותם.
+ */
+export function dropEstimatesNearConfirmedActuals<T extends Record<string, unknown>>(
+  records: T[],
+  windowDays: number = STALE_ESTIMATE_WINDOW_DAYS,
+): T[] {
+  const confirmedByTicker = new Map<string, string[]>()
+  for (const rec of records) {
+    const hasActual = rec.actual != null || rec.revenue_actual != null
+    if (!hasActual) continue
+    const key = tickerKeyFromParts(rec.ticker as string | null, rec.code as string | null)
+    const date = String(rec.report_date ?? '').slice(0, 10)
+    if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+    const list = confirmedByTicker.get(key) ?? []
+    list.push(date)
+    confirmedByTicker.set(key, list)
+  }
+  if (confirmedByTicker.size === 0) return records
+
+  return records.filter((rec) => {
+    const hasActual = rec.actual != null || rec.revenue_actual != null
+    if (hasActual) return true
+    const key = tickerKeyFromParts(rec.ticker as string | null, rec.code as string | null)
+    const date = String(rec.report_date ?? '').slice(0, 10)
+    const confirmedDates = confirmedByTicker.get(key)
+    if (!confirmedDates?.length) return true
+    return !confirmedDates.some((cd) => calendarDaysBetween(cd, date) <= windowDays)
+  })
+}
+
+/**
+ * מוחק מ-DB שורות אומדן (ללא actual) בסביבת תאריכי דיווח מאושרים.
+ * הסיבה: unique(ticker, report_date) משאיר תאריכי אומדן קודמים כשהתאריך מתעדכן.
+ */
+export async function purgeStaleEstimateRowsNearConfirmed(
+  supabase: SupabaseClient,
+  confirmed: Array<{ ticker: string; code?: string | null; reportDate: string }>,
+  windowDays: number = STALE_ESTIMATE_WINDOW_DAYS,
+): Promise<{ deleted: number }> {
+  let deleted = 0
+
+  for (const item of confirmed) {
+    const ticker = tickerKeyFromParts(item.ticker, item.code)
+    const reportDate = String(item.reportDate).slice(0, 10)
+    if (!ticker || !/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) continue
+
+    const code = (item.code || `${ticker}.US`).toString().toUpperCase()
+    const from = addCalendarDays(reportDate, -windowDays)
+    const to = addCalendarDays(reportDate, windowDays)
+
+    const { data: candidates, error } = await supabase
+      .from('earnings_calendar')
+      .select('id, report_date, actual')
+      .is('actual', null)
+      .gte('report_date', from)
+      .lte('report_date', to)
+      .or(`ticker.eq.${ticker},code.eq.${code}`)
+
+    if (error) {
+      console.warn(`[purge-stale] select ${ticker}: ${error.message}`)
+      continue
+    }
+
+    const ids = (candidates ?? [])
+      .filter((row) => {
+        const d = String(row.report_date).slice(0, 10)
+        if (d === reportDate) return false
+        return calendarDaysBetween(d, reportDate) <= windowDays
+      })
+      .map((row) => row.id as string)
+
+    if (ids.length === 0) continue
+
+    const { error: delError, count } = await supabase
+      .from('earnings_calendar')
+      .delete({ count: 'exact' })
+      .in('id', ids)
+
+    if (delError) {
+      console.warn(`[purge-stale] delete ${ticker}: ${delError.message}`)
+      continue
+    }
+
+    const n = count ?? ids.length
+    deleted += n
+    console.log(
+      `🗑️ Purged ${n} stale estimate row(s) for ${ticker} near confirmed ${reportDate}`,
+    )
+  }
+
+  return { deleted }
+}
+
+/**
+ * אחרי sync: עבור כל טיקר שנגענו בו — מחק אומדנים ישנים ליד כל דיווח עם actual ב-DB.
+ */
+export async function purgeStaleEstimatesForTouchedTickers(
+  supabase: SupabaseClient,
+  tickers: string[],
+  windowDays: number = STALE_ESTIMATE_WINDOW_DAYS,
+): Promise<{ deleted: number }> {
+  const unique = [...new Set(tickers.map((t) => t.trim().toUpperCase()).filter(Boolean))]
+  if (unique.length === 0) return { deleted: 0 }
+
+  let deleted = 0
+  // עיבוד במנות כדי לא לפתוח יותר מדי שאילתות במקביל
+  const chunkSize = 40
+  for (let i = 0; i < unique.length; i += chunkSize) {
+    const chunk = unique.slice(i, i + chunkSize)
+    const codes = chunk.map((t) => `${t}.US`)
+
+    const { data: confirmedRows, error } = await supabase
+      .from('earnings_calendar')
+      .select('ticker, code, report_date, actual')
+      .not('actual', 'is', null)
+      .or(`ticker.in.(${chunk.join(',')}),code.in.(${codes.join(',')})`)
+
+    if (error) {
+      console.warn(`[purge-stale] confirmed lookup: ${error.message}`)
+      continue
+    }
+
+    const confirmed = (confirmedRows ?? []).map((row) => ({
+      ticker: tickerKeyFromParts(row.ticker as string | null, row.code as string | null),
+      code: (row.code as string | null) ?? undefined,
+      reportDate: String(row.report_date).slice(0, 10),
+    })).filter((c) => c.ticker && c.reportDate)
+
+    if (confirmed.length === 0) continue
+    const result = await purgeStaleEstimateRowsNearConfirmed(supabase, confirmed, windowDays)
+    deleted += result.deleted
+  }
+
+  return { deleted }
 }
 
 export const prepareEarningsRecord = (

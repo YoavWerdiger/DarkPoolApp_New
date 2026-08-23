@@ -3,6 +3,7 @@ import {
   Image,
   ImageBackground,
   StyleSheet,
+  Text,
   View,
   type ImageStyle,
   type StyleProp,
@@ -10,11 +11,29 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDesignTokens } from '../../../components/ui/DesignTokens';
-import { TickerLogo } from '../../Portfolios/components/TickerLogo';
 import {
   INVESTOR_PORTRAIT_PLACEHOLDER_URI,
   portraitPhotoCandidates,
 } from '../utils/investorPlaceholder';
+
+/** פולבק בלי תמונה — מונוגרם ראשי־תיבות בלבד (לא לוגו מניה). */
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+}
+
+function monogramColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  const palette = ['#1B4332', '#2D6A4F', '#1D3557', '#457B9D', '#3D348B', '#5C4D7A'];
+  return palette[Math.abs(hash) % palette.length];
+}
 
 interface Props {
   name: string;
@@ -61,36 +80,8 @@ export function InvestorPortraitFallback({
   );
 
   const uri = candidates[0] ?? null;
-
-  const showTickerHero =
-    kind === 'insider' && !!ticker && !uri;
-
-  if (showTickerHero && ticker) {
-    return (
-      <View
-        style={[
-          layout === 'circle' ? circleStyle(size) : styles.cardBg,
-          layout === 'circle' ? styles.ring : null,
-          layout === 'circle' ? { borderColor: tokens.colors.border.subtle } : null,
-          styles.logoWrap,
-          style,
-        ]}
-      >
-        {layout === 'card' ? (
-          <LinearGradient
-            colors={['#0f160f', '#1a261a', '#0a0e0a']}
-            style={StyleSheet.absoluteFillObject}
-          />
-        ) : null}
-        <TickerLogo
-          symbol={ticker}
-          size={layout === 'card' ? 72 : Math.round(size * 0.72)}
-          borderRadius={layout === 'card' ? 14 : Math.round(size * 0.16)}
-        />
-        {children}
-      </View>
-    );
-  }
+  const initials = initialsFromName(name);
+  const monoBg = monogramColor(personId || name || ticker || 'x');
 
   if (layout === 'circle') {
     if (!uri) {
@@ -99,15 +90,15 @@ export function InvestorPortraitFallback({
           style={[
             circleStyle(size),
             styles.ring,
-            { borderColor: tokens.colors.border.subtle },
+            styles.mono,
+            { borderColor: tokens.colors.border.subtle, backgroundColor: monoBg },
             style,
           ]}
+          accessibilityLabel={name}
         >
-          <Image
-            source={{ uri: INVESTOR_PORTRAIT_PLACEHOLDER_URI }}
-            style={[circleStyle(size), imageStyle]}
-            accessibilityLabel={name}
-          />
+          <Text style={[styles.monoText, { fontSize: Math.round(size * 0.34) }]}>
+            {initials}
+          </Text>
         </View>
       );
     }
@@ -138,11 +129,21 @@ export function InvestorPortraitFallback({
 
   if (!uri) {
     return (
-      <View style={[styles.cardBg, styles.logoWrap, style]}>
+      <View style={[styles.cardBg, style]}>
         <LinearGradient
-          colors={['#0f160f', '#1a261a', '#0a0e0a']}
+          colors={[monoBg, '#0a0e0a']}
           style={StyleSheet.absoluteFillObject}
         />
+        <View style={styles.cardMonoCenter}>
+          <View
+            style={[
+              styles.cardMonoCircle,
+              { backgroundColor: `${tokens.colors.primary.main}33` },
+            ]}
+          >
+            <Text style={styles.cardMonoText}>{initials}</Text>
+          </View>
+        </View>
         {children}
       </View>
     );
@@ -267,10 +268,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     backgroundColor: '#0f160f',
   },
-  logoWrap: {
+  mono: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0a0e0a',
+  },
+  monoText: {
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  cardMonoCenter: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 28,
+  },
+  cardMonoCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardMonoText: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });
 

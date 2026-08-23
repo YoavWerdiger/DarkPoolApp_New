@@ -1,9 +1,11 @@
 import { legacyAlert } from '../../utils/appDialog';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Dimensions, Keyboard, Image, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Pressable, ScrollView, ImageBackground, Animated, Easing } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { useRegistration } from '../../context/RegistrationContext';
+import { AuthService } from '../../services/authService';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -107,12 +109,21 @@ export default function LoginScreen({ navigation }: any) {
   const [showForm, setShowForm] = useState(false);
   const logoFloat = useRef(new Animated.Value(0)).current;
 
-  const { signIn, signInWithGoogle, isLoading } = useAuth();
+  const { signIn, signInWithGoogle, isLoading, setUser, passwordRecoveryMode, setPasswordRecoveryMode } = useAuth();
   const { setGoogleUserData } = useRegistration();
 
   useEffect(() => {
     loadSavedCredentials();
   }, []);
+
+  // מסך התחברות מכוון — מנקים recovery תקוע שלא יחסום Main אחרי login.
+  // לא מנקים כש-recovery פעיל (deep-link / OTP) — PasswordRecoveryRedirect מנווט משם.
+  useFocusEffect(
+    useCallback(() => {
+      if (passwordRecoveryMode) return;
+      void setPasswordRecoveryMode(false);
+    }, [passwordRecoveryMode, setPasswordRecoveryMode])
+  );
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -166,21 +177,21 @@ export default function LoginScreen({ navigation }: any) {
       legacyAlert('שגיאה', 'אנא מלא את כל השדות');
       return;
     }
-    const { error } = await signIn({ email: email.trim(), password });
+    // ניקוי מכוון לפני/תוך signIn — גם אם נשארנו על Login עם דגל recovery
+    await setPasswordRecoveryMode(false);
+    const normalizedEmail = email.trim().toLowerCase();
+    const { error } = await signIn({ email: normalizedEmail, password });
     if (error) {
       legacyAlert('שגיאה בהתחברות', error);
       await saveCredentials('', false);
     } else {
-      await saveCredentials(email.trim(), rememberMe);
+      await saveCredentials(normalizedEmail, rememberMe);
     }
   };
 
   const handleForgotPassword = () => {
-    if (!email.trim()) {
-      legacyAlert('שגיאה', 'אנא הכנס את כתובת האימייל שלך');
-      return;
-    }
-    legacyAlert('איפוס סיסמה', 'נשלח לך אימייל לאיפוס הסיסמה');
+    void HapticFeedback.impactLight();
+    navigation.navigate('ForgotPassword', { email: email.trim() });
   };
 
   const handleGoogleSignIn = async () => {
@@ -189,8 +200,11 @@ export default function LoginScreen({ navigation }: any) {
       const result = await signInWithGoogle();
       if (result.error) { legacyAlert('שגיאה בהתחברות', result.error); return; }
       if (result.isNewUser && result.googleUser) {
+        // קודם קונטקסט הרשמה, אחר כך setUser — App מנתב ל-Onboarding עם isGoogleSignUp=true
         setGoogleUserData(result.googleUser);
-        navigation.navigate('Onboarding', { skipToIntro: true });
+        const { user: profile } = await AuthService.getCurrentUser();
+        if (profile) setUser(profile);
+        // Navigation ל-Onboarding קורה אוטומטית דרך App.tsx conditional rendering
       }
     } catch {
       legacyAlert('שגיאה', 'אירעה שגיאה בהתחברות עם Google');
@@ -264,13 +278,13 @@ export default function LoginScreen({ navigation }: any) {
                         elevation: 8,
                       }}
                     >
-                      <TouchableOpacity
-                        onPress={() => {
-                          void HapticFeedback.medium();
-                          navigation.navigate('Onboarding');
-                        }}
-                        activeOpacity={0.86}
-                        style={{ paddingVertical: 17, alignItems: 'center' }}
+                <TouchableOpacity
+                  onPress={() => {
+                    void HapticFeedback.medium();
+                    navigation.navigate('Register');
+                  }}
+                  activeOpacity={0.86}
+                  style={{ paddingVertical: 17, alignItems: 'center' }}
                       >
                         <Text style={{ color: colors.text.inverse, fontSize: 17, fontWeight: '800' }}>
                           התחל כאן
@@ -563,13 +577,13 @@ export default function LoginScreen({ navigation }: any) {
                 </TouchableOpacity>
 
                 {/* Register */}
-                <TouchableOpacity
-                  onPress={() => {
-                    void HapticFeedback.impactLight();
-                    navigation.navigate('Onboarding');
-                  }}
-                  activeOpacity={0.75}
-                  style={{
+              <TouchableOpacity
+                onPress={() => {
+                  void HapticFeedback.impactLight();
+                  navigation.navigate('Register');
+                }}
+                activeOpacity={0.75}
+                style={{
                     borderRadius: 30,
                     borderWidth: 1.5,
                     borderColor: colors.primary.main,

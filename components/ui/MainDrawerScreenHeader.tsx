@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDesignTokens } from './DesignTokens';
 import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from './DayNavBlurButton';
@@ -7,10 +7,19 @@ import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from './DayNavBlurButton';
 /** כמו מסך שווקים (בית) / רשימת צ׳אטים — מרווח אופקי לכותרת ול־section */
 export const MAIN_SCREEN_HEADER_HP = 20;
 
+/** טיפוגרפיית כותרת שורש — גודל/משקל לפני האיחוד (לא title2 הצר) */
+export const MAIN_SCREEN_HEADER_TITLE_SIZE = 24;
+export const MAIN_SCREEN_HEADER_TITLE_WEIGHT = '800' as const;
+export const MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT = 30;
+
 export type MainDrawerScreenHeaderProps = {
   title: string;
+  /** מחליף את טקסט הכותרת במרכז (למשל לוגו קהילה) — אותה שורה/מרווחים */
+  centerAccessory?: React.ReactNode;
   /** כותרת משנה מתחת לכותרת (למשל מדד פחד במסך שווקים) */
   subtitle?: string;
+  /** לחיצה על כותרת המשנה (אופציונלי) */
+  onSubtitlePress?: () => void;
   onMenuPress: () => void;
   /** תוכן מתחת לכותרת — באותו padding אופקי כמו `sectionPicker` בשווקים */
   section?: React.ReactNode;
@@ -31,7 +40,9 @@ export type MainDrawerScreenHeaderProps = {
  */
 export function MainDrawerScreenHeader({
   title,
+  centerAccessory,
   subtitle,
+  onSubtitlePress,
   onMenuPress,
   section,
   sectionContainerStyle,
@@ -43,8 +54,31 @@ export function MainDrawerScreenHeader({
   const styles = useMemo(() => createStyles(tokens, inRtlTree), [tokens, inRtlTree]);
   const row = inRtlTree ? styles.rowLtrInRtlTree : styles.rowAppLtr;
 
+  const subtitleEl = subtitle ? (
+    onSubtitlePress ? (
+      <Pressable
+        onPress={onSubtitlePress}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={subtitle}
+        style={styles.subtitleRow}
+      >
+        <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
+          {subtitle}
+        </Text>
+      </Pressable>
+    ) : (
+      <View style={styles.subtitleRow}>
+        <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
+          {subtitle}
+        </Text>
+      </View>
+    )
+  ) : null;
+
   return (
     <View style={style}>
+      {/* שורת כותרת בלבד — אותו גובה כמו חדשות/קהילה גם כשיש subtitle מתחת */}
       <View style={[styles.appHeader, row]}>
         <View style={styles.appHeaderActionsMenu}>
           <DayNavBlurButton
@@ -56,20 +90,22 @@ export function MainDrawerScreenHeader({
             <Ionicons name="menu" size={24} color={tokens.colors.text.primary} />
           </DayNavBlurButton>
         </View>
-        <View style={styles.titleBlock}>
-          <Text style={styles.appHeaderTitle} numberOfLines={1}>
-            {title}
-          </Text>
-          {subtitle ? (
-            <Text style={styles.appHeaderSubtitle} numberOfLines={2}>
-              {subtitle}
+        <View
+          style={styles.titleBlock}
+          accessibilityRole="header"
+          accessibilityLabel={title}
+        >
+          {centerAccessory ?? (
+            <Text style={styles.appHeaderTitle} numberOfLines={1}>
+              {title}
             </Text>
-          ) : null}
+          )}
         </View>
         <View style={styles.appHeaderActionsEnd} pointerEvents="box-none">
           {rightAccessory ?? <View style={styles.headerActionSpacer} />}
         </View>
       </View>
+      {subtitleEl}
       {section != null ? (
         <View style={[styles.sectionPicker, sectionContainerStyle]}>{section}</View>
       ) : null}
@@ -122,14 +158,22 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
       minHeight: 48,
     },
     appHeaderTitle: {
-      fontSize: 22,
-      fontWeight: '700' as const,
+      fontSize: MAIN_SCREEN_HEADER_TITLE_SIZE,
+      fontWeight: MAIN_SCREEN_HEADER_TITLE_WEIGHT,
       color: tokens.colors.text.primary,
-      letterSpacing: -0.3,
+      letterSpacing: -0.35,
+      lineHeight: MAIN_SCREEN_HEADER_TITLE_LINE_HEIGHT,
       textAlign: 'center',
     },
+    /** מתחת לשורת הכותרת — לא בתוך titleBlock (מונע הזזת כותרת/כפתורים למעלה) */
+    subtitleRow: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: MAIN_SCREEN_HEADER_HP,
+      marginTop: -4,
+      paddingBottom: 12,
+    },
     appHeaderSubtitle: {
-      marginTop: 3,
       fontSize: 13,
       fontWeight: '500' as const,
       color: tokens.colors.text.secondary,
@@ -138,7 +182,7 @@ function createStyles(tokens: ReturnType<typeof useDesignTokens>, inRtlTree: boo
     },
     sectionPicker: {
       paddingHorizontal: MAIN_SCREEN_HEADER_HP,
-      paddingTop: 6,
+      paddingTop: 8,
       paddingBottom: 10,
     },
   });

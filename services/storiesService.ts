@@ -125,7 +125,7 @@ export async function getUsersWithStories(currentUserId?: string): Promise<Story
 
   const userIds = [...new Set(stories.map((s) => s.user_id))];
   const { data: users, error: usersErr } = await supabase
-    .from('users')
+    .from('v_public_profiles')
     .select('id, display_name, full_name, profile_picture')
     .in('id', userIds);
 
@@ -369,7 +369,7 @@ export async function getStoryViewers(storyId: string): Promise<StoryViewer[]> {
 
   const ids = [...new Set(data.map((v: any) => v.viewer_id))];
   const { data: users } = await supabase
-    .from('users')
+    .from('v_public_profiles')
     .select('id, display_name, full_name, profile_picture')
     .in('id', ids);
   const userMap = new Map((users || []).map((u) => [u.id, u]));
@@ -549,7 +549,7 @@ export async function getStoryReactions(
 
   const reactorIds = [...new Set(data.map((r: any) => r.reactor_id))];
   const { data: users } = await supabase
-    .from('users')
+    .from('v_public_profiles')
     .select('id, display_name, full_name, profile_picture')
     .in('id', reactorIds);
   const userMap = new Map((users || []).map((u) => [u.id, u]));

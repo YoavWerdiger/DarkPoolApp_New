@@ -5,7 +5,7 @@
 // ============================================
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useAuth } from './AuthContext';
 import { logger } from '../utils/logger';
 import { getChatMessagePreview } from '../utils/chatMessagePreview';
@@ -48,8 +48,25 @@ import {
 import { supabase } from '../services/supabase';
 import { queryClient } from '../lib/queryClient';
 import { appQueryKeys } from '../lib/appQueryKeys';
-import { scheduleChatMessagesPersist } from '../lib/chatMessagePersist';
+import { readCachedMessagesForGroup } from '../lib/chatMessagePersist';
+import {
+  CHAT_AROUND_AFTER,
+  CHAT_AROUND_BEFORE,
+  CHAT_DELTA_MAX,
+  CHAT_DELTA_PAGE,
+  CHAT_MESSAGES_MEMORY_CAP,
+  CHAT_OPEN_WINDOW_DEFAULT,
+  CHAT_OPEN_WINDOW_MAX,
+  appendMessageToGroupCache,
+  capChatMessages,
+  getNewestPersistedCursor,
+  mergeChatMessages,
+  messageIdInCache,
+  readGroupMessagesCache,
+  writeGroupMessagesCache,
+} from '../lib/chatMessageCache';
 import { persistQueryCache } from '../lib/queryPersist';
+import { schedulePrefetchChatMessages } from '../services/appPrefetch';
 import * as Haptics from 'expo-haptics';
 // Audio import removed — notification sound is not yet implemented (no mp3 asset in repo)
 
@@ -147,8 +164,13 @@ interface ChatContextType {
 
   // Read Receipts
   markAsRead: (groupId: string, messageIds: string[]) => Promise<void>;
-  /** סימון "נקרא עד הסוף" — אחרי גלילה לתחתית (לא בפתיחה עם unread) */
-  confirmChatReadAtBottom: () => Promise<void>;
+  /** סימון "נקרא" — גלילה לתחתית / יציאה מהצ'אט. אופציונלי: groupId ספציפי (ביציאה). */
+  confirmChatReadAtBottom: (groupId?: string) => Promise<void>;
+  /**
+   * ביציאה ממסך הצ'אט — מפסיק active-viewer על השרת כדי ש־unread fan-out
+   * לא יידלג על המשתמש אחרי שהוא כבר ברשימת הקבוצות.
+   */
+  leaveChatScreen: (groupId: string) => void;
 
   // Unread
   totalUnreadCount: number;
@@ -177,6 +199,7 @@ type ChatActionsType = Pick<
   | 'setTyping'
   | 'markAsRead'
   | 'confirmChatReadAtBottom'
+  | 'leaveChatScreen'
   | 'addOptimisticMediaMessage'
   | 'updateOptimisticMessage'
   | 'removeOptimisticMessage'
@@ -210,10 +233,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const messagesOffset = useRef(0);
   const hasMoreMessages = useRef(true);
   const currentGroupId = useRef<string | null>(null);
-  const resubscribeActiveGroupRef = useRef<(() => void) | null>(null);
+  const resubscribeActiveGroupRef = useRef<(() => Promise<void>) | null>(null);
   const personalDeletedIds = useRef<Set<string>>(new Set());
   // C1: version counter to abort stale selectGroup calls
   const selectVersion = useRef(0);
+  /** מונע selectGroup:fetch בלולאה על אותה קבוצה (Android thrashing). */
+  const selectInFlightRef = useRef<string | null>(null);
+  const lastSelectCompletedRef = useRef<{ groupId: string; at: number } | null>(null);
+  /** Groups the user already confirmed-read this session — blocks stale group-details/realtime from resurrecting the badge */
+  const sessionReadConfirmedRef = useRef<Set<string>>(new Set());
+  /** Active chat viewing presence — server skips unread fan-out while fresh */
+  const viewingGroupRef = useRef<string | null>(null);
+  const viewingHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // C3: track IDs already processed to prevent triple-source duplicates
   const processedMessageIds = useRef<Set<string>>(new Set());
   // C4: ref-based lock to prevent concurrent loadMoreMessages calls
@@ -223,18 +254,87 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // A single in-flight guard prevents two flushers running concurrently.
   const isFlushing = useRef(false);
 
+  // Typing indicators: client-side staleness guard. Realtime DELETE events can
+  // be dropped (reconnects, backgrounding), which would otherwise leave a
+  // "מקליד..." indicator stuck forever. The sender refreshes started_typing_at
+  // every ~1.5s while typing, so anything older than TYPING_STALE_MS is treated
+  // as gone and auto-cleared even without a DELETE event.
+  const TYPING_STALE_MS = 6000;
+  const typingStaleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingRef = useRef<ChatTypingIndicator[]>([]);
+
+  const applyTypingIndicators = useCallback((indicators: ChatTypingIndicator[]) => {
+    lastTypingRef.current = indicators;
+    if (typingStaleTimerRef.current) {
+      clearTimeout(typingStaleTimerRef.current);
+      typingStaleTimerRef.current = null;
+    }
+    const now = Date.now();
+    const ageOf = (i: ChatTypingIndicator) =>
+      i.started_typing_at ? now - new Date(i.started_typing_at).getTime() : 0;
+    const fresh = indicators.filter((i) => ageOf(i) < TYPING_STALE_MS);
+    setTypingUsers(fresh.map((i) => ({ ...i, userName: i.user?.display_name })));
+    if (fresh.length > 0) {
+      const soonestExpiryIn = Math.min(...fresh.map((i) => TYPING_STALE_MS - ageOf(i)));
+      typingStaleTimerRef.current = setTimeout(() => {
+        typingStaleTimerRef.current = null;
+        // Re-filter the last known set: drops whatever expired, keeps and
+        // re-arms for anyone still actively typing.
+        applyTypingIndicators(lastTypingRef.current);
+      }, Math.max(250, soonestExpiryIn + 100));
+    }
+  }, []);
+
+  const clearTypingIndicators = useCallback(() => {
+    if (typingStaleTimerRef.current) {
+      clearTimeout(typingStaleTimerRef.current);
+      typingStaleTimerRef.current = null;
+    }
+    lastTypingRef.current = [];
+    setTypingUsers([]);
+  }, []);
+
+  const stopGroupViewing = useCallback((groupId?: string | null) => {
+    if (viewingHeartbeatRef.current) {
+      clearInterval(viewingHeartbeatRef.current);
+      viewingHeartbeatRef.current = null;
+    }
+    const gid = groupId ?? viewingGroupRef.current;
+    viewingGroupRef.current = null;
+    if (gid) {
+      void chatMessageService.setChatGroupViewing(gid, false);
+    }
+  }, []);
+
+  const startGroupViewing = useCallback((groupId: string) => {
+    if (!groupId) return;
+    if (viewingGroupRef.current && viewingGroupRef.current !== groupId) {
+      void chatMessageService.setChatGroupViewing(viewingGroupRef.current, false);
+    }
+    viewingGroupRef.current = groupId;
+    void chatMessageService.setChatGroupViewing(groupId, true);
+    if (viewingHeartbeatRef.current) {
+      clearInterval(viewingHeartbeatRef.current);
+    }
+    viewingHeartbeatRef.current = setInterval(() => {
+      if (
+        viewingGroupRef.current === groupId &&
+        AppState.currentState === 'active'
+      ) {
+        void chatMessageService.setChatGroupViewing(groupId, true);
+      }
+    }, 55_000);
+  }, []);
+
   // Keep messagesRef in sync with state
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   // סנכרון cache ההודעות (כולל realtime) + גיבוי לדיסק — לכניסה מיידית בפעם הבאה
   useEffect(() => {
     const gid = currentGroupId.current;
-    if (!gid || !user || messages.length === 0) return;
-    const persistable = messages.filter((m) => !m.id.startsWith('temp-'));
-    if (persistable.length === 0) return;
-    queryClient.setQueryData(appQueryKeys.chatMessages(gid), persistable);
-    scheduleChatMessagesPersist(user.id);
-  }, [messages, user]);
+    if (!gid || !user?.id || messages.length === 0) return;
+    writeGroupMessagesCache(gid, messages, user.id);
+  }, [messages, user?.id]);
 
   // Clear pending read timer when user logs out to avoid stale API calls
   useEffect(() => {
@@ -256,14 +356,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const pending = pendingReadRef.current;
     pendingReadRef.current = null;
     if (!user || !pending || pending.messageIds.size === 0) return;
+    // Optimistic badge clear — don't wait for network (Android feels stuck otherwise)
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === pending.groupId ? { ...g, unread_count: 0, mentioned_count: 0 } : g,
+      ),
+    );
     try {
       await chatMessageService.markMessagesAsRead(
         { group_id: pending.groupId, message_ids: Array.from(pending.messageIds) },
         user.id
       );
-      setGroups(prev => prev.map(g =>
-        g.id === pending.groupId ? { ...g, unread_count: 0 } : g
-      ));
     } catch (error) {
       logger.error('ChatContext', 'Error marking as read', error);
     }
@@ -286,25 +389,52 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     readTimerRef.current = setTimeout(flushMarkAsRead, 500);
   }, [user, flushMarkAsRead]);
 
-  const confirmChatReadAtBottom = useCallback(async () => {
+  const confirmChatReadAtBottom = useCallback(async (groupId?: string) => {
     if (!user) return;
-    const gid = currentGroupId.current;
+    const gid = groupId ?? currentGroupId.current;
     if (!gid) return;
 
-    const newestPersistedId = getNewestPersistedMessageId(messagesRef.current);
+    // Only clear session unread divider when confirming the active thread
+    const isActiveThread = currentGroupId.current === gid;
+    const newestPersistedId = isActiveThread
+      ? getNewestPersistedMessageId(messagesRef.current)
+      : undefined;
 
-    try {
-      await chatMessageService.markChatAsRead(gid, user.id, newestPersistedId);
+    sessionReadConfirmedRef.current.add(gid);
+
+    // Optimistic: badge (+ divider for active thread) clear immediately
+    if (isActiveThread) {
       setInitialUnreadInfo(null);
-      setGroups((prev) =>
-        prev.map((g) =>
+    }
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === gid ? { ...g, unread_count: 0, mentioned_count: 0 } : g,
+      ),
+    );
+    // Keep query-cache groups in sync so list badges don't resurrect from stale cache
+    const cacheKey = appQueryKeys.chatGroups(user.id);
+    const cached = queryClient.getQueryData<ChatGroup[]>(cacheKey);
+    if (cached?.length) {
+      queryClient.setQueryData(
+        cacheKey,
+        cached.map((g) =>
           g.id === gid ? { ...g, unread_count: 0, mentioned_count: 0 } : g,
         ),
       );
+    }
+
+    try {
+      await chatMessageService.markChatAsRead(gid, user.id, newestPersistedId);
     } catch (error) {
       logger.error('ChatContext', 'confirmChatReadAtBottom failed', error);
     }
   }, [user]);
+
+  /** ביציאה ממסך הצ'אט — מפסיק chat_active_viewers כדי ש־unread יתעדכן ברשימה. */
+  const leaveChatScreen = useCallback((groupId: string) => {
+    if (!groupId) return;
+    stopGroupViewing(groupId);
+  }, [stopGroupViewing]);
 
   const userRef = useRef(user);
   useEffect(() => {
@@ -327,9 +457,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // ============================================
 
   const loadGroups = useCallback(async () => {
-    if (!user) return;
+    const userId = user?.id;
+    if (!userId) return;
 
-    const cacheKey = appQueryKeys.chatGroups(user.id);
+    const cacheKey = appQueryKeys.chatGroups(userId);
     const cached = queryClient.getQueryData<ChatGroup[]>(cacheKey);
     if (cached?.length) {
       setGroups(cached);
@@ -339,18 +470,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { data, error } = await chatGroupService.getChatGroups(user.id);
-      if (data) {
-        setGroups(data);
-        queryClient.setQueryData(cacheKey, data);
-        void persistQueryCache(user.id);
-      } else {
-        logger.error('ChatContext', 'Error loading groups', error);
+      // staleTime:0 — תמיד מרעננים אחרי hydrate (שנחשב "טרי"); אם warm כבר בטיסה — RQ ממזג
+      const data = await queryClient.fetchQuery({
+        queryKey: cacheKey,
+        queryFn: async () => {
+          const { data: groups, error } = await chatGroupService.getChatGroups(userId);
+          if (error) throw error;
+          return groups ?? [];
+        },
+        staleTime: 0,
+      });
+      setGroups(data);
+      void persistQueryCache(userId);
+      // עדיפות unread בלבד — warmAppCache כבר מריץ warm מלא; התור ממזג אם שניהם רצים
+      const unreadIds = data
+        .filter((g) => (g.unread_count || 0) > 0)
+        .map((g) => g.id);
+      if (unreadIds.length > 0) {
+        schedulePrefetchChatMessages(userId, { groupIds: unreadIds });
       }
+    } catch (error) {
+      logger.error('ChatContext', 'Error loading groups', error);
     } finally {
       setIsLoadingGroups(false);
     }
-  }, [user]);
+    // חשוב: user?.id ולא [user] — TOKEN_REFRESHED יוצר אובייקט user חדש ומפעיל לולאת load/realtime
+  }, [user?.id]);
 
   // ============================================
   // Shared helper: fetch reply_to data for a message (cached)
@@ -496,12 +641,61 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     ingestIncomingInsertRef.current = ingestIncomingInsert;
   }, [ingestIncomingInsert]);
 
+  /** משלים שם+אווטאר ברקע להודעות שכבר על המסך (קאש / אחרי UPDATE) בלי לחסום TTI. */
+  const hydrateMissingSenders = useCallback(
+    (groupId: string, version: number, snapshot?: ChatMessage[]) => {
+      const source = snapshot ?? messagesRef.current;
+      if (!source.length) return;
+      const needsEnrich = source.some(
+        (m) => m.sender_id && !chatRealtimeService.hasUsableSender(m.sender),
+      );
+      if (!needsEnrich) return;
+
+      void chatRealtimeService.enrichChatMessagesSenders(source).then((enriched) => {
+        if (selectVersion.current !== version) return;
+        if (currentGroupId.current !== groupId) return;
+
+        const byId = new Map(enriched.map((m) => [m.id, m]));
+        setMessages((prev) => {
+          let changed = false;
+          const next = prev.map((m) => {
+            if (chatRealtimeService.hasUsableSender(m.sender)) return m;
+            const e = byId.get(m.id);
+            if (!e?.sender || !chatRealtimeService.hasUsableSender(e.sender)) return m;
+            changed = true;
+            return { ...m, sender: e.sender };
+          });
+          return changed ? next : prev;
+        });
+      });
+    },
+    [],
+  );
+
   // ============================================
   // Select group
   // ============================================
 
   const selectGroup = useCallback(async (groupId: string) => {
     if (!user) return;
+
+    // P0: עצירת thrashing — אותה קבוצה כבר ב-fetch / נטענה זה עתה עם subscription חי
+    if (selectInFlightRef.current === groupId) {
+      logger.debug('ChatContext', `selectGroup:skip in-flight groupId=${groupId}`);
+      return;
+    }
+    const isSameGroupEarly = currentGroupId.current === groupId;
+    const lastDone = lastSelectCompletedRef.current;
+    if (
+      isSameGroupEarly &&
+      messagesRef.current.length > 0 &&
+      chatRealtimeService.isGroupRealtimeSubscribed(groupId) &&
+      lastDone?.groupId === groupId &&
+      Date.now() - lastDone.at < 4000
+    ) {
+      logger.debug('ChatContext', `selectGroup:skip fresh groupId=${groupId}`);
+      return;
+    }
 
     const isSameGroup = currentGroupId.current === groupId;
     const keepVisibleThread = isSameGroup && messagesRef.current.length > 0;
@@ -510,13 +704,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       isSameGroup && chatRealtimeService.isGroupRealtimeSubscribed(groupId);
 
     if (!isSameGroup && currentGroupId.current) {
-      chatRealtimeService.unsubscribeFromGroup(currentGroupId.current);
+      stopGroupViewing(currentGroupId.current);
+      void chatRealtimeService.unsubscribeFromGroup(currentGroupId.current);
     } else if (isSameGroup && !groupAlreadySubscribed && !keepVisibleThread) {
-      chatRealtimeService.unsubscribeFromGroup(groupId);
+      void chatRealtimeService.unsubscribeFromGroup(groupId);
     }
 
     // C2: bump version so any prior in-flight selectGroup call detects it's stale
     const version = ++selectVersion.current;
+    selectInFlightRef.current = groupId;
     if (!isSameGroup) {
       processedMessageIds.current.clear();
     }
@@ -533,6 +729,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         : [];
 
     currentGroupId.current = groupId;
+    startGroupViewing(groupId);
+    if (!isSameGroup) {
+      // כניסה מחדש לקבוצה — אפשר שוב להציג unread מהשרת/cache
+      sessionReadConfirmedRef.current.delete(groupId);
+    }
 
     // אופטימי: זריעת currentGroup מיידית מה-cache של רשימת הקבוצות.
     // מונע את ה-skeleton המלא ("מסך תקוע") ומציג כותרת/שם הקבוצה מיד בכניסה,
@@ -554,8 +755,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     if (!keepVisibleThread) {
       // אופטימי: זריעת הודעות מיידית מה-cache (stale-while-revalidate).
-      // אם יש הודעות שמורות מהכניסה הקודמת — מציגים אותן מיד בלי skeleton,
-      // והרשת מרעננת ברקע. אחרת — מצב טעינה רגיל.
+      // Memory hit → setState סינכרוני לפני כל await (TTI = 1 frame עם ChatGroupScreen seed).
+      // Disk miss בזיכרון → לא חוסמים רשת: hydrate/disk רצים במקביל ל-fetch.
       const cachedMessages = queryClient.getQueryData<ChatMessage[]>(
         appQueryKeys.chatMessages(groupId),
       );
@@ -565,127 +766,423 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         hasMoreMessages.current = true;
         setIsLoadingMessages(false);
         warmChatMediaCache(cachedMessages);
+        hydrateMissingSenders(groupId, version, cachedMessages);
       } else {
         setIsLoadingMessages(true);
-        setMessages([]);
-        messagesOffset.current = 0;
+        if (!isSameGroup) {
+          // לא להציג thread של קבוצה אחרת; מסך יציג skeleton עד disk/network
+          setMessages([]);
+        }
+        messagesOffset.current = isSameGroup ? messagesRef.current.length : 0;
         hasMoreMessages.current = true;
+        // Disk/hydrate במקביל — לא await לפני fetch (רגרסיית iOS: serial await על open path)
+        void readCachedMessagesForGroup(user.id, groupId).then((diskMessages) => {
+          if (selectVersion.current !== version) return;
+          if (!diskMessages?.length) return;
+          const cur = messagesRef.current;
+          const alreadyForGroup =
+            cur.length > 0 &&
+            cur.some((m) => m.group_id === groupId && !m.id.startsWith('temp-'));
+          if (alreadyForGroup) return;
+          setMessages(diskMessages);
+          messagesOffset.current = diskMessages.length;
+          hasMoreMessages.current = true;
+          setIsLoadingMessages(false);
+          warmChatMediaCache(diskMessages);
+          hydrateMissingSenders(groupId, version, diskMessages);
+        });
       }
-      setTypingUsers([]);
-      setInitialUnreadInfo(null);
+      clearTypingIndicators();
     }
 
     // כבר בצ'אט עם הודעות טעונות — בלי reload/markAsRead (מונע קפיצות גלילה)
     const skipMessageReload = isSameGroup && keepVisibleThread;
 
-    // משתנים שישמשו גם מחוץ ל-blocks
-    let savedUnreadCount = 0;
-    let savedLastReadMessageId: string | null = null;
+    // unread meta — מתעדכן כש־group details חוזר; נזרע גם מ־cache הרשימה ל־first paint.
+    // חשוב: לא לאפס ל-null ואז לכתוב שוב באותו select — זה גרם ל-divider/badge
+    // להבהב (value→null→value) ולשבור גלילה ראשונית ב-Android.
+    const unreadMeta = {
+      ready: false,
+      count: 0,
+      lastReadMessageId: null as string | null,
+      markedRead: false,
+    };
+    if (!keepVisibleThread && !skipMessageReload) {
+      const cachedGroups = queryClient.getQueryData<ChatGroup[]>(
+        appQueryKeys.chatGroups(user.id),
+      );
+      const cachedGroup = cachedGroups?.find((g) => g.id === groupId);
+      if (cachedGroup) {
+        unreadMeta.ready = true;
+        unreadMeta.count = cachedGroup.unread_count || 0;
+        unreadMeta.lastReadMessageId = cachedGroup.last_read_message_id ?? null;
+        // count=0 חייב להיות אובייקט (לא null) — null = "עדיין לא ידוע",
+        // ואז ChatGroupScreen נתקע ב-bottom-lite לנצח בלי לסיים גלילה לתחתית.
+        logger.debug(
+          'ChatContext',
+          `setInitialUnreadInfo source=cache-group groupId=${groupId} count=${unreadMeta.count} lastReadId=${unreadMeta.lastReadMessageId ?? 'null'}`,
+        );
+        setInitialUnreadInfo({
+          count: unreadMeta.count,
+          lastReadMessageId: unreadMeta.lastReadMessageId,
+        });
+      } else {
+        logger.debug(
+          'ChatContext',
+          `setInitialUnreadInfo(null) no-cache groupId=${groupId}`,
+        );
+        setInitialUnreadInfo(null);
+      }
+    }
+
+    const markReadIfNeeded = (newestMessageId: string | undefined) => {
+      if (skipMessageReload || unreadMeta.markedRead) return;
+      if (!unreadMeta.ready || unreadMeta.count > 0 || !newestMessageId) return;
+      unreadMeta.markedRead = true;
+      void chatMessageService.markChatAsRead(groupId, user.id, newestMessageId).then(() => {
+        if (selectVersion.current !== version) return;
+        setGroups((prev) =>
+          prev.map((g) =>
+            g.id === groupId ? { ...g, unread_count: 0, mentioned_count: 0 } : g,
+          ),
+        );
+      });
+    };
+
+    const applyUnreadCorrection = (apiMessages: ChatMessage[]) => {
+      if (!unreadMeta.ready || !unreadMeta.lastReadMessageId || apiMessages.length === 0) return;
+      const lastReadIndex = apiMessages.findIndex((m) => m.id === unreadMeta.lastReadMessageId);
+      if (lastReadIndex === -1) return;
+      // newest-first: indices before lastRead are unread; never count UI dividers
+      const actualUnreadCount = apiMessages
+        .slice(0, lastReadIndex)
+        .filter(
+          (m) =>
+            m.sender_id !== user.id &&
+            !m.is_silent &&
+            !m.is_system_message &&
+            !m.id.startsWith('temp-'),
+        ).length;
+      if (actualUnreadCount === unreadMeta.count) return;
+
+      logger.debug(
+        'ChatContext',
+        `Correcting unread count: server=${unreadMeta.count}, actual=${actualUnreadCount}`,
+      );
+      unreadMeta.count = actualUnreadCount;
+      logger.debug(
+        'ChatContext',
+        `setInitialUnreadInfo source=correction groupId=${groupId} count=${actualUnreadCount} lastReadId=${unreadMeta.lastReadMessageId ?? 'null'}`,
+      );
+      setInitialUnreadInfo({
+        count: actualUnreadCount,
+        lastReadMessageId: unreadMeta.lastReadMessageId,
+      });
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.id === groupId ? { ...g, unread_count: actualUnreadCount } : g,
+        ),
+      );
+    };
 
     try {
-      // הרצה במקביל: פרטי הקבוצה + ההודעות יוצאים יחד (במקום בטור).
-      // טעינת פרטי הקבוצה כוללת join לכל החברים ויכולה להיות איטית —
-      // אין סיבה שטעינת ההודעות תחכה לה. חוסך עד ~חצי מזמן הכניסה.
+      // פרטי קבוצה (כולל members) איטיים — לא חוסמים first paint / הודעות.
       const groupDetailsPromise = chatGroupService.getChatGroupDetails(groupId, user.id);
-      const messagesPromise = skipMessageReload
-        ? null
-        : chatMessageService.getChatMessages(groupId, user.id, { limit: 50, offset: 0 });
 
-      // Load group details
-      const { data: groupData, error: groupError } = await groupDetailsPromise;
-      if (selectVersion.current !== version) return;
-      if (groupError) {
-        logger.error('ChatContext', 'Failed to load group details', groupError);
-      }
-      if (groupData) {
-        setCurrentGroup(groupData);
+      // אסטרטגיית fetch: לא טוענים היסטוריה מלאה.
+      // - יש קאש + last_read בתוכו / אין unread → רק הודעות חדשות מאז הקאש (delta)
+      // - יש unread ו-last_read מחוץ לקאש → חלון מוגבל סביב last_read
+      // - אין קאש → חלון אחרון קטן (עם תקרה גם אם unread ענק)
+      type FetchMode = 'skip' | 'delta' | 'around' | 'fresh';
+      let fetchMode: FetchMode = 'skip';
+      const cachedSnapshot = skipMessageReload ? [] : readGroupMessagesCache(groupId);
+      const cachedForFetch = skipMessageReload
+        ? []
+        : cachedSnapshot.length > 0
+          ? cachedSnapshot
+          : messagesRef.current;
+      const newestCached = getNewestPersistedCursor(cachedForFetch);
+      const lastReadInCache = messageIdInCache(
+        cachedForFetch,
+        unreadMeta.lastReadMessageId,
+      );
+      const unreadCount = unreadMeta.count || 0;
 
-        if (!skipMessageReload) {
-          savedUnreadCount = groupData.unread_count || 0;
-          savedLastReadMessageId = groupData.last_read_message_id || null;
+      let messagesPromise: Promise<{
+        messages: ChatMessage[];
+        has_more: boolean;
+        mode: FetchMode;
+      } | null> | null = null;
 
-          if (savedUnreadCount > 0) {
-            setInitialUnreadInfo({
-              count: savedUnreadCount,
-              lastReadMessageId: savedLastReadMessageId,
-            });
-          }
-        }
-      }
-
-      if (!skipMessageReload && messagesPromise) {
-        const { data: messagesData } = await messagesPromise;
-
-        if (selectVersion.current !== version) return;
-        if (messagesData) {
-        // מיזוג הודעות אופטימיסטיות – התאמה אחד-לאחד (מונע איבוד הודעות שנשלחו במקביל)
-        const usedApiIndices = new Set();
-        const stillPending = optimisticsToKeep.filter((opt) => {
-          const optTime = new Date(opt.created_at).getTime();
-          const matchIdx = messagesData.messages.findIndex((api, idx) => {
-            if (usedApiIndices.has(idx)) return false;
-            if (api.sender_id !== user.id) return false;
-            if (Math.abs(new Date(api.created_at).getTime() - optTime) >= 15000) return false;
-            const contentMatch = api.content === opt.content;
-            const emptyContent = !(api.content || '').trim() && !(opt.content || '').trim();
-            const typeMatch = api.message_type === opt.message_type && emptyContent;
-            return contentMatch || typeMatch;
-          });
-          if (matchIdx !== -1) {
-            usedApiIndices.add(matchIdx);
-            return false;
-          }
-          return true;
-        });
-        const merged = stillPending.length > 0 ? [...stillPending, ...messagesData.messages] : messagesData.messages;
-
-        setMessages(merged);
-        messagesOffset.current = merged.length;
-        hasMoreMessages.current = messagesData.has_more;
-        warmChatMediaCache(merged);
-
-        // שמירת ה-batch הראשון ל-cache לכניסה אופטימית מהירה בפעם הבאה.
-        // שומרים רק הודעות אמיתיות (לא אופטימיות temp-) כדי לא לזרוע מצב שליחה.
-        const persistable = merged.filter((m) => !m.id.startsWith('temp-'));
-        queryClient.setQueryData(appQueryKeys.chatMessages(groupId), persistable);
-
-        // ✅ ספירה אמיתית של הודעות לא נקראות (לא סומכים על unread_count מהשרת)
-        if (savedLastReadMessageId && messagesData.messages.length > 0) {
-          const lastReadIndex = messagesData.messages.findIndex(m => m.id === savedLastReadMessageId);
-          if (lastReadIndex !== -1) {
-            // ספירת הודעות שנוצרו אחרי ההודעה האחרונה שנקראה (ולא שלי)
-            const actualUnreadCount = messagesData.messages
-              .slice(0, lastReadIndex) // הודעות אחרי lastReadMessageId (FlatList inverted)
-              .filter(m => m.sender_id !== user.id) // לא הודעות שלי
-              .length;
-            
-            if (actualUnreadCount > 0 && actualUnreadCount !== savedUnreadCount) {
-              logger.debug('ChatContext', `Correcting unread count: server=${savedUnreadCount}, actual=${actualUnreadCount}`);
-              setInitialUnreadInfo({
-                count: actualUnreadCount,
-                lastReadMessageId: savedLastReadMessageId,
-              });
+      if (skipMessageReload) {
+        fetchMode = 'skip';
+        messagesPromise = null;
+      } else if (
+        newestCached &&
+        cachedForFetch.length > 0 &&
+        (unreadCount === 0 || lastReadInCache || !unreadMeta.lastReadMessageId)
+      ) {
+        fetchMode = 'delta';
+        // lean: בלי reactions/starred/reads/reply enrichment — חוסך 4 שאילתות לכל עמוד.
+        // קריטי כשיש catch-up אחרי יום "חופר" (מאות הודעות); UI מתעשר ברקע/realtime.
+        // אם הפער גדול מ-CHAT_DELTA_MAX — ה-delta לבד מחזיר את *תחילת* הפער (ישן),
+        // לא את הטיפ העדכני. לכן ממזגים גם חלון אחרון (tip) כדי שהמסך לא יישאר על הודעות מיושנות.
+        messagesPromise = chatMessageService
+          .fetchMessagesSince(groupId, user.id, newestCached.created_at, {
+            pageSize: CHAT_DELTA_PAGE,
+            maxTotal: CHAT_DELTA_MAX,
+            lean: true,
+          })
+          .then(async ({ data, error, has_more }) => {
+            if (error) {
+              logger.warn('ChatContext', 'selectGroup delta fetch failed', error);
+              return null;
             }
-          }
+            let messages = data ?? [];
+            if (has_more) {
+              const tipRes = await chatMessageService.getChatMessages(
+                groupId,
+                user.id,
+                { limit: CHAT_OPEN_WINDOW_DEFAULT, offset: 0 },
+                undefined,
+                { lean: true },
+              );
+              if (tipRes.data?.messages?.length) {
+                messages = mergeChatMessages(tipRes.data.messages, messages);
+              }
+            }
+            return { messages, has_more, mode: 'delta' as const };
+          });
+      } else if (unreadCount > 0 && unreadMeta.lastReadMessageId && !lastReadInCache) {
+        // אם ה-unread נכנס בחלון מוגבל של ההודעות האחרונות — מספיק fresh (tip + divider).
+        // אחרת: around ל-last_read + tip אחרון (בלי למשוך אלפי הודעות).
+        const fitsInLatestWindow = unreadCount + 15 <= CHAT_OPEN_WINDOW_MAX;
+        if (fitsInLatestWindow) {
+          fetchMode = 'fresh';
+          messagesPromise = chatMessageService
+            .getChatMessages(
+              groupId,
+              user.id,
+              {
+                limit: Math.min(CHAT_OPEN_WINDOW_MAX, unreadCount + 15),
+                offset: 0,
+              },
+              undefined,
+              { lean: true },
+            )
+            .then((res) =>
+              res.data
+                ? {
+                    messages: res.data.messages,
+                    has_more: res.data.has_more,
+                    mode: 'fresh' as const,
+                  }
+                : null,
+            );
+        } else {
+          fetchMode = 'around';
+          messagesPromise = Promise.all([
+            chatMessageService.fetchMessagesAround(
+              groupId,
+              user.id,
+              unreadMeta.lastReadMessageId,
+              { before: CHAT_AROUND_BEFORE, after: CHAT_AROUND_AFTER, lean: true },
+            ),
+            chatMessageService.getChatMessages(
+              groupId,
+              user.id,
+              {
+                limit: CHAT_OPEN_WINDOW_DEFAULT,
+                offset: 0,
+              },
+              undefined,
+              { lean: true },
+            ),
+          ]).then(([aroundRes, tipRes]) => {
+            const merged = mergeChatMessages(
+              aroundRes.data,
+              tipRes.data?.messages,
+            );
+            if (!merged.length) {
+              logger.warn('ChatContext', 'selectGroup around+tip fetch empty', aroundRes.error);
+              return null;
+            }
+            return { messages: merged, has_more: true, mode: 'around' as const };
+          });
+        }
+      } else {
+        fetchMode = 'fresh';
+        const initialLimit = Math.min(
+          CHAT_OPEN_WINDOW_MAX,
+          Math.max(CHAT_OPEN_WINDOW_DEFAULT, unreadCount > 0 ? unreadCount + 15 : CHAT_OPEN_WINDOW_DEFAULT),
+        );
+        messagesPromise = chatMessageService
+          .getChatMessages(
+            groupId,
+            user.id,
+            { limit: initialLimit, offset: 0 },
+            undefined,
+            { lean: true },
+          )
+          .then((res) =>
+            res.data
+              ? {
+                  messages: res.data.messages,
+                  has_more: res.data.has_more,
+                  mode: 'fresh' as const,
+                }
+              : null,
+          );
+      }
+
+      logger.debug(
+        'ChatContext',
+        `selectGroup:fetch groupId=${groupId} mode=${fetchMode} cached=${cachedForFetch.length} cachedUnread=${unreadCount} lastReadId=${unreadMeta.lastReadMessageId ?? 'null'} lastReadInCache=${lastReadInCache}`,
+      );
+
+      void groupDetailsPromise.then((groupResult) => {
+        if (selectVersion.current !== version) return;
+        const { data: groupData, error: groupError } = groupResult;
+        if (groupError) {
+          logger.error('ChatContext', 'Failed to load group details', groupError);
+          return;
+        }
+        if (!groupData) return;
+
+        const detailsAlreadyRead = sessionReadConfirmedRef.current.has(groupId);
+        setCurrentGroup(
+          detailsAlreadyRead
+            ? { ...groupData, unread_count: 0, mentioned_count: 0 }
+            : groupData,
+        );
+
+        if (skipMessageReload) return;
+
+        // Stale details that raced after confirm-read must not bring the badge back
+        if (detailsAlreadyRead) {
+          unreadMeta.ready = true;
+          unreadMeta.count = 0;
+          unreadMeta.lastReadMessageId = groupData.last_read_message_id || null;
+          setInitialUnreadInfo({
+            count: 0,
+            lastReadMessageId: unreadMeta.lastReadMessageId,
+          });
+          setGroups((prev) =>
+            prev.map((g) =>
+              g.id === groupId ? { ...g, unread_count: 0, mentioned_count: 0 } : g,
+            ),
+          );
+          markReadIfNeeded(
+            messagesRef.current.find((m) => !m.id.startsWith('temp-'))?.id,
+          );
+          return;
         }
 
-        // בלי unread — סימון מיידי; עם unread — רק אחרי גלילה לתחתית (confirmChatReadAtBottom)
-        if (messagesData.messages.length > 0 && savedUnreadCount === 0) {
-          const newestMessageId = messagesData.messages[0].id;
-          await chatMessageService.markChatAsRead(groupId, user.id, newestMessageId);
+        unreadMeta.ready = true;
+        unreadMeta.count = groupData.unread_count || 0;
+        unreadMeta.lastReadMessageId = groupData.last_read_message_id || null;
+
+        logger.debug(
+          'ChatContext',
+          `setInitialUnreadInfo source=group-details groupId=${groupId} count=${unreadMeta.count} lastReadId=${unreadMeta.lastReadMessageId ?? 'null'}`,
+        );
+        setInitialUnreadInfo({
+          count: unreadMeta.count,
+          lastReadMessageId: unreadMeta.lastReadMessageId,
+        });
+        if (unreadMeta.count === 0) {
           setGroups((prev) =>
             prev.map((g) =>
               g.id === groupId ? { ...g, unread_count: 0, mentioned_count: 0 } : g,
             ),
           );
         }
+
+        applyUnreadCorrection(messagesRef.current);
+        const newest = messagesRef.current.find((m) => !m.id.startsWith('temp-'));
+        markReadIfNeeded(newest?.id);
+      });
+
+      if (!skipMessageReload && messagesPromise) {
+        const fetchResult = await messagesPromise;
+
+        if (selectVersion.current !== version) return;
+        if (fetchResult) {
+          const apiMessages = fetchResult.messages;
+          const mode = fetchResult.mode;
+          const usedApiIndices = new Set<number>();
+          const stillPending = optimisticsToKeep.filter((opt) => {
+            const optTime = new Date(opt.created_at).getTime();
+            const matchIdx = apiMessages.findIndex((api, idx) => {
+              if (usedApiIndices.has(idx)) return false;
+              if (api.sender_id !== user.id) return false;
+              if (Math.abs(new Date(api.created_at).getTime() - optTime) >= 15000) return false;
+              const contentMatch = api.content === opt.content;
+              const emptyContent = !(api.content || '').trim() && !(opt.content || '').trim();
+              const typeMatch = api.message_type === opt.message_type && emptyContent;
+              return contentMatch || typeMatch;
+            });
+            if (matchIdx !== -1) {
+              usedApiIndices.add(matchIdx);
+              return false;
+            }
+            return true;
+          });
+
+          // delta/around: ממזגים עם קאש קיים. fresh: מחליפים (או ממזגים אם כבר זרענו מקאש).
+          const baseForMerge =
+            mode === 'fresh' && cachedForFetch.length === 0
+              ? []
+              : (messagesRef.current.length > 0 ? messagesRef.current : cachedForFetch);
+
+          if (mode === 'delta' && apiMessages.length === 0) {
+            // אין חדשות — משאירים קאש, רק סוגרים טעינה (+ השלמת שולחים חסרים)
+            setIsLoadingMessages(false);
+            hasMoreMessages.current = true;
+            const newest = getNewestPersistedCursor(messagesRef.current);
+            markReadIfNeeded(newest?.id);
+            hydrateMissingSenders(groupId, version, messagesRef.current);
+          } else {
+            const merged = capChatMessages(
+              mergeChatMessages(stillPending, apiMessages, baseForMerge),
+              CHAT_MESSAGES_MEMORY_CAP,
+            );
+
+            setMessages(merged);
+            messagesOffset.current = merged.length;
+            hasMoreMessages.current = mode === 'fresh' ? fetchResult.has_more : true;
+            setIsLoadingMessages(false);
+            warmChatMediaCache(mode === 'delta' ? apiMessages : merged);
+            writeGroupMessagesCache(groupId, merged, user.id);
+            hydrateMissingSenders(groupId, version, merged);
+
+            try {
+              const requiredUnread = unreadMeta.count || 0;
+              const lastReadIdxLog = unreadMeta.lastReadMessageId
+                ? merged.findIndex((m) => m.id === unreadMeta.lastReadMessageId)
+                : -1;
+              const unreadInWindow = lastReadIdxLog === -1 ? 0 : lastReadIdxLog;
+              logger.debug(
+                'ChatContext',
+                `messagesLoaded groupId=${groupId} mode=${mode} fetched=${apiMessages.length} total=${merged.length} unreadInWindow=${unreadInWindow} requiredUnread=${requiredUnread} lastReadIdxInWindow=${lastReadIdxLog}`,
+              );
+            } catch {
+              /* ignore */
+            }
+
+            applyUnreadCorrection(merged);
+            markReadIfNeeded(merged.find((m) => !m.id.startsWith('temp-'))?.id);
+          }
+        } else {
+          setIsLoadingMessages(false);
         }
       }
 
-      if (selectVersion.current !== version) return; // C2: stale call, abort before subscribing
+      if (selectVersion.current !== version) return;
 
       if (skipMessageReload && groupAlreadySubscribed) {
         chatRealtimeService.startTypingCleanup();
+        lastSelectCompletedRef.current = { groupId, at: Date.now() };
         return;
       }
 
@@ -698,27 +1195,43 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           if (eventType === 'INSERT') {
             await ingestIncomingInsertRef.current(message);
           } else if (eventType === 'UPDATE') {
-            // Updated message - מילוי reply_to אם יש
-            let enrichedMessage = message;
-            if (message.reply_to_message_id && !message.reply_to) {
-              const replyTo = await fetchReplyToData(message.reply_to_message_id);
+            // postgres_changes UPDATE מגיע בלי join ל-users — אסור לדרוס sender קיים
+            // (read_by_count / reactions_count גורמים ל-UPDATE תכופים).
+            const existing = messagesRef.current.find((m) => m.id === message.id);
+            let enrichedMessage: ChatMessage = {
+              ...message,
+              sender: chatRealtimeService.hasUsableSender(message.sender)
+                ? chatRealtimeService.normalizeChatSender(message.sender)
+                : existing?.sender,
+              reply_to: message.reply_to || existing?.reply_to,
+            };
+
+            if (enrichedMessage.reply_to_message_id && !enrichedMessage.reply_to) {
+              const replyTo = await fetchReplyToData(enrichedMessage.reply_to_message_id);
               if (replyTo) {
-                enrichedMessage = { ...message, reply_to: replyTo };
+                enrichedMessage = { ...enrichedMessage, reply_to: replyTo };
               }
             }
+            if (!chatRealtimeService.hasUsableSender(enrichedMessage.sender)) {
+              enrichedMessage =
+                await chatRealtimeService.enrichChatMessageSender(enrichedMessage);
+            }
 
-            // עדכון ההודעה אבל שמירה על הריאקציות המקומיות (optimistic)
-            setMessages(prev => prev.map(m => {
-              if (m.id === enrichedMessage.id) {
-                // שמור על הריאקציות המקומיות - הן עודכנו אופטימיסטית
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id !== enrichedMessage.id) return m;
                 return {
                   ...enrichedMessage,
                   reactions: m.reactions,
-                  reactions_count: m.reactions_count,
+                  reactions_count:
+                    enrichedMessage.reactions_count ?? m.reactions_count,
+                  reply_to: enrichedMessage.reply_to || m.reply_to,
+                  sender: chatRealtimeService.hasUsableSender(enrichedMessage.sender)
+                    ? enrichedMessage.sender
+                    : m.sender,
                 };
-              }
-              return m;
-            }));
+              }),
+            );
           } else if (eventType === 'DELETE') {
             // Deleted message
             setMessages(prev => prev.filter(m => m.id !== message.id));
@@ -755,10 +1268,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           );
         },
         onTyping: (indicators) => {
-          setTypingUsers(indicators.map(i => ({
-            ...i,
-            userName: i.user?.display_name
-          })));
+          applyTypingIndicators(indicators as ChatTypingIndicator[]);
         },
         onMember: (_data, _eventType) => {
           if (memberDetailsRefreshTimerRef.current) {
@@ -795,20 +1305,33 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           setCurrentGroup(prev => prev ? { ...prev, ...data } : prev);
         },
       };
-      resubscribeActiveGroupRef.current = () => {
+      resubscribeActiveGroupRef.current = async () => {
         const gid = currentGroupId.current;
-        if (!user || !gid) return;
+        const uid = userRef.current?.id;
+        if (!uid || !gid) return;
+        // רק אם הערוץ מת — לא לפרק subscription בריא (מונע CLOSED thrash)
+        if (chatRealtimeService.isGroupRealtimeSubscribed(gid)) {
+          // רענון listeners בלבד (subscribeToGroup early-return מעדכן את ה-map)
+          await chatRealtimeService.subscribeToGroup(gid, uid, groupRealtimeListeners);
+          return;
+        }
         chatRealtimeService.clearFailedChannel(gid);
-        chatRealtimeService.unsubscribeFromGroup(gid);
-        void chatRealtimeService.subscribeToGroup(gid, user.id, groupRealtimeListeners);
+        await chatRealtimeService.unsubscribeFromGroup(gid);
+        await chatRealtimeService.subscribeToGroup(gid, uid, groupRealtimeListeners);
       };
       void chatRealtimeService.subscribeToGroup(groupId, user.id, groupRealtimeListeners);
+      if (selectVersion.current === version) {
+        lastSelectCompletedRef.current = { groupId, at: Date.now() };
+      }
     } catch (error) {
       logger.error('ChatContext', 'Error selecting group', error);
     } finally {
+      if (selectInFlightRef.current === groupId) {
+        selectInFlightRef.current = null;
+      }
       setIsLoadingMessages(false);
     }
-  }, [user]);
+  }, [user?.id, startGroupViewing, stopGroupViewing, hydrateMissingSenders]);
 
   const refreshCurrentGroupDetails = useCallback(async () => {
     if (!user || !currentGroupId.current) return;
@@ -831,6 +1354,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               members_count: data.members_count,
               messages_count: data.messages_count,
               updated_at: data.updated_at,
+              is_muted: data.is_muted,
             }
           : g
       )
@@ -841,8 +1365,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   // Load more messages
   // ============================================
 
-  const MAX_MESSAGES_IN_MEMORY = 500;
-
   const loadMoreMessages = useCallback(async () => {
     // C4: ref-based lock prevents concurrent calls (state updates are async)
     if (!user || !currentGroupId.current || !hasMoreMessages.current || isLoadingMoreRef.current) {
@@ -850,7 +1372,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Hard memory cap — stop loading history when we have enough in RAM
-    if (messagesRef.current.length >= MAX_MESSAGES_IN_MEMORY) {
+    if (messagesRef.current.length >= CHAT_MESSAGES_MEMORY_CAP) {
       hasMoreMessages.current = false;
       return;
     }
@@ -873,18 +1395,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         warmChatMediaCache(newMessages);
 
         setMessages(prev => {
-          const prevIds = new Set(prev.map(m => m.id));
-          const toAppend = data.messages.filter(m => !prevIds.has(m.id));
-          const combined = [...prev, ...toAppend];
-          // C4: sliding window – trim oldest messages (end of array) when history grows too large.
-          // In inverted FlatList index 0 = newest, so slice from the start keeps the newest.
-          // Never trim while there are in-flight optimistic messages.
-          if (combined.length > MAX_MESSAGES_IN_MEMORY) {
-            const hasPendingOptimistic = combined.some(m => m.id.startsWith('temp-') && (m.is_sending || m.is_uploading));
-            if (hasPendingOptimistic) return combined;
-            return combined.slice(0, MAX_MESSAGES_IN_MEMORY);
-          }
-          return combined;
+          const combined = mergeChatMessages(prev, data.messages);
+          return capChatMessages(combined, CHAT_MESSAGES_MEMORY_CAP);
         });
         hasMoreMessages.current = data.has_more;
         logger.info(
@@ -917,59 +1429,26 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     isLoadingAroundRef.current = true;
 
     try {
-      // L5: cursor-based – מצא את created_at של ההודעה ואז טען 50 לפני ו-50 אחרי
-      const { data: anchor, error: anchorError } = await supabase
-        .from('chat_messages')
-        .select('created_at')
-        .eq('id', messageId)
-        .eq('group_id', currentGroupId.current)
-        .single();
-
-      if (anchorError || !anchor) {
-        return { success: false, error: 'הודעה לא נמצאה' };
-      }
-
-      const anchorTs = anchor.created_at;
-
-      // שאילתה A: הודעות ישנות יותר (כולל ה-anchor עצמה)
-      const olderPromise = chatMessageService.getChatMessages(
+      const { data: combined, error } = await chatMessageService.fetchMessagesAround(
         currentGroupId.current,
         user.id,
-        { limit: 50, before: new Date(new Date(anchorTs).getTime() + 1).toISOString() }
+        messageId,
+        { before: 50, after: 50 },
       );
 
-      // שאילתה B: הודעות חדשות יותר
-      const newerPromise = chatMessageService.getChatMessages(
-        currentGroupId.current,
-        user.id,
-        { limit: 50, after: anchorTs }
-      );
-
-      const [{ data: older }, { data: newer }] = await Promise.all([olderPromise, newerPromise]);
-
-      const combined = [
-        ...(newer?.messages || []),
-        ...(older?.messages || []),
-      ];
-
-      if (combined.length > 0) {
-        const byId = new Map<string, ChatMessage>();
-        for (const m of [...messagesRef.current, ...combined]) {
-          byId.set(m.id, m);
-        }
-        const all = Array.from(byId.values()).sort((a, b) => {
-          const dt = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          if (dt !== 0) return dt;
-          return b.id < a.id ? -1 : b.id > a.id ? 1 : 0;
-        });
-
-        setMessages(all);
-        messagesOffset.current = all.length;
-        warmChatMediaCache(combined);
-        return { success: true };
+      if (error || !combined?.length) {
+        return { success: false, error: error?.message || 'לא נמצאו הודעות' };
       }
 
-      return { success: false, error: 'לא נמצאו הודעות' };
+      const all = capChatMessages(
+        mergeChatMessages(messagesRef.current, combined),
+        CHAT_MESSAGES_MEMORY_CAP,
+      );
+      setMessages(all);
+      messagesOffset.current = all.length;
+      warmChatMediaCache(combined);
+      writeGroupMessagesCache(currentGroupId.current, all, user.id);
+      return { success: true };
     } catch (error: any) {
       logger.error('ChatContext', 'Error loading messages around', error);
       return { success: false, error: error.message };
@@ -1046,10 +1525,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Clear current group using the ref (always up-to-date) instead of state
       if (currentGroupId.current === groupId) {
+        stopGroupViewing(groupId);
         currentGroupId.current = null;
         setCurrentGroup(null);
         setMessages([]);
-        setTypingUsers([]);
+        clearTypingIndicators();
       }
 
       return { success: true };
@@ -1057,7 +1537,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     logger.error('ChatContext', 'leaveGroup failed', error);
     return { success: false, error: error.message };
-  }, [user]);
+  }, [user, stopGroupViewing, clearTypingIndicators]);
 
   // ============================================
   // Send message
@@ -1123,8 +1603,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       read_by_count: 0,
       sender: {
         id: user.id,
-        display_name: user.display_name || 'אני',
-        profile_picture: user.profile_picture,
+        display_name: user?.display_name || 'אני',
+        profile_picture: user?.profile_picture,
         is_online: true,
       },
       is_sending: true,
@@ -1204,6 +1684,12 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               ...g,
               last_message_at: data.created_at,
               last_message_preview: getChatMessagePreview(data.message_type, data.content),
+              last_message_sender_name:
+                data.sender?.display_name ||
+                user?.display_name ||
+                user?.full_name ||
+                'משתמש',
+              last_message_type: data.message_type,
               messages_count: g.messages_count + 1,
             }
             : g
@@ -1335,18 +1821,32 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     const actor = {
       id: user.id,
-      name: user.display_name || 'אני',
-      profile_picture: user.profile_picture,
+      name: user?.display_name || 'אני',
+      profile_picture: user?.profile_picture,
     };
 
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== messageId) return m;
+    // Realtime מתעלם מריאקציות שלי — ה-UI תלוי בעדכון אופטימיסטי.
+    // אם ההודעה עדיין רק ב-cache (טרם selectGroup), ממזגים אותה ל-state.
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === messageId);
+      if (idx >= 0) {
+        const m = prev[idx];
         const reactions = applyReactionInsert(m.reactions, emoji, actor, { isActorMe: true });
-        if (reactions === m.reactions) return m;
-        return { ...m, reactions, reactions_count: totalReactionCount(reactions) };
-      }),
-    );
+        if (reactions === m.reactions) return prev;
+        const next = prev.slice();
+        next[idx] = { ...m, reactions, reactions_count: totalReactionCount(reactions) };
+        return next;
+      }
+      const gid = currentGroupId.current;
+      const cached = gid ? readGroupMessagesCache(gid) : [];
+      const source = cached.find((m) => m.id === messageId);
+      if (!source) return prev;
+      const reactions = applyReactionInsert(source.reactions, emoji, actor, { isActorMe: true });
+      return mergeChatMessages(
+        [{ ...source, reactions, reactions_count: totalReactionCount(reactions) }],
+        prev,
+      );
+    });
 
     const { error } = await chatMessageService.addReaction({ message_id: messageId, emoji }, user.id);
     if (error) {
@@ -1364,21 +1864,33 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const removeReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user || isOptimisticChatMessageId(messageId)) return;
 
-    setMessages((prev) =>
-      prev.map((m) => {
-        if (m.id !== messageId) return m;
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === messageId);
+      if (idx >= 0) {
+        const m = prev[idx];
         const reactions = applyReactionRemove(m.reactions, emoji, user.id, user.id);
-        if (reactions === m.reactions) return m;
-        return { ...m, reactions, reactions_count: totalReactionCount(reactions) };
-      }),
-    );
+        if (reactions === m.reactions) return prev;
+        const next = prev.slice();
+        next[idx] = { ...m, reactions, reactions_count: totalReactionCount(reactions) };
+        return next;
+      }
+      const gid = currentGroupId.current;
+      const cached = gid ? readGroupMessagesCache(gid) : [];
+      const source = cached.find((m) => m.id === messageId);
+      if (!source) return prev;
+      const reactions = applyReactionRemove(source.reactions, emoji, user.id, user.id);
+      return mergeChatMessages(
+        [{ ...source, reactions, reactions_count: totalReactionCount(reactions) }],
+        prev,
+      );
+    });
 
     const { error } = await chatMessageService.removeReaction({ message_id: messageId, emoji }, user.id);
     if (error) {
       const actor = {
         id: user.id,
-        name: user.display_name || 'אני',
-        profile_picture: user.profile_picture,
+        name: user?.display_name || 'אני',
+        profile_picture: user?.profile_picture,
       };
       setMessages((prev) =>
         prev.map((m) => {
@@ -1560,9 +2072,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       setGroups(prev => prev.filter(g => g.id !== removedGroupId));
       chatRealtimeService.unsubscribeFromGroup(removedGroupId);
       if (currentGroupId.current === removedGroupId) {
+        stopGroupViewing(removedGroupId);
         setCurrentGroup(null);
         setMessages([]);
-        setTypingUsers([]);
+        clearTypingIndicators();
         currentGroupId.current = null;
         resubscribeActiveGroupRef.current = null;
       }
@@ -1570,21 +2083,111 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     const handleGlobalNewMessage = (groupId: string, message: ChatMessage) => {
       logger.debug('ChatContext', `onNewMessage: group=${groupId} msg=${message.id}`);
-      setGroups((prev) =>
-        prev.map((g) =>
-          g.id === groupId
-            ? {
+      const viewingThisGroup = viewingGroupRef.current === groupId;
+      // הודעה חדשה כשלא צופים — לאפשר שוב badge (ביטול suppress אחרי confirm-read)
+      if (!viewingThisGroup) {
+        sessionReadConfirmedRef.current.delete(groupId);
+      }
+      // postgres_changes לא כולל join ל-users — משיגים שם שולח לפרביו ברשימה
+      void (async () => {
+        let senderName =
+          message.sender?.display_name ||
+          (message.sender as { full_name?: string } | undefined)?.full_name ||
+          '';
+        if (!senderName && message.sender_id) {
+          const enriched = await chatRealtimeService.enrichChatMessageSender(message);
+          senderName = enriched.sender?.display_name || '';
+          if (!senderName) {
+            const { data: nameRows } = await supabase.rpc('get_user_display_names', {
+              user_ids: [message.sender_id],
+            });
+            senderName =
+              (nameRows as Array<{ display_name: string }> | null)?.[0]?.display_name || '';
+          }
+        }
+        const preview = getChatMessagePreview(message.message_type, message.content);
+        setGroups((prev) => {
+          const next = prev.map((g) => {
+            if (g.id !== groupId) return g;
+            const stillViewing = viewingGroupRef.current === groupId;
+            return {
               ...g,
               last_message_at: message.created_at,
-              last_message_preview: getChatMessagePreview(message.message_type, message.content),
-            }
-            : g
-        )
-      );
-      // גיבוי: אם מנוי הקבוצה הפעילה נכשל — עדיין להציג הודעות במסך הפתוח
-      if (currentGroupId.current === groupId) {
+              last_message_preview: preview,
+              last_message_sender_name: senderName || 'משתמש',
+              last_message_type: message.message_type,
+              // אופטימי: אם עדיין אין membership UPDATE — השורה עולה עם badge
+              ...(stillViewing
+                ? {}
+                : { unread_count: (g.unread_count || 0) + 1 }),
+            };
+          });
+          if (user?.id) {
+            queryClient.setQueryData(appQueryKeys.chatGroups(user.id), next);
+          }
+          return next;
+        });
+      })();
+      // קאש per-group: גם כשהצ'אט לא פתוח — הודעת realtime נכנסת לקאש (עם sender)
+      if (!viewingThisGroup) {
+        void chatRealtimeService.enrichChatMessageSender(message).then((enriched) => {
+          appendMessageToGroupCache(groupId, enriched, user.id);
+        });
+      }
+      // רק כשבאמת צופים במסך הצ'אט — לא כש־currentGroupId נשאר sticky אחרי יציאה
+      if (viewingThisGroup) {
         void ingestIncomingInsertRef.current(message);
       }
+    };
+
+    const applyMembershipGroupPatch = (groupId: string, data: any) => {
+      setGroups((prev) => {
+        let changed = false;
+        const next = prev.map((g) => {
+          if (g.id !== groupId) return g;
+
+          const patch = { ...data } as Partial<ChatGroup>;
+          // אחרי confirm-read בזמן צפייה — לא לתת ל-realtime ישן להחזיר badge.
+          // אחרי יציאה / הודעה חדשה sessionReadConfirmed מנוקה — לא מדכאים unread לגיטימי.
+          const suppressStaleUnread =
+            sessionReadConfirmedRef.current.has(groupId) &&
+            viewingGroupRef.current === groupId &&
+            (patch.unread_count ?? 0) > 0;
+          if (suppressStaleUnread) {
+            patch.unread_count = 0;
+            patch.mentioned_count = 0;
+          }
+
+          const newUnread = patch.unread_count ?? g.unread_count;
+          const newMentioned = patch.mentioned_count ?? g.mentioned_count;
+
+          if (
+            newUnread === g.unread_count &&
+            newMentioned === g.mentioned_count &&
+            !patch.last_message_at &&
+            !patch.last_message_preview &&
+            !patch.name &&
+            !patch.avatar_url
+          ) {
+            return g;
+          }
+
+          if (
+            (newUnread || 0) > 0 &&
+            (newUnread || 0) > (g.unread_count || 0) &&
+            viewingGroupRef.current !== groupId
+          ) {
+            schedulePrefetchChatMessages(user.id, { groupIds: [groupId] });
+          }
+
+          changed = true;
+          return { ...g, ...patch };
+        });
+        if (changed && user?.id) {
+          queryClient.setQueryData(appQueryKeys.chatGroups(user.id), next);
+        }
+        return changed ? next : prev;
+      });
     };
 
     const subscribeAllGroups = () => {
@@ -1592,23 +2195,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         user.id,
         handleGlobalNewMessage,
         (groupId, data) => {
-          // עדכון קבוצות (כולל unread_count מהשרת)
           logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
-          setGroups(prev => prev.map(g => {
-            if (g.id !== groupId) return g;
-
-            const newUnread = data.unread_count ?? g.unread_count;
-            const newMentioned = data.mentioned_count ?? g.mentioned_count;
-
-            // אם אין שינוי אמיתי, לא מעדכנים
-            if (newUnread === g.unread_count &&
-                newMentioned === g.mentioned_count &&
-                !data.last_message_at && !data.name && !data.avatar_url) {
-              return g;
-            }
-
-            return { ...g, ...data };
-          }));
+          applyMembershipGroupPatch(groupId, data);
         },
         handleMembershipRemoved
       );
@@ -1631,37 +2219,55 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       if (nextState.match(/inactive|background/)) {
         chatRealtimeService.updateOnlineStatus(user.id, false);
+        if (viewingGroupRef.current) {
+          void chatMessageService.setChatGroupViewing(viewingGroupRef.current, false);
+        }
         return;
       }
 
       if (prevState.match(/inactive|background/) && nextState === 'active') {
         chatRealtimeService.updateOnlineStatus(user.id, true);
+        if (viewingGroupRef.current) {
+          void chatMessageService.setChatGroupViewing(viewingGroupRef.current, true);
+        }
 
         if (reconnectTimer) clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(() => {
           reconnectTimer = null;
-          chatRealtimeService.clearFailedChannels();
-          void chatRealtimeService.subscribeToAllUserGroups(
-            user.id,
-            handleGlobalNewMessage,
-            (groupId, data) => {
-              logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
-              setGroups(prev => prev.map(g => {
-                if (g.id !== groupId) return g;
-                const newUnread = data.unread_count ?? g.unread_count;
-                const newMentioned = data.mentioned_count ?? g.mentioned_count;
-                if (newUnread === g.unread_count &&
-                    newMentioned === g.mentioned_count &&
-                    !data.last_message_at && !data.name && !data.avatar_url) {
-                  return g;
-                }
-                return { ...g, ...data };
-              }));
-            },
-            handleMembershipRemoved,
-            { force: true }
-          );
-          resubscribeActiveGroupRef.current?.();
+          // setAuth רק אם הטוקן באמת השתנה — אחרת socket closed → CLOSED thrash
+          void chatRealtimeService.ensureRealtimeAuth().then(() => {
+            const membershipOk = chatRealtimeService.isMembershipRealtimeHealthy(user.id);
+            if (Platform.OS === 'android') {
+              logger.debug(
+                'ChatContext',
+                `[ChatRealtime][Android] AppState active membershipOk=${membershipOk}`,
+              );
+            }
+            if (!membershipOk) {
+              chatRealtimeService.clearFailedChannels();
+              void chatRealtimeService.subscribeToAllUserGroups(
+                user.id,
+                handleGlobalNewMessage,
+                (groupId, data) => {
+                  logger.debug('ChatContext', `onGroupUpdate: group=${groupId}`);
+                  applyMembershipGroupPatch(groupId, data);
+                },
+                handleMembershipRemoved,
+                { force: true }
+              );
+            } else {
+              // רענון callbacks בלי teardown
+              void chatRealtimeService.subscribeToAllUserGroups(
+                user.id,
+                handleGlobalNewMessage,
+                (groupId, data) => {
+                  applyMembershipGroupPatch(groupId, data);
+                },
+                handleMembershipRemoved,
+              );
+            }
+            void resubscribeActiveGroupRef.current?.();
+          });
         }, 800);
       }
     });
@@ -1670,18 +2276,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       clearInterval(presenceHeartbeat);
       appStateSub.remove();
-      chatRealtimeService.updateOnlineStatus(user.id, false);
+      // קודם ערוצים — בלי UPDATE ל-users ב-logout (אין סשן → RLS / noise ב-Sentry)
+      stopGroupViewing(viewingGroupRef.current);
       chatRealtimeService.stopTypingCleanup();
       chatRealtimeService.unsubscribeAll();
       chatRealtimeService.onConnectionStatusChange(null);
       setRealtimeConnectionState('connecting');
       resubscribeActiveGroupRef.current = null;
     };
-  }, [user?.id]);
+  }, [user?.id, stopGroupViewing]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      stopGroupViewing(viewingGroupRef.current);
       if (currentGroupId.current) {
         chatRealtimeService.unsubscribeFromGroup(currentGroupId.current);
       }
@@ -1694,7 +2302,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
       pendingReadRef.current = null;
     };
-  }, []);
+  }, [stopGroupViewing]);
 
   // ============================================
   // Optimistic Media Functions
@@ -1874,6 +2482,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setTyping,
     markAsRead,
     confirmChatReadAtBottom,
+    leaveChatScreen,
     isConnected,
     realtimeConnectionState,
     totalUnreadCount,
@@ -1889,6 +2498,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     sendMessage, loadMoreMessages, loadMessagesAround, editMessage,
     deleteMessage, forwardMessage, addReaction, removeReaction,
     starMessage, unstarMessage, setTyping, markAsRead, confirmChatReadAtBottom,
+    leaveChatScreen,
     addOptimisticMediaMessage, updateOptimisticMessage, removeOptimisticMessage, retrySendMessage,
   ]);
 
@@ -1913,6 +2523,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setTyping,
     markAsRead,
     confirmChatReadAtBottom,
+    leaveChatScreen,
     addOptimisticMediaMessage,
     updateOptimisticMessage,
     removeOptimisticMessage,
@@ -1939,6 +2550,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setTyping: (...args) => actionsRef.current.setTyping(...args),
     markAsRead: (...args) => actionsRef.current.markAsRead(...args),
     confirmChatReadAtBottom: (...args) => actionsRef.current.confirmChatReadAtBottom(...args),
+    leaveChatScreen: (...args) => actionsRef.current.leaveChatScreen(...args),
     addOptimisticMediaMessage: (...args) => actionsRef.current.addOptimisticMediaMessage(...args),
     updateOptimisticMessage: (...args) => actionsRef.current.updateOptimisticMessage(...args),
     removeOptimisticMessage: (...args) => actionsRef.current.removeOptimisticMessage(...args),

@@ -11,9 +11,9 @@ export function getAppVersionLabel(): string {
 }
 
 export const APP_LINKS = {
-  website: 'https://darkpool.co.il',
-  privacy: 'https://darkpool.co.il/privacy',
-  terms: 'https://darkpool.co.il/terms',
+  website: 'https://darkpool.site',
+  privacy: 'https://darkpool.site/privacy',
+  terms: 'https://darkpool.site/terms',
   supportEmail: 'support@darkpool.co.il',
   feedbackForm: 'https://forms.gle/darkpool-feedback',
   iosAppStore: 'https://apps.apple.com/app/id6755930835',

@@ -129,6 +129,7 @@ export async function getChatGroups(
         group_id,
         role,
         muted,
+        is_muted,
         unread_count,
         mentioned_count,
         last_read_message_id,
@@ -159,7 +160,7 @@ export async function getChatGroups(
       ...item.chat_groups,
       unread_count: item.unread_count || 0,
       mentioned_count: item.mentioned_count || 0,
-      is_muted: item.muted,
+      is_muted: !!(item.muted || item.is_muted),
       my_role: item.role,
       last_read_message_id: item.last_read_message_id,
     }));
@@ -204,12 +205,11 @@ export async function getChatGroupDetails(
       .from('chat_group_members')
       .select(`
         *,
-        user:users (
+        user:v_public_profiles (
           id,
           display_name,
           full_name,
           profile_picture,
-          email,
           is_online,
           last_active
         )
@@ -234,7 +234,7 @@ export async function getChatGroupDetails(
       is_admin: isAdmin,
       unread_count: myMembership?.unread_count || 0,
       mentioned_count: myMembership?.mentioned_count || 0,
-      is_muted: myMembership?.muted || false,
+      is_muted: !!(myMembership?.muted || myMembership?.is_muted),
       my_role: myMembership?.role as ChatMemberRole,
       last_read_message_id: myMembership?.last_read_message_id || null,
     };
@@ -466,15 +466,36 @@ export async function removeGroupMember(
       }
     }
 
-    const { error } = await supabase
+    // לא משתמשים ב-`.select()` אחרי DELETE: PostgREST עושה RETURNING, ואז
+    // SELECT RLS נבדק על השורה — אחרי המחיקה `is_user_member_of_group` נכשל
+    // והתוצאה נראית כ־0 rows למרות שה-DELETE הצליח. `count: 'exact'` סופר
+    // לפי שורות שה-DELETE (USING) נגע בהן, בלי RETURNING.
+    const { error, count } = await supabase
       .from('chat_group_members')
-      .delete()
+      .delete({ count: 'exact' })
       .eq('group_id', groupId)
       .eq('user_id', userIdToRemove);
 
     if (error) {
       logger.error('ChatGroup', 'Error removing member', error);
       return { error: { code: 'REMOVE_MEMBER_ERROR', message: error.message } };
+    }
+
+    if (!count || count === 0) {
+      logger.error('ChatGroup', 'removeGroupMember affected 0 rows (likely RLS)', {
+        groupId,
+        userIdToRemove,
+        removedBy,
+        isSelf,
+      });
+      return {
+        error: {
+          code: 'REMOVE_MEMBER_NO_ROWS',
+          message: isSelf
+            ? 'לא ניתן לעזוב את הקבוצה כרגע (הרשאות). נסה שוב מאוחר יותר.'
+            : 'לא ניתן להסיר את החבר כרגע (הרשאות).',
+        },
+      };
     }
 
     // System messages for user_left / member_removed are disabled by design.
@@ -580,12 +601,11 @@ export async function getGroupMembers(
       .from('chat_group_members')
       .select(`
         *,
-        user:users (
+        user:v_public_profiles (
           id,
           display_name,
           full_name,
           profile_picture,
-          email,
           is_online,
           last_active
         )
@@ -736,7 +756,7 @@ export async function isGroupMuted(
   try {
     const { data, error } = await supabase
       .from('chat_group_members')
-      .select('muted')
+      .select('muted, is_muted')
       .eq('group_id', groupId)
       .eq('user_id', userId)
       .single();
@@ -745,7 +765,7 @@ export async function isGroupMuted(
       return false;
     }
 
-    return data.muted === true;
+    return data.muted === true || data.is_muted === true;
   } catch (error) {
     logger.error('ChatGroup', 'Error checking group mute status', error);
     return false;

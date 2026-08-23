@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { resolveEconomicEventImportance } from '../_shared/economicEventImportance.ts'
 
 const EODHD_API_KEY = Deno.env.get('EODHD_API_KEY') ?? ''
 const EODHD_BASE_URL = 'https://eodhd.com/api'
@@ -24,11 +25,9 @@ interface EconomicEvent {
   source: string
 }
 
-function determineImportance(eventType: string): 'high' | 'medium' | 'low' {
-  const type = eventType.toLowerCase();
-  const highKeywords = ['cpi', 'pce', 'nfp', 'employment', 'unemployment', 'jobless', 'gdp', 'fomc', 'rate decision', 'ppi', 'retail sales'];
-  if (highKeywords.some(k => type.includes(k))) return 'high';
-  return 'medium';
+function determineImportance(eventType: string, translatedTitle?: string): 'high' | 'medium' | 'low' {
+  // טקסונומיית אדום/כתום; מחוץ לרשימה — low (טייר נמוך יותר)
+  return resolveEconomicEventImportance(eventType || '', 'low', translatedTitle);
 }
 
 function determineCategory(eventType: string): string {
@@ -305,12 +304,13 @@ serve(async (req) => {
             
             console.log(`📅 Event: ${originalType} → "${translatedTitle}" - Original: ${event.date} → Parsed: ${adjustedDate} ${parsedTime}`);
             
+            const importance = determineImportance(originalType, translatedTitle);
             events.push({
               id: eventId,
               title: translatedTitle, // תרגום לעברית!
               country: 'ארצות הברית',
               currency: 'USD',
-              importance: determineImportance(event.type || ''),
+              importance,
               date: adjustedDate,
               time: parsedTime,
               actual: event.actual?.toString() || '',
@@ -318,7 +318,7 @@ serve(async (req) => {
               previous: event.previous?.toString() || '',
               description: event.type || '',
               category: determineCategory(event.type || ''),
-              impact: determineImportance(event.type || ''),
+              impact: importance,
               source: 'EODHD'
             })
           } catch (error) {

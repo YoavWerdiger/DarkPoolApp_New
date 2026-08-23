@@ -12,5 +12,8 @@ export function useFearAndGreed() {
     queryKey: appQueryKeys.fearGreed,
     queryFn: () => fearAndGreedService.getFearAndGreedIndex(),
     staleTime: FEAR_GREED_STALE_MS,
+    // תמיד לרענן בכניסה למסך — מונע תקיעה על ערך ישן מ-queryPersist/AsyncStorage
+    // אחרי ש-DB כבר עודכן (cron / fear-greed-update).
+    refetchOnMount: 'always',
   });
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback, useState } from 'react';
+import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { View, StyleSheet, Text, Image, Platform, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MessageSnapshot } from '../../types/MessageSnapshot';
@@ -10,6 +10,7 @@ import {
   ChatSheetContent,
   useChatFitContentSnap,
 } from './ChatBottomSheet';
+import { SHEET_CLOSE_MS } from '../ui/BottomSheet';
 import { useDesignTokens } from '../ui/DesignTokens';
 import { chatPalette } from './chatDesignTokens';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,9 @@ import { HapticFeedback } from '../../utils/hapticFeedback';
 import { logger } from '../../utils/logger';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+
+/** הפרדה חזקה יותר רק לשיט Action של הצ׳אט (לא לכל שיטי האפליקציה). */
+const ACTION_SHEET_BACKDROP = 0.78;
 
 type ParsedTrade = {
   id: string;
@@ -70,35 +74,52 @@ export default function LongPressOverlay({
   const DesignTokens = useDesignTokens();
   const messagePreviewStyles = useMemo(() => createMessagePreviewStyles(DesignTokens), [DesignTokens]);
 
+  // שומרים את ההודעה גם כשההורה מאפס message=null יחד עם visible=false —
+  // אחרת return null מיידי תולש את ה-Modal בלי visible=false, ואז focus למקלדת נכשל.
+  const cachedMessageRef = useRef<MessageSnapshot | null>(null);
+  if (message) cachedMessageRef.current = message;
+  const displayMessage = message ?? cachedMessageRef.current;
+
+  const [keepMounted, setKeepMounted] = useState(visible);
+  useEffect(() => {
+    if (visible) {
+      setKeepMounted(true);
+      return;
+    }
+    if (!keepMounted) return;
+    const t = setTimeout(() => setKeepMounted(false), SHEET_CLOSE_MS + 60);
+    return () => clearTimeout(t);
+  }, [visible, keepMounted]);
+
   // הערכת snap ראשונית לפי תוכן (עד onLayout מדייק) — כמו ReactionDetails
   const initialSnapEstimate = useMemo(() => {
-    if (!message) return 0.35;
+    if (!displayMessage) return 0.35;
     const mainCount = 4
-      + (message.isMe && !message.id?.toString().startsWith('temp-') ? 1 : 0)
+      + (displayMessage.isMe && !displayMessage.id?.toString().startsWith('temp-') ? 1 : 0)
       + (isAdmin ? 1 : 0);
-    const dangerCount = (message.isMe ? 1 : 0) + (message.isMe || isAdmin ? 1 : 0);
-    const previewLines = message.content
-      ? Math.min(4, message.content.split('\n').length + Math.ceil(message.content.length / 40))
+    const dangerCount = (displayMessage.isMe ? 1 : 0) + (displayMessage.isMe || isAdmin ? 1 : 0);
+    const previewLines = displayMessage.content
+      ? Math.min(4, displayMessage.content.split('\n').length + Math.ceil(displayMessage.content.length / 40))
       : 0;
-    const isTrade = isTradeMessageType(message.type) || !!parseTradeFromContent(message.content);
+    const isTrade = isTradeMessageType(displayMessage.type) || !!parseTradeFromContent(displayMessage.content);
     const previewPx = isTrade
       ? 220
-      : 64 + previewLines * 20 + (message.mediaUrl ? 20 : 0);
-    const reactionPx = 52;
-    const menuRowPx = 74;
+      : 64 + previewLines * 20 + (displayMessage.mediaUrl ? 20 : 0);
+    const reactionPx = 58;
+    const menuRowPx = 80;
     const mainRows = Math.ceil(mainCount / 4);
     const dangerRows = dangerCount > 0 ? 1 : 0;
-    const menuPx = mainRows * menuRowPx + dangerRows * menuRowPx + 24;
+    const menuPx = mainRows * menuRowPx + dangerRows * menuRowPx + 28;
     const estimatedPx = previewPx + reactionPx + menuPx + 42 + Math.max(insets.bottom, 16);
     return Math.min(0.88, Math.max(0.22, estimatedPx / SCREEN_HEIGHT));
-  }, [message, isAdmin, insets.bottom]);
+  }, [displayMessage, isAdmin, insets.bottom]);
 
   // snap לפי גובה מדוד — אותו hook כמו שאר ה-sheets
   const { snapPoint, onContentLayout } = useChatFitContentSnap(
     initialSnapEstimate,
     0.92,
     0.12,
-    `${message?.id ?? ''}-${visible}-${isAdmin}`,
+    `${displayMessage?.id ?? ''}-${visible}-${isAdmin}`,
   );
 
   const sheetBottomPad = useMemo(() => {
@@ -107,19 +128,19 @@ export default function LongPressOverlay({
   }, [insets.bottom]);
 
   const currentUserReaction = useMemo(() => {
-    if (!message?.reactions || !Array.isArray(message.reactions)) return null;
-    const myReaction = message.reactions.find((r: any) =>
+    if (!displayMessage?.reactions || !Array.isArray(displayMessage.reactions)) return null;
+    const myReaction = displayMessage.reactions.find((r: any) =>
       r.reacted_by_me === true
     );
     return myReaction?.emoji || null;
-  }, [message?.reactions]);
+  }, [displayMessage?.reactions]);
 
   useEffect(() => {
     const fetchRole = async () => {
       try {
         const { data: auth } = await supabase.auth.getUser();
         const userId = auth.user?.id;
-        const channelId = message?.channelId;
+        const channelId = displayMessage?.channelId;
         if (!userId || !channelId) return;
 
         const { data, error } = await supabase
@@ -136,49 +157,53 @@ export default function LongPressOverlay({
         logger.error('LongPressOverlay', 'Failed to fetch role', error);
       }
     };
-    if (message) {
+    if (displayMessage) {
       fetchRole();
     }
-  }, [message]);
+  }, [displayMessage?.id, displayMessage?.channelId]);
 
   useEffect(() => {
-    if (visible && message) {
+    if (visible && displayMessage) {
       try { HapticFeedback.impactLight(); } catch { /* non-critical */ }
     }
-  }, [visible, message]);
+  }, [visible, displayMessage?.id]);
 
   const handleReaction = useCallback((emoji: string) => {
-    onAction('react', { messageId: message?.id, emoji });
-  }, [message?.id, onAction]);
+    onAction('react', { messageId: displayMessage?.id, emoji });
+  }, [displayMessage?.id, onAction]);
+
+  const handleOpenPicker = useCallback(() => {
+    onAction('openReactionPicker', { messageId: displayMessage?.id });
+  }, [displayMessage?.id, onAction]);
 
   const handleOptionSelect = useCallback((option: string) => {
-    onAction(option, message);
-  }, [message, onAction]);
+    onAction(option, displayMessage);
+  }, [displayMessage, onAction]);
 
-  if (!message) {
+  if (!displayMessage || (!visible && !keepMounted)) {
     return null;
   }
 
   const renderMessagePreview = () => {
-    const timeText = message.timestamp
-      ? format(new Date(message.timestamp), 'HH:mm')
-      : message.createdAt
-      ? format(new Date(message.createdAt), 'HH:mm')
+    const timeText = displayMessage.timestamp
+      ? format(new Date(displayMessage.timestamp), 'HH:mm')
+      : displayMessage.createdAt
+      ? format(new Date(displayMessage.createdAt), 'HH:mm')
       : '';
 
-    const contentTrimmed = (message.content ?? '').trim();
+    const contentTrimmed = (displayMessage.content ?? '').trim();
     const isAudio =
-      message.type === 'audio' ||
-      (message.type as string) === 'voice' ||
+      displayMessage.type === 'audio' ||
+      (displayMessage.type as string) === 'voice' ||
       (contentTrimmed.startsWith('{') && contentTrimmed.includes('waveformData'));
-    const isMedia = !!(message.mediaUrl && (message.type === 'image' || message.type === 'video'));
-    const mediaIcon = isAudio ? 'mic' : message.type === 'video' ? 'videocam' : 'image';
-    const mediaLabel = isAudio ? 'הקלטה' : message.type === 'video' ? 'סרטון' : 'תמונה';
-    const tradeFromContent = parseTradeFromContent(message.content);
-    const isTrade = isTradeMessageType(message.type) || !!tradeFromContent;
+    const isMedia = !!(displayMessage.mediaUrl && (displayMessage.type === 'image' || displayMessage.type === 'video'));
+    const mediaIcon = isAudio ? 'mic' : displayMessage.type === 'video' ? 'videocam' : 'image';
+    const mediaLabel = isAudio ? 'הקלטה' : displayMessage.type === 'video' ? 'סרטון' : 'תמונה';
+    const tradeFromContent = parseTradeFromContent(displayMessage.content);
+    const isTrade = isTradeMessageType(displayMessage.type) || !!tradeFromContent;
     const tradePayload = tradeFromContent;
 
-    const isMe = message.isMe;
+    const isMe = displayMessage.isMe;
     const p = messagePreviewStyles;
     const mediaIconColor = isMe ? 'rgba(255,255,255,0.75)' : DesignTokens.colors.text.secondary;
 
@@ -187,12 +212,12 @@ export default function LongPressOverlay({
         <View style={p.row}>
           {!isMe && (
             <View style={p.avatarCol}>
-              {message.senderAvatar ? (
-                <Image source={{ uri: message.senderAvatar }} style={p.avatar} />
+              {displayMessage.senderAvatar ? (
+                <Image source={{ uri: displayMessage.senderAvatar }} style={p.avatar} />
               ) : (
                 <View style={[p.avatar, p.avatarFallback]}>
                   <Text style={p.avatarLetter}>
-                    {(message.senderName ?? '?').charAt(0).toUpperCase()}
+                    {(displayMessage.senderName ?? '?').charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}
@@ -200,8 +225,8 @@ export default function LongPressOverlay({
           )}
 
           <View style={[p.bubble, isMe ? p.myBubble : p.theirBubble, isTrade && p.tradeBubble]}>
-            {!isMe && message.senderName ? (
-              <Text style={p.senderName} numberOfLines={1}>{message.senderName}</Text>
+            {!isMe && displayMessage.senderName ? (
+              <Text style={p.senderName} numberOfLines={1}>{displayMessage.senderName}</Text>
             ) : null}
 
             {isTrade && tradePayload ? (
@@ -215,9 +240,9 @@ export default function LongPressOverlay({
                   </View>
                 )}
 
-                {message.content && !isAudio ? (
+                {displayMessage.content && !isAudio ? (
                   <Text style={[p.msgText, isMe ? p.myText : p.theirText]} numberOfLines={4}>
-                    {message.content}
+                    {displayMessage.content}
                   </Text>
                 ) : null}
               </>
@@ -238,8 +263,12 @@ export default function LongPressOverlay({
       onClose={onClose}
       snapPoints={[snapPoint]}
       fitContent
+      useGlassBackground
+      showBrandBackground={false}
       showBrandWatermark={false}
+      showHandle
       contentPaddingBottom={0}
+      backdropOpacity={ACTION_SHEET_BACKDROP}
     >
       {/* direction:ltr — FlatList inverted + forceRTL הופכים את ציר X;
           בתוך השיט בלי inverted, חייבים LTR כדי ש-other יישאר משמאל כמו בצ׳אט. */}
@@ -247,7 +276,7 @@ export default function LongPressOverlay({
         style={{
           direction: 'ltr',
           paddingBottom: sheetBottomPad,
-          paddingHorizontal: 10,
+          paddingHorizontal: 12,
           backgroundColor: 'transparent',
         }}
         onLayout={onContentLayout}
@@ -255,14 +284,18 @@ export default function LongPressOverlay({
         {renderMessagePreview()}
 
         <View style={styles.reactionWrapper}>
-          <ReactionBar onReaction={handleReaction} currentReaction={currentUserReaction} />
+          <ReactionBar
+            onReaction={handleReaction}
+            currentReaction={currentUserReaction}
+            onOpenPicker={handleOpenPicker}
+          />
         </View>
 
         <ContextMenu
           onSelect={handleOptionSelect}
           isAdmin={isAdmin}
-          isMe={message.isMe}
-          canEdit={!message.id?.toString().startsWith('temp-')}
+          isMe={displayMessage.isMe}
+          canEdit={!displayMessage.id?.toString().startsWith('temp-')}
         />
       </ChatSheetContent>
     </ChatBottomSheet>
@@ -272,14 +305,15 @@ export default function LongPressOverlay({
 const styles = StyleSheet.create({
   reactionWrapper: {
     alignItems: 'center',
-    marginVertical: 12,
+    marginTop: 8,
+    marginBottom: 12,
   },
 });
 
 const createMessagePreviewStyles = (tokens: any) => StyleSheet.create({
   previewWrap: {
-    paddingTop: tokens.spacing.xs,
-    paddingBottom: tokens.spacing.xs,
+    paddingTop: tokens.spacing.sm,
+    paddingBottom: tokens.spacing.base,
     width: '100%',
   },
   previewWrapMe: {

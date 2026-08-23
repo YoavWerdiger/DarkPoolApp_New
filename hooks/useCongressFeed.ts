@@ -36,7 +36,7 @@ async function enrichWithQuotes(
   return rows.map((trade) => buildCongressFeedItem(trade, quotes));
 }
 
-async function loadCongress(limit: number, refresh: boolean): Promise<CongressTradeFeedItem[]> {
+export async function loadCongress(limit: number, refresh: boolean): Promise<CongressTradeFeedItem[]> {
   if (refresh && !DARK_POOL_SEC_PRODUCTION) {
     await triggerCongressSync().catch(() => fetchUwCongressFeed(limit, true));
   }
@@ -66,6 +66,7 @@ export function useCongressFeed(limit = 40, enabled = true) {
       return loadCongress(limit, refresh);
     },
     enabled,
+    staleTime: 2 * 60 * 1000,
   });
 
   const refetch = useCallback(async () => {

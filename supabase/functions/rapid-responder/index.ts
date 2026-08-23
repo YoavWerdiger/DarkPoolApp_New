@@ -1,374 +1,221 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+/**
+ * rapid-responder — CardCom webhook + GetLpResult validation
+ *
+ * Unauthenticated webhook; authenticity via GetLpResult (timeout 5s, retry×1).
+ * Match orders by LowProfileId only (never ReturnValue as primary key).
+ * Do not show CardCom Description to buyers.
+ */
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'npm:@supabase/supabase-js@2.94.1';
+import {
+  activateSubscriptionFromPayment,
+  extractCardDisplayFromLp,
+  getLpResult,
+  loadCardComConfig,
+  mapVerifiedStatus,
+  resolveCardComDocumentUrl,
+} from '../_shared/cardcom.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function parseWebhookBody(req: Request): Promise<Record<string, unknown>> {
+  const contentType = (req.headers.get('content-type') || '').toLowerCase();
+  if (contentType.includes('application/json')) {
+    const data = await req.json().catch(() => ({}));
+    return data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
+  }
+  // CardCom may post form-urlencoded / multipart
+  try {
+    const form = await req.formData();
+    return Object.fromEntries(form.entries()) as Record<string, unknown>;
+  } catch {
+    const text = await req.text();
+    try {
+      return JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+}
+
+function webViewHtml(isSuccess: boolean, transactionId: string, status: string) {
+  const messageType = isSuccess ? 'payment_success' : 'payment_failed';
+  const message = isSuccess ? 'התשלום הושלם בהצלחה' : 'התשלום נכשל';
+  return `<!DOCTYPE html>
+<html dir="rtl" lang="he"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>תשלום</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0a;color:#fff;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center}
+.box{padding:32px;max-width:360px}.ok{color:#00E654}.bad{color:#FF4444}
+</style></head><body><div class="box">
+<div class="${isSuccess ? 'ok' : 'bad'}" style="font-size:48px">${isSuccess ? '✓' : '✕'}</div>
+<h1>${message}</h1>
+<p>${isSuccess ? 'המנוי שלך הופעל בהצלחה' : 'אנא נסו שוב או פנו לתמיכה'}</p>
+</div>
+<script>
+var msg={type:'${messageType}',transactionId:'${transactionId}',status:'${status}',message:'${message}'};
+if(window.parent&&window.parent!==window)window.parent.postMessage(JSON.stringify(msg),'*');
+if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify(msg));
+</script></body></html>`;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  const wantsHtml = (req.headers.get('accept') || '').includes('text/html');
 
   try {
-    // Initialize Supabase client
-    const supabaseClient = createClient(
+    const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
 
-    console.log('🔄 Payment Callback: Processing callback from CardCom')
+    const webhook = await parseWebhookBody(req);
+    const lowProfileId = String(webhook.LowProfileId || webhook.lowProfileId || '').trim();
 
-    // Parse the callback data from CardCom
-    const formData = await req.formData()
-    const callbackData = Object.fromEntries(formData.entries())
+    if (!lowProfileId) {
+      console.error('[rapid-responder] HIGH missing LowProfileId', webhook);
+      return json({ success: false, error: 'Missing LowProfileId' }, 400);
+    }
 
-    console.log('🔄 Payment Callback: Received data:', callbackData)
+    const { data: order, error: orderErr } = await supabase
+      .from('payment_transactions')
+      .select('*')
+      .eq('cardcom_low_profile_id', lowProfileId)
+      .maybeSingle();
 
-    // Extract transaction details from LowProfile API
-    const {
-      LowProfileId,
-      TranzactionId,
-      ResponseCode,
-      Description,
-      Amount,
-      ReturnValue,
-      UIValues,
-      TranzactionInfo,
-      DocumentInfo,
-      TokenInfo  // TokenInfo contains Token for recurring payments!
-    } = callbackData
+    if (orderErr || !order) {
+      console.error('[rapid-responder] HIGH order not found for LowProfileId', lowProfileId, orderErr);
+      return json({ success: false, error: 'Order not found' }, 404);
+    }
 
-    // Extract our internal data from ReturnValue
-    const transactionId = ReturnValue || ''
-    
-    // Parse transaction info to get user details
-    let userId = ''
-    let planId = ''
-    let userEmail = ''
-    let userName = ''
-    
-    // Extract from CustomFields if available
-    if (callbackData.CustomFields) {
-      try {
-        const customFields = JSON.parse(callbackData.CustomFields)
-        const userIdValue = customFields.find((field: any) => field.Name === 'userId')?.Value || ''
-        userId = userIdValue === 'pending' ? '' : userIdValue
-        planId = customFields.find((field: any) => field.Name === 'planId')?.Value || ''
-      } catch (e) {
-        console.error('❌ Payment Callback: Error parsing custom fields:', e)
+    // Idempotent: already has cardcom_transaction_id (incl. "0" for CreateTokenOnly)
+    if (order.cardcom_transaction_id != null && String(order.cardcom_transaction_id).length > 0) {
+      console.log('[rapid-responder] idempotent skip', order.id, order.cardcom_transaction_id);
+      if (wantsHtml) {
+        const ok = order.status === 'success';
+        return new Response(webViewHtml(ok, order.id, order.status), {
+          headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+        });
       }
-    }
-    
-    if (UIValues) {
-      try {
-        const uiValues = JSON.parse(UIValues)
-        userEmail = uiValues.CardOwnerEmail || ''
-        userName = uiValues.CardOwnerName || ''
-      } catch (e) {
-        console.error('❌ Payment Callback: Error parsing UI values:', e)
-      }
+      return json({ success: true, idempotent: true, status: order.status });
     }
 
-    // Extract TokenInfo for recurring payments
-    let paymentToken = ''
-    let tokenExpDate = null
-    let cardLast4 = ''
-    let cardBrand = ''
-    
-    if (TokenInfo) {
-      try {
-        const tokenInfo = JSON.parse(TokenInfo)
-        paymentToken = tokenInfo.Token || ''
-        tokenExpDate = tokenInfo.TokenExDate || null
-        console.log('🔄 Payment Callback: TokenInfo extracted:', {
-          hasToken: !!paymentToken,
-          tokenExpDate: tokenExpDate
-        })
-      } catch (e) {
-        console.error('❌ Payment Callback: Error parsing TokenInfo:', e)
-      }
-    }
-    
-    // Extract card info from TranzactionInfo if available
-    if (TranzactionInfo) {
-      try {
-        const tranzactionInfo = JSON.parse(TranzactionInfo)
-        cardLast4 = tranzactionInfo.Last4CardDigitsString || tranzactionInfo.Last4CardDigits || ''
-        cardBrand = tranzactionInfo.Brand || ''
-        console.log('🔄 Payment Callback: Card info extracted:', {
-          last4: cardLast4,
-          brand: cardBrand
-        })
-      } catch (e) {
-        console.error('❌ Payment Callback: Error parsing TranzactionInfo:', e)
-      }
+    const config = await loadCardComConfig(supabase);
+    if (!config) {
+      console.error('[rapid-responder] HIGH CardCom config missing');
+      return json({ success: false, error: 'Payment config unavailable' }, 500);
     }
 
-    console.log('🔄 Payment Callback: Extracted data:', {
-      userId,
-      planId,
-      transactionId,
-      cardcomTransactionId: TranzactionId,
-      responseCode: ResponseCode,
-      amount: Amount,
-      hasToken: !!paymentToken,
-      cardLast4: cardLast4
-    })
-
-    // Determine payment status based on CardCom response
-    let status = 'failed'
-    if (ResponseCode === 0 || ResponseCode === '0') {
-      status = 'success'
-    } else if (ResponseCode === 1 || ResponseCode === '1') {
-      status = 'pending'
+    let lp: Awaited<ReturnType<typeof getLpResult>>;
+    try {
+      lp = await getLpResult(config, lowProfileId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[rapid-responder] GetLpResult failed after retry', msg);
+      return json({ success: false, error: msg }, 500);
     }
 
-    // Update the payment transaction record
-    if (transactionId) {
-      const { error: updateError } = await supabaseClient
-        .from('payment_transactions')
-        .update({
-          status: status,
-          cardcom_low_profile_id: LowProfileId,
-          cardcom_transaction_id: TranzactionId,
-          callback_data: callbackData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', transactionId)
+    const responseCode = Number(lp.ResponseCode);
+    const operation = lp.Operation != null ? String(lp.Operation) : order.cardcom_operation;
+    const mapped = mapVerifiedStatus(responseCode, operation);
 
-      if (updateError) {
-        console.error('❌ Payment Callback: Error updating transaction:', updateError)
-      } else {
-        console.log('✅ Payment Callback: Transaction updated successfully')
-      }
+    let cardcomTxnId = mapped.transactionIdToStore;
+    if (mapped.status === 'success') {
+      cardcomTxnId =
+        lp.TranzactionId != null && Number(lp.TranzactionId) !== 0
+          ? String(lp.TranzactionId)
+          : order.cardcom_transaction_id;
+      // Ensure non-null for idempotency on success
+      if (!cardcomTxnId) cardcomTxnId = `ok_${order.id}`;
     }
 
-    // If payment was successful, update user subscription
-    if (status === 'success' && userId && planId) {
-      console.log('🔄 Payment Callback: Updating user subscription')
+    const tokenInfo = lp.TokenInfo || {};
+    const docInfo = lp.DocumentInfo || {};
 
-      // Get plan details
-      const { data: planData, error: planError } = await supabaseClient
-        .from('subscription_plans')
-        .select('*')
-        .eq('id', planId)
-        .single()
-
-      if (planError) {
-        console.error('❌ Payment Callback: Error getting plan:', planError)
-      } else if (planData) {
-        // Calculate expiration date based on plan period
-        const expiresAt = new Date()
-        if (planData.period === 'monthly') {
-          expiresAt.setMonth(expiresAt.getMonth() + 1)
-        } else if (planData.period === 'quarterly') {
-          expiresAt.setMonth(expiresAt.getMonth() + 3)
-        } else if (planData.period === 'yearly') {
-          expiresAt.setFullYear(expiresAt.getFullYear() + 1)
-        } else {
-          expiresAt.setMonth(expiresAt.getMonth() + 1) // Default to monthly
-        }
-
-        // Update user subscription details
-        const { error: userError } = await supabaseClient
-          .from('users')
-          .update({
-            subscription_plan: planId,
-            subscription_role: planData.role,
-            subscription_expires_at: expiresAt.toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId)
-
-        if (userError) {
-          console.error('❌ Payment Callback: Error updating user:', userError)
-        } else {
-          console.log('✅ Payment Callback: User subscription updated')
-        }
-
-        // Create or update user subscription record with Token for recurring payments
-        const subscriptionData: any = {
-          user_id: userId,
-          plan_id: planId,
-          status: 'active',
-          starts_at: new Date().toISOString(),
-          expires_at: expiresAt.toISOString(),
-          auto_renew: true,
-          updated_at: new Date().toISOString()
-        }
-        
-        // Add token info if available (for recurring payments)
-        if (paymentToken) {
-          subscriptionData.cardcom_token = paymentToken
-          subscriptionData.cardcom_token_exp_date = tokenExpDate
-          subscriptionData.card_last4_digits = cardLast4
-          subscriptionData.card_brand = cardBrand
-          console.log('🔄 Payment Callback: Adding token for recurring payments:', {
-            hasToken: true,
-            tokenExpDate: tokenExpDate,
-            cardLast4: cardLast4
-          })
-        }
-        
-        const { error: subscriptionError } = await supabaseClient
-          .from('user_subscriptions')
-          .upsert(subscriptionData, {
-            onConflict: 'user_id,plan_id'
-          })
-
-        if (subscriptionError) {
-          console.error('❌ Payment Callback: Error creating subscription:', subscriptionError)
-        } else {
-          console.log('✅ Payment Callback: User subscription record created/updated', 
-            paymentToken ? 'with recurring payment token' : 'without token')
-        }
-      }
+    const documentType = docInfo.DocumentType != null ? String(docInfo.DocumentType) : null;
+    const documentNumber =
+      docInfo.DocumentNumber != null ? Number(docInfo.DocumentNumber) : null;
+    let documentUrl: string | null = null;
+    if (mapped.status === 'success' || mapped.status === 'pending_charge') {
+      documentUrl = await resolveCardComDocumentUrl(config, {
+        documentUrl: docInfo.DocumentUrl,
+        documentNumber,
+        documentType,
+      });
     }
 
-    // Return HTML response for iframe communication
-    const isSuccess = status === 'success'
-    const messageType = isSuccess ? 'payment_success' : 'payment_failed'
-    const message = isSuccess ? 'התשלום הושלם בהצלחה' : 'התשלום נכשל'
+    const patch: Record<string, unknown> = {
+      status: mapped.status,
+      cardcom_operation: operation || order.cardcom_operation,
+      cardcom_response_code: String(lp.ResponseCode ?? ''),
+      cardcom_description: lp.Description ?? null,
+      cardcom_document_type: documentType,
+      cardcom_document_number: documentNumber,
+      cardcom_document_url: documentUrl,
+      cardcom_token: tokenInfo.Token ?? null,
+      cardcom_token_card_year: tokenInfo.CardYear != null ? Number(tokenInfo.CardYear) : null,
+      cardcom_token_card_month: tokenInfo.CardMonth != null ? Number(tokenInfo.CardMonth) : null,
+      cardcom_token_token_approval_number: tokenInfo.TokenApprovalNumber ?? null,
+      cardcom_token_card_owner_identity_number: tokenInfo.CardOwnerIdentityNumber ?? null,
+      callback_data: { webhook, getLpResult: lp },
+      updated_at: new Date().toISOString(),
+    };
+    if (cardcomTxnId != null) patch.cardcom_transaction_id = cardcomTxnId;
 
-    const htmlResponse = `
-      <!DOCTYPE html>
-      <html dir="rtl" lang="he">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>תשלום ${isSuccess ? 'הושלם' : 'נכשל'}</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
-            color: white;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            text-align: center;
-          }
-          .container {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 40px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 400px;
-            width: 100%;
-          }
-          .icon {
-            font-size: 60px;
-            margin-bottom: 20px;
-          }
-          .success { color: #00E654; }
-          .error { color: #FF4444; }
-          h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            font-weight: 700;
-          }
-          p {
-            font-size: 16px;
-            margin-bottom: 20px;
-            opacity: 0.8;
-          }
-          .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #00E654;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s ease-in-out infinite;
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="icon ${isSuccess ? 'success' : 'error'}">
-            ${isSuccess ? '✅' : '❌'}
-          </div>
-          <h1>${message}</h1>
-          <p>${isSuccess ? 'המנוי שלך הופעל בהצלחה' : 'אנא נסה שוב או פנה לתמיכה'}</p>
-          <div class="loading"></div>
-          <p style="font-size: 14px; margin-top: 20px; opacity: 0.6;">
-            מחזיר לאפליקציה...
-          </p>
-        </div>
-        
-        <script>
-          // Send message to parent window (React Native WebView)
-          const message = {
-            type: '${messageType}',
-            transactionId: '${transactionId}',
-            status: '${status}',
-            message: '${message}'
-          };
-          
-          console.log('Sending message to parent:', message);
-          
-          // Try to send message to parent window
-          if (window.parent && window.parent !== window) {
-            window.parent.postMessage(JSON.stringify(message), '*');
-          }
-          
-          // Also try to send to React Native WebView
-          if (window.ReactNativeWebView) {
-            window.ReactNativeWebView.postMessage(JSON.stringify(message));
-          }
-          
-          // Fallback: redirect after delay
-          setTimeout(() => {
-            if (window.parent && window.parent !== window) {
-              window.parent.postMessage(JSON.stringify({
-                type: 'payment_redirect',
-                url: '${isSuccess ? 'success' : 'failed'}'
-              }), '*');
-            }
-          }, 3000);
-        </script>
-      </body>
-      </html>
-    `
+    const { error: updErr } = await supabase
+      .from('payment_transactions')
+      .update(patch)
+      .eq('id', order.id);
 
-    console.log('✅ Payment Callback: Processing completed successfully')
+    if (updErr) {
+      console.error('[rapid-responder] update order failed', updErr);
+      return json({ success: false, error: 'DB update failed' }, 500);
+    }
 
-    return new Response(
-      htmlResponse,
-      {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'text/html; charset=utf-8' 
-        },
-        status: 200,
-      },
-    )
+    // Activate subscription only after verified success (not pending_charge / failed)
+    if (mapped.activateSubscription && mapped.status === 'success' && order.user_id && order.plan_id) {
+      const cardDisplay = extractCardDisplayFromLp(lp);
+      const act = await activateSubscriptionFromPayment(supabase, {
+        userId: order.user_id,
+        planId: order.plan_id,
+        sourceTransactionId: order.id,
+        paymentToken: tokenInfo.Token ? String(tokenInfo.Token) : null,
+        tokenExpDate: tokenInfo.TokenExDate ? String(tokenInfo.TokenExDate) : null,
+        cardLast4: cardDisplay.last4 ?? undefined,
+        cardBrand: cardDisplay.brand ?? undefined,
+      });
+      if (!act.ok) console.error('[rapid-responder] subscription activate failed', act.error);
+      else console.log('[rapid-responder] subscription activated', { already: act.alreadyGranted });
+    } else if (mapped.status === 'pending_charge') {
+      console.log('[rapid-responder] pending_charge — no subscription activation (Task 7 deferred charge)', order.id);
+    }
 
+    if (wantsHtml) {
+      return new Response(
+        webViewHtml(mapped.status === 'success', order.id, mapped.status),
+        { headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' } },
+      );
+    }
+
+    return json({ success: true, status: mapped.status, transactionId: order.id });
   } catch (error) {
-    console.error('❌ Payment Callback: Error processing callback:', error)
-    
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
-      }),
-      {
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-        status: 500,
-      },
-    )
+    console.error('[rapid-responder] unexpected', error);
+    return json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Internal error',
+    }, 500);
   }
-})
+});

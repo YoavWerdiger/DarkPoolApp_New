@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.94.1'
+import { resolveEconomicEventImportance } from '../_shared/economicEventImportance.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -169,12 +170,17 @@ async function fetchBenzingaEvents() {
 
   return data.economics.map((event: any) => {
     // ממיר importance של Benzinga (0-5) לפורמט של האפליקציה
-    let importance: 'high' | 'medium' | 'low' = 'low';
+    let providerImportance: 'high' | 'medium' | 'low' = 'low';
     if (event.importance >= 4) {
-      importance = 'high';
+      providerImportance = 'high';
     } else if (event.importance >= 2) {
-      importance = 'medium';
+      providerImportance = 'medium';
     }
+    const importance = resolveEconomicEventImportance(
+      event.event_name || '',
+      providerImportance,
+      event.description || '',
+    );
 
     return {
       event_id: `benzinga_${event.id}`,

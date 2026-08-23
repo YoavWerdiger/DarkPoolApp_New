@@ -1,19 +1,21 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer, Theme as NavTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import AuthStack from './navigation/AuthStack';
 import MainTabs from './navigation/MainTabs';
 import ProfileStack from './navigation/ProfileStack';
-import { View, ActivityIndicator, Text, StatusBar, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
+import AdminStack from './navigation/AdminStack';
+import { View, ActivityIndicator, Text, StyleSheet, AppState, TouchableOpacity, Platform } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AnimatedBackground } from './components/VideoBackground';
 import "./global.css";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import OnboardingNavigator from './navigation/OnboardingNavigator';
-import { RegistrationProvider } from './context/RegistrationContext';
+import { RegistrationProvider, useRegistration } from './context/RegistrationContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { useAppBootstrap } from './hooks/useAppBootstrap';
@@ -23,14 +25,20 @@ import { initSentry, Sentry } from './utils/sentry';
 import { ToastProvider } from './components/ui/Toast';
 import { AppDialogProvider } from './components/ui/AppDialogProvider';
 import { logger } from './utils/logger';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { HapticFeedback } from './utils/hapticFeedback';
 import { Fingerprint } from 'lucide-react-native';
 import { rootNavigationRef } from './navigation/rootNavigationRef';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as NavigationBar from 'expo-navigation-bar';
 import { enableScreens, enableFreeze } from 'react-native-screens';
+import { isRegistrationComplete } from './services/authService';
+import { APP_SYSTEM_BACKGROUND, applyAppSystemUI } from './lib/androidSystemUI';
+import {
+  buildNotificationNavigateArgs,
+  resolveNotificationNavTarget,
+} from './lib/notificationRouting';
 
 // מסכים לא-פעילים (כל ה-stacks ב-Drawer נשארים טעונים) מוקפאים ולא מתרנדרים ברקע —
 // משחרר את ה-JS thread ומשפר משמעותית את חלקות הניווט והאינטראקציות.
@@ -41,18 +49,51 @@ initSentry();
 
 const Stack = createNativeStackNavigator();
 
-const OnboardingWithProvider = () => (
-  <RegistrationProvider>
-    <OnboardingNavigator />
-  </RegistrationProvider>
-);
+/** Dark theme for Navigation Background/card — DefaultTheme is light and paints white under edge-to-edge bars. */
+const AppNavigationTheme: NavTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: '#00C805',
+    background: APP_SYSTEM_BACKGROUND,
+    card: APP_SYSTEM_BACKGROUND,
+    border: 'rgba(255,255,255,0.08)',
+    text: '#FFFFFF',
+    notification: '#00C805',
+  },
+};
 
 function AppContent() {
-  const { user, isLoading } = useAuth();
-  useAppBootstrap(user?.id, !isLoading);
+  const { user, isLoading, passwordRecoveryMode, signOut } = useAuth();
+  const { data: registrationData } = useRegistration();
   const [biometricLocked, setBiometricLocked] = useState(false);
   const [biometricChecked, setBiometricChecked] = useState(false);
   const appState = useRef(AppState.currentState);
+  /** רק אחרי מעבר ראשון מ-loading — לנקות סשן רישום ישן ב-cold start בלי לפגוע ב-Google/OTP חי */
+  const bootAuthHandledRef = useRef(false);
+  // באמצע אשף הרישום עבור אותו משתמש מחובר — לא מדלגים ל-Main גם אם הפרופיל עוד לא מעודכן
+  const midRegistrationWizard =
+    !!user &&
+    (registrationData.pendingAuthUserId === user.id ||
+      (registrationData.isGoogleSignUp && registrationData.googleUserId === user.id) ||
+      (registrationData.emailVerified &&
+        !!registrationData.email &&
+        registrationData.email.toLowerCase() === (user.email || '').toLowerCase()));
+  // passwordRecoveryMode חוסם Main בזמן איפוס סיסמה — אחרי signIn רגיל הדגל מנוקה
+  const registrationDone =
+    isRegistrationComplete(user) && !midRegistrationWizard && !passwordRecoveryMode;
+  // Warm/hydrate רק אחרי רישום מלא — לא לבזבז רשת באמצע OTP
+  useAppBootstrap(user?.id, !isLoading && registrationDone);
+
+  // Cold start: סשן OTP/רישום לא-הושלם בלי כוונת המשך פעילה → Welcome (לא Onboarding)
+  // לא רצים בזמן recovery — אחרת מסלקים את סשן ה-OTP לפני מסך סיסמה חדשה
+  useEffect(() => {
+    if (isLoading || bootAuthHandledRef.current) return;
+    bootAuthHandledRef.current = true;
+    if (!user || passwordRecoveryMode) return;
+    if (isRegistrationComplete(user) || midRegistrationWizard) return;
+    void signOut(true);
+  }, [isLoading, user, passwordRecoveryMode, midRegistrationWizard, signOut]);
 
   const attemptBiometricAuth = useCallback(async () => {
     try {
@@ -68,7 +109,7 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (!user || isLoading || biometricChecked) return;
+    if (!user || !registrationDone || isLoading || biometricChecked) return;
 
     const checkBiometric = async () => {
       try {
@@ -94,7 +135,7 @@ function AppContent() {
     };
 
     checkBiometric();
-  }, [user, isLoading, biometricChecked]);
+  }, [user, registrationDone, isLoading, biometricChecked]);
 
   useEffect(() => {
     if (!user) {
@@ -135,97 +176,105 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    void applyAppSystemUI().catch((error) => {
+      logger.warn('App', 'Failed to configure Android system UI', error);
+    });
 
-    const setupNavigationBar = async () => {
-      try {
-        await NavigationBar.setBackgroundColorAsync('#00000000');
-        await NavigationBar.setButtonStyleAsync('light');
-      } catch (error) {
-        logger.warn('App', 'Failed to configure Android navigation bar', error);
+    // Modals / sheets / keyboard can leave system bars in a bad state — re-apply on resume.
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void applyAppSystemUI();
       }
-    };
-
-    setupNavigationBar();
+    });
+    return () => sub.remove();
   }, []);
 
   // אתחול עדכונים מתוזמנים
   useEffect(() => {
-    // התחלת עדכונים מתוזמנים רק אחרי שהמשתמש מחובר
-    if (user && !isLoading) {
+    // התחלת עדכונים מתוזמנים רק אחרי שהמשתמש מחובר והשלים רישום
+    if (user && registrationDone && !isLoading) {
       ScheduledUpdatesService.startScheduledUpdates();
     }
 
     return () => {
       ScheduledUpdatesService.stopScheduledUpdates();
     };
-  }, [user, isLoading]);
+  }, [user, registrationDone, isLoading]);
 
-  // טיפול בהתראות
+  // משתמש חדש (Google / pending payment) — העברה ל-Onboarding בלי לדלג ל-Main
+  // הוסר: navigation לא צריך להיות ב-useEffect כי ה-conditional rendering כבר מטפל בזה
+
+  // טיפול בהתראות — tap (foreground/background) + cold start
   useEffect(() => {
-    if (!user) return;
+    if (!user || !registrationDone) return;
 
-    const receivedSubscription = NotificationService.addNotificationReceivedListener((_notification) => {
-    });
+    const handledKeys = new Set<string>();
 
-    const responseSubscription = NotificationService.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
-      const notificationType = data?.type;
+    const responseKey = (response: {
+      notification: { request: { identifier: string }; date?: number };
+    }) =>
+      `${response.notification.request.identifier}:${response.notification.date ?? ''}`;
 
-      if (!rootNavigationRef.isReady()) return;
+    const navigateFromNotificationData = (raw: unknown) => {
+      const data =
+        raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null;
+      const target = resolveNotificationNavTarget(data);
+      const args = buildNotificationNavigateArgs(target);
 
-      try {
-        if (notificationType === 'chat_message' && data?.group_id) {
-          rootNavigationRef.navigate('Main', {
-            screen: 'Chat',
-            params: {
-              screen: 'ChatGroup',
-              params: {
-                groupId: data.group_id,
-                groupName: data.group_name || 'צ\'אט',
-              },
-            },
-          });
-        } else if (notificationType === 'news' && data?.articleId) {
-          rootNavigationRef.navigate('Main', {
-            screen: 'News',
-            params: { articleId: data.articleId, tab: 'breaking' }
-          });
-        } else if (
-          notificationType === 'economic_calendar' ||
-          notificationType === 'economic_result'
-        ) {
-          rootNavigationRef.navigate('Main', {
-            screen: 'NewsCalendar',
-          });
-        } else if (
-          notificationType === 'earnings' ||
-          notificationType === 'earnings_results'
-        ) {
-          rootNavigationRef.navigate('Main', {
-            screen: 'NewsEarnings',
-          });
-        } else if (data?.kind === 'dark_pool_signal' && data?.ticker) {
-          rootNavigationRef.navigate('Main', {
-            screen: 'DarkPool',
-            params: {
-              screen: 'DarkPoolTicker',
-              params: { ticker: String(data.ticker), tab: 'darkpool' },
-            },
-          });
-        } else {
-          rootNavigationRef.navigate('Main');
+      const attempt = (triesLeft: number) => {
+        if (!rootNavigationRef.isReady()) {
+          if (triesLeft <= 0) {
+            logger.warn('App', 'Notification navigation skipped — nav not ready');
+            return;
+          }
+          setTimeout(() => attempt(triesLeft - 1), 120);
+          return;
         }
-      } catch (navError) {
-        logger.error('App', 'Notification navigation failed', navError);
-      }
+        try {
+          if (args.params) {
+            rootNavigationRef.navigate(args.name as never, args.params as never);
+          } else {
+            rootNavigationRef.navigate(args.name as never);
+          }
+        } catch (navError) {
+          logger.error('App', 'Notification navigation failed', navError);
+        }
+      };
+      attempt(25);
+    };
+
+    const handleResponse = (response: {
+      notification: {
+        request: { identifier: string; content: { data?: unknown } };
+        date?: number;
+      };
+    }) => {
+      const key = responseKey(response);
+      if (handledKeys.has(key)) return;
+      handledKeys.add(key);
+      navigateFromNotificationData(response.notification.request.content.data);
+      NotificationService.clearLastNotificationResponse();
+    };
+
+    const receivedSubscription = NotificationService.addNotificationReceivedListener(
+      (_notification) => {},
+    );
+
+    const responseSubscription =
+      NotificationService.addNotificationResponseReceivedListener(handleResponse);
+
+    let cancelled = false;
+    void NotificationService.getLastNotificationResponse().then((response) => {
+      if (cancelled || !response) return;
+      handleResponse(response);
     });
 
     return () => {
+      cancelled = true;
       receivedSubscription.remove();
       responseSubscription.remove();
     };
-  }, [user]);
+  }, [user, registrationDone]);
 
   // מסך טעינה מינימלי בלבד בזמן טעינת ה-Auth (בלי splash \"מלאכותי\" ובלי תמונת רקע מרשת)
   if (isLoading) {
@@ -237,7 +286,7 @@ function AppContent() {
   }
 
   // לא מציגים את ה-Main לפני שידוע אם נדרשת ביומטריה — מונע תחושת "זריקה" לשכבת הנעילה
-  if (user && !biometricChecked) {
+  if (user && registrationDone && !biometricChecked) {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#00C805" />
@@ -246,35 +295,44 @@ function AppContent() {
   }
 
   return (
-    <View style={{ flex: 1, direction: 'ltr', backgroundColor: '#0A0E0A' }}>
+    <View style={{ flex: 1, direction: 'ltr', backgroundColor: APP_SYSTEM_BACKGROUND }}>
+      {/* KeyboardProvider בתוך עץ LTR — ה-dummy translateX של הספרייה לא מתהפך מ-forceRTL כמו מחוץ למעטפת (פרודקשן ≠ Expo Go). */}
+      <KeyboardProvider
+        statusBarTranslucent={Platform.OS === 'android'}
+        navigationBarTranslucent={Platform.OS === 'android'}
+      >
       <AnimatedBackground />
-      <StatusBar
-        barStyle="light-content"
-        backgroundColor="transparent"
-        translucent={false}
-      />
+      {/* edge-to-edge: רק style — backgroundColor/translucent נדחים באנדרואיד 15+ */}
+      <StatusBar style="light" />
       {/* חייב להתאים ל־direction של ה־View המעטף — אחרת useLocale (rtl) לא תואם ל־Yoga (ltr) ו־react-native-drawer-layout מחשב translateX שגוי (רצועת מגירה בפרודקשן). */}
-      <NavigationContainer ref={rootNavigationRef} direction="ltr">
+      <NavigationContainer ref={rootNavigationRef} direction="ltr" theme={AppNavigationTheme}>
         <Stack.Navigator screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: 'transparent' },
           animation: 'fade',
         }}>
-          {user ? (
+          {user && registrationDone ? (
             <>
               <Stack.Screen name="Main" component={MainTabs} />
               <Stack.Screen name="Profile" component={ProfileStack} />
+              <Stack.Screen name="Admin" component={AdminStack} />
+            </>
+          ) : midRegistrationWizard && !passwordRecoveryMode ? (
+            <>
+              {/* אשף רישום פעיל (OTP/Google באמצע) — ממשיכים Onboarding רק עם כוונת המשך */}
+              <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
+              <Stack.Screen name="Auth" component={AuthStack} />
             </>
           ) : (
-            <>
-              <Stack.Screen name="Auth" component={AuthStack} />
-              <Stack.Screen name="Onboarding" component={OnboardingWithProvider} />
-            </>
+            // מנותק / סשן לא-הושלם / recovery — נשארים ב-Auth
+            // (registrationDone כבר false כש-passwordRecoveryMode; ענף נפרד גרם ל-remount
+            // של AuthStack באמצע OTP וזריקת משתמש ל-Main)
+            <Stack.Screen name="Auth" component={AuthStack} />
           )}
         </Stack.Navigator>
       </NavigationContainer>
 
-      {biometricLocked && (
+      {biometricLocked && registrationDone && (
         <View style={[StyleSheet.absoluteFillObject, { backgroundColor: '#0A0E0A', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }]}>
           <LinearGradient
             colors={['#0A0E0A', '#0F1A0F', '#0F1A0F', '#0A0E0A']}
@@ -316,27 +374,31 @@ function AppContent() {
           </View>
         </View>
       )}
+      </KeyboardProvider>
     </View>
   );
 }
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#0A0E0A' }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_SYSTEM_BACKGROUND }}>
       <SafeAreaProvider>
-        <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
-          <QueryClientProvider client={queryClient}>
-            <ThemeProvider>
-              <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            <AuthProvider>
+              <RegistrationProvider>
                 <ToastProvider>
                   <AppDialogProvider>
-                    <AppContent />
+                    {/* ErrorBoundary פנימי — קריסת UI לא מפרקת AuthProvider באמצע signOut */}
+                    <ErrorBoundary>
+                      <AppContent />
+                    </ErrorBoundary>
                   </AppDialogProvider>
                 </ToastProvider>
-              </AuthProvider>
-            </ThemeProvider>
-          </QueryClientProvider>
-        </KeyboardProvider>
+              </RegistrationProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

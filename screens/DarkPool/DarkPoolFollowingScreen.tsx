@@ -217,7 +217,7 @@ export default function DarkPoolFollowingScreen() {
                 עדיין לא עוקב אחרי אף משקיע.{'\n'}
                 גלה פוליטיקאים ובכירים בטאב גילוי ולחץ «עקוב».
               </Text>
-              <UIButton title="לגילוי" variant="primary" onPress={goExplore} />
+              <UIButton title="לאנשים" variant="primary" onPress={goExplore} />
             </View>
           )}
         </ScrollView>

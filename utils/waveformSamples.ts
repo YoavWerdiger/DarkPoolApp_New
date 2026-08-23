@@ -1,28 +1,51 @@
-/** מספר ברים לתצוגה בבועה / פריוויו */
-export const WAVEFORM_DISPLAY_BARS = 46;
+/** מספר ברים לתצוגה בבועה / פריוויו — צר יותר (WhatsApp-like) */
+export const WAVEFORM_DISPLAY_BARS = 32;
 
 /** מספר samples לשמירה בהודעה — מספיק כדי לשמור loud/soft לאורך הזמן */
 export const WAVEFORM_STORE_BARS = 48;
 
 /**
- * דגימות רציפות → N ברים.
- * הקטנה: peak envelope (לא ממוצע) — שומר רגעי דיבור חזקים/חלשים.
- * הגדלה: מתיחה לינארית על כל הרוחב — לא ריפוד באפסים.
+ * עיצוב תצוגה משותף — חי + בועה.
+ * קצת פחות רגיש: רצפה/שקט גבוהים יותר, gamma > 1, תקרת פלט נמוכה יותר.
  */
-export function normalizeWaveformSamples(samples: number[], targetCount: number): number[] {
+export const WAVEFORM_SILENCE = 0.055;
+export const WAVEFORM_FLOOR = 0.14;
+export const WAVEFORM_GAMMA = 1.08;
+export const WAVEFORM_OUT_MIN = 0.05;
+export const WAVEFORM_OUT_SPAN = 0.75;
+
+/**
+ * רמה בודדת 0–1 → גובה בר לתצוגה.
+ * אותה נוסחה ל־VoiceWaveform חי ולבועה אחרי resample.
+ */
+export function shapeWaveformLevel(raw: number): number {
+  const v = Math.max(0, Math.min(1, Number(raw) || 0));
+  if (v < WAVEFORM_SILENCE) return 0;
+  const span = Math.max(1e-6, 1 - WAVEFORM_FLOOR);
+  const above = Math.max(0, v - WAVEFORM_FLOOR);
+  const n = Math.pow(above / span, WAVEFORM_GAMMA);
+  return Math.min(1, WAVEFORM_OUT_MIN + n * WAVEFORM_OUT_SPAN);
+}
+
+/**
+ * דגימות רציפות → N ברים (peak / stretch) — בלי עיצוב תצוגה.
+ * לשמירה: raw levels; לתצוגה: אחר כך shapeWaveformLevel.
+ */
+export function resampleWaveformSamples(samples: number[], targetCount: number): number[] {
   if (targetCount <= 0) return [];
 
   if (samples.length === 0) {
-    return Array(targetCount).fill(0.08);
+    return Array(targetCount).fill(0);
   }
 
   if (samples.length === targetCount) {
-    return normalizeWaveformRange(samples);
+    return samples.map((v) => Math.max(0, Math.min(1, Number(v) || 0)));
   }
 
   if (samples.length < targetCount) {
     if (samples.length === 1) {
-      return normalizeWaveformRange(Array(targetCount).fill(samples[0]));
+      const v = Math.max(0, Math.min(1, Number(samples[0]) || 0));
+      return Array(targetCount).fill(v);
     }
     const result: number[] = [];
     const last = samples.length - 1;
@@ -31,9 +54,10 @@ export function normalizeWaveformSamples(samples: number[], targetCount: number)
       const lo = Math.floor(pos);
       const hi = Math.min(last, Math.ceil(pos));
       const t = pos - lo;
-      result.push(samples[lo] * (1 - t) + samples[hi] * t);
+      const v = samples[lo] * (1 - t) + samples[hi] * t;
+      result.push(Math.max(0, Math.min(1, v)));
     }
-    return normalizeWaveformRange(result);
+    return result;
   }
 
   const result: number[] = [];
@@ -44,34 +68,24 @@ export function normalizeWaveformSamples(samples: number[], targetCount: number)
     const end = Math.max(start + 1, Math.floor((i + 1) * windowSize));
     let peak = 0;
     for (let j = start; j < end && j < samples.length; j++) {
-      if (samples[j] > peak) peak = samples[j];
+      const v = Number(samples[j]) || 0;
+      if (v > peak) peak = v;
     }
-    result.push(peak);
+    result.push(Math.max(0, Math.min(1, peak)));
   }
 
-  return normalizeWaveformRange(result);
+  return result;
 }
 
 /**
- * נרמול לתצוגה — רגיש לדיבור רך בלי למחוק ניגודיות loud/soft.
- * רצפת רעש נמוכה + gamma שמגביר mid-low, טווח פלט רחב.
+ * לתצוגה: resample + shapeWaveformLevel (אותו עיצוב כמו ההקלטה החיה).
  */
-function normalizeWaveformRange(values: number[]): number[] {
-  const maxVal = Math.max(...values);
-  if (maxVal <= 0.012) {
-    return values.map(() => 0.06);
+export function normalizeWaveformSamples(samples: number[], targetCount: number): number[] {
+  if (targetCount <= 0) return [];
+  if (samples.length === 0) {
+    return Array(targetCount).fill(WAVEFORM_OUT_MIN);
   }
-
-  // רצפה יחסית נמוכה — לא בולעת דיבור רך
-  const floor = maxVal * 0.018;
-  const span = Math.max(1e-6, maxVal - floor);
-
-  return values.map((v) => {
-    const above = Math.max(0, v - floor);
-    // ~0.5 מגביר mid-low בלי לשטח פיקים גבוהים
-    const n = Math.pow(above / span, 0.48);
-    return Math.max(0.05, Math.min(1, 0.05 + n * 0.95));
-  });
+  return resampleWaveformSamples(samples, targetCount).map(shapeWaveformLevel);
 }
 
 export function flatWaveformBars(count: number): number[] {

@@ -286,8 +286,8 @@ function ViewersSheet({
     transform: [{ translateY: translateY.value }],
   }));
 
-  const displayName = (u: { display_name: string | null; full_name: string | null }) =>
-    u.display_name || u.full_name || 'משתמש';
+  const displayName = (u?: { display_name: string | null; full_name: string | null } | null) =>
+    u?.display_name || u?.full_name || 'משתמש';
 
   const listData = tab === 'viewers' ? viewers : reactions;
 

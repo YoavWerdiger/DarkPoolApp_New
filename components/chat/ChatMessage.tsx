@@ -32,6 +32,7 @@ import { extractWaveformData, WAVEFORM_STORE_BARS } from '../../utils/waveformSa
 import { resolveMessageWaveform } from '../../utils/audioWaveformPeaks';
 import * as WebBrowser from 'expo-web-browser';
 import { logger } from '../../utils/logger';
+import { getChatMessagePreview } from '../../utils/chatMessagePreview';
 import {
   getChatMediaDisplayUri,
   getCachedChatMediaDisplayUri,
@@ -45,6 +46,10 @@ import LinkPreview, { extractFirstUrl } from './LinkPreview';
 import MessageReactions from './MessageReactions';
 import { useAuth } from '../../context/AuthContext';
 import { PollService, type PollWithVotes } from '../../services/pollService';
+import {
+  claimVoicePlayback,
+  releaseVoicePlayback,
+} from '../../utils/voicePlaybackController';
 
 type ResolvedMessageMedia = {
   main: string | null;
@@ -725,7 +730,7 @@ function ChatMessage({
                   {String(message.reply_to.sender_name || 'משתמש')}
                 </Text>
                 <Text key={`reply-text-${message.id}`} style={[styles.replyText, { textAlign: 'right' }]} numberOfLines={1}>
-                  {getReplyPreviewText(message.reply_to)}
+                  {getChatMessagePreview(message.reply_to.message_type, message.reply_to.content)}
                 </Text>
               </View>
             </GHTouchableOpacity>
@@ -749,7 +754,7 @@ function ChatMessage({
               (message.message_type === MessageType.IMAGE ||
                message.message_type === MessageType.VIDEO ||
                message.message_type === MessageType.MEDIA_GROUP)
-                && { paddingHorizontal: 8, paddingTop: 2 },
+                && { paddingHorizontal: 8, paddingTop: 4, paddingBottom: 6 },
             ]}>
               {message.sender?.display_name || 'משתמש'}
             </Text>
@@ -971,7 +976,9 @@ function renderMediaContent(
     case MessageType.IMAGE: {
       const imgW = message.media_width;
       const imgH = message.media_height;
-      const aspectRatio = imgW && imgH ? imgW / imgH : 4 / 3;
+      // Mild WhatsApp hint: soft portrait default + clamp (not hard 3:4)
+      const rawAspect = imgW && imgH ? imgW / imgH : 0.9;
+      const aspectRatio = Math.min(1.15, Math.max(0.65, rawAspect));
       const thumbUri =
         resolved.thumb ||
         getCachedChatMediaDisplayUri(message.media_thumbnail_url) ||
@@ -1144,7 +1151,7 @@ function renderMediaContent(
           mediaItems={message.media_urls || []}
           localMediaItems={message.local_media_urls}
           isUploading={message.is_uploading}
-          maxWidth={240}
+          maxWidth={220}
         />
       );
 
@@ -1179,29 +1186,6 @@ function getSystemMessageText(message: ChatMessageType): string {
       return 'תיאור הקבוצה שונה';
     default:
       return 'פעולה בקבוצה';
-  }
-}
-
-function getMediaTypeText(type?: MessageType | string | null): string {
-  if (!type) return 'מדיה';
-
-  switch (type) {
-    case MessageType.IMAGE:
-      return '📷 תמונה';
-    case MessageType.VIDEO:
-      return '🎥 סרטון';
-    case MessageType.AUDIO:
-      return '🎤 הודעה קולית';
-    case MessageType.DOCUMENT:
-      return '📎 מסמך';
-    case MessageType.MEDIA_GROUP:
-      return '🖼️ אלבום';
-    case MessageType.TRADE:
-      return '📈 טרייד';
-    case MessageType.POLL:
-      return '📊 סקר';
-    default:
-      return 'מדיה';
   }
 }
 
@@ -1251,6 +1235,7 @@ function buildStubPollFromMessage(message: ChatMessageType): PollWithVotes | nul
     question: message.content?.trim() || 'סקר',
     options,
     multiple_choice: !!data?.multiple_choice,
+    allow_vote_change: !!data?.allow_vote_change,
     is_locked: false,
     created_at: message.created_at,
     user_votes: [],
@@ -1283,6 +1268,7 @@ function PollMessageContent({
     message.created_at,
     message.system_message_data?.poll_id,
     message.system_message_data?.multiple_choice,
+    message.system_message_data?.allow_vote_change,
   ]);
 
   useEffect(() => {
@@ -1329,44 +1315,6 @@ function PollMessageContent({
       embeddedInBubble
     />
   );
-}
-
-/** תצוגת ריפליי — לא מציגים JSON של waveform מתוך תוכן אודיו */
-function getReplyPreviewText(reply: {
-  content?: string | null;
-  message_type?: MessageType | string | null;
-}): string {
-  const type = reply.message_type as MessageType | undefined;
-  if (type === MessageType.AUDIO) {
-    return getMediaTypeText(MessageType.AUDIO);
-  }
-  if (type === MessageType.TRADE && reply.content?.trim()) {
-    try {
-      const p = JSON.parse(reply.content.trim()) as { trade?: { symbol?: string } };
-      if (p.trade?.symbol) return `📈 טרייד · ${p.trade.symbol}`;
-    } catch {
-      /* ignore */
-    }
-    return getMediaTypeText(MessageType.TRADE);
-  }
-  const raw = reply.content?.trim();
-  if (raw) {
-    if (raw.startsWith('{')) {
-      try {
-        const p = JSON.parse(raw) as Record<string, unknown>;
-        if (p.trade && typeof (p.trade as any).symbol === 'string') {
-          return `📈 טרייד · ${(p.trade as any).symbol}`;
-        }
-        if (p.waveform != null || p.waveformData != null || typeof p.duration === 'number') {
-          return getMediaTypeText(MessageType.AUDIO);
-        }
-      } catch {
-        /* לא JSON תקין */
-      }
-    }
-    return raw;
-  }
-  return getMediaTypeText(type);
 }
 
 function formatDuration(seconds: number): string {
@@ -1528,6 +1476,8 @@ function AudioPlayer({
   const isScrubbingRef = useRef(false);
   const wasPlayingBeforeScrubRef = useRef(false);
   const playbackRateRef = useRef(playbackRate);
+  const playerId = `msg:${message.id}`;
+  const stopExternallyRef = useRef<() => Promise<void>>(async () => {});
 
   const progressSV = useSharedValue(0);
   const isPlayingSV = useSharedValue(0);
@@ -1580,14 +1530,44 @@ function AudioPlayer({
     isPlayingSV.value = 0;
     if (soundRef.current) {
       try {
+        // stop לפני seek — מונע replay לא מכוון אחרי didJustFinish בחלק מהפלטפורמות
+        await soundRef.current.stopAsync();
         await soundRef.current.setPositionAsync(0);
       } catch (e) {
-        if (isMountedRef.current) {
-          logger.error('ChatMessage', 'Audio reset error', e);
+        try {
+          await soundRef.current?.setPositionAsync(0);
+        } catch (e2) {
+          if (isMountedRef.current) {
+            logger.error('ChatMessage', 'Audio reset error', e2 ?? e);
+          }
         }
       }
     }
   }, [progressSV, isPlayingSV]);
+
+  // עצירה חיצונית כשנגן אחר תופס את הניגון
+  stopExternallyRef.current = async () => {
+    if (soundRef.current) {
+      try {
+        const st = await soundRef.current.getStatusAsync();
+        if (st.isLoaded && st.isPlaying) {
+          await soundRef.current.pauseAsync();
+        }
+        await soundRef.current.setPositionAsync(0);
+      } catch {
+        /* noop */
+      }
+    }
+    if (!isMountedRef.current) return;
+    progressSV.value = 0;
+    setPosition(0);
+    setIsPlaying(false);
+    isPlayingSV.value = 0;
+  };
+
+  const claimExclusivePlayback = useCallback(() => {
+    claimVoicePlayback(playerId, () => stopExternallyRef.current());
+  }, [playerId]);
 
   const syncProgressFromAudio = useCallback(
     (posSeconds: number, durSeconds: number) => {
@@ -1619,11 +1599,13 @@ function AudioPlayer({
         currentUriRef.current = signed;
       }
     }
+    const initialStatus = {
+      progressUpdateIntervalMillis: 80,
+      isLooping: false,
+      shouldPlay: false,
+    } as const;
     try {
-      return await Audio.Sound.createAsync(
-        { uri },
-        { progressUpdateIntervalMillis: 80 },
-      );
+      return await Audio.Sound.createAsync({ uri }, initialStatus);
     } catch (first) {
       const ref = message.media_url;
       if (!ref) throw first;
@@ -1632,10 +1614,7 @@ function AudioPlayer({
       const fresh = await getChatMediaDisplayUri(ref);
       if (!fresh || fresh === uri) throw first;
       currentUriRef.current = fresh;
-      return await Audio.Sound.createAsync(
-        { uri: fresh },
-        { progressUpdateIntervalMillis: 80 },
-      );
+      return await Audio.Sound.createAsync({ uri: fresh }, initialStatus);
     }
   };
 
@@ -1648,6 +1627,8 @@ function AudioPlayer({
         durationSV.value = sec;
       }
       if (status.didJustFinish) {
+        // סיום טבעי: איפוס להתחלה, בלי לופ / playAsync מחדש
+        releaseVoicePlayback(playerId);
         void resetPlayheadToStart();
         return;
       }
@@ -1680,6 +1661,7 @@ function AudioPlayer({
       duration,
       durationSV,
       isPlayingSV,
+      playerId,
       progressSV,
       resetPlayheadToStart,
       syncProgressFromAudio,
@@ -1689,12 +1671,13 @@ function AudioPlayer({
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      releaseVoicePlayback(playerId);
       if (soundRef.current) {
         void soundRef.current.unloadAsync();
         soundRef.current = null;
       }
     };
-  }, []);
+  }, [playerId]);
 
   const seekToProgress = useCallback(
     async (progress01: number, resumeIfNeeded: boolean) => {
@@ -1724,6 +1707,7 @@ function AudioPlayer({
         }
         await soundRef.current.setPositionAsync(targetMs);
         if (resumeIfNeeded) {
+          claimExclusivePlayback();
           await soundRef.current.setRateAsync(playbackRateRef.current, true);
           await soundRef.current.playAsync();
           setIsPlaying(true);
@@ -1737,6 +1721,7 @@ function AudioPlayer({
     },
     [
       actualDuration,
+      claimExclusivePlayback,
       duration,
       progressSV,
       durationSV,
@@ -1752,10 +1737,11 @@ function AudioPlayer({
     wasPlayingBeforeScrubRef.current = isPlayingSV.value > 0.5;
     if (soundRef.current && wasPlayingBeforeScrubRef.current) {
       void soundRef.current.pauseAsync();
+      releaseVoicePlayback(playerId);
       setIsPlaying(false);
       isPlayingSV.value = 0;
     }
-  }, [isScrubbingSV, isPlayingSV]);
+  }, [isScrubbingSV, isPlayingSV, playerId]);
 
   const onScrubUpdate = useCallback(
     (progress01: number) => {
@@ -1803,6 +1789,7 @@ function AudioPlayer({
             await sound.setPositionAsync(startProgress * dur * 1000);
           }
         }
+        claimExclusivePlayback();
         await sound.playAsync();
         soundRef.current = sound;
         setIsPlaying(true);
@@ -1820,6 +1807,7 @@ function AudioPlayer({
         if (status.isLoaded) {
           if (status.isPlaying) {
             await soundRef.current.pauseAsync();
+            releaseVoicePlayback(playerId);
             setIsPlaying(false);
             isPlayingSV.value = 0;
             const pos = (status.positionMillis ?? 0) / 1000;
@@ -1837,6 +1825,7 @@ function AudioPlayer({
               progressSV.value = 0;
               setPosition(0);
             }
+            claimExclusivePlayback();
             await soundRef.current.setRateAsync(playbackRateRef.current, true);
             await soundRef.current.playAsync();
             setIsPlaying(true);
@@ -1936,13 +1925,15 @@ function AudioPlayer({
               onScrubStart={onScrubStart}
               onScrubUpdate={onScrubUpdate}
               onScrubEnd={onScrubEnd}
-              thumbColor={tokens.colors.accent.main}
-              activeColor={tokens.colors.primary.main}
+              thumbColor="rgba(255,255,255,0.92)"
+              activeColor={
+                isMe ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.68)'
+              }
               inactiveColor={
-                isMe ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.22)'
+                isMe ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.22)'
               }
               nearActiveColor={
-                isMe ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.4)'
+                isMe ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.42)'
               }
             />
           </View>
@@ -2108,7 +2099,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
   gestureSwipeWrapperThem: {
     alignSelf: 'flex-start',
   },
-  /** אודיו: קצת מעל רוחב בועה רגילה, בלי למלא כמעט את המסך */
+  /** אודיו: בועה רחבה יחסית — כמו לפני ה־narrow polish */
   gestureSwipeWrapperAudio: {
     maxWidth: '78%',
     minWidth: 210,
@@ -2261,7 +2252,7 @@ const createStyles = (tokens: any) => StyleSheet.create({
 
   mediaImage: {
     width: '100%',
-    maxWidth: 240,
+    maxWidth: 220,
     // aspectRatio set dynamically from media dimensions
     borderRadius: tokens.borderRadius.md,
     marginBottom: 4,
@@ -2293,8 +2284,8 @@ const createStyles = (tokens: any) => StyleSheet.create({
   mediaVideo: {
     position: 'relative',
     width: '100%',
-    maxWidth: 240,
-    aspectRatio: 1,
+    maxWidth: 220,
+    aspectRatio: 0.9,
     borderRadius: tokens.borderRadius.md,
     marginBottom: 4,
     overflow: 'hidden',

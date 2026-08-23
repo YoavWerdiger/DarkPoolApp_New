@@ -17,7 +17,11 @@ BEGIN
   IF COALESCE(NEW.is_silent, FALSE) = FALSE
      AND COALESCE(NEW.is_system_message, FALSE) = FALSE
   THEN
-    PERFORM public.increment_unread_count(NEW.group_id, NEW.sender_id, '{}'::uuid[]);
+    PERFORM public.increment_unread_count(
+      NEW.group_id,
+      NEW.sender_id,
+      COALESCE(NEW.mentioned_users, '{}'::uuid[])
+    );
   END IF;
   RETURN NEW;
 END;

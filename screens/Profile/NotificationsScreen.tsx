@@ -21,6 +21,7 @@ import { NotificationService } from '../../services/notificationService';
 import { Linking, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { HapticFeedback } from '../../utils/hapticFeedback';
+import { SettingsSectionTitle } from '../../components/profile/ProfileSettingsUI';
 
 interface NotificationSettings {
   notifications: boolean;
@@ -375,18 +376,7 @@ export default function NotificationsScreen({ navigation }: any) {
             showsVerticalScrollIndicator={false}
           >
           <View style={{ paddingHorizontal: DesignTokens.spacing.lg, paddingTop: DesignTokens.spacing.lg }}>
-            {/* System Notifications Section */}
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.xs,
-              fontWeight: DesignTokens.typography.fontWeight.bold as any,
-              color: DesignTokens.colors.text.tertiary,
-              marginBottom: DesignTokens.spacing.sm,
-              textAlign: 'right',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5
-            }}>
-              התראות מערכת
-            </Text>
+            <SettingsSectionTitle title="התראות מערכת" />
 
             <UICard
               variant="glass"
@@ -463,18 +453,7 @@ export default function NotificationsScreen({ navigation }: any) {
             ))}
             </UICard>
 
-            {/* News Notifications Section */}
-            <Text style={{
-              fontSize: DesignTokens.typography.fontSize.xs,
-              fontWeight: DesignTokens.typography.fontWeight.bold as any,
-              color: DesignTokens.colors.text.tertiary,
-              marginBottom: DesignTokens.spacing.sm,
-              textAlign: 'right',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5
-            }}>
-              התראות חדשות
-            </Text>
+            <SettingsSectionTitle title="התראות חדשות" />
 
             <UICard
               variant="glass"

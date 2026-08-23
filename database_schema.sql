@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   profile_picture TEXT,
   account_type TEXT,
   track_id TEXT,
-  intro_data JSONB, -- כל נתוני ההרשמה (markets, experience, styles, brokers, level, goal, communityGoals, hours, socials, heardFrom, wish)
+  intro_data JSONB, -- onboarding questionnaire: age (number) OR age_range (deprecated), experience_level, trading_focus, trading_platform (array, multi-select), portfolio_size (optional)
   registration_completed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PollOption } from '../../services/pollService';
 import { useDesignTokens } from '../ui/DesignTokens';
@@ -13,6 +13,9 @@ interface PollResultsProps {
   isLocked: boolean;
   isMe?: boolean;
   embeddedInBubble?: boolean;
+  /** When set, options are tappable (used for changing vote). */
+  onOptionPress?: (optionId: string) => void;
+  allowChangeVote?: boolean;
 }
 
 export default function PollResults({
@@ -22,6 +25,8 @@ export default function PollResults({
   multipleChoice: _multipleChoice,
   isMe = false,
   embeddedInBubble = false,
+  onOptionPress,
+  allowChangeVote = false,
 }: PollResultsProps) {
   const tokens = useDesignTokens();
   const lightOnBubble = embeddedInBubble && isMe;
@@ -34,6 +39,8 @@ export default function PollResults({
     if (totalVotes === 0) return 0;
     return Math.round((votesCount / totalVotes) * 100);
   };
+
+  const interactive = !!allowChangeVote && !!onOptionPress;
 
   return (
     <View style={styles.container}>
@@ -48,8 +55,8 @@ export default function PollResults({
             ? 'rgba(0, 200, 5, 0.28)'
             : 'rgba(255,255,255,0.08)';
 
-        return (
-          <View key={option.id} style={styles.row}>
+        const content = (
+          <>
             <View style={[styles.barFill, { width: `${percentage}%`, backgroundColor: fillColor }]} />
             <View style={styles.rowContent}>
               <View style={styles.labelRow}>
@@ -66,12 +73,32 @@ export default function PollResults({
               </View>
               <Text style={styles.percent}>{percentage}%</Text>
             </View>
+          </>
+        );
+
+        if (interactive) {
+          return (
+            <TouchableOpacity
+              key={option.id}
+              onPress={() => onOptionPress?.(option.id)}
+              activeOpacity={0.75}
+              style={styles.row}
+            >
+              {content}
+            </TouchableOpacity>
+          );
+        }
+
+        return (
+          <View key={option.id} style={styles.row}>
+            {content}
           </View>
         );
       })}
 
       <Text style={styles.footer}>
         {totalVotes} {totalVotes === 1 ? 'הצבעה' : 'הצבעות'}
+        {interactive ? ' · לחץ לשינוי בחירה' : ''}
       </Text>
     </View>
   );

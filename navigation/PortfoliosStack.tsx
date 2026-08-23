@@ -16,6 +16,10 @@ export type PortfoliosStackParamList = {
     portfolioId: string;
     initialMode?: 'asset' | 'cash' | 'dividend';
     transactionId?: string;
+    /** editTradeId — לעריכת trade מטבלת trades (המודל החדש) */
+    editTradeId?: string;
+    /** סימבול התחלתי מרשימת מעקב */
+    initialSymbol?: string;
   };
   ImportTransactions: { portfolioId: string };
   ConnectBroker: undefined;

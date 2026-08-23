@@ -4,19 +4,37 @@ import { knownPortraitForInvestor } from './knownInvestorPortraits';
 
 export type ExploreKindFilter = 'all' | 'politician' | 'insider';
 
-/** URL תמונה אמיתית — לא placeholder / לא ריק */
+/** האם URL נראה כמו תמונת אדם (לא לוגו חברה / אייקון) */
+function looksLikePersonPhoto(url: string): boolean {
+  const u = url.toLowerCase();
+  if (u.includes('transback.png')) return false;
+  if (u.includes('brandfetch') || u.includes('/logo') || u.includes('clearbit')) {
+    return false;
+  }
+  // לוגו טיקר של UW — לא פנים
+  if (u.includes('uwassets') && (u.includes('/tickers') || u.includes('/logos'))) {
+    return false;
+  }
+  return true;
+}
+
+/** URL תמונה אמיתית של אדם — לא placeholder / לא לוגו חברה */
 export function resolveExplorePhotoUrl(person: ExplorePerson): string | null {
-  const direct = person.image_url?.trim();
-  if (direct && !direct.includes('transback.png')) return direct;
+  const known = knownPortraitForInvestor({
+    personId: person.id,
+    name: person.name,
+  });
+  if (known) return known;
 
   if (person.kind === 'politician') {
-    return (
-      congressPhotoUrl(person.id) ??
-      knownPortraitForInvestor({ personId: person.id, name: person.name })
-    );
+    const congress = congressPhotoUrl(person.id);
+    if (congress) return congress;
   }
 
-  return knownPortraitForInvestor({ personId: person.id, name: person.name });
+  const direct = person.image_url?.trim();
+  if (direct && looksLikePersonPhoto(direct)) return direct;
+
+  return null;
 }
 
 export function explorePersonHasPhoto(person: ExplorePerson): boolean {
@@ -28,16 +46,22 @@ export function withResolvedPhoto(person: ExplorePerson): ExplorePerson {
   return url ? { ...person, image_url: url } : person;
 }
 
-/** מאחד כל המקורות לרשימת פרופילים ייחודית — רק עם תמונה */
+/** מאחד כל המקורות לרשימת פרופילים ייחודית */
 export function buildExploreProfileGrid(
   sources: ExplorePerson[],
-  opts?: { kind?: ExploreKindFilter; query?: string }
+  opts?: { kind?: ExploreKindFilter; query?: string; requirePhoto?: boolean }
 ): ExplorePerson[] {
   const map = new Map<string, ExplorePerson>();
+  const requirePhoto = opts?.requirePhoto !== false;
 
   for (const raw of sources) {
     const person = withResolvedPhoto(raw);
-    if (!explorePersonHasPhoto(person)) continue;
+    // בלי תמונה — רק אם יש טיקר (InvestorPortrait נופל ללוגו מניה)
+    if (requirePhoto) {
+      if (!explorePersonHasPhoto(person)) continue;
+    } else if (!explorePersonHasPhoto(person) && !person.ticker) {
+      continue;
+    }
 
     const prev = map.get(person.id);
     if (!prev || (person.activity_score ?? 0) > (prev.activity_score ?? 0)) {

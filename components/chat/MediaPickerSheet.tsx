@@ -9,7 +9,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from '../ui/DesignTokens';
-import { ChatBottomSheet } from './ChatBottomSheet';
+import {
+  ChatBottomSheet,
+  ChatSheetContent,
+  useChatFitContentSnap,
+} from './ChatBottomSheet';
+import { sheetContentBottomPadding } from '../ui/BottomSheet/sheetGlass';
 import { chatRtlText } from './chatDesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { runAfterSheetDismiss } from './mediaPickerLaunch';
@@ -59,6 +64,15 @@ export default function MediaPickerSheet({
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
 
+  /**
+   * ריפוד תחתון כולל safe area (+ מינימום אמין באנדרואיד כש-insets.bottom=0).
+   * מנוהל בתוכן (`contentPaddingBottom={0}`) כדי שנמדד ב-fitContent ולא ייחתך מאחורי nav.
+   */
+  const sheetBottomPad = useMemo(
+    () => sheetContentBottomPadding(insets.bottom),
+    [insets.bottom],
+  );
+
   const options = useMemo<PickerOption[]>(
     () =>
       [
@@ -79,14 +93,29 @@ export default function MediaPickerSheet({
   const rows = useMemo(() => chunkOptions(options, GRID_COLS), [options]);
   const styles = useMemo(() => createStyles(tokens), [tokens]);
 
+  const { snapPoint, onContentLayout } = useChatFitContentSnap(
+    0.42,
+    0.72,
+    0.28,
+    `${visible}-${options.length}-${sheetBottomPad}`,
+  );
+
   return (
     <ChatBottomSheet
       visible={visible}
       onClose={onClose}
-      snapPoints={[0.38]}
+      snapPoints={[snapPoint]}
+      fitContent
       showBrandWatermark={false}
+      contentPaddingBottom={0}
     >
-      <View style={[styles.container, { paddingBottom: insets.bottom + 20 }]}>
+      <ChatSheetContent
+        onLayout={onContentLayout}
+        style={{
+          paddingBottom: sheetBottomPad,
+          backgroundColor: 'transparent',
+        }}
+      >
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: tokens.colors.text.primary }]}>צרף קובץ</Text>
         </View>
@@ -136,18 +165,13 @@ export default function MediaPickerSheet({
             </View>
           ))}
         </View>
-      </View>
+      </ChatSheetContent>
     </ChatBottomSheet>
   );
 }
 
 const createStyles = (tokens: ReturnType<typeof useDesignTokens>) =>
   StyleSheet.create({
-    container: {
-      paddingHorizontal: tokens.spacing.md,
-      direction: 'rtl',
-      backgroundColor: 'transparent',
-    },
     header: {
       alignItems: 'center',
       paddingTop: tokens.spacing.xs,

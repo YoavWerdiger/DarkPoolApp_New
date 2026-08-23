@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { DayNavBlurButton, DRAWER_MENU_BUTTON_SIZE } from '../../components/ui/DayNavBlurButton';
-import { ChatSessionBackdrop } from '../../components/chat/ChatSessionBackdrop';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView as RNSafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { ScreenChrome } from '../../components/ui/ScreenChrome';
+import { MainDrawerScreenHeader } from '../../components/ui/MainDrawerScreenHeader';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { MarketsEmbedSwitcher } from '../Markets/components/MarketsEmbedSwitcher';
 import TradesListTab from './TradesListTab';
@@ -47,34 +47,9 @@ export default function TradingScreen() {
   const styles = useMemo(
     () =>
       StyleSheet.create({
-        screenRoot: {
-          flex: 1,
-          backgroundColor: '#0A0E0A',
-        },
         safeAreaContainer: {
           flex: 1,
           backgroundColor: 'transparent',
-        },
-        appHeader: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          paddingHorizontal: DesignTokens.layout.screenPadding,
-          paddingVertical: 14,
-        },
-        appHeaderActions: {
-          flexDirection: 'row-reverse',
-          alignItems: 'center',
-          minWidth: 72,
-        },
-        appHeaderTitle: {
-          fontSize: 22,
-          fontWeight: '700',
-          color: DesignTokens.colors.text.primary,
-          letterSpacing: -0.3,
-        },
-        appHeaderTitleCenter: {
-          flex: 1,
-          textAlign: 'center',
         },
         tabBarWrap: {
           paddingHorizontal: DesignTokens.layout.screenPadding,
@@ -115,26 +90,10 @@ export default function TradingScreen() {
   );
 
   return (
-    <View style={styles.screenRoot}>
-      <ChatSessionBackdrop />
+    <ScreenChrome withBrandWatermark>
       <StatusBar style="light" />
       <RNSafeAreaView style={styles.safeAreaContainer} edges={['top']}>
-        <View style={styles.appHeader}>
-          <View style={styles.appHeaderActions}>
-            <DayNavBlurButton
-              onPress={openMainDrawer}
-              glassIntensity="subtle"
-              size={DRAWER_MENU_BUTTON_SIZE}
-              accessibilityLabel="תפריט ראשי"
-            >
-              <Ionicons name="menu" size={24} color={DesignTokens.colors.text.primary} />
-            </DayNavBlurButton>
-          </View>
-          <Text style={[styles.appHeaderTitle, styles.appHeaderTitleCenter]} numberOfLines={1}>
-            יומן מסחר
-          </Text>
-          <View style={styles.appHeaderActions} />
-        </View>
+        <MainDrawerScreenHeader title="יומן מסחר" onMenuPress={openMainDrawer} />
 
         <View style={styles.tabBarWrap} accessibilityRole="tablist">
           <MarketsEmbedSwitcher
@@ -169,6 +128,6 @@ export default function TradingScreen() {
           </View>
         ) : null}
       </RNSafeAreaView>
-    </View>
+    </ScreenChrome>
   );
 }

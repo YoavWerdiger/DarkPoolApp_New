@@ -9,7 +9,9 @@ const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') || '';
 
 /** התראות ישנות יותר מזה לא נשלחות — מונע הצפה כשהתור נצבר */
 const MAX_AGE_HOURS = 2;
-const BATCH_LIMIT = 50;
+const BATCH_LIMIT = 150;
+/** מקסימום דוחות כלכליים למשתמש בריצה אחת — השאר נשארים בתור לריצה הבאה */
+const MAX_ECONOMIC_PER_USER = 8;
 
 async function ensureNotificationImageUrl(
   supabase: ReturnType<typeof createClient>,
@@ -178,9 +180,7 @@ serve(async (req) => {
       notificationsByUser.get(notification.user_id)!.push(notification);
     }
 
-    const MAX_ECONOMIC_PER_USER = 1;
-
-    // לחדשות: מקסימום אחת למשתמש. ליומן כלכלי: מקסימום 3 האחרונות.
+    // לחדשות: מקסימום אחת למשתמש. ליומן כלכלי: עד N לכל ריצה (השאר נשארים בתור).
     for (const [userId, list] of notificationsByUser) {
       const newsOnly = list.filter((n) => n.notification_type === 'news');
       const econOnly = list.filter((n) => n.notification_type === 'economic_calendar');
@@ -205,20 +205,17 @@ serve(async (req) => {
         trimmed = [newsOnly[0], ...trimmed];
       }
 
-      if (econOnly.length > MAX_ECONOMIC_PER_USER) {
-        const toSend = econOnly.slice(0, MAX_ECONOMIC_PER_USER);
-        const skippedEconIds = econOnly.slice(MAX_ECONOMIC_PER_USER).map((n) => n.id);
-        if (skippedEconIds.length > 0) {
-          await supabase
-            .from('pending_notifications')
-            .update({ is_sent: true, sent_at: new Date().toISOString() })
-            .in('id', skippedEconIds);
-          console.log(`⏭️ Skipped ${skippedEconIds.length} older economic for user ${userId}`);
-        }
-        trimmed = [...trimmed, ...toSend];
-      } else {
-        trimmed = [...trimmed, ...econOnly];
+      // כרונולוגי: שולחים את הוותיקים קודם; עודפים נשארים is_sent=false לריצה הבאה
+      const econSorted = [...econOnly].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+      );
+      const econToSend = econSorted.slice(0, MAX_ECONOMIC_PER_USER);
+      if (econSorted.length > econToSend.length) {
+        console.log(
+          `⏳ Queued ${econSorted.length - econToSend.length} economic for next run (user ${userId})`,
+        );
       }
+      trimmed = [...trimmed, ...econToSend];
 
       notificationsByUser.set(userId, trimmed);
     }
@@ -313,10 +310,11 @@ serve(async (req) => {
               : isEarnings
                 ? 'darkpool-earnings'
                 : 'darkpool-general';
+          // collapse/tag לפי אירוע — לא לפי משתמש, כדי שלא יחליף תוצאה קודמת באותו בוקר
           const collapseId = isEconomic
-            ? `darkpool-economic-${userId}`
+            ? `darkpool-economic-${notification.article_id || notificationData.eventId || notification.id}`
             : isEarnings
-              ? `darkpool-earnings-${userId}`
+              ? `darkpool-earnings-${notificationData.earnings_report_id || notification.id}`
               : isNews && notification.article_id
                 ? `darkpool-news-${notification.article_id}`
                 : threadId;
@@ -336,7 +334,15 @@ serve(async (req) => {
             pushBody = econBody;
             pushBodyWithEconomicName = androidBody;
           } else if (isNews) {
-            subtitle = ensurePushBidi(String(notificationData.source || '').trim()) || undefined;
+            // title = label, subtitle = source, body = text, image = img
+            const label = String(notificationData.label || '').trim();
+            const source = String(notificationData.source || '').trim();
+            if (label) {
+              pushTitle = ensurePushBidi(label);
+            }
+            if (source) {
+              subtitle = ensurePushBidi(source) || undefined;
+            }
           }
 
           const economicEventName = isEconomic ? subtitle : undefined;

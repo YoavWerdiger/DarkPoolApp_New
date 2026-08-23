@@ -1,14 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { 
-  Modal, 
-  View, 
-  Pressable, 
-  Animated, 
-  Dimensions, 
+import {
+  Modal,
+  View,
+  Pressable,
+  Animated,
+  Dimensions,
   ViewStyle,
-  StatusBar 
 } from 'react-native';
 import { useDesignTokens } from './DesignTokens';
+import { applyAppSystemUI } from '../../lib/androidSystemUI';
 
 export interface UIModalProps {
   visible: boolean;
@@ -37,7 +37,7 @@ const UIModal: React.FC<UIModalProps> = ({
 }) => {
   const DesignTokens = useDesignTokens();
   const { colors, shadows, animation } = DesignTokens;
-  
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
 
@@ -87,6 +87,7 @@ const UIModal: React.FC<UIModalProps> = ({
           }),
         ]).start();
       }
+      void applyAppSystemUI();
     }
   }, [visible]);
 
@@ -133,16 +134,17 @@ const UIModal: React.FC<UIModalProps> = ({
       animationType="none"
       statusBarTranslucent={statusBarTranslucent}
       onRequestClose={onClose}
+      onDismiss={() => {
+        void applyAppSystemUI();
+      }}
     >
-      <StatusBar backgroundColor="rgba(0,0,0,0.6)" barStyle="light-content" />
-      
       <Animated.View style={[backdropStyle, { opacity: fadeAnim }]}>
         {/* Backdrop Pressable */}
-        <Pressable 
+        <Pressable
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
           onPress={closeOnBackdropPress ? onClose : undefined}
         />
-        
+
         {/* Content */}
         <Animated.View style={[combinedContentStyle, getAnimatedStyle()]}>
           {children}
@@ -153,4 +155,3 @@ const UIModal: React.FC<UIModalProps> = ({
 };
 
 export default UIModal;
-

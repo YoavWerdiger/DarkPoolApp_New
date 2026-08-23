@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { 
-  Modal, 
-  View, 
-  Animated, 
-  Dimensions, 
+import {
+  Modal,
+  View,
+  Animated,
+  Dimensions,
   ViewStyle,
   Easing,
   PanResponder,
@@ -14,6 +14,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDesignTokens } from './DesignTokens';
 import { SHEET_OPEN_MS, SHEET_CLOSE_MS } from './BottomSheet/sheetMotion';
+import {
+  SHEET_BACKDROP_OPACITY,
+  SHEET_GLASS_FLOOR,
+  SHEET_GLASS_INTENSITY,
+  SHEET_GLASS_OVERLAY,
+  sheetContentBottomPadding,
+  sheetSystemBarFillHeight,
+} from './BottomSheet/sheetGlass';
+import { SheetGlassBackground } from './BottomSheet/SheetGlassBackground';
+import { applyAppSystemUI } from '../../lib/androidSystemUI';
 
 export interface UIBottomSheetProps {
   visible: boolean;
@@ -27,10 +37,11 @@ export interface UIBottomSheetProps {
   sheetStyle?: ViewStyle;
   closeOnBackdropPress?: boolean;
   maxHeight?: string | number;
+  /** ברירת מחדל true — אותו glass כמו BottomSheet / Action sheet */
+  useGlassBackground?: boolean;
 }
 
 const screenHeight = Dimensions.get('window').height;
-
 /** RN Animated — זהה ל־sheetMotion (open≈close, בלי bounce) */
 const SHEET_EASE_OUT_RN = Easing.bezier(0.25, 0.1, 0.25, 1);
 const SHEET_EASE_IN_RN = Easing.bezier(0.32, 0, 0.67, 0);
@@ -40,6 +51,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
+  systemBarFill: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  handle: {
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+  },
 });
 
 const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
@@ -48,17 +74,19 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
   children,
   showHandle = true,
   dragToClose = true,
-  backdropOpacity = 0.7,
+  backdropOpacity = SHEET_BACKDROP_OPACITY,
   contentStyle,
   sheetStyle,
   closeOnBackdropPress = true,
   maxHeight = '80%',
+  useGlassBackground = true,
 }) => {
   const tokens = useDesignTokens();
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(screenHeight)).current;
   const [isMounted, setIsMounted] = React.useState(visible);
+  const [glassActive, setGlassActive] = React.useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -78,8 +106,9 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
           useNativeDriver: true,
           easing: SHEET_EASE_OUT_RN,
         }),
-      ]).start();
+      ]).start(() => setGlassActive(true));
     } else {
+      setGlassActive(false);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -98,6 +127,14 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
       });
     }
   }, [visible, fadeAnim, translateY]);
+
+  // Modal שקוף באנדרואיד — ב־edge-to-edge צבעי NavigationBar נדחים; משחזרים theme אחיד בסגירה
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    if (!visible) {
+      void applyAppSystemUI();
+    }
+  }, [visible]);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -120,18 +157,24 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
           }).start();
         }
       },
-    })
+    }),
   ).current;
 
-  const maxHeightValue = typeof maxHeight === 'string' && maxHeight.includes('%')
-    ? (screenHeight * parseFloat(maxHeight) / 100)
-    : typeof maxHeight === 'number' ? maxHeight : screenHeight * 0.8;
+  const maxHeightValue =
+    typeof maxHeight === 'string' && maxHeight.includes('%')
+      ? (screenHeight * parseFloat(maxHeight)) / 100
+      : typeof maxHeight === 'number'
+        ? maxHeight
+        : screenHeight * 0.8;
 
   if (!isMounted) {
     return null;
   }
 
-  const bottomPad = Math.max(insets.bottom, Platform.OS === 'android' ? 20 : 12) + (Platform.OS === 'android' ? 10 : 8);
+  const bottomPad = sheetContentBottomPadding(insets.bottom);
+  const systemBarFillHeight = sheetSystemBarFillHeight(insets.bottom);
+  const sheetSurface =
+    tokens.colors.background.sheet ?? tokens.colors.background.secondary ?? SHEET_GLASS_FLOOR;
 
   return (
     <Modal
@@ -139,16 +182,31 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
       transparent
       animationType="none"
       statusBarTranslucent={true}
+      navigationBarTranslucent={Platform.OS === 'android'}
       presentationStyle="overFullScreen"
+      onShow={() => setGlassActive(true)}
       onRequestClose={() => {
         onClose();
       }}
     >
       <View style={styles.modalRoot}>
+        <View
+          pointerEvents="none"
+          style={[
+            styles.systemBarFill,
+            { height: systemBarFillHeight, backgroundColor: SHEET_GLASS_FLOOR },
+          ]}
+        />
         {/* Backdrop */}
-        <TouchableWithoutFeedback onPress={closeOnBackdropPress ? () => {
-          onClose();
-        } : undefined}>
+        <TouchableWithoutFeedback
+          onPress={
+            closeOnBackdropPress
+              ? () => {
+                  onClose();
+                }
+              : undefined
+          }
+        >
           <Animated.View
             style={{
               position: 'absolute',
@@ -156,7 +214,7 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.7)',
+              backgroundColor: '#000',
               opacity: fadeAnim.interpolate({
                 inputRange: [0, 1],
                 outputRange: [0, backdropOpacity],
@@ -164,50 +222,56 @@ const UIBottomSheet: React.FC<UIBottomSheetProps> = ({
             }}
           />
         </TouchableWithoutFeedback>
-        
+
         {/* Sheet Container */}
-        <Animated.View 
+        <Animated.View
           style={[
             {
               position: 'absolute',
               bottom: 0,
               left: 0,
               right: 0,
-              backgroundColor: tokens.colors.background.sheet,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
+              backgroundColor: useGlassBackground ? 'transparent' : sheetSurface,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: 'rgba(255,255,255,0.08)',
+              borderTopColor: 'rgba(255,255,255,0.12)',
+              borderBottomWidth: 0,
               minHeight: 200,
               maxHeight: maxHeightValue,
               paddingBottom: bottomPad,
               overflow: 'hidden',
               shadowColor: Platform.OS === 'ios' ? '#000' : 'transparent',
-              shadowOffset: { width: 0, height: -6 },
-              shadowOpacity: Platform.OS === 'ios' ? 0.22 : 0,
-              shadowRadius: 16,
-              elevation: Platform.OS === 'android' ? 22 : 10,
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: Platform.OS === 'ios' ? 0.18 : 0,
+              shadowRadius: 12,
+              elevation: Platform.OS === 'android' ? 12 : 6,
               transform: [{ translateY }],
+              zIndex: 2,
             },
             sheetStyle,
           ]}
         >
+          {useGlassBackground ? (
+            <SheetGlassBackground
+              active={glassActive}
+              intensity={SHEET_GLASS_INTENSITY}
+              overlayColor={SHEET_GLASS_OVERLAY}
+            />
+          ) : null}
+
           {showHandle && (
-            <View 
-              style={{ alignItems: 'center', paddingTop: 12, paddingBottom: 8 }}
+            <View
+              style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 6, zIndex: 2 }}
               {...(dragToClose ? panResponder.panHandlers : {})}
             >
-              <View style={{
-                width: 40,
-                height: 5,
-                backgroundColor: 'rgba(255,255,255,0.15)',
-                borderRadius: 2.5,
-              }} />
+              <View style={styles.handle} />
             </View>
           )}
-          
+
           {/* Content */}
-          <View style={contentStyle}>
-            {children}
-          </View>
+          <View style={[{ zIndex: 2, backgroundColor: 'transparent' }, contentStyle]}>{children}</View>
         </Animated.View>
       </View>
     </Modal>

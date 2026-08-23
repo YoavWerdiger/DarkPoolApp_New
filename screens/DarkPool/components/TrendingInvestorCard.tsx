@@ -104,7 +104,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
               />
             </Svg>
           ) : (
-            <Text style={styles.noChart}>פעילות דיווחים</Text>
+            <Text style={styles.noChart}>שווי תיק</Text>
           )}
         </View>
       </UICard>
@@ -115,7 +115,7 @@ export function TrendingInvestorCard({ person, onPress }: Props) {
 function createStyles(tokens: ReturnType<typeof useDesignTokens>) {
   return StyleSheet.create({
     card: {
-      borderRadius: tokens.borderRadius.xl,
+      borderRadius: tokens.borderRadius['2xl'],
       borderWidth: 1,
       borderColor: tokens.colors.border.subtle,
       marginBottom: tokens.spacing.sm,

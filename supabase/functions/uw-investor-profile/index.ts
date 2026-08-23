@@ -67,6 +67,8 @@ interface HoldingRow {
   amount_label: string | null;
   /** אמצע טווח disclosure ב-$1000 (מ-UW snapshot) */
   mid_usd_k?: number;
+  /** מחיר כניסה מוצר: Form4=cost/qty; קונגרס=Yahoo ב־first_added */
+  entry_price?: number | null;
   return_pct?: number | null;
 }
 
@@ -500,21 +502,32 @@ async function buildInsiderProfile(
 }
 
 function metricsHoldingsToRows(m: CongressPortfolioMetrics): HoldingRow[] {
-  return m.holdings.map((h) => ({
-    ticker: h.ticker,
-    issuer: null,
-    owner_label: null,
-    trade_count: 0,
-    last_trade_date: null,
-    first_added_date: h.first_added_date ?? null,
-    txn_mix: 'פתוח',
-    allocation_pct: h.allocation_pct,
-    amount_label: h.basis_reliable
-      ? `${Math.round(h.qty).toLocaleString('en-US')} מניות · שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`
-      : `שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`,
-    mid_usd_k: h.market_value / 1000,
-    return_pct: h.basis_reliable ? h.return_pct : null,
-  }));
+  return m.holdings.map((h) => {
+    const entry =
+      h.entry_price != null && h.entry_price > 0 ? h.entry_price : null;
+    const hasReturn =
+      entry != null && Number.isFinite(h.return_pct)
+        ? true
+        : h.basis_reliable === true && Number.isFinite(h.return_pct);
+    return {
+      ticker: h.ticker,
+      issuer: null,
+      owner_label: null,
+      trade_count: 0,
+      last_trade_date: null,
+      first_added_date: h.first_added_date ?? null,
+      txn_mix: 'פתוח',
+      allocation_pct: h.allocation_pct,
+      // qty רק כש־basis_reliable — לא ממציאים מניות מטווח STOCK Act
+      amount_label: h.basis_reliable
+        ? `${Math.round(h.qty).toLocaleString('en-US')} מניות · שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`
+        : `שווי אחזקה $${Math.round(h.market_value).toLocaleString('en-US')}`,
+      mid_usd_k: h.market_value / 1000,
+      entry_price: entry,
+      // תשואה מוצר: Form4 מ־cost; טווחי קונגרס מ־מחיר שוק ב־first_added
+      return_pct: hasReturn ? h.return_pct : null,
+    };
+  });
 }
 
 function form4TradeToUwTx(t: {

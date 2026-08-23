@@ -268,6 +268,20 @@ export function buildProfileHoldings(
         : null;
     const basisReliable =
       'basisReliable' in p ? p.basisReliable !== false : true;
+    let entryPrice: number | null = null;
+    let returnPct = 0;
+
+    if (basisReliable && p.qty > 0 && p.cost > 0) {
+      entryPrice = p.cost / p.qty;
+      returnPct = round2(((marketValue - p.cost) / p.cost) * 100);
+    } else if (firstAdded) {
+      const atEntry = priceOnOrBefore(priceMap ?? new Map(), firstAdded);
+      if (atEntry != null && atEntry > 0) {
+        entryPrice = atEntry;
+        returnPct = round2(((currentPrice - atEntry) / atEntry) * 100);
+      }
+    }
+
     holdings.push({
       ticker,
       qty: p.qty,
@@ -275,9 +289,10 @@ export function buildProfileHoldings(
       current_price: currentPrice,
       market_value: marketValue,
       allocation_pct: 0,
-      return_pct: p.cost > 0 ? round2(((marketValue - p.cost) / p.cost) * 100) : 0,
+      return_pct: returnPct,
       first_added_date: firstAdded,
       basis_reliable: basisReliable,
+      entry_price: entryPrice != null ? round2(entryPrice) : null,
     });
   }
 

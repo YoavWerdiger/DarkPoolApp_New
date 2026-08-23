@@ -12,9 +12,15 @@ export interface PortfolioHoldingMetric {
   first_added_date?: string | null;
   /**
    * true רק כש־qty/cost מבוססים על מניות מדווחות (Form 4), לא על טווחי STOCK Act.
-   * בלי זה אין להציג «מחיר ממוצע» מדויק.
+   * בלי זה אין להציג «מחיר ממוצע» מדויק מ־cost/qty.
    */
   basis_reliable?: boolean;
+  /**
+   * מחיר כניסה מוצר:
+   * - basis_reliable: cost/qty
+   * - אחרת: מחיר שוק ב־first_added_date
+   */
+  entry_price?: number | null;
 }
 
 export interface PortfolioValuePoint {

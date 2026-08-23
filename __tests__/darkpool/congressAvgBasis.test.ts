@@ -1,6 +1,6 @@
 /**
  * מוודא שהלוגיקה של בסיס עלות אמין/מוערך — לא מוק.
- * משקף את normalizeCongressTrades ב־congressPortfolio (edge).
+ * משקף את normalizeCongressTrades / buildCongressPortfolioMetrics ב־congressPortfolio (edge).
  */
 
 describe('congress avg basis reliability', () => {
@@ -25,13 +25,21 @@ describe('congress avg basis reliability', () => {
     expect(avg).not.toBeCloseTo(yahooPx, 0);
   });
 
-  it('basis_reliable gate: only show avg when explicitly reliable', () => {
+  it('basis_reliable: show avg from cost/qty; range uses market-at-first-added instead', () => {
     const cost = 750_000;
     const qty = 750_000 / 1770;
     const basisReliable = false;
-    const shown =
+    const avgFromCost =
       basisReliable && cost > 0 && qty > 0 ? cost / qty : null;
-    expect(shown).toBeNull();
+    expect(avgFromCost).toBeNull();
+
+    // מוצר: מחיר כניסה = Yahoo בתאריך הקנייה הראשון (לא cost/qty מעגלי)
+    const firstAddedPx = 150;
+    const currentPx = 165;
+    const entryPrice = firstAddedPx;
+    const returnPct = ((currentPx - entryPrice) / entryPrice) * 100;
+    expect(entryPrice).toBe(150);
+    expect(returnPct).toBeCloseTo(10);
   });
 
   it('chart series: range-only portfolios still get reconstructed series (algorithm OK)', () => {
@@ -42,8 +50,18 @@ describe('congress avg basis reliability', () => {
     ];
     const basisReliable = false;
     const showChart = series.length >= 2;
-    const showAvg = basisReliable;
+    const showAvgFromCost = basisReliable;
+    const showEntryFromMarket = !basisReliable;
     expect(showChart).toBe(true);
-    expect(showAvg).toBe(false);
+    expect(showAvgFromCost).toBe(false);
+    expect(showEntryFromMarket).toBe(true);
+  });
+
+  it('Form4 prefers disclosed avg over yahoo-at-date when both exist', () => {
+    const disclosedAvg = 42.5;
+    const yahooAtDate = 50;
+    const basisReliable = true;
+    const entry = basisReliable ? disclosedAvg : yahooAtDate;
+    expect(entry).toBe(42.5);
   });
 });

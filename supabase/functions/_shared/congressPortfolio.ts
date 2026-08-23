@@ -45,9 +45,15 @@ export interface PortfolioHoldingMetric {
   first_added_date?: string | null;
   /**
    * true רק כשכל הכמות הפתוחה מבוססת על מניות מדווחות (לא טווחי קונגרס).
-   * בלי זה — אין להציג «מחיר ממוצע» מדויק.
+   * בלי זה — אין להציג «מחיר ממוצע» מ־cost/qty (מעגלי).
    */
   basis_reliable?: boolean;
+  /**
+   * מחיר כניסה מוצר:
+   * - basis_reliable: cost/qty (מניות מדווחות)
+   * - אחרת: מחיר שוק ב־first_added_date (Yahoo)
+   */
+  entry_price?: number | null;
 }
 
 export interface ValuePoint {
@@ -612,6 +618,25 @@ export function buildCongressPortfolioMetrics(
     const marketValue = p.qty * currentPrice;
     totalValue += marketValue;
     totalCost += p.cost;
+
+    const basisReliable = p.basisReliable === true;
+    let entryPrice: number | null = null;
+    let returnPct = 0;
+
+    if (basisReliable && p.qty > 0 && p.cost > 0) {
+      // Form 4 / מניות מדווחות — מחיר מדווח עדיף על Yahoo-at-date
+      entryPrice = p.cost / p.qty;
+      returnPct = Math.round(((marketValue - p.cost) / p.cost) * 10000) / 100;
+    } else if (p.first_added_date) {
+      // STOCK Act / טווח $ — מחיר כניסה = מחיר שוק בתאריך הקנייה הראשון
+      const atEntry = priceOnOrBefore(priceMap ?? new Map(), p.first_added_date);
+      if (atEntry != null && atEntry > 0) {
+        entryPrice = atEntry;
+        returnPct =
+          Math.round(((currentPrice - atEntry) / atEntry) * 10000) / 100;
+      }
+    }
+
     holdings.push({
       ticker,
       qty: p.qty,
@@ -619,9 +644,10 @@ export function buildCongressPortfolioMetrics(
       current_price: currentPrice,
       market_value: marketValue,
       allocation_pct: 0,
-      return_pct: p.cost > 0 ? ((marketValue - p.cost) / p.cost) * 100 : 0,
+      return_pct: returnPct,
       first_added_date: p.first_added_date,
-      basis_reliable: p.basisReliable === true,
+      basis_reliable: basisReliable,
+      entry_price: entryPrice != null ? Math.round(entryPrice * 10000) / 10000 : null,
     });
   }
 
@@ -790,17 +816,38 @@ export async function metricsFromCongressTrades(
             const firstBuy = normalized.find(
               (t) => t.ticker === ticker && t.side === 'buy'
             );
+            const firstAdded = firstBuy?.date.slice(0, 10) ?? null;
+            const priceMap = pricesByTicker.get(ticker);
+            const entryAt =
+              firstAdded && priceMap
+                ? priceOnOrBefore(priceMap, firstAdded)
+                : null;
+            const lastDate = priceMap
+              ? Array.from(priceMap.keys()).sort().pop()
+              : undefined;
+            const current =
+              (lastDate && priceMap?.get(lastDate)) ||
+              (entryAt != null && entryAt > 0 ? entryAt : 0);
+            const entry_price =
+              entryAt != null && entryAt > 0
+                ? Math.round(entryAt * 10000) / 10000
+                : null;
+            const return_pct =
+              entry_price != null && current > 0
+                ? Math.round(((current - entry_price) / entry_price) * 10000) / 100
+                : 0;
             return {
               ticker,
               qty: market_value,
               cost_usd: market_value,
-              current_price: 1,
+              current_price: current > 0 ? current : 1,
               market_value,
               allocation_pct:
                 total > 0 ? Math.round((market_value / total) * 1000) / 10 : 0,
-              return_pct: 0,
-              first_added_date: firstBuy?.date.slice(0, 10) ?? null,
+              return_pct,
+              first_added_date: firstAdded,
               basis_reliable: false,
+              entry_price,
             };
           });
       }

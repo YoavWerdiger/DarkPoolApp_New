@@ -18,6 +18,8 @@ export interface InvestorHolding {
   txn_mix: string;
   allocation_pct?: number;
   amount_label?: string | null;
+  /** מחיר כניסה מוצר (Form4 / Yahoo ב־first_added) */
+  entry_price?: number | null;
   return_pct?: number | null;
 }
 

@@ -602,38 +602,41 @@ const staticTokens = {
    */
   cashAppStyle: {
     colors: {
-      // Primary - לבן לכפתורים ראשיים (הפוך מ-Cash App)
+      // Primary - לבן לכפתורים ראשיים
       buttonPrimary: '#FFFFFF',
       buttonPrimaryText: '#000000',
       
       // Secondary - אפור כהה לכפתורים משניים
-      buttonSecondary: '#2C2C2C',
+      buttonSecondary: '#434343',
       buttonSecondaryText: '#FFFFFF',
       
       // Disabled
-      buttonDisabled: '#E0E0E0',
-      buttonDisabledText: '#999999',
+      buttonDisabled: '#666565',
+      buttonDisabledText: '#AFAFAF',
       
-      // Backgrounds - Dark Mode
-      screen: '#000000',
-      card: '#1A1A1A',
-      input: '#2C2C2C',
+      // Backgrounds - Dark Mode (#242424)
+      screen: '#242424',
+      card: '#2C2C2C',
+      input: '#434343',
       
       // Text - Dark Mode
       headline: '#FFFFFF',
-      body: '#CCCCCC',
-      secondary: '#999999',
-      placeholder: '#666666',
+      body: '#AFAFAF',
+      secondary: '#898989',
+      placeholder: '#666565',
       
       // Borders - Dark Mode
-      input: '#3C3C3C',
-      inputFocus: '#00C805', // DarkPool Green
-      subtle: '#2C2C2C',
+      input: '#666565',
+      inputFocus: '#0ab010', // DarkPool Green
+      subtle: '#434343',
       
       // States
       error: '#FF4444',
-      success: '#00C805',
+      success: '#0ab010',
       warning: '#FFB800',
+      
+      // Primary Brand
+      primary: '#0ab010', // DarkPool Green
     },
     
     typography: {

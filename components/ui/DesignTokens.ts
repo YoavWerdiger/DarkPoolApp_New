@@ -602,33 +602,33 @@ const staticTokens = {
    */
   cashAppStyle: {
     colors: {
-      // Primary - שחור לכפתורים ראשיים
-      buttonPrimary: '#000000',
-      buttonPrimaryText: '#FFFFFF',
+      // Primary - לבן לכפתורים ראשיים (הפוך מ-Cash App)
+      buttonPrimary: '#FFFFFF',
+      buttonPrimaryText: '#000000',
       
-      // Secondary - אפור לכפתורים משניים
-      buttonSecondary: '#e8e8e8',
-      buttonSecondaryText: '#000000',
+      // Secondary - אפור כהה לכפתורים משניים
+      buttonSecondary: '#2C2C2C',
+      buttonSecondaryText: '#FFFFFF',
       
       // Disabled
       buttonDisabled: '#E0E0E0',
       buttonDisabledText: '#999999',
       
-      // Backgrounds - נקיים ופשוטים
-      screen: '#FFFFFF',
-      card: '#FAFAFA',
-      input: '#F8F8F8',
+      // Backgrounds - Dark Mode
+      screen: '#000000',
+      card: '#1A1A1A',
+      input: '#2C2C2C',
       
-      // Text
-      headline: '#000000',
-      body: '#666666',
+      // Text - Dark Mode
+      headline: '#FFFFFF',
+      body: '#CCCCCC',
       secondary: '#999999',
-      placeholder: '#BBBBBB',
+      placeholder: '#666666',
       
-      // Borders
-      input: '#E0E0E0',
+      // Borders - Dark Mode
+      input: '#3C3C3C',
       inputFocus: '#00C805', // DarkPool Green
-      subtle: '#F0F0F0',
+      subtle: '#2C2C2C',
       
       // States
       error: '#FF4444',

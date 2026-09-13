@@ -95,34 +95,39 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
   const legalStyle: TextStyle = {
     fontSize: 12,
     color: '#666',
-    textAlign: 'center',
+    textAlign: 'right',
+    writingDirection: 'rtl',
     lineHeight: 18,
     marginTop: tokens.spacing.xl * 2,
   };
 
   return (
     <CashAppScreen
-      title="Enter your info to log in or create an account"
+      title="מה מספר הטלפון שלך?"
+      subtitle="נשתמש בו ליצירת קשר ולהתראות חשובות"
       showHelp
       onHelp={handleHelp}
       currentStep={1}
       totalSteps={10}
       footer={
-        <View style={{ flexDirection: 'row', gap: tokens.spacing.md }}>
+        <View style={{ flexDirection: 'row-reverse', gap: tokens.spacing.md }}>
           <View style={{ flex: 1 }}>
             <CashAppButton
-              title="Use Email"
-              variant="secondary"
-              onPress={handleEmailOption}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <CashAppButton
-              title="Next"
+              title="המשך"
               variant="primary"
               onPress={handleNext}
               disabled={!canContinue}
               loading={loading}
+              style={{ backgroundColor: '#000000' }}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <CashAppButton
+              title="שימוש באימייל"
+              variant="secondary"
+              onPress={handleEmailOption}
+              style={{ backgroundColor: '#e8e8e8' }}
+              textStyle={{ color: '#000000' }}
             />
           </View>
         </View>
@@ -152,7 +157,8 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
       ) : null}
 
       <CashAppInput
-        placeholder="+1  Phone Number"
+        label="מספר טלפון"
+        placeholder="054-000-0000"
         value={phone}
         onChangeText={(text) => {
           setPhoneInput(text);
@@ -160,7 +166,7 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
         }}
         keyboardType="phone-pad"
         autoFormat="phone"
-        maxLength={12} // 054-000-0000
+        maxLength={12}
         autoFocus
         leftIcon="call-outline"
       />
@@ -180,28 +186,29 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
             textAlign: 'center',
             textDecorationLine: 'underline',
             fontWeight: '500',
+            writingDirection: 'rtl',
           }}
         >
-          Need help logging in?
+          צריך עזרה להתחברות?
         </Text>
       </Pressable>
 
       <Text style={legalStyle}>
-        By entering and tapping Next, you agree to the{' '}
+        בלחיצה על "המשך" אני מאשר/ת את{' '}
         <Text style={{ color: cashApp.colors.primary, textDecorationLine: 'underline' }}>
-          Terms
+          התנאים וההגבלות
         </Text>
         {', '}
         <Text style={{ color: cashApp.colors.primary, textDecorationLine: 'underline' }}>
-          E-Sign Consent
+          הסכמת E-Sign
         </Text>
-        {' & '}
+        {' ו'}
         <Text style={{ color: cashApp.colors.primary, textDecorationLine: 'underline' }}>
-          Privacy Notice
+          מדיניות הפרטיות
         </Text>
         .{'\n\n'}
-        You agree to receive a One Time Password Confirmation Code from Cash App. Message
-        frequency varies. Message and data rates may apply. Reply HELP for help, STOP to cancel.
+        אני מאשר/ת קבלת קוד אימות חד-פעמי מ-DarkPool. תדירות ההודעות משתנה. 
+        עלולים לחול תעריפי הודעות ונתונים. השב HELP לעזרה, STOP לביטול.
       </Text>
 
       <View style={{ flex: 1 }} />

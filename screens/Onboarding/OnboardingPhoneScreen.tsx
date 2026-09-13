@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextStyle, ViewStyle } from 'react-native';
+import { View, Text, TextStyle, ViewStyle, Pressable } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import CashAppScreen from '../../components/ui/CashAppScreen';
@@ -93,36 +93,38 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const legalStyle: TextStyle = {
-    fontSize: cashApp.typography.caption.fontSize,
-    color: cashApp.colors.secondary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
     lineHeight: 18,
-    marginTop: tokens.spacing.xl,
+    marginTop: tokens.spacing.xl * 2,
   };
 
   return (
     <CashAppScreen
-      title="מה מספר הטלפון שלך?"
-      subtitle="נשתמש בו ליצירת קשר ולהתראות חשובות"
+      title="Enter your info to log in or create an account"
       showHelp
       onHelp={handleHelp}
       currentStep={1}
       totalSteps={10}
       footer={
-        <View style={{ gap: tokens.spacing.md }}>
-          <CashAppButton
-            title="המשך"
-            variant="primary"
-            onPress={handleNext}
-            disabled={!canContinue}
-            loading={loading}
-          />
-          <CashAppButton
-            title="השתמש באימייל"
-            variant="secondary"
-            onPress={handleEmailOption}
-          />
+        <View style={{ flexDirection: 'row', gap: tokens.spacing.md }}>
+          <View style={{ flex: 1 }}>
+            <CashAppButton
+              title="Use Email"
+              variant="secondary"
+              onPress={handleEmailOption}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <CashAppButton
+              title="Next"
+              variant="primary"
+              onPress={handleNext}
+              disabled={!canContinue}
+              loading={loading}
+            />
+          </View>
         </View>
       }
     >
@@ -150,8 +152,7 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
       ) : null}
 
       <CashAppInput
-        label="מספר טלפון"
-        placeholder="054-000-0000"
+        placeholder="+1  Phone Number"
         value={phone}
         onChangeText={(text) => {
           setPhoneInput(text);
@@ -164,14 +165,43 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
         leftIcon="call-outline"
       />
 
+      <Pressable
+        onPress={handleHelp}
+        style={{
+          alignSelf: 'center',
+          marginTop: tokens.spacing.lg,
+          paddingVertical: tokens.spacing.sm,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 15,
+            color: cashApp.colors.primary,
+            textAlign: 'center',
+            textDecorationLine: 'underline',
+            fontWeight: '500',
+          }}
+        >
+          Need help logging in?
+        </Text>
+      </Pressable>
+
       <Text style={legalStyle}>
-        בלחיצה על "המשך" אני מאשר/ת את{' '}
-        <Text style={{ color: tokens.colors.primary.main }}>התנאים וההגבלות</Text>
+        By entering and tapping Next, you agree to the{' '}
+        <Text style={{ color: cashApp.colors.primary, textDecorationLine: 'underline' }}>
+          Terms
+        </Text>
         {', '}
-        <Text style={{ color: tokens.colors.primary.main }}>הסכמת E-Sign</Text>
-        {' ו'}
-        <Text style={{ color: tokens.colors.primary.main }}>מדיניות הפרטיות</Text>
-        . אני מאשר/ת קבלת הודעות SMS לאימות חשבון.
+        <Text style={{ color: cashApp.colors.primary, textDecorationLine: 'underline' }}>
+          E-Sign Consent
+        </Text>
+        {' & '}
+        <Text style={{ color: cashApp.colors.primary, textDecorationLine: 'underline' }}>
+          Privacy Notice
+        </Text>
+        .{'\n\n'}
+        You agree to receive a One Time Password Confirmation Code from Cash App. Message
+        frequency varies. Message and data rates may apply. Reply HELP for help, STOP to cancel.
       </Text>
 
       <View style={{ flex: 1 }} />

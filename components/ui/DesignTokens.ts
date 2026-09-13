@@ -293,8 +293,23 @@ const staticTokens = {
     },
   },
 
+  /**
+   * Spacing Scale - מרחקים סטנדרטיים
+   * 
+   * שימוש מומלץ:
+   * - 2xs (2px): מרווחים מיקרו בין אלמנטים קטנים מאוד
+   * - xs (4px): מרווח מינימלי בין אייקונים לטקסט
+   * - sm (8px): מרווח בין אלמנטים קטנים
+   * - md (12px): מרווח סטנדרטי בין קומפוננטות
+   * - base (16px): מרווח בסיס בין אלמנטים
+   * - lg (20px): padding מסכים, מרווח בין sections
+   * - xl (24px): מרווח גדול בין sections
+   * - 2xl (32px): מרווח גדול מאוד, padding של כרטיסים גדולים
+   * - 3xl (40px): מרווח hero sections
+   * - 4xl (48px): מרווח בין אזורים מרכזיים
+   * - 5xl (64px): מרווח maximum למסכים מיוחדים
+   */
   spacing: {
-    micro: 2,
     '2xs': 2,
     xs: 4,
     sm: 8,
@@ -308,6 +323,21 @@ const staticTokens = {
     '5xl': 64,
   },
 
+  /**
+   * Border Radius Scale - עיגול פינות סטנדרטי
+   * 
+   * שימוש מומלץ:
+   * - none (0): אין עיגול
+   * - xs (4px): עיגול מינימלי (badges קטנים)
+   * - sm (8px): עיגול קטן (pills, chips)
+   * - md (12px): עיגול סטנדרטי לכרטיסים קטנים
+   * - lg (16px): עיגול בסיס לכרטיסים (**המומלץ לרוב הכרטיסים**)
+   * - xl (20px): עיגול גדול לכרטיסים מרכזיים
+   * - 2xl (24px): עיגול גדול מאוד לאלמנטים hero
+   * - 3xl (30px): עיגול מקסימלי (כרטיסי פיד, modals)
+   * - full (9999): עיגול מלא (כפתורים עגולים, אווטרים)
+   * - button (9999): pill מלא לכפתורים (אל תשתמש ב-borderRadius אחר לכפתורים!)
+   */
   borderRadius: {
     none: 0,
     xs: 4,
@@ -462,7 +492,7 @@ const staticTokens = {
     dark: ['#0A0E0A', '#0F1A0F'],
     overlay: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.75)'],
     card: ['rgba(0, 200, 5, 0.06)', 'rgba(0, 200, 5, 0.02)'],
-    screen: ['#0A0E0A', '#0D140D', '#0F1A0F', '#142014', '#0F1A0F', '#0A0E0A'],
+    screen: ['#000000', '#0A0E0A', '#0F1A0F', '#142014', '#0A0E0A', '#000000'],
     screenStart: { x: 0.5, y: 0 },
     screenEnd: { x: 0.5, y: 1 },
   },
@@ -564,6 +594,128 @@ const staticTokens = {
     blurIntensity: 26,
     /** רקע Android כשאין blur אמיתי */
     androidFallback: 'rgba(14, 22, 16, 0.82)',
+  },
+
+  /**
+   * Cash App Style Onboarding Tokens
+   * בהשראת ניתוח Cash App onboarding flow
+   */
+  cashAppStyle: {
+    colors: {
+      // Primary - שחור לכפתורים ראשיים
+      buttonPrimary: '#000000',
+      buttonPrimaryText: '#FFFFFF',
+      
+      // Secondary - אפור לכפתורים משניים
+      buttonSecondary: '#e8e8e8',
+      buttonSecondaryText: '#000000',
+      
+      // Disabled
+      buttonDisabled: '#E0E0E0',
+      buttonDisabledText: '#999999',
+      
+      // Backgrounds - נקיים ופשוטים
+      screen: '#FFFFFF',
+      card: '#FAFAFA',
+      input: '#F8F8F8',
+      
+      // Text
+      headline: '#000000',
+      body: '#666666',
+      secondary: '#999999',
+      placeholder: '#BBBBBB',
+      
+      // Borders
+      input: '#E0E0E0',
+      inputFocus: '#00C805', // DarkPool Green
+      subtle: '#F0F0F0',
+      
+      // States
+      error: '#FF4444',
+      success: '#00C805',
+      warning: '#FFB800',
+    },
+    
+    typography: {
+      // Headlines - גדולות ו-bold כמו Cash App
+      headline: {
+        fontSize: 28,
+        fontWeight: '700' as const,
+        letterSpacing: -0.5,
+        lineHeight: 34,
+      },
+      
+      // Subheadline - תיאור משני
+      subheadline: {
+        fontSize: 16,
+        fontWeight: '400' as const,
+        lineHeight: 24,
+      },
+      
+      // Body - טקסט רגיל
+      body: {
+        fontSize: 16,
+        fontWeight: '400' as const,
+        lineHeight: 24,
+      },
+      
+      // Button - bold וברור
+      button: {
+        fontSize: 17,
+        fontWeight: '700' as const,
+        letterSpacing: 0,
+      },
+      
+      // Caption - טקסט עזר קטן
+      caption: {
+        fontSize: 12,
+        fontWeight: '400' as const,
+        lineHeight: 16,
+      },
+    },
+    
+    spacing: {
+      screenPadding: 20,        // מרווח מסכים
+      elementGap: 16,           // בין אלמנטים
+      sectionGap: 24,           // בין סקשנים
+      buttonHeight: 56,         // גובה כפתור סטנדרטי
+      inputHeight: 56,          // גובה שדה קלט
+      progressDotSize: 8,       // גודל נקודת progress
+      progressDotGap: 8,        // מרווח בין נקודות
+    },
+    
+    borderRadius: {
+      input: 12,                // שדות קלט
+      button: 28,               // כפתורים (pill)
+      card: 16,                 // כרטיסים
+      full: 9999,              // עיגול מלא
+    },
+    
+    animations: {
+      // Page transitions
+      pageTransition: {
+        duration: 300,
+        easing: 'ease-in-out' as const,
+      },
+      
+      // Button press
+      buttonPress: {
+        scale: 0.97,
+        duration: 100,
+      },
+      
+      // Input focus
+      inputFocus: {
+        duration: 200,
+        easing: 'ease-out' as const,
+      },
+      
+      // Progress indicator
+      progressDot: {
+        duration: 200,
+        scale: 1.2,
+      },
+    },
   },
 };
 

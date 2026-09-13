@@ -118,7 +118,6 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
               onPress={handleNext}
               disabled={!canContinue}
               loading={loading}
-              style={{ backgroundColor: '#000000' }}
             />
           </View>
           <View style={{ flex: 1 }}>
@@ -126,8 +125,6 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
               title="שימוש באימייל"
               variant="secondary"
               onPress={handleEmailOption}
-              style={{ backgroundColor: '#e8e8e8' }}
-              textStyle={{ color: '#000000' }}
             />
           </View>
         </View>

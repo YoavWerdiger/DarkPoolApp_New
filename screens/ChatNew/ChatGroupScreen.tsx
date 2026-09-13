@@ -8,6 +8,7 @@ import { View, FlatList, Text, StyleSheet, type ViewStyle, type DimensionValue, 
 import { SHEET_CLOSE_MS } from '../../components/ui/BottomSheet';
 import { chatComposerSafeBottomInset, chatComposerKeyboardTranslate, CHAT_COMPOSER_KEYBOARD_GAP, CHAT_KEYBOARD_LTR_STYLE } from '../../components/chat/chatInputLayout';
 import { ChatComposerDock, ChatKeyboardFollow } from '../../components/chat/ChatComposerDock';
+import { lockAndroidChatSoftInput } from '../../components/chat/androidChatKeyboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChatKeyboardInsets } from '../../hooks/useChatKeyboardInsets';
 import Reanimated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
@@ -25,6 +26,7 @@ import { useAuth } from '../../context/AuthContext';
 import { queryClient } from '../../lib/queryClient';
 import { appQueryKeys } from '../../lib/appQueryKeys';
 import { readGroupMessagesCache } from '../../lib/chatMessageCache';
+import { chatMessageListKey } from '../../lib/chatMessageIdentity';
 import { CommonActions, useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useLockParentDrawerWhileFocused } from '../../hooks/useLockParentDrawerWhileFocused';
 import ChatInput from '../../components/chat/ChatInput';
@@ -75,11 +77,20 @@ const SkeletonBubble = React.memo(({ isMe, width, delay }: { isMe: boolean; widt
   );
 });
 
+/** FAB נסתר כשהמקלדת פתוחה — hook נפרד כדי שמסך הצ'אט לא ירנדר את הרשימה ב-DidShow/DidHide. */
+function ChatScrollFabGate({ children }: { children: React.ReactNode }) {
+  const { keyboardShown } = useChatKeyboardInsets();
+  if (keyboardShown) return null;
+  return <>{children}</>;
+}
+
 export default function ChatGroupScreen() {
   const DesignTokens = useDesignTokens();
   const styles = useMemo(() => createChatGroupStyles(DesignTokens), [DesignTokens]);
   const navigation = useNavigation();
   const route = useRoute();
+  const { groupId = '', scrollToMessageId } = (route.params || {}) as { groupId: string; scrollToMessageId?: string };
+  const warmOnMount = groupId ? readGroupMessagesCache(groupId).length > 0 : false;
   const { user } = useAuth();
   const { isAdmin: isAppAdmin } = useIsAdmin();
   const insets = useSafeAreaInsets();
@@ -91,10 +102,10 @@ export default function ChatGroupScreen() {
   //   navigate → first RN frame paints messages from queryClient (opacity 1) → done
   //   scroll-to-unread / network delta run AFTER first paint
   // Cold (no cache): brief skeleton OK until disk/network seed.
-  const [messagesListReady, setMessagesListReady] = useState(false);
-  const [messagesRevealed, setMessagesRevealed] = useState(false);
-  const messagesRevealedRef = useRef(false);
-  const listOpacity = useRef(new RNAnimated.Value(0)).current;
+  const [messagesListReady, setMessagesListReady] = useState(warmOnMount);
+  const [messagesRevealed, setMessagesRevealed] = useState(warmOnMount);
+  const messagesRevealedRef = useRef(warmOnMount);
+  const listOpacity = useRef(new RNAnimated.Value(warmOnMount ? 1 : 0)).current;
   const onComposerLayout = useCallback((event: LayoutChangeEvent) => {
     const h = event.nativeEvent.layout.height;
     if (h > 0 && Math.abs(h - composerHeight) > 2) {
@@ -135,8 +146,6 @@ export default function ChatGroupScreen() {
   const contentSizePinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const readConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoScrollRafRef = useRef<number | null>(null);
-
-  const { groupId = '', scrollToMessageId } = (route.params || {}) as { groupId: string; scrollToMessageId?: string };
 
   const { selectGroup, refreshCurrentGroupDetails, confirmChatReadAtBottom, leaveChatScreen } = useChatActions();
 
@@ -193,7 +202,7 @@ export default function ChatGroupScreen() {
       appQueryKeys.chatGroups(user.id),
     );
     const hit = cachedGroups?.find((g) => g.id === groupId);
-    return (hit as typeof currentGroup) ?? currentGroup;
+    return (hit as typeof currentGroup) ?? currentGroup ?? ({ id: groupId, name: '' } as typeof currentGroup);
   }, [currentGroup, groupId, user?.id]);
 
   const initialUnreadInfoRef = useRef(initialUnreadInfo);
@@ -459,6 +468,8 @@ export default function ChatGroupScreen() {
     content: string;
     messageType?: string;
   } | undefined>();
+  const replyToRef = useRef(replyTo);
+  replyToRef.current = replyTo;
 
   const [reactionPickerVisible, setReactionPickerVisible] = useState(false);
   const [selectedMessageForReaction, setSelectedMessageForReaction] = useState<ChatMessageType | null>(null);
@@ -648,7 +659,7 @@ export default function ChatGroupScreen() {
       requestAnimationFrame(() => applyScrollToBottomRef.current?.(false));
     }
   }, []);
-  const { keyboardShown } = useChatKeyboardInsets(onKeyboardShow);
+  useChatKeyboardInsets(onKeyboardShow, false);
   const composerPaddingBottom = useMemo(
     () => chatComposerSafeBottomInset(insets.bottom),
     [insets.bottom],
@@ -1104,7 +1115,7 @@ export default function ChatGroupScreen() {
         applyScrollToBottom(false);
       });
     }
-  }, [messages.length, messages[0]?.id, applyScrollToBottom]);
+  }, [messages.length, messages[0] ? chatMessageListKey(messages[0]) : '', applyScrollToBottom]);
 
   // סנכרון בזמן render (לא ב-useEffect) — renderItem קורא ל-neighbors לפני ה-effect
   messagesRef.current = displayMessages;
@@ -1112,7 +1123,12 @@ export default function ChatGroupScreen() {
   // זריעת baseline של אנימציית הכניסה: כל ההודעות שקיימות בעת חשיפת הרשימה
   // מסומנות כ"נראו כבר" ולכן לא מונפשות — רק הודעות שיגיעו אח"כ ינפישו.
   if (!animBaselineSeededRef.current && messagesListReady) {
-    for (const m of displayMessages) animatedMsgIdsRef.current.add(m.id);
+    for (const m of displayMessages) {
+      animatedMsgIdsRef.current.add(chatMessageListKey(m));
+      animatedMsgIdsRef.current.add(m.id);
+      if (m.client_message_id) animatedMsgIdsRef.current.add(m.client_message_id);
+      if (m.local_id) animatedMsgIdsRef.current.add(m.local_id);
+    }
     animBaselineSeededRef.current = true;
   }
 
@@ -1159,6 +1175,7 @@ export default function ChatGroupScreen() {
 
     // Instant paint: seed opacity BEFORE selectGroup state lands.
     // Cache hit TTI = this layout pass (1 frame). Unread scroll deferred.
+    lockAndroidChatSoftInput();
     const warmHit = readGroupMessagesCache(groupId).length > 0;
     if (isNewGroup) {
       if (warmHit) {
@@ -1241,6 +1258,12 @@ export default function ChatGroupScreen() {
     setMessagesRevealed(false);
     messagesRevealedRef.current = false;
     listOpacity.setValue(0);
+    // Android: InteractionManager waits for native-stack + keyboard — 300–400ms.
+    // Don't block the empty-list → cache paint on that. iOS keeps a short after-interactions.
+    if (Platform.OS === 'android') {
+      setMessagesListReady(true);
+      return;
+    }
     const handle = InteractionManager.runAfterInteractions(() => {
       setMessagesListReady(true);
     });
@@ -1340,7 +1363,11 @@ export default function ChatGroupScreen() {
 
   useEffect(() => {
     if (!scrollToMessageId) return;
-    const timer = setTimeout(() => handleJumpToMessage(scrollToMessageId), 400);
+    const alreadyInCache =
+      readGroupMessagesCache(groupId).some((m) => m.id === scrollToMessageId) ||
+      messagesRef.current.some((m) => m.id === scrollToMessageId);
+    const delay = alreadyInCache ? 32 : 280;
+    const timer = setTimeout(() => handleJumpToMessage(scrollToMessageId), delay);
     return () => clearTimeout(timer);
   }, [scrollToMessageId, handleJumpToMessage, groupId]);
 
@@ -1362,6 +1389,8 @@ export default function ChatGroupScreen() {
 
     isSendingRef.current = true;
     scrollToBottomOnSend();
+    const replyId = replyToRef.current?.id;
+    setReplyTo(undefined);
 
     try {
       const result = await sendMessage({
@@ -1369,7 +1398,7 @@ export default function ChatGroupScreen() {
         content: content?.trim() || '',
         message_type: mediaType || MessageType.TEXT,
         media_url: mediaUrl,
-        reply_to_message_id: replyTo?.id,
+        reply_to_message_id: replyId,
         metadata: metadata,
         media_file_name: metadata?.media_file_name,
         media_size: metadata?.media_size,
@@ -1377,7 +1406,12 @@ export default function ChatGroupScreen() {
         media_duration: metadata?.media_duration,
         media_urls: metadata?.media_urls,
         mentioned_users: metadata?.mentioned_users || [],
+        mentions: Array.isArray(metadata?.mentions) ? metadata.mentions : [],
         existing_optimistic_id: metadata?.existing_optimistic_id,
+        client_message_id:
+          typeof metadata?.client_message_id === 'string'
+            ? metadata.client_message_id
+            : undefined,
       });
 
       if (!result.success && !(result as any).queued) {
@@ -1385,15 +1419,12 @@ export default function ChatGroupScreen() {
       } else {
         void HapticFeedback.impactLight();
       }
-
-      setReplyTo(undefined);
-      scrollToBottomOnSend();
     } catch (e) {
       logger.error('ChatGroupScreen', 'Send message error', e);
     } finally {
       setTimeout(() => { isSendingRef.current = false; }, 500);
     }
-  }, [groupId, replyTo?.id, sendMessage, scrollToBottomOnSend]);
+  }, [groupId, sendMessage, scrollToBottomOnSend]);
 
   const handleTyping = useCallback((isTyping: boolean) => {
     if (groupId) {
@@ -1805,12 +1836,24 @@ export default function ChatGroupScreen() {
 
       // מנפישים רק את ההודעה החדשה ביותר (index 0) אם לא נראתה עדיין —
       // לא היסטוריה בטעינה ולא פריטים שממוחזרים בגלילה.
+      const listKey = chatMessageListKey(item);
       let animateEntrance = false;
-      if (animBaselineSeededRef.current && index === 0 && !animatedMsgIdsRef.current.has(item.id)) {
+      if (
+        animBaselineSeededRef.current &&
+        index === 0 &&
+        !animatedMsgIdsRef.current.has(listKey) &&
+        !animatedMsgIdsRef.current.has(item.id)
+      ) {
         animateEntrance = true;
       }
-      if (index === 0) animatedMsgIdsRef.current.add(item.id);
+      if (index === 0) {
+        animatedMsgIdsRef.current.add(listKey);
+        animatedMsgIdsRef.current.add(item.id);
+        if (item.client_message_id) animatedMsgIdsRef.current.add(item.client_message_id);
+        if (item.local_id) animatedMsgIdsRef.current.add(item.local_id);
+      }
 
+      const showUnread = shouldShowUnreadDivider(item.id, index);
       return (
         <ChatListRow
             message={item}
@@ -1821,8 +1864,8 @@ export default function ChatGroupScreen() {
           isAfterSenderChange={isAfterSenderChange}
           showDateDivider={showDivider}
           dateDividerLabel={showDivider ? formatDateDivider(new Date(item.created_at)) : ''}
-          showUnreadDivider={shouldShowUnreadDivider(item.id, index)}
-          unreadCount={dividerInfo?.count || 0}
+          showUnreadDivider={showUnread}
+          unreadCount={showUnread ? dividerInfo?.count || 0 : 0}
           unreadDividerDismissing={unreadDividerPhase === 'fading'}
           onUnreadDividerDismissed={handleUnreadDividerDismissed}
           isHighlighted={item.id === highlightedMessageId}
@@ -1947,22 +1990,6 @@ export default function ChatGroupScreen() {
 
   if (!groupId) return null;
 
-  if (!shellGroup) {
-    return (
-      <ChatScreenShell>
-        <View style={{ flex: 1, paddingHorizontal: 12, paddingTop: 16 }}>
-          {[
-            { isMe: false, w: '55%' }, { isMe: true, w: '40%' },
-            { isMe: false, w: '70%' }, { isMe: true, w: '50%' },
-            { isMe: false, w: '60%' }, { isMe: true, w: '45%' },
-          ].map((s, i) => (
-            <SkeletonBubble key={i} isMe={s.isMe} width={s.w as any} delay={i * 80} />
-          ))}
-        </View>
-      </ChatScreenShell>
-    );
-  }
-
   const chatComposer = (
     <View
       style={[
@@ -2023,7 +2050,7 @@ export default function ChatGroupScreen() {
           // NativeWind 4.1.x שבר scrollTo* ב-RN 0.81; cssInterop=false = FlatList מקורי
           {...({ cssInterop: false } as object)}
           renderItem={renderMessage}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => chatMessageListKey(item)}
           extraData={flatListExtraData}
           ListFooterComponent={renderFooter}
             scrollEnabled
@@ -2033,7 +2060,7 @@ export default function ChatGroupScreen() {
           initialNumToRender={initialListRender}
             maxToRenderPerBatch={listMaxBatch}
           windowSize={listWindowSize}
-          updateCellsBatchingPeriod={Platform.OS === 'android' ? 50 : 30}
+          updateCellsBatchingPeriod={30}
             // inverted + clipping עלול לחתוך תאים; iOS נהנה מ-false יציב יותר עם window קטן
             removeClippedSubviews={false}
             onEndReached={() => {
@@ -2142,7 +2169,8 @@ export default function ChatGroupScreen() {
       </ChatComposerDock>
 
       {/* FAB מעל הקומפוזר — אותו UICard glass/light כמו ChatInput + clip עיגול */}
-      {showScrollToBottomButton && !keyboardShown && (
+      {showScrollToBottomButton ? (
+        <ChatScrollFabGate>
         <View
           pointerEvents="box-none"
           style={[
@@ -2175,14 +2203,17 @@ export default function ChatGroupScreen() {
             </View>
           )}
         </View>
-      )}
+        </ChatScrollFabGate>
+      ) : null}
 
     </View>
   );
 
   return (
     <ChatScreenShell>
-      <View style={styles.screenRoot}>{chatMainColumn}</View>
+      <View style={styles.screenRoot}>
+        {chatMainColumn}
+      </View>
 
       {/* Modals — מחוץ לעמודת המקלדת */}
       <ReactionPicker
@@ -2577,7 +2608,7 @@ const createChatGroupStyles = (tokens: any) => StyleSheet.create({
   },
   screenRoot: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#111111',
   },
   messagesKeyboardAvoid: {
     flex: 1,

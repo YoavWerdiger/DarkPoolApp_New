@@ -18,7 +18,7 @@ import PollCreationBottomSheet from './PollCreationBottomSheet';
 
 // ImagePicker media types - using new array format for Expo SDK 52+
 import * as DocumentPicker from 'expo-document-picker';
-import { Audio } from 'expo-av';
+import { Audio, isExpoAvAvailable, EXPO_AV_UNAVAILABLE_MESSAGE } from '../../lib/expoAvSafe';
 import { ChatMessage, ChatMessageType } from '../../types/chat.types';
 import { chatMediaService } from '../../services/chat';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,17 +29,23 @@ import { MediaFile } from '../../services/mediaService';
 import { useChatActions } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useMentions } from '../../hooks/useMentions';
 import { useChatDraft } from '../../hooks/useChatDraft';
 import { useTypingBroadcast } from '../../hooks/useTypingBroadcast';
-import MentionPicker from './MentionPicker';
+import MentionPickerSheet from '../share/MentionPickerSheet';
+import type { CommunityMention } from '../../types/tweets.types';
 import { logger } from '../../utils/logger';
 import { getChatMessagePreview } from '../../utils/chatMessagePreview';
+import { makeClientMessageId, makeLocalId } from '../../services/chat/chatOfflineQueue';
+import {
+  serializeEntityMessageContent,
+  type ShareableAttachment,
+} from '../../types/shareableEntity';
+import EntityAttachPickerSheet from '../share/EntityAttachPickerSheet';
+import EntityEmbedCard from '../share/EntityEmbedCard';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import {
   resampleWaveformSamples,
   WAVEFORM_STORE_BARS,
-  WAVEFORM_SILENCE,
 } from '../../utils/waveformSamples';
 import { meteringDbToLevel, resolveMessageWaveform } from '../../utils/audioWaveformPeaks';
 import {
@@ -50,6 +56,52 @@ import { useFrameCallback, useSharedValue, runOnJS } from 'react-native-reanimat
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 const PREVIEW_PLAYER_ID = 'chat-input-preview';
+const MAX_CHAT_MENTIONS = 10;
+
+function mentionTagOf(displayName: string): string {
+  return `@${displayName.replace(/\s+/g, '')}`;
+}
+
+/**
+ * אינדקס של `@` פעיל לתיוג: בתחילת מחרוזת או אחרי רווח/שורה,
+ * ועדיין בלי רווח/שורה אחריו (אחרת זה לא query פתוח).
+ */
+function getActiveAtIndex(value: string): number {
+  const lastAt = value.lastIndexOf('@');
+  if (lastAt === -1) return -1;
+  if (lastAt > 0 && !/[\s\n]/.test(value.charAt(lastAt - 1))) return -1;
+  const afterAt = value.slice(lastAt + 1);
+  if (afterAt.includes(' ') || afterAt.includes('\n')) return -1;
+  return lastAt;
+}
+
+function hasActiveAtQuery(value: string): boolean {
+  return getActiveAtIndex(value) !== -1;
+}
+
+/** true רק כשהמשתמש הקליד זה עתה `@` כטריגר תיוג חדש (לא תווים אחריו) */
+function didTypeAtMentionTrigger(prev: string, next: string): boolean {
+  if (next.length === prev.length + 1) {
+    let i = 0;
+    while (i < prev.length && prev.charAt(i) === next.charAt(i)) i += 1;
+    if (next.charAt(i) !== '@') return false;
+    if (next.slice(i + 1) !== prev.slice(i)) return false;
+    return i === 0 || /[\s\n]/.test(next.charAt(i - 1));
+  }
+  // הדבקה / החלפת selection — פתיחה במעבר ל־query פעיל חדש
+  return hasActiveAtQuery(next) && !hasActiveAtQuery(prev);
+}
+
+/** מחליף `@` / `@partial` פעיל ב־tag, או מוסיף בסוף */
+function replaceOrAppendMentionTag(prev: string, tag: string): string {
+  const atIdx = getActiveAtIndex(prev);
+  if (atIdx !== -1) {
+    return `${prev.slice(0, atIdx)}${tag} `;
+  }
+  if (prev.includes(tag)) return prev;
+  const spacer = prev && !/\s$/.test(prev) ? ' ' : '';
+  return `${prev}${spacer}${tag} `;
+}
 
 /**
  * iOS: WAV/PCM — חילוץ peaks אמיתיים מהקובץ אחרי עצירה.
@@ -210,18 +262,6 @@ function ChatInputImpl({
 
   const [isRecording, setIsRecording] = useState(false);
 
-  // Mentions hook
-  const {
-    mentionTokens,
-    showMentionPicker,
-    mentionSearchQuery,
-    insertMention,
-    handleInputChange: handleMentionInputChange,
-    getMentionRanges,
-    closeMentionPicker,
-    clearAllMentions,
-  } = useMentions(text);
-
   // Throttled typing broadcaster: first keystroke fires immediately, then at
   // most once every 1.5s. Idle → fires `false` once after 2s of inactivity.
   const { reportKeystroke: reportTypingKeystroke, flushStop: stopTyping } =
@@ -242,6 +282,10 @@ function ChatInputImpl({
   const [selectedMedia, setSelectedMedia] = useState<MediaFile[]>([]);
   const [mediaPickerVisible, setMediaPickerVisible] = useState(false);
   const [pollCreationVisible, setPollCreationVisible] = useState(false);
+  const [entityPickerVisible, setEntityPickerVisible] = useState(false);
+  const [pendingEntity, setPendingEntity] = useState<ShareableAttachment | null>(null);
+  const [mentionSheetOpen, setMentionSheetOpen] = useState(false);
+  const [communityMentions, setCommunityMentions] = useState<CommunityMention[]>([]);
 
 
   const textInputRef = useRef<TextInput>(null);
@@ -279,7 +323,28 @@ function ChatInputImpl({
   const isPausedRef = useRef(false);
   const disabledRef = useRef(disabled);
   const isUploadingRef = useRef(false);
+  const sendInFlightRef = useRef(false);
+  const keepComposerFocusRef = useRef(false);
+  const keepComposerFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textRef = useRef(text);
+
+  const armKeepComposerFocus = useCallback(() => {
+    keepComposerFocusRef.current = true;
+    if (keepComposerFocusTimerRef.current) {
+      clearTimeout(keepComposerFocusTimerRef.current);
+    }
+    keepComposerFocusTimerRef.current = setTimeout(() => {
+      keepComposerFocusRef.current = false;
+      keepComposerFocusTimerRef.current = null;
+    }, 280);
+  }, []);
+
+  const focusComposerIfBlurred = useCallback(() => {
+    const input = textInputRef.current;
+    if (!input) return;
+    if (typeof input.isFocused === 'function' && input.isFocused()) return;
+    input.focus();
+  }, []);
 
   /** פריוויו אחרי עצירת הקלטה — URI + peaks מוכנים, לפני שליחה */
   const isVoicePreview = isPaused && !!recordedAudioUri;
@@ -289,7 +354,7 @@ function ChatInputImpl({
   const MAX_RECORDING_DURATION = 60; // מקסימום 60 שניות
 
   // מעבר מיידי מיק↔שליחה לפי תוכן (בלי spring — נתקע לפעמים אחרי re-render / typing)
-  const hasText = text.trim().length > 0;
+  const hasText = text.trim().length > 0 || !!pendingEntity;
 
   // ============================================
   // Cleanup typing status when unmounting
@@ -297,6 +362,10 @@ function ChatInputImpl({
 
   useEffect(() => {
     return () => {
+      if (keepComposerFocusTimerRef.current) {
+        clearTimeout(keepComposerFocusTimerRef.current);
+        keepComposerFocusTimerRef.current = null;
+      }
       // useTypingBroadcast already publishes onTyping(false) on unmount,
       // so we don't need to duplicate that here. Kept as a defence in depth
       // in case parents swap onTyping at runtime.
@@ -331,7 +400,10 @@ function ChatInputImpl({
     const focusInput = () => {
       const input = textInputRef.current;
       if (!input) return;
-      input.focus();
+      const alreadyFocused = typeof input.isFocused === 'function' && input.isFocused();
+      if (!alreadyFocused) {
+        input.focus();
+      }
       // הצבת סמן בסוף הטיוטה הקיימת כדי שהמשתמש ימשיך להקליד ברצף
       const len = textRef.current?.length ?? 0;
       if (len > 0) {
@@ -343,11 +415,18 @@ function ChatInputImpl({
       }
     };
 
-    // דחיה קלה כדי לא להתנגש עם אנימציית סגירה של BottomSheet / ContextMenu
-    // (הן עלולות לחטוף focus חזרה, במיוחד באנדרואיד). rAF מטפל במקרה שהשיט
-    // כבר סגור; setTimeout מכסה את זמן האנימציה.
+    // אם הקומפוזר כבר מפוקס — לא לקרוא focus() מחדש (מאתחל IME = הבהוב).
+    // דחיה קלה רק כשצריך לפתוח מקלדת אחרי סגירת BottomSheet / ContextMenu.
+    const alreadyOpen =
+      typeof textInputRef.current?.isFocused === 'function' &&
+      textInputRef.current.isFocused();
+    if (alreadyOpen) {
+      focusInput();
+      return;
+    }
+
     const raf = requestAnimationFrame(focusInput);
-    const timer = setTimeout(focusInput, Platform.OS === 'android' ? 150 : 80);
+    const timer = setTimeout(focusInput, 80);
 
     return () => {
       cancelAnimationFrame(raf);
@@ -360,52 +439,145 @@ function ChatInputImpl({
   // ============================================
 
   const handleTextChange = (newText: string) => {
+    const prevText = textRef.current;
     textRef.current = newText;
     setText(newText);
 
-    // Handle mentions (@)
-    handleMentionInputChange(newText);
+    // הקלדת `@` (תחילת מילה) → MentionPickerSheet
+    if (
+      communityMentions.length < MAX_CHAT_MENTIONS &&
+      !mentionSheetOpen &&
+      didTypeAtMentionTrigger(prevText, newText)
+    ) {
+      Keyboard.dismiss();
+      setMentionSheetOpen(true);
+    }
 
     // Throttled typing-indicator broadcast (≤ 1Hz to the realtime channel).
     reportTypingKeystroke(newText);
   };
 
-  // Handle mention selection
-  const handleMentionSelect = (user: { id: string; display: string }) => {
-    const newText = insertMention(user);
-    if (newText) {
-      setText(newText);
-    }
-  };
+  const addCommunityMention = useCallback(
+    (mention: CommunityMention) => {
+      setCommunityMentions((prev) => {
+        if (prev.some((m) => m.userId === mention.userId)) return prev;
+        if (prev.length >= MAX_CHAT_MENTIONS) return prev;
+        return [...prev, mention];
+      });
+      // setText → useChatDraft.setDraft — חייב מחרוזת בלבד (לא React updater),
+      // אחרת AsyncStorage מקבל function ו־TurboModule יכול לעשות abort ב־Expo Go.
+      const next = replaceOrAppendMentionTag(
+        textRef.current,
+        mentionTagOf(mention.displayName)
+      );
+      textRef.current = next;
+      setText(next);
+      setMentionSheetOpen(false);
+      requestAnimationFrame(() => textInputRef.current?.focus());
+    },
+    [setText]
+  );
+
+  const removeCommunityMention = useCallback((userId: string) => {
+    setCommunityMentions((prev) => prev.filter((m) => m.userId !== userId));
+    void HapticFeedback.selection();
+  }, []);
+
+  const buildMentionsPayload = useCallback((): CommunityMention[] => {
+    return communityMentions.slice(0, MAX_CHAT_MENTIONS);
+  }, [communityMentions]);
+
+  const clearComposerMentions = useCallback(() => {
+    setCommunityMentions([]);
+  }, []);
 
   // ============================================
   // Send Text Message
   // ============================================
 
   const handleSend = async () => {
+    if (sendInFlightRef.current) return;
     const messageText = text.trim();
+    armKeepComposerFocus();
+
+    // Multiverse entity (+ optional caption)
+    if (pendingEntity && !disabled && user?.id) {
+      sendInFlightRef.current = true;
+      const caption = messageText;
+      const attachment = pendingEntity;
+      const mentionsPayload = buildMentionsPayload();
+      const mentionedUserIds = mentionsPayload.map((m) => m.userId);
+      clearDraft();
+      clearComposerMentions();
+      stopTyping();
+      setPendingEntity(null);
+
+      const content = serializeEntityMessageContent(attachment, caption || undefined);
+      const tempId = makeLocalId();
+      const clientMessageId = makeClientMessageId();
+      const optimisticMessage: ChatMessage = {
+        id: tempId,
+        local_id: tempId,
+        client_message_id: clientMessageId,
+        group_id: groupId,
+        sender_id: user.id,
+        content,
+        message_type: ChatMessageType.ENTITY,
+        is_forwarded: false,
+        mentioned_users: mentionedUserIds,
+        mentions: mentionsPayload,
+        is_edited: false,
+        is_deleted: false,
+        deleted_for_everyone: false,
+        is_silent: false,
+        is_system_message: false,
+        is_sending: true,
+        created_at: new Date().toISOString(),
+        reactions_count: 0,
+        read_by_count: 0,
+        sender: {
+          id: user.id,
+          display_name: (user as any)?.display_name || 'אני',
+          profile_picture: (user as any)?.profile_picture,
+          is_online: true,
+        },
+      };
+      addOptimisticMediaMessage(optimisticMessage);
+      void onSendMessage(content, undefined, ChatMessageType.ENTITY, {
+        existing_optimistic_id: tempId,
+        client_message_id: clientMessageId,
+        mentioned_users: mentionedUserIds,
+        mentions: mentionsPayload,
+      }).catch((e: any) => {
+        updateOptimisticMessage(tempId, { is_sending: false, send_failed: true } as any);
+        Alert.alert('שגיאה', e?.message || 'לא הצלחנו לשלוח');
+      });
+      sendInFlightRef.current = false;
+      return;
+    }
 
     if (!messageText || disabled) {
       return;
     }
 
     // Extract mentions before clearing
-    const mentions = getMentionRanges(text);
-    const mentionedUserIds = mentions.map(m => m.user_id);
+    const mentionsPayload = buildMentionsPayload();
+    const mentionedUserIds = mentionsPayload.map((m) => m.userId);
 
     const textToSend = messageText;
+    sendInFlightRef.current = true;
     // Clear local draft state AND persisted AsyncStorage draft. We do this
     // BEFORE awaiting the send: optimistic UI means the bubble shows up
     // instantly, and the user expects the input to clear instantly too.
     clearDraft();
-    clearAllMentions();
+    clearComposerMentions();
     stopTyping();
 
     try {
       // Send message with mentions
       onSendMessage(textToSend, undefined, undefined, {
         mentioned_users: mentionedUserIds,
-        mentions: mentions
+        mentions: mentionsPayload,
       }).catch((error) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
         Alert.alert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
@@ -414,14 +586,11 @@ function ChatInputImpl({
         setText(textToSend);
       });
 
-      // WhatsApp-style: keep composer focused so the keyboard stays open
-      requestAnimationFrame(() => {
-        textInputRef.current?.focus();
-      });
-      if (Platform.OS === 'android') {
-        setTimeout(() => textInputRef.current?.focus(), 64);
-      }
+      // WhatsApp: לא סוגרים מקלדת בשליחה. persist taps מונע blur; onBlur
+      // הוא רק רשת ביטחון בלי focus() מושהה שגורם לסגירה-ואז-פתיחה.
+      sendInFlightRef.current = false;
     } catch (error) {
+      sendInFlightRef.current = false;
       const errorMessage = error instanceof Error ? error.message : String(error);
       Alert.alert('שגיאה', errorMessage || 'לא הצלחנו לשלוח את ההודעה');
       setText(textToSend);
@@ -456,7 +625,8 @@ function ChatInputImpl({
     setShowMediaPreview(false);
     setSelectedMedia([]);
 
-    const tempId = `temp-media-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const tempId = makeLocalId();
+    const clientMessageId = makeClientMessageId();
 
     // Get first caption (used for all media in group)
     const firstCaption = Object.values(captions).find(c => c.trim()) || '';
@@ -475,6 +645,8 @@ function ChatInputImpl({
 
       const optimisticMessage: ChatMessage = {
         id: tempId,
+        local_id: tempId,
+        client_message_id: clientMessageId,
         group_id: groupId,
         sender_id: user.id,
         content: firstCaption.trim(),
@@ -560,7 +732,10 @@ function ChatInputImpl({
             local_media_uri: undefined,
           });
 
-          const metadata: Record<string, any> = { existing_optimistic_id: tempId };
+          const metadata: Record<string, any> = {
+            existing_optimistic_id: tempId,
+            client_message_id: clientMessageId,
+          };
           if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
             metadata.media_thumbnail_url = uploadResult.thumbnail_url;
           }
@@ -588,11 +763,14 @@ function ChatInputImpl({
 
     // Create optimistic messages for each media file
     const optimisticIds: string[] = [];
+    const optimisticClientIds: string[] = [];
 
     for (let i = 0; i < mediaFiles.length; i++) {
       const mediaFile = mediaFiles[i];
-      const itemTempId = `temp-media-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`;
+      const itemTempId = makeLocalId();
+      const itemClientId = makeClientMessageId();
       optimisticIds.push(itemTempId);
+      optimisticClientIds.push(itemClientId);
 
       let messageType: ChatMessageType;
       switch (mediaFile.type) {
@@ -604,6 +782,8 @@ function ChatInputImpl({
 
       const optimisticMessage: ChatMessage = {
         id: itemTempId,
+        local_id: itemTempId,
+        client_message_id: itemClientId,
         group_id: groupId,
         sender_id: user.id,
         content: i === 0 ? firstCaption.trim() : '', // Only first message gets caption
@@ -699,7 +879,10 @@ function ChatInputImpl({
             default: messageType = ChatMessageType.IMAGE;
           }
 
-          const metadata: Record<string, any> = { existing_optimistic_id: itemTempId };
+          const metadata: Record<string, any> = {
+            existing_optimistic_id: itemTempId,
+            client_message_id: optimisticClientIds[index],
+          };
           if ('thumbnail_url' in uploadResult && uploadResult.thumbnail_url) {
             metadata.media_thumbnail_url = uploadResult.thumbnail_url;
           }
@@ -845,11 +1028,14 @@ function ChatInputImpl({
         const asset = result.assets[0];
         const fileName = asset.name || 'document';
         const fileSize = asset.size || 0;
-        const tempId = `temp-doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const tempId = makeLocalId();
+        const clientMessageId = makeClientMessageId();
 
         // Create optimistic message immediately
         const optimisticMessage: ChatMessage = {
           id: tempId,
+          local_id: tempId,
+          client_message_id: clientMessageId,
           group_id: groupId,
           sender_id: user.id,
           content: '',
@@ -908,6 +1094,7 @@ function ChatInputImpl({
 
             await onSendMessage('', uploadResult.url, ChatMessageType.DOCUMENT, {
               existing_optimistic_id: tempId,
+              client_message_id: clientMessageId,
               media_file_name: fileName,
               media_size: fileSize,
             });
@@ -933,6 +1120,11 @@ function ChatInputImpl({
     runAfterSheetDismiss(() => setPollCreationVisible(true));
   };
 
+  const handleOpenEntityPicker = () => {
+    // MediaPickerSheet כבר קורא ל-runAfterSheetDismiss, אז פשוט פותחים ישירות
+    setEntityPickerVisible(true);
+  };
+
   const handlePollCreated = (_poll: any) => {
     // הסקר יוצג אוטומטית בצ'אט דרך PollService.createPollMessage
     setPollCreationVisible(false);
@@ -951,8 +1143,8 @@ function ChatInputImpl({
   // ============================================
 
   /**
-   * Metering חי: דגימה גולמית ל־envelope (שמירה), smoothing רק ל־UI של ההקלטה.
-   * הויבפורם הסופי בהודעה נבנה מפיקי הקובץ (WAV) כשאפשר.
+   * Metering חי כל ~32ms: raw לשמירה, envelope עם attack מיידי + decay מהיר ל־UI.
+   * בלי smoothing משותף — כדי שהברים יקפצו ויפלו עם הקול (לא נתקעים בשיא).
    */
   const handleRecordingStatus = useCallback((status: Audio.RecordingStatus) => {
     if (!status.isRecording) return;
@@ -961,12 +1153,9 @@ function ChatInputImpl({
 
     const raw = meteringDbToLevel(metering);
     const prev = audioLevelRef.current;
-    // smoothing משותף ל־UI ולדגימות שנשמרות — כדי שהבועה תתאים לחי
-    const next =
-      raw <= WAVEFORM_SILENCE * 0.65 ? prev * 0.4 : prev * 0.25 + raw * 0.75;
-    const level = next < WAVEFORM_SILENCE * 0.55 ? 0 : Math.min(1, next);
-    audioLevelRef.current = level;
-    waveformSamplesRef.current.push(level);
+    const next = raw >= prev ? raw : prev * 0.32 + raw * 0.68;
+    audioLevelRef.current = next < 0.02 ? 0 : Math.min(1, next);
+    waveformSamplesRef.current.push(raw);
   }, []);
 
   const clearWaveformPolling = useCallback(() => {
@@ -977,6 +1166,11 @@ function ChatInputImpl({
   }, []);
 
   const startRecording = async (opts?: { openInLockedMode?: boolean }) => {
+    if (!isExpoAvAvailable) {
+      Alert.alert('לא זמין ב-Expo Go', EXPO_AV_UNAVAILABLE_MESSAGE);
+      return;
+    }
+
     if (isStartingRecordingRef.current) {
       return;
     }
@@ -1026,7 +1220,7 @@ function ChatInputImpl({
       const recording = new Audio.Recording();
       await recording.prepareToRecordAsync(VOICE_RECORDING_OPTIONS);
       recording.setOnRecordingStatusUpdate(handleRecordingStatus);
-      recording.setProgressUpdateInterval(50);
+      recording.setProgressUpdateInterval(32);
       await recording.startAsync();
 
       recordingRef.current = recording;
@@ -1169,7 +1363,7 @@ function ChatInputImpl({
       }, 250);
 
       recordingRef.current.setOnRecordingStatusUpdate(handleRecordingStatus);
-      recordingRef.current.setProgressUpdateInterval(50);
+      recordingRef.current.setProgressUpdateInterval(32);
     } catch (error) {
       logger.error('ChatInput', 'Recording error', error);
       Alert.alert('שגיאה', 'לא הצלחנו להמשיך את ההקלטה');
@@ -1200,9 +1394,9 @@ function ChatInputImpl({
       recordingRef.current.setOnRecordingStatusUpdate(null);
 
       const status = await recordingRef.current.getStatusAsync();
-      const uri = recordingRef.current.getURI();
       const liveSamples = [...waveformSamplesRef.current];
-      await recordingRef.current.stopAndUnloadAsync();
+      const stopped = await recordingRef.current.stopAndUnloadAsync();
+      const uri = stopped?.uri ?? recordingRef.current.getURI?.() ?? null;
       recordingRef.current = null;
 
       // משך סופי מדויק — מעדיף את durationMillis האמיתי של ההקלטה
@@ -1504,7 +1698,8 @@ function ChatInputImpl({
   const sendRecordedAudio = async () => {
     if (!recordedAudioUri || !user) return;
 
-    const tempId = `temp-audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const tempId = makeLocalId();
+    const clientMessageId = makeClientMessageId();
     const audioUri = recordedAudioUri;
     const duration = recordingDuration;
     // אחרי stopRecording כבר יש peaks סופיים ב-ref; אם חסר — מחלצים שוב מהקובץ
@@ -1522,6 +1717,8 @@ function ChatInputImpl({
     // Create optimistic message immediately
     const optimisticMessage: ChatMessage = {
       id: tempId,
+      local_id: tempId,
+      client_message_id: clientMessageId,
       group_id: groupId,
       sender_id: user.id,
       content: JSON.stringify({ waveform, waveformData: waveform, duration }),
@@ -1602,6 +1799,7 @@ function ChatInputImpl({
 
         await onSendMessage('', uploadResult.url, ChatMessageType.AUDIO, {
           existing_optimistic_id: tempId,
+          client_message_id: clientMessageId,
           waveformData: waveform,
           media_duration: duration,
         });
@@ -2061,6 +2259,7 @@ function ChatInputImpl({
         <View style={styles.sendBtnOuter}>
           {isVoicePreview ? (
             <Pressable
+              unstable_pressDelay={0}
               onPress={() => {
                 void HapticFeedback.medium();
                 void sendRecordedAudio();
@@ -2074,6 +2273,7 @@ function ChatInputImpl({
             </Pressable>
           ) : (
             <Pressable
+              unstable_pressDelay={0}
               onPress={() => {
                 void HapticFeedback.medium();
                 void stopRecording();
@@ -2089,13 +2289,87 @@ function ChatInputImpl({
         </View>
       </View>
       ) : (
+        <>
+        {pendingEntity ? (
+          <View style={{ paddingHorizontal: 12, paddingBottom: 6 }}>
+            <EntityEmbedCard
+              attachment={pendingEntity}
+              compact
+              onPress={() => setPendingEntity(null)}
+            />
+            <TouchableOpacity
+              onPress={() => setPendingEntity(null)}
+              style={{ alignSelf: 'flex-start', marginTop: 4 }}
+            >
+              <Text style={{ color: DesignTokens.colors.text.tertiary, fontSize: 12 }}>
+                הסר שיתוף
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        {communityMentions.length > 0 ? (
+          <View
+            style={{
+              paddingHorizontal: 12,
+              paddingBottom: 6,
+              flexDirection: 'row-reverse',
+              flexWrap: 'wrap',
+              gap: 6,
+            }}
+          >
+            {communityMentions.map((m) => (
+              <TouchableOpacity
+                key={m.userId}
+                onPress={() => removeCommunityMention(m.userId)}
+                style={{
+                  flexDirection: 'row-reverse',
+                  alignItems: 'center',
+                  gap: 4,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                  backgroundColor: `${DesignTokens.colors.primary.main}22`,
+                }}
+                accessibilityLabel={`הסר תיוג של ${m.displayName}`}
+              >
+                <Text
+                  style={{
+                    color: DesignTokens.colors.primary.main,
+                    fontSize: 12,
+                    fontWeight: '700',
+                    writingDirection: 'rtl',
+                  }}
+                  numberOfLines={1}
+                >
+                  {mentionTagOf(m.displayName)}
+                </Text>
+                <Ionicons
+                  name="close-circle"
+                  size={14}
+                  color={DesignTokens.colors.primary.main}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
         <ChatComposerBar
           value={text}
           onChangeText={handleTextChange}
-          onBlur={stopTyping}
+          onBlur={() => {
+            stopTyping();
+            if (!keepComposerFocusRef.current) return;
+            keepComposerFocusRef.current = false;
+            focusComposerIfBlurred();
+          }}
           inputRef={textInputRef}
           nativeID={CHAT_COMPOSER_NATIVE_ID}
-          placeholder={isUploading ? 'מעלה...' : 'הקלד הודעה...'}
+          placeholder={
+            isUploading
+              ? 'מעלה...'
+              : pendingEntity
+                ? 'כיתוב אופציונלי…'
+                : 'הקלד הודעה...'
+          }
           placeholderTextColor={DesignTokens.colors.text.secondary}
           editable={!disabled && !isUploading}
           maxLength={10000}
@@ -2143,13 +2417,18 @@ function ChatInputImpl({
             <View style={styles.sendBtnOuter}>
               {hasText ? (
                 <Pressable
-                  onPress={() => {
+                  unstable_pressDelay={0}
+                  onPressIn={() => {
+                    armKeepComposerFocus();
                     void HapticFeedback.impactLight();
                     Animated.sequence([
                       Animated.timing(sendBtnScale, { toValue: 0.82, duration: 70, useNativeDriver: true }),
                       Animated.spring(sendBtnScale, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
                     ]).start();
-                    handleSend();
+                    void handleSend();
+                  }}
+                  onPress={() => {
+                    void handleSend();
                   }}
                   style={styles.sendBtnTouchable}
                   disabled={disabled || isUploading}
@@ -2160,7 +2439,7 @@ function ChatInputImpl({
                     <Ionicons name="send" size={22} color={DesignTokens.colors.text.inverse} />
                   </Animated.View>
                 </Pressable>
-              ) : (
+              ) : isExpoAvAvailable ? (
                 // Native RNGH gesture (see recordGesture above). Wrapping View
                 // uses collapsable={false} + zIndex/elevation so Android never
                 // merges it into a sibling and nothing sitting on top (glass
@@ -2183,10 +2462,21 @@ function ChatInputImpl({
                     <Ionicons name="mic" size={24} color={DesignTokens.colors.text.inverse} />
                   </View>
                 </GestureDetector>
+              ) : (
+                <View
+                  style={[styles.sendBtnTouchable, { opacity: 0.35 }]}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel="הקלטת קול לא זמינה ב-Expo Go"
+                  accessibilityState={{ disabled: true }}
+                >
+                  <Ionicons name="mic-off" size={24} color={DesignTokens.colors.text.inverse} />
+                </View>
               )}
             </View>
           }
         />
+        </>
       )}
 
       {/* Media Preview Modal */}
@@ -2210,8 +2500,19 @@ function ChatInputImpl({
         onGallery={handlePickImage}
         onVideo={handlePickVideo}
         onDocument={handlePickDocument}
-        onAudio={handleStartAudioRecording}
+        onAudio={isExpoAvAvailable ? handleStartAudioRecording : undefined}
         onPoll={handleCreatePoll}
+        onEntity={handleOpenEntityPicker}
+      />
+
+      <EntityAttachPickerSheet
+        visible={entityPickerVisible}
+        onClose={() => setEntityPickerVisible(false)}
+        onSelect={(att) => {
+          setPendingEntity(att);
+          setEntityPickerVisible(false);
+          void HapticFeedback.selection();
+        }}
       />
 
       {/* Poll Creation Bottom Sheet */}
@@ -2222,13 +2523,11 @@ function ChatInputImpl({
         onPollCreated={handlePollCreated}
       />
 
-      {/* Mention Picker */}
-      <MentionPicker
-        visible={showMentionPicker && !isRecording && !isPaused}
-        onClose={closeMentionPicker}
-        onSelectUser={handleMentionSelect}
-        groupId={groupId}
-        searchQuery={mentionSearchQuery}
+      <MentionPickerSheet
+        visible={mentionSheetOpen}
+        onClose={() => setMentionSheetOpen(false)}
+        onSelect={addCommunityMention}
+        excludeUserIds={communityMentions.map((m) => m.userId)}
       />
     </>
   );

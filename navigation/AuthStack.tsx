@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import LoginScreen from '../screens/Auth/LoginScreen';
 import OnboardingNavigator from './OnboardingNavigator';
+import OnboardingStack from './OnboardingStack';
 import TestRegistrationScreen from '../screens/Auth/TestRegistrationScreen';
 import ForgotPasswordScreen from '../screens/Auth/ForgotPasswordScreen';
 import ForgotPasswordOtpScreen from '../screens/Auth/ForgotPasswordOtpScreen';
@@ -81,7 +82,8 @@ export default function AuthStack() {
       }}
     >
       <Stack.Screen name="Login" component={LoginWithRecoveryRedirect} />
-      <Stack.Screen name="Register" component={OnboardingNavigator} />
+      <Stack.Screen name="Register" component={OnboardingStack} />
+      <Stack.Screen name="OldRegister" component={OnboardingNavigator} />
       <Stack.Screen name="TestRegistration" component={TestRegistrationScreen} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="ForgotPasswordOtp" component={ForgotPasswordOtpScreen} />

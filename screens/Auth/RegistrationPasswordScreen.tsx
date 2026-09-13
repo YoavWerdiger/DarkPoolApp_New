@@ -3,17 +3,17 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '../../context/RegistrationContext';
 import { AuthService } from '../../services/authService';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
-import OnboardingInput from '../../components/onboarding/OnboardingInput';
-import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import CashAppScreen from '../../components/ui/CashAppScreen';
+import CashAppInput from '../../components/ui/CashAppInput';
+import CashAppButton from '../../components/ui/CashAppButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
 import { safeRegistrationBack } from '../../hooks/useExitRegistration';
 
 const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
+  const tokens = useDesignTokens();
   const [password, setPassword] = useState(data.password || '');
   const [confirmPassword, setConfirmPassword] = useState(data.password || '');
   const [error, setError] = useState('');
@@ -72,17 +72,19 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
   };
 
   return (
-    <OnboardingLayout
+    <CashAppScreen
       title="צור סיסמה"
       subtitle="לפחות 6 תווים — ואשר אותה למטה"
-      density="focused"
       currentStep={ONBOARDING_STEPS.password}
       totalSteps={ONBOARDING_TOTAL_STEPS}
+      progressVariant="dots"
       showBack
       onBack={handleBack}
       footer={
-        <OnboardingButton
+        <CashAppButton
           title="המשך"
+          variant="primary"
+          size="lg"
           onPress={handleNext}
           loading={loading}
           disabled={!canContinue}
@@ -97,17 +99,17 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
             backgroundColor: 'rgba(248,81,73,0.08)',
             borderWidth: 1,
             borderColor: 'rgba(248,81,73,0.35)',
-            borderRadius: 14,
-            padding: 13,
-            marginBottom: 18,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: tokens.spacing.lg,
           }}
         >
-          <Ionicons name="alert-circle" size={18} color="#F85149" style={{ marginLeft: 8 }} />
+          <Ionicons name="alert-circle" size={20} color="#F85149" style={{ marginLeft: 8 }} />
           <Text
             style={{
               color: '#F85149',
-              fontSize: 14,
-              fontWeight: '500',
+              fontSize: 15,
+              fontWeight: '600',
               textAlign: 'right',
               writingDirection: 'rtl',
               flex: 1,
@@ -118,15 +120,10 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
         </View>
       ) : null}
 
-      <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="md"
-        style={{ borderRadius: DesignTokens.borderRadius.xl }}
-      >
-        <OnboardingInput
+      <View style={{ gap: tokens.spacing.lg }}>
+        <CashAppInput
           label="סיסמה"
-          icon="lock-closed-outline"
+          leftIcon="lock-closed-outline"
           placeholder="לפחות 6 תווים"
           value={password}
           onChangeText={(t) => {
@@ -138,20 +135,19 @@ const RegistrationPasswordScreen = ({ navigation }: { navigation: any }) => {
           autoFocus
           helperText="שמור סיסמה שקל לזכור לך וקשה לנחש"
         />
-        <OnboardingInput
+        <CashAppInput
           label="אימות סיסמה"
-          icon="lock-closed-outline"
+          leftIcon="lock-closed-outline"
           placeholder="הכנס שוב את הסיסמה"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
           autoCapitalize="none"
           error={confirmError}
-          isLast
         />
-      </UICard>
+      </View>
       <View style={{ flex: 1 }} />
-    </OnboardingLayout>
+    </CashAppScreen>
   );
 };
 

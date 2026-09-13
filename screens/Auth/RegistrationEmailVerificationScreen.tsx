@@ -2,11 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
 import { AuthService } from '../../services/authService';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
-import OnboardingButton from '../../components/onboarding/OnboardingButton';
-import OnboardingErrorBanner from '../../components/onboarding/OnboardingErrorBanner';
+import CashAppScreen from '../../components/ui/CashAppScreen';
+import CashAppButton from '../../components/ui/CashAppButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import OtpInput from '../../components/onboarding/OtpInput';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -31,6 +29,7 @@ function mapSendError(code: string | null | undefined): string {
 const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
   const exitRegistration = useRegistrationExitOptional();
+  const tokens = useDesignTokens();
   const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -203,7 +202,7 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
   const canContinue = !loading && !sending && otp.length === 6;
 
   return (
-    <OnboardingLayout
+    <CashAppScreen
       title="אמת את האימייל שלך"
       subtitle={
         emailHint
@@ -212,9 +211,9 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
             : `שלחנו קוד ל-${emailHint}`
           : 'שלחנו קוד לאימייל שהזנת'
       }
-      density="focused"
       currentStep={ONBOARDING_STEPS.emailVerification}
       totalSteps={ONBOARDING_TOTAL_STEPS}
+      progressVariant="dots"
       showBack
       onBack={() => {
         void HapticFeedback.impactLight();
@@ -224,8 +223,10 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
         });
       }}
       footer={
-        <OnboardingButton
+        <CashAppButton
           title="אמת והמשך"
+          variant="primary"
+          size="lg"
           onPress={handleVerify}
           loading={loading}
           disabled={!canContinue}
@@ -233,11 +234,11 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
       }
     >
       {sending ? (
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <ActivityIndicator color={DesignTokens.colors.primary.main} />
+        <View style={{ alignItems: 'center', marginBottom: tokens.spacing.lg }}>
+          <ActivityIndicator color={tokens.cashAppStyle.colors.headline} />
           <Text
             style={{
-              color: DesignTokens.colors.text.secondary,
+              color: tokens.cashAppStyle.colors.body,
               fontSize: 14,
               marginTop: 10,
               writingDirection: 'rtl',
@@ -248,17 +249,45 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
         </View>
       ) : null}
 
-      {error ? <OnboardingErrorBanner message={error} /> : null}
+      {error ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: 'rgba(248,81,73,0.08)',
+            borderWidth: 1,
+            borderColor: 'rgba(248,81,73,0.35)',
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: tokens.spacing.lg,
+          }}
+        >
+          <Text
+            style={{
+              color: '#F85149',
+              fontSize: 15,
+              fontWeight: '600',
+              textAlign: 'right',
+              writingDirection: 'rtl',
+              flex: 1,
+            }}
+          >
+            {error}
+          </Text>
+        </View>
+      ) : null}
 
-      <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="lg"
-        style={{ borderRadius: DesignTokens.borderRadius.xl, alignItems: 'center' }}
+      <View
+        style={{
+          backgroundColor: tokens.cashAppStyle.colors.screen,
+          borderRadius: tokens.cashAppStyle.borderRadius.input,
+          padding: tokens.spacing.xl,
+          alignItems: 'center',
+        }}
       >
         <Text
           style={{
-            color: DesignTokens.colors.text.secondary,
+            color: tokens.cashAppStyle.colors.body,
             fontSize: 15,
             fontWeight: '500',
             textAlign: 'center',
@@ -287,10 +316,10 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
           style={{
             paddingVertical: 12,
             paddingHorizontal: 20,
-            borderRadius: DesignTokens.borderRadius.md,
+            borderRadius: tokens.cashAppStyle.borderRadius.button,
             backgroundColor: canResend && !sending
-              ? 'rgba(0,200,5,0.12)'
-              : 'rgba(255,255,255,0.05)',
+              ? 'rgba(0,0,0,0.08)'
+              : 'rgba(0,0,0,0.03)',
             opacity: canResend && !sending ? 1 : 0.5,
           }}
         >
@@ -298,8 +327,8 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
             style={{
               color:
                 canResend && !sending
-                  ? DesignTokens.colors.primary.main
-                  : DesignTokens.colors.text.tertiary,
+                  ? tokens.cashAppStyle.colors.headline
+                  : tokens.cashAppStyle.colors.secondary,
               fontSize: 15,
               fontWeight: '600',
               textAlign: 'center',
@@ -313,10 +342,10 @@ const RegistrationEmailVerificationScreen = ({ navigation }: { navigation: any }
               : `שלח שוב בעוד ${resendCountdown} שניות`}
           </Text>
         </Pressable>
-      </UICard>
+      </View>
 
       <View style={{ flex: 1 }} />
-    </OnboardingLayout>
+    </CashAppScreen>
   );
 };
 

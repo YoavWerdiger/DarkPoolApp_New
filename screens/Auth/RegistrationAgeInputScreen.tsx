@@ -1,12 +1,11 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { Text, View, TextInput, StyleSheet } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
-import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
-import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import CashAppScreen from '../../components/ui/CashAppScreen';
+import CashAppButton from '../../components/ui/CashAppButton';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import {
   safeRegistrationBack,
   useRegistrationExitOptional,
@@ -23,6 +22,7 @@ type Props = {
 const RegistrationAgeInputScreen = ({ navigation }: Props) => {
   const { data, setData } = useRegistration();
   const exitRegistration = useRegistrationExitOptional();
+  const tokens = useDesignTokens();
   const existingAge = data.age ? String(data.age) : '';
   const [value, setValue] = useState(existingAge);
   const [error, setError] = useState('');
@@ -86,12 +86,12 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
   const showBack = stackCanGoBack || !isGoogleFlow || !!exitRegistration;
 
   return (
-    <OnboardingLayout
+    <CashAppScreen
       title="מה הגיל שלך?"
       subtitle="עוזר לנו להתאים את החוויה"
-      density="focused"
       currentStep={ONBOARDING_STEPS.age}
       totalSteps={ONBOARDING_TOTAL_STEPS}
+      progressVariant="dots"
       showBack={showBack}
       onBack={handleBack}
       footer={
@@ -99,8 +99,10 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
           {error ? (
             <Text style={styles.errorText}>{error}</Text>
           ) : null}
-          <OnboardingButton
+          <CashAppButton
             title="המשך"
+            variant="primary"
+            size="lg"
             onPress={handleNext}
             disabled={!canContinue}
           />
@@ -108,23 +110,36 @@ const RegistrationAgeInputScreen = ({ navigation }: Props) => {
       }
     >
       <View style={styles.container}>
-        <UICard variant="glass" style={styles.inputCard}>
+        <View
+          style={{
+            backgroundColor: tokens.cashAppStyle.colors.input,
+            borderRadius: tokens.cashAppStyle.borderRadius.input,
+            borderWidth: 1,
+            borderColor: tokens.cashAppStyle.colors.input,
+            padding: 24,
+            alignItems: 'center',
+            minWidth: 200,
+          }}
+        >
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { color: tokens.cashAppStyle.colors.headline }
+            ]}
             value={value}
             onChangeText={handleChangeText}
             keyboardType="number-pad"
             placeholder="28"
-            placeholderTextColor="rgba(255,255,255,0.2)"
+            placeholderTextColor={tokens.cashAppStyle.colors.placeholder}
             maxLength={3}
             autoFocus
             textAlign="center"
-            selectionColor={DesignTokens.colors.primary.main}
+            selectionColor={tokens.cashAppStyle.colors.inputFocus}
           />
-        </UICard>
+        </View>
       </View>
       <View style={{ flex: 1 }} />
-    </OnboardingLayout>
+    </CashAppScreen>
   );
 };
 
@@ -134,24 +149,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingTop: 40,
   },
-  inputCard: {
-    padding: 24,
-    alignItems: 'center',
-    minWidth: 200,
-  },
   input: {
     fontSize: 80,
     fontWeight: '700',
-    color: '#fff',
     textAlign: 'center',
     letterSpacing: -2,
   },
   errorText: {
     color: '#F85149',
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
     marginBottom: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     writingDirection: 'rtl',
   },
 });

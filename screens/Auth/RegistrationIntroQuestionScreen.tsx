@@ -4,8 +4,9 @@ import {
   useRegistration,
   type RegistrationData,
 } from '../../context/RegistrationContext';
-import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
-import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import CashAppScreen from '../../components/ui/CashAppScreen';
+import CashAppButton from '../../components/ui/CashAppButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import OnboardingChoiceRow, {
   OnboardingChoiceGroup,
 } from '../../components/onboarding/OnboardingChoiceRow';
@@ -61,6 +62,7 @@ type Props = {
 const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
   const { data, setData } = useRegistration();
   const exitRegistration = useRegistrationExitOptional();
+  const tokens = useDesignTokens();
   const isMulti = !!config.multiple;
   const [selected, setSelected] = useState<string[]>(() => toValueArray(data[config.field]));
 
@@ -96,12 +98,12 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
   };
 
   return (
-    <OnboardingLayout
+    <CashAppScreen
       title={config.title}
       subtitle={displayMode === 'swipe' ? undefined : config.subtitle}
-      density="focused"
       currentStep={ONBOARDING_STEPS[config.stepKey]}
       totalSteps={ONBOARDING_TOTAL_STEPS}
+      progressVariant="dots"
       showBack
       onBack={() => {
         void HapticFeedback.impactLight();
@@ -112,7 +114,7 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
           {config.optional ? (
             <Text
               style={{
-                color: 'rgba(255,255,255,0.35)',
+                color: tokens.cashAppStyle.colors.secondary,
                 fontSize: 13,
                 textAlign: 'center',
                 marginBottom: 10,
@@ -122,8 +124,10 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
               אפשר לדלג ולהמשיך בלי לבחור
             </Text>
           ) : null}
-          <OnboardingButton
+          <CashAppButton
             title={displayMode === 'swipe' ? 'בחר את זה' : 'המשך'}
+            variant="primary"
+            size="lg"
             onPress={handleNext}
             disabled={!canContinue}
           />
@@ -153,7 +157,7 @@ const RegistrationIntroQuestionScreen = ({ navigation, config }: Props) => {
           <View style={{ flex: 1 }} />
         </>
       )}
-    </OnboardingLayout>
+    </CashAppScreen>
   );
 };
 

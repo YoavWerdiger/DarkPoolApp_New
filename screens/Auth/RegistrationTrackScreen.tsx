@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+import { ScrollView } from 'react-native';
 import { useRegistration } from '../../context/RegistrationContext';
-import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
+import CashAppScreen from '../../components/ui/CashAppScreen';
 import PlanPicker, { getSelectablePlans } from '../../components/subscription/PlanPicker';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -53,12 +54,12 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
   };
 
   return (
-    <OnboardingLayout
+    <CashAppScreen
       title="בחר מסלול"
       subtitle="בחר את המסלול שמתאים לך — אפשר לשדרג בכל עת"
-      density="compact"
       currentStep={ONBOARDING_STEPS.track}
       totalSteps={ONBOARDING_TOTAL_STEPS}
+      progressVariant="dots"
       showBack
       onBack={() => {
         void HapticFeedback.impactLight();
@@ -67,15 +68,20 @@ const RegistrationTrackScreen = ({ navigation }: { navigation: any }) => {
           fallbackRoute: 'RegistrationPortfolio',
         });
       }}
-      scrollable
+      footer={undefined}
     >
-      <PlanPicker
-        mode="registration"
-        selectedPlanId={selectedPlanId}
-        onSelect={setSelectedPlanId}
-        onContinue={handleContinue}
-      />
-    </OnboardingLayout>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      >
+        <PlanPicker
+          mode="registration"
+          selectedPlanId={selectedPlanId}
+          onSelect={setSelectedPlanId}
+          onContinue={handleContinue}
+        />
+      </ScrollView>
+    </CashAppScreen>
   );
 };
 

@@ -5,10 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '../../context/RegistrationContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
-import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import CashAppScreen from '../../components/ui/CashAppScreen';
+import CashAppButton from '../../components/ui/CashAppButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { legacyAlert } from '../../utils/appDialog';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -19,9 +18,9 @@ const AVATAR = 180;
 
 const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
+  const tokens = useDesignTokens();
   const [image, setImage] = useState<string | null>(data.profileImage || null);
   const [loading, setLoading] = useState(false);
-  const surface = DesignTokens.onboardingInputSurface;
 
   useEffect(() => {
     ImagePicker.requestMediaLibraryPermissionsAsync().catch(() => {});
@@ -113,29 +112,31 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
   };
 
   return (
-    <OnboardingLayout
+    <CashAppScreen
       title="תמונת פרופיל"
       subtitle="בחר תמונה שתייצג אותך בקהילת DarkPool"
-      density="focused"
       currentStep={ONBOARDING_STEPS.profileImage}
       totalSteps={ONBOARDING_TOTAL_STEPS}
+      progressVariant="dots"
       showBack
       onBack={handleBack}
       footer={
-        <OnboardingButton
+        <CashAppButton
           title={image ? "המשך" : "דלג לעכשיו"}
+          variant="primary"
+          size="lg"
           onPress={image ? continueWithImage : skipImage}
           disabled={loading}
         />
       }
     >
       <View style={{ alignItems: 'center', marginBottom: 32, flex: 1, justifyContent: 'center' }}>
-        <UICard
-          variant="glass"
-          glassIntensity="medium"
-          padding="none"
+        <View
           style={{
-            borderRadius: DesignTokens.borderRadius['2xl'],
+            backgroundColor: tokens.cashAppStyle.colors.input,
+            borderRadius: tokens.cashAppStyle.borderRadius.input,
+            borderWidth: 1,
+            borderColor: tokens.cashAppStyle.colors.input,
             width: '100%',
             marginBottom: 20,
           }}
@@ -148,16 +149,16 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                 borderRadius: AVATAR / 2,
                 borderWidth: 2,
                 borderColor: image
-                  ? DesignTokens.colors.primary.main
-                  : 'rgba(255,255,255,0.15)',
-                backgroundColor: surface.backgroundColor,
+                  ? tokens.cashAppStyle.colors.inputFocus
+                  : 'rgba(0,0,0,0.1)',
+                backgroundColor: '#FFFFFF',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
-                shadowColor: DesignTokens.colors.primary.main,
-                shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: image ? 0.4 : 0,
-                shadowRadius: 12,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
                 marginBottom: 24,
               }}
             >
@@ -170,12 +171,12 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                   transition={150}
                 />
               ) : loading ? (
-                <ActivityIndicator size="large" color={DesignTokens.colors.primary.main} />
+                <ActivityIndicator size="large" color={tokens.cashAppStyle.colors.headline} />
               ) : (
                 <Ionicons 
                   name="person-outline" 
                   size={80} 
-                  color="rgba(255,255,255,0.3)" 
+                  color="rgba(0,0,0,0.2)" 
                 />
               )}
             </View>
@@ -183,8 +184,8 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
             {loading ? (
               <Text
                 style={{
-                  color: DesignTokens.colors.primary.main,
-                  fontSize: 14,
+                  color: tokens.cashAppStyle.colors.headline,
+                  fontSize: 15,
                   fontWeight: '600',
                   textAlign: 'center',
                   marginBottom: 20,
@@ -196,9 +197,9 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
               <>
                 <Text
                   style={{
-                    color: 'rgba(255,255,255,0.9)',
-                    fontSize: 16,
-                    fontWeight: '600',
+                    color: tokens.cashAppStyle.colors.headline,
+                    fontSize: 17,
+                    fontWeight: '700',
                     textAlign: 'center',
                     marginBottom: 6,
                   }}
@@ -207,8 +208,8 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                 </Text>
                 <Text
                   style={{
-                    color: 'rgba(255,255,255,0.5)',
-                    fontSize: 13,
+                    color: tokens.cashAppStyle.colors.body,
+                    fontSize: 14,
                     textAlign: 'center',
                     lineHeight: 18,
                     marginBottom: 20,
@@ -221,9 +222,9 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
               <>
                 <Text
                   style={{
-                    color: 'rgba(255,255,255,0.75)',
-                    fontSize: 15,
-                    fontWeight: '600',
+                    color: tokens.cashAppStyle.colors.headline,
+                    fontSize: 17,
+                    fontWeight: '700',
                     textAlign: 'center',
                     marginBottom: 6,
                   }}
@@ -232,8 +233,8 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
                 </Text>
                 <Text
                   style={{
-                    color: 'rgba(255,255,255,0.45)',
-                    fontSize: 13,
+                    color: tokens.cashAppStyle.colors.body,
+                    fontSize: 14,
                     textAlign: 'center',
                     lineHeight: 18,
                     paddingHorizontal: 20,
@@ -248,27 +249,29 @@ const RegistrationProfileImageScreen = ({ navigation }: { navigation: any }) => 
             {!loading && (
               <View style={{ flexDirection: 'row-reverse', gap: 12, width: '100%' }}>
                 <View style={{ flex: 1 }}>
-                  <OnboardingButton
+                  <CashAppButton
                     title="מצלמה"
-                    onPress={handleTakePhoto}
                     variant="secondary"
-                    icon={<Ionicons name="camera" size={20} color="rgba(255,255,255,0.55)" />}
+                    size="md"
+                    icon="camera"
+                    onPress={handleTakePhoto}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <OnboardingButton
+                  <CashAppButton
                     title="גלריה"
-                    onPress={handlePickFromGallery}
                     variant="secondary"
-                    icon={<Ionicons name="images" size={20} color="rgba(255,255,255,0.55)" />}
+                    size="md"
+                    icon="images"
+                    onPress={handlePickFromGallery}
                   />
                 </View>
               </View>
             )}
           </View>
-        </UICard>
+        </View>
       </View>
-    </OnboardingLayout>
+    </CashAppScreen>
   );
 };
 

@@ -3,11 +3,10 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRegistration } from '../../context/RegistrationContext';
 import { AuthService } from '../../services/authService';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
-import OnboardingInput from '../../components/onboarding/OnboardingInput';
-import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import CashAppScreen from '../../components/ui/CashAppScreen';
+import CashAppInput from '../../components/ui/CashAppInput';
+import CashAppButton from '../../components/ui/CashAppButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
 import {
@@ -20,6 +19,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
   const { data, setData } = useRegistration();
   const exitRegistration = useRegistrationExitOptional();
+  const tokens = useDesignTokens();
   const [email, setEmail] = useState(data.email || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -137,12 +137,12 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
   };
 
   return (
-    <OnboardingLayout
+    <CashAppScreen
       title="מה האימייל שלך?"
       subtitle="ישמש להתחברות ולהתראות חשובות"
-      density="focused"
       currentStep={ONBOARDING_STEPS.email}
       totalSteps={ONBOARDING_TOTAL_STEPS}
+      progressVariant="dots"
       showBack
       onBack={() => {
         void HapticFeedback.impactLight();
@@ -152,8 +152,10 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
         });
       }}
       footer={
-        <OnboardingButton
+        <CashAppButton
           title="המשך"
+          variant="primary"
+          size="lg"
           onPress={handleNext}
           loading={loading}
           disabled={!canContinue}
@@ -168,17 +170,17 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
             backgroundColor: 'rgba(248,81,73,0.08)',
             borderWidth: 1,
             borderColor: 'rgba(248,81,73,0.35)',
-            borderRadius: 14,
-            padding: 13,
-            marginBottom: 18,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: tokens.spacing.lg,
           }}
         >
-          <Ionicons name="alert-circle" size={18} color="#F85149" style={{ marginLeft: 8 }} />
+          <Ionicons name="alert-circle" size={20} color="#F85149" style={{ marginLeft: 8 }} />
           <Text
             style={{
               color: '#F85149',
-              fontSize: 14,
-              fontWeight: '500',
+              fontSize: 15,
+              fontWeight: '600',
               textAlign: 'right',
               writingDirection: 'rtl',
               flex: 1,
@@ -189,37 +191,29 @@ const RegistrationEmailScreen = ({ navigation }: { navigation: any }) => {
         </View>
       ) : null}
 
-      <UICard
-        variant="glass"
-        glassIntensity="light"
-        padding="md"
-        style={{ borderRadius: DesignTokens.borderRadius.xl }}
-      >
-        <OnboardingInput
-          label="כתובת אימייל"
-          icon="mail-outline"
-          placeholder="you@example.com"
-          value={email}
-          onChangeText={(t) => {
-            setEmail(t);
-            if (error) setError('');
-          }}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          autoFocus
-          isLast
-          helperText={
-            checkingEmail
-              ? 'בודק זמינות...'
-              : error
-              ? undefined
-              : 'בשלב הבא נשלח אליך קוד אימות למייל'
-          }
-        />
-      </UICard>
+      <CashAppInput
+        label="כתובת אימייל"
+        leftIcon="mail-outline"
+        placeholder="you@example.com"
+        value={email}
+        onChangeText={(t) => {
+          setEmail(t);
+          if (error) setError('');
+        }}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        autoCorrect={false}
+        autoFocus
+        helperText={
+          checkingEmail
+            ? 'בודק זמינות...'
+            : error
+            ? undefined
+            : 'בשלב הבא נשלח אליך קוד אימות למייל'
+        }
+      />
       <View style={{ flex: 1 }} />
-    </OnboardingLayout>
+    </CashAppScreen>
   );
 };
 

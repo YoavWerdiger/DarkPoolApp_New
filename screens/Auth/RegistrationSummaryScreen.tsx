@@ -7,10 +7,9 @@ import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthService } from '../../services/authService';
 import { SUBSCRIPTION_PLANS } from '../../services/paymentService';
-import { DesignTokens } from '../../components/ui/DesignTokens';
-import UICard from '../../components/ui/UICard';
-import OnboardingLayout from '../../components/onboarding/OnboardingLayout';
-import OnboardingButton from '../../components/onboarding/OnboardingButton';
+import CashAppScreen from '../../components/ui/CashAppScreen';
+import CashAppButton from '../../components/ui/CashAppButton';
+import { useDesignTokens } from '../../components/ui/DesignTokens';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 import { ONBOARDING_STEPS, ONBOARDING_TOTAL_STEPS } from '../../constants/onboardingFlow';
@@ -20,6 +19,7 @@ import { mediaService } from '../../services/mediaService';
 const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   const { data, resetData } = useRegistration();
   const { setUser, signOut, user: currentUser } = useAuth();
+  const tokens = useDesignTokens();
   const [loading, setLoading] = useState(false);
 
   const badgeScale = useRef(new Animated.Value(0.82)).current;
@@ -204,14 +204,19 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
   };
 
   return (
-    <OnboardingLayout
+    <CashAppScreen
+      title=""
+      subtitle=""
       currentStep={ONBOARDING_STEPS.summary}
       totalSteps={ONBOARDING_TOTAL_STEPS}
-      showProgress={false}
+      progressVariant="none"
+      showBack={false}
       showClose={false}
       footer={
-        <OnboardingButton
+        <CashAppButton
           title="התחל להשתמש"
+          variant="primary"
+          size="lg"
           onPress={() => {
             void HapticFeedback.success();
             handleFinish();
@@ -223,31 +228,54 @@ const RegistrationSummaryScreen = ({ navigation }: { navigation: any }) => {
     >
       <View style={styles.centered}>
         <Animated.View style={[styles.halo, { transform: [{ scale: badgeScale }] }]}>
-          <View style={styles.ring}>
-            <UICard
-              variant="glass"
-              glassIntensity="medium"
-              padding="none"
-              style={styles.badge}
-              contentContainerStyle={styles.badgeContent}
+          <View style={[styles.ring, { backgroundColor: tokens.cashAppStyle.colors.inputFocus }]}>
+            <View
+              style={[
+                styles.badge,
+                {
+                  backgroundColor: tokens.cashAppStyle.colors.screen,
+                  borderRadius: tokens.cashAppStyle.borderRadius.full,
+                },
+              ]}
             >
-              <Ionicons
-                name="checkmark"
-                size={52}
-                color={DesignTokens.colors.primary.main}
-              />
-            </UICard>
+              <View style={styles.badgeContent}>
+                <Ionicons
+                  name="checkmark"
+                  size={52}
+                  color={tokens.cashAppStyle.colors.headline}
+                />
+              </View>
+            </View>
           </View>
         </Animated.View>
 
         <Animated.View style={{ opacity: contentOpacity }}>
-          <Text style={styles.title}>הכל מוכן!</Text>
-          <Text style={styles.subtitle}>
+          <Text
+            style={[
+              styles.title,
+              {
+                color: tokens.cashAppStyle.colors.headline,
+                fontSize: tokens.cashAppStyle.typography.headline.fontSize,
+                fontWeight: tokens.cashAppStyle.typography.headline.fontWeight,
+              },
+            ]}
+          >
+            הכל מוכן!
+          </Text>
+          <Text
+            style={[
+              styles.subtitle,
+              {
+                color: tokens.cashAppStyle.colors.body,
+                fontSize: tokens.cashAppStyle.typography.subheadline.fontSize,
+              },
+            ]}
+          >
             החשבון שלך נוצר בהצלחה — הכל מחכה לך בפנים.
           </Text>
         </Animated.View>
       </View>
-    </OnboardingLayout>
+    </CashAppScreen>
   );
 };
 
@@ -264,25 +292,28 @@ const styles = StyleSheet.create({
   halo: {
     width: HALO_SIZE,
     height: HALO_SIZE,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: DesignTokens.colors.primary.subtle,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,200,5,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: DesignTokens.spacing['2xl'],
-    ...DesignTokens.shadows.greenGlow,
+    marginBottom: 32,
+    shadowColor: '#00C805',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
   },
   ring: {
     width: RING_SIZE,
     height: RING_SIZE,
-    borderRadius: DesignTokens.borderRadius.full,
-    backgroundColor: DesignTokens.colors.primary.dim,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   badge: {
     width: BADGE_SIZE,
     height: BADGE_SIZE,
-    borderRadius: DesignTokens.borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badgeContent: {
     width: '100%',
@@ -291,21 +322,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: DesignTokens.typography.heroTitle.size,
-    lineHeight: DesignTokens.typography.heroTitle.lineHeight,
-    fontWeight: DesignTokens.typography.heroTitle.weight,
-    color: DesignTokens.colors.text.primary,
     textAlign: 'center',
     writingDirection: 'rtl',
-    marginBottom: DesignTokens.spacing.md,
+    marginBottom: 12,
   },
   subtitle: {
-    fontSize: DesignTokens.typography.callout.size,
-    lineHeight: DesignTokens.typography.callout.lineHeight,
-    color: DesignTokens.colors.text.tertiary,
     textAlign: 'center',
     writingDirection: 'rtl',
-    paddingHorizontal: DesignTokens.spacing.lg,
+    paddingHorizontal: 24,
+    lineHeight: 22,
   },
 });
 

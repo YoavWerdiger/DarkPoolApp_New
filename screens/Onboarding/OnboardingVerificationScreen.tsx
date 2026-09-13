@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,47 +10,41 @@ import { useOnboarding } from '../../context/OnboardingContext';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { HapticFeedback } from '../../utils/hapticFeedback';
 
-type OnboardingStackParamList = {
-  OnboardingPhone: undefined;
-  OnboardingVerification: undefined;
-  OnboardingName: undefined;
-};
-
-type NavigationProp = NativeStackNavigationProp<OnboardingStackParamList, 'OnboardingPhone'>;
+type NavigationProp = NativeStackNavigationProp<any, 'OnboardingVerification'>;
 
 interface Props {
   navigation: NavigationProp;
 }
 
 /**
- * מסך 1: OnboardingPhoneScreen
- * כניסה ראשונית עם מספר טלפון
+ * מסך 2: OnboardingVerificationScreen
+ * אימות קוד OTP שנשלח לטלפון
  */
-const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
-  const { data, setPhone, setCurrentStep, markStepCompleted } = useOnboarding();
+const OnboardingVerificationScreen: React.FC<Props> = ({ navigation }) => {
+  const { data, setPhoneVerified, setCurrentStep, markStepCompleted } = useOnboarding();
   const tokens = useDesignTokens();
 
-  const [phone, setPhoneInput] = useState(data.phone || '');
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
 
-  const formatPhone = (text: string): string => {
-    const cleaned = text.replace(/\D/g, '');
-    if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 6) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
-    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
-  };
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setCanResend(true);
+    }
+  }, [resendTimer]);
 
-  const isValidPhone = (phoneNumber: string): boolean => {
-    const cleaned = phoneNumber.replace(/\D/g, '');
-    return cleaned.length === 10 && cleaned.startsWith('05');
-  };
-
-  const canContinue = !loading && isValidPhone(phone);
+  const isValidCode = code.replace(/\D/g, '').length === 6;
+  const canContinue = !loading && isValidCode;
 
   const handleNext = async () => {
     if (!canContinue) {
-      setError('אנא הכנס מספר טלפון תקין (למשל 054-123-4567)');
+      setError('אנא הכנס קוד אימות תקין (6 ספרות)');
       void HapticFeedback.error();
       return;
     }
@@ -59,33 +53,40 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
     setLoading(true);
 
     try {
-      // TODO: הוסף אימות SMS אמיתי
-      // כרגע זה רק סימולציה
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // כאן תהיה קריאה לשרת לאימות הקוד
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-      setPhone(phone);
-      markStepCompleted(1);
-      setCurrentStep(2);
+      setPhoneVerified(true);
+      markStepCompleted(2);
+      setCurrentStep(3);
       
       void HapticFeedback.success();
-      navigation.navigate('OnboardingVerification');
+      navigation.navigate('OnboardingName');
     } catch (err) {
-      setError('שגיאה בשליחת קוד האימות. נסה שוב.');
+      setError('קוד אימות שגוי. נסה שוב.');
       void HapticFeedback.error();
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEmailOption = () => {
-    // TODO: הוסף אפשרות כניסה באימייל
+  const handleResend = async () => {
+    if (!canResend) return;
+
     void HapticFeedback.impactLight();
+    setCanResend(false);
+    setResendTimer(60);
+    
+    // כאן תהיה קריאה לשרת לשליחת קוד חדש
+    await new Promise((resolve) => setTimeout(resolve, 500));
   };
 
-  const handleHelp = () => {
-    // TODO: הוסף מסך עזרה
+  const handleBack = () => {
     void HapticFeedback.impactLight();
+    navigation.goBack();
   };
+
+  const maskedPhone = data.phone.replace(/(\d{3})-(\d{3})-(\d{4})/, '$1-***-$4');
 
   return (
     <ScreenChrome rtl>
@@ -96,15 +97,12 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View style={{ flex: 1 }} />
+            <Pressable onPress={handleBack} style={styles.backButton}>
+              <Ionicons name="chevron-forward" size={28} color={tokens.colors.text.primary} />
+            </Pressable>
             <Text style={[styles.stepIndicator, { color: tokens.colors.text.tertiary }]}>
-              שלב 1 מתוך 10
+              שלב 2 מתוך 10
             </Text>
-            <View style={{ flex: 1, alignItems: 'flex-start' }}>
-              <Pressable onPress={handleHelp} style={styles.helpButton}>
-                <Ionicons name="help-circle-outline" size={24} color={tokens.colors.text.tertiary} />
-              </Pressable>
-            </View>
           </View>
 
           <ScrollView
@@ -115,10 +113,10 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
           >
             {/* Title */}
             <Text style={[styles.title, { color: tokens.colors.text.primary }]}>
-              מה מספר הטלפון שלך?
+              הכנס את הקוד שנשלח
             </Text>
             <Text style={[styles.subtitle, { color: tokens.colors.text.secondary }]}>
-              נשתמש בו ליצירת קשר ולהתראות חשובות
+              שלחנו קוד אימות ל-{maskedPhone}
             </Text>
 
             {/* Error */}
@@ -140,22 +138,22 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
             {/* Input */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: tokens.colors.text.secondary }]}>
-                מספר טלפון
+                קוד אימות
               </Text>
               <UICard variant="inputGlass" padding="none" style={styles.inputCard}>
                 <View style={styles.inputWrapper}>
-                  <Ionicons name="call-outline" size={20} color={tokens.colors.text.tertiary} />
+                  <Ionicons name="keypad-outline" size={20} color={tokens.colors.text.tertiary} />
                   <TextInput
                     style={[styles.input, { color: tokens.colors.text.primary }]}
-                    placeholder="054-000-0000"
+                    placeholder="000-000"
                     placeholderTextColor={tokens.colors.text.muted}
-                    value={phone}
+                    value={code}
                     onChangeText={(text) => {
-                      setPhoneInput(formatPhone(text));
+                      setCode(text);
                       if (error) setError('');
                     }}
-                    keyboardType="phone-pad"
-                    maxLength={12}
+                    keyboardType="number-pad"
+                    maxLength={7}
                     autoFocus
                     textAlign="right"
                   />
@@ -163,30 +161,17 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
               </UICard>
             </View>
 
-            <Pressable onPress={handleHelp} style={styles.helpLink}>
-              <Text style={[styles.helpLinkText, { color: tokens.colors.primary.main }]}>
-                צריך עזרה להתחברות?
+            <Text style={[styles.timer, { color: tokens.colors.text.tertiary }]}>
+              {canResend
+                ? 'ניתן לשלוח קוד חדש'
+                : `ניתן לבקש קוד נוסף בעוד ${resendTimer} שניות`}
+            </Text>
+
+            <Pressable onPress={() => {}}>
+              <Text style={[styles.link, { color: tokens.colors.primary.main }]}>
+                צריך עזרה בכניסה?
               </Text>
             </Pressable>
-
-            {/* Legal Text */}
-            <Text style={[styles.legalText, { color: tokens.colors.text.tertiary }]}>
-              בלחיצה על "המשך" אני מאשר/ת את{' '}
-              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>
-                התנאים וההגבלות
-              </Text>
-              {', '}
-              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>
-                הסכמת E-Sign
-              </Text>
-              {' ו'}
-              <Text style={[styles.legalLink, { color: tokens.colors.primary.main }]}>
-                מדיניות הפרטיות
-              </Text>
-              .{'\n\n'}
-              אני מאשר/ת קבלת קוד אימות חד-פעמי מ-DarkPool. תדירות ההודעות משתנה. 
-              עלולים לחול תעריפי הודעות ונתונים. השב HELP לעזרה, STOP לביטול.
-            </Text>
 
             <View style={{ flex: 1 }} />
           </ScrollView>
@@ -196,6 +181,16 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.footerButtons}>
               <View style={{ flex: 1 }}>
                 <UIButton
+                  title="שלח שוב"
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                  onPress={handleResend}
+                  disabled={!canResend}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <UIButton
                   title="המשך"
                   variant="primary"
                   size="lg"
@@ -203,15 +198,6 @@ const OnboardingPhoneScreen: React.FC<Props> = ({ navigation }) => {
                   onPress={handleNext}
                   disabled={!canContinue}
                   loading={loading}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <UIButton
-                  title="שימוש באימייל"
-                  variant="secondary"
-                  size="lg"
-                  fullWidth
-                  onPress={handleEmailOption}
                 />
               </View>
             </View>
@@ -233,7 +219,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 16,
   },
-  helpButton: {
+  backButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
@@ -302,24 +288,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '400',
   },
-  helpLink: {
-    alignSelf: 'center',
-    marginTop: 20,
-    paddingVertical: 8,
-  },
-  helpLinkText: {
-    fontSize: 15,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
-  },
-  legalText: {
+  timer: {
     fontSize: 12,
-    lineHeight: 18,
-    marginTop: 64,
     textAlign: 'right',
+    marginTop: 12,
   },
-  legalLink: {
-    textDecorationLine: 'underline',
+  link: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'right',
+    marginTop: 20,
   },
   footer: {
     paddingHorizontal: 20,
@@ -327,9 +305,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   footerButtons: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     gap: 12,
   },
 });
 
-export default OnboardingPhoneScreen;
+export default OnboardingVerificationScreen;

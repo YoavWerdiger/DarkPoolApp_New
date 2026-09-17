@@ -19,6 +19,8 @@ import UICard from '../../components/ui/UICard';
 import { useDesignTokens } from '../../components/ui/DesignTokens';
 import { TradeCardSkeleton } from '../../components/ui/SkeletonLoader';
 import { useDarkPoolTabBarHeight } from '../../hooks/useDarkPoolTabBarHeight';
+import { queryClient } from '../../lib/queryClient';
+import { appQueryKeys } from '../../lib/appQueryKeys';
 import {
   dispatchOpenMainDrawer,
   type DrawerParentNavigation,
@@ -28,12 +30,13 @@ import { useDarkPoolStackNav } from './hooks/useDarkPoolStackNav';
 import { CongressTradeCard } from './components/CongressTradeCard';
 import { InsiderTradeCard } from './components/InsiderTradeCard';
 import { DarkPoolTabToggle } from './components/DarkPoolTabToggle';
-import { useCongressFeed } from '../../hooks/useCongressFeed';
-import { useDarkPoolInsiderFeed } from '../../hooks/useDarkPoolInsiderFeed';
+import { useCongressFeed, loadCongress } from '../../hooks/useCongressFeed';
+import { useDarkPoolInsiderFeed, loadInsider } from '../../hooks/useDarkPoolInsiderFeed';
 import type { DarkPoolFeedTab } from '../../hooks/useDarkPoolInsiderFeed';
 import {
   DARK_POOL_SEC_PRODUCTION,
   DARK_POOL_FEED_LIMIT,
+  DARK_POOL_FEED_STALE_MS,
 } from '../../types/darkpool.types';
 import { prefetchTickerLogos } from '../../utils/prefetchTickerLogos';
 import { useNavigation } from '@react-navigation/native';
@@ -62,6 +65,25 @@ export default function DarkPoolFeedScreen() {
     limit: DARK_POOL_FEED_LIMIT,
     enabled: segment === 'all',
   });
+
+  // Prefetch the other tab when switching
+  const handleSegmentChange = useCallback((newSegment: DarkPoolFeedTab) => {
+    setSegment(newSegment);
+    // Prefetch the opposite tab's data
+    if (newSegment === 'congress') {
+      void queryClient.prefetchQuery({
+        queryKey: appQueryKeys.insiderFeed('all', true, DARK_POOL_FEED_LIMIT),
+        queryFn: () => loadInsider('all', DARK_POOL_FEED_LIMIT, true, false, {}),
+        staleTime: DARK_POOL_FEED_STALE_MS,
+      });
+    } else {
+      void queryClient.prefetchQuery({
+        queryKey: appQueryKeys.congressFeed(DARK_POOL_FEED_LIMIT),
+        queryFn: () => loadCongress(DARK_POOL_FEED_LIMIT, false, {}),
+        staleTime: DARK_POOL_FEED_STALE_MS,
+      });
+    }
+  }, []);
 
   const active = segment === 'congress' ? congress : insiders;
   const loading =
@@ -177,7 +199,7 @@ export default function DarkPoolFeedScreen() {
       <View style={styles.listHeader}>
         <DarkPoolTabToggle
           value={segment}
-          onChange={setSegment}
+          onChange={handleSegmentChange}
           hideWatchlist
           hideFollowing
         />
@@ -218,7 +240,7 @@ export default function DarkPoolFeedScreen() {
   }, [loading, segment, styles, goToExplore]);
 
   const loadingSkeleton = useMemo(() => {
-    if (!loading) return null;
+    if (!loading || rows.length > 0) return null;
     return (
       <View style={styles.scrollContent}>
         {Array.from({ length: 6 }).map((_, i) => (
@@ -226,9 +248,9 @@ export default function DarkPoolFeedScreen() {
         ))}
       </View>
     );
-  }, [loading, styles]);
+  }, [loading, rows.length, styles]);
 
-  if (loading) {
+  if (loading && rows.length === 0) {
     return (
       <ScreenChrome rtl>
         <StatusBar style="light" />

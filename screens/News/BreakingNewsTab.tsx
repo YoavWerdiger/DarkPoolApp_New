@@ -1387,7 +1387,7 @@ export default function BreakingNewsTab({
     );
   };
 
-  if (loading) {
+  if (loading && articles.length === 0) {
     return (
       <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 12 }}>
         {Array.from({ length: 5 }).map((_, i) => (

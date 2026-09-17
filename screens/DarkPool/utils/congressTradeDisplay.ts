@@ -207,8 +207,8 @@ function usd(n: number): string {
 function usdCompact(n: number): string {
   const abs = Math.abs(n);
   if (abs >= 1_000_000) {
-    const m = n / 1_000_000;
-    return `$${m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)}M`;
+    const m = Math.round((n / 1_000_000) * 10) / 10;
+    return `$${Number.isInteger(m) ? m.toFixed(0) : m.toFixed(1)}M`;
   }
   if (abs >= 1_000) return `$${Math.round(n / 1_000)}K`;
   return usd(n);

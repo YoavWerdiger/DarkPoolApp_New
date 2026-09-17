@@ -418,7 +418,7 @@ export default function PortfoliosTab() {
     );
   }, [searchQuery, sortMode, styles, tokens]);
 
-  if (loading) {
+  if (loading && items.length === 0) {
     return (
       <View style={[styles.root, { paddingHorizontal: 20, paddingTop: 12 }]}>
         {Array.from({ length: 3 }).map((_, i) => (

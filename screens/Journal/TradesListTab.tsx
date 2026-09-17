@@ -204,7 +204,7 @@ export default function TradesListTab() {
     return { totalPnl, winRate, totalTrades: filteredTrades.length, wins: wins.length, profitFactor };
   }, [filteredTrades]);
 
-  if (loading) {
+  if (loading && trades.length === 0) {
     return (
       <View style={[styles.loadingContainer, styles.rtlRoot]}>
         {Array.from({ length: 4 }).map((_, i) => (

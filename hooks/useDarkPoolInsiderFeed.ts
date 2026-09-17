@@ -140,6 +140,7 @@ export function useDarkPoolInsiderFeed({
     },
     enabled,
     staleTime: DARK_POOL_FEED_STALE_MS,
+    placeholderData: [],
   });
 
   const refetch = useCallback(async () => {

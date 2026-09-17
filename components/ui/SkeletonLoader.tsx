@@ -85,19 +85,20 @@ export const CardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) => {
         padding: tokens.spacing.base,
         marginBottom: tokens.spacing.md,
         gap: tokens.spacing.md,
+        direction: 'rtl',
       }}
     >
       {/* Header row */}
       <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 12 }}>
         <SkeletonBox width={44} height={44} borderRadius={22} delay={delay} />
-        <View style={{ flex: 1, gap: 6 }}>
+        <View style={{ flex: 1, gap: 6, alignItems: 'flex-end' }}>
           <SkeletonBox width="60%" height={16} delay={delay + 50} />
           <SkeletonBox width="40%" height={12} delay={delay + 100} />
         </View>
       </View>
 
       {/* Content */}
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: 8, alignItems: 'flex-end' }}>
         <SkeletonBox width="100%" height={14} delay={delay + 150} />
         <SkeletonBox width="85%" height={14} delay={delay + 200} />
         <SkeletonBox width="70%" height={14} delay={delay + 250} />
@@ -132,10 +133,11 @@ export const ListItemSkeleton: React.FC<ListItemSkeletonProps> = ({
         paddingHorizontal: 16,
         paddingVertical: 10,
         gap: 12,
+        direction: 'rtl',
       }}
     >
       {showAvatar && <SkeletonBox width={50} height={50} borderRadius={25} delay={delay} />}
-      <View style={{ flex: 1, gap: 8 }}>
+      <View style={{ flex: 1, gap: 8, alignItems: 'flex-end' }}>
         <SkeletonBox width="60%" height={13} delay={delay + 50} />
         <SkeletonBox width="80%" height={11} delay={delay + 100} />
       </View>
@@ -155,7 +157,7 @@ export const ProfileSkeleton: React.FC<ProfileSkeletonProps> = ({ delay = 0 }) =
   const tokens = useDesignTokens();
 
   return (
-    <View style={{ padding: tokens.spacing.lg, gap: tokens.spacing.lg }}>
+    <View style={{ padding: tokens.spacing.lg, gap: tokens.spacing.lg, direction: 'rtl' }}>
       {/* Avatar + Name */}
       <View style={{ alignItems: 'center', gap: 12 }}>
         <SkeletonBox width={88} height={88} borderRadius={44} delay={delay} />
@@ -180,7 +182,7 @@ export const ProfileSkeleton: React.FC<ProfileSkeletonProps> = ({ delay = 0 }) =
       </View>
 
       {/* Bio */}
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: 8, alignItems: 'flex-end' }}>
         <SkeletonBox width="100%" height={14} delay={delay + 350} />
         <SkeletonBox width="90%" height={14} delay={delay + 400} />
         <SkeletonBox width="60%" height={14} delay={delay + 450} />
@@ -206,10 +208,13 @@ export const ChartSkeleton: React.FC<ChartSkeletonProps> = ({ delay = 0, height 
         height,
         padding: tokens.spacing.base,
         gap: tokens.spacing.sm,
+        direction: 'rtl',
       }}
     >
       {/* Title */}
-      <SkeletonBox width="40%" height={16} delay={delay} />
+      <View style={{ alignItems: 'flex-end' }}>
+        <SkeletonBox width="40%" height={16} delay={delay} />
+      </View>
 
       {/* Chart area */}
       <View style={{ flex: 1, justifyContent: 'flex-end', gap: 8 }}>
@@ -290,13 +295,14 @@ export const TradeCardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) =>
         padding: tokens.spacing.base,
         marginBottom: tokens.spacing.md,
         gap: tokens.spacing.sm,
+        direction: 'rtl',
       }}
     >
       {/* Header */}
       <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
           <SkeletonBox width={36} height={36} borderRadius={18} delay={delay} />
-          <View style={{ gap: 4 }}>
+          <View style={{ gap: 4, alignItems: 'flex-end' }}>
             <SkeletonBox width={100} height={14} delay={delay + 50} />
             <SkeletonBox width={70} height={11} delay={delay + 100} />
           </View>
@@ -311,7 +317,7 @@ export const TradeCardSkeleton: React.FC<CardSkeletonProps> = ({ delay = 0 }) =>
       </View>
 
       {/* Details */}
-      <View style={{ gap: 6 }}>
+      <View style={{ gap: 6, alignItems: 'flex-end' }}>
         <SkeletonBox width="100%" height={12} delay={delay + 300} />
         <SkeletonBox width="75%" height={12} delay={delay + 350} />
       </View>
@@ -444,7 +450,7 @@ interface TextSkeletonProps {
 
 export const TextSkeleton: React.FC<TextSkeletonProps> = ({ lines = 3, delay = 0 }) => {
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 8, alignItems: 'flex-end', direction: 'rtl' }}>
       {Array.from({ length: lines }).map((_, i) => (
         <SkeletonBox
           key={i}

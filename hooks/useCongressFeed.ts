@@ -95,6 +95,7 @@ export function useCongressFeed(limit = 40, enabled = true) {
     },
     enabled,
     staleTime: DARK_POOL_FEED_STALE_MS,
+    placeholderData: [],
   });
 
   const refetch = useCallback(async () => {
